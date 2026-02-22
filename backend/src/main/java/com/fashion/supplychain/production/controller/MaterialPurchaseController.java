@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping({ "/api/production/purchase", "/api/production/material" })
 @Slf4j
-@PreAuthorize("hasAnyAuthority('MENU_MATERIAL_PURCHASE', 'ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_1')")
+@PreAuthorize("isAuthenticated()")
 public class MaterialPurchaseController {
 
     @Autowired
@@ -230,7 +230,6 @@ public class MaterialPurchaseController {
      * 回退库存，恢复采购任务状态
      * 参数：{ pickingId, reason }
      */
-    @PreAuthorize("hasAnyAuthority('MENU_MATERIAL_PURCHASE', 'ROLE_ADMIN', 'ROLE_SUPERVISOR')")
     @PostMapping("/cancel-picking")
     public Result<?> cancelPicking(@RequestBody Map<String, Object> body) {
         return Result.success(materialPurchaseOrchestrator.cancelPicking(body));

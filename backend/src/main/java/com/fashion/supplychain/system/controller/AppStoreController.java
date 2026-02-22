@@ -47,7 +47,6 @@ public class AppStoreController {
     /**
      * 获取应用列个表
      */
-    @PreAuthorize("hasAuthority('MENU_APP_STORE_VIEW')")
     @PostMapping("/list")
     public Result<List<AppStore>> list(@RequestBody(required = false) Map<String, Object> params) {
         QueryWrapper<AppStore> wrapper = new QueryWrapper<>();
@@ -79,7 +78,6 @@ public class AppStoreController {
     /**
      * 获取应用详情
      */
-    @PreAuthorize("hasAuthority('MENU_APP_STORE_VIEW')")
     @GetMapping("/{id}")
     public Result<AppStore> getDetail(@PathVariable Long id) {
         AppStore app = appStoreService.getByIdWithJson(id);
@@ -92,7 +90,6 @@ public class AppStoreController {
     /**
      * 创建订单
      */
-    @PreAuthorize("hasAuthority('MENU_APP_STORE_BUY')")
     @PostMapping("/create-order")
     public Result<AppOrder> createOrder(@RequestBody CreateOrderRequest request) {
         try {
@@ -150,7 +147,6 @@ public class AppStoreController {
     /**
      * 开通免费试用（7天）
      */
-    @PreAuthorize("hasAuthority('MENU_APP_STORE_VIEW')")
     @PostMapping("/start-trial")
     public Result<?> startTrial(@RequestBody Map<String, Object> params) {
         try {
@@ -252,7 +248,6 @@ public class AppStoreController {
     /**
      * 获取我的订阅
      */
-    @PreAuthorize("hasAuthority('MENU_APP_SUBSCRIPTION_VIEW')")
     @PostMapping("/my-subscriptions")
     public Result<List<TenantSubscription>> getMySubscriptions() {
         Long tenantId = UserContext.tenantId();
@@ -267,7 +262,6 @@ public class AppStoreController {
     /**
      * 检查租户对某应用的试用状态
      */
-    @PreAuthorize("hasAuthority('MENU_APP_STORE_VIEW')")
     @GetMapping("/trial-status/{appId}")
     public Result<Map<String, Object>> getTrialStatus(@PathVariable Long appId) {
         Long tenantId = UserContext.tenantId();

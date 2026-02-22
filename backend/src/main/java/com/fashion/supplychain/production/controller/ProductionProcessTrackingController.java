@@ -33,7 +33,6 @@ public class ProductionProcessTrackingController {
      * @return 跟踪记录列表
      */
     @Operation(summary = "查询订单的工序跟踪记录", description = "PC端弹窗显示，含SKU、颜色、工序、扫码状态")
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/order/{productionOrderId}")
     public Result<List<ProductionProcessTracking>> getByOrderId(@PathVariable String productionOrderId) {
         List<ProductionProcessTracking> records = trackingOrchestrator.getTrackingRecords(productionOrderId);
@@ -48,7 +47,6 @@ public class ProductionProcessTrackingController {
      * @return 重置结果
      */
     @Operation(summary = "重置扫码记录", description = "管理员权限，允许退回重新扫码")
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_EDIT')")
     @PostMapping("/{trackingId}/reset")
     public Result<Boolean> reset(@PathVariable String trackingId, @RequestBody Map<String, Object> request) {
         String resetReason = (String) request.get("resetReason");
@@ -63,7 +61,6 @@ public class ProductionProcessTrackingController {
      * @return 生成的记录数量
      */
     @Operation(summary = "初始化工序跟踪记录", description = "裁剪完成时触发，生成菲号×工序的记录")
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_EDIT')")
     @PostMapping("/initialize/{productionOrderId}")
     public Result<Integer> initialize(@PathVariable String productionOrderId) {
         int count = trackingOrchestrator.initializeProcessTracking(productionOrderId);

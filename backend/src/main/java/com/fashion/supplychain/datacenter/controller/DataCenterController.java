@@ -23,13 +23,11 @@ public class DataCenterController {
     /**
      * 获取数据中心概览统计。
      */
-    @PreAuthorize("hasAuthority('MENU_DATA_CENTER_VIEW')")
     @GetMapping("/stats")
     public Result<?> stats() {
         return Result.success(dataCenterOrchestrator.stats());
     }
 
-    @PreAuthorize("hasAuthority('MENU_DATA_CENTER_VIEW')")
     @GetMapping("/production-sheet")
     public Result<?> productionSheet(@RequestParam(required = false) String styleNo,
             @RequestParam(required = false) Long styleId) {

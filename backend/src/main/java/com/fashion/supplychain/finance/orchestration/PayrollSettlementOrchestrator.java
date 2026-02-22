@@ -464,4 +464,70 @@ public class PayrollSettlementOrchestrator {
         String n = v.trim().toLowerCase();
         return "1".equals(n) || "true".equals(n) || "yes".equals(n) || "y".equals(n) || "on".equals(n);
     }
+
+    /**
+     * 取消工资结算单
+     * 只允许取消 pending 状态的结算单，取消后释放已关联的扫码记录
+     *
+     * @param settlementId 结算单ID
+     * @param remark       取消原因
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancel(String settlementId, String remark) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        if (!"pending".equalsIgnoreCase(settlement.getStatus())) {
+            throw new IllegalStateException("当前状态不允许取消，只有待审核(pending)状态可以取消");
+        }
+
+        // 更新结算单状态为 cancelled
+        LambdaUpdateWrapper<PayrollSettlement> settlementUw = new LambdaUpdateWrapper<PayrollSettlement>()
+                .set(PayrollSettlement::getStatus, "cancelled")
+                .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
+                .eq(PayrollSettlement::getId, settlementId.trim());
+        payrollSettlementService.update(settlementUw);
+
+        // 释放已关联的扫码记录（清除 payrollSettlementId 和 settlementStatus）
+        ScanRecord release = new ScanRecord();
+        release.setPayrollSettlementId("");
+        release.setSettlementStatus("");
+        release.setUpdateTime(LocalDateTime.now());
+        LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
+                .set(ScanRecord::getPayrollSettlementId, null)
+                .set(ScanRecord::getSettlementStatus, null)
+                .set(ScanRecord::getUpdateTime, LocalDateTime.now())
+                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim());
+        scanRecordMapper.update(new ScanRecord(), scanUw);
+    }
+
+    /**
+     * 删除工资结算单
+     * 只允许删除 cancelled 状态的结算单，同时删除明细
+     *
+     * @param settlementId 结算单ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String settlementId) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        if (!"cancelled".equalsIgnoreCase(settlement.getStatus())) {
+            throw new IllegalStateException("只允许删除已取消(cancelled)的结算单，请先取消");
+        }
+
+        // 先删明细，再删主记录
+        payrollSettlementItemService.deleteByOrderId(settlement.getOrderId());
+        payrollSettlementService.removeById(settlementId.trim());
+    }
 }

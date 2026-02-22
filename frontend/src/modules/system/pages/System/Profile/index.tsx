@@ -271,8 +271,9 @@ const Profile: React.FC = () => {
 
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontWeight: 700 }}>主题</span>
+                            <label htmlFor="profile-theme-select" style={{ fontWeight: 700 }}>主题</label>
                             <Select
+                                id="profile-theme-select"
                                 style={{ width: 220 }}
                                 value={theme}
                                 onChange={onThemeChange}
@@ -299,10 +300,10 @@ const Profile: React.FC = () => {
                             <Input disabled autoComplete="username" />
                         </Form.Item>
                         <Form.Item label="角色" name="roleName">
-                            <Input disabled />
+                            <Input disabled autoComplete="off" />
                         </Form.Item>
                         <Form.Item label="姓名" name="name">
-                            <Input disabled />
+                            <Input disabled autoComplete="name" />
                         </Form.Item>
                         <Form.Item
                             label="手机号"
@@ -322,7 +323,7 @@ const Profile: React.FC = () => {
                             <Input placeholder="请输入手机号" autoComplete="tel" />
                         </Form.Item>
                         <Form.Item label="邮箱" name="email">
-                            <Input disabled />
+                            <Input disabled autoComplete="email" />
                         </Form.Item>
                     </Form>
                 </Spin>
@@ -364,13 +365,13 @@ const Profile: React.FC = () => {
                         </div>
                         <Form form={tenantForm} layout="vertical" requiredMark={false}>
                             <Form.Item label="工厂名称" name="tenantName">
-                                <Input disabled />
+                                <Input disabled autoComplete="organization" />
                             </Form.Item>
                             <Form.Item label="联系人" name="contactName">
-                                <Input disabled />
+                                <Input disabled autoComplete="name" />
                             </Form.Item>
                             <Form.Item label="联系电话" name="contactPhone">
-                                <Input disabled />
+                                <Input disabled autoComplete="tel" />
                             </Form.Item>
                         </Form>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>

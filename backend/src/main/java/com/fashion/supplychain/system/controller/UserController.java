@@ -41,7 +41,6 @@ public class UserController {
      * @param status   状态
      * @return 分页结果
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_VIEW')")
     @GetMapping("/list")
     public Result<?> getUserList(
             @RequestParam(defaultValue = "1") Long page,
@@ -60,17 +59,18 @@ public class UserController {
      * @param id 用户ID
      * @return 用户信息
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_VIEW')")
     @GetMapping("/{id}")
     public Result<?> getUserById(@PathVariable Long id) {
         return Result.success(userOrchestrator.getById(id));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public Result<?> me() {
         return Result.success(userOrchestrator.me());
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
     public Result<?> updateMe(@RequestBody User user) {
         return Result.success(userOrchestrator.updateMe(user));
@@ -82,7 +82,6 @@ public class UserController {
      * @param user 用户信息
      * @return 操作结果
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PostMapping
     public Result<?> addUser(@RequestBody User user) {
         userOrchestrator.add(user);
@@ -95,7 +94,6 @@ public class UserController {
      * @param user 用户信息
      * @return 操作结果
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PutMapping
     public Result<?> updateUser(@RequestBody User user) {
         userOrchestrator.update(user);
@@ -108,7 +106,6 @@ public class UserController {
      * @param id 用户ID
      * @return 操作结果
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<?> deleteUser(@PathVariable Long id,
             @RequestParam(required = false) String remark) {
@@ -123,7 +120,6 @@ public class UserController {
      * @param status 状态
      * @return 操作结果
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PutMapping("/status")
     public Result<?> toggleStatus(@RequestParam Long id, @RequestParam String status,
             @RequestParam(required = false) String remark) {
@@ -235,7 +231,6 @@ public class UserController {
      * @return 待审批用户列表
      */
     @GetMapping("/pending")
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     public Result<?> getPendingUsers(
             @RequestParam(defaultValue = "1") Long page,
             @RequestParam(defaultValue = "10") Long pageSize) {
@@ -252,7 +247,6 @@ public class UserController {
      * @return 操作结果
      */
     @PostMapping("/{id}/approval-action")
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     public Result<?> approvalAction(
             @PathVariable Long id,
             @RequestParam String action,
@@ -300,6 +294,7 @@ public class UserController {
     /**
      * 个人修改密码（登录用户本人操作）
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/me/change-password")
     public Result<?> changePassword(@RequestBody java.util.Map<String, String> body) {
         String oldPassword = safeTrim(body.get("oldPassword"));
@@ -317,7 +312,7 @@ public class UserController {
     /**
      * 超级管理员重置组户主账号密码
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/reset-tenant-owner-password")
     public Result<?> resetTenantOwnerPassword(@RequestBody java.util.Map<String, Object> body) {
         Long tenantId = body.get("tenantId") != null ? Long.valueOf(String.valueOf(body.get("tenantId"))) : null;

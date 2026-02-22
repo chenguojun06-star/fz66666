@@ -50,6 +50,11 @@ def search(query: str, chunks: list, tokens: list, top_n: int = 5, filter_type: 
     if not query_tokens:
         return []
 
+    # copilot-instructions.md 是 summary 文件，密度极高会霸榜
+    # 降权至 0.4（仍可出现，但不会每次都排第一）
+    SUMMARY_SOURCES = {".github/copilot-instructions.md"}
+    SUMMARY_WEIGHT = 0.4
+
     # 可选：按类型过滤
     if filter_type:
         indices = [i for i, c in enumerate(chunks) if filter_type in c.get("type", "")]
@@ -65,6 +70,11 @@ def search(query: str, chunks: list, tokens: list, top_n: int = 5, filter_type: 
 
     bm25 = BM25Okapi(filtered_tokens)
     scores = bm25.get_scores(query_tokens)
+
+    # 对 summary 文件降权
+    for i, chunk in enumerate(filtered_chunks):
+        if chunk.get("source", "") in SUMMARY_SOURCES:
+            scores[i] *= SUMMARY_WEIGHT
 
     # 取 top_n
     top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_n]

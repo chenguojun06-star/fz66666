@@ -251,6 +251,7 @@ public class ShipmentReconciliationOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         String key = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(key)) {

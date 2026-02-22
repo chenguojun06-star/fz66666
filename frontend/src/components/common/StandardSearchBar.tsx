@@ -44,16 +44,18 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
     <div className="standard-search-bar">
       <Space size={12} wrap className="standard-search-row">
         <Input
+          id="standard-search-keyword"
+          name="keyword"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
           className="standard-search-input"
           allowClear
-          // If search button is shown, maybe we want onPressEnter to trigger search?
           onPressEnter={onSearch}
         />
         {showDate ? (
           <RangePicker
+            id="standard-search-date"
             value={dateValue || null}
             onChange={(value) => onDateChange && onDateChange(value as [Dayjs | null, Dayjs | null] | null)}
             className="standard-search-date"
@@ -61,6 +63,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
         ) : null}
         {showStatus ? (
           <Select
+            id="standard-search-status"
             value={statusValue}
             onChange={(value) => onStatusChange && onStatusChange(value)}
             options={statusOptions}

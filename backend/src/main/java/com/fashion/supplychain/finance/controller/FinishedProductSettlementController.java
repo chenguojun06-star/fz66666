@@ -291,4 +291,31 @@ public class FinishedProductSettlementController {
 
         return Result.success(new ArrayList<>(grouped.values()));
     }
+
+    @Operation(summary = "取消成品结算单")
+    @PostMapping("/{id}/cancel")
+    public Result<Void> cancel(@PathVariable String id) {
+        TenantAssert.assertTenantContext();
+        if (StringUtils.isBlank(id)) {
+            return Result.fail("结算单ID不能为空");
+        }
+        FinishedProductSettlement settlement = settlementService.getById(id.trim());
+        if (settlement == null) {
+            return Result.fail("未找到该结算单");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "结算单");
+
+        String currentStatus = settlement.getStatus();
+        if ("cancelled".equalsIgnoreCase(currentStatus) || "CANCELLED".equals(currentStatus)) {
+            return Result.fail("该结算单已取消，无需重复操作");
+        }
+
+        FinishedProductSettlement patch = new FinishedProductSettlement();
+        patch.setId(settlement.getId());
+        patch.setStatus("cancelled");
+        patch.setUpdateTime(LocalDateTime.now());
+        settlementService.updateById(patch);
+
+        return Result.success(null);
+    }
 }

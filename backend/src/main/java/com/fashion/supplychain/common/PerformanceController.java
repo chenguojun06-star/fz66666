@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/monitor/performance")
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class PerformanceController {
 
     @Autowired
@@ -24,7 +25,6 @@ public class PerformanceController {
      * 获取所有性能统计信息
      */
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('ADMIN')")
     public Result<Map<String, Object>> getAllStats() {
         Map<String, MethodStats> stats = performanceMonitor.getAllStats();
 
@@ -51,7 +51,6 @@ public class PerformanceController {
      * 获取指定方法的统计信息
      */
     @GetMapping("/stats/{methodName}")
-    @PreAuthorize("hasRole('ADMIN')")
     public Result<Map<String, Long>> getMethodStats(@PathVariable String methodName) {
         MethodStats stats = performanceMonitor.getStats(methodName);
 
@@ -72,7 +71,6 @@ public class PerformanceController {
      * 清除所有统计信息
      */
     @PostMapping("/clear")
-    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> clearStats() {
         performanceMonitor.clearStats();
         return Result.successMessage("统计信息已清除");
@@ -82,7 +80,6 @@ public class PerformanceController {
      * 打印统计报告到日志
      */
     @PostMapping("/report")
-    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> printReport() {
         performanceMonitor.printReport();
         return Result.successMessage("统计报告已打印到日志");
@@ -92,7 +89,6 @@ public class PerformanceController {
      * 获取慢方法列表（执行时间超过阈值的）
      */
     @GetMapping("/slow-methods")
-    @PreAuthorize("hasRole('ADMIN')")
     public Result<Map<String, Object>> getSlowMethods(
             @RequestParam(defaultValue = "1000") long threshold) {
 

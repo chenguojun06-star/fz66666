@@ -25,7 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/production/pattern")
 @Slf4j
-@PreAuthorize("hasAnyAuthority('MENU_PRODUCTION', 'MENU_PROGRESS', 'ROLE_ADMIN', 'ROLE_1')")
+@PreAuthorize("isAuthenticated()")
 public class PatternProductionController {
 
     @Autowired

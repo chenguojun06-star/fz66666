@@ -27,7 +27,6 @@ public class FinishedInventoryController {
      * @param params 查询参数
      * @return 分页结果
      */
-    @PreAuthorize("hasAuthority('MENU_WAREHOUSE')")
     @PostMapping("/list")
     public Result<IPage<FinishedInventoryDTO>> list(@RequestBody Map<String, Object> params) {
         IPage<FinishedInventoryDTO> page = finishedInventoryOrchestrator.getFinishedInventoryPage(params);
@@ -37,7 +36,6 @@ public class FinishedInventoryController {
     /**
      * 兼容GET方式的查询（适配标准列表组件）
      */
-    @PreAuthorize("hasAuthority('MENU_WAREHOUSE')")
     @GetMapping("/list")
     public Result<IPage<FinishedInventoryDTO>> listGet(@RequestParam Map<String, Object> params) {
         IPage<FinishedInventoryDTO> page = finishedInventoryOrchestrator.getFinishedInventoryPage(params);

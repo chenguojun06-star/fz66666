@@ -147,7 +147,7 @@ const Login: React.FC = () => {
           layout="vertical"
         >
           {/* 隐藏字段存储实际tenantId */}
-          <Form.Item name="tenantId" hidden><Input /></Form.Item>
+          <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
           <Form.Item
             name="companySearch"
             rules={[
@@ -176,6 +176,7 @@ const Login: React.FC = () => {
               <Input
                 prefix={<SearchOutlined className="site-form-item-icon" />}
                 allowClear
+                autoComplete="off"
                 onClear={() => {
                   setSelectedTenant(null);
                   form.setFieldsValue({ tenantId: undefined });

@@ -114,6 +114,7 @@ Controller → Orchestrator → Service → Mapper
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
 - ✅ **权限控制**：Controller **class 级别**添加 `@PreAuthorize("isAuthenticated()")`；超管专属端点使用 `@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")`
 - ✅ **事务边界**：在 Orchestrator 层使用 `@Transactional(rollbackFor = Exception.class)`
+  - ⚠️ **强制**：所有涉及多表写操作的方法（包括 `delete()`、`create()`、`update()`）都必须加此注解，否则任一步骤失败无法回滚
 
 **常见错误示例**（禁止）：
 ```java
@@ -178,7 +179,7 @@ backend/src/main/java/com/fashion/supplychain/
 │   ├── helper/            # 辅助类
 │   └── util/              # 工具类
 ├── style/                 # 款式管理（5个编排器）
-├── finance/               # 财务结算（7个编排器）
+├── finance/               # 财务结算（10个编排器：PayrollAggregation/WagePayment/ReconciliationBackfill/MaterialReconciliationSync/MaterialReconciliation/PayrollSettlement/ReconciliationStatus/ShipmentReconciliation/ExpenseReimbursement/OrderProfit）
 ├── warehouse/             # 仓库管理（2个编排器）
 ├── stock/                 # 库存管理（1个编排器）
 ├── system/                # 系统管理（6个编排器）
@@ -186,7 +187,7 @@ backend/src/main/java/com/fashion/supplychain/
 ├── wechat/                # 微信集成（1个编排器）
 ├── dashboard/             # 仪表板（1个编排器）
 ├── datacenter/            # 数据中心（1个编排器）
-├── payroll/               # 工资管理
+├── payroll/               # ⚠️ 空包（历史遗留，工资管理已全部迁移至 finance/ 模块，此包仅有1个空文件，禁止再往此包新增代码）
 ├── integration/           # 第三方集成
 ├── common/                # 公共组件（Result, UserContext）
 └── config/                # 配置类
@@ -680,6 +681,7 @@ GET /api/production/orders/by-order-no/{o `.run/backend.env` 环境变量
 7. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
 8. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 9. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。`LocalDateTime.now()` 与 DB 的 `NOW()` 相差 8 小时。`1小时撤回等时间校验会对手动插入测试数据失效`。生产数据无问题（Spring Boot 写入时用 CST），但写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 生成 CST 时间。
+10. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
 
 // ❌ 禁止：分散的状态流转
 POST /api/style-info/{id}/pattern-start
@@ -810,6 +812,7 @@ SKU = styleNo + color + size
 8. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
 9. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
+11. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
 
 ---
 

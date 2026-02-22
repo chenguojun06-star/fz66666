@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
+import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.common.Result;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,15 +15,16 @@ import java.util.Map;
 
 /**
  * 工资结算 Controller
- * 支持按人员和工序分组查询工资聚合数据
+ * 支持按人员和工序分组查询工资聚合数据，以及结算单取消/删除操作
  */
 @RestController
 @RequestMapping("/api/finance/payroll-settlement")
 @AllArgsConstructor
-@PreAuthorize("hasAnyAuthority('MENU_PAYROLL_OPERATOR_SUMMARY', 'MENU_FINANCE', 'ROLE_ADMIN', 'ROLE_1')")
+@PreAuthorize("isAuthenticated()")
 public class PayrollSettlementController {
 
     private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;
+    private final PayrollSettlementOrchestrator payrollSettlementOrchestrator;
 
     /**
      * 获取人员工序汇总数据
@@ -85,5 +87,31 @@ public class PayrollSettlementController {
                 );
 
         return Result.success(result);
+    }
+
+    /**
+     * 取消工资结算单
+     * 只允许取消 pending 状态的结算单，取消后释放已关联的扫码记录
+     *
+     * @param id     结算单ID（路径参数）
+     * @param params 请求体，包含 remark（取消原因）
+     */
+    @PostMapping("/{id}/cancel")
+    public Result<Void> cancel(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
+        String remark = params == null ? null : (String) params.get("remark");
+        payrollSettlementOrchestrator.cancel(id, remark);
+        return Result.success(null);
+    }
+
+    /**
+     * 删除工资结算单
+     * 只允许删除已取消(cancelled)的结算单，同时删除明细
+     *
+     * @param id 结算单ID（路径参数）
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable String id) {
+        payrollSettlementOrchestrator.delete(id);
+        return Result.success(null);
     }
 }

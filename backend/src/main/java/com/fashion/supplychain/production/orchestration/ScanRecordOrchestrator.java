@@ -248,6 +248,11 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("记录已失效");
         }
 
+        // 工资已结算的扫码记录禁止撤回
+        if (StringUtils.hasText(target.getPayrollSettlementId())) {
+            throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
+        }
+
         String targetType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase()
                 : (hasText(scanType) ? scanType.trim().toLowerCase() : "");
         boolean warehousingLike = "warehouse".equals(targetType) || "quality".equals(targetType)

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.finance.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -39,5 +40,12 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
     @Override
     public PayrollSettlement getDetailById(String id) {
         return baseMapper.selectById(id);
+    }
+
+    @Override
+    public void deleteByOrderId(String orderId) {
+        if (!StringUtils.hasText(orderId)) return;
+        remove(new LambdaQueryWrapper<PayrollSettlement>()
+                .eq(PayrollSettlement::getOrderId, orderId));
     }
 }

@@ -182,6 +182,7 @@ const Register: React.FC = () => {
               size="large"
               allowClear
               disabled={submitting}
+              autoComplete="organization"
             />
           </Form.Item>
           <Form.Item
@@ -196,6 +197,7 @@ const Register: React.FC = () => {
               size="large"
               allowClear
               disabled={submitting}
+              autoComplete="name"
             />
           </Form.Item>
           <Form.Item
@@ -213,6 +215,7 @@ const Register: React.FC = () => {
               size="large"
               allowClear
               disabled={submitting}
+              autoComplete="tel"
             />
           </Form.Item>
           {isApplyMode && (
@@ -229,9 +232,11 @@ const Register: React.FC = () => {
             <Form.Item
               label="所属工厂"
               required
+              htmlFor="register-factory-search"
               style={{ marginBottom: 8 }}
             >
               <AutoComplete
+                id="register-factory-search"
                 options={filteredOptions.length ? filteredOptions : tenantOptions.map(o => ({ value: o.value, label: o.label }))}
                 onSearch={handleTenantSearch}
                 onSelect={handleTenantSelect}
@@ -260,6 +265,7 @@ const Register: React.FC = () => {
               size="large"
               allowClear
               disabled={submitting}
+              autoComplete="off"
             />
           </Form.Item>
 
@@ -297,6 +303,7 @@ const Register: React.FC = () => {
               size="large"
               allowClear
               disabled={submitting}
+              autoComplete="name"
             />
           </Form.Item>
 

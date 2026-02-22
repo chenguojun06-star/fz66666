@@ -2,6 +2,7 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import {
   AccountBookOutlined,
+  ApiOutlined,
   AppstoreOutlined,
   BookOutlined,
   BuildOutlined,
@@ -113,7 +114,7 @@ export const permissionCodes = {
   systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
   dict: 'MENU_DICT',
   tutorial: 'MENU_TUTORIAL',
-  tenantManagement: 'MENU_TENANT',
+  tenantManagement: 'MENU_TENANT_APP',
   customerManagement: 'MENU_CUSTOMER',
   appStore: 'MENU_APP_STORE_VIEW',
 } as const;
@@ -216,11 +217,10 @@ export const menuConfig: MenuSection[] = [
     superAdminOnly: true,
   },
   {
-    title: '客户应用管理',
+    title: 'API对接管理',
     key: 'tenant',
-    icon: React.createElement(SafetyCertificateOutlined),
+    icon: React.createElement(ApiOutlined),
     path: paths.tenantManagement,
-    superAdminOnly: true,
   },
 ];
 

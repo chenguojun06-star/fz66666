@@ -24,7 +24,6 @@ public class LoginLogController {
     /**
      * 查询登录日志列表
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_LOGIN_LOG_VIEW')")
     @GetMapping("/list")
     public Result<?> getLoginLogList(
             @RequestParam(defaultValue = "1") Long page,
@@ -41,7 +40,6 @@ public class LoginLogController {
     /**
      * 查询操作日志列表
      */
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_LOGIN_LOG_VIEW')")
     @GetMapping("/operations")
     public Result<?> getOperationLogs(
             @RequestParam(required = false) String bizType,

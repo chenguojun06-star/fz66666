@@ -124,6 +124,12 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private com.fashion.supplychain.finance.service.ShipmentReconciliationService shipmentReconciliationService;
 
+    @Autowired
+    private com.fashion.supplychain.finance.service.PayrollSettlementService payrollSettlementService;
+
+    @Autowired
+    private com.fashion.supplychain.finance.service.PayrollSettlementItemService payrollSettlementItemService;
+
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         return productionOrderQueryService.queryPage(params);
     }
@@ -327,6 +333,18 @@ public class ProductionOrderOrchestrator {
             shipmentReconciliationService.removeByOrderId(orderId);
         } catch (Exception e) {
             log.warn("Failed to cascade delete shipment reconciliation: orderId={}", orderId, e);
+        }
+
+        try {
+            payrollSettlementItemService.deleteByOrderId(orderId);
+        } catch (Exception e) {
+            log.warn("Failed to cascade delete payroll settlement items: orderId={}", orderId, e);
+        }
+
+        try {
+            payrollSettlementService.deleteByOrderId(orderId);
+        } catch (Exception e) {
+            log.warn("Failed to cascade delete payroll settlements: orderId={}", orderId, e);
         }
     }
 

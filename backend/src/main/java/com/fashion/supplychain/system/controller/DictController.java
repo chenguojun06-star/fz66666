@@ -25,26 +25,22 @@ public class DictController {
     @Autowired
     private DictOrchestrator dictOrchestrator;
 
-    @PreAuthorize("hasAuthority('MENU_SYSTEM_DICT_VIEW')")
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         IPage<Dict> page = dictOrchestrator.list(params);
         return Result.success(page);
     }
 
-    @PreAuthorize("hasAuthority('MENU_DICT')")
     @PostMapping
     public Result<?> create(@RequestBody Dict dict) {
         return Result.success(dictOrchestrator.create(dict));
     }
 
-    @PreAuthorize("hasAuthority('MENU_DICT')")
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable Long id, @RequestBody Dict dict) {
         return Result.success(dictOrchestrator.update(id, dict));
     }
 
-    @PreAuthorize("hasAuthority('MENU_DICT')")
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         dictOrchestrator.delete(id);

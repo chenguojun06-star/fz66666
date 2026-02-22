@@ -11,21 +11,21 @@ class ProductWarehousingServiceImplRuleTest {
     void rule_rejectsBelowMinBeforeLastFill() {
         String msg = ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 4);
         assertEquals(
-                "入库数量不符合规则（本次4/剩余100/裁剪100）。每次入库数量需在裁剪数量的5%~15%之间（末次可小于5%）",
+                "入库数量不符合规则（本次4/剩余100/裁剪100）。每次入库数量需在裁剪数量的5%~50%之间（末次可小于5%）",
                 msg);
     }
 
     @Test
     void rule_allowsMinAndMax() {
         assertNull(ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 5));
-        assertNull(ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 15));
+        assertNull(ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 50));
     }
 
     @Test
     void rule_rejectsAboveMaxBeforeLastFill() {
-        String msg = ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 16);
+        String msg = ProductWarehousingHelper.warehousingQuantityRuleViolationMessageStatic(100, 0, 51);
         assertEquals(
-                "入库数量不符合规则（本次16/剩余100/裁剪100）。每次入库数量需在裁剪数量的5%~15%之间（末次可小于5%）",
+                "入库数量不符合规则（本次51/剩余100/裁剪100）。每次入库数量需在裁剪数量的5%~50%之间（末次可小于5%）",
                 msg);
     }
 

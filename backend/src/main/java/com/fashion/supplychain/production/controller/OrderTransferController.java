@@ -40,7 +40,7 @@ public class OrderTransferController {
      *
      * @since 2026-02-01 优化版本
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         String type = (String) params.get("type");
@@ -69,7 +69,6 @@ public class OrderTransferController {
     /**
      * 发起订单转移请求
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_MANAGE')")
     @PostMapping("/create")
     public Result<?> createTransfer(@RequestBody Map<String, Object> params) {
         String orderId = (String) params.get("orderId");
@@ -100,7 +99,6 @@ public class OrderTransferController {
      * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
     @Deprecated
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/pending")
     public Result<?> queryPendingTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -115,7 +113,6 @@ public class OrderTransferController {
     /**
      * 接受转移请求
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_MANAGE')")
     @PostMapping("/accept/{transferId}")
     public Result<?> acceptTransfer(@PathVariable Long transferId) {
         try {
@@ -130,7 +127,6 @@ public class OrderTransferController {
     /**
      * 拒绝转移请求
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_MANAGE')")
     @PostMapping("/reject/{transferId}")
     public Result<?> rejectTransfer(@PathVariable Long transferId, @RequestBody Map<String, Object> params) {
         String rejectReason = (String) params.get("rejectReason");
@@ -149,7 +145,6 @@ public class OrderTransferController {
      * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
     @Deprecated
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/my-transfers")
     public Result<?> queryMyTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -166,7 +161,6 @@ public class OrderTransferController {
      * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
     @Deprecated
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/received")
     public Result<?> queryReceivedTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -181,7 +175,6 @@ public class OrderTransferController {
     /**
      * 搜索用户（按名字或ID）
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/search-users")
     public Result<?> searchUsers(
             @RequestParam(required = false) String keyword,
@@ -200,7 +193,6 @@ public class OrderTransferController {
     /**
      * 获取待处理转移数量
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/pending-count")
     public Result<?> getPendingCount() {
         try {
@@ -218,7 +210,6 @@ public class OrderTransferController {
     /**
      * 搜索可转移工厂（仅限同租户系统内部工厂）
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
     @GetMapping("/search-factories")
     public Result<?> searchFactories(
             @RequestParam(required = false) String keyword,
@@ -236,7 +227,6 @@ public class OrderTransferController {
     /**
      * 创建转工厂请求（仅限同租户系统内部工厂）
      */
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_MANAGE')")
     @PostMapping("/create-to-factory")
     public Result<?> createTransferToFactory(@RequestBody Map<String, Object> params) {
         try {

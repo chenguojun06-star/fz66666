@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Button, Card, Modal } from 'antd';
+import { App, Button, Card, Input, Modal } from 'antd';
 import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -268,18 +268,14 @@ const StyleInfoListPage: React.FC = () => {
           <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
             维护说明：将重置 <strong>{maintenanceRecord?.styleNo}</strong> 的完成状态，允许再次修改和提交
           </div>
-          <textarea
+          <Input.TextArea
+            id="maintenance-reason"
+            name="maintenanceReason"
             placeholder="请输入维护原因（必填）"
             value={maintenanceReason}
             onChange={(e) => setMaintenanceReason(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: 100,
-              padding: 8,
-              border: '1px solid #d9d9d9',
-
-              resize: 'vertical',
-            }}
+            rows={4}
+            style={{ width: '100%', resize: 'vertical' }}
           />
         </div>
       </Modal>

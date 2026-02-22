@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -142,6 +143,7 @@ public class MaterialDatabaseOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         MaterialDatabase current = getById(id);
         MaterialDatabase patch = new MaterialDatabase();

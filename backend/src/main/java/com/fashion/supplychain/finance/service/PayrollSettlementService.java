@@ -9,4 +9,9 @@ public interface PayrollSettlementService extends IService<PayrollSettlement> {
     IPage<PayrollSettlement> queryPage(Map<String, Object> params);
 
     PayrollSettlement getDetailById(String id);
+
+    /**
+     * 按订单ID删除工资结算单（用于订单级联清理）
+     */
+    void deleteByOrderId(String orderId);
 }

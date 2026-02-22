@@ -6,6 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -21,6 +24,7 @@ import static org.mockito.Mockito.*;
  * RedisService单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RedisServiceTest {
 
     @Mock
@@ -29,12 +33,17 @@ class RedisServiceTest {
     @Mock
     private ValueOperations<String, Object> valueOperations;
 
+    @SuppressWarnings("rawtypes")
+    @Mock
+    private HashOperations hashOperations;
+
     @InjectMocks
     private RedisService redisService;
 
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
     }
 
     @Test
@@ -197,7 +206,7 @@ class RedisServiceTest {
         redisService.hSet(key, hashKey, value);
 
         // Then
-        verify(redisTemplate.opsForHash()).put(key, hashKey, value);
+        verify(hashOperations).put(key, hashKey, value);
     }
 
     @Test
@@ -206,7 +215,7 @@ class RedisServiceTest {
         String key = "test:hash";
         String hashKey = "field1";
         String expectedValue = "value1";
-        when(redisTemplate.opsForHash().get(key, hashKey)).thenReturn(expectedValue);
+        when(hashOperations.get(key, hashKey)).thenReturn(expectedValue);
 
         // When
         String result = redisService.hGet(key, hashKey);
