@@ -12,3 +12,4 @@ export const Tutorial = React.lazy(() => import('./pages/System/Tutorial'));
 export const TenantManagement = React.lazy(() => import('./pages/System/TenantManagement'));
 export const CustomerManagement = React.lazy(() => import('./pages/System/CustomerManagement'));
 export const AppStore = React.lazy(() => import('./pages/AppStore'));
+export const DataImport = React.lazy(() => import('./pages/DataImport'));

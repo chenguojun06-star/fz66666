@@ -76,6 +76,7 @@ export const paths = {
   tenantManagement: '/system/tenant',
   customerManagement: '/system/customer',
   appStore: '/system/app-store',
+  dataImport: '/system/data-import',
 } as const;
 
 export const permissionCodes = {
@@ -117,6 +118,7 @@ export const permissionCodes = {
   tenantManagement: 'MENU_TENANT_APP',
   customerManagement: 'MENU_CUSTOMER',
   appStore: 'MENU_APP_STORE_VIEW',
+  dataImport: 'MENU_DATA_IMPORT',
 } as const;
 
 export type MenuItem = {
@@ -201,6 +203,7 @@ export const menuConfig: MenuSection[] = [
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
+      { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
     ],
   },
   {
@@ -261,6 +264,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.tenantManagement]: permissionCodes.tenantManagement,
   [paths.customerManagement]: permissionCodes.customerManagement,
   [paths.appStore]: permissionCodes.appStore,
+  [paths.dataImport]: permissionCodes.dataImport,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */
