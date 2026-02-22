@@ -76,12 +76,12 @@ const GlobalImagePreview: React.FC = () => {
   // 计算模态框尺寸
   const getModalSize = React.useMemo(() => {
     if (!imageDimensions) {
-      return { width: 600, height: 600 };
+      return { width: 480, height: 480 };
     }
 
-    const maxWidth = Math.min(window.innerWidth * 0.65, 1000);
-    const maxHeight = Math.min(window.innerHeight * 0.65, 800);
-    const minSize = 300; // 最小尺寸
+    const maxWidth = 600;
+    const maxHeight = 600;
+    const minSize = 240; // 最小尺寸
 
     let { width, height } = imageDimensions;
 
@@ -94,7 +94,6 @@ const GlobalImagePreview: React.FC = () => {
       height = Math.round(height * ratio);
     }
 
-    // 确保最小尺寸
     width = Math.max(width, minSize);
     height = Math.max(height, minSize);
 

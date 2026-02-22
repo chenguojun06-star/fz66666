@@ -11,7 +11,7 @@ interface PreviewModalProps {
 }
 
 const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }) => {
-  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 600, height: 600 });
+  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 480, height: 480 });
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -19,8 +19,8 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
     const naturalHeight = img.naturalHeight;
     if (!naturalWidth || !naturalHeight) return;
 
-    const maxWidth = Math.min(window.innerWidth * 0.65, 1000);
-    const maxHeight = Math.min(window.innerHeight * 0.65, 800);
+    const maxWidth = 600;
+    const maxHeight = 600;
     const minSize = 300;
 
     let w = naturalWidth;
@@ -39,7 +39,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
   };
 
   React.useEffect(() => {
-    if (!open) setModalSize({ width: 600, height: 600 });
+    if (!open) setModalSize({ width: 480, height: 480 });
   }, [open]);
 
   return (

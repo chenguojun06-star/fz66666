@@ -25,7 +25,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   title = '图片预览',
   onClose,
 }) => {
-  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 600, height: 600 });
+  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 480, height: 480 });
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -33,8 +33,8 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     const naturalHeight = img.naturalHeight;
     if (!naturalWidth || !naturalHeight) return;
 
-    const maxWidth = Math.min(window.innerWidth * 0.65, 1000);
-    const maxHeight = Math.min(window.innerHeight * 0.65, 800);
+    const maxWidth = 600;
+    const maxHeight = 600;
     const minSize = 300;
 
     let w = naturalWidth;
@@ -54,7 +54,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
   // 关闭时重置尺寸，避免下次打开闪烁
   React.useEffect(() => {
-    if (!open) setModalSize({ width: 600, height: 600 });
+    if (!open) setModalSize({ width: 480, height: 480 });
   }, [open]);
 
   return (
