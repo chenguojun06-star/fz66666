@@ -376,41 +376,37 @@ const AppStore: React.FC = () => {
             </div>
           )}
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>价格方案</div>
-            <Row gutter={8}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>价格方案</div>
+            <div style={{ display: 'grid', gridTemplateColumns: selectedApp?.trialDays ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: 10 }}>
+              {/* 免费试用 */}
               {selectedApp?.trialDays ? (
-                <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center', borderRadius: 6, border: '1px solid #b7eb8f', background: 'rgba(34, 197, 94, 0.15)' }}>
-                    <GiftOutlined style={{ fontSize: 14, color: 'var(--color-success)', marginBottom: 4 }} />
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>免费试用</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-success)' }}>¥0</div>
-                    <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>{selectedApp.trialDays} 天</div>
-                  </Card>
-                </Col>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 8px', borderRadius: 10, border: '1.5px solid #52c41a', background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', minHeight: 100 }}>
+                  <GiftOutlined style={{ fontSize: 18, color: '#52c41a', marginBottom: 5 }} />
+                  <div style={{ fontSize: 11, color: '#389e0d', fontWeight: 600, marginBottom: 3 }}>免费试用</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#52c41a', lineHeight: 1.1 }}>¥0</div>
+                  <div style={{ fontSize: 11, color: '#73d13d', marginTop: 3 }}>{selectedApp.trialDays} 天</div>
+                </div>
               ) : null}
-              <Col span={selectedApp?.trialDays ? 6 : 8}>
-                <Card size="small" style={{ textAlign: 'center', borderRadius: 6 }}>
-                  <div style={{ fontSize: 11 }}>月付</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary-color, #1890ff)' }}>¥{selectedApp?.priceMonthly}</div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>/月</div>
-                </Card>
-              </Col>
-              <Col span={selectedApp?.trialDays ? 6 : 8}>
-                <Card size="small" style={{ textAlign: 'center', borderRadius: 6, border: '1px solid var(--color-warning)', position: 'relative' }}>
-                  <Tag color="gold" style={{ position: 'absolute', top: -8, right: 4, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>推荐</Tag>
-                  <div style={{ fontSize: 11 }}>年付</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary-color, #1890ff)' }}>¥{selectedApp?.priceYearly}</div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>/年</div>
-                </Card>
-              </Col>
-              <Col span={selectedApp?.trialDays ? 6 : 8}>
-                <Card size="small" style={{ textAlign: 'center', borderRadius: 6 }}>
-                  <div style={{ fontSize: 11 }}>买断</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary-color, #1890ff)' }}>¥{selectedApp?.priceOnce}</div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>永久</div>
-                </Card>
-              </Col>
-            </Row>
+              {/* 月付 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 8px', borderRadius: 10, border: '1.5px solid #d9d9d9', background: '#fafafa', minHeight: 100 }}>
+                <div style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 500, marginBottom: 5 }}>月 付</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#1677ff', lineHeight: 1.1 }}>¥{selectedApp?.priceMonthly}</div>
+                <div style={{ fontSize: 11, color: '#bfbfbf', marginTop: 3 }}>/ 月</div>
+              </div>
+              {/* 年付（推荐） */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 8px', borderRadius: 10, border: '1.5px solid #faad14', background: 'linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%)', minHeight: 100, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: -1, right: -1, background: '#faad14', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: '0 9px 0 8px', letterSpacing: 0.5 }}>推荐</div>
+                <div style={{ fontSize: 11, color: '#d48806', fontWeight: 600, marginBottom: 5 }}>年 付</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#fa8c16', lineHeight: 1.1 }}>¥{selectedApp?.priceYearly}</div>
+                <div style={{ fontSize: 10, color: '#ffc53d', marginTop: 3 }}>/ 年 · 省2个月</div>
+              </div>
+              {/* 买断 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 8px', borderRadius: 10, border: '1.5px solid #adc6ff', background: 'linear-gradient(135deg, #f0f5ff 0%, #d6e4ff 100%)', minHeight: 100 }}>
+                <div style={{ fontSize: 11, color: '#2f54eb', fontWeight: 600, marginBottom: 5 }}>买 断</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#2f54eb', lineHeight: 1.1 }}>¥{selectedApp?.priceOnce}</div>
+                <div style={{ fontSize: 11, color: '#85a5ff', marginTop: 3 }}>永久使用</div>
+              </div>
+            </div>
           </div>
         </div>
       </Modal>
