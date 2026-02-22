@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
-import { PlusOutlined, SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined } from '@ant-design/icons';
+import { PlusOutlined, SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import IntegrationGuideTab from './IntegrationGuideTab';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -253,15 +253,20 @@ const AppManagementTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, disabled: 0, totalCalls: 0 });
   const [queryParams, setQueryParams] = useState({ page: 1, size: 20, appType: '', status: '' });
-  const createModal = useModal<TenantAppInfo>();
   const detailModal = useModal<TenantAppInfo>();
   const logModal = useModal<TenantAppInfo>();
-  const [form] = Form.useForm();
   const [selectedApp, setSelectedApp] = useState<TenantAppInfo | null>(null);
   const [logs, setLogs] = useState<TenantAppLogInfo[]>([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsLoading, setLogsLoading] = useState(false);
   const [newSecret, setNewSecret] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // 行内编辑URL状态
+  const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
+  const [editingUrlField, setEditingUrlField] = useState<'callbackUrl' | 'externalApiUrl' | null>(null);
+  const [editingUrlValue, setEditingUrlValue] = useState('');
+  const [savingUrl, setSavingUrl] = useState(false);
 
   const fetchApps = useCallback(async () => {
     setLoading(true);
@@ -286,23 +291,33 @@ const AppManagementTab: React.FC = () => {
 
   useEffect(() => { fetchApps(); fetchStats(); }, [fetchApps, fetchStats]);
 
-  const handleCreate = async () => {
+  // 行内保存URL
+  const handleSaveUrl = async () => {
+    if (!editingUrlId || !editingUrlField) return;
+    setSavingUrl(true);
     try {
-      const values = await form.validateFields();
-      const res: any = await tenantAppService.createApp(values);
-      const appData = res?.data || res;
-      message.success('应用创建成功');
-      setNewSecret(appData?.appSecret || null);
-      setSelectedApp(appData);
-      createModal.close();
-      detailModal.open(appData);
-      form.resetFields();
+      await tenantAppService.updateApp(editingUrlId, { [editingUrlField]: editingUrlValue });
+      message.success('地址已保存');
+      setEditingUrlId(null);
+      setEditingUrlField(null);
       fetchApps();
-      fetchStats();
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '创建失败');
+    } catch {
+      message.error('保存失败');
+    } finally {
+      setSavingUrl(false);
     }
+  };
+
+  const startEditUrl = (record: TenantAppInfo, field: 'callbackUrl' | 'externalApiUrl') => {
+    setEditingUrlId(record.id);
+    setEditingUrlField(field);
+    setEditingUrlValue((record as any)[field] || '');
+  };
+
+  const cancelEditUrl = () => {
+    setEditingUrlId(null);
+    setEditingUrlField(null);
+    setEditingUrlValue('');
   };
 
   const handleToggleStatus = async (record: TenantAppInfo) => {
@@ -392,7 +407,7 @@ const AppManagementTab: React.FC = () => {
 
   const columns: ColumnsType<TenantAppInfo> = [
     {
-      title: '应用', dataIndex: 'appName', width: 200,
+      title: '应用', dataIndex: 'appName', width: 180,
       render: (name: string, record: TenantAppInfo) => {
         const cfg = APP_TYPE_CONFIG[record.appType];
         return (
@@ -404,13 +419,52 @@ const AppManagementTab: React.FC = () => {
       },
     },
     {
-      title: 'AppKey', dataIndex: 'appKey', width: 220,
+      title: 'AppKey', dataIndex: 'appKey', width: 200,
       render: (key: string) => (
         <Space>
           <Text code style={{ fontSize: 12 }}>{key}</Text>
           <Tooltip title="复制"><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(key)} /></Tooltip>
         </Space>
       ),
+    },
+    {
+      title: '配置状态', key: 'configStatus', width: 90, align: 'center',
+      render: (_: unknown, record: TenantAppInfo) => {
+        const hasUrl = !!(record.callbackUrl || record.externalApiUrl);
+        return (
+          <Tooltip title={hasUrl ? '已配置接口地址' : '未配置接口地址，点击操作列编辑'}>
+            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 11 }}>
+              {hasUrl ? '✓ 已配置' : '⚙ 待配置'}
+            </Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: '回调地址', key: 'callbackUrl', width: 220,
+      render: (_: unknown, record: TenantAppInfo) => {
+        if (editingUrlId === record.id && editingUrlField === 'callbackUrl') {
+          return (
+            <Space size={4}>
+              <Input size="small" value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
+                placeholder="https://..." style={{ width: 150, fontSize: 11 }} />
+              <SaveOutlined style={{ cursor: 'pointer', color: 'var(--color-success)' }} onClick={handleSaveUrl} />
+              <CloseOutlined style={{ cursor: 'pointer', color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
+            </Space>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {record.callbackUrl ? (
+              <Text style={{ fontSize: 11 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 11 }}>未配置</Text>
+            )}
+            <EditOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: 11, flexShrink: 0 }}
+              onClick={() => startEditUrl(record, 'callbackUrl')} />
+          </div>
+        );
+      },
     },
     {
       title: '状态', dataIndex: 'status', width: 80, align: 'center',
@@ -494,8 +548,8 @@ const AppManagementTab: React.FC = () => {
             options={[{ value: 'active', label: '启用' }, { value: 'disabled', label: '停用' }]}
           />
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setNewSecret(null); createModal.open(); }}>
-          创建应用
+        <Button type="primary" icon={<ShopOutlined />} onClick={() => navigate('/system/app-store')}>
+          去应用商店开通
         </Button>
       </div>
 
@@ -513,50 +567,6 @@ const AppManagementTab: React.FC = () => {
         }}
         size="small"
       />
-
-      {/* 创建应用弹窗 */}
-      <ResizableModal
-        open={createModal.visible}
-        title="创建对接应用"
-        onCancel={createModal.close}
-        width="40vw"
-        footer={
-          <Space>
-            <Button onClick={createModal.close}>取消</Button>
-            <Button type="primary" onClick={handleCreate}>确认创建</Button>
-          </Space>
-        }
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item label="应用名称" name="appName" rules={[{ required: true, message: '请输入应用名称' }]}>
-            <Input placeholder="如: XXX品牌下单通道" />
-          </Form.Item>
-          <Form.Item label="应用类型" name="appType" rules={[{ required: true, message: '请选择应用类型' }]}>
-            <Select placeholder="选择对接模块">
-              {Object.entries(APP_TYPE_CONFIG).map(([key, cfg]) => (
-                <Select.Option key={key} value={key}>
-                  <div>
-                    <span>{cfg.icon} {cfg.label}</span>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{cfg.description}</div>
-                  </div>
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item label="回调地址 (Webhook)" name="callbackUrl" tooltip="我们将向此地址推送数据变更通知">
-            <Input placeholder="https://your-system.com/webhook/callback" />
-          </Form.Item>
-          <Form.Item label="客户API地址" name="externalApiUrl" tooltip="用于主动调用客户系统接口">
-            <Input placeholder="https://your-system.com/api" />
-          </Form.Item>
-          <Form.Item label="每日调用限制" name="dailyQuota" tooltip="0 表示不限制">
-            <InputNumber min={0} max={1000000} defaultValue={0} style={{ width: '100%' }} placeholder="0 = 不限制" />
-          </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={2} placeholder="备注说明" />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
 
       {/* 应用详情弹窗 */}
       <ResizableModal

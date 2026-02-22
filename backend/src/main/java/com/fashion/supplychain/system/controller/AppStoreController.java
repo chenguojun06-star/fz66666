@@ -146,6 +146,7 @@ public class AppStoreController {
 
     /**
      * 开通免费试用（7天）
+     * 支持一步到位：可同时传入 callbackUrl / externalApiUrl，自动配置API对接
      */
     @PostMapping("/start-trial")
     public Result<?> startTrial(@RequestBody Map<String, Object> params) {
@@ -153,6 +154,10 @@ public class AppStoreController {
             Long appId = Long.valueOf(params.get("appId").toString());
             Long tenantId = UserContext.tenantId();
             if (tenantId == null) tenantId = 0L;
+
+            // 获取可选的 URL 参数（一键配置）
+            String callbackUrl = params.get("callbackUrl") != null ? params.get("callbackUrl").toString().trim() : null;
+            String externalApiUrl = params.get("externalApiUrl") != null ? params.get("externalApiUrl").toString().trim() : null;
 
             // 1. 查询应用信息
             AppStore app = appStoreService.getById(appId);
@@ -208,16 +213,23 @@ public class AppStoreController {
 
             tenantSubscriptionService.save(subscription);
 
-            // 6. 自动创建 TenantApp（API对接凭证），使租户可以立即使用API
+            // 6. 自动创建 TenantApp（API对接凭证），同时自动配置URL
             TenantAppResponse appCredentials = null;
             try {
                 TenantAppRequest appRequest = new TenantAppRequest();
                 appRequest.setAppName(app.getAppName() + "(试用)");
-                appRequest.setAppType(app.getAppCode()); // AppStore.appCode == TenantApp.appType
-                appRequest.setDailyQuota(100); // 试用期每日100次调用
+                appRequest.setAppType(app.getAppCode());
+                appRequest.setDailyQuota(100);
                 appRequest.setRemark("试用自动创建 - 订阅号: " + subscription.getSubscriptionNo());
                 String expireTime = subscription.getEndTime().toString();
                 appRequest.setExpireTime(expireTime);
+                // 一键配置：传入URL
+                if (callbackUrl != null && !callbackUrl.isEmpty()) {
+                    appRequest.setCallbackUrl(callbackUrl);
+                }
+                if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
+                    appRequest.setExternalApiUrl(externalApiUrl);
+                }
                 appCredentials = tenantAppOrchestrator.createApp(tenantId, appRequest);
                 log.info("试用自动创建API凭证: appKey={}", appCredentials.getAppKey());
             } catch (Exception ex) {
@@ -227,13 +239,20 @@ public class AppStoreController {
             log.info("应用试用开通成功：{} - 租户 {} - 到期 {}",
                 app.getAppName(), tenantId, subscription.getEndTime());
 
-            // 返回订阅信息，附带API凭证
+            // 7. 构建API端点信息（告诉前端这个模块包含哪些端点）
+            List<Map<String, String>> apiEndpoints = getApiEndpointsForModule(app.getAppCode());
+
+            // 返回订阅信息 + API凭证 + 端点信息
             Map<String, Object> responseData = new java.util.HashMap<>();
             responseData.put("subscription", subscription);
+            responseData.put("apiEndpoints", apiEndpoints);
+            responseData.put("appCode", app.getAppCode());
+            responseData.put("appName", app.getAppName());
             if (appCredentials != null) {
                 responseData.put("apiCredentials", Map.of(
                     "appKey", appCredentials.getAppKey(),
                     "appSecret", appCredentials.getAppSecret(),
+                    "appId", appCredentials.getId(),
                     "message", "⚠️ 请保存以下API密钥，仅显示一次！"
                 ));
             }
@@ -242,6 +261,121 @@ public class AppStoreController {
         } catch (Exception e) {
             log.error("开通试用失败", e);
             return Result.fail("开通试用失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 快速配置已开通的应用（填写对方API地址即可使用）
+     * 用户购买/试用后，调用此接口一键配置回调URL和外部API地址
+     */
+    @PostMapping("/quick-setup")
+    public Result<?> quickSetup(@RequestBody Map<String, Object> params) {
+        try {
+            String tenantAppId = params.get("tenantAppId") != null ? params.get("tenantAppId").toString() : null;
+            String callbackUrl = params.get("callbackUrl") != null ? params.get("callbackUrl").toString().trim() : null;
+            String externalApiUrl = params.get("externalApiUrl") != null ? params.get("externalApiUrl").toString().trim() : null;
+
+            if (tenantAppId == null || tenantAppId.isEmpty()) {
+                return Result.fail("请指定要配置的应用ID");
+            }
+
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) tenantId = 0L;
+
+            TenantAppRequest updateReq = new TenantAppRequest();
+            if (callbackUrl != null && !callbackUrl.isEmpty()) {
+                updateReq.setCallbackUrl(callbackUrl);
+            }
+            if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
+                updateReq.setExternalApiUrl(externalApiUrl);
+            }
+
+            TenantAppResponse updated = tenantAppOrchestrator.updateApp(tenantAppId, tenantId, updateReq);
+            log.info("快速配置完成: tenantAppId={}, callbackUrl={}, externalApiUrl={}", tenantAppId, callbackUrl, externalApiUrl);
+
+            return Result.success(updated);
+        } catch (Exception e) {
+            log.error("快速配置失败", e);
+            return Result.fail("配置失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取我的已开通应用列表（合并应用商店信息 + API凭证状态）
+     * 前端用于展示"已购应用"及其配置状态
+     */
+    @PostMapping("/my-apps")
+    public Result<?> getMyApps() {
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) tenantId = 0L;
+
+            // 获取所有订阅
+            QueryWrapper<TenantSubscription> subWrapper = new QueryWrapper<>();
+            subWrapper.eq("tenant_id", tenantId);
+            subWrapper.orderByDesc("create_time");
+            List<TenantSubscription> subscriptions = tenantSubscriptionService.list(subWrapper);
+
+            // 获取所有 TenantApp
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<TenantAppResponse> appsPage =
+                tenantAppOrchestrator.listApps(tenantId, null, null, 1, 100);
+            List<TenantAppResponse> apps = appsPage.getRecords();
+
+            // 组装每个已订阅应用的信息
+            List<Map<String, Object>> myApps = new java.util.ArrayList<>();
+            java.util.Set<String> processedCodes = new java.util.HashSet<>();
+
+            for (TenantSubscription sub : subscriptions) {
+                if (processedCodes.contains(sub.getAppCode())) continue;
+                processedCodes.add(sub.getAppCode());
+
+                Map<String, Object> appInfo = new java.util.LinkedHashMap<>();
+                appInfo.put("subscriptionId", sub.getId());
+                appInfo.put("appCode", sub.getAppCode());
+                appInfo.put("appName", sub.getAppName());
+                appInfo.put("subscriptionType", sub.getSubscriptionType());
+                appInfo.put("status", sub.getStatus());
+                appInfo.put("startTime", sub.getStartTime());
+                appInfo.put("endTime", sub.getEndTime());
+                boolean isExpired = sub.getEndTime() != null && sub.getEndTime().isBefore(LocalDateTime.now());
+                appInfo.put("isExpired", isExpired);
+
+                // 匹配对应的 TenantApp
+                TenantAppResponse matchedApp = apps.stream()
+                    .filter(a -> sub.getAppCode().equals(a.getAppType()))
+                    .findFirst().orElse(null);
+
+                if (matchedApp != null) {
+                    appInfo.put("tenantAppId", matchedApp.getId());
+                    appInfo.put("appKey", matchedApp.getAppKey());
+                    appInfo.put("callbackUrl", matchedApp.getCallbackUrl());
+                    appInfo.put("externalApiUrl", matchedApp.getExternalApiUrl());
+                    appInfo.put("dailyQuota", matchedApp.getDailyQuota());
+                    appInfo.put("dailyUsed", matchedApp.getDailyUsed());
+                    appInfo.put("totalCalls", matchedApp.getTotalCalls());
+                    appInfo.put("appStatus", matchedApp.getStatus());
+                    // 配置状态判断
+                    boolean hasCallbackUrl = matchedApp.getCallbackUrl() != null && !matchedApp.getCallbackUrl().isEmpty();
+                    boolean hasExternalUrl = matchedApp.getExternalApiUrl() != null && !matchedApp.getExternalApiUrl().isEmpty();
+                    appInfo.put("configured", hasCallbackUrl || hasExternalUrl);
+                    appInfo.put("hasCallbackUrl", hasCallbackUrl);
+                    appInfo.put("hasExternalUrl", hasExternalUrl);
+                } else {
+                    appInfo.put("configured", false);
+                    appInfo.put("hasCallbackUrl", false);
+                    appInfo.put("hasExternalUrl", false);
+                }
+
+                // API端点列表
+                appInfo.put("apiEndpoints", getApiEndpointsForModule(sub.getAppCode()));
+
+                myApps.add(appInfo);
+            }
+
+            return Result.success(myApps);
+        } catch (Exception e) {
+            log.error("获取我的应用失败", e);
+            return Result.fail("获取失败：" + e.getMessage());
         }
     }
 
@@ -298,6 +432,7 @@ public class AppStoreController {
      * 【管理员】手动激活订单（人工开通模式）
      * 收到款项后，管理员调用此接口完成开通，无需对接支付网关
      */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/admin/activate-order")
     public Result<?> adminActivateOrder(@RequestBody ActivateOrderRequest request) {
         try {
@@ -359,6 +494,7 @@ public class AppStoreController {
             subscription.setAutoRenew(false);
             UserContext ctx = UserContext.get();
             subscription.setCreatedBy(ctx != null ? ctx.getUsername() : "admin");
+            subscription.setOrderId(order.getId());
             subscription.setRemark("人工开通 - " + (request.getRemark() != null ? request.getRemark() : order.getOrderNo()));
             tenantSubscriptionService.save(subscription);
 
@@ -402,6 +538,7 @@ public class AppStoreController {
     /**
      * 【管理员】查看所有待处理订单（用于跟进人工开通）
      */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/admin/order-list")
     public Result<List<AppOrder>> adminOrderList(@RequestBody(required = false) Map<String, Object> params) {
         QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
@@ -413,6 +550,47 @@ public class AppStoreController {
     }
 
     /**
+     * 获取某个模块包含的所有API端点信息
+     */
+    private List<Map<String, String>> getApiEndpointsForModule(String appCode) {
+        List<Map<String, String>> endpoints = new java.util.ArrayList<>();
+        switch (appCode) {
+            case "ORDER_SYNC":
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/order/create", "desc", "创建生产订单"));
+                endpoints.add(Map.of("method", "GET", "path", "/openapi/v1/order/status/{orderNo}", "desc", "查询订单状态"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/order/list", "desc", "订单列表查询"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/order/upload", "desc", "批量上传订单"));
+                break;
+            case "QUALITY_FEEDBACK":
+                endpoints.add(Map.of("method", "GET", "path", "/openapi/v1/quality/report/{orderNo}", "desc", "获取质检报告"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/quality/list", "desc", "质检记录列表"));
+                endpoints.add(Map.of("method", "PUSH", "path", "Webhook回调", "desc", "自动推送质检结果到您的系统"));
+                break;
+            case "LOGISTICS_SYNC":
+                endpoints.add(Map.of("method", "GET", "path", "/openapi/v1/logistics/status/{orderNo}", "desc", "查询物流状态"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/logistics/list", "desc", "物流记录列表"));
+                endpoints.add(Map.of("method", "PUSH", "path", "Webhook回调", "desc", "出库时自动推送物流信息"));
+                break;
+            case "PAYMENT_SYNC":
+                endpoints.add(Map.of("method", "GET", "path", "/openapi/v1/payment/pending", "desc", "待付款清单"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/payment/confirm", "desc", "确认付款"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/payment/list", "desc", "付款记录列表"));
+                break;
+            case "MATERIAL_SUPPLY":
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/material/purchase-order", "desc", "推送采购订单"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/material/purchase/upload", "desc", "批量上传采购记录"));
+                endpoints.add(Map.of("method", "POST", "path", "/openapi/v1/material/inventory/query", "desc", "查询供应商库存"));
+                endpoints.add(Map.of("method", "PUSH", "path", "/openapi/v1/webhook/material/order-confirm", "desc", "供应商对采购单确认回调"));
+                endpoints.add(Map.of("method", "PUSH", "path", "/openapi/v1/webhook/material/price-update", "desc", "供应商价格更新回调"));
+                endpoints.add(Map.of("method", "PUSH", "path", "/openapi/v1/webhook/material/shipping-update", "desc", "供应商发货物流回调"));
+                break;
+            default:
+                break;
+        }
+        return endpoints;
+    }
+
+    /**
      * 计算价格
      */
     private BigDecimal calculatePrice(AppStore app, String subscriptionType) {
@@ -420,11 +598,11 @@ public class AppStoreController {
             case "TRIAL":
                 return BigDecimal.ZERO;
             case "MONTHLY":
-                return app.getPriceMonthly();
+                return app.getPriceMonthly() != null ? app.getPriceMonthly() : BigDecimal.ZERO;
             case "YEARLY":
-                return app.getPriceYearly();
+                return app.getPriceYearly() != null ? app.getPriceYearly() : BigDecimal.ZERO;
             case "PERPETUAL":
-                return app.getPriceOnce();
+                return app.getPriceOnce() != null ? app.getPriceOnce() : BigDecimal.ZERO;
             default:
                 return BigDecimal.ZERO;
         }

@@ -1,5 +1,28 @@
 import request from '@/utils/api';
 
+export interface MyAppInfo {
+  subscriptionId: number;
+  appCode: string;
+  appName: string;
+  subscriptionType: string;
+  status: string;
+  startTime: string;
+  endTime?: string;
+  isExpired: boolean;
+  tenantAppId?: string;
+  appKey?: string;
+  callbackUrl?: string;
+  externalApiUrl?: string;
+  dailyQuota?: number;
+  dailyUsed?: number;
+  totalCalls?: number;
+  appStatus?: string;
+  configured: boolean;
+  hasCallbackUrl: boolean;
+  hasExternalUrl: boolean;
+  apiEndpoints?: { method: string; path: string; desc: string }[];
+}
+
 export interface AppStoreItem {
   id: number;
   appCode: string;
@@ -95,32 +118,48 @@ export const appStoreService = {
 
   // 创建订单
   createOrder: (data: CreateOrderRequest): Promise<AppOrder> => {
-    return request.post('/system/app-order/create', data);
+    return request.post('/system/app-store/create-order', data);
   },
 
   // 获取我的订阅
   getMySubscriptions: (): Promise<Subscription[]> => {
-    return request.post('/system/subscription/list');
+    return request.post('/system/app-store/my-subscriptions');
   },
 
-  // 获取订单详情
+  // 获取订单详情（TODO: 后端暂未实现独立的订单详情查询端点，需要时再添加）
   getOrder: (orderNo: string): Promise<AppOrder> => {
-    return request.get(`/system/app-order/${orderNo}`);
+    return request.get(`/system/app-store/order/${orderNo}`);
   },
 
-  // 取消订单
+  // 取消订单（TODO: 后端暂未实现取消订单端点，需要时再添加）
   cancelOrder: (orderNo: string): Promise<void> => {
-    return request.post(`/system/app-order/${orderNo}/cancel`);
+    return request.post(`/system/app-store/order/${orderNo}/cancel`);
   },
 
-  // 续费订阅
+  // 续费订阅（TODO: 后端暂未实现续费端点，需要时再添加）
   renewSubscription: (subscriptionId: number, subscriptionType: string): Promise<AppOrder> => {
-    return request.post(`/system/subscription/${subscriptionId}/renew`, { subscriptionType });
+    return request.post(`/system/app-store/subscription/${subscriptionId}/renew`, { subscriptionType });
   },
 
-  // 开通免费试用（返回订阅信息 + API凭证）
-  startTrial: (appId: number): Promise<{ subscription: Subscription; apiCredentials?: { appKey: string; appSecret: string; message: string } }> => {
-    return request.post('/system/app-store/start-trial', { appId });
+  // 开通免费试用（返回订阅信息 + API凭证 + 端点信息）
+  startTrial: (appId: number, options?: { callbackUrl?: string; externalApiUrl?: string }): Promise<{
+    subscription: Subscription;
+    apiCredentials?: { appKey: string; appSecret: string; appId: string; message: string };
+    apiEndpoints?: { method: string; path: string; desc: string }[];
+    appCode?: string;
+    appName?: string;
+  }> => {
+    return request.post('/system/app-store/start-trial', { appId, ...options });
+  },
+
+  // 快速配置（填写对方API地址）
+  quickSetup: (tenantAppId: string, data: { callbackUrl?: string; externalApiUrl?: string }): Promise<any> => {
+    return request.post('/system/app-store/quick-setup', { tenantAppId, ...data });
+  },
+
+  // 获取我的已开通应用（含配置状态）
+  getMyApps: (): Promise<MyAppInfo[]> => {
+    return request.post('/system/app-store/my-apps');
   },
 
   // 检查试用状态
