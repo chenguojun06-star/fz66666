@@ -21,11 +21,15 @@ server {
         try_files $uri =404;
     }
 
-    # index.html 不缓存
+    # index.html 不缓存（安全头必须在此重复声明，否则 nginx add_header 不继承）
     location = /index.html {
         add_header Cache-Control "no-store, no-cache, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header X-Content-Type-Options "nosniff";
+        add_header Referrer-Policy "strict-origin-when-cross-origin";
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: https:;" always;
     }
 
     # ---- 健康检查 / 调试 ----
@@ -83,7 +87,7 @@ server {
 
     # ---- SPA 路由支持 ----
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri $uri/ @spa_fallback;
     }
 
     # ---- 安全响应头 ----
@@ -95,7 +99,15 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: https:;" always;
 
     # ---- 错误页 ----
-    # 仅 404 返回 SPA 页面（支持 React Router 客户端路由）
-    # 500/502/503/504 不拦截：让 /api/ 代理错误原样返回，便于调试
-    error_page 404 /index.html;
+    # CORB 修复：图片/ZIP/字体等二进制请求404时直接返回404，不返回SPA HTML
+    # 否则 <img src="xxx.png"> 收到HTML → Response was blocked by CORB
+    error_page 404 @spa_fallback;
+    location @spa_fallback {
+        # 二进制/媒体文件类型：直接返回404，避免img/script标签收到HTML触发CORB
+        if ($request_uri ~* "\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|pdf|zip|rar|tar|gz|mp3|mp4|woff|woff2|ttf|eot|otf)$") {
+            return 404;
+        }
+        # SPA路由：其余请求（/profile /orders 等）回退到index.html
+        rewrite ^ /index.html last;
+    }
 }
