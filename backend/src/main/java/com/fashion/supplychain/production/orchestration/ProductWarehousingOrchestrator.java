@@ -414,6 +414,77 @@ public class ProductWarehousingOrchestrator {
     }
 
     /**
+     * 查询指定订单下各菲号的扫码就绪状态
+     * 返回：qcReadyQrs（已完成车缝、尚未质检的菲号二维码列表）
+     *       warehouseReadyQrs（已质检、尚未入库的菲号二维码列表）
+     * 前端用于控制质检/入库页面中哪些菲号可选
+     */
+    public Map<String, Object> getBundleReadiness(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+
+        // 查询该订单所有关联菲号的扫码记录
+        List<ScanRecord> scans = scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderId, orderId.trim())
+                        .isNotNull(ScanRecord::getCuttingBundleId)
+                        .ne(ScanRecord::getCuttingBundleId, "")
+        );
+
+        // 按 cuttingBundleId 分组，收集每个菲号经历的 scanType 集合
+        Map<String, Set<String>> bundleScanTypes = new HashMap<>();
+        for (ScanRecord scan : scans) {
+            String bundleId = scan.getCuttingBundleId().trim();
+            String scanType = scan.getScanType();
+            if (!StringUtils.hasText(scanType)) continue;
+            bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
+        }
+
+        // 分类：质检就绪 vs 入库就绪
+        Set<String> qcReadyBundleIds = new HashSet<>();
+        Set<String> warehouseReadyBundleIds = new HashSet<>();
+
+        for (Map.Entry<String, Set<String>> entry : bundleScanTypes.entrySet()) {
+            Set<String> types = entry.getValue();
+            // 质检就绪：完成车缝(production) 但还没质检(quality)
+            if (types.contains("production") && !types.contains("quality")) {
+                qcReadyBundleIds.add(entry.getKey());
+            }
+            // 入库就绪：已质检(quality) 但还没入库(warehouse)
+            if (types.contains("quality") && !types.contains("warehouse")) {
+                warehouseReadyBundleIds.add(entry.getKey());
+            }
+        }
+
+        // 将 bundleId 转换为 QR code
+        Set<String> allIds = new HashSet<>();
+        allIds.addAll(qcReadyBundleIds);
+        allIds.addAll(warehouseReadyBundleIds);
+
+        List<String> qcReadyQrs = new ArrayList<>();
+        List<String> warehouseReadyQrs = new ArrayList<>();
+
+        if (!allIds.isEmpty()) {
+            List<CuttingBundle> bundles = cuttingBundleService.listByIds(new ArrayList<>(allIds));
+            if (bundles != null) {
+                for (CuttingBundle b : bundles) {
+                    if (b == null || !StringUtils.hasText(b.getId()) || !StringUtils.hasText(b.getQrCode())) continue;
+                    String bid = b.getId().trim();
+                    String qr = b.getQrCode().trim();
+                    if (qcReadyBundleIds.contains(bid)) qcReadyQrs.add(qr);
+                    if (warehouseReadyBundleIds.contains(bid)) warehouseReadyQrs.add(qr);
+                }
+            }
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("qcReadyQrs", qcReadyQrs);
+        result.put("warehouseReadyQrs", warehouseReadyQrs);
+        return result;
+    }
+
+    /**
      * 质检简报：返回订单的关键信息、款式BOM、尺寸规格、质检注意事项
      * 供质检详情页右侧面板使用
      */

@@ -38,6 +38,7 @@ export const useWarehousingForm = (
   const [qualifiedWarehousedBundleQrs, setQualifiedWarehousedBundleQrs] = useState<string[]>([]);
   const [bundleRepairStatsByQr, setBundleRepairStatsByQr] = useState<Record<string, BundleRepairStats>>({});
   const [bundleRepairRemainingByQr, setBundleRepairRemainingByQr] = useState<Record<string, number>>({});
+  const [productionReadyQrs, setProductionReadyQrs] = useState<string[]>([]);
   const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]);
   const [batchSelectedBundleQrs, setBatchSelectedBundleQrs] = useState<string[]>([]);
   const [batchQtyByQr, setBatchQtyByQr] = useState<Record<string, number>>({});
@@ -131,6 +132,26 @@ export const useWarehousingForm = (
     } catch {
       setQualifiedWarehousedBundleQrs([]);
       form.setFieldsValue({ warehousingNo: undefined });
+    }
+  };
+
+  const fetchBundleReadiness = async (orderId: string) => {
+    const oid = String(orderId || '').trim();
+    if (!oid) {
+      setProductionReadyQrs([]);
+      return;
+    }
+    try {
+      const res = await api.get<{ code: number; data: { qcReadyQrs: string[]; warehouseReadyQrs: string[] } }>('/production/warehousing/bundle-readiness', {
+        params: { orderId: oid },
+      });
+      if (res.code === 200) {
+        setProductionReadyQrs((res.data?.qcReadyQrs || []).map((v: string) => String(v || '').trim()).filter(Boolean));
+      } else {
+        setProductionReadyQrs([]);
+      }
+    } catch {
+      setProductionReadyQrs([]);
     }
   };
 
@@ -253,6 +274,7 @@ export const useWarehousingForm = (
     if (!visible) {
       setBundles([]);
       setQualifiedWarehousedBundleQrs([]);
+      setProductionReadyQrs([]);
       setBatchSelectedBundleQrs([]);
       setBatchQtyByQr({});
       setDetailWarehousingItems([]);
@@ -333,6 +355,14 @@ export const useWarehousingForm = (
     );
   }, [qualifiedWarehousedBundleQrs]);
 
+  const productionReadyQrSet = useMemo(() => {
+    return new Set(
+      productionReadyQrs
+        .map((v) => String(v || '').trim())
+        .filter(Boolean)
+    );
+  }, [productionReadyQrs]);
+
   const batchSelectRows = useMemo((): BatchSelectBundleRow[] => {
     return bundles
       .map((b) => {
@@ -347,11 +377,15 @@ export const useWarehousingForm = (
         const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
         const availableQty = isBlocked ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
         const isUsed = qualifiedWarehousedBundleQrSet.has(qr);
-        const disabled = isUsed || (isBlocked && (remaining === undefined || availableQty <= 0));
+        // 检查生产就绪：菲号必须完成车缝扫码才可质检
+        const isProductionReady = productionReadyQrSet.size === 0 || productionReadyQrSet.has(qr);
+        const disabled = isUsed || !isProductionReady || (isBlocked && (remaining === undefined || availableQty <= 0));
 
         let statusText = '';
         if (isUsed) {
           statusText = '已合格质检';
+        } else if (!isProductionReady) {
+          statusText = '生产未完成';
         } else if (isBlocked) {
           if (remaining === undefined) statusText = '次品待返修（计算中）';
           else statusText = availableQty > 0 ? `次品待返修｜可入库${availableQty}` : '次品待返修｜无可入库';
@@ -375,7 +409,7 @@ export const useWarehousingForm = (
         };
       })
       .filter(Boolean) as BatchSelectBundleRow[];
-  }, [bundleRepairRemainingByQr, bundles, qualifiedWarehousedBundleQrSet]);
+  }, [bundleRepairRemainingByQr, bundles, productionReadyQrSet, qualifiedWarehousedBundleQrSet]);
 
   const batchSelectableQrs = useMemo(() => {
     return batchSelectRows.filter((r) => !r.disabled).map((r) => r.qr);
@@ -735,6 +769,7 @@ export const useWarehousingForm = (
       });
       setBundles([]);
       setQualifiedWarehousedBundleQrs([]);
+      setProductionReadyQrs([]);
       setBatchSelectedBundleQrs([]);
       setBatchQtyByQr({});
       return;
@@ -764,11 +799,13 @@ export const useWarehousingForm = (
       repairRemark: '',
     });
     setQualifiedWarehousedBundleQrs([]);
+    setProductionReadyQrs([]);
     setBatchSelectedBundleQrs([]);
     setBatchQtyByQr({});
     await Promise.all([
       fetchBundlesByOrderNo((order as any).orderNo!),
       fetchQualifiedWarehousedBundleQrsByOrderId((order as any).id!),
+      fetchBundleReadiness((order as any).id!),
     ]);
   };
 

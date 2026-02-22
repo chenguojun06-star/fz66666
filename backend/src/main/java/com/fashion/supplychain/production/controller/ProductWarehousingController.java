@@ -45,6 +45,16 @@ public class ProductWarehousingController {
     }
 
     /**
+     * 查询指定订单下各菲号的扫码就绪状态
+     * 用于质检/入库详情页控制哪些菲号可操作
+     * 返回 qcReadyQrs（可质检菲号QR列表）和 warehouseReadyQrs（可入库菲号QR列表）
+     */
+    @GetMapping("/bundle-readiness")
+    public Result<?> getBundleReadiness(@RequestParam String orderId) {
+        return Result.success(productWarehousingOrchestrator.getBundleReadiness(orderId));
+    }
+
+    /**
      * 质检简报：返回订单关键信息、BOM、尺寸规格、质检注意事项
      * 供质检详情页右侧面板使用
      */
