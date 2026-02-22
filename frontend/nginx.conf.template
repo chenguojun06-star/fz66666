@@ -8,6 +8,9 @@ server {
     listen 80;
     server_name _;
 
+    # 允许上传最大 50MB 文件（与后端 Spring Boot multipart 配置保持一致）
+    client_max_body_size 50m;
+
     root /usr/share/nginx/html;
     index index.html;
 
