@@ -16,10 +16,16 @@ import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import com.fashion.supplychain.system.entity.TenantSubscription;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -46,6 +52,40 @@ public class AppStoreOrchestrator {
 
     @Autowired
     private TenantService tenantService;
+
+    /** Server酱 SendKey，设置环境变量 NOTIFY_SERVERCHAN_KEY 即可启用微信通知 */
+    @Value("${notify.serverchan.key:}")
+    private String serverChanKey;
+
+    /**
+     * 发送微信通知（通过 Server酱，免费，直接推送到管理员个人微信"服务通知"）
+     * 配置方式：设置环境变量 NOTIFY_SERVERCHAN_KEY=你的SendKey
+     * 获取 SendKey：微信扫码登录 https://sct.ftqq.com/
+     */
+    private void sendWechatNotify(String title, String content) {
+        if (serverChanKey == null || serverChanKey.isBlank()) {
+            return; // 未配置，静默跳过
+        }
+        try {
+            String apiUrl = "https://sctapi.ftqq.com/" + serverChanKey.trim() + ".send";
+            String body = "title=" + URLEncoder.encode(title, StandardCharsets.UTF_8)
+                    + "&desp=" + URLEncoder.encode(content, StandardCharsets.UTF_8);
+            HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setDoOutput(true);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body.getBytes(StandardCharsets.UTF_8));
+            }
+            int code = conn.getResponseCode();
+            log.info("[Server酱通知] 发送结果: HTTP {}, title={}", code, title);
+            conn.disconnect();
+        } catch (Exception e) {
+            log.warn("[Server酱通知] 发送失败（不影响主流程）: {}", e.getMessage());
+        }
+    }
 
     /**
      * 获取当前租户名称（优先从 t_tenant 查，否则用 username）
@@ -104,6 +144,22 @@ public class AppStoreOrchestrator {
 
         appOrderService.save(order);
         log.info("创建应用订单成功：{}", order.getOrderNo());
+
+        // 微信通知（Server酱，非阻塞，失败不影响主流程）
+        try {
+            String notifyContent = "**应用**：" + app.getAppName() + "  \n"
+                    + "**套餐**：" + subscriptionType + "  \n"
+                    + "**金额**：¥" + actualAmount + "  \n"
+                    + "**联系人**：" + contactName + " " + contactPhone + "  \n"
+                    + "**公司**：" + (companyName != null ? companyName : "-") + "  \n"
+                    + "**租户**：" + order.getTenantName() + "  \n"
+                    + "**订单号**：" + order.getOrderNo() + "  \n"
+                    + "\n> 请登录后台 → 应用商店 → 人工激活订单";
+            sendWechatNotify("🛒 新购买订单：" + app.getAppName(), notifyContent);
+        } catch (Exception e) {
+            log.warn("订单通知发送异常（不影响主流程）", e);
+        }
+
         return order;
     }
 

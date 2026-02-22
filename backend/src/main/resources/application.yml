@@ -182,3 +182,10 @@ wechat:
     appid: ${WECHAT_MP_APPID:}
     secret: ${WECHAT_MP_SECRET:}
     mock-enabled: true
+
+# 微信通知（Server酱，免费，直接推到个人微信"服务通知"）
+# 获取 SendKey：微信扫码登录 https://sct.ftqq.com/ → 复制 SendKey
+# 设置方式：环境变量 NOTIFY_SERVERCHAN_KEY=你的SendKey
+notify:
+  serverchan:
+    key: ${NOTIFY_SERVERCHAN_KEY:}
