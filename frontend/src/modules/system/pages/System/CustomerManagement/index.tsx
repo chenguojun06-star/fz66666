@@ -548,7 +548,8 @@ const TenantListTab: React.FC = () => {
   );
 };
 
-// ========== 注册审批 Tab ==========: React.FC = () => {
+// ========== 注册审批 Tab ==========
+const RegistrationTab: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [tenantApps, setTenantApps] = useState<TenantInfo[]>([]);
   const [tenantAppsLoading, setTenantAppsLoading] = useState(false);
@@ -570,12 +571,12 @@ const TenantListTab: React.FC = () => {
   const handleApproveTenant = async (record: TenantInfo) => {
     Modal.confirm({
       title: `确认审批通过「${record.tenantName}」`,
-      content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户。`,
+      content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户（默认免费试用30天，可在「客户管理」中调整套餐）。`,
       okText: '确认审批',
       cancelText: '取消',
       onOk: async () => {
         try {
-          await tenantService.approveApplication(record.id);
+          await tenantService.approveApplication(record.id, { planType: 'TRIAL', trialDays: 30 });
           message.success('审批通过，工厂账户已激活');
           fetchTenantApps();
         } catch (e: any) {
