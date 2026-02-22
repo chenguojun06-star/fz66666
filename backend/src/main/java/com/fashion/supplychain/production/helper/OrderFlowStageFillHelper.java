@@ -349,6 +349,9 @@ public class OrderFlowStageFillHelper {
                                 (int) Math.round(Math.max(0, packagingQty) * 100.0 / baseQtyForRate));
                 o.setPackagingCompletionRate(packagingRate);
 
+                // 尾部工序：使用包装完成率作为近似（剪线等尾部工序与包装阶段对齐）
+                o.setTailProcessRate(packagingRate);
+
                 o.setQualityStartTime(qualityStart);
                 o.setQualityEndTime(qualityEnd);
                 o.setQualityOperatorName(qualityOperator);
