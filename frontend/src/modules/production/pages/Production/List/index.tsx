@@ -356,6 +356,14 @@ const ProductionList: React.FC = () => {
       align: 'right' as const,
     },
     {
+      title: '单价',
+      dataIndex: 'factoryUnitPrice',
+      key: 'factoryUnitPrice',
+      width: 90,
+      align: 'right' as const,
+      render: (v: any) => v != null ? <span style={{ color: '#1677ff', fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span> : <span style={{ color: '#bfbfbf' }}>-</span>,
+    },
+    {
       title: '下单人',
       dataIndex: 'orderOperatorName',
       key: 'orderOperatorName',
