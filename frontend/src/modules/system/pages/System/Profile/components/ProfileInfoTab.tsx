@@ -199,6 +199,12 @@ const ProfileInfoTab: React.FC = () => {
             }
             form.setFieldsValue({ avatarUrl: url });
             updateUser({ avatarUrl: url } as any);
+            // 立即持久化到数据库，否则刷新页面后头像丢失
+            try {
+                await api.put('/system/user/me', { avatarUrl: url });
+            } catch {
+                // 保存失败不阻断上传成功的提示
+            }
             message.success('上传成功');
         } catch (e: any) {
             message.error(e?.message || '上传失败');
@@ -212,7 +218,9 @@ const ProfileInfoTab: React.FC = () => {
         try {
             const values = await form.validateFields();
             setSaving(true);
-            const payload = { phone: values.phone };
+            const payload: Record<string, unknown> = { phone: values.phone };
+            const currentAvatarUrl = values.avatarUrl || (user as any)?.avatarUrl;
+            if (currentAvatarUrl) payload.avatarUrl = currentAvatarUrl;
             const res: any = await api.put('/system/user/me', payload);
             if (res?.code === 200 && res?.data) {
                 updateUser({

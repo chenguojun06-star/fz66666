@@ -80,4 +80,7 @@ public class User {
 
     /** 微信小程序 openid（用于一键登录，首次手动绑定后自动登录） */
     private String openid;
+
+    /** 用户头像URL（COS存储路径或本地路径） */
+    private String avatarUrl;
 }

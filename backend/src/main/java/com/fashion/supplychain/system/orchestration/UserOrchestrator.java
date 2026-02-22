@@ -361,9 +361,14 @@ public class UserOrchestrator {
             throw new NoSuchElementException("用户不存在");
         }
 
-        // 个人中心仅允许修改手机号，其他字段（姓名/邮箱等）需管理员通过人员管理页面操作
+        // 个人中心允许修改手机号和头像URL，其他字段（姓名/邮箱等）需管理员通过人员管理页面操作
         String phone = patch == null ? null : safeTrim(patch.getPhone());
         current.setPhone(phone);
+
+        // 头像URL：非空时才更新（允许只传手机号不传头像）
+        if (patch != null && patch.getAvatarUrl() != null && !patch.getAvatarUrl().isBlank()) {
+            current.setAvatarUrl(patch.getAvatarUrl().trim());
+        }
 
         boolean success = userService.updateById(current);
         if (!success) {
