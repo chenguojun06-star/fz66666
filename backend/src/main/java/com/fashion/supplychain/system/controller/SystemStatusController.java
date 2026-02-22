@@ -1,6 +1,11 @@
 package com.fashion.supplychain.system.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.TenantService;
+import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +22,9 @@ import java.sql.Connection;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,6 +38,12 @@ public class SystemStatusController {
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired
+    private TenantService tenantService;
+
+    @Autowired
+    private UserService userService;
 
     @Value("${spring.application.name:supplychain}")
     private String applicationName;
@@ -82,6 +95,36 @@ public class SystemStatusController {
         info.put("database", checkDatabase());
 
         return Result.success(info);
+    }
+
+    /**
+     * 租户人员统计（每个租户的用户数量）
+     */
+    @GetMapping("/tenant-user-stats")
+    public Result<?> tenantUserStats() {
+        List<Tenant> tenants = tenantService.list();
+        List<Map<String, Object>> result = new ArrayList<>();
+        long totalUsers = 0;
+
+        for (Tenant tenant : tenants) {
+            long userCount = userService.count(
+                new LambdaQueryWrapper<User>().eq(User::getTenantId, tenant.getId()));
+            totalUsers += userCount;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tenantId", tenant.getId());
+            item.put("tenantName", tenant.getTenantName());
+            item.put("userCount", userCount);
+            result.add(item);
+        }
+
+        // 按人数降序排列
+        result.sort((a, b) -> Long.compare((long) b.get("userCount"), (long) a.get("userCount")));
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("totalTenants", tenants.size());
+        data.put("totalUsers", totalUsers);
+        data.put("tenants", result);
+        return Result.success(data);
     }
 
     /**

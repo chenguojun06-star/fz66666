@@ -1488,6 +1488,8 @@ const SystemStatusTab: React.FC = () => {
   const [overview, setOverview] = useState<SystemStatusOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [tenantStats, setTenantStats] = useState<any>(null);
+  const [loadingTenantStats, setLoadingTenantStats] = useState(false);
 
   const fetchOverview = useCallback(async () => {
     setLoading(true);
@@ -1498,7 +1500,15 @@ const SystemStatusTab: React.FC = () => {
     } catch { message.error('加载系统状态失败'); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchOverview(); }, [fetchOverview]);
+  const fetchTenantStats = useCallback(async () => {
+    setLoadingTenantStats(true);
+    try {
+      const res: any = await systemStatusService.tenantUserStats();
+      setTenantStats(res?.data || res);
+    } catch { /* ignore */ } finally { setLoadingTenantStats(false); }
+  }, []);
+
+  useEffect(() => { fetchOverview(); fetchTenantStats(); }, [fetchOverview, fetchTenantStats]);
 
   // 自动刷新
   useEffect(() => {
@@ -1587,6 +1597,31 @@ const SystemStatusTab: React.FC = () => {
       {!overview && !loading && (
         <Alert type="warning" message="无法获取系统状态" description="请检查后端服务是否正常运行" />
       )}
+
+      {/* 租户人员统计 */}
+      <Card size="small" title={<span>租户人员统计{tenantStats ? <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>共 {tenantStats.totalTenants} 个租户，{tenantStats.totalUsers} 名用户</Text> : null}</span>} style={{ marginTop: 16 }}
+        extra={<Button size="small" onClick={fetchTenantStats} loading={loadingTenantStats}>刷新</Button>}
+      >
+        {tenantStats?.tenants?.length > 0 ? (
+          <ResizableTable
+            dataSource={tenantStats.tenants}
+            rowKey="tenantId"
+            size="small"
+            pagination={false}
+            columns={[
+              { title: '租户ID', dataIndex: 'tenantId', width: 80 },
+              { title: '租户名称', dataIndex: 'tenantName', ellipsis: true },
+              {
+                title: '人员数量', dataIndex: 'userCount', width: 120,
+                sorter: (a: any, b: any) => a.userCount - b.userCount,
+                render: (v: number) => <Text strong style={{ color: v > 0 ? undefined : '#999' }}>{v}</Text>,
+              },
+            ]}
+          />
+        ) : (
+          <Text type="secondary">暂无租户数据</Text>
+        )}
+      </Card>
     </div>
   );
 };
