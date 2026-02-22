@@ -25,8 +25,6 @@ import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
-import OperationHistoryTable from '@/components/common/OperationHistoryTable';
-import { buildHistoryRowsForList } from '@/utils/operationHistory';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -134,7 +132,7 @@ const ProductionList: React.FC = () => {
   const {
     processDetailVisible, processDetailRecord, processDetailType,
     processDetailActiveTab, setProcessDetailActiveTab,
-    procurementStatus, processStatus, processDetailScanRecords, processDetailNodeOperations,
+    procurementStatus, processStatus, processDetailNodeOperations,
     openProcessDetail, closeProcessDetail, syncProcessFromTemplate, saveDelegation,
     childProcessesByStage, activeStageKeys,
     factories, factoriesLoading, delegationData, setDelegationData,
@@ -1276,24 +1274,6 @@ const ProductionList: React.FC = () => {
                   暂无委派记录
                 </div>
               </div>
-            </div>
-          )}
-          scanRecordContent={processDetailRecord && (
-            <div style={{ padding: '8px 0' }}>
-              <div style={{
-                fontSize: '13px', fontWeight: 600, color: 'var(--neutral-text)',
-                marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--color-border)'
-              }}>
-                操作记录（扫码/委派/同步）
-              </div>
-              <OperationHistoryTable rows={buildHistoryRowsForList({
-                records: Array.isArray(processDetailScanRecords) ? processDetailScanRecords : [],
-                activeStageKeys,
-                childProcessesByStage,
-                nodeOperations: processDetailNodeOperations as Record<string, any> | null,
-                formatDateTime,
-                matchStageKey,
-              })} />
             </div>
           )}
         />

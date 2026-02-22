@@ -26,7 +26,6 @@ interface ProcessDetailModalProps {
   activeTab: string;
   onTabChange: (key: string) => void;
   delegationContent?: React.ReactNode; // 工序委派Tab内容（从父组件传入）
-  scanRecordContent?: React.ReactNode; // 操作历史Tab内容（从父组件传入）
 }
 
 const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
@@ -39,7 +38,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   activeTab,
   onTabChange,
   delegationContent,
-  scanRecordContent,
 }) => {
   const navigate = useNavigate();
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
-import { FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, ClockCircleOutlined, WalletOutlined } from '@ant-design/icons';
+import { FileTextOutlined, UnorderedListOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from './ResizableModal';
@@ -9,7 +9,6 @@ import api from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useAuth } from '@/utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import OperationHistoryTable, { OperationHistoryRow } from '@/components/common/OperationHistoryTable';
 import { getScanTypeFromNodeKey, matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
@@ -126,21 +125,6 @@ interface ProcessPriceItem {
   estimatedMinutes?: number;
 }
 
-/** 样板生产扫码记录 */
-interface PatternScanRecord {
-  id: string;
-  patternProductionId?: string;
-  styleId?: string;
-  styleNo?: string;
-  color?: string;
-  operationType?: string;
-  operatorId?: string;
-  operatorName?: string;
-  operatorRole?: string;
-  scanTime?: string;
-  remark?: string;
-}
-
 /** 组件属性 */
 interface NodeDetailModalProps {
   visible: boolean;
@@ -204,7 +188,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [nodeOperations, setNodeOperations] = useState<NodeOperations>({});
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
-  const [patternScanRecords, setPatternScanRecords] = useState<PatternScanRecord[]>([]);
   const [orderDetail, setOrderDetail] = useState<Record<string, unknown> | null>(null);
   const [orderSummary, setOrderSummary] = useState<{ orderNo?: string; styleNo?: string; orderQuantity?: number }>({
     orderNo,
@@ -356,21 +339,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   }, [orderId]);
 
-  // 加载样板生产扫码记录
-  const loadPatternScanRecords = useCallback(async () => {
-    if (!orderId) return;
-    try {
-      const res = await api.get<{ code: number; data: PatternScanRecord[] }>(
-        `/production/pattern/${orderId}/scan-records`
-      );
-      if (res.code === 200 && Array.isArray(res.data)) {
-        setPatternScanRecords(res.data);
-      }
-    } catch (err) {
-      console.error('加载样板扫码记录失败', err);
-    }
-  }, [orderId]);
-
   // 加载工序跟踪数据（工资结算依据）
   const loadProcessTrackingData = useCallback(async () => {
     if (!orderId) {
@@ -406,19 +374,17 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         loadBundles();
         loadProcessTrackingData(); // 加载工序跟踪数据
       } else {
-        // 样板生产时清空这些数据，加载样板扫码记录
+        // 样板生产时清空这些数据
         setScanRecords([]);
         setBundles([]);
-        loadPatternScanRecords();
       }
     }
     // 重置状态
     if (!visible) {
       setActiveTab('settings');
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
-      setPatternScanRecords([]); // 清空样板扫码记录
     }
-  }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadPatternScanRecords]);
+  }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
@@ -500,73 +466,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     return parts.filter(Boolean).join(' · ') || '-';
   }, [normalizeText]);
 
-  const historyTableRows = useMemo<OperationHistoryRow[]>(() => {
-    const rows: OperationHistoryRow[] = [];
-    const stageName = nodeName || '-';
-    const detail = orderDetail || {};
-    const orderFieldMap: Record<string, { operator: string; endTime: string; startTime?: string; altTime?: string }> = {
-      procurement: { operator: 'procurementOperatorName', endTime: 'procurementEndTime', startTime: 'procurementStartTime', altTime: 'procurementConfirmedAt' },
-      cutting: { operator: 'cuttingOperatorName', endTime: 'cuttingEndTime', startTime: 'cuttingStartTime' },
-      sewing: { operator: 'sewingOperatorName', endTime: 'sewingEndTime', startTime: 'sewingStartTime' },
-      quality: { operator: 'qualityOperatorName', endTime: 'qualityEndTime', startTime: 'qualityStartTime' },
-      warehousing: { operator: 'warehousingOperatorName', endTime: 'warehousingEndTime', startTime: 'warehousingStartTime' },
-    };
-    const field = orderFieldMap[String(nodeTypeKey || '').trim()];
-    if (field) {
-      const operatorName = String((detail as any)?.[field.operator] || '').trim();
-      const timeValue = (detail as any)?.[field.endTime] || (detail as any)?.[field.altTime || ''] || (detail as any)?.[field.startTime || ''];
-      if (operatorName || timeValue) {
-        rows.push({
-          type: '我的订单',
-          stageName,
-          processName: normalizeText(currentNodeData.delegateProcessName) || '-',
-          operatorName: operatorName || '-',
-          quantity: '-',
-          time: formatHistoryTime(timeValue),
-          remark: '同步自我的订单',
-        });
-      }
-    }
-
-    filteredScanRecords.forEach((record) => {
-      rows.push({
-        type: '扫码',
-        stageName,
-        processName: normalizeText(record.processName || record.progressStage) || '-',
-        operatorName: String(record.operatorName || (record as any).actualOperatorName || '-').trim() || '-',
-        quantity: typeof record.quantity === 'number' ? `${record.quantity}` : '0',
-        time: formatHistoryTime(record.scanTime || (record as any).createTime),
-        remark: formatScanDetail(record),
-      });
-    });
-
-    patternScanRecords.forEach((record) => {
-      const op = patternOperationLabels[record.operationType || ''] || { text: record.operationType || '扫码', color: 'default' };
-      rows.push({
-        type: op.text,
-        stageName,
-        processName: normalizeText(record.operationType) || '-',
-        operatorName: String(record.operatorName || '-').trim() || '-',
-        quantity: '-',
-        time: formatHistoryTime(record.scanTime),
-        remark: record.remark || '-',
-      });
-    });
-
-    (currentNodeData.history || []).forEach((item) => {
-      rows.push({
-        type: '委派',
-        stageName,
-        processName: normalizeText(currentNodeData.delegateProcessName) || '-',
-        operatorName: String(item.operatorName || '-').trim() || '-',
-        quantity: '-',
-        time: formatHistoryTime(item.time),
-        remark: item.changes || '-',
-      });
-    });
-
-    return rows.sort((a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf());
-  }, [currentNodeData.delegateProcessName, currentNodeData.history, filteredScanRecords, formatHistoryTime, formatScanDetail, nodeName, orderDetail, patternScanRecords, normalizeText, nodeTypeKey]);
 
 
   // 更新当前节点数据
@@ -995,69 +894,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     );
   };
 
-  // 扫码记录 Tab
-  // 样板生产扫码记录 Tab
-  const renderPatternScanRecordsTab = () => {
-    const patternScanColumns: ColumnsType<PatternScanRecord> = [
-      {
-        title: '时间',
-        dataIndex: 'scanTime',
-        width: 150,
-        render: (v) => v ? new Date(v).toLocaleString('zh-CN') : '-',
-      },
-      {
-        title: '操作类型',
-        dataIndex: 'operationType',
-        width: 100,
-        render: (v) => {
-          const op = patternOperationLabels[v] || { text: v, color: 'default' };
-          return <Tag color={op.color}>{op.text}</Tag>;
-        },
-      },
-      {
-        title: '操作员',
-        dataIndex: 'operatorName',
-        width: 100,
-      },
-      {
-        title: '角色',
-        dataIndex: 'operatorRole',
-        width: 80,
-        render: (v) => {
-          const roles: Record<string, string> = {
-            PLATE_WORKER: '车板师',
-            MERCHANDISER: '跟单员',
-            WAREHOUSE: '仓管',
-          };
-          return roles[v] || v || '-';
-        },
-      },
-      {
-        title: '备注',
-        dataIndex: 'remark',
-        ellipsis: true,
-      },
-    ];
-
-    return (
-      <div style={{ padding: '4px 0' }}>
-        <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">共 {patternScanRecords.length} 条操作记录</Text>
-        </div>
-        <ResizableTable
-          storageKey="node-detail-pattern-scan"
-          size="small"
-          rowKey="id"
-          dataSource={patternScanRecords}
-          columns={patternScanColumns}
-          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
-          scroll={{ y: 280 }}
-          locale={{ emptyText: '暂无扫码记录' }}
-        />
-      </div>
-    );
-  };
-
   const _renderScanRecordsTab = () => (
     <div style={{ padding: '4px 0' }}>
       <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1121,46 +957,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     </div>
   );
 
-  // 操作历史 Tab（与“我的订单”表格一致）
-  const renderHistoryTab = () => (
-    <div style={{ padding: '8px 0' }}>
-      <div style={{
-        fontSize: '13px',
-        fontWeight: 600,
-        color: '#374151',
-        marginBottom: '8px',
-        paddingBottom: '6px',
-        borderBottom: '1px solid var(--color-border)'
-      }}>
-        生产扫码记录（记录所有操作人）
-      </div>
-      <OperationHistoryTable
-        rows={historyTableRows}
-        renderOperator={(row) => {
-          if (!row.operatorName || row.operatorName === '-') return '-';
-          return (
-            <a
-              style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
-              onClick={() => {
-                const orderValue = orderSummary.orderNo || orderNo || '';
-                const processValue = String(row.processName || '').trim();
-                const scanTypeValue = getScanTypeFromNodeKey(nodeTypeKey);
-                if (orderValue) {
-                  const params = new URLSearchParams();
-                  params.set('orderNo', orderValue);
-                  if (scanTypeValue) params.set('scanType', scanTypeValue);
-                  if (processValue && processValue !== '-') params.set('processName', processValue);
-                  navigate(`/finance/payroll-operator-summary?${params.toString()}`);
-                }
-              }}
-            >
-              {row.operatorName}
-            </a>
-          );
-        }}
-      />
-    </div>
-  );
 
   // 检查是否有设置数据
   const hasSettings = !!(
