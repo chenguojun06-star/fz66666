@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.system.entity.Factory;
@@ -48,6 +50,9 @@ public class ExcelImportOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     @Autowired
     private StyleProcessService styleProcessService;
@@ -788,9 +793,11 @@ public class ExcelImportOrchestrator {
                         new LambdaQueryWrapper<StyleInfo>()
                                 .eq(StyleInfo::getStyleNo, styleNo)
                                 .last("LIMIT 1"));
-                if (existing != null) throw new IllegalArgumentException("款号已存在: " + styleNo);
 
-                StyleInfo style = new StyleInfo();
+                // 款号已存在则覆盖更新，不存在则新增
+                StyleInfo style = existing != null ? existing : new StyleInfo();
+                boolean isUpdate = existing != null;
+
                 style.setStyleNo(styleNo);
                 style.setStyleName(StringUtils.hasText(safe(item.get("款名"))) ? safe(item.get("款名")) : styleNo);
                 style.setCategory(safe(item.get("品类")));
@@ -801,23 +808,23 @@ public class ExcelImportOrchestrator {
                 style.setDescription(StringUtils.hasText(safe(item.get("描述"))) ? safe(item.get("描述")) : "[ZIP导入]");
                 BigDecimal price = parseDecimal(item.get("单价"));
                 if (price != null) style.setPrice(price);
-                style.setYear(LocalDate.now().getYear());
-                style.setMonth(LocalDate.now().getMonthValue());
-                style.setStatus("ENABLED");
-                style.setCreateTime(LocalDateTime.now());
                 style.setUpdateTime(LocalDateTime.now());
+                if (!isUpdate) {
+                    style.setYear(LocalDate.now().getYear());
+                    style.setMonth(LocalDate.now().getMonthValue());
+                    style.setStatus("ENABLED");
+                    style.setCreateTime(LocalDateTime.now());
+                }
 
-                // 关联封面图（文件名 = 款号）
+                // 先保存款式（取得 ID 后再处理附件）
+                boolean saved = isUpdate ? styleInfoService.updateById(style) : styleInfoService.save(style);
+                if (!saved) throw new RuntimeException(isUpdate ? "更新失败" : "保存失败");
+                if (isUpdate) log.info("[ZIP导入] 款号={} 已存在，执行覆盖更新", styleNo);
+
+                // 关联封面图（文件名 = 款号），在 save 后插入附件记录
                 if (imageMap.containsKey(styleNo)) {
                     try {
                         byte[] imgBytes = imageMap.get(styleNo);
-                        // 推断扩展名
-                        String imgExt = "jpg";
-                        for (Map.Entry<String, byte[]> e : imageMap.entrySet()) {
-                            if (e.getKey().equals(styleNo)) break;
-                        }
-                        // 从原始 imageMap key 里拿不到 ext，需要重新找
-                        // （imageMap key=款号，找原始文件名时直接用 UUID 命名存储即可）
                         String newFilename = UUID.randomUUID().toString() + ".jpg";
                         String contentType = "image/jpeg";
 
@@ -828,8 +835,29 @@ public class ExcelImportOrchestrator {
                             java.nio.file.Files.write(dest.toPath(), imgBytes);
                         }
                         String coverUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
+                        // 更新 cover 字段
                         style.setCover(coverUrl);
-                        log.info("[ZIP导入] 款号={} 封面图已上传: {}", styleNo, coverUrl);
+                        styleInfoService.updateById(style);
+
+                        // 写入 t_style_attachment（前端图片列从此表读取）
+                        // 覆盖更新时先删除旧的 general 附件
+                        if (isUpdate && style.getId() != null) {
+                            styleAttachmentService.remove(
+                                new LambdaQueryWrapper<StyleAttachment>()
+                                    .eq(StyleAttachment::getStyleId, String.valueOf(style.getId()))
+                                    .eq(StyleAttachment::getBizType, "general")
+                            );
+                        }
+                        StyleAttachment attachment = new StyleAttachment();
+                        attachment.setStyleId(String.valueOf(style.getId()));
+                        attachment.setFileName(styleNo + ".jpg");
+                        attachment.setFileUrl(coverUrl);
+                        attachment.setFileType("image/jpeg");
+                        attachment.setBizType("general");
+                        attachment.setVersion(1);
+                        attachment.setCreateTime(LocalDateTime.now());
+                        styleAttachmentService.save(attachment);
+                        log.info("[ZIP导入] 款号={} 封面图已上传并写入附件记录: {}", styleNo, coverUrl);
                     } catch (Exception imgEx) {
                         String errMsg = styleNo + ": " + imgEx.getMessage();
                         log.warn("[ZIP导入] 款号={} 封面图上传失败，跳过图片: {}", styleNo, imgEx.getMessage());
@@ -838,13 +866,12 @@ public class ExcelImportOrchestrator {
                     }
                 }
 
-                if (!styleInfoService.save(style)) throw new RuntimeException("保存失败");
-
                 Map<String, Object> success = new LinkedHashMap<>();
                 success.put("row", index + 2);
                 success.put("styleNo", styleNo);
                 success.put("styleName", style.getStyleName());
                 success.put("hasCover", style.getCover() != null);
+                success.put("isUpdate", isUpdate);
                 successRecords.add(success);
             } catch (Exception e) {
                 Map<String, Object> fail = new LinkedHashMap<>();
@@ -863,9 +890,14 @@ public class ExcelImportOrchestrator {
         if (!imageErrors.isEmpty()) {
             result.put("imageErrors", imageErrors);
         }
-        if (!failedRecords.isEmpty() || withCover > 0) {
-            result.put("message", result.get("message") + "，共关联封面图 " + withCover + " 张");
+        long updateCount = successRecords.stream().filter(r -> Boolean.TRUE.equals(r.get("isUpdate"))).count();
+        if (updateCount > 0) {
+            result.put("updateCount", updateCount);
         }
+        String msg = (String) result.get("message");
+        if (withCover > 0) msg = msg + "，共关联封面图 " + withCover + " 张";
+        if (updateCount > 0) msg = msg + "（其中覆盖更新 " + updateCount + " 条）";
+        result.put("message", msg);
         return result;
     }
 }
