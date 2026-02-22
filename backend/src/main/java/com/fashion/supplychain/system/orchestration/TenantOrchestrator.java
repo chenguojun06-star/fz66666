@@ -670,6 +670,184 @@ public class TenantOrchestrator {
         return true;
     }
 
+    // ========== 租户自助账单与发票 ==========
+
+    /**
+     * 租户查看自己的账单概览（无需超管权限）
+     * 包含：套餐信息、已用存储/用户、最近6期账单
+     */
+    public Map<String, Object> getMyBilling() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) throw new IllegalArgumentException("超级管理员无租户账单");
+
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) throw new IllegalArgumentException("租户不存在");
+
+        long userCount = tenantService.countTenantUsers(tenantId);
+
+        Map<String, Object> overview = new LinkedHashMap<>();
+        overview.put("tenantId", tenant.getId());
+        overview.put("tenantName", tenant.getTenantName());
+        overview.put("tenantCode", tenant.getTenantCode());
+        overview.put("planType", tenant.getPlanType());
+        overview.put("billingCycle", tenant.getBillingCycle());
+        overview.put("monthlyFee", tenant.getMonthlyFee());
+        overview.put("paidStatus", tenant.getPaidStatus());
+        overview.put("expireTime", tenant.getExpireTime());
+        overview.put("storageQuotaMb", tenant.getStorageQuotaMb());
+        overview.put("storageUsedMb", tenant.getStorageUsedMb());
+        overview.put("storageUsedPercent", tenant.getStorageQuotaMb() > 0
+                ? Math.round(tenant.getStorageUsedMb() * 100.0 / tenant.getStorageQuotaMb()) : 0);
+        overview.put("maxUsers", tenant.getMaxUsers());
+        overview.put("currentUsers", userCount);
+
+        // 默认开票信息
+        Map<String, String> invoiceDefaults = new LinkedHashMap<>();
+        invoiceDefaults.put("invoiceTitle", tenant.getInvoiceTitle());
+        invoiceDefaults.put("invoiceTaxNo", tenant.getInvoiceTaxNo());
+        invoiceDefaults.put("invoiceBankName", tenant.getInvoiceBankName());
+        invoiceDefaults.put("invoiceBankAccount", tenant.getInvoiceBankAccount());
+        invoiceDefaults.put("invoiceAddress", tenant.getInvoiceAddress());
+        invoiceDefaults.put("invoicePhone", tenant.getInvoicePhone());
+        overview.put("invoiceDefaults", invoiceDefaults);
+
+        // 最近6期账单
+        QueryWrapper<TenantBillingRecord> bq = new QueryWrapper<>();
+        bq.eq("tenant_id", tenantId).orderByDesc("billing_month").last("LIMIT 6");
+        overview.put("recentBills", billingRecordService.list(bq));
+
+        return overview;
+    }
+
+    /**
+     * 租户查看自己的账单列表（无需超管权限，自动按 tenantId 过滤）
+     */
+    public Page<TenantBillingRecord> listMyBills(Long page, Long pageSize, String status) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) throw new IllegalArgumentException("超级管理员无租户账单");
+
+        QueryWrapper<TenantBillingRecord> query = new QueryWrapper<>();
+        query.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(status)) query.eq("status", status);
+        query.orderByDesc("billing_month");
+        return billingRecordService.page(
+                new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
+    }
+
+    /**
+     * 租户申请开票（对已支付账单申请发票）
+     * 自动携带租户默认开票信息，也允许本次覆盖
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean requestInvoice(Long billId, Map<String, String> invoiceInfo) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) throw new IllegalArgumentException("超级管理员不能申请发票");
+
+        TenantBillingRecord bill = billingRecordService.getById(billId);
+        if (bill == null) throw new IllegalArgumentException("账单不存在");
+        if (!tenantId.equals(bill.getTenantId())) throw new AccessDeniedException("无权操作其他租户账单");
+        if (!"PAID".equals(bill.getStatus()) && !"PENDING".equals(bill.getStatus())) {
+            throw new IllegalStateException("仅待付款/已支付账单可申请发票");
+        }
+        if ("ISSUED".equals(bill.getInvoiceStatus()) || "MAILED".equals(bill.getInvoiceStatus())) {
+            throw new IllegalStateException("该账单发票已开具或已寄出");
+        }
+
+        // 优先使用本次传入的信息，否则使用租户默认信息
+        Tenant tenant = tenantService.getById(tenantId);
+        String title = getOrDefault(invoiceInfo, "invoiceTitle", tenant.getInvoiceTitle());
+        String taxNo = getOrDefault(invoiceInfo, "invoiceTaxNo", tenant.getInvoiceTaxNo());
+        if (!StringUtils.hasText(title)) throw new IllegalArgumentException("发票抬头不能为空");
+        if (!StringUtils.hasText(taxNo)) throw new IllegalArgumentException("纳税人识别号不能为空");
+
+        bill.setInvoiceRequired(true);
+        bill.setInvoiceStatus("PENDING");
+        bill.setInvoiceTitle(title);
+        bill.setInvoiceTaxNo(taxNo);
+        bill.setInvoiceBankName(getOrDefault(invoiceInfo, "invoiceBankName", tenant.getInvoiceBankName()));
+        bill.setInvoiceBankAccount(getOrDefault(invoiceInfo, "invoiceBankAccount", tenant.getInvoiceBankAccount()));
+        bill.setInvoiceAddress(getOrDefault(invoiceInfo, "invoiceAddress", tenant.getInvoiceAddress()));
+        bill.setInvoicePhone(getOrDefault(invoiceInfo, "invoicePhone", tenant.getInvoicePhone()));
+        bill.setInvoiceAmount(bill.getTotalAmount());
+        bill.setUpdateTime(LocalDateTime.now());
+        billingRecordService.updateById(bill);
+
+        log.info("[发票申请] tenantId={} billId={} 抬头={} 金额={}", tenantId, billId, title, bill.getTotalAmount());
+
+        // 通知超管有新的开票申请（复用入驻申请通知通道）
+        try {
+            if (webSocketService != null) {
+                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
+                adminQuery.eq(User::getIsSuperAdmin, true).eq(User::getStatus, "active").isNull(User::getTenantId);
+                List<User> superAdmins = userService.list(adminQuery);
+                for (User sa : superAdmins) {
+                    webSocketService.notifyTenantApplicationPending(
+                            String.valueOf(sa.getId()),
+                            tenant.getTenantName() + " 申请开票 ¥" + bill.getTotalAmount());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("通知超管发票申请WebSocket失败: {}", e.getMessage());
+        }
+
+        return true;
+    }
+
+    /**
+     * 超管确认开票（填写发票号码、实际开票日期）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean issueInvoice(Long billId, String invoiceNo) {
+        assertSuperAdmin();
+        TenantBillingRecord bill = billingRecordService.getById(billId);
+        if (bill == null) throw new IllegalArgumentException("账单不存在");
+        if (!"PENDING".equals(bill.getInvoiceStatus())) {
+            throw new IllegalStateException("仅待开票的账单可操作");
+        }
+        if (!StringUtils.hasText(invoiceNo)) throw new IllegalArgumentException("发票号码不能为空");
+
+        bill.setInvoiceStatus("ISSUED");
+        bill.setInvoiceNo(invoiceNo);
+        bill.setInvoiceIssuedTime(LocalDateTime.now());
+        bill.setUpdateTime(LocalDateTime.now());
+        billingRecordService.updateById(bill);
+
+        log.info("[开票完成] billId={} invoiceNo={} 租户={}", billId, invoiceNo, bill.getTenantName());
+        return true;
+    }
+
+    /**
+     * 租户维护自己的默认开票信息（发票抬头、税号、银行等）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateMyInvoiceInfo(Map<String, String> invoiceInfo) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) throw new AccessDeniedException("超级管理员无需设置开票信息");
+        if (!UserContext.isTenantOwner() && !UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("只有工厂主账号或管理员才能修改开票信息");
+        }
+
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) throw new IllegalArgumentException("租户不存在");
+
+        if (invoiceInfo.containsKey("invoiceTitle")) tenant.setInvoiceTitle(invoiceInfo.get("invoiceTitle"));
+        if (invoiceInfo.containsKey("invoiceTaxNo")) tenant.setInvoiceTaxNo(invoiceInfo.get("invoiceTaxNo"));
+        if (invoiceInfo.containsKey("invoiceBankName")) tenant.setInvoiceBankName(invoiceInfo.get("invoiceBankName"));
+        if (invoiceInfo.containsKey("invoiceBankAccount")) tenant.setInvoiceBankAccount(invoiceInfo.get("invoiceBankAccount"));
+        if (invoiceInfo.containsKey("invoiceAddress")) tenant.setInvoiceAddress(invoiceInfo.get("invoiceAddress"));
+        if (invoiceInfo.containsKey("invoicePhone")) tenant.setInvoicePhone(invoiceInfo.get("invoicePhone"));
+        tenant.setUpdateTime(LocalDateTime.now());
+        tenantService.updateById(tenant);
+
+        log.info("[开票信息更新] tenantId={} 抬头={}", tenantId, tenant.getInvoiceTitle());
+        return true;
+    }
+
+    private String getOrDefault(Map<String, String> map, String key, String defaultVal) {
+        if (map != null && StringUtils.hasText(map.get(key))) return map.get(key);
+        return defaultVal;
+    }
+
     /**
      * 获取所有活跃租户列表（公开接口，无需认证）
      * 仅用于登录页面的公司选择下拉框

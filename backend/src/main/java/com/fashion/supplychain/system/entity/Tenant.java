@@ -44,6 +44,24 @@ public class Tenant {
     /** 联系电话 */
     private String contactPhone;
 
+    /** 默认发票抬头 */
+    private String invoiceTitle;
+
+    /** 默认纳税人识别号 */
+    private String invoiceTaxNo;
+
+    /** 开户银行 */
+    private String invoiceBankName;
+
+    /** 银行账号 */
+    private String invoiceBankAccount;
+
+    /** 注册地址 */
+    private String invoiceAddress;
+
+    /** 注册电话 */
+    private String invoicePhone;
+
     /** 状态: active=正常, disabled=禁用, expired=过期, pending_review=申请待审核, rejected=申请已拒绝 */
     private String status;
 

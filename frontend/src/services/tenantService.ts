@@ -173,6 +173,22 @@ const tenantService = {
   getUserPermissionOverrides: (userId: number) => api.get(`${BASE}/user-overrides/${userId}`),
   setUserPermissionOverrides: (userId: number, grantPermissionIds: number[], revokePermissionIds: number[]) =>
     api.post(`${BASE}/user-overrides/${userId}`, { grantPermissionIds, revokePermissionIds }),
+
+  // ========== 租户自助账单与发票 ==========
+  /** 租户查看自己的账单概览（套餐+账单+开票信息） */
+  getMyBilling: () => api.get(`${BASE}/my/billing`),
+  /** 租户查看自己的账单列表 */
+  listMyBills: (params: { page?: number; pageSize?: number; status?: string }) =>
+    api.post(`${BASE}/my/bills`, params),
+  /** 租户对已支付账单申请开票 */
+  requestInvoice: (billId: number, invoiceInfo?: Record<string, string>) =>
+    api.post(`${BASE}/my/bills/${billId}/request-invoice`, invoiceInfo || {}),
+  /** 租户维护默认开票信息 */
+  updateMyInvoiceInfo: (invoiceInfo: Record<string, string>) =>
+    api.put(`${BASE}/my/invoice-info`, invoiceInfo),
+  /** 超管确认开票 */
+  issueInvoice: (billId: number, invoiceNo: string) =>
+    api.post(`${BASE}/billing/${billId}/issue-invoice`, { invoiceNo }),
 };
 
 export default tenantService;

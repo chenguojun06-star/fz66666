@@ -27,6 +27,12 @@ Page({
     showInviteSection: false,
     tenantCode: '',
     tenantName: '',
+    // 问题反馈
+    showFeedbackForm: false,
+    feedbackForm: { category: 'BUG', title: '', content: '', contact: '' },
+    submittingFeedback: false,
+    myFeedbacks: [],
+    showMyFeedbacks: false,
   },
 
   onShow() {
@@ -353,5 +359,88 @@ Page({
       data: url,
       success: () => wx.showToast({ title: '注册链接已复制', icon: 'success' }),
     });
+  },
+
+  // ========== 问题反馈 ==========
+  onShowFeedbackForm() {
+    this.setData({
+      showFeedbackForm: true,
+      feedbackForm: { category: 'BUG', title: '', content: '', contact: '' },
+    });
+  },
+
+  onCloseFeedbackForm() {
+    this.setData({ showFeedbackForm: false });
+  },
+
+  onFeedbackCategoryChange(e) {
+    const categories = ['BUG', 'SUGGESTION', 'QUESTION', 'OTHER'];
+    this.setData({ 'feedbackForm.category': categories[e.detail.value] || 'BUG' });
+  },
+
+  onFeedbackTitleInput(e) {
+    this.setData({ 'feedbackForm.title': e.detail.value });
+  },
+
+  onFeedbackContentInput(e) {
+    this.setData({ 'feedbackForm.content': e.detail.value });
+  },
+
+  onFeedbackContactInput(e) {
+    this.setData({ 'feedbackForm.contact': e.detail.value });
+  },
+
+  async onSubmitFeedback() {
+    if (this.data.submittingFeedback) return;
+
+    const { category, title, content, contact } = this.data.feedbackForm;
+    if (!title || !title.trim()) {
+      wx.showToast({ title: '请输入标题', icon: 'none' });
+      return;
+    }
+    if (!content || !content.trim()) {
+      wx.showToast({ title: '请描述问题详情', icon: 'none' });
+      return;
+    }
+
+    this.setData({ submittingFeedback: true });
+    try {
+      await api.system.submitFeedback({
+        source: 'MINIPROGRAM',
+        category: category || 'BUG',
+        title: title.trim(),
+        content: content.trim(),
+        contact: (contact || '').trim() || undefined,
+      });
+      wx.showToast({ title: '反馈提交成功', icon: 'success' });
+      this.setData({
+        showFeedbackForm: false,
+        feedbackForm: { category: 'BUG', title: '', content: '', contact: '' },
+      });
+      // 刷新我的反馈列表
+      this.loadMyFeedbacks();
+    } catch (e) {
+      wx.showToast({ title: (e && e.errMsg) || '提交失败', icon: 'none' });
+    } finally {
+      this.setData({ submittingFeedback: false });
+    }
+  },
+
+  onToggleMyFeedbacks() {
+    const show = !this.data.showMyFeedbacks;
+    this.setData({ showMyFeedbacks: show });
+    if (show && this.data.myFeedbacks.length === 0) {
+      this.loadMyFeedbacks();
+    }
+  },
+
+  async loadMyFeedbacks() {
+    try {
+      const res = await api.system.myFeedbackList({ page: 1, pageSize: 10 });
+      const records = (res && res.records) || [];
+      this.setData({ myFeedbacks: records });
+    } catch (e) {
+      console.error('加载我的反馈失败', e);
+    }
   },
 });

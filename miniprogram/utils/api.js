@@ -226,6 +226,13 @@ const system = {
   changePassword(oldPassword, newPassword) {
     return ok('/api/system/user/me/change-password', 'POST', { oldPassword, newPassword });
   },
+  // 问题反馈
+  submitFeedback(payload) {
+    return ok('/api/system/feedback/submit', 'POST', payload || {});
+  },
+  myFeedbackList(params) {
+    return ok('/api/system/feedback/my-list', 'POST', params || {});
+  },
 };
 
 const style = {

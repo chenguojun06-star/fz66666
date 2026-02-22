@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Typography, Upload } from 'antd';
-import { LockOutlined, LinkOutlined, QrcodeOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Tag, Typography, Upload } from 'antd';
+import { LockOutlined, LinkOutlined, MessageOutlined, QrcodeOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
+import feedbackService from '@/services/feedbackService';
+import type { UserFeedback } from '@/services/feedbackService';
 import './styles.css';
 
 type ProfileMe = {
@@ -30,6 +33,13 @@ const Profile: React.FC = () => {
     const [tenantInfo, setTenantInfo] = useState<{ tenantCode?: string; tenantName?: string; contactName?: string; contactPhone?: string } | null>(null);
     const [tenantForm] = Form.useForm();
     const [savingTenant, setSavingTenant] = useState(false);
+
+    // 问题反馈
+    const [feedbackVisible, setFeedbackVisible] = useState(false);
+    const [feedbackForm] = Form.useForm();
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
+    const [myFeedbacks, setMyFeedbacks] = useState<UserFeedback[]>([]);
+    const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
     // 获取当前用户的主题存储key（每个账号独立）
     const getUserThemeKey = () => {
@@ -241,6 +251,53 @@ const Profile: React.FC = () => {
         }
     };
 
+    // ========== 问题反馈 ==========
+    const loadMyFeedbacks = async () => {
+        setLoadingFeedbacks(true);
+        try {
+            const res: any = await feedbackService.myList({ page: 1, pageSize: 10 });
+            const d = res?.data || res;
+            setMyFeedbacks(d?.records || []);
+        } catch { /* ignore */ } finally {
+            setLoadingFeedbacks(false);
+        }
+    };
+
+    const submitFeedback = async () => {
+        try {
+            const values = await feedbackForm.validateFields();
+            setSubmittingFeedback(true);
+            const res: any = await feedbackService.submit(values);
+            if (res?.code === 200) {
+                message.success('反馈提交成功，感谢您的意见！');
+                feedbackForm.resetFields();
+                setFeedbackVisible(false);
+                loadMyFeedbacks();
+                return;
+            }
+            message.error(res?.message || '提交失败');
+        } catch (e: any) {
+            if (e?.errorFields) return;
+            message.error(e?.message || '提交失败');
+        } finally {
+            setSubmittingFeedback(false);
+        }
+    };
+
+    const FEEDBACK_CATEGORY_MAP: Record<string, { label: string; color: string }> = {
+        BUG: { label: '缺陷', color: 'red' },
+        SUGGESTION: { label: '建议', color: 'blue' },
+        QUESTION: { label: '咨询', color: 'orange' },
+        OTHER: { label: '其他', color: 'default' },
+    };
+
+    const FEEDBACK_STATUS_MAP: Record<string, { label: string; color: string }> = {
+        PENDING: { label: '待处理', color: 'default' },
+        PROCESSING: { label: '处理中', color: 'processing' },
+        RESOLVED: { label: '已解决', color: 'success' },
+        CLOSED: { label: '已关闭', color: 'default' },
+    };
+
     return (
         <Layout>
             <Card className="page-card">
@@ -431,6 +488,76 @@ const Profile: React.FC = () => {
                         </div>
                     );
                 })()}
+
+                {/* 问题反馈入口 */}
+                <div style={{ marginTop: 32 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                        <MessageOutlined style={{ color: 'var(--primary-color)' }} />
+                        <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
+                    </div>
+                    <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+                        <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
+                            遇到问题或有改进建议？提交反馈帮助我们优化系统
+                        </Typography.Text>
+                        <Space>
+                            <Button type="primary" icon={<MessageOutlined />} onClick={() => setFeedbackVisible(true)}>
+                                提交反馈
+                            </Button>
+                            <Button onClick={() => { loadMyFeedbacks(); }}>
+                                我的反馈
+                            </Button>
+                        </Space>
+                        {/* 我的反馈列表（简洁） */}
+                        {myFeedbacks.length > 0 && (
+                            <div style={{ marginTop: 16 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
+                                {myFeedbacks.slice(0, 5).map(fb => (
+                                    <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                                        <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
+                                            {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
+                                        </Tag>
+                                        <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
+                                        <Tag color={FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.color || 'default'} style={{ margin: 0 }}>
+                                            {FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.label}
+                                        </Tag>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>加载中...</div>}
+                    </Card>
+                </div>
+
+                {/* 提交反馈弹窗 */}
+                <ResizableModal
+                    open={feedbackVisible}
+                    title="提交问题反馈"
+                    onCancel={() => setFeedbackVisible(false)}
+                    width="40vw"
+                    onOk={submitFeedback}
+                    confirmLoading={submittingFeedback}
+                    okText="提交"
+                >
+                    <Form form={feedbackForm} layout="vertical" requiredMark={false}>
+                        <Form.Item label="分类" name="category" initialValue="BUG" rules={[{ required: true }]}>
+                            <Select options={[
+                                { value: 'BUG', label: '🐛 系统缺陷' },
+                                { value: 'SUGGESTION', label: '💡 功能建议' },
+                                { value: 'QUESTION', label: '❓ 使用咨询' },
+                                { value: 'OTHER', label: '📋 其他' },
+                            ]} />
+                        </Form.Item>
+                        <Form.Item label="标题" name="title" rules={[{ required: true, message: '请输入标题' }]}>
+                            <Input placeholder="简要描述您遇到的问题" maxLength={100} />
+                        </Form.Item>
+                        <Form.Item label="详细描述" name="content" rules={[{ required: true, message: '请描述问题详情' }]}>
+                            <Input.TextArea rows={5} placeholder="请详细描述问题现象、操作步骤、期望结果等" maxLength={2000} showCount />
+                        </Form.Item>
+                        <Form.Item label="联系方式（选填）" name="contact">
+                            <Input placeholder="手机号或微信号，方便我们与您联系" />
+                        </Form.Item>
+                    </Form>
+                </ResizableModal>
                   </div>{/* end 右列 */}
                 </div>{/* end 2列布局 */}
             </Card>

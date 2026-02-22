@@ -168,6 +168,55 @@ public class TenantController {
         return Result.success(tenantOrchestrator.updateMyTenantInfo(tenantName, contactName, contactPhone));
     }
 
+    // ========== 租户自助账单与发票 ==========
+
+    /**
+     * 租户查看自己的账单概览（套餐信息+最近账单+开票信息）
+     */
+    @GetMapping("/my/billing")
+    public Result<Map<String, Object>> getMyBilling() {
+        return Result.success(tenantOrchestrator.getMyBilling());
+    }
+
+    /**
+     * 租户查看自己的账单列表
+     */
+    @PostMapping("/my/bills")
+    public Result<Page<TenantBillingRecord>> listMyBills(@RequestBody Map<String, Object> params) {
+        Long page = params.get("page") != null ? Long.parseLong(params.get("page").toString()) : 1L;
+        Long pageSize = params.get("pageSize") != null ? Long.parseLong(params.get("pageSize").toString()) : 20L;
+        String status = params.get("status") != null ? params.get("status").toString() : null;
+        return Result.success(tenantOrchestrator.listMyBills(page, pageSize, status));
+    }
+
+    /**
+     * 租户对已支付账单申请开票
+     */
+    @PostMapping("/my/bills/{billId}/request-invoice")
+    public Result<Boolean> requestInvoice(@PathVariable Long billId,
+                                          @RequestBody(required = false) Map<String, String> invoiceInfo) {
+        return Result.success(tenantOrchestrator.requestInvoice(billId, invoiceInfo));
+    }
+
+    /**
+     * 租户维护默认开票信息（发票抬头、税号、银行等）
+     */
+    @PutMapping("/my/invoice-info")
+    public Result<Boolean> updateMyInvoiceInfo(@RequestBody Map<String, String> invoiceInfo) {
+        return Result.success(tenantOrchestrator.updateMyInvoiceInfo(invoiceInfo));
+    }
+
+    /**
+     * 超管确认开票（填写发票号码）
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/billing/{billId}/issue-invoice")
+    public Result<Boolean> issueInvoice(@PathVariable Long billId,
+                                        @RequestBody Map<String, String> params) {
+        String invoiceNo = params.get("invoiceNo");
+        return Result.success(tenantOrchestrator.issueInvoice(billId, invoiceNo));
+    }
+
     // ========== 角色模板管理 ==========
 
     /**

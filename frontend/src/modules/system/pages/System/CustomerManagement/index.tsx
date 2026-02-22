@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio } from 'antd';
-import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio, Statistic } from 'antd';
+import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -11,6 +11,10 @@ import { useModal } from '@/hooks';
 import { useAuth } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo, PlanDefinition, BillingRecord } from '@/services/tenantService';
+import feedbackService from '@/services/feedbackService';
+import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
+import systemStatusService from '@/services/systemStatusService';
+import type { SystemStatusOverview } from '@/services/systemStatusService';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
@@ -921,6 +925,33 @@ const BillingTab: React.FC = () => {
     });
   };
 
+  const handleIssueInvoice = async (bill: BillingRecord) => {
+    Modal.confirm({
+      title: `确认开票 - ${bill.billingNo}`,
+      content: (
+        <div>
+          <p>租户：{bill.tenantName}，金额：¥{bill.totalAmount}</p>
+          <p>抬头：{(bill as any).invoiceTitle || '—'}</p>
+          <p>税号：{(bill as any).invoiceTaxNo || '—'}</p>
+          <Input placeholder="请输入发票号码" id="invoice-no-input" style={{ marginTop: 8 }} />
+        </div>
+      ),
+      okText: '确认开票',
+      onOk: async () => {
+        const invoiceNo = (document.getElementById('invoice-no-input') as HTMLInputElement)?.value || '';
+        if (!invoiceNo.trim()) { message.warning('请输入发票号码'); throw new Error('cancel'); }
+        try {
+          await tenantService.issueInvoice(bill.id, invoiceNo.trim());
+          message.success('已确认开票');
+          fetchBills();
+        } catch (e: any) {
+          if (e?.message === 'cancel') throw e;
+          message.error(e?.message || '操作失败');
+        }
+      },
+    });
+  };
+
   const tenantColumns: ColumnsType<TenantInfo> = [
     { title: '工厂名称', dataIndex: 'tenantName', width: 160 },
     { title: '租户编码', dataIndex: 'tenantCode', width: 100 },
@@ -1003,14 +1034,30 @@ const BillingTab: React.FC = () => {
     },
     { title: '支付时间', dataIndex: 'paidTime', width: 150 },
     {
-      title: '操作', key: 'actions', width: 160,
+      title: '发票', dataIndex: 'invoiceStatus', width: 80, align: 'center',
+      render: (v: string) => {
+        const map: Record<string, { label: string; color: string }> = {
+          NOT_REQUIRED: { label: '无需', color: 'default' },
+          PENDING: { label: '待开票', color: 'processing' },
+          ISSUED: { label: '已开', color: 'success' },
+          MAILED: { label: '已寄', color: 'success' },
+        };
+        const cfg = map[v] || { label: v || '—', color: 'default' };
+        return <Tag color={cfg.color}>{cfg.label}</Tag>;
+      },
+    },
+    {
+      title: '操作', key: 'actions', width: 200,
       render: (_: unknown, record: BillingRecord) => {
-        if (record.status === 'PAID' || record.status === 'WAIVED') return '-';
-        const actions: RowAction[] = [
-          { key: 'pay', label: '标记已付', primary: true, onClick: () => handleMarkBillPaid(record) },
-          { key: 'waive', label: '减免', onClick: () => handleWaiveBill(record) },
-        ];
-        return <RowActions actions={actions} />;
+        const actions: RowAction[] = [];
+        if (record.status !== 'PAID' && record.status !== 'WAIVED') {
+          actions.push({ key: 'pay', label: '标记已付', primary: true, onClick: () => handleMarkBillPaid(record) });
+          actions.push({ key: 'waive', label: '减免', onClick: () => handleWaiveBill(record) });
+        }
+        if ((record as any).invoiceStatus === 'PENDING') {
+          actions.push({ key: 'invoice', label: '确认开票', onClick: () => handleIssueInvoice(record) });
+        }
+        return actions.length > 0 ? <RowActions actions={actions} /> : '-';
       },
     },
   ];
@@ -1205,6 +1252,345 @@ const BillingTab: React.FC = () => {
   );
 };
 
+// ========== 用户反馈管理 Tab ==========
+const FEEDBACK_CATEGORY: Record<string, { label: string; color: string }> = {
+  BUG: { label: '缺陷', color: 'red' },
+  SUGGESTION: { label: '建议', color: 'blue' },
+  QUESTION: { label: '咨询', color: 'orange' },
+  OTHER: { label: '其他', color: 'default' },
+};
+const FEEDBACK_STATUS: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '待处理', color: 'default' },
+  PROCESSING: { label: '处理中', color: 'processing' },
+  RESOLVED: { label: '已解决', color: 'success' },
+  CLOSED: { label: '已关闭', color: 'default' },
+};
+
+const FeedbackTab: React.FC = () => {
+  const [data, setData] = useState<UserFeedback[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<FeedbackStats | null>(null);
+  const [queryParams, setQueryParams] = useState({ page: 1, pageSize: 20, status: '', tenantName: '', category: '' });
+  const replyModal = useModal<UserFeedback>();
+  const detailModal = useModal<UserFeedback>();
+  const [replyForm] = Form.useForm();
+  const [replying, setReplying] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res: any = await feedbackService.list(queryParams);
+      const d = res?.data || res;
+      setData(d?.records || []);
+      setTotal(d?.total || 0);
+    } catch { message.error('加载反馈列表失败'); } finally { setLoading(false); }
+  }, [queryParams]);
+
+  const fetchStats = async () => {
+    try {
+      const res: any = await feedbackService.stats();
+      const d = res?.data || res;
+      setStats(d);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { fetchData(); fetchStats(); }, [fetchData]);
+
+  const handleReply = async () => {
+    const record = replyModal.data;
+    if (!record?.id) return;
+    try {
+      const values = await replyForm.validateFields();
+      setReplying(true);
+      await feedbackService.reply(record.id, values.reply, values.status || 'RESOLVED');
+      message.success('回复成功');
+      replyModal.close();
+      replyForm.resetFields();
+      fetchData();
+      fetchStats();
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || '回复失败');
+    } finally { setReplying(false); }
+  };
+
+  const handleUpdateStatus = async (id: number, status: string) => {
+    try {
+      await feedbackService.updateStatus(id, status);
+      message.success('状态已更新');
+      fetchData();
+      fetchStats();
+    } catch { message.error('操作失败'); }
+  };
+
+  const columns: ColumnsType<UserFeedback> = [
+    { title: 'ID', dataIndex: 'id', width: 60 },
+    { title: '租户', dataIndex: 'tenantName', width: 120, ellipsis: true },
+    { title: '提交人', dataIndex: 'userName', width: 80 },
+    { title: '来源', dataIndex: 'source', width: 70,
+      render: (v: string) => <Tag color={v === 'MINIPROGRAM' ? 'green' : 'blue'}>{v === 'MINIPROGRAM' ? '小程序' : 'PC'}</Tag>,
+    },
+    { title: '分类', dataIndex: 'category', width: 70,
+      render: (v: string) => <Tag color={FEEDBACK_CATEGORY[v]?.color}>{FEEDBACK_CATEGORY[v]?.label || v}</Tag>,
+    },
+    { title: '标题', dataIndex: 'title', width: 200, ellipsis: true },
+    { title: '状态', dataIndex: 'status', width: 80,
+      render: (v: string) => <Tag color={FEEDBACK_STATUS[v]?.color}>{FEEDBACK_STATUS[v]?.label || v}</Tag>,
+    },
+    { title: '提交时间', dataIndex: 'createTime', width: 160 },
+    {
+      title: '操作', key: 'actions', width: 160,
+      render: (_: unknown, record: UserFeedback) => {
+        const actions: RowAction[] = [
+          { key: 'detail', label: '查看', primary: true, onClick: () => detailModal.open(record) },
+          { key: 'reply', label: '回复', onClick: () => { replyModal.open(record); replyForm.setFieldsValue({ reply: record.reply || '', status: 'RESOLVED' }); } },
+        ];
+        if (record.status === 'PENDING') {
+          actions.push({ key: 'processing', label: '处理中', onClick: () => handleUpdateStatus(record.id!, 'PROCESSING') });
+        }
+        if (record.status !== 'CLOSED') {
+          actions.push({ key: 'close', label: '关闭', onClick: () => handleUpdateStatus(record.id!, 'CLOSED') });
+        }
+        return <RowActions actions={actions} />;
+      },
+    },
+  ];
+
+  return (
+    <div>
+      {/* 统计卡片 */}
+      {stats && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}><Card size="small"><Statistic title="总反馈" value={stats.total} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="待处理" value={stats.pending} valueStyle={{ color: stats.pending > 0 ? '#ff4d4f' : undefined }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="处理中" value={stats.processing} valueStyle={{ color: '#1890ff' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="已解决" value={stats.resolved} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        </Row>
+      )}
+
+      {/* 筛选 */}
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Select style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
+            onChange={v => setQueryParams(p => ({ ...p, page: 1, status: v || '' }))}
+            options={[
+              { value: 'PENDING', label: '待处理' },
+              { value: 'PROCESSING', label: '处理中' },
+              { value: 'RESOLVED', label: '已解决' },
+              { value: 'CLOSED', label: '已关闭' },
+            ]}
+          />
+          <Select style={{ width: 120 }} placeholder="分类" allowClear value={queryParams.category || undefined}
+            onChange={v => setQueryParams(p => ({ ...p, page: 1, category: v || '' }))}
+            options={[
+              { value: 'BUG', label: '缺陷' },
+              { value: 'SUGGESTION', label: '建议' },
+              { value: 'QUESTION', label: '咨询' },
+              { value: 'OTHER', label: '其他' },
+            ]}
+          />
+          <Input.Search style={{ width: 200 }} placeholder="搜索租户名称" allowClear
+            onSearch={v => setQueryParams(p => ({ ...p, page: 1, tenantName: v }))}
+          />
+          <Button onClick={() => { fetchData(); fetchStats(); }}>刷新</Button>
+        </Space>
+      </Card>
+
+      <ResizableTable
+        storageKey="customer-feedback-list"
+        rowKey="id"
+        columns={columns}
+        dataSource={data}
+        loading={loading}
+        pagination={{
+          current: queryParams.page,
+          pageSize: queryParams.pageSize,
+          total,
+          showSizeChanger: true,
+          onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })),
+        }}
+        size="small"
+      />
+
+      {/* 详情弹窗 */}
+      <ResizableModal open={detailModal.visible} title="反馈详情" onCancel={detailModal.close} width="40vw"
+        footer={<Button onClick={detailModal.close}>关闭</Button>}
+      >
+        {detailModal.data && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="ID">{detailModal.data.id}</Descriptions.Item>
+            <Descriptions.Item label="来源">
+              <Tag color={detailModal.data.source === 'MINIPROGRAM' ? 'green' : 'blue'}>
+                {detailModal.data.source === 'MINIPROGRAM' ? '小程序' : 'PC'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="租户">{detailModal.data.tenantName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="提交人">{detailModal.data.userName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="分类">
+              <Tag color={FEEDBACK_CATEGORY[detailModal.data.category]?.color}>
+                {FEEDBACK_CATEGORY[detailModal.data.category]?.label}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={FEEDBACK_STATUS[detailModal.data.status || 'PENDING']?.color}>
+                {FEEDBACK_STATUS[detailModal.data.status || 'PENDING']?.label}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="标题" span={2}>{detailModal.data.title}</Descriptions.Item>
+            <Descriptions.Item label="详细描述" span={2}>
+              <div style={{ whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>{detailModal.data.content}</div>
+            </Descriptions.Item>
+            <Descriptions.Item label="联系方式" span={2}>{detailModal.data.contact || '-'}</Descriptions.Item>
+            <Descriptions.Item label="提交时间">{detailModal.data.createTime}</Descriptions.Item>
+            <Descriptions.Item label="更新时间">{detailModal.data.updateTime}</Descriptions.Item>
+            {detailModal.data.reply && (
+              <>
+                <Descriptions.Item label="管理员回复" span={2}>
+                  <div style={{ whiteSpace: 'pre-wrap', color: '#1890ff' }}>{detailModal.data.reply}</div>
+                </Descriptions.Item>
+                <Descriptions.Item label="回复时间" span={2}>{detailModal.data.replyTime}</Descriptions.Item>
+              </>
+            )}
+          </Descriptions>
+        )}
+      </ResizableModal>
+
+      {/* 回复弹窗 */}
+      <ResizableModal open={replyModal.visible} title={`回复反馈 - ${replyModal.data?.title || ''}`}
+        onCancel={replyModal.close} width="40vw" onOk={handleReply} confirmLoading={replying} okText="提交回复"
+      >
+        {replyModal.data && (
+          <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{replyModal.data.title}</div>
+            <div style={{ fontSize: 12, color: '#666', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
+          </div>
+        )}
+        <Form form={replyForm} layout="vertical">
+          <Form.Item label="回复内容" name="reply" rules={[{ required: true, message: '请输入回复内容' }]}>
+            <Input.TextArea rows={4} placeholder="请输入回复内容" maxLength={2000} showCount />
+          </Form.Item>
+          <Form.Item label="设置状态" name="status" initialValue="RESOLVED">
+            <Select options={[
+              { value: 'PROCESSING', label: '处理中' },
+              { value: 'RESOLVED', label: '已解决' },
+              { value: 'CLOSED', label: '已关闭' },
+            ]} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+    </div>
+  );
+};
+
+// ========== 系统运维面板 Tab ==========
+const SystemStatusTab: React.FC = () => {
+  const [overview, setOverview] = useState<SystemStatusOverview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+
+  const fetchOverview = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res: any = await systemStatusService.overview();
+      const d = res?.data || res;
+      setOverview(d);
+    } catch { message.error('加载系统状态失败'); } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchOverview(); }, [fetchOverview]);
+
+  // 自动刷新
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = setInterval(fetchOverview, 15000);
+    return () => clearInterval(timer);
+  }, [autoRefresh, fetchOverview]);
+
+  const heapPercent = overview?.heapUsedPercent || 0;
+  const heapColor = heapPercent >= 90 ? '#ff4d4f' : heapPercent >= 70 ? '#faad14' : '#52c41a';
+  const dbUp = overview?.database?.status === 'UP';
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Space>
+          <Badge status={overview ? 'success' : 'default'} text={overview ? '系统运行中' : '加载中...'} />
+          {overview && <Text type="secondary" style={{ fontSize: 12 }}>运行时长：{overview.uptime}</Text>}
+        </Space>
+        <Space>
+          <Button size="small" onClick={() => setAutoRefresh(!autoRefresh)} type={autoRefresh ? 'primary' : 'default'}>
+            {autoRefresh ? '自动刷新中(15s)' : '开启自动刷新'}
+          </Button>
+          <Button size="small" onClick={fetchOverview} loading={loading}>刷新</Button>
+        </Space>
+      </div>
+
+      {overview && (
+        <>
+          {/* 核心指标 */}
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic title="JVM 堆内存" value={overview.heapUsedMb} suffix={`/ ${overview.heapMaxMb > 0 ? overview.heapMaxMb : '∞'} MB`}
+                  valueStyle={{ color: heapColor, fontSize: 20 }}
+                />
+                <Progress percent={heapPercent} size="small" strokeColor={heapColor} showInfo={false} style={{ marginTop: 8 }} />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic title="线程数" value={overview.threadCount} suffix={`/ 峰值 ${overview.peakThreadCount}`}
+                  valueStyle={{ fontSize: 20 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic title="CPU 负载" value={overview.systemLoadAverage} precision={2}
+                  suffix={`/ ${overview.availableProcessors} 核`}
+                  valueStyle={{ fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? '#ff4d4f' : undefined }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic title="数据库"
+                  value={dbUp ? '正常' : '异常'}
+                  valueStyle={{ color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 }}
+                />
+                {dbUp && <Text type="secondary" style={{ fontSize: 11 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
+              </Card>
+            </Col>
+          </Row>
+
+          {/* 详细信息 */}
+          <Card size="small" title="系统详情">
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="应用名称">{overview.applicationName}</Descriptions.Item>
+              <Descriptions.Item label="Java 版本">{overview.javaVersion}</Descriptions.Item>
+              <Descriptions.Item label="操作系统">{overview.osName} ({overview.osArch})</Descriptions.Item>
+              <Descriptions.Item label="CPU 核心数">{overview.availableProcessors}</Descriptions.Item>
+              <Descriptions.Item label="启动时间">{overview.startTime}</Descriptions.Item>
+              <Descriptions.Item label="当前时间">{overview.currentTime}</Descriptions.Item>
+              <Descriptions.Item label="堆内存(已用/最大)">{overview.heapUsedMb}MB / {overview.heapMaxMb > 0 ? overview.heapMaxMb + 'MB' : '无限制'}</Descriptions.Item>
+              <Descriptions.Item label="非堆内存">{overview.nonHeapUsedMb}MB</Descriptions.Item>
+              <Descriptions.Item label="数据库状态">
+                <Badge status={dbUp ? 'success' : 'error'} text={dbUp ? '连接正常' : '连接异常'} />
+              </Descriptions.Item>
+              <Descriptions.Item label="数据库版本">{overview.database?.product} {overview.database?.version?.split('-')[0] || '-'}</Descriptions.Item>
+            </Descriptions>
+          </Card>
+        </>
+      )}
+
+      {!overview && !loading && (
+        <Alert type="warning" message="无法获取系统状态" description="请检查后端服务是否正常运行" />
+      )}
+    </div>
+  );
+};
+
 // ========== 主页面 ==========
 const CustomerManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1230,6 +1616,16 @@ const CustomerManagement: React.FC = () => {
             key: 'billing',
             label: <span><DollarOutlined /> 套餐与收费</span>,
             children: <BillingTab />,
+          },
+          {
+            key: 'feedback',
+            label: <span><MessageOutlined /> 问题反馈</span>,
+            children: <FeedbackTab />,
+          },
+          {
+            key: 'system-status',
+            label: <span><DashboardOutlined /> 系统运维</span>,
+            children: <SystemStatusTab />,
           },
         ]}
       />

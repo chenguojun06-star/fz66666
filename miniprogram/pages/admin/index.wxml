@@ -66,6 +66,60 @@
       </view>
     </view>
 
+    <!-- 问题反馈入口 -->
+    <view class="action-row" bindtap="onShowFeedbackForm">
+      <text class="action-row-label">📝 问题反馈</text>
+      <text class="action-row-arrow">›</text>
+    </view>
+
+    <!-- 问题反馈表单（展开） -->
+    <view wx:if="{{showFeedbackForm}}" class="change-pwd-panel">
+      <view class="change-pwd-title">提交问题反馈</view>
+      <view class="change-pwd-field">
+        <text class="field-label">问题类型</text>
+        <picker class="field-input" mode="selector" range="{{['Bug缺陷', '功能建议', '使用疑问', '其他']}}" value="{{['BUG','SUGGESTION','QUESTION','OTHER'].indexOf(feedbackForm.category)}}" bindchange="onFeedbackCategoryChange">
+          <view class="picker-value">{{feedbackForm.category === 'BUG' ? 'Bug缺陷' : feedbackForm.category === 'SUGGESTION' ? '功能建议' : feedbackForm.category === 'QUESTION' ? '使用疑问' : '其他'}}</view>
+        </picker>
+      </view>
+      <view class="change-pwd-field">
+        <text class="field-label">标题</text>
+        <input class="field-input" placeholder="简要描述问题" bindinput="onFeedbackTitleInput" value="{{feedbackForm.title}}" maxlength="100" />
+      </view>
+      <view class="change-pwd-field">
+        <text class="field-label">详细描述</text>
+        <textarea class="field-textarea" placeholder="请详细描述遇到的问题、操作步骤等" bindinput="onFeedbackContentInput" value="{{feedbackForm.content}}" maxlength="2000" auto-height="{{true}}" />
+      </view>
+      <view class="change-pwd-field">
+        <text class="field-label">联系方式</text>
+        <input class="field-input" placeholder="手机号或微信号（选填）" bindinput="onFeedbackContactInput" value="{{feedbackForm.contact}}" />
+      </view>
+      <view class="change-pwd-btns">
+        <view class="pwd-btn-cancel" bindtap="onCloseFeedbackForm">取消</view>
+        <view class="pwd-btn-confirm {{submittingFeedback ? 'disabled' : ''}}" bindtap="onSubmitFeedback">{{submittingFeedback ? '提交中...' : '提交反馈'}}</view>
+      </view>
+    </view>
+
+    <!-- 我的反馈历史 -->
+    <view class="action-row" bindtap="onToggleMyFeedbacks">
+      <text class="action-row-label">📋 我的反馈</text>
+      <text class="action-row-arrow">{{showMyFeedbacks ? '∨' : '›'}}</text>
+    </view>
+    <view wx:if="{{showMyFeedbacks}}" class="feedback-list">
+      <view wx:if="{{myFeedbacks.length === 0}}" class="hint">暂无反馈记录</view>
+      <view wx:for="{{myFeedbacks}}" wx:key="id" class="feedback-item">
+        <view class="feedback-item-head">
+          <text class="feedback-item-title">{{item.title}}</text>
+          <text class="feedback-status feedback-status-{{item.status}}">{{item.status === 'PENDING' ? '待处理' : item.status === 'PROCESSING' ? '处理中' : item.status === 'RESOLVED' ? '已解决' : '已关闭'}}</text>
+        </view>
+        <view class="feedback-item-content">{{item.content}}</view>
+        <view wx:if="{{item.reply}}" class="feedback-item-reply">
+          <text class="reply-label">回复：</text>
+          <text>{{item.reply}}</text>
+        </view>
+        <view class="feedback-item-time">{{item.createTime}}</view>
+      </view>
+    </view>
+
     <!-- 功能导航行 -->
     <view class="nav-row">
       <view class="user-info-item">

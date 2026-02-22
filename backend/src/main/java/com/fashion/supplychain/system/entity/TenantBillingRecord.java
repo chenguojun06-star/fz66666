@@ -55,6 +55,40 @@ public class TenantBillingRecord {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime paidTime;
 
+    /** 是否需要发票 */
+    private Boolean invoiceRequired;
+
+    /** 发票状态: NOT_REQUIRED/PENDING/ISSUED/MAILED */
+    private String invoiceStatus;
+
+    /** 发票抬头 */
+    private String invoiceTitle;
+
+    /** 纳税人识别号 */
+    private String invoiceTaxNo;
+
+    /** 发票号码 */
+    private String invoiceNo;
+
+    /** 发票金额 */
+    private BigDecimal invoiceAmount;
+
+    /** 开票时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime invoiceIssuedTime;
+
+    /** 开户银行 */
+    private String invoiceBankName;
+
+    /** 银行账号 */
+    private String invoiceBankAccount;
+
+    /** 注册地址 */
+    private String invoiceAddress;
+
+    /** 注册电话 */
+    private String invoicePhone;
+
     /** 备注 */
     private String remark;
 
