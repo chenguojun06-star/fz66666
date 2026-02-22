@@ -696,8 +696,8 @@ const DataCenter: React.FC = () => {
             <Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button>
           </Space>
         }
-        defaultWidth="40vw"
-        defaultHeight="50vh"
+        width="40vw"
+        initialHeight={500}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
@@ -717,8 +717,8 @@ const DataCenter: React.FC = () => {
       <ResizableModal
         open={patternRevisionModalVisible}
         title={`纸样修改记录 - ${patternRevisionRecord?.styleNo || ''}`}
-        defaultWidth="30vw"
-        defaultHeight="40vh"
+        width="40vw"
+        initialHeight={520}
         onCancel={() => {
           setPatternRevisionModalVisible(false);
           setPatternRevisionRecord(null);
@@ -821,8 +821,8 @@ const DataCenter: React.FC = () => {
             }}>打印制单</Button>
           </Space>
         }
-        defaultWidth="60vw"
-        defaultHeight="60vh"
+        width="60vw"
+        initialHeight={620}
       >
         {detailRecord && (
           <div style={{ padding: '16px' }}>

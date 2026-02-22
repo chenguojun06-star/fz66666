@@ -44,8 +44,8 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
       okText="入库"
       cancelText="取消"
       confirmLoading={loading}
-      defaultWidth="30vw"
-      defaultHeight="40vh"
+      width="30vw"
+      initialHeight={400}
       autoFontSize={false}
       destroyOnHidden
     >

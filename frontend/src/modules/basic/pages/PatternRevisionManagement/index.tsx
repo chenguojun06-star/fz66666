@@ -578,8 +578,8 @@ const PatternRevisionManagement: React.FC = () => {
         okText="保存"
         cancelText={modalMode === 'view' ? '关闭' : '取消'}
         confirmLoading={saving}
-        defaultWidth="30vw"
-        defaultHeight="40vh"
+        width="40vw"
+        initialHeight={520}
       >
         <Form
           form={form}
