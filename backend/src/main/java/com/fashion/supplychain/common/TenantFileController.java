@@ -65,16 +65,19 @@ public class TenantFileController {
                 }
             }
 
-            // ✅ COS 已启用：优先从 COS 获取，找不到则回退本地存储
+            // ✅ COS 已启用：直接生成预签名URL，302跳转到COS
+            // 不再调用 exists()（HeadObject 可能缺权限导致误判404）
+            // 如果文件在COS不存在，COS本身会返回404，效果一样但不会误杀
             if (cosService.isEnabled()) {
-                if (cosService.exists(tenantId, fileName)) {
+                try {
                     String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
                     return ResponseEntity.status(302)
                             .header(HttpHeaders.LOCATION, presignedUrl)
                             .build();
+                } catch (Exception e) {
+                    log.warn("[COS] 生成预签名URL失败，尝试本地回退: tenantId={}, fileName={}, error={}",
+                            tenantId, fileName, e.getMessage());
                 }
-                // COS 中不存在，尝试回退到本地文件（兼容 COS 启用前的旧数据）
-                log.info("[COS] 文件不在COS中，尝试本地回退: tenantId={}, fileName={}", tenantId, fileName);
             }
 
             // 本地文件存储（开发环境 / 未配置 COS / COS 回退）

@@ -225,8 +225,17 @@ public class CosService {
         try {
             cosClient.getObjectMetadata(bucket, key);
             return true;
+        } catch (com.qcloud.cos.exception.CosServiceException e) {
+            if ("NoSuchKey".equals(e.getErrorCode()) || e.getStatusCode() == 404) {
+                return false; // 文件确实不存在
+            }
+            // 权限不足等其他错误，记录日志并抛出（不能静默吞掉）
+            log.error("[COS] exists检查异常: key={}, errorCode={}, statusCode={}, message={}",
+                    key, e.getErrorCode(), e.getStatusCode(), e.getErrorMessage());
+            throw new RuntimeException("COS文件检查失败(" + e.getErrorCode() + "): " + e.getErrorMessage(), e);
         } catch (Exception e) {
-            return false;
+            log.error("[COS] exists检查未知异常: key={}, error={}", key, e.getMessage());
+            throw new RuntimeException("COS文件检查失败: " + e.getMessage(), e);
         }
     }
 

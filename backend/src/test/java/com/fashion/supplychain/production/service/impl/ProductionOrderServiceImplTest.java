@@ -56,10 +56,10 @@ class ProductionOrderServiceImplTest {
         Map<String, Object> params = new HashMap<>();
         params.put("page", 1);
         params.put("pageSize", 10);
-        
+
         // When: 执行查询
         IPage<ProductionOrder> result = productionOrderService.queryPage(params);
-        
+
         // Then: 验证结果
         assertNotNull(result);
         assertTrue(result.getTotal() >= 0);
@@ -82,10 +82,10 @@ class ProductionOrderServiceImplTest {
         order.setCreateTime(LocalDateTime.now());
         order.setDeleteFlag(0);
         order.setStatus("pending");
-        
+
         // When: 执行保存
         boolean saved = productionOrderService.save(order);
-        
+
         // Then: 验证结果
         assertTrue(saved);
         assertNotNull(order.getId());
@@ -110,15 +110,15 @@ class ProductionOrderServiceImplTest {
         order.setDeleteFlag(0);
         order.setStatus("pending");
         productionOrderService.save(order);
-        
+
         Map<String, Object> params = new HashMap<>();
         params.put("page", 1);
         params.put("pageSize", 10);
         params.put("orderNo", orderNo);
-        
+
         // When: 执行查询
         IPage<ProductionOrder> result = productionOrderService.queryPage(params);
-        
+
         // Then: 验证结果
         assertNotNull(result);
         assertEquals(1, result.getRecords().size());
@@ -143,12 +143,12 @@ class ProductionOrderServiceImplTest {
         order.setDeleteFlag(0);
         order.setStatus("pending");
         productionOrderService.save(order);
-        
+
         // When: 执行更新
         order.setStyleName("更新后款式");
         order.setOrderQuantity(500);
         boolean updated = productionOrderService.updateById(order);
-        
+
         // Then: 验证结果
         assertTrue(updated);
         ProductionOrder found = productionOrderService.getById(order.getId());
@@ -175,10 +175,10 @@ class ProductionOrderServiceImplTest {
         order.setStatus("pending");
         productionOrderService.save(order);
         String id = order.getId();
-        
+
         // When: 执行删除
         boolean deleted = productionOrderService.removeById(id);
-        
+
         // Then: 验证结果
         assertTrue(deleted);
         // 逻辑删除后仍然能通过ID查到，但deleteFlag=1
@@ -205,13 +205,13 @@ class ProductionOrderServiceImplTest {
         order.setDeleteFlag(0);
         order.setStatus("pending");
         productionOrderService.save(order);
-        
+
         // When & Then: 测试状态流转
         // CREATED -> IN_PROGRESS
         order.setStatus("production");
         assertTrue(productionOrderService.updateById(order));
         assertEquals("production", productionOrderService.getById(order.getId()).getStatus());
-        
+
         // IN_PROGRESS -> COMPLETED
         order.setStatus("completed");
         assertTrue(productionOrderService.updateById(order));
