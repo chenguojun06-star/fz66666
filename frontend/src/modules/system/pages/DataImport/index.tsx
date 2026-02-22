@@ -220,8 +220,8 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                   message.error('仅支持 .xlsx 或 .xls 格式的Excel文件');
                   return Upload.LIST_IGNORE;
                 }
-                if (file.size > 10 * 1024 * 1024) {
-                  message.error('文件大小不能超过10MB');
+                if (file.size > 5 * 1024 * 1024) {
+                  message.error('文件大小不能超过5MB');
                   return Upload.LIST_IGNORE;
                 }
                 setFileList([{ ...file, uid: file.uid, name: file.name, originFileObj: file } as UploadFile]);

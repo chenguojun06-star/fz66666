@@ -133,8 +133,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
   // 上传文件
   const uploadOne = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      message.error('文件过大，最大10MB');
+    if (file.size > 15 * 1024 * 1024) {
+      message.error('文件过大，最大15MB');
       return Upload.LIST_IGNORE;
     }
     const ext = getExt(file.name);

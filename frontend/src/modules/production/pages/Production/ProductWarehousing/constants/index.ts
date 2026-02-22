@@ -1,6 +1,6 @@
 export const COVER_SIZE = 120;
 export const MAX_UNQUALIFIED_IMAGES = 4;
-export const MAX_UNQUALIFIED_IMAGE_MB = 5;
+export const MAX_UNQUALIFIED_IMAGE_MB = 15;
 export const BATCH_LIST_MAX_HEIGHT = 360;
 
 export const DEFECT_CATEGORY_OPTIONS = [

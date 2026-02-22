@@ -125,8 +125,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       message.error(`${file.name} 不是图片文件`);
       return false;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      message.error(`${file.name} 文件过大，最大50MB`);
+    if (file.size > 15 * 1024 * 1024) {
+      message.error(`${file.name} 文件过大，最大15MB`);
       return false;
     }
     // 超出数量限制时跳过（保留前4张）

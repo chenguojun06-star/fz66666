@@ -61,8 +61,8 @@ const FactoryList: React.FC = () => {
       message.error('仅支持图片文件');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      message.error('图片过大，最大10MB');
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('图片过大，最大5MB');
       return;
     }
     const formData = new FormData();
