@@ -100,11 +100,9 @@ public class ViewMigrator {
     /* ---------- 内联 SQL 兜底视图 ---------- */
 
     private void ensureProductionViewsFallback() {
-        if (dbHelper.viewExists("v_production_order_flow_stage_snapshot")
-                && dbHelper.viewExists("v_production_order_stage_done_agg")
-                && dbHelper.viewExists("v_production_order_procurement_snapshot")) {
-            return;
-        }
+        // 不再做 "视图存在就跳过" 的早返回！
+        // 必须每次都执行 CREATE OR REPLACE VIEW，确保视图内容与代码保持同步。
+        // 历史上的早返回导致：视图内容有 bug 时，后端重启永远无法自动修复。
 
         String flowStageSnapshot = """
                 CREATE OR REPLACE VIEW v_production_order_flow_stage_snapshot AS
