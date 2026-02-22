@@ -30,6 +30,7 @@ public class SystemTableMigrator {
         seedDefaultAuthData();
         ensureDictTable();
         createAdminUser(jdbc);
+        fixAppStorePrices(jdbc);
     }
 
     private void createUserTable(JdbcTemplate jdbc) {
@@ -484,6 +485,34 @@ public class SystemTableMigrator {
             }
         } catch (Exception e) {
             log.warn("Failed to check/insert admin user: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 修复应用商店价格数据
+     * 初始INSERT遗漏了price_once列，导致买断价格显示为0
+     */
+    private void fixAppStorePrices(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_app_store")) {
+            return;
+        }
+        try {
+            // 检查是否有price_once=0的已发布应用（说明数据需要修复）
+            Integer zeroCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_app_store WHERE status='PUBLISHED' AND (price_once IS NULL OR price_once = 0)",
+                Integer.class
+            );
+            if (zeroCount != null && zeroCount > 0) {
+                log.info("Fixing app store prices: {} apps have price_once=0, updating...", zeroCount);
+                jdbc.update("UPDATE t_app_store SET price_monthly=299.00,  price_yearly=2990.00, price_once=19999.00 WHERE app_code='ORDER_SYNC'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=199.00,  price_yearly=1990.00, price_once=19999.00 WHERE app_code='QUALITY_FEEDBACK'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=149.00,  price_yearly=1490.00, price_once=19999.00 WHERE app_code='LOGISTICS_SYNC'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=199.00,  price_yearly=1990.00, price_once=19999.00 WHERE app_code='PAYMENT_SYNC'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=249.00,  price_yearly=2490.00, price_once=19999.00 WHERE app_code='MATERIAL_SUPPLY'");
+                log.info("App store prices fixed successfully.");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fix app store prices: {}", e.getMessage());
         }
     }
 }

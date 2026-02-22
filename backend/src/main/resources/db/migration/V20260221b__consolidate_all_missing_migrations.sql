@@ -348,12 +348,19 @@ CREATE TABLE IF NOT EXISTS `t_app_payment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用支付记录';
 
 -- 初始应用数据（INSERT IGNORE 保证幂等）
-INSERT IGNORE INTO `t_app_store` (`app_code`, `app_name`, `app_icon`, `app_desc`, `category`, `price_type`, `price_monthly`, `price_yearly`, `sort_order`, `is_hot`, `trial_days`, `status`, `features`) VALUES
-('ORDER_SYNC',       '下单对接',       '📦', '与客户系统对接，自动同步订单数据，减少人工录入',                 '核心对接', 'MONTHLY', 999.00,  9990.00,  1, 1, 7, 'PUBLISHED', '["自动接收客户订单","订单状态同步","订单变更通知","批量导入导出","订单数据校验"]'),
-('QUALITY_FEEDBACK', '质检反馈',       '✅', '质检结果实时同步，不良品反馈，质量数据分析',                     '核心对接', 'MONTHLY', 799.00,  7990.00,  2, 0, 7, 'PUBLISHED', '["质检结果推送","不良品反馈","质检报告生成","质量数据统计","异常预警通知"]'),
-('LOGISTICS_SYNC',   '物流对接',       '🚚', '物流信息实时同步，发货通知，物流轨迹跟踪',                       '核心对接', 'MONTHLY', 599.00,  5990.00,  3, 1, 7, 'PUBLISHED', '["发货信息同步","物流轨迹跟踪","签收状态通知","退货物流对接","批量发货管理"]'),
-('PAYMENT_SYNC',     '付款对接',       '💰', '付款信息自动同步，对账管理，结算数据对接',                       '核心对接', 'MONTHLY', 699.00,  6990.00,  4, 0, 7, 'PUBLISHED', '["付款信息同步","自动对账","结算数据推送","账单生成","付款状态跟踪"]'),
-('MATERIAL_SUPPLY',  '面辅料供应对接', '🧵', '采购单自动同步、库存实时查询、价格自动更新、物流跟踪',           '核心对接', 'MONTHLY', 899.00,  8990.00,  5, 0, 7, 'PUBLISHED', '["采购订单自动推送","供应商库存实时查询","价格自动更新同步","发货物流跟踪","批量采购管理"]');
+INSERT IGNORE INTO `t_app_store` (`app_code`, `app_name`, `app_icon`, `app_desc`, `category`, `price_type`, `price_monthly`, `price_yearly`, `price_once`, `sort_order`, `is_hot`, `trial_days`, `status`, `features`) VALUES
+('ORDER_SYNC',       '下单对接',       '📦', '与客户系统对接，自动同步订单数据，减少人工录入',                 '核心对接', 'MONTHLY', 299.00,  2990.00, 19999.00, 1, 1, 7, 'PUBLISHED', '["自动接收客户订单","订单状态同步","订单变更通知","批量导入导出","订单数据校验"]'),
+('QUALITY_FEEDBACK', '质检反馈',       '✅', '质检结果实时同步，不良品反馈，质量数据分析',                     '核心对接', 'MONTHLY', 199.00,  1990.00, 19999.00, 2, 0, 7, 'PUBLISHED', '["质检结果推送","不良品反馈","质检报告生成","质量数据统计","异常预警通知"]'),
+('LOGISTICS_SYNC',   '物流对接',       '🚚', '物流信息实时同步，发货通知，物流轨迹跟踪',                       '核心对接', 'MONTHLY', 149.00,  1490.00, 19999.00, 3, 1, 7, 'PUBLISHED', '["发货信息同步","物流轨迹跟踪","签收状态通知","退货物流对接","批量发货管理"]'),
+('PAYMENT_SYNC',     '付款对接',       '💰', '付款信息自动同步，对账管理，结算数据对接',                       '核心对接', 'MONTHLY', 199.00,  1990.00, 19999.00, 4, 0, 7, 'PUBLISHED', '["付款信息同步","自动对账","结算数据推送","账单生成","付款状态跟踪"]'),
+('MATERIAL_SUPPLY',  '面辅料供应对接', '🧵', '采购单自动同步、库存实时查询、价格自动更新、物流跟踪',           '核心对接', 'MONTHLY', 249.00,  2490.00, 19999.00, 5, 0, 7, 'PUBLISHED', '["采购订单自动推送","供应商库存实时查询","价格自动更新同步","发货物流跟踪","批量采购管理"]');
+
+-- 修复已存在的数据（INSERT IGNORE不会更新已有记录，所以需要UPDATE）
+UPDATE `t_app_store` SET `price_monthly`=299.00,  `price_yearly`=2990.00, `price_once`=19999.00 WHERE `app_code`='ORDER_SYNC';
+UPDATE `t_app_store` SET `price_monthly`=199.00,  `price_yearly`=1990.00, `price_once`=19999.00 WHERE `app_code`='QUALITY_FEEDBACK';
+UPDATE `t_app_store` SET `price_monthly`=149.00,  `price_yearly`=1490.00, `price_once`=19999.00 WHERE `app_code`='LOGISTICS_SYNC';
+UPDATE `t_app_store` SET `price_monthly`=199.00,  `price_yearly`=1990.00, `price_once`=19999.00 WHERE `app_code`='PAYMENT_SYNC';
+UPDATE `t_app_store` SET `price_monthly`=249.00,  `price_yearly`=2490.00, `price_once`=19999.00 WHERE `app_code`='MATERIAL_SUPPLY';
 
 
 -- ======================================================================
