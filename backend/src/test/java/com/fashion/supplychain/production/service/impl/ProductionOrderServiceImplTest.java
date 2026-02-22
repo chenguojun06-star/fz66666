@@ -14,6 +14,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fashion.supplychain.common.UserContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -27,6 +31,23 @@ class ProductionOrderServiceImplTest {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @BeforeEach
+    void setUpUserContext() {
+        UserContext ctx = new UserContext();
+        ctx.setUserId("test-admin");
+        ctx.setUsername("test-admin");
+        ctx.setRole("admin");
+        ctx.setPermissionRange("all");
+        ctx.setTenantId(1L);
+        ctx.setTenantOwner(true);
+        UserContext.set(ctx);
+    }
+
+    @AfterEach
+    void clearUserContext() {
+        UserContext.clear();
+    }
 
     @Test
     @DisplayName("测试生产订单查询分页")

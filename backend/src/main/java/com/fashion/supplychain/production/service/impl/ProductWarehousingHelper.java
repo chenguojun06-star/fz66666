@@ -477,7 +477,7 @@ public class ProductWarehousingHelper {
         }
     }
 
-    void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
+    public void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
         if (deltaQuantity == 0) {
             return;
         }

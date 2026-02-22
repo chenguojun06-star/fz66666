@@ -1,11 +1,14 @@
 package com.fashion.supplychain.production.integration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,23 @@ public class MaterialPurchaseStockIntegrationTest {
     @Autowired
     private MaterialStockService materialStockService;
 
+    @BeforeEach
+    void setUpUserContext() {
+        UserContext ctx = new UserContext();
+        ctx.setUserId("test-admin");
+        ctx.setUsername("test-admin");
+        ctx.setRole("admin");
+        ctx.setPermissionRange("all");
+        ctx.setTenantId(1L);
+        ctx.setTenantOwner(true);
+        UserContext.set(ctx);
+    }
+
+    @AfterEach
+    void clearUserContext() {
+        UserContext.clear();
+    }
+
     @Test
     @DisplayName("验证采购入库后库存自动增加")
     public void testPurchaseArrivedSyncsStock() {
@@ -41,6 +61,7 @@ public class MaterialPurchaseStockIntegrationTest {
         purchase.setArrivedQuantity(0); // 初始未到货
         purchase.setUnitPrice(new BigDecimal("10.0"));
         purchase.setSupplierName("Test Supplier");
+        purchase.setSourceType("independent"); // 非订单驱动采购，确保库存同步生效
 
         boolean saved = materialPurchaseService.save(purchase);
         Assertions.assertTrue(saved, "采购单保存失败");
