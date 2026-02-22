@@ -543,7 +543,7 @@ public class OrderFlowStageFillHelper {
                     secondaryProcessEnd = t;
                     secondaryProcessOperator = op;
                     secondaryProcessQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("packaging".equals(pn) || pn.contains("包装"))) {
+                } else if ("production".equals(st) && ("packaging".equals(pn) || "tailProcess".equals(pn) || "tail_process".equals(pn) || pn.contains("包装"))) {
                     if (packagingStart == null) {
                         packagingStart = t;
                     }
