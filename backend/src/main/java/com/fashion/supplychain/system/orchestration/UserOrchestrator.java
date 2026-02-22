@@ -327,6 +327,7 @@ public class UserOrchestrator {
         result.put("permissionRange", user.getPermissionRange());
         result.put("phone", user.getPhone());
         result.put("email", user.getEmail());
+        result.put("avatarUrl", user.getAvatarUrl());
         result.put("tenantId", user.getTenantId());
         result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
         result.put("isSuperAdmin", Boolean.TRUE.equals(user.getIsSuperAdmin()));
