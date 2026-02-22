@@ -776,6 +776,7 @@ public class ExcelImportOrchestrator {
         // 3. 逐行保存款式 + 匹配并上传封面图
         List<Map<String, Object>> successRecords = new ArrayList<>();
         List<Map<String, Object>> failedRecords = new ArrayList<>();
+        List<String> imageErrors = new ArrayList<>();
 
         for (int index = 0; index < rows.size(); index++) {
             Map<String, String> item = rows.get(index);
@@ -830,7 +831,9 @@ public class ExcelImportOrchestrator {
                         style.setCover(coverUrl);
                         log.info("[ZIP导入] 款号={} 封面图已上传: {}", styleNo, coverUrl);
                     } catch (Exception imgEx) {
+                        String errMsg = styleNo + ": " + imgEx.getMessage();
                         log.warn("[ZIP导入] 款号={} 封面图上传失败，跳过图片: {}", styleNo, imgEx.getMessage());
+                        imageErrors.add(errMsg);
                         // 图片上传失败不影响款式数据导入
                     }
                 }
@@ -857,6 +860,9 @@ public class ExcelImportOrchestrator {
         Map<String, Object> result = buildResult(rows.size(), successRecords, failedRecords, "款式(ZIP)");
         result.put("imageCount", imageMap.size());
         result.put("withCoverCount", withCover);
+        if (!imageErrors.isEmpty()) {
+            result.put("imageErrors", imageErrors);
+        }
         if (!failedRecords.isEmpty() || withCover > 0) {
             result.put("message", result.get("message") + "，共关联封面图 " + withCover + " 张");
         }
