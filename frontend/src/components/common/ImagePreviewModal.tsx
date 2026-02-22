@@ -33,8 +33,8 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     const naturalHeight = img.naturalHeight;
     if (!naturalWidth || !naturalHeight) return;
 
-    const maxWidth = window.innerWidth * 0.88;
-    const maxHeight = window.innerHeight * 0.88;
+    const maxWidth = window.innerWidth * 0.8;
+    const maxHeight = window.innerHeight * 0.8;
     const minSize = 300;
 
     let w = naturalWidth;

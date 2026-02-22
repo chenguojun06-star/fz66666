@@ -79,8 +79,8 @@ const GlobalImagePreview: React.FC = () => {
       return { width: 600, height: 600 };
     }
 
-    const maxWidth = window.innerWidth * 0.9; // 最大宽度为视口的90%
-    const maxHeight = window.innerHeight * 0.9; // 最大高度为视口的90%
+    const maxWidth = window.innerWidth * 0.8; // 最大宽度为视口的80%
+    const maxHeight = window.innerHeight * 0.8; // 最大高度为视口的80%
     const minSize = 300; // 最小尺寸
 
     let { width, height } = imageDimensions;
