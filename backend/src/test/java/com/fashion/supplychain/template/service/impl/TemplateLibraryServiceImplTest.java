@@ -12,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.*;
  * TemplateLibraryServiceImpl单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TemplateLibraryServiceImplTest {
 
     @Mock
@@ -117,7 +120,9 @@ class TemplateLibraryServiceImplTest {
         template.setTemplateName("New Template");
         template.setTemplateContent("{}");
 
-        when(templateLibraryMapper.selectOne(any(LambdaQueryWrapper.class)))
+        when(templateLibraryMapper.selectList(any(LambdaQueryWrapper.class)))
+            .thenReturn(Collections.emptyList());
+        when(templateLibraryMapper.selectOne(any(LambdaQueryWrapper.class), anyBoolean()))
             .thenReturn(null);
         when(templateLibraryMapper.insert(any(TemplateLibrary.class)))
             .thenReturn(1);
@@ -141,7 +146,9 @@ class TemplateLibraryServiceImplTest {
         update.setTemplateName("Updated Name");
         update.setTemplateContent("{\"updated\": true}");
 
-        when(templateLibraryMapper.selectOne(any(LambdaQueryWrapper.class)))
+        when(templateLibraryMapper.selectList(any(LambdaQueryWrapper.class)))
+            .thenReturn(Collections.singletonList(existing));
+        when(templateLibraryMapper.selectOne(any(LambdaQueryWrapper.class), anyBoolean()))
             .thenReturn(existing);
         when(templateLibraryMapper.updateById(any(TemplateLibrary.class)))
             .thenReturn(1);

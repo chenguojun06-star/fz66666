@@ -311,7 +311,7 @@ public class FinishedProductSettlementController {
         }
 
         FinishedProductSettlement patch = new FinishedProductSettlement();
-        patch.setId(settlement.getId());
+        patch.setOrderId(settlement.getOrderId());
         patch.setStatus("cancelled");
         patch.setUpdateTime(LocalDateTime.now());
         settlementService.updateById(patch);

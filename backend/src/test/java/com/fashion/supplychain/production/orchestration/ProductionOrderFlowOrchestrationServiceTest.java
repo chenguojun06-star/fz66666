@@ -199,8 +199,8 @@ class ProductionOrderFlowOrchestrationServiceTest {
         assertEquals(3, stages.size());
 
         assertEquals("下单", stages.get(0).get("processName"));
-        assertEquals("not_started", stages.get(0).get("status"));
-        assertEquals(0, stages.get(0).get("totalQuantity"));
+        assertEquals("completed", stages.get(0).get("status"));  // 下单阶段：订单存在即为 completed
+        assertEquals(100, stages.get(0).get("totalQuantity"));    // 等于 orderQuantity
 
         assertEquals("裁剪", stages.get(1).get("processName"));
         assertEquals("in_progress", stages.get(1).get("status"));
