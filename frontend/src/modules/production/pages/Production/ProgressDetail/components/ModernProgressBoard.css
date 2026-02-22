@@ -3,7 +3,10 @@
 .mpb-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;min-height:46px}
 .mpb-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);background:var(--color-bg-base);border:1px solid var(--color-border);color:var(--color-text-primary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mpb-pillDot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;box-shadow:0 8px 18px rgba(15,23,42,.12)}
-.mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:wrap}
+.mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
+.mpb-nodesWrap::-webkit-scrollbar{height:4px}
+.mpb-nodesWrap::-webkit-scrollbar-thumb{background:rgba(15,23,42,.15);border-radius:999px}
+.mpb-nodesWrap::-webkit-scrollbar-track{background:transparent}
 .mpb-mark{display:flex;align-items:center}
 .mpb-node{position:relative;overflow:hidden;width:70px;height:70px;padding:0;border-radius:50%;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--color-bg-base);border:1px solid var(--color-border);color:var(--color-text-primary);box-shadow:none}
 .mpb-node::before{content:"";position:absolute;left:0;top:auto;bottom:0;right:0;width:100%;height:var(--p,0%);background:var(--color-primary-light);transition:height .35s ease;opacity:.18;border-radius:50%}

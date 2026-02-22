@@ -18,6 +18,7 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
   const pct = clampPercent(progress);
   const effectivePct = frozen ? 100 : pct;
   const ns = Array.isArray(nodes) && nodes.length ? nodes : defaultNodes;
+  const nodeSize = ns.length > 12 ? 52 : ns.length > 8 ? 60 : 70;
   const currentIdx = getNodeIndexFromProgress(ns, effectivePct);
   const segPct = ns.length ? 100 / ns.length : 100;
   const safeTotal = Math.max(0, Number(totalQty) || 0);
@@ -59,7 +60,7 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
                   <div
                     key={badgeKey}
                     className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
-                    style={{ ['--p' as any]: `${fillPct}%` }}
+                    style={{ ['--p' as any]: `${fillPct}%`, width: nodeSize, height: nodeSize }}
                   >
                     <span className="mpb-nodeName">{name}</span>
                     <span className="mpb-nodeQty">{displayText}</span>
