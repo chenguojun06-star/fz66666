@@ -113,4 +113,32 @@ public class ExcelImportController {
         }
         return Result.success(result);
     }
+
+    /**
+     * ZIP 打包导入：款式资料 + 封面图片
+     *
+     * ZIP 结构规则：
+     *   - 包含一个 Excel 文件（.xlsx/.xls），字段同款式导入模板
+     *   - 图片文件名 = 款号（如 FZ2024001.jpg），自动关联为封面图
+     *   - 支持 jpg/jpeg/png/gif/webp
+     *   - 最大 500 条款式，ZIP 包 500MB 以内
+     */
+    @PostMapping("/upload-zip/style")
+    public Result<Map<String, Object>> uploadZipAndImport(
+            @RequestParam("file") MultipartFile file) {
+
+        if (file == null || file.isEmpty()) return Result.fail("请上传 ZIP 文件");
+
+        String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        if (!filename.endsWith(".zip")) return Result.fail("仅支持 .zip 格式，请将 Excel + 图片一起压缩成 ZIP 后上传");
+
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) return Result.fail("无法获取租户信息，请重新登录");
+
+        log.info("[ZIP导入] 用户={}, 租户={}, 文件={}, 大小={}KB",
+                UserContext.username(), tenantId, file.getOriginalFilename(), file.getSize() / 1024);
+
+        Map<String, Object> result = excelImportOrchestrator.importStylesFromZip(tenantId, file);
+        return Result.success(result);
+    }
 }

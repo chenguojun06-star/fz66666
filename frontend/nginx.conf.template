@@ -8,8 +8,8 @@ server {
     listen 80;
     server_name _;
 
-    # 允许上传最大 15MB 文件（拍照照片上限；个人/工厂图像由前端限制 5MB）
-    client_max_body_size 15m;
+    # 普通图片/文件: 前端限 15MB；ZIP 批量导入包最大 500MB
+    client_max_body_size 500m;
 
     root /usr/share/nginx/html;
     index index.html;

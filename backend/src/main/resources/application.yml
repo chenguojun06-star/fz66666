@@ -14,8 +14,8 @@ spring:
     allow-circular-references: true
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 100MB
+      max-file-size: 500MB
+      max-request-size: 500MB
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}

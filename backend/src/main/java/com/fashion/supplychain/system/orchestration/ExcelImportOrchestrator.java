@@ -1,6 +1,9 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -13,17 +16,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Excel数据导入编排器
@@ -48,6 +57,12 @@ public class ExcelImportOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CosService cosService;
+
+    @Value("${fashion.upload-path:./uploads/}")
+    private String uploadPath;
 
     // ==================== 模板定义 ====================
 
@@ -665,5 +680,186 @@ public class ExcelImportOrchestrator {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ==================== ZIP 图片包导入 ====================
+
+    /**
+     * ZIP 打包导入款式 + 图片
+     *
+     * ZIP 内容规则：
+     *   - 必须包含一个 .xlsx 或 .xls 文件（款式数据，字段同普通导入模板）
+     *   - 图片文件名 = 款号（如 FZ2024001.jpg / FZ2024001.png），系统自动关联封面图
+     *   - 支持 jpg/jpeg/png/gif/webp 格式
+     *   - 单次最多 500 条款式
+     *
+     * @param tenantId  当前租户ID
+     * @param zipFile   上传的 ZIP 文件
+     * @return 导入结果（含成功/失败数量、失败详情）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> importStylesFromZip(Long tenantId, MultipartFile zipFile) {
+        // 1. 解压 ZIP，分别收集 Excel 和图片
+        byte[] excelBytes = null;
+        String excelName = null;
+        Map<String, byte[]> imageMap = new LinkedHashMap<>(); // key=款号（无扩展名）, value=图片字节
+
+        Set<String> imageExts = new HashSet<>(Arrays.asList("jpg", "jpeg", "png", "gif", "webp"));
+
+        try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) { zis.closeEntry(); continue; }
+
+                // 取文件名（忽略 __MACOSX 等垃圾目录）
+                String entryName = entry.getName();
+                if (entryName.contains("__MACOSX") || entryName.startsWith(".")) { zis.closeEntry(); continue; }
+                String baseName = entryName.contains("/")
+                        ? entryName.substring(entryName.lastIndexOf('/') + 1)
+                        : entryName;
+                if (baseName.startsWith(".") || baseName.isEmpty()) { zis.closeEntry(); continue; }
+
+                byte[] bytes = zis.readAllBytes();
+                String lowerName = baseName.toLowerCase();
+
+                if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+                    if (excelBytes == null) { // 取第一个 Excel
+                        excelBytes = bytes;
+                        excelName = baseName;
+                    }
+                } else {
+                    int dotIdx = lowerName.lastIndexOf('.');
+                    if (dotIdx > 0) {
+                        String ext = lowerName.substring(dotIdx + 1);
+                        if (imageExts.contains(ext)) {
+                            String styleNo = baseName.substring(0, baseName.lastIndexOf('.')); // 文件名去掉扩展名 = 款号
+                            imageMap.put(styleNo, bytes);
+                        }
+                    }
+                }
+                zis.closeEntry();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("ZIP 文件解压失败: " + e.getMessage(), e);
+        }
+
+        if (excelBytes == null) {
+            throw new IllegalArgumentException("ZIP 包内未找到 Excel 文件（.xlsx 或 .xls），请确认 ZIP 内容");
+        }
+
+        log.info("[ZIP导入] 租户={}, Excel={}, 图片数={}", tenantId, excelName, imageMap.size());
+
+        // 2. 用现有逻辑解析 Excel（包装成 MultipartFile）
+        final byte[] finalExcelBytes = excelBytes;
+        final String finalExcelName = excelName;
+        MultipartFile excelMultipart = new MultipartFile() {
+            @Override public String getName() { return "file"; }
+            @Override public String getOriginalFilename() { return finalExcelName; }
+            @Override public String getContentType() { return "application/octet-stream"; }
+            @Override public boolean isEmpty() { return finalExcelBytes.length == 0; }
+            @Override public long getSize() { return finalExcelBytes.length; }
+            @Override public byte[] getBytes() { return finalExcelBytes; }
+            @Override public InputStream getInputStream() { return new ByteArrayInputStream(finalExcelBytes); }
+            @Override public void transferTo(File dest) throws IOException {
+                java.nio.file.Files.write(dest.toPath(), finalExcelBytes);
+            }
+        };
+        List<Map<String, String>> rows = parseExcel(excelMultipart, STYLE_HEADERS);
+
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("Excel 文件中没有数据（第1行为表头，请从第2行开始填写）");
+        }
+        if (rows.size() > 500) {
+            throw new IllegalArgumentException("单次最多导入 500 条，当前 " + rows.size() + " 条");
+        }
+
+        // 3. 逐行保存款式 + 匹配并上传封面图
+        List<Map<String, Object>> successRecords = new ArrayList<>();
+        List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+        for (int index = 0; index < rows.size(); index++) {
+            Map<String, String> item = rows.get(index);
+            try {
+                String styleNo = safe(item.get("款号*"));
+                if (!StringUtils.hasText(styleNo)) throw new IllegalArgumentException("款号不能为空");
+
+                StyleInfo existing = styleInfoService.getOne(
+                        new LambdaQueryWrapper<StyleInfo>()
+                                .eq(StyleInfo::getStyleNo, styleNo)
+                                .last("LIMIT 1"));
+                if (existing != null) throw new IllegalArgumentException("款号已存在: " + styleNo);
+
+                StyleInfo style = new StyleInfo();
+                style.setStyleNo(styleNo);
+                style.setStyleName(StringUtils.hasText(safe(item.get("款名"))) ? safe(item.get("款名")) : styleNo);
+                style.setCategory(safe(item.get("品类")));
+                style.setColor(safe(item.get("颜色")));
+                style.setSize(safe(item.get("码数")));
+                style.setSeason(safe(item.get("季节")));
+                style.setCustomer(safe(item.get("客户")));
+                style.setDescription(StringUtils.hasText(safe(item.get("描述"))) ? safe(item.get("描述")) : "[ZIP导入]");
+                BigDecimal price = parseDecimal(item.get("单价"));
+                if (price != null) style.setPrice(price);
+                style.setYear(LocalDate.now().getYear());
+                style.setMonth(LocalDate.now().getMonthValue());
+                style.setStatus("ENABLED");
+                style.setCreateTime(LocalDateTime.now());
+                style.setUpdateTime(LocalDateTime.now());
+
+                // 关联封面图（文件名 = 款号）
+                if (imageMap.containsKey(styleNo)) {
+                    try {
+                        byte[] imgBytes = imageMap.get(styleNo);
+                        // 推断扩展名
+                        String imgExt = "jpg";
+                        for (Map.Entry<String, byte[]> e : imageMap.entrySet()) {
+                            if (e.getKey().equals(styleNo)) break;
+                        }
+                        // 从原始 imageMap key 里拿不到 ext，需要重新找
+                        // （imageMap key=款号，找原始文件名时直接用 UUID 命名存储即可）
+                        String newFilename = UUID.randomUUID().toString() + ".jpg";
+                        String contentType = "image/jpeg";
+
+                        if (cosService.isEnabled()) {
+                            cosService.upload(tenantId, newFilename, imgBytes, contentType);
+                        } else {
+                            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                            java.nio.file.Files.write(dest.toPath(), imgBytes);
+                        }
+                        String coverUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
+                        style.setCover(coverUrl);
+                        log.info("[ZIP导入] 款号={} 封面图已上传: {}", styleNo, coverUrl);
+                    } catch (Exception imgEx) {
+                        log.warn("[ZIP导入] 款号={} 封面图上传失败，跳过图片: {}", styleNo, imgEx.getMessage());
+                        // 图片上传失败不影响款式数据导入
+                    }
+                }
+
+                if (!styleInfoService.save(style)) throw new RuntimeException("保存失败");
+
+                Map<String, Object> success = new LinkedHashMap<>();
+                success.put("row", index + 2);
+                success.put("styleNo", styleNo);
+                success.put("styleName", style.getStyleName());
+                success.put("hasCover", style.getCover() != null);
+                successRecords.add(success);
+            } catch (Exception e) {
+                Map<String, Object> fail = new LinkedHashMap<>();
+                fail.put("row", index + 2);
+                fail.put("styleNo", item.get("款号*"));
+                fail.put("error", e.getMessage());
+                failedRecords.add(fail);
+            }
+        }
+
+        // 4. 追加统计：有多少款式匹配到了图片
+        long withCover = successRecords.stream().filter(r -> Boolean.TRUE.equals(r.get("hasCover"))).count();
+        Map<String, Object> result = buildResult(rows.size(), successRecords, failedRecords, "款式(ZIP)");
+        result.put("imageCount", imageMap.size());
+        result.put("withCoverCount", withCover);
+        if (!failedRecords.isEmpty() || withCover > 0) {
+            result.put("message", result.get("message") + "，共关联封面图 " + withCover + " 张");
+        }
+        return result;
     }
 }

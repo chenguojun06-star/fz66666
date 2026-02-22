@@ -11,6 +11,8 @@ import {
   Tag,
   message,
   Result as AntResult,
+  Progress,
+  Steps,
 } from 'antd';
 import {
   DownloadOutlined,
@@ -22,6 +24,8 @@ import {
   TeamOutlined,
   ToolOutlined,
   ShopOutlined,
+  FileZipOutlined,
+  PictureOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
@@ -97,7 +101,160 @@ const TAB_CONFIGS: TabConfig[] = [
   },
 ];
 
-// ==================== 导入面板组件 ====================
+// ==================== ZIP 批量导入组件（款式+图片） ====================
+
+const ZipImportPanel: React.FC = () => {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<ImportResult | null>(null);
+
+  const handleUpload = useCallback(async () => {
+    if (fileList.length === 0) { message.warning('请先选择 ZIP 文件'); return; }
+    const file = fileList[0].originFileObj as RcFile;
+    if (!file) { message.error('文件读取失败，请重新选择'); return; }
+
+    setUploading(true);
+    setProgress(0);
+    setResult(null);
+    try {
+      const res = await dataImportService.uploadZip(file, setProgress);
+      setResult(res);
+      setProgress(100);
+      if (res.failedCount === 0) message.success(res.message);
+      else message.warning(res.message);
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '导入失败，请检查 ZIP 文件内容');
+    } finally {
+      setUploading(false);
+    }
+  }, [fileList]);
+
+  const failedColumns = [
+    { title: '行号', dataIndex: 'row', key: 'row', width: 80 },
+    { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
+    { title: '错误原因', dataIndex: 'error', key: 'error', render: (t: string) => <Text type="danger">{t}</Text> },
+  ];
+
+  return (
+    <div>
+      {/* 说明 */}
+      <Card size="small" style={{ marginBottom: 16, background: '#f0f7ff', border: '1px solid #91caff' }}>
+        <Paragraph style={{ marginBottom: 8 }}>
+          <Text strong><FileZipOutlined style={{ marginRight: 6 }} />ZIP 打包导入：一次性导入款式数据 + 封面图片</Text>
+        </Paragraph>
+        <Steps
+          size="small"
+          style={{ marginBottom: 12 }}
+          items={[
+            { title: '下载 Excel 模板', description: '填写款式数据' },
+            { title: '准备图片', description: '文件名 = 款号（如 FZ2024001.jpg）' },
+            { title: '打包 ZIP', description: 'Excel + 图片一起压缩' },
+            { title: '上传导入', description: '系统自动解析并关联' },
+          ]}
+        />
+        <Space direction="vertical" size={2}>
+          <Text type="secondary">• 图片命名规则：<Text code>款号.jpg</Text>（或 .png .webp），图片文件名 = 款号，系统自动关联为封面图</Text>
+          <Text type="secondary">• Excel 格式与"款式资料"Tab 完全相同，可下载同一份模板</Text>
+          <Text type="secondary">• 支持格式：<Text code>jpg / jpeg / png / gif / webp</Text>；ZIP 包最大 <Text strong>500MB</Text></Text>
+          <Text type="secondary">• 图片上传失败不影响款式数据导入，会单独提示</Text>
+        </Space>
+      </Card>
+
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        {/* 下载模板 */}
+        <Card size="small" title="第一步：下载款式 Excel 模板">
+          <Button icon={<DownloadOutlined />} onClick={() => {
+            const url = dataImportService.getTemplateUrl('style');
+            const a = document.createElement('a'); a.href = url; a.download = '';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          }}>下载 Excel 模板</Button>
+          <Text type="secondary" style={{ marginLeft: 12 }}>填写款式数据后，与图片一起压缩成 ZIP</Text>
+        </Card>
+
+        {/* 上传 ZIP */}
+        <Card size="small" title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Upload
+              fileList={fileList}
+              beforeUpload={(file) => {
+                const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
+                if (!isZip) { message.error('仅支持 .zip 格式'); return Upload.LIST_IGNORE; }
+                if (file.size > 500 * 1024 * 1024) { message.error('ZIP 包不能超过 500MB'); return Upload.LIST_IGNORE; }
+                setFileList([{ ...file, uid: file.uid, name: file.name, originFileObj: file } as UploadFile]);
+                setResult(null);
+                return false;
+              }}
+              onRemove={() => { setFileList([]); setResult(null); }}
+              maxCount={1}
+              accept=".zip"
+            >
+              <Button icon={<FileZipOutlined />}>选择 ZIP 文件</Button>
+            </Upload>
+
+            {uploading && <Progress percent={progress} status="active" />}
+
+            <Space>
+              <Button type="primary" icon={<UploadOutlined />} onClick={handleUpload} loading={uploading} disabled={fileList.length === 0}>
+                {uploading ? `上传中 ${progress}%...` : '开始导入'}
+              </Button>
+              {result && <Button onClick={() => { setFileList([]); setResult(null); setProgress(0); }}>重新导入</Button>}
+            </Space>
+          </Space>
+        </Card>
+
+        {/* 结果 */}
+        {result && (
+          <Card size="small" title="导入结果">
+            {result.failedCount === 0 ? (
+              <AntResult
+                status="success"
+                title={result.message}
+                subTitle={
+                  <Space>
+                    <span>共 {result.total} 条款式</span>
+                    {(result.withCoverCount ?? 0) > 0 && (
+                      <Tag icon={<PictureOutlined />} color="blue">关联封面图 {result.withCoverCount} 张</Tag>
+                    )}
+                    {(result.imageCount ?? 0) > (result.withCoverCount ?? 0) && (
+                      <Tag color="default">ZIP内图片 {result.imageCount} 张（未匹配 {(result.imageCount ?? 0) - (result.withCoverCount ?? 0)} 张）</Tag>
+                    )}
+                  </Space>
+                }
+                style={{ padding: '12px 0' }}
+              />
+            ) : (
+              <>
+                <Alert
+                  type={result.successCount > 0 ? 'warning' : 'error'}
+                  showIcon
+                  message={result.message}
+                  description={
+                    <Space wrap>
+                      <Tag icon={<CheckCircleOutlined />} color="success">成功 {result.successCount} 条</Tag>
+                      <Tag icon={<CloseCircleOutlined />} color="error">失败 {result.failedCount} 条</Tag>
+                      <Text type="secondary">（共 {result.total} 条）</Text>
+                      {(result.withCoverCount ?? 0) > 0 && <Tag icon={<PictureOutlined />} color="blue">封面图 {result.withCoverCount} 张</Tag>}
+                    </Space>
+                  }
+                  style={{ marginBottom: 12 }}
+                />
+                <Table
+                  dataSource={result.failedRecords as Record<string, unknown>[]}
+                  columns={failedColumns}
+                  rowKey="row"
+                  size="small"
+                  pagination={false}
+                  scroll={{ y: 300 }}
+                />
+              </>
+            )}
+          </Card>
+        )}
+      </Space>
+    </div>
+  );
+};
 
 const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -317,7 +474,21 @@ const DataImport: React.FC = () => {
       </div>
 
       <Card>
-        <Tabs defaultActiveKey="style" size="large">
+        <Tabs defaultActiveKey="zip-style" size="large">
+          {/* ZIP 图片包导入 */}
+          <TabPane
+            key="zip-style"
+            tab={
+              <span>
+                <FileZipOutlined />
+                <span style={{ marginLeft: 6 }}>款式 + 图片批量导入</span>
+              </span>
+            }
+          >
+            <ZipImportPanel />
+          </TabPane>
+
+          {/* 普通 Excel 导入 */}
           {TAB_CONFIGS.map((config) => (
             <TabPane
               key={config.key}
