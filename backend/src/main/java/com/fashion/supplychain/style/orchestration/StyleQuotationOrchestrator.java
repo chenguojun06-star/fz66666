@@ -81,10 +81,10 @@ public class StyleQuotationOrchestrator {
                 .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
                 .sum();
 
-        // 二次工艺总价并入工序成本
+        // 二次工艺用单价（unitPrice）并入工序成本，报价单核算单件成本
         List<SecondaryProcess> secondaryList = secondaryProcessService.listByStyleId(styleId);
         double secondaryTotal = secondaryList.stream()
-                .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
+                .mapToDouble(sp -> sp.getUnitPrice() != null ? sp.getUnitPrice().doubleValue() : 0.0)
                 .sum();
         processTotal += secondaryTotal;
 

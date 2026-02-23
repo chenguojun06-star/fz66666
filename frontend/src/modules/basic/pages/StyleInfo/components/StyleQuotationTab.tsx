@@ -88,14 +88,14 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         setProcessList(processData);
       }
 
-      // 4. 自动计算二次工艺费用（并入工序总成本，用 totalPrice）
+      // 4. 自动计算二次工艺费用（用 unitPrice 单价，报价单算单件成本）
       const secondaryProcessRes = await api.get<any[]>(`/style/secondary-process/list?styleId=${styleId}`);
       const secondaryProcessResult = secondaryProcessRes as any;
       let secondaryCost = 0;
       let secondaryData: any[] = [];
       if (secondaryProcessResult.code === 200) {
         secondaryData = (secondaryProcessResult.data || []) as any[];
-        secondaryCost = secondaryData.reduce((sum: number, item: any) => sum + (Number(item.totalPrice) || 0), 0);
+        secondaryCost = secondaryData.reduce((sum: number, item: any) => sum + (Number(item.unitPrice) || 0), 0);
         setSecondaryProcessList(secondaryData);
       }
 
@@ -561,7 +561,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       {/* 4. 二次工艺明细 */}
       {secondaryProcessList.length > 0 && (
         <Card
-          title={<span style={{ fontSize: '15px', fontWeight: 600 }}>✨ 二次工艺明细 ({secondaryProcessList.length}项) - 总费用: ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0).toFixed(2)}</span>}
+          title={<span style={{ fontSize: '15px', fontWeight: 600 }}>✨ 二次工艺明细 ({secondaryProcessList.length}项) - 单件小计: ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}</span>}
           size="small"
           styles={{ body: { padding: '8px' } }}
         >
@@ -575,7 +575,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
             scroll={{ x: 960 }}
             style={{ fontSize: '14px' }}
             summary={() => {
-              const secondaryTotal = secondaryProcessList.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+              const secondaryTotal = secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0);
               return (
                 <Table.Summary fixed>
                   <Table.Summary.Row>
@@ -612,7 +612,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 ¥{processCost.toFixed(2)}
               </span>
               <span style={{ fontSize: '13px', color: 'var(--neutral-text-disabled)', marginLeft: 8 }}>
-                = ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)} + ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0).toFixed(2)}
+                = ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)} + ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}
               </span>
             </Col>
           </Row>
