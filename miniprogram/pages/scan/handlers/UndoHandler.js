@@ -32,6 +32,12 @@ function startUndoTimer(page, record) {
   });
 
   undoTimer = setInterval(() => {
+    // 防御性检查：页面可能已卸载或框架重载，page.data 为 null 时自动清除定时器
+    if (!page || !page.data) {
+      clearInterval(undoTimer);
+      undoTimer = null;
+      return;
+    }
     const next = page.data.undoCountdown - 1;
     if (next <= 0) {
       stopUndoTimer(page);
@@ -49,6 +55,7 @@ function stopUndoTimer(page) {
     clearInterval(undoTimer);
     undoTimer = null;
   }
+  if (!page || !page.data) return;
   page.setData({
     undoVisible: false,
     undoCountdown: 0,
