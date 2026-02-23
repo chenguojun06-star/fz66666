@@ -240,16 +240,18 @@ public class ProductionScanExecutor {
             scanRecordService.saveScanRecord(sr);
 
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
+            // 必须用父节点名（progressStage）查工序跟踪，tracking 表初始化时按父节点建行
+            // processCode（子工序名如"绣花"）≠ tracking 里的 processCode（父节点名如"二次工艺"）
             if (bundle != null && hasText(bundle.getId())) {
                 try {
                     processTrackingOrchestrator.updateScanRecord(
                         bundle.getId(),
-                        processCode,
+                        progressStage,
                         operatorId,
                         operatorName,
                         sr.getId()
                     );
-                    log.info("工序跟踪记录更新成功: bundleId={}, processCode={}", bundle.getId(), processCode);
+                    log.info("工序跟踪记录更新成功: bundleId={}, progressStage(父节点)={}, processCode(子)={}", bundle.getId(), progressStage, processCode);
                 } catch (Exception e) {
                     log.warn("工序跟踪记录更新失败: bundleId={}, processCode={}", bundle.getId(), processCode, e);
                 }
