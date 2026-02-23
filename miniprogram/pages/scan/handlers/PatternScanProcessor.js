@@ -139,6 +139,30 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
 
   const options = [];
 
+  // ── 阶段一：仓库操作（优先判断，状态明确）──────────────────────────
+  // 已入库 → 只能出库
+  if (scannedSet.has('WAREHOUSE_IN') && !scannedSet.has('WAREHOUSE_OUT')) {
+    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
+    return options; // 已入库阶段只展示出库
+  }
+  // 已出库 → 只能归还
+  if (scannedSet.has('WAREHOUSE_OUT') && !scannedSet.has('WAREHOUSE_RETURN')) {
+    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '↩️' });
+    return options; // 已出库阶段只展示归还
+  }
+  // 已归还 → 可再次出库（循环借还）
+  if (scannedSet.has('WAREHOUSE_RETURN')) {
+    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
+    return options;
+  }
+
+  // ── 阶段二：生产完成，等待入库 ─────────────────────────────────────
+  if (status === 'COMPLETED' && !scannedSet.has('WAREHOUSE_IN')) {
+    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '📦' });
+    return options; // 已完成只展示入库，不展示其他生产工序
+  }
+
+  // ── 阶段三：生产中，展示待做工序 ───────────────────────────────────
   if (status === 'PENDING' && !scannedSet.has('RECEIVE')) {
     options.push({ value: 'RECEIVE', label: '领取样衣', icon: '📥' });
   }
@@ -150,7 +174,10 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
   sortedConfig.forEach(item => {
     const value = String(item?.operationType || item?.processName || '').trim();
     if (!value) return;
+    // 跳过已扫过的工序
     if (scannedSet.has(value)) return;
+    // 跳过仓库类操作（由上面阶段一/二统一处理）
+    if (['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN'].includes(value)) return;
 
     const stage = String(item?.progressStage || '').trim();
     const processName = String(item?.processName || value).trim();
@@ -158,25 +185,19 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
     options.push({
       value,
       label: `${processName}${stageSuffix}`,
-      icon: stage === '入库' || value === 'WAREHOUSE_IN' ? '📦' : '🧵',
+      icon: '🧵',
     });
   });
 
-  if (scannedSet.has('WAREHOUSE_IN') && !scannedSet.has('WAREHOUSE_OUT')) {
-    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
-  }
-  if (scannedSet.has('WAREHOUSE_OUT') && !scannedSet.has('WAREHOUSE_RETURN')) {
-    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '↩️' });
-  }
-
+  // 兜底
   if (options.length === 0) {
     const fallbackType = determinePatternOperation(patternDetail, manualScanType);
     options.push({
       value: fallbackType,
       label: getPatternSuccessMessage(fallbackType).replace('✅ ', ''),
-      icon: fallbackType === 'WAREHOUSE_IN'
-        ? '📦'
-        : (fallbackType === 'WAREHOUSE_OUT' ? '📤' : (fallbackType === 'WAREHOUSE_RETURN' ? '↩️' : '🧵')),
+      icon: fallbackType === 'WAREHOUSE_IN' ? '📦'
+        : (fallbackType === 'WAREHOUSE_OUT' ? '📤'
+          : (fallbackType === 'WAREHOUSE_RETURN' ? '↩️' : '🧵')),
     });
   }
 

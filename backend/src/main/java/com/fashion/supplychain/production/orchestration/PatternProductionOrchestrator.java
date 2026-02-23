@@ -919,10 +919,12 @@ public class PatternProductionOrchestrator {
             return;
         }
         String op = operationType.trim();
-        if (!"WAREHOUSE_OUT".equals(op) && !"WAREHOUSE_RETURN".equals(op)) {
+        // 只对仓库相关操作做流程校验
+        if (!"WAREHOUSE_IN".equals(op) && !"WAREHOUSE_OUT".equals(op) && !"WAREHOUSE_RETURN".equals(op)) {
             return;
         }
 
+        // 查询该样衣所有扫码记录
         LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PatternScanRecord::getPatternProductionId, patternId)
                 .eq(PatternScanRecord::getDeleteFlag, 0);
@@ -933,11 +935,27 @@ public class PatternProductionOrchestrator {
                 .map(String::trim)
                 .collect(Collectors.toSet());
 
-        if ("WAREHOUSE_OUT".equals(op) && !scanned.contains("WAREHOUSE_IN")) {
-            throw new IllegalStateException("样衣未入库，不能出库");
+        if ("WAREHOUSE_IN".equals(op)) {
+            // 入库：必须已完成生产，且不能重复入库
+            PatternProduction pattern = patternProductionService.getById(patternId);
+            if (pattern != null && !"COMPLETED".equals(pattern.getStatus())) {
+                throw new IllegalStateException("样衣尚未完成生产，不能入库");
+            }
+            if (scanned.contains("WAREHOUSE_IN")) {
+                throw new IllegalStateException("该样衣已入库，不能重复入库");
+            }
         }
-        if ("WAREHOUSE_RETURN".equals(op) && !scanned.contains("WAREHOUSE_OUT")) {
-            throw new IllegalStateException("样衣未出库，不能归还");
+        if ("WAREHOUSE_OUT".equals(op)) {
+            // 出库：必须已入库
+            if (!scanned.contains("WAREHOUSE_IN")) {
+                throw new IllegalStateException("样衣未入库，不能出库");
+            }
+        }
+        if ("WAREHOUSE_RETURN".equals(op)) {
+            // 归还：必须有借出记录
+            if (!scanned.contains("WAREHOUSE_OUT")) {
+                throw new IllegalStateException("样衣未出库，不能归还");
+            }
         }
     }
 
