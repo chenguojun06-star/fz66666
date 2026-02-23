@@ -1,10 +1,13 @@
-import React, { useMemo } from 'react';
-import { Tag, Space } from 'antd';
+import React, { useMemo, useCallback } from 'react';
+import { Tag, Space, App } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
+import { productionScanApi } from '@/services/production/productionApi';
 
 interface ProcessTrackingRecord {
-  id: number;
+  id: string;
   bundleNo: string;
   sku?: string;
   color?: string;
@@ -18,6 +21,10 @@ interface ProcessTrackingRecord {
   scanTime?: string;
   operatorName?: string;
   settlementAmount?: number;
+  /** 关联的扫码记录ID（用于撤回） */
+  scanRecordId?: string;
+  /** 是否已工资结算（已结算不可撤回） */
+  isSettled?: boolean;
 }
 
 interface ProcessTrackingTableProps {
@@ -29,6 +36,24 @@ interface ProcessTrackingTableProps {
   nodeName?: string;
   /** ProcessDetailModal 传入的工序类型 (procurement/cutting/carSewing/secondaryProcess/tailProcess/warehousing) */
   processType?: string;
+  /** 订单状态（completed 时禁止撤回） */
+  orderStatus?: string;
+  /** 撤回成功后的回调 */
+  onUndoSuccess?: () => void;
+}
+
+/** 判断工序跟踪记录是否可在 PC 端撤回 */
+function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string): boolean {
+  if (record.scanStatus !== 'scanned') return false;
+  if (record.isSettled) return false;
+  if (!record.scanRecordId) return false;
+  if (orderStatus && orderStatus.toLowerCase() === 'completed') return false;
+  const scanTime = record.scanTime;
+  if (scanTime) {
+    const scanMs = new Date(String(scanTime).replace(' ', 'T')).getTime();
+    if (!isNaN(scanMs) && Date.now() - scanMs >= 3600 * 1000) return false;
+  }
+  return true;
 }
 
 /**
@@ -100,8 +125,28 @@ const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeNa
   return false;
 };
 
-const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType }) => {
+const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType, orderStatus, onUndoSuccess }) => {
+  const { message, modal } = App.useApp();
   const safeRecords = Array.isArray(records) ? records : [];
+
+  const handleUndo = useCallback(async (record: ProcessTrackingRecord) => {
+    modal.confirm({
+      title: '确认撤回',
+      content: `确定撤回此扫码记录？\n菲号: ${record.bundleNo}\n工序: ${record.processName || '-'}\n数量: ${record.quantity || 0}件`,
+      okText: '确认撤回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await productionScanApi.undo({ recordId: record.scanRecordId! });
+          message.success('撤回成功');
+          onUndoSuccess?.();
+        } catch (e: any) {
+          message.error(e?.response?.data?.message || e?.message || '撤回失败');
+        }
+      },
+    });
+  }, [message, modal, onUndoSuccess]);
   const filterType = nodeType || processType;
 
   // 按 nodeType/processType/nodeName 过滤记录
@@ -232,6 +277,24 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
           {amount ? `¥${Number(amount).toFixed(2)}` : '-'}
         </span>
       ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 80,
+      render: (_: any, record: ProcessTrackingRecord) => {
+        if (!canUndoTracking(record, orderStatus)) return null;
+        const actions: RowAction[] = [
+          {
+            key: 'undo',
+            label: '撤回',
+            danger: true,
+            primary: true,
+            onClick: () => handleUndo(record),
+          },
+        ];
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 

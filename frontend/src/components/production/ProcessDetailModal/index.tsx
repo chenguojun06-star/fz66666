@@ -881,6 +881,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   records={Array.isArray(processTrackingRecords) ? processTrackingRecords : []}
                   loading={trackingLoading}
                   processType={processType}
+                  orderStatus={record?.status}
+                  onUndoSuccess={loadProcessTrackingData}
                 />
               </div>
             ),
