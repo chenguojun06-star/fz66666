@@ -25,7 +25,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   title = '图片预览',
   onClose,
 }) => {
-  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 480, height: 480 });
+  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 600, height: 600 });
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -33,8 +33,8 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     const naturalHeight = img.naturalHeight;
     if (!naturalWidth || !naturalHeight) return;
 
-    const maxWidth = 600;
-    const maxHeight = 600;
+    const maxWidth = Math.min(window.innerWidth * 0.85, 1400);
+    const maxHeight = Math.min(window.innerHeight * 0.85, 1200);
     const minSize = 300;
 
     let w = naturalWidth;
@@ -52,9 +52,8 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     setModalSize({ width: w, height: h });
   };
 
-  // 关闭时重置尺寸，避免下次打开闪烁
   React.useEffect(() => {
-    if (!open) setModalSize({ width: 480, height: 480 });
+    if (!open) setModalSize({ width: 600, height: 600 });
   }, [open]);
 
   return (
@@ -75,28 +74,17 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       destroyOnHidden
     >
       {imageUrl ? (
-        <div
+        <img
+          src={getFullAuthedFileUrl(imageUrl)}
+          alt={title}
+          onLoad={handleImageLoad}
           style={{
             width: '100%',
             height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            background: '#f0f0f0',
+            objectFit: 'contain',
+            display: 'block',
           }}
-        >
-          <img
-            src={getFullAuthedFileUrl(imageUrl)}
-            alt={title}
-            onLoad={handleImageLoad}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-          />
-        </div>
+        />
       ) : null}
     </ResizableModal>
   );

@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Spin, App as AntdApp } from 'antd';
+import { Button, Modal, Spin, App as AntdApp } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
@@ -73,23 +73,20 @@ const GlobalImagePreview: React.FC = () => {
     setImageDimensions(null);
   }, []);
 
-  // 计算模态框尺寸
+  // 计算模态框尺寸（按图片真实宽高比，限制在视口85%内）
   const getModalSize = React.useMemo(() => {
     if (!imageDimensions) {
-      return { width: 480, height: 480 };
+      return { width: 600, height: 600 };
     }
 
-    const maxWidth = 600;
-    const maxHeight = 600;
-    const minSize = 240; // 最小尺寸
+    const maxWidth = Math.min(window.innerWidth * 0.85, 1400);
+    const maxHeight = Math.min(window.innerHeight * 0.85, 1200);
+    const minSize = 240;
 
     let { width, height } = imageDimensions;
 
-    // 如果图片太大，按比例缩小
     if (width > maxWidth || height > maxHeight) {
-      const widthRatio = maxWidth / width;
-      const heightRatio = maxHeight / height;
-      const ratio = Math.min(widthRatio, heightRatio);
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
       width = Math.round(width * ratio);
       height = Math.round(height * ratio);
     }
@@ -160,42 +157,33 @@ const GlobalImagePreview: React.FC = () => {
   }, []);
 
   return (
-    <ResizableModal
+    <Modal
       open={open}
-      title={null}
       onCancel={close}
+      title={null}
       footer={null}
+      centered
       width={getModalSize.width}
-      minWidth={300}
-      minHeight={300}
-      initialHeight={getModalSize.height}
-      contentPadding={0}
-      destroyOnHidden
+      destroyOnClose
+      styles={{
+        body: { padding: 0 },
+        mask: { backgroundColor: 'rgba(0,0,0,0.8)' },
+      }}
+      rootClassName="image-preview-modal-root"
     >
       {src ? (
-        <div
+        <img
+          src={src}
+          alt={alt || ''}
           style={{
             width: '100%',
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            background: '#f0f0f0',
+            height: getModalSize.height,
+            objectFit: 'contain',
+            display: 'block',
           }}
-        >
-          <img
-            src={src}
-            alt={alt || ''}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-          />
-        </div>
+        />
       ) : null}
-    </ResizableModal>
+    </Modal>
   );
 };
 

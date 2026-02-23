@@ -1431,3 +1431,10 @@ body {
 .transfer-bundle-row-disabled:hover td {
   background: var(--color-bg-layout, #f0f0f0) !important;
 }
+
+/* === 全局图片预览弹窗：透明无白框 === */
+.image-preview-modal-root .ant-modal-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
