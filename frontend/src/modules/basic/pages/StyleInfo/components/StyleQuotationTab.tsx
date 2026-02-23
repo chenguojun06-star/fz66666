@@ -11,9 +11,10 @@ interface Props {
   styleId: string | number;
   readOnly?: boolean;
   onSaved?: () => void;
+  totalQty?: number;
 }
 
-const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
+const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQty = 0 }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [_loading, setLoading] = useState(false);
@@ -445,47 +446,41 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         </Col>
       </Row>
 
-      {/* 多件总价表 */}
-      {totalPrice > 0 && (
+      {/* 实际批次报价汇总（按款式实际数量） */}
+      {totalPrice > 0 && totalQty > 0 && (
         <Card
-          title={<span style={{ fontSize: '15px', fontWeight: 600 }}>📈 多件总价表（单件报价 ¥{totalPrice.toFixed(2)}）</span>}
           size="small"
-          style={{ marginBottom: 8 }}
-          styles={{ body: { padding: '8px' } }}
+          style={{ marginBottom: 8, background: 'var(--color-bg-subtle)', border: '1px solid var(--neutral-border)' }}
+          styles={{ body: { padding: '12px 16px' } }}
         >
-          <Table
-            size="small"
-            pagination={false}
-            dataSource={[1, 5, 10, 20, 50, 100, 200, 500].map(qty => ({
-              qty,
-              totalCostAmt: Number((totalCost * qty).toFixed(2)),
-              totalPriceAmt: Number((totalPrice * qty).toFixed(2)),
-              profit: Number(((totalPrice - totalCost) * qty).toFixed(2)),
-            }))}
-            rowKey="qty"
-            columns={[
-              {
-                title: '件数', dataIndex: 'qty', key: 'qty', width: 80, align: 'center',
-                render: (v: number) => <span style={{ fontWeight: 600 }}>{v} 件</span>,
-              },
-              {
-                title: '总成本', dataIndex: 'totalCostAmt', key: 'totalCostAmt', width: 130, align: 'right',
-                render: (v: number) => <span style={{ color: 'var(--neutral-text-secondary)' }}>¥{v.toFixed(2)}</span>,
-              },
-              {
-                title: '含利润总订单价', dataIndex: 'totalPriceAmt', key: 'totalPriceAmt', width: 160, align: 'right',
-                render: (v: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>¥{v.toFixed(2)}</span>,
-              },
-              {
-                title: `预计总利润（利润率 ${profitRate}%）`, dataIndex: 'profit', key: 'profit', align: 'right',
-                render: (v: number) => (
-                  <span style={{ color: v >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>
-                    {v >= 0 ? '+' : ''}¥{v.toFixed(2)}
-                  </span>
-                ),
-              },
-            ]}
-          />
+          <Row align="middle" gutter={32}>
+            <Col>
+              <span style={{ fontSize: '13px', color: 'var(--neutral-text-secondary)' }}>本批实际数量</span>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--neutral-text)' }}>{totalQty} 件</div>
+            </Col>
+            <Col flex={1} style={{ borderLeft: '1px solid var(--neutral-border)', paddingLeft: 24 }}>
+              <Row gutter={32}>
+                <Col>
+                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>单件报价</span>
+                  <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-danger)' }}>¥{totalPrice.toFixed(2)}</div>
+                </Col>
+                <Col>
+                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批总成本</span>
+                  <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>¥{(totalCost * totalQty).toFixed(2)}</div>
+                </Col>
+                <Col>
+                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批含利润总订单价</span>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-danger)' }}>¥{(totalPrice * totalQty).toFixed(2)}</div>
+                </Col>
+                <Col>
+                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>预计总利润（{profitRate}%）</span>
+                  <div style={{ fontSize: '16px', fontWeight: 600, color: (totalPrice - totalCost) * totalQty >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                    {(totalPrice - totalCost) * totalQty >= 0 ? '+' : ''}¥{((totalPrice - totalCost) * totalQty).toFixed(2)}
+                  </div>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
         </Card>
       )}
 
