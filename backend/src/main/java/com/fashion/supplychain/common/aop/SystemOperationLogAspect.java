@@ -3,6 +3,9 @@ package com.fashion.supplychain.common.aop;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -23,6 +26,12 @@ public class SystemOperationLogAspect {
 
     @Resource
     private OperationLogService operationLogService;
+
+    @Autowired(required = false)
+    private StyleInfoService styleInfoService;
+
+    @Autowired(required = false)
+    private ProductionOrderService productionOrderService;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -74,6 +83,8 @@ public class SystemOperationLogAspect {
             // 优先从返回值取 orderNo（关单/报废/更新都有完整对象返回）
             String targetName = extractTargetNameFromResult(result);
             if (targetName == null) targetName = resolveTargetName(pjp.getArgs());
+            // fallback：stage-action 等返回 Boolean 时从数据库取实体名称
+            if (targetName == null) targetName = resolveEntityNameFromUri(uri, pjp.getArgs());
             String targetId = resolveTargetId(pjp.getArgs());
             OperationLog log = new OperationLog();
             log.setModule(module);
@@ -91,6 +102,7 @@ public class SystemOperationLogAspect {
             return result;
         } catch (Throwable e) {
             String targetName = resolveTargetName(pjp.getArgs());
+            if (targetName == null) targetName = resolveEntityNameFromUri(uri, pjp.getArgs());
             String targetId   = resolveTargetId(pjp.getArgs());
             OperationLog log = new OperationLog();
             log.setModule(module);
@@ -427,6 +439,48 @@ public class SystemOperationLogAspect {
                 Object v = m.invoke(obj);
                 if (v != null) return v;
             } catch (NoSuchMethodException ignore) {}
+        }
+        return null;
+    }
+
+    /**
+     * 当返回值无法提取名称时（如 stage-action 返回 Boolean），
+     * 根据 URI 路径判断实体类型，用 args 中第一个 Long 参数作为 id 查库。
+     * 样衣开发 → 款号；生产订单 → 订单号(款号)
+     */
+    private String resolveEntityNameFromUri(String uri, Object[] args) {
+        if (uri == null) return null;
+        Long id = extractFirstLong(args);
+        if (id == null) return null;
+        try {
+            if (uri.contains("/style/")) {
+                if (styleInfoService != null) {
+                    var style = styleInfoService.getById(id);
+                    return style != null ? style.getStyleNo() : null;
+                }
+            }
+            if (uri.contains("/production/") || uri.contains("/cutting/")) {
+                if (productionOrderService != null) {
+                    var order = productionOrderService.getById(id);
+                    if (order != null) {
+                        String orderNo = order.getOrderNo();
+                        String styleNo = order.getStyleNo();
+                        if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                        return orderNo != null ? orderNo : styleNo;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // 查询失败不影响主流程
+        }
+        return null;
+    }
+
+    /** 从方法参数中取第一个 Long（对应 @PathVariable Long id）*/
+    private Long extractFirstLong(Object[] args) {
+        if (args == null) return null;
+        for (Object a : args) {
+            if (a instanceof Long) return (Long) a;
         }
         return null;
     }
