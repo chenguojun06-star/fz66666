@@ -9,12 +9,14 @@ import com.fashion.supplychain.common.util.QrCodeSigner;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import org.springframework.util.StringUtils;
 import java.time.LocalDate;
@@ -51,6 +53,9 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private ProductionProcessTrackingService processTrackingService;
 
     @Autowired
     private ProductionCleanupOrchestrator productionCleanupOrchestrator;
@@ -314,6 +319,9 @@ public class ScanRecordOrchestrator {
             patch.setUpdateTime(LocalDateTime.now());
             scanRecordService.updateById(patch);
 
+            // 同步重置工序跟踪记录（撤回就应还原为待扫码）
+            resetTrackingByScanRecord(target.getId());
+
             String oid = TextUtils.safeText(target.getOrderId());
             if (hasText(oid)) {
                 productionOrderService.recomputeProgressAsync(oid);
@@ -331,6 +339,9 @@ public class ScanRecordOrchestrator {
         patch.setRemark("已撤销");
         patch.setUpdateTime(LocalDateTime.now());
         scanRecordService.updateById(patch);
+
+        // 同步重置工序跟踪记录（撤回就应还原为待扫码）
+        resetTrackingByScanRecord(target.getId());
 
         String oid = TextUtils.safeText(target.getOrderId());
         if (hasText(oid)) {
@@ -461,6 +472,9 @@ public class ScanRecordOrchestrator {
         patch.setRemark("退回重扫");
         patch.setUpdateTime(LocalDateTime.now());
         scanRecordService.updateById(patch);
+
+        // 同步重置工序跟踪记录（退回重扫就应还原为待扫码）
+        resetTrackingByScanRecord(target.getId());
 
         // 异步重算订单进度
         String orderId = TextUtils.safeText(target.getOrderId());
@@ -722,5 +736,41 @@ public class ScanRecordOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * 撤回/退回重扫后，把关联的 ProcessTracking 状态还原为 pending。
+     * 两端（手机+PC）撤回走同一条 undo/rescan 路径，此方法统一处理联动。
+     *
+     * @param scanRecordId 被撤回的扫码记录 ID
+     */
+    private void resetTrackingByScanRecord(String scanRecordId) {
+        if (!hasText(scanRecordId)) return;
+        try {
+            ProductionProcessTracking tracking = processTrackingService.getOne(
+                    new LambdaQueryWrapper<ProductionProcessTracking>()
+                            .eq(ProductionProcessTracking::getScanRecordId, scanRecordId)
+                            .last("LIMIT 1"),
+                    false);
+            if (tracking == null) return;
+            // 已结算的记录不能重置（保护财务数据）
+            if (Boolean.TRUE.equals(tracking.getIsSettled())) {
+                log.warn("[resetTracking] 该工序跟踪记录已结算，跳过重置: trackingId={}", tracking.getId());
+                return;
+            }
+            ProductionProcessTracking reset = new ProductionProcessTracking();
+            reset.setId(tracking.getId());
+            reset.setScanStatus("pending");
+            reset.setScanTime(null);
+            reset.setScanRecordId(null);
+            reset.setOperatorId(null);
+            reset.setOperatorName(null);
+            reset.setSettlementAmount(null);
+            processTrackingService.updateById(reset);
+            log.info("[resetTracking] 工序跟踪已还原为 pending: trackingId={}, 菲号={}, 工序={}",
+                    tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
+        } catch (Exception e) {
+            log.error("[resetTracking] 重置失败（不影响主流程）: scanRecordId={}", scanRecordId, e);
+        }
     }
 }
