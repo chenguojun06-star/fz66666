@@ -48,6 +48,16 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
     borderColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--color-success)',
   };
 
+  // 推送到下单管理需要：样衣完成 + 有工序数据 + 未推送
+  const canPushToOrder = sampleCompleted && hasProcessData && !pushedToOrder;
+  const pushToOrderTitle = !sampleCompleted
+    ? '请先完成样衣制作'
+    : !hasProcessData
+    ? '请先配置工序'
+    : pushedToOrder
+    ? '已推送'
+    : undefined;
+
   const saveButtonText = isNewPage
     ? '创建款式'
     : (editLocked ? '解锁编辑' : '保存信息');
@@ -92,10 +102,11 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
         <Button
           type="primary"
           loading={pushingToOrder}
-          disabled={!hasProcessData || pushedToOrder}
+          disabled={!canPushToOrder}
           onClick={onPushToOrder}
           style={primaryButtonStyle}
           size="small"
+          title={pushToOrderTitle}
         >
           {pushedToOrder ? '已推送' : '推送到下单管理'}
         </Button>

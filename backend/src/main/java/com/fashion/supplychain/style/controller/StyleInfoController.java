@@ -136,6 +136,7 @@ public class StyleInfoController {
                     case "start": return Result.success(styleInfoOrchestrator.startSecondary(id));
                     case "complete": return Result.success(styleInfoOrchestrator.completeSecondary(id));
                     case "skip": return Result.success(styleInfoOrchestrator.skipSecondary(id));
+                    case "reset": return Result.success(styleInfoOrchestrator.resetSecondary(id, body));
                     default: return Result.fail("不支持的操作: " + action);
                 }
             case "size":

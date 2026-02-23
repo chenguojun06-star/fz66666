@@ -499,6 +499,10 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.skipSecondary(id);
     }
 
+    public boolean resetSecondary(Long id, Map<String, Object> body) {
+        return styleStageHelper.resetSecondary(id, body);
+    }
+
     /**
      * 获取样衣开发费用统计
      */

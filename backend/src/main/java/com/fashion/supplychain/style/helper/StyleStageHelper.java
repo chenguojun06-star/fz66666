@@ -2,9 +2,11 @@ package com.fashion.supplychain.style.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -14,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -39,6 +42,9 @@ public class StyleStageHelper {
 
     @Autowired
     private StyleBomService styleBomService;
+
+    @Autowired
+    private SecondaryProcessService secondaryProcessService;
 
     @Autowired
     private TemplateLibraryOrchestrator templateLibraryOrchestrator;
@@ -831,16 +837,58 @@ public class StyleStageHelper {
             return true;
         }
 
+        LocalDateTime now = LocalDateTime.now();
+        String currentUser = UserContext.username();
+
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
-                .set(StyleInfo::getSecondaryCompletedTime, LocalDateTime.now())
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .set(StyleInfo::getSecondaryCompletedTime, now)
+                .set(StyleInfo::getUpdateTime, now)
                 .update();
 
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
-        log.info("二次工艺已完成: styleId={}", id);
+
+        // 联动更新：将所有 pending/processing 状态的子记录标记为已完成，补充领取人和完成时间
+        List<SecondaryProcess> pendingItems = secondaryProcessService.listByStyleId(id)
+                .stream()
+                .filter(p -> !"completed".equals(p.getStatus()) && !"cancelled".equals(p.getStatus()))
+                .collect(Collectors.toList());
+        for (SecondaryProcess item : pendingItems) {
+            secondaryProcessService.lambdaUpdate()
+                    .eq(SecondaryProcess::getId, item.getId())
+                    .set(SecondaryProcess::getStatus, "completed")
+                    .set(SecondaryProcess::getAssignee, currentUser)
+                    .set(SecondaryProcess::getCompletedTime, now)
+                    .update();
+        }
+        log.info("二次工艺已完成: styleId={}, 联动更新子记录{}条", id, pendingItems.size());
+        return true;
+    }
+
+    public boolean resetSecondary(Long id, Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("退回原因不能为空");
+        }
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSecondaryCompletedTime, null)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("二次工艺已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
 
