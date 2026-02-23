@@ -81,15 +81,20 @@ public class StyleQuotationOrchestrator {
                 .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
                 .sum();
 
-        // 二次工艺总价并入工序成本，不覆盖用户手动填写的其他费用
+        // 二次工艺总价并入工序成本
         List<SecondaryProcess> secondaryList = secondaryProcessService.listByStyleId(styleId);
         double secondaryTotal = secondaryList.stream()
                 .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
                 .sum();
         processTotal += secondaryTotal;
 
-        // 其他费用保留用户手动填写的值，不自动覆盖
-        double otherTotal = existing.getOtherCost() != null ? existing.getOtherCost().doubleValue() : 0.0;
+        // 其他费用：auto重算不覆盖用户手动值。
+        // 但若检测到是老 bug 自动写入的（other_cost == 当时二次工艺汇总），则清零。
+        double existingOther = existing.getOtherCost() != null ? existing.getOtherCost().doubleValue() : 0.0;
+        // 用四舍五入后比较，避免浮点误差
+        boolean isBuggyValue = existingOther > 0
+                && Math.abs(existingOther - secondaryTotal) < 0.01;
+        double otherTotal = isBuggyValue ? 0.0 : existingOther;
 
         BigDecimal materialCost = BigDecimal.valueOf(materialTotal).setScale(2, RoundingMode.HALF_UP);
         BigDecimal processCost  = BigDecimal.valueOf(processTotal).setScale(2, RoundingMode.HALF_UP);
@@ -175,5 +180,33 @@ public class StyleQuotationOrchestrator {
         }
 
         return true;
+    }
+
+    /**
+     * 启动时修复历史脏数据：
+     * 老版本代码错误地把二次工艺总价写入了 other_cost，此方法在启动时
+     * 对所有 other_cost > 0 的报价单调用 recalculateFromLiveData，
+     * 其中的 isBuggyValue 检测会自动清零并重算。
+     */
+    public void fixBuggyOtherCostOnStartup() {
+        try {
+            List<StyleQuotation> dirty = styleQuotationService.lambdaQuery()
+                    .gt(StyleQuotation::getOtherCost, BigDecimal.ZERO)
+                    .list();
+            if (dirty.isEmpty()) return;
+            log.info("[Startup Migration] Found {} quotations with other_cost>0, recalculating...", dirty.size());
+            int fixed = 0;
+            for (StyleQuotation q : dirty) {
+                try {
+                    recalculateFromLiveData(q.getStyleId());
+                    fixed++;
+                } catch (Exception e) {
+                    log.warn("[Startup Migration] Failed to recalculate styleId={}: {}", q.getStyleId(), e.getMessage());
+                }
+            }
+            log.info("[Startup Migration] Done. Fixed {} / {} quotations.", fixed, dirty.size());
+        } catch (Exception e) {
+            log.warn("[Startup Migration] fixBuggyOtherCost failed: {}", e.getMessage());
+        }
     }
 }
