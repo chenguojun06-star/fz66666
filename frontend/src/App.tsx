@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Modal, Spin, App as AntdApp } from 'antd';
+import { Button, Spin, App as AntdApp } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
@@ -64,38 +65,12 @@ const GlobalImagePreview: React.FC = () => {
   const [open, setOpen] = React.useState(false);
   const [src, setSrc] = React.useState<string | undefined>(undefined);
   const [alt, setAlt] = React.useState<string | undefined>(undefined);
-  const [imageDimensions, setImageDimensions] = React.useState<{ width: number; height: number } | null>(null);
 
   const close = React.useCallback(() => {
     setOpen(false);
     setSrc(undefined);
     setAlt(undefined);
-    setImageDimensions(null);
   }, []);
-
-  // 计算模态框尺寸（按图片真实宽高比，限制在视口85%内）
-  const getModalSize = React.useMemo(() => {
-    if (!imageDimensions) {
-      return { width: 600, height: 600 };
-    }
-
-    const maxWidth = Math.min(window.innerWidth * 0.85, 1400);
-    const maxHeight = Math.min(window.innerHeight * 0.85, 1200);
-    const minSize = 240;
-
-    let { width, height } = imageDimensions;
-
-    if (width > maxWidth || height > maxHeight) {
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
-    }
-
-    width = Math.max(width, minSize);
-    height = Math.max(height, minSize);
-
-    return { width, height };
-  }, [imageDimensions]);
 
   React.useEffect(() => {
     const isIgnored = (img: HTMLImageElement) => {
@@ -132,21 +107,7 @@ const GlobalImagePreview: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
 
-      // 获取图片的实际尺寸
-      const naturalWidth = img.naturalWidth;
-      const naturalHeight = img.naturalHeight;
-
-      if (naturalWidth && naturalHeight) {
-        setImageDimensions({ width: naturalWidth, height: naturalHeight });
-      } else {
-        // 如果图片尚未加载，创建新Image对象获取尺寸
-        const tempImg = new Image();
-        tempImg.onload = () => {
-          setImageDimensions({ width: tempImg.width, height: tempImg.height });
-        };
-        tempImg.src = nextSrc;
-      }
-
+      // 获取图片的实际尺寸（仅预加载，不再用于计算尺寸）
       setSrc(nextSrc);
       setAlt(img.getAttribute('alt') || undefined);
       setOpen(true);
@@ -156,34 +117,37 @@ const GlobalImagePreview: React.FC = () => {
     return () => document.removeEventListener('click', onClickCapture, true);
   }, []);
 
-  return (
-    <Modal
-      open={open}
-      onCancel={close}
-      title={null}
-      footer={null}
-      centered
-      width={getModalSize.width}
-      destroyOnClose
-      styles={{
-        body: { padding: 0 },
-        mask: { backgroundColor: 'rgba(0,0,0,0.8)' },
+  if (!open || !src) return null;
+
+  return createPortal(
+    <div
+      onClick={close}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'zoom-out',
       }}
-      rootClassName="image-preview-modal-root"
     >
-      {src ? (
-        <img
-          src={src}
-          alt={alt || ''}
-          style={{
-            width: '100%',
-            height: getModalSize.height,
-            objectFit: 'contain',
-            display: 'block',
-          }}
-        />
-      ) : null}
-    </Modal>
+      <img
+        src={src}
+        alt={alt || ''}
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          objectFit: 'contain',
+          display: 'block',
+          cursor: 'default',
+          borderRadius: 4,
+        }}
+      />
+    </div>,
+    document.body
   );
 };
 
