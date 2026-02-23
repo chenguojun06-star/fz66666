@@ -26,50 +26,71 @@ interface ProgressNode {
   unitPrice?: number;
 }
 
+interface ProcessConfigItem {
+  operationType: string; // 操作类型（小程序扫码用）
+  processName: string;   // 工序名称（显示用）
+  progressStage: string; // 父节点名称（如 裁剪、车缝、尾部、入库）
+  sortOrder: number;
+  price?: number;
+}
+
 interface PatternProductionRecord {
   id: string;
   styleId?: string;
   styleNo: string;
   color: string;
-  sizes?: string[]; // 码数列表
+  sizes?: string[];
   quantity: number;
-  releaseTime: string; // 下板时间
-  deliveryTime: string; // 交板时间
-  receiver: string; // 领取人
-  receiveTime: string; // 领取时间
-  completeTime: string; // 完成时间
-  progressNodes: { [nodeId: string]: number }; // 各工序的完成百分比
-  processUnitPrices?: { [processName: string]: number }; // 工序单价汇总（从后端获取）
-  processDetails?: { [stageName: string]: Array<{ name: string; unitPrice: number }> }; // 每个节点下的工序明细
-  procurementProgress?: { // 采购进度信息
-    total: number; // 总采购单数
-    completed: number; // 已完成采购单数
-    percent: number; // 完成百分比
-    completedTime?: string; // 最新完成时间
-    receiver?: string; // 最新领取人
+  releaseTime: string;
+  deliveryTime: string;
+  receiver: string;
+  receiveTime: string;
+  completeTime: string;
+  progressNodes: { [nodeId: string]: number };
+  processConfig: ProcessConfigItem[];
+  processUnitPrices?: { [processName: string]: number };
+  processDetails?: { [stageName: string]: Array<{ name: string; unitPrice: number }> };
+  procurementProgress?: {
+    total: number;
+    completed: number;
+    percent: number;
+    completedTime?: string;
+    receiver?: string;
   };
-  orderNo?: string; // 订单号
-  coverImage?: string; // 封面图片
-  patternMaker?: string; // 纸样师傅
-  // 人员信息（从款式基础信息同步）
-  designer?: string; // 设计师
-  patternDeveloper?: string; // 纸样师
-  plateWorker?: string; // 车板师
-  merchandiser?: string; // 跟单员
-  maintainer?: string; // 维护人
-  maintainTime?: string; // 维护时间
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'; // 状态
+  orderNo?: string;
+  coverImage?: string;
+  patternMaker?: string;
+  designer?: string;
+  patternDeveloper?: string;
+  plateWorker?: string;
+  merchandiser?: string;
+  maintainer?: string;
+  maintainTime?: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 }
 
-// 默认工序节点（不含单价，单价从后端获取）
-const DEFAULT_NODES: ProgressNode[] = [
-  { id: 'cutting', name: '裁剪' },
-  { id: 'sewing', name: '车缝' },
-  { id: 'ironing', name: '大烫' },
-  { id: 'quality', name: '质检' },
-  { id: 'secondary', name: '二次工艺' },
-  { id: 'packaging', name: '包装' },
-];
+// 进度节点中文名→英文key映射（与后竭resolveProgressKey保持一致）
+const stageToKey: Record<string, string> = {
+  '采购': 'procurement',
+  '裁剪': 'cutting',
+  '车缝': 'sewing', '缝制': 'sewing', '生产': 'sewing',
+  '尾部': 'tail', '后整': 'tail',
+  '入库': 'warehousing',
+  '出库': 'warehouse_out',
+  '归还': 'warehouse_return',
+  '质检': 'quality',
+  '大烫': 'ironing',
+  '二次工艺': 'secondary',
+  '包装': 'packaging',
+};
+
+/** 从 progressNodes 中读某个 stage 的进度（兼容英文key和中文key） */
+const getNodePercent = (progressNodes: Record<string, number>, stageName: string): number => {
+  const key = stageToKey[stageName] || stageName;
+  if (progressNodes[key] !== undefined) return progressNodes[key] as number;
+  if (progressNodes[stageName] !== undefined) return progressNodes[stageName] as number;
+  return 0;
+};
 
 // Lottie 液体进度组件（已移至通用组件 LiquidProgressLottie）
 
@@ -241,11 +262,9 @@ const PatternProduction: React.FC = () => {
           coverImage: item.coverImage,
           patternMaker: item.patternMaker || '-',
           progressNodes,
-          // 工序单价汇总从后端获取（从样板开发的工艺配置汇总）
+          processConfig: item.processConfig || [],
           processUnitPrices: item.processUnitPrices || {},
-          // 每个节点下的工序明细（含工序名和单价）
           processDetails: item.processDetails || {},
-          // 采购进度信息
           procurementProgress,
           status: normalizedStatus,
         };
@@ -492,25 +511,23 @@ const PatternProduction: React.FC = () => {
         // 从后端获取的进度节点配置和单价汇总
         const processUnitPrices = record.processUnitPrices || {};
 
-        // 动态构建进度节点列表（从样板开发的工艺配置读取）
-        // 进度节点按顺序：采购、裁剪、车缝、尾部、入库
-        const progressStages = ['采购', '裁剪', '车缝', '尾部', '入库'];
-        const nodesWithPrices = progressStages.map((stageName) => {
-          // 节点ID使用拼音映射
-          const stageIdMap: Record<string, string> = {
-            '采购': 'procurement',
-            '裁剪': 'cutting',
-            '车缝': 'sewing',
-            '尾部': 'tail',
-            '入库': 'warehousing',
-          };
-          const nodeId = stageIdMap[stageName] || stageName;
-          return {
-            id: nodeId,
-            name: stageName,
-            unitPrice: processUnitPrices[stageName] || 0,
-          };
+        // 动态构建进度节点列表（从样板开发的工艺配置读取，与小程序扫码逻辑一致）
+        const rawConfig = (record.processConfig as ProcessConfigItem[]) || [];
+        const stageNodeMap = new Map<string, ProcessConfigItem>();
+        rawConfig.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).forEach(item => {
+          const stage = item.progressStage || item.processName;
+          if (stage && !stageNodeMap.has(stage)) stageNodeMap.set(stage, item);
         });
+        const dynamicNodes = stageNodeMap.size > 0
+          ? Array.from(stageNodeMap.entries()).map(([stage, item]) => ({
+              id: stageToKey[stage] || stage,
+              name: item.processName || stage,
+            }))
+          : ['采购', '裁剪', '车缝', '尾部', '入库'].map(s => ({ id: stageToKey[s] || s, name: s }));
+        const nodesWithPrices = dynamicNodes.map(node => ({
+          ...node,
+          unitPrice: processUnitPrices[node.name] || 0,
+        }));
 
         return (
           <div style={{
@@ -826,25 +843,35 @@ const PatternProduction: React.FC = () => {
             </div>
           )}
           <Form form={form} layout="vertical">
-            {DEFAULT_NODES.map((node) => (
-              <Form.Item
-                key={node.id}
-                name={node.id}
-                label={node.name}
-                rules={[
-                  { required: true, message: `请输入${node.name}进度` },
-                  { type: 'number', min: 0, max: 100, message: '进度范围：0-100' },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  max={100}
-                  style={{ width: '100%' }}
-                  placeholder="请输入百分比（0-100）"
-                  addonAfter="%"
-                />
-              </Form.Item>
-            ))}
+            {(() => {
+              const cfg = progressModal.data?.processConfig || [];
+              // 展展展展展: 工序节点按 progressStage 去重，表单字段使用英文key
+              const stageMap = new Map<string, ProcessConfigItem>();
+              cfg.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).forEach(item => {
+                const stage = item.progressStage || item.processName;
+                if (stage && !stageMap.has(stage)) stageMap.set(stage, item);
+              });
+              const formNodes = Array.from(stageMap.entries()).map(([stage, item]) => ({
+                key: stageToKey[stage] || stage, // 表单字段名用英文key，与 progressNodes 存储一致
+                label: item.processName || stage, // 显示名称
+              }));
+              const fallback = formNodes.length > 0
+                ? formNodes
+                : ['裁剪','车缝','尾部','入库'].map(s => ({ key: stageToKey[s] || s, label: s }));
+              return fallback.map(node => (
+                <Form.Item
+                  key={node.key}
+                  name={node.key}
+                  label={node.label}
+                  rules={[
+                    { required: true, message: `请输入${node.label}进度` },
+                    { type: 'number', min: 0, max: 100, message: '进度范围：0-100' },
+                  ]}
+                >
+                  <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" addonAfter="%" />
+                </Form.Item>
+              ));
+            })()}
           </Form>
         </StandardModal>
 

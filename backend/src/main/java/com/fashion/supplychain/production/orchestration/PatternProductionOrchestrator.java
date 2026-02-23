@@ -361,6 +361,15 @@ public class PatternProductionOrchestrator {
         // 获取采购进度
         enrichWithProcurementProgress(map, record.getStyleId());
 
+        // 获取动态工序配置（与小程序端保持一致）
+        try {
+            List<Map<String, Object>> processConfig = getPatternProcessConfig(record.getId());
+            map.put("processConfig", processConfig);
+        } catch (Exception e) {
+            log.warn("Failed to get processConfig for record: {}", record.getId(), e);
+            map.put("processConfig", buildDefaultPatternProcessConfig());
+        }
+
         return map;
     }
 
