@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PatternProduction;
@@ -9,6 +10,11 @@ import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.stock.entity.SampleLoan;
+import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
+import com.fashion.supplychain.stock.mapper.SampleStockMapper;
+import com.fashion.supplychain.stock.service.SampleStockService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -58,6 +64,15 @@ public class PatternProductionOrchestrator {
 
     @Autowired
     private PatternScanRecordService patternScanRecordService;
+
+    @Autowired
+    private SampleStockService sampleStockService;
+
+    @Autowired
+    private SampleLoanMapper sampleLoanMapper;
+
+    @Autowired
+    private SampleStockMapper sampleStockMapper;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -223,6 +238,9 @@ public class PatternProductionOrchestrator {
         // 更新样板状态
         updatePatternStatusByOperation(pattern, operationType, operatorName);
 
+        // 同步库存：根据操作类型自动更新 t_sample_stock / t_sample_loan
+        syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
+
         Map<String, Object> result = new HashMap<>();
         result.put("recordId", scanRecord.getId());
         result.put("patternId", patternId);
@@ -235,6 +253,126 @@ public class PatternProductionOrchestrator {
         result.put("scanTime", scanRecord.getScanTime());
         result.put("newStatus", pattern.getStatus());
         return result;
+    }
+
+    /**
+     * 扫码操作自动同步样衣库存<br>
+     * - WAREHOUSE_IN  → t_sample_stock 新增或累加（同款号+颜色+尺码+类型幂等）<br>
+     * - WAREHOUSE_OUT → t_sample_loan  新增借出记录，减少可用库存<br>
+     * - WAREHOUSE_RETURN → t_sample_loan 对应记录归还，恢复可用库存
+     */
+    private void syncStockByOperation(PatternProduction pattern,
+                                      PatternScanRecord scanRecord,
+                                      String operationType,
+                                      String operatorId,
+                                      String operatorName) {
+        if (pattern == null) return;
+        Long tenantId = UserContext.tenantId();
+        int qty = pattern.getQuantity() != null && pattern.getQuantity() > 0
+                ? pattern.getQuantity() : 1;
+
+        if ("WAREHOUSE_IN".equals(operationType)) {
+            // 幂等查找（同租户+款号+颜色+类型=development，若以后扩展可由前端传）
+            LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
+                    .eq(SampleStock::getColor, pattern.getColor())
+                    .eq(SampleStock::getSampleType, "development")
+                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+            SampleStock existing = sampleStockService.getOne(q);
+            if (existing != null) {
+                // 累加库存
+                sampleStockMapper.updateStockQuantity(existing.getId(), qty);
+                log.info("[样衣入库] 累加库存 stockId={} +{}件", existing.getId(), qty);
+            } else {
+                // 新建库存记录
+                SampleStock stock = new SampleStock();
+                stock.setStyleId(pattern.getStyleId());
+                stock.setStyleNo(pattern.getStyleNo());
+                stock.setColor(pattern.getColor());
+                stock.setSampleType("development");
+                stock.setQuantity(qty);
+                stock.setLoanedQuantity(0);
+                stock.setLocation(scanRecord.getWarehouseCode());
+                stock.setRemark("扫码自动入库");
+                stock.setCreateTime(LocalDateTime.now());
+                stock.setUpdateTime(LocalDateTime.now());
+                stock.setDeleteFlag(0);
+                stock.setTenantId(tenantId);
+                sampleStockService.save(stock);
+                log.info("[样衣入库] 新建库存 styleNo={} color={} qty={}",
+                        pattern.getStyleNo(), pattern.getColor(), qty);
+            }
+
+        } else if ("WAREHOUSE_OUT".equals(operationType)) {
+            // 找到对应库存记录
+            LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
+                    .eq(SampleStock::getColor, pattern.getColor())
+                    .eq(SampleStock::getSampleType, "development")
+                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+            SampleStock stock = sampleStockService.getOne(q);
+            if (stock == null) {
+                log.warn("[样衣出库] 未找到对应库存记录，跳过借出登记 styleNo={}", pattern.getStyleNo());
+                return;
+            }
+            int available = (stock.getQuantity() == null ? 0 : stock.getQuantity())
+                    - (stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity());
+            if (available < qty) {
+                throw new IllegalStateException(
+                        String.format("样衣可用库存不足（可用%d件，出库%d件）", available, qty));
+            }
+            // 创建借出记录
+            SampleLoan loan = new SampleLoan();
+            loan.setSampleStockId(stock.getId());
+            loan.setBorrower(operatorName);
+            loan.setBorrowerId(operatorId);
+            loan.setQuantity(qty);
+            loan.setLoanDate(LocalDateTime.now());
+            loan.setStatus("borrowed");
+            loan.setRemark(scanRecord.getWarehouseCode() != null
+                    ? "扫码出库，目的地：" + scanRecord.getWarehouseCode() : "扫码出库");
+            loan.setCreateTime(LocalDateTime.now());
+            loan.setUpdateTime(LocalDateTime.now());
+            loan.setDeleteFlag(0);
+            loan.setTenantId(tenantId);
+            sampleLoanMapper.insert(loan);
+            sampleStockMapper.updateLoanedQuantity(stock.getId(), qty);
+            log.info("[样衣出库] loanId={} stockId={} qty={}", loan.getId(), stock.getId(), qty);
+
+        } else if ("WAREHOUSE_RETURN".equals(operationType)) {
+            // 找最近一条该样衣的借出中记录归还
+            LambdaQueryWrapper<SampleStock> sq = new LambdaQueryWrapper<SampleStock>()
+                    .eq(SampleStock::getDeleteFlag, 0)
+                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
+                    .eq(SampleStock::getColor, pattern.getColor())
+                    .eq(SampleStock::getSampleType, "development")
+                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+            SampleStock stock = sampleStockService.getOne(sq);
+            if (stock == null) {
+                log.warn("[样衣归还] 未找到库存记录，跳过 styleNo={}", pattern.getStyleNo());
+                return;
+            }
+            LambdaQueryWrapper<SampleLoan> lq = new LambdaQueryWrapper<SampleLoan>()
+                    .eq(SampleLoan::getSampleStockId, stock.getId())
+                    .eq(SampleLoan::getStatus, "borrowed")
+                    .eq(SampleLoan::getDeleteFlag, 0)
+                    .orderByDesc(SampleLoan::getLoanDate)
+                    .last("LIMIT 1");
+            SampleLoan loan = sampleLoanMapper.selectOne(lq);
+            if (loan == null) {
+                log.warn("[样衣归还] 未找到借出记录，跳过 stockId={}", stock.getId());
+                return;
+            }
+            loan.setStatus("returned");
+            loan.setReturnDate(LocalDateTime.now());
+            loan.setUpdateTime(LocalDateTime.now());
+            loan.setRemark("扫码归还");
+            sampleLoanMapper.updateById(loan);
+            sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity());
+            log.info("[样衣归还] loanId={} stockId={} qty=-{}", loan.getId(), stock.getId(), loan.getQuantity());
+        }
     }
 
     /**
