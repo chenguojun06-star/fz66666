@@ -829,47 +829,51 @@ const PatternProduction: React.FC = () => {
           okText="保存"
           cancelText="取消"
           size="sm"
+          width={380}
+          minWidth={340}
         >
           {progressModal.data && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-                <div><strong>款号:</strong> {progressModal.data.styleNo}</div>
-                <div><strong>颜色:</strong> {progressModal.data.color}</div>
-                <div><strong>状态:</strong> {renderStatus(progressModal.data.status)}</div>
-              </div>
-              <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
-                当所有工序进度达到 100% 时，系统将自动标记为已完成
-              </div>
+            <div style={{ marginBottom: 10, fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-secondary)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span><strong>款号:</strong> {progressModal.data.styleNo}</span>
+              <span><strong>颜色:</strong> {progressModal.data.color}</span>
+              <span>{renderStatus(progressModal.data.status)}</span>
             </div>
           )}
-          <Form form={form} layout="vertical">
+          <Form form={form} layout="horizontal" labelCol={{ flex: '60px' }} wrapperCol={{ flex: 1 }}>
             {(() => {
               const cfg = progressModal.data?.processConfig || [];
-              // 展展展展展: 工序节点按 progressStage 去重，表单字段使用英文key
               const stageMap = new Map<string, ProcessConfigItem>();
               cfg.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).forEach(item => {
                 const stage = item.progressStage || item.processName;
                 if (stage && !stageMap.has(stage)) stageMap.set(stage, item);
               });
               const formNodes = Array.from(stageMap.entries()).map(([stage, item]) => ({
-                key: stageToKey[stage] || stage, // 表单字段名用英文key，与 progressNodes 存储一致
-                label: item.processName || stage, // 显示名称
+                key: stageToKey[stage] || stage,
+                label: item.progressStage || stage,
               }));
               const fallback = formNodes.length > 0
                 ? formNodes
                 : ['裁剪','车缝','尾部','入库'].map(s => ({ key: stageToKey[s] || s, label: s }));
-              return fallback.map(node => (
-                <Form.Item
-                  key={node.key}
-                  name={node.key}
-                  label={node.label}
-                  rules={[
-                    { required: true, message: `请输入${node.label}进度` },
-                    { type: 'number', min: 0, max: 100, message: '进度范围：0-100' },
-                  ]}
-                >
-                  <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" addonAfter="%" />
-                </Form.Item>
+              // 2列网格
+              const rows: Array<typeof fallback> = [];
+              for (let i = 0; i < fallback.length; i += 2) rows.push(fallback.slice(i, i + 2));
+              return rows.map((row, ri) => (
+                <div key={ri} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                  {row.map(node => (
+                    <Form.Item
+                      key={node.key}
+                      name={node.key}
+                      label={node.label}
+                      style={{ marginBottom: 10 }}
+                      rules={[
+                        { required: true, message: '请填写' },
+                        { type: 'number', min: 0, max: 100, message: '0-100' },
+                      ]}
+                    >
+                      <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" addonAfter="%" />
+                    </Form.Item>
+                  ))}
+                </div>
               ));
             })()}
           </Form>
