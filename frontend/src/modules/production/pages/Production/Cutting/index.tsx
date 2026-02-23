@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Divider, Form, Input, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
@@ -31,6 +30,7 @@ import {
   useCuttingCreateTask,
 } from './hooks';
 import type { CuttingBundleRow } from './hooks';
+import { CuttingCreateTaskModal, CuttingPrintPreviewModal } from './components';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -747,247 +747,17 @@ const CuttingManagement: React.FC = () => {
               />
 
               {/* 打印预览弹窗 */}
-              <ResizableModal
-                open={print.printPreviewOpen}
-                title={`批量打印（${print.printBundles.length}张）`}
-                width={modalWidth}
-                centered
-                onCancel={() => print.setPrintPreviewOpen(false)}
-                footer={[
-                  <Button key="clear" onClick={bundles.clearBundleSelection} disabled={!bundles.selectedBundles.length}>
-                    清除勾选
-                  </Button>,
-                  <Button key="cancel" onClick={() => print.setPrintPreviewOpen(false)}>
-                    关闭
-                  </Button>,
-                  <Button key="print" type="primary" onClick={print.triggerPrint} disabled={!print.printBundles.length}>
-                    下载/打印
-                  </Button>,
-                ]}
-                initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-              >
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>打印纸规格</span>
-                  <Select
-                    value={print.printConfig.paperSize}
-                    style={{ width: 150 }}
-                    options={[
-                      { label: '7cm × 4cm', value: '7x4' },
-                      { label: '10cm × 5cm', value: '10x5' },
-                    ]}
-                    onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperSize: v as '7x4' | '10x5' }))}
-                  />
-                  <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginLeft: 16 }}>二维码大小</span>
-                  <InputNumber
-                    min={60}
-                    max={150}
-                    value={print.printConfig.qrSize}
-                    onChange={(v) => print.setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))}
-                    addonAfter="px"
-                    style={{ width: 120 }}
-                  />
-                  <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)', marginLeft: 16 }}>💡 每页打印一张菲号标签</span>
-                </div>
-
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    background: 'var(--primary-color)',
-                    color: '#fff',
-                    marginBottom: '8px',
-                    borderRadius: '4px',
-                    textAlign: 'center',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                  }}
-                >
-                  共 {print.printBundles.length} 张菲号标签，实际尺寸：{print.printConfig.paperSize === '7x4' ? '7cm × 4cm' : '10cm × 5cm'}（一页一张，居中显示）
-                </div>
-                <div
-                  style={{
-                    padding: '10px 16px',
-                    background: '#d4edda',
-                    color: '#155724',
-                    marginBottom: '16px',
-                    borderRadius: '4px',
-                    border: '1px solid #28a745',
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>✅ 使用说明：</div>
-                  <div>• 点击"下载/打印"后直接选择打印机或"另存为PDF"即可</div>
-                  <div>• 标签已按固定尺寸设置，无需手动调整纸张大小</div>
-                  <div>• 每张标签独占一页，居中显示，方便裁剪</div>
-                  <div>• 建议使用专用标签打印机或A4纸打印后裁剪</div>
-                </div>
-                <div
-                  style={{
-                    maxHeight: 'calc(85vh - 310px)',
-                    overflowY: 'auto',
-                    padding: '16px',
-                    background: 'var(--color-bg-subtle)',
-                  }}
-                >
-                  {print.printBundles.map((b, idx) => {
-                    const paperRatio = print.printConfig.paperSize === '7x4' ? (70 / 40) : (100 / 50);
-                    const previewWidth = 280;
-                    const previewHeight = previewWidth / paperRatio;
-
-                    return (
-                      <div
-                        key={b.id || `${b.qrCode || ''}-${idx}`}
-                        style={{
-                          width: `${previewWidth}px`,
-                          height: `${previewHeight}px`,
-                          margin: '0 auto 16px',
-                          background: 'var(--neutral-white)',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          padding: '8px',
-                        }}
-                      >
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          border: '1px solid #000',
-                          padding: '6px',
-                          display: 'flex',
-                          gap: '6px',
-                        }}>
-                          <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-                            {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={Math.min(previewHeight - 20, print.printConfig.qrSize)} includeMargin /> : null}
-                          </div>
-                          <div style={{
-                            flex: '1 1 auto',
-                            fontSize: '11px',
-                            lineHeight: '1.3',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-around',
-                          }}>
-                            <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
-                            <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
-                            <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
-                            <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
-                            <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                            <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ResizableModal>
+              <CuttingPrintPreviewModal
+                modalWidth={modalWidth}
+                print={print}
+                bundles={{ selectedBundles: bundles.selectedBundles, clearBundleSelection: bundles.clearBundleSelection }}
+              />
 
             </>
           ) : null}
 
           {/* ====== 新建裁剪任务弹窗 ====== */}
-          <ResizableModal
-            open={createTask.createTaskOpen}
-            title="新建裁剪任务"
-            width={modalWidth}
-            centered
-            onCancel={() => createTask.setCreateTaskOpen(false)}
-            okText="创建"
-            confirmLoading={createTask.createTaskSubmitting}
-            onOk={createTask.handleSubmitCreateTask}
-            initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-          >
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <Space wrap>
-                <span>款号</span>
-                <AutoComplete
-                  value={createTask.createStyleNo}
-                  style={{ width: 260 }}
-                  placeholder="输入或搜索款号"
-                  options={createTask.createStyleOptions.map((x) => ({
-                    value: x.styleNo,
-                    label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,
-                  }))}
-                  onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
-                  onChange={(v) => createTask.handleStyleNoChange(v)}
-                  filterOption={false}
-                  allowClear
-                  onClear={() => createTask.handleStyleNoChange('')}
-                />
-                <span>裁剪单号</span>
-                <Input
-                  value={createTask.createOrderNo}
-                  style={{ width: 220 }}
-                  placeholder="不填自动生成"
-                  onChange={(e) => createTask.setCreateOrderNo(e.target.value)}
-                />
-              </Space>
-              {createTask.createStyleName ? (
-                <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>款名：{createTask.createStyleName}</div>
-              ) : null}
-            </Card>
-
-            {/* 工序进度单价预览 */}
-            {(createTask.createProcessPrices.length > 0 || createTask.processPricesLoading) && (
-              <Card
-                size="small"
-                style={{ marginBottom: 12 }}
-                title={
-                  <Space>
-                    <span>工序进度单价</span>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      （将随订单反推至大货生产）
-                    </Typography.Text>
-                  </Space>
-                }
-              >
-                {createTask.processPricesLoading ? (
-                  <Spin size="small" />
-                ) : (
-                  <Space wrap>
-                    {createTask.createProcessPrices.map((p, i) => (
-                      <Tag key={i} color="blue">
-                        {p.processName}{p.unitPrice != null ? ` ¥${p.unitPrice}` : ' 未配置'}
-                      </Tag>
-                    ))}
-                  </Space>
-                )}
-              </Card>
-            )}
-
-            <Card size="small" title="自定义裁剪单" extra={
-              <Button type="dashed" onClick={createTask.handleCreateBundleAdd}>
-                新增一行
-              </Button>
-            }>
-              {createTask.createBundles.map((row, index) => (
-                <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                  <Input
-                    placeholder="颜色"
-                    style={{ width: 160 }}
-                    value={row.color}
-                    onChange={(e) => createTask.handleCreateBundleChange(index, 'color', e.target.value)}
-                  />
-                  <Input
-                    placeholder="尺码"
-                    style={{ width: 140 }}
-                    value={row.size}
-                    onChange={(e) => createTask.handleCreateBundleChange(index, 'size', e.target.value)}
-                  />
-                  <InputNumber
-                    placeholder="数量"
-                    style={{ width: 140 }}
-                    min={0}
-                    value={row.quantity}
-                    onChange={(value) => createTask.handleCreateBundleChange(index, 'quantity', value || 0)}
-                  />
-                  <Button onClick={() => createTask.handleCreateBundleRemove(index)} disabled={createTask.createBundles.length === 1}>
-                    删除
-                  </Button>
-                </Space>
-              ))}
-            </Card>
-          </ResizableModal>
+          <CuttingCreateTaskModal modalWidth={modalWidth} createTask={createTask} />
 
           {/* 快速编辑弹窗 */}
           <QuickEditModal

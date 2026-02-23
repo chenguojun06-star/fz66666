@@ -74,6 +74,10 @@ public class TenantInterceptor implements InnerInterceptor {
         // === 超管可管理的表（超管审批/创建账号时需要跨租户操作）===
         SUPERADMIN_MANAGED_TABLES.add("t_user");         // 超管审批入驻、创建租户主账号
         // t_role 已在 SHARED_TENANT_TABLES，超管可正常访问模板角色
+
+        // === 应用商店平台表（超管需要跨租户查看所有购买订单和订阅记录）===
+        SUPERADMIN_MANAGED_TABLES.add("t_app_order");        // 租户购买订单（超管激活用）
+        SUPERADMIN_MANAGED_TABLES.add("t_tenant_subscription"); // 租户订阅记录（超管管理用）
     }
 
     @Override

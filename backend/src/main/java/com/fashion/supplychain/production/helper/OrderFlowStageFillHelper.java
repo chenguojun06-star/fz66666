@@ -937,24 +937,20 @@ public class OrderFlowStageFillHelper {
     }
 
     /**
-     * 从 process_tracking 按工序名关键字汇总已扫数量。
-     * 有 tracking 数据时直接用 tracking（撤回后准确减少），无 tracking 数据才 fallback 到视图值。
+     * 从 process_tracking 按工序名关键字汇总已扫数量，取视图量和 tracking 量的最大值。
+     * 保证列表进度数量不低于弹窗中显示的实际值。
      */
     private int resolveTrackingQty(Map<String, Integer> trackingByProcess, int viewQty, String... keywords) {
         int trackingTotal = 0;
-        boolean hit = false;
         for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
             String pname = entry.getKey() == null ? "" : entry.getKey().toLowerCase();
             for (String kw : keywords) {
                 if (pname.contains(kw.toLowerCase())) {
                     trackingTotal += entry.getValue();
-                    hit = true;
                     break;
                 }
             }
         }
-        // hit=true 说明 tracking 有此工序数据（撤回后正确减少），直接使用
-        // hit=false 说明 tracking 没有此工序记录（如尚未初始化），fallback 到视图值
-        return hit ? trackingTotal : viewQty;
+        return Math.max(viewQty, trackingTotal);
     }
 }

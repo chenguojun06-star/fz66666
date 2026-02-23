@@ -32,7 +32,7 @@ const SUB_TYPE: Record<string, { label: string; color: string }> = {
  * - 查看所有客户提交的应用购买订单
  * - 手动激活待处理订单（创建订阅 + API凭证）
  */
-const AppOrderTab: React.FC = () => {
+const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActivated }) => {
   const [data, setData] = useState<AppOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -72,6 +72,8 @@ const AppOrderTab: React.FC = () => {
       setRemark('');
       resultModal.open(result);
       fetchData();
+      // 通知父组件刷新待处理数量（清除红点）
+      onOrderActivated?.();
     } catch (e: any) {
       message.error(e?.message || '激活失败');
     } finally {

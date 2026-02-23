@@ -229,3 +229,5 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     openBatchPrint, triggerPrint,
   };
 }
+
+export type CuttingPrintState = ReturnType<typeof useCuttingPrint>;

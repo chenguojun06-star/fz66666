@@ -11,6 +11,8 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.RoundingMode;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -720,13 +722,22 @@ public class StyleBomOrchestrator {
     }
 
     /**
-     * 根据BOM配置生成物料采购记录（样衣开发阶段）
-     *
-     * @param styleId 款式ID
-     * @return 生成的采购记录数量
+     * 根据BOM配置生成物料采购记录（样衣开发阶段），不支持强制重置
      */
     @Transactional(rollbackFor = Exception.class)
     public int generatePurchase(Long styleId) {
+        return generatePurchase(styleId, false);
+    }
+
+    /**
+     * 根据BOM配置生成物料采购记录（样衣开发阶段）
+     *
+     * @param styleId 款式ID
+     * @param force   true=强制重新生成（先软删除已有记录再重建）；false=若已存在则报错
+     * @return 生成的采购记录数量
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int generatePurchase(Long styleId, boolean force) {
         if (styleId == null || styleId <= 0) {
             throw new IllegalArgumentException("款式ID不能为空");
         }
@@ -751,8 +762,94 @@ public class StyleBomOrchestrator {
         long existsCount = materialPurchaseService.count(existsWrapper);
 
         if (existsCount > 0) {
-            throw new IllegalStateException("该款式已生成过样衣采购记录，请勿重复生成");
+            if (!force) {
+                throw new IllegalStateException("该款式已生成过样衣采购记录，请勿重复生成");
+            }
+            // force=true：软删除已有的样衣采购记录（状态为pending的才允许删除）
+            List<MaterialPurchase> existingRecords = materialPurchaseService.list(existsWrapper);
+            int softDeletedCount = 0;
+            for (MaterialPurchase mp : existingRecords) {
+                String status = mp.getStatus() == null ? "" : mp.getStatus().trim().toLowerCase();
+                if (MaterialConstants.STATUS_PENDING.equals(status)) {
+                    mp.setDeleteFlag(1);
+                    mp.setUpdateTime(LocalDateTime.now());
+                    materialPurchaseService.updateById(mp);
+                    softDeletedCount++;
+                } else {
+                    log.warn("样衣采购记录已{}，无法删除，跳过重新生成: purchaseNo={}", status, mp.getPurchaseNo());
+                }
+            }
+            log.info("强制重新生成：软删除 {} 条旧样衣采购记录: styleId={}", softDeletedCount, styleId);
         }
+
+        // ---- 解析 size_color_config，提取颜色列表和款式总件数 ----
+        String colorStr = null;
+        String sizeStr = null;
+        int styleTotalQty = 0;
+
+        String sizeColorConfig = styleInfo.getSizeColorConfig();
+        if (StringUtils.hasText(sizeColorConfig)) {
+            try {
+                ObjectMapper om = new ObjectMapper();
+                JsonNode root = om.readTree(sizeColorConfig);
+                // 格式示例：{"sizes":["S","M"],"colors":["红色","蓝色"],"quantities":[10,5,8,4],...}
+                // colors 与 sizes 各自去重后，quantities 按 colors×sizes 展开
+                JsonNode colorsNode = root.get("colors");
+                JsonNode sizesNode = root.get("sizes");
+                JsonNode quantitiesNode = root.get("quantities");
+
+                List<String> colors = new ArrayList<>();
+                if (colorsNode != null && colorsNode.isArray()) {
+                    for (JsonNode n : colorsNode) {
+                        String c = n.asText("").trim();
+                        if (!c.isEmpty()) colors.add(c);
+                    }
+                }
+                List<String> sizes = new ArrayList<>();
+                if (sizesNode != null && sizesNode.isArray()) {
+                    for (JsonNode n : sizesNode) {
+                        String s = n.asText("").trim();
+                        if (!s.isEmpty()) sizes.add(s);
+                    }
+                }
+                if (quantitiesNode != null && quantitiesNode.isArray()) {
+                    for (JsonNode n : quantitiesNode) {
+                        styleTotalQty += n.asInt(0);
+                    }
+                }
+
+                if (!colors.isEmpty()) {
+                    colorStr = String.join(",", colors);
+                }
+                if (!sizes.isEmpty()) {
+                    sizeStr = String.join(",", sizes);
+                }
+            } catch (Exception e) {
+                log.warn("解析 size_color_config 失败，降级为款式 color/size 字段: styleId={}, error={}", styleId, e.getMessage());
+            }
+        }
+
+        // 降级：从旧 color/size 字段读取
+        if (colorStr == null || colorStr.isEmpty()) {
+            String fallbackColor = styleInfo.getColor();
+            if (fallbackColor != null && !fallbackColor.trim().isEmpty()) {
+                colorStr = fallbackColor.trim();
+            }
+        }
+        if (sizeStr == null || sizeStr.isEmpty()) {
+            String fallbackSize = styleInfo.getSize();
+            if (fallbackSize != null && !fallbackSize.trim().isEmpty()) {
+                sizeStr = fallbackSize.trim();
+            }
+        }
+
+        // 如果款式总件数仍为0（无 quantities 字段），默认用1避免采购数量为0
+        if (styleTotalQty <= 0) {
+            styleTotalQty = 1;
+            log.warn("款式颜色尺码数量配置未设置，采购数量将按BOM单件用量计算: styleId={}", styleId);
+        }
+
+        log.info("样衣采购参数: styleId={}, 颜色={}, 尺码={}, 款式总件数={}", styleId, colorStr, sizeStr, styleTotalQty);
 
         // 为每个BOM项创建采购记录
         int createdCount = 0;
@@ -769,8 +866,12 @@ public class StyleBomOrchestrator {
                 purchase.setSpecifications(bom.getSpecification());
                 purchase.setUnit(bom.getUnit());
 
+                // 采购数量 = BOM单件用量 × 款式总件数（含损耗率）
                 BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
-                int purchaseQty = usageAmount.setScale(0, RoundingMode.CEILING).intValue();
+                BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+                BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+                BigDecimal totalUsage = usageAmount.multiply(BigDecimal.valueOf(styleTotalQty)).multiply(lossFactor);
+                int purchaseQty = totalUsage.setScale(0, RoundingMode.CEILING).intValue();
 
                 if (purchaseQty <= 0) {
                     log.warn("BOM配置用量为0或未设置，跳过该物料: styleId={}, materialName={}", styleId, bom.getMaterialName());
@@ -787,8 +888,8 @@ public class StyleBomOrchestrator {
                 purchase.setSupplierName(supplier != null ? supplier.trim() : "");
 
                 BigDecimal bomUnitPrice = bom.getUnitPrice();
-                log.info("BOM单价读取: styleId={}, materialCode={}, materialName={}, bomUnitPrice={}",
-                        styleId, bom.getMaterialCode(), bom.getMaterialName(), bomUnitPrice);
+                log.info("BOM单价读取: styleId={}, materialCode={}, materialName={}, bomUnitPrice={}, 款式件数={}, 采购数量={}",
+                        styleId, bom.getMaterialCode(), bom.getMaterialName(), bomUnitPrice, styleTotalQty, purchaseQty);
 
                 purchase.setUnitPrice(bomUnitPrice);
                 BigDecimal totalAmount = bomUnitPrice != null
@@ -801,12 +902,12 @@ public class StyleBomOrchestrator {
                 purchase.setStyleName(styleInfo.getStyleName());
                 purchase.setStyleCover(styleInfo.getCover());
 
-                // 从款式信息中携带颜色和码数，方便采购单详情展示
-                if (styleInfo.getColor() != null && !styleInfo.getColor().trim().isEmpty()) {
-                    purchase.setColor(styleInfo.getColor().trim());
+                // 从 size_color_config 解析的颜色/尺码信息（优先），用于采购单头部展示
+                if (colorStr != null && !colorStr.isEmpty()) {
+                    purchase.setColor(colorStr);
                 }
-                if (styleInfo.getSize() != null && !styleInfo.getSize().trim().isEmpty()) {
-                    purchase.setSize(styleInfo.getSize().trim());
+                if (sizeStr != null && !sizeStr.isEmpty()) {
+                    purchase.setSize(sizeStr);
                 }
 
                 purchase.setSourceType("sample");

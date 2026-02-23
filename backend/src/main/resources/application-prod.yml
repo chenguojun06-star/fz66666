@@ -5,10 +5,17 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: 20
-      minimum-idle: 5
+      # 云托管容器会休眠，minimum-idle=0 避免保留空闲连接被 MySQL 断掉后唤醒失败
+      minimum-idle: 0
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      # idle-timeout: 容器休眠时空闲连接会被杀掉，设短一点让 HikariCP 主动回收
+      idle-timeout: 180000
+      # max-lifetime: 必须小于 MySQL wait_timeout(默认28800s=480min)，留出余量
+      max-lifetime: 1200000
+      # keepalive-time: 每隔2分钟发一次心跳，防止云网络层把空闲TCP连接踢掉
+      keepalive-time: 120000
+      # 连接验证查询
+      connection-test-query: SELECT 1
 
   # Redis 生产配置（可选，不可用时降级为单机模式）
   redis:

@@ -189,7 +189,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createStyleOptions, createStyleLoading, createStyleNo, setCreateStyleNo,
     createStyleName, setCreateStyleName,
     createBundles,
-    createProcessPrices, processPricesLoading,
+    createProcessPrices, setCreateProcessPrices, processPricesLoading,
     fetchStyleInfoOptions,
     fetchProcessUnitPrices,
     handleStyleNoChange,
@@ -200,3 +200,4 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
 }
 
 export type { StyleOption };
+export type CuttingCreateTaskState = ReturnType<typeof useCuttingCreateTask>;

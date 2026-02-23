@@ -84,6 +84,7 @@ public class StyleBomController {
     /**
      * 根据BOM配置手动生成物料采购记录
      * 用于样衣开发阶段的物料采购
+     * @param force 是否强制重新生成（先软删除已有记录）
      */
     @PostMapping("/generate-purchase")
     public Result<Integer> generatePurchase(@RequestBody Map<String, Object> params) {
@@ -100,7 +101,10 @@ public class StyleBomController {
                 }
             }
 
-            int createdCount = styleBomOrchestrator.generatePurchase(styleId);
+            boolean force = Boolean.TRUE.equals(params.get("force")) ||
+                    "true".equalsIgnoreCase(String.valueOf(params.getOrDefault("force", "false")));
+
+            int createdCount = styleBomOrchestrator.generatePurchase(styleId, force);
             return Result.success(createdCount);
 
         } catch (IllegalArgumentException | IllegalStateException e) {

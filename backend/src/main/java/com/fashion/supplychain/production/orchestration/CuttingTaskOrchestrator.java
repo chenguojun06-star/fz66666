@@ -126,6 +126,9 @@ public class CuttingTaskOrchestrator {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> bundles = body == null ? null : (List<Map<String, Object>>) body.get("bundles");
 
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> processUnitPrices = body == null ? null : (List<Map<String, Object>>) body.get("processUnitPrices");
+
         if (!StringUtils.hasText(styleNo) || bundles == null || bundles.isEmpty()) {
             throw new IllegalArgumentException("参数错误");
         }
@@ -139,6 +142,7 @@ public class CuttingTaskOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
 
+        // 生成 CUT 前缀订单号（若用户未提供）
         String finalOrderNo = StringUtils.hasText(orderNo)
                 ? orderNo
                 : "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
@@ -151,10 +155,64 @@ public class CuttingTaskOrchestrator {
             finalOrderNo = finalOrderNo + "-" + String.valueOf(System.nanoTime()).substring(8);
         }
 
+        LocalDateTime now = LocalDateTime.now();
+
+        // ── 1. 构建 progressWorkflowJson（从前端传来的 processUnitPrices）──────
+        String progressWorkflowJson = null;
+        if (processUnitPrices != null && !processUnitPrices.isEmpty()) {
+            List<Map<String, Object>> nodes = new ArrayList<>();
+            for (Map<String, Object> p : processUnitPrices) {
+                String processName = p.get("processName") == null ? null : String.valueOf(p.get("processName")).trim();
+                if (!StringUtils.hasText(processName)) continue;
+                Map<String, Object> node = new java.util.LinkedHashMap<>();
+                node.put("name", processName);
+                if (StringUtils.hasText(p.get("processCode") == null ? null : String.valueOf(p.get("processCode")).trim())) {
+                    node.put("processCode", String.valueOf(p.get("processCode")).trim());
+                }
+                node.put("unitPrice", p.get("unitPrice") != null ? p.get("unitPrice") : 0);
+                nodes.add(node);
+            }
+            if (!nodes.isEmpty()) {
+                Map<String, Object> workflow = new java.util.LinkedHashMap<>();
+                workflow.put("nodes", nodes);
+                try {
+                    progressWorkflowJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
+                } catch (Exception ex) {
+                    log.warn("构建 progressWorkflowJson 失败", ex);
+                }
+            }
+        }
+
+        // ── 2. 创建关联的 ProductionOrder（CUT 前缀，支持扫码计件）────────────
+        ProductionOrder order = new ProductionOrder();
+        order.setOrderNo(finalOrderNo);
+        order.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
+        order.setStyleNo(styleNo);
+        order.setStyleName(style.getStyleName());
+        order.setColor(style.getColor());
+        order.setSize(style.getSize());
+        order.setStatus("production");
+        order.setDeleteFlag(0);
+        order.setProgressWorkflowJson(progressWorkflowJson);
+        order.setCreateTime(now);
+        order.setUpdateTime(now);
+        // 设置租户 ID
+        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+        if (ctx != null && ctx.getTenantId() != null) {
+            order.setTenantId(ctx.getTenantId());
+        }
+
+        boolean orderOk = productionOrderService.save(order);
+        if (!orderOk) {
+            throw new IllegalStateException("创建生产订单失败");
+        }
+        log.info("自定义裁剪单已关联生产订单: orderNo={}, orderId={}, progressWorkflowJson={}",
+                finalOrderNo, order.getId(), progressWorkflowJson != null ? "已设置" : "未设置（无工序单价）");
+
+        // ── 3. 构建 CuttingBundle 并关联 productionOrderId ──────────────────
         List<CuttingBundle> toSave = new ArrayList<>();
         int bundleNo = 1;
         int totalQty = 0;
-        LocalDateTime now = LocalDateTime.now();
 
         for (Map<String, Object> item : bundles) {
             if (item == null) {
@@ -176,7 +234,7 @@ public class CuttingTaskOrchestrator {
             }
 
             CuttingBundle b = new CuttingBundle();
-            b.setProductionOrderId(null);
+            b.setProductionOrderId(order.getId());   // ✅ 关联生产订单
             b.setProductionOrderNo(finalOrderNo);
             b.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
             b.setStyleNo(styleNo);
@@ -198,8 +256,9 @@ public class CuttingTaskOrchestrator {
             throw new IllegalArgumentException("请至少录入一行有效的颜色/尺码/数量");
         }
 
+        // ── 4. 保存 CuttingTask，关联 productionOrderId ──────────────────────
         CuttingTask task = new CuttingTask();
-        task.setProductionOrderId(null);
+        task.setProductionOrderId(order.getId());    // ✅ 关联生产订单
         task.setProductionOrderNo(finalOrderNo);
         task.setOrderQrCode(null);
         task.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
@@ -226,22 +285,17 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("创建失败");
         }
 
-        // 初始化工序跟踪表（修复PC端工序明细弹窗数据缺失问题）
-        // ⚠️ 自定义裁剪任务没有订单ID，跳过工序跟踪初始化
-        if (StringUtils.hasText(task.getProductionOrderId())) {
+        // ── 5. 初始化工序跟踪（有 progressWorkflowJson 才会生成记录）──────────
+        if (StringUtils.hasText(progressWorkflowJson)) {
             try {
-                if (processTrackingOrchestrator != null) {
-                    int trackingCount = processTrackingOrchestrator.initializeProcessTracking(task.getProductionOrderId());
-                    log.info("裁剪完成，初始化工序跟踪：orderId={}, 菲号数={}, tracking记录数={}",
-                        task.getProductionOrderId(), toSave.size(), trackingCount);
-                } else {
-                    log.warn("processTrackingOrchestrator未注入，跳过工序跟踪初始化");
-                }
+                int trackingCount = processTrackingOrchestrator.initializeProcessTracking(order.getId());
+                log.info("自定义裁剪单初始化工序跟踪成功: orderId={}, 菲号数={}, tracking记录数={}",
+                        order.getId(), toSave.size(), trackingCount);
             } catch (Exception e) {
-                log.error("初始化工序跟踪失败：orderId={}", task.getProductionOrderId(), e);
+                log.error("初始化工序跟踪失败：orderId={}", order.getId(), e);
             }
         } else {
-            log.info("自定义裁剪任务无订单ID，跳过工序跟踪初始化");
+            log.info("自定义裁剪单未配置工序单价，跳过工序跟踪初始化 orderId={}", order.getId());
         }
 
         task.setCuttingQuantity(totalQty);

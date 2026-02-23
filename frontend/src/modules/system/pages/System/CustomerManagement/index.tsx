@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio, Statistic } from 'antd';
 import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -16,6 +16,7 @@ import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import systemStatusService from '@/services/systemStatusService';
 import type { SystemStatusOverview } from '@/services/systemStatusService';
 import AppOrderTab from './AppOrderTab';
+import { appStoreService } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
@@ -1631,12 +1632,42 @@ const SystemStatusTab: React.FC = () => {
 const CustomerManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'tenants';
+  // 待处理应用订单数量（不依赖WebSocket，主动轮询）
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchPendingOrderCount = useCallback(async () => {
+    try {
+      const res: any = await appStoreService.adminOrderList({ status: 'PENDING' });
+      const list = res?.data || res || [];
+      setPendingOrderCount(Array.isArray(list) ? list.length : 0);
+    } catch {
+      // 静默失败，不影响主流程
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingOrderCount();
+    // 每60秒轮询一次，不依赖WebSocket是否在线
+    pollTimerRef.current = setInterval(fetchPendingOrderCount, 60000);
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [fetchPendingOrderCount]);
+
+  // 切换到"应用订单"Tab时清除红点并刷新
+  const handleTabChange = useCallback((key: string) => {
+    setSearchParams({ tab: key });
+    if (key === 'app-orders') {
+      setPendingOrderCount(0);
+    }
+  }, [setSearchParams]);
 
   return (
     <Layout>
       <Tabs
         activeKey={activeTab}
-        onChange={(key) => setSearchParams({ tab: key })}
+        onChange={handleTabChange}
         items={[
           {
             key: 'tenants',
@@ -1655,8 +1686,15 @@ const CustomerManagement: React.FC = () => {
           },
           {
             key: 'app-orders',
-            label: <span><ShoppingCartOutlined /> 应用订单</span>,
-            children: <AppOrderTab />,
+            label: (
+              <span>
+                <ShoppingCartOutlined /> 应用订单
+                {pendingOrderCount > 0 && (
+                  <Badge count={pendingOrderCount} style={{ marginLeft: 6 }} size="small" />
+                )}
+              </span>
+            ),
+            children: <AppOrderTab onOrderActivated={fetchPendingOrderCount} />,
           },
           {
             key: 'feedback',

@@ -825,28 +825,44 @@ const StyleBomTab: React.FC<Props> = ({
       return;
     }
 
+    const doGenerate = async (force: boolean) => {
+      setLoading(true);
+      try {
+        const res = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
+          styleId: sid,
+          force,
+        });
+        const result = res as Record<string, unknown>;
+        if (result.code === 200) {
+          const count = Number(result.data) || 0;
+          message.success(`成功生成 ${count} 条物料采购记录`);
+        } else {
+          const errMsg = String(result.message || '生成失败');
+          // 已生成过时，提示是否强制重新生成
+          if (errMsg.includes('已生成过') && !force) {
+            Modal.confirm({
+              title: '已存在样衣采购记录',
+              content: '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）',
+              okText: '重新生成',
+              okButtonProps: { danger: true },
+              cancelText: '取消',
+              onOk: () => doGenerate(true),
+            });
+          } else {
+            message.error(errMsg);
+          }
+        }
+      } catch (error: any) {
+        message.error(`生成失败：${error?.message || '请求失败'}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     Modal.confirm({
       title: '确认生成采购单',
-      content: `将根据当前BOM配置（${data.length}个物料）生成物料采购记录，是否继续？`,
-      onOk: async () => {
-        setLoading(true);
-        try {
-          const res = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
-            styleId: sid,
-          });
-          const result = res as Record<string, unknown>;
-          if (result.code === 200) {
-            const count = Number(result.data) || 0;
-            message.success(`成功生成 ${count} 条物料采购记录`);
-          } else {
-            message.error(String(result.message || '生成失败'));
-          }
-        } catch (error: any) {
-          message.error(`生成失败：${error?.message || '请求失败'}`);
-        } finally {
-          setLoading(false);
-        }
-      },
+      content: `将根据当前BOM配置（${data.length}个物料）及款式颜色数量生成物料采购记录，是否继续？`,
+      onOk: () => doGenerate(false),
     });
   };
 

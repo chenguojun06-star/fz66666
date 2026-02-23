@@ -1174,8 +1174,8 @@ const OrderManagement: React.FC = () => {
     { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
     {
       title: '品类',
-      dataIndex: 'productCategory',
-      key: 'productCategory',
+      dataIndex: 'category',
+      key: 'category',
       width: 120,
       render: (v: unknown) => toCategoryCn(v),
     },
