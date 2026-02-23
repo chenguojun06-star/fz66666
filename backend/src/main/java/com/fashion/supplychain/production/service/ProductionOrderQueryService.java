@@ -112,12 +112,10 @@ public class ProductionOrderQueryService {
         orderCuttingFillService.fillCuttingSummary(resultPage.getRecords());
         progressFillHelper.fillCurrentProcessName(resultPage.getRecords());
         orderStockFillService.fillStockSummary(resultPage.getRecords());
-        // 性能优化：列表查询跳过昂贵的 fillFlowStageFields（查2个视图，759行逻辑）
-        // 流程进度条数据仅在详情页（fillDetails）中加载
-        // flowStageFillHelper.fillFlowStageFields(resultPage.getRecords());
-        // 改用轻量级完成率填充：直接从已填充字段（materialArrivalRate/cuttingQuantity/warehousingQualifiedQuantity）计算
-        flowStageFillHelper.fillCompletionRatesLight(resultPage.getRecords());
-        // 轻量填充下单人：fillFlowStageFields 已注释，createdByName 是数据库直接字段，直接复用即可
+        // 恢复完整的流程阶段数据填充：从 v_production_order_flow_stage_snapshot 视图读取实际扫码数量
+        // 确保列表页进度条（车缝/二次工艺/质检等）显示真实值，而非以入库量近似代替
+        flowStageFillHelper.fillFlowStageFields(resultPage.getRecords());
+        // 兜底：若 fillFlowStageFields 未能填充下单人，则从 createdByName 复用
         resultPage.getRecords().forEach(o -> {
             if (o != null && (!org.springframework.util.StringUtils.hasText(o.getOrderOperatorName()))
                     && org.springframework.util.StringUtils.hasText(o.getCreatedByName())) {
