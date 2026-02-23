@@ -45,16 +45,17 @@
     <!-- 批量查询各工序已扫码数量汇总（列表进度条与弹窗数据同源） -->
     <select id="selectScannedQtySummaryByOrderIds" resultType="java.util.HashMap">
         SELECT
-            production_order_id AS productionOrderId,
-            process_name        AS processName,
-            SUM(quantity)       AS scannedQty
+            production_order_id                       AS productionOrderId,
+            COALESCE(NULLIF(TRIM(process_name),''), NULLIF(TRIM(process_code),''), 'unknown') AS processName,
+            process_code                              AS processCode,
+            SUM(quantity)                             AS scannedQty
         FROM t_production_process_tracking
         WHERE scan_status = 'scanned'
           AND production_order_id IN
           <foreach collection="orderIds" item="id" open="(" separator="," close=")">
               #{id}
           </foreach>
-        GROUP BY production_order_id, process_name
+        GROUP BY production_order_id, COALESCE(NULLIF(TRIM(process_name),''), NULLIF(TRIM(process_code),''), 'unknown'), process_code
     </select>
 
     <!-- 检查菲号+工序是否已存在 -->

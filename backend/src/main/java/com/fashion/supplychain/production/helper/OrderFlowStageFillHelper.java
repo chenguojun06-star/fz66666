@@ -88,9 +88,16 @@ public class OrderFlowStageFillHelper {
                 for (Map<String, Object> row : trackingRows) {
                     String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));
                     String pname = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "processName"));
+                    String pcode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "processCode"));
                     int qty = ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(row, "scannedQty"));
-                    if (StringUtils.hasText(toid) && StringUtils.hasText(pname) && qty > 0) {
-                        trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pname, qty, Integer::sum);
+                    if (StringUtils.hasText(toid) && qty > 0) {
+                        if (StringUtils.hasText(pname)) {
+                            trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pname, qty, Integer::sum);
+                        }
+                        // processCode 单独也作为 key，避免 process_name 为空时漏掉
+                        if (StringUtils.hasText(pcode) && !pcode.equals(pname)) {
+                            trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pcode, qty, Integer::sum);
+                        }
                     }
                 }
             }
@@ -245,9 +252,9 @@ public class OrderFlowStageFillHelper {
                 // 用 process_tracking 实际扫码量覆盖（取两者最大值，避免视图条件遗漏）
                 Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, new HashMap<>());
                 if (!trackingByProcess.isEmpty()) {
-                    carSewingQty = resolveTrackingQty(trackingByProcess, carSewingQty, "车缝", "carsewing");
-                    ironingQty = resolveTrackingQty(trackingByProcess, ironingQty, "尾部", "大烫", "整烫", "剪线", "尾工", "ironing");
-                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary");
+                    carSewingQty = resolveTrackingQty(trackingByProcess, carSewingQty, "车缝", "carsewing", "car_sewing", "carSewing");
+                    ironingQty = resolveTrackingQty(trackingByProcess, ironingQty, "尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process");
+                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary", "secondaryprocess", "secondary_process");
                     packagingQty = resolveTrackingQty(trackingByProcess, packagingQty, "包装", "packaging");
                 }
 
