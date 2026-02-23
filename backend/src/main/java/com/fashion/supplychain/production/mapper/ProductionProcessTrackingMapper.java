@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生产工序跟踪记录 Mapper
@@ -60,6 +61,14 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
         @Param("cuttingBundleId") String cuttingBundleId,
         @Param("processName") String processName
     );
+
+    /**
+     * 按订单批量查询各工序已扫码数量汇总（用于列表进度条与弹窗保持同源）
+     *
+     * @param orderIds 订单ID列表
+     * @return [{productionOrderId, processName, scannedQty}]
+     */
+    List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds);
 
     /**
      * 删除订单的所有跟踪记录（重新初始化时使用）

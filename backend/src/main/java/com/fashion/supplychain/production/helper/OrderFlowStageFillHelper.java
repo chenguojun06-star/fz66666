@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
+import com.fashion.supplychain.production.mapper.ProductionProcessTrackingMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -31,6 +32,9 @@ public class OrderFlowStageFillHelper {
 
     @Autowired
     private MaterialPurchaseMapper materialPurchaseMapper;
+
+    @Autowired
+    private ProductionProcessTrackingMapper processTrackingMapper;
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
@@ -74,6 +78,24 @@ public class OrderFlowStageFillHelper {
             flowSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query flow stage snapshot: orderIdsCount={}", orderIds.size(), e);
+        }
+
+        // 从 process_tracking 加载各工序实际已扫数量（与弹窗同源，修正视图匹配遗漏问题）
+        Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
+        try {
+            List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds);
+            if (trackingRows != null) {
+                for (Map<String, Object> row : trackingRows) {
+                    String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));
+                    String pname = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "processName"));
+                    int qty = ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(row, "scannedQty"));
+                    if (StringUtils.hasText(toid) && StringUtils.hasText(pname) && qty > 0) {
+                        trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pname, qty, Integer::sum);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query process tracking qty summary: {}", e.getMessage());
         }
 
         boolean procurementSnapshotOk = false;
@@ -220,6 +242,15 @@ public class OrderFlowStageFillHelper {
                 int packagingQty = flow == null ? 0
                         : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "packagingQuantity"));
 
+                // 用 process_tracking 实际扫码量覆盖（取两者最大值，避免视图条件遗漏）
+                Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, new HashMap<>());
+                if (!trackingByProcess.isEmpty()) {
+                    carSewingQty = resolveTrackingQty(trackingByProcess, carSewingQty, "车缝", "carsewing");
+                    ironingQty = resolveTrackingQty(trackingByProcess, ironingQty, "尾部", "大烫", "整烫", "剪线", "尾工", "ironing");
+                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary");
+                    packagingQty = resolveTrackingQty(trackingByProcess, packagingQty, "包装", "packaging");
+                }
+
                 LocalDateTime qualityStart = flow == null ? null
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "qualityStartTime"));
                 LocalDateTime qualityEnd = flow == null ? null
@@ -228,6 +259,9 @@ public class OrderFlowStageFillHelper {
                         : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "qualityOperatorName"));
                 int qualityQty = flow == null ? 0
                         : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "qualityQuantity"));
+                if (!trackingByProcess.isEmpty()) {
+                    qualityQty = resolveTrackingQty(trackingByProcess, qualityQty, "质检", "检验", "品检", "验货", "quality");
+                }
 
                 LocalDateTime wareStart = flow == null ? null
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "warehousingStartTime"));
@@ -893,5 +927,23 @@ public class OrderFlowStageFillHelper {
             o.setQualityCompletionRate(sewRate);
             o.setWarehousingCompletionRate(sewRate);
         }
+    }
+
+    /**
+     * 从 process_tracking 按工序名关键字汇总已扫数量，取视图量和 tracking 量的最大值。
+     * 保证列表进度数量不低于弹窗中显示的实际值。
+     */
+    private int resolveTrackingQty(Map<String, Integer> trackingByProcess, int viewQty, String... keywords) {
+        int trackingTotal = 0;
+        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
+            String pname = entry.getKey() == null ? "" : entry.getKey().toLowerCase();
+            for (String kw : keywords) {
+                if (pname.contains(kw.toLowerCase())) {
+                    trackingTotal += entry.getValue();
+                    break;
+                }
+            }
+        }
+        return Math.max(viewQty, trackingTotal);
     }
 }
