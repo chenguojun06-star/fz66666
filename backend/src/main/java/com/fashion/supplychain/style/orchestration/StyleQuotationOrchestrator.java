@@ -75,17 +75,21 @@ public class StyleQuotationOrchestrator {
             return usage * (1.0 + loss / 100.0) * up;
         }).sum();
 
-        // --- 实时汇总工序成本 ---
+        // --- 实时汇总工序成本（含二次工艺）---
         List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
         double processTotal = processes.stream()
                 .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
                 .sum();
 
-        // --- 实时汇总二次工艺成本 ---
+        // 二次工艺总价并入工序成本，不覆盖用户手动填写的其他费用
         List<SecondaryProcess> secondaryList = secondaryProcessService.listByStyleId(styleId);
-        double otherTotal = secondaryList.stream()
+        double secondaryTotal = secondaryList.stream()
                 .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
                 .sum();
+        processTotal += secondaryTotal;
+
+        // 其他费用保留用户手动填写的值，不自动覆盖
+        double otherTotal = existing.getOtherCost() != null ? existing.getOtherCost().doubleValue() : 0.0;
 
         BigDecimal materialCost = BigDecimal.valueOf(materialTotal).setScale(2, RoundingMode.HALF_UP);
         BigDecimal processCost  = BigDecimal.valueOf(processTotal).setScale(2, RoundingMode.HALF_UP);
