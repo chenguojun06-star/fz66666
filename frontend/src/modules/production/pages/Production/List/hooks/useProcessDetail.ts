@@ -172,7 +172,9 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
     // 获取扫码记录
     try {
       const res = await productionScanApi.listByOrderId(record.id, { page: 1, pageSize: 1000 });
-      if (res.code === 200 && Array.isArray(res.data)) {
+      if (res.code === 200 && Array.isArray((res.data as any)?.records)) {
+        setProcessDetailScanRecords((res.data as any).records);
+      } else if (res.code === 200 && Array.isArray(res.data)) {
         setProcessDetailScanRecords(res.data);
       } else {
         setProcessDetailScanRecords([]);
