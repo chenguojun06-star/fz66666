@@ -64,69 +64,13 @@ jobs:
     name: 部署到微信云托管
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-build]
-    # 仅 push 到 main 分支时部署（PR 不部署）
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    env:
-      CLOUDBASE_ENV_ID: ${{ secrets.CLOUDBASE_ENV_ID }}
-      CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
-      CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-
     steps:
-    - name: 检查必要 Secrets 是否已配置
+    - name: 跳过 CI 自动部署（使用微信云托管控制台手动触发）
       run: |
-        if [ -z "$CLOUDBASE_ENV_ID" ] || [ -z "$CLOUDBASE_SECRET_ID" ] || [ -z "$CLOUDBASE_SECRET_KEY" ]; then
-          echo "⚠️  GitHub Secrets 未配置，跳过部署。"
-          echo "请在仓库 Settings → Secrets and variables → Actions 中添加："
-          echo "  CLOUDBASE_ENV_ID / CLOUDBASE_SECRET_ID / CLOUDBASE_SECRET_KEY"
-          echo "  以及 MYSQL_HOST / MYSQL_USER / MYSQL_PASSWORD / REDIS_HOST"
-          echo "  JWT_SECRET / WECHAT_APPID / WECHAT_SECRET"
-          exit 0
-        fi
-        echo "✅ Secrets 已配置，继续部署..."
-
-    - name: 检出代码
-      if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
-      uses: actions/checkout@v4
-
-    - name: 设置 Node.js
-      if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: 安装 CloudBase CLI
-      if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
-      run: npm install -g @cloudbase/cli@latest
-
-    - name: 替换 cloudbaserc.json 中的占位符
-      if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
-      env:
-        MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-        MYSQL_USER: ${{ secrets.MYSQL_USER }}
-        MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-        REDIS_HOST: ${{ secrets.REDIS_HOST }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
-        WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
-      run: |
-        sed -i "s/{{ENV_ID}}/${CLOUDBASE_ENV_ID}/g" cloudbaserc.json
-        sed -i "s|{{MYSQL_HOST}}|${MYSQL_HOST}|g" cloudbaserc.json
-        sed -i "s/{{MYSQL_USER}}/${MYSQL_USER}/g" cloudbaserc.json
-        sed -i "s/{{MYSQL_PASSWORD}}/${MYSQL_PASSWORD}/g" cloudbaserc.json
-        sed -i "s/{{REDIS_HOST}}/${REDIS_HOST}/g" cloudbaserc.json
-        sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" cloudbaserc.json
-        sed -i "s/{{WECHAT_APPID}}/${WECHAT_APPID}/g" cloudbaserc.json
-        sed -i "s/{{WECHAT_SECRET}}/${WECHAT_SECRET}/g" cloudbaserc.json
-        echo "📋 替换后 envId: $(cat cloudbaserc.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["envId"])')"
-
-    - name: 部署后端 + 前端到微信云托管
-      if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
-      run: |
-        tcb login --apiKeyId "${CLOUDBASE_SECRET_ID}" --apiKey "${CLOUDBASE_SECRET_KEY}"
-        tcb framework deploy \
-          --envId "${CLOUDBASE_ENV_ID}" \
-          --verbose
+        echo "ℹ️  部署由微信云托管控制台直接触发，CI 不再执行自动部署。"
+        echo "请登录 https://cloud.weixin.qq.com → 服务管理 → 部署发布"
 
   notify:
     name: 通知结果
