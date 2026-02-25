@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（51个编排器）
 > **测试覆盖率**：核心编排器 100% | 代码优化（TemplateCenter 1912→900行）
-> **最后更新**：2026-03-01 | **AI指令版本**：v3.5
+> **最后更新**：2026-02-25 | **AI指令版本**：v3.6
 
 ---
 
@@ -523,6 +523,10 @@ open target/site/jacoco/index.html
 - ✅ 测试框架：3个Executor完整测试结构（36个测试用例）
 - ✅ CI/CD：GitHub Actions自动测试配置完成
 - ✅ `TemplateCenter/index.tsx`：1912行 → 900行（拆分为4个子组件）
+- ✅ **全局进度球缓存重构（2026-02-25）**：新增 `stores/productionBoardStore.ts`，双份缓存 → 全局单一 Zustand store，彻底消除两 Tab 数据不一致
+- ✅ **兜底虚高修复**：`useBoardStats.ts` 添加 `hasScanByNode` 守卫，有扫码记录时禁止比例兜底覆盖
+- ✅ **NodeDetailModal 错误可见**：5个并发 API 任意失败改为显示 Alert 警告条，不再静默失败
+- ✅ **死代码清理**：删除 `ModernProgressBoard.tsx` + `.css`，修复 9 处 lint 警告（7处 eslint-disable 指令 + 2处未使用 import）
 
 ---
 
@@ -1228,7 +1232,7 @@ ls -1 test-*.sh           # 列出所有测试脚本
 
 ---
 
-## 📊 生产进度数据流规范（核查验证版 v1.0，2026-03）
+## 📊 生产进度数据流规范（核查验证版 v2.0，2026-02-25 全局缓存重构）
 
 > 本节描述"我的订单"与"生产进度"两个 Tab 中进度球/弹窗/手机端的**数据唯一来源与显示一致性**，修改相关逻辑前必须阅读。
 
@@ -1237,10 +1241,11 @@ ls -1 test-*.sh           # 列出所有测试脚本
 | 页面/组件 | 路径 | 说明 |
 |-----------|------|------|
 | 我的订单 + 生产进度（列表视图） | `ProgressDetail/index.tsx` + `hooks/useProgressColumns.tsx` | **同一套列定义**，两 Tab 共用 |
-| 进度球点击弹窗 | `components/common/NodeDetailModal.tsx` | 弹窗头部统计来自父组件传入，明细来自独立 API |
-| 进度球数据计算 | `ProgressDetail/hooks/useBoardStats.ts` | 唯一数据源 |
+| 进度球点击弹窗 | `components/common/NodeDetailModal.tsx` | 弹窗头部统计来自父组件传入，明细来自独立 API；任意 API 失败显示 Alert 警告条 |
+| 进度球数据计算 | `ProgressDetail/hooks/useBoardStats.ts` | 唯一数据源，通过全局 store 存储 |
+| **全局进度球缓存** | `stores/productionBoardStore.ts` | ✅ **Zustand 全局单一缓存**，两 Tab 共享，消除双份不一致 |
 | 卡片视图（两 Tab） | `index.tsx` → `UniversalCardView` | 只显示 `productionProgress`，**不显示工序球** |
-| `ModernProgressBoard` 组件 | `components/ModernProgressBoard.tsx` | ⚠️ 孤立组件，当前**未被任何地方导入**，属于死代码 |
+| ~~`ModernProgressBoard` 组件~~ | ~~已删除~~ | ✅ **已于 2026-02-25 删除**（从未被任何页面导入，死代码已清理） |
 
 ---
 
@@ -1260,11 +1265,15 @@ ls -1 test-*.sh           # 列出所有测试脚本
     →  boardTimesByOrder[orderId][nodeName]
 ```
 
-**兜底逻辑**（当无扫码记录时）：
+**兜底逻辑**（仅当该节点**无任何扫码记录**时才生效，有真实扫码则完全跳过）：
 - `裁剪` 节点：若 `cuttingQuantity > 0`，则强制 `max(scanned, cuttingQuantity)`
 - 其他节点：`sewingCompletionRate / procurementCompletionRate` 等订单级字段 × 基数，取 max
 
-**缓存刷新**：调用 `fetchOrders()` 拉取最新订单列表后，自动清空 boardStats 缓存（`setBoardStatsByOrder({})` + `boardStatsLoadingRef.current = {}`），触发重新拉取，确保进度球与扫码记录同步。
+⚠️ **关键守卫（`hasScanByNode`）**：`useBoardStats.ts` 内部维护 `hasScanByNode` 映射，只要该节点存在任意 `success` 扫码记录，比例兜底逻辑**完全跳过**，防止真实数据被订单级字段覆盖虚高。
+
+**全局缓存（2026-02-25 重构）**：`boardStatsByOrder`、`boardTimesByOrder`、`boardStatsLoadingByOrder` 全部存储在 `stores/productionBoardStore.ts`（Zustand）。两 Tab（`ProgressDetail/index.tsx` 和 `List/hooks/useProgressTracking.tsx`）读写**同一份缓存**，彻底消除双份不一致问题。
+
+**缓存刷新**：调用 `fetchOrders()` 后执行 `clearAllBoardCache()`（全局 store 方法）清空缓存，触发重新拉取，确保进度球与扫码记录同步。旧代码中的 `setBoardStatsByOrder({})` + `boardStatsLoadingRef.current = {}` 已废弃。
 
 ---
 
@@ -1298,6 +1307,8 @@ const completionTime = boardTimesByOrder[orderId][nodeName] || '';
 | 节点操作记录 | 审核/备注记录 | 独立 API：`productionOrderApi.getNodeOperations` |
 
 **结论**：弹窗头部统计与进度球是**同一数字，永远一致**；明细来自独立 API fresh 拉取，有延迟但更实时。
+
+**错误处理（2026-02-25 新增）**：5 个并发 API 中任何一个失败，弹窗顶部会出现黄色 `Alert` 警告条（如"工厂列表加载失败；工序跟踪加载失败"），不再静默丢失数据，用户可快速感知并刷新。
 
 ---
 
@@ -1346,10 +1357,12 @@ const completionTime = boardTimesByOrder[orderId][nodeName] || '';
 ### 八、常见陷阱
 
 1. **修改进度球节点名**：需同步检查 `stageNameMatches` 匹配规则，否则扫码记录无法匹配到节点
-2. **开发调试时进度球不更新**：检查是否在 `fetchOrders()` 后清空了 `boardStatsByOrder` 缓存
+2. **开发调试时进度球不更新**：检查是否在 `fetchOrders()` 后调用了 `clearAllBoardCache()`（全局 store 方法）；旧代码中的 `setBoardStatsByOrder({})` + `boardStatsLoadingRef` 已废弃
 3. **弹窗统计与球不一致**：不可能发生（同源），若出现说明 `openNodeDetail` 的入参被中间层修改了
-4. **`ModernProgressBoard` 组件修改**：此组件为死代码，修改不影响任何页面，建议后续删除或实际接入
-5. **扫码后进度球不变**：需用户手动刷新（点"刷新"按钮），触发 `fetchOrders` → 清空缓存 → 重新拉取 boardStats
+4. **~~`ModernProgressBoard` 组件修改~~**：✅ 已于 2026-02-25 永久删除，无需维护
+5. **扫码后进度球不变**：需用户手动刷新（点"刷新"按钮），触发 `fetchOrders` → `clearAllBoardCache()` → 重新拉取 boardStats
+6. **兜底数字虚高**：历史版本存在比例兜底覆盖真实扫码数的 bug，已通过 `hasScanByNode` 守卫修复——有真实扫码记录的节点绝对不会被兜底覆盖
+7. **弹窗 API 失败无感知**：历史版本 5 个并发请求任一失败静默忽略，现已在弹窗顶部显示 Alert 警告，可快速定位加载失败的数据块
 
 ---
 
