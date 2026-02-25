@@ -58,7 +58,10 @@ function buildSizeMeta(order) {
 
 /**
  * 计算交期和剩余天数
- * @param {Object} source - 订单数据
+ * 颜色逻辑与 PC 端 progressColor.ts 保持一致：
+ *   有 createTime 时按比例：≤20% → red，≤50% → yellow，>50% → green
+ *   无 createTime 时固定阈值：≤3天 → urgent，≤7天 → warn，>7天 → safe
+ * @param {Object} source - 订单数据（需包含 plannedEndDate/expectedShipDate，可选 createTime）
  * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
  */
 function calcDeliveryInfo(source) {
@@ -79,21 +82,43 @@ function calcDeliveryInfo(source) {
 
   let remainDaysText = '';
   let remainDaysClass = '';
-  if (remainDays > 7) {
-    remainDaysText = `剩${remainDays}天`;
-    remainDaysClass = 'days-safe';
-  } else if (remainDays > 3) {
-    remainDaysText = `剩${remainDays}天`;
-    remainDaysClass = 'days-warn';
-  } else if (remainDays > 0) {
-    remainDaysText = `剩${remainDays}天❗`;
-    remainDaysClass = 'days-urgent';
+
+  if (remainDays < 0) {
+    remainDaysText = `超期${Math.abs(remainDays)}天`;
+    remainDaysClass = 'days-overdue';
   } else if (remainDays === 0) {
     remainDaysText = '今天到期❗';
     remainDaysClass = 'days-urgent';
   } else {
-    remainDaysText = `超期${Math.abs(remainDays)}天`;
-    remainDaysClass = 'days-overdue';
+    // 有 createTime 时，按剩余比例计算等级（与 PC 端 getRemainingDaysDisplay 一致）
+    const createRaw = source.createTime || '';
+    if (createRaw) {
+      const start = new Date(createRaw);
+      const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      const ratio = remainDays / totalDays;
+      if (ratio <= 0.2) {
+        remainDaysText = `剩${remainDays}天❗`;
+        remainDaysClass = 'days-urgent';
+      } else if (ratio <= 0.5) {
+        remainDaysText = `剩${remainDays}天`;
+        remainDaysClass = 'days-warn';
+      } else {
+        remainDaysText = `剩${remainDays}天`;
+        remainDaysClass = 'days-safe';
+      }
+    } else {
+      // 无 createTime，退化为固定阈值
+      if (remainDays <= 3) {
+        remainDaysText = `剩${remainDays}天❗`;
+        remainDaysClass = 'days-urgent';
+      } else if (remainDays <= 7) {
+        remainDaysText = `剩${remainDays}天`;
+        remainDaysClass = 'days-warn';
+      } else {
+        remainDaysText = `剩${remainDays}天`;
+        remainDaysClass = 'days-safe';
+      }
+    }
   }
 
   return { deliveryDateStr, remainDays, remainDaysText, remainDaysClass };

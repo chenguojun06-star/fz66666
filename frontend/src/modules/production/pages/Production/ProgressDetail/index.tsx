@@ -170,6 +170,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         const records = result.data.records || [];
         setOrders(records);
         setTotal(result.data.total || 0);
+        // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
+        setBoardStatsByOrder({});
+        boardStatsLoadingRef.current = {};
 
         const styleNos = Array.from(
           new Set(
