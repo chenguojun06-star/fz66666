@@ -180,6 +180,7 @@ function _addRecordToGroup(group, record) {
     canRescan: canRescan && !payrollSettled,
     canUndo: canRescan && !payrollSettled,
     payrollSettled: payrollSettled,
+    cuttingBundleId: record.cuttingBundleId || '',
   });
 }
 
@@ -213,6 +214,26 @@ function groupScanRecords(records) {
   });
 
   groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
+
+  // 下一生产环节已有成功记录则禁止撤回：cutting→production→quality→warehouse
+  const NEXT_STAGE_MAP = { cutting: 'production', production: 'quality', quality: 'warehouse' };
+  groupedList.forEach(g => {
+    g.items.forEach(item => {
+      if (!item.canRescan) return; // 已禁止的不需再判断
+      const nextType = NEXT_STAGE_MAP[item.scanType];
+      if (nextType && item.cuttingBundleId) {
+        const hasNext = records.some(r =>
+          r.cuttingBundleId === item.cuttingBundleId &&
+          r.scanType === nextType &&
+          r.scanResult === 'success'
+        );
+        if (hasNext) {
+          item.canRescan = false;
+          item.canUndo = false;
+        }
+      }
+    });
+  });
 
   return groupedList;
 }

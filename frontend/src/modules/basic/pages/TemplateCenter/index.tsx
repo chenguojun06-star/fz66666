@@ -613,23 +613,23 @@ const TemplateCenter: React.FC = () => {
         url ? (
           <Image
             src={url}
-            width={50}
-            height={50}
+            width={48}
+            height={48}
             style={{ objectFit: 'cover', borderRadius: 4 }}
-            preview={{ src: url }}
+            preview={false}
           />
         ) : (
           <div
             style={{
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               margin: '0 auto',
-              background: '#f5f5f5',
+              background: 'var(--color-bg-subtle)',
               borderRadius: 4,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#bbb',
+              color: '#ccc',
               fontSize: 11,
             }}
           >

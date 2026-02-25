@@ -63,7 +63,7 @@ const IntegrationCenter: React.FC = () => {
   ];
 
   return (
-    <Layout title="集成对接中心">
+    <Layout>
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}

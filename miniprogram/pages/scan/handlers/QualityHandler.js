@@ -19,7 +19,6 @@ function showQualityModal(page, detail) {
     'qualityModal.handleMethod': 0,
     'qualityModal.remark': '',
     'qualityModal.images': [],
-    'qualityModal.warehouseIndex': 0,
   });
 }
 

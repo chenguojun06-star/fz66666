@@ -246,10 +246,9 @@ public class ScanRecordOrchestrator {
                 String fallbackOrderId = TextUtils.safeText(safeParams.get("orderId"));
                 if (hasText(fallbackOrderId)) {
                     ProductionOrder fallbackOrder = productionOrderService.getById(fallbackOrderId);
-                    if (fallbackOrder != null && "completed".equalsIgnoreCase(
-                            fallbackOrder.getStatus() == null ? "" : fallbackOrder.getStatus().trim())) {
-                        throw new IllegalStateException("订单已完成，无法撤回扫码记录");
-                    }
+                    if (fallbackOrder != null && isTerminalOrderStatus(fallbackOrder.getStatus())) {
+                        throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
+                }
                 }
                 Map<String, Object> body = new HashMap<>();
                 body.put("orderId", fallbackOrderId);
@@ -274,6 +273,19 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
         }
 
+        // 下一生产环节已有成功记录则禁止撤回
+        String nextStageType = getNextStageScanType(target.getScanType());
+        if (hasText(nextStageType) && hasText(target.getCuttingBundleId())) {
+            long nextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, target.getOrderId())
+                    .eq(ScanRecord::getCuttingBundleId, target.getCuttingBundleId())
+                    .eq(ScanRecord::getScanType, nextStageType)
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (nextCount > 0) {
+                throw new IllegalStateException("下一生产环节已完成扫码，无法撤回当前记录");
+            }
+        }
+
         // 1小时时间限制
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
@@ -284,9 +296,8 @@ public class ScanRecordOrchestrator {
         String orderId = TextUtils.safeText(target.getOrderId());
         if (hasText(orderId)) {
             ProductionOrder order = productionOrderService.getById(orderId);
-            if (order != null && "completed".equalsIgnoreCase(
-                    order.getStatus() == null ? "" : order.getStatus().trim())) {
-                throw new IllegalStateException("订单已完成，无法撤回扫码记录");
+            if (order != null && isTerminalOrderStatus(order.getStatus())) {
+                throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
             }
         }
 
@@ -393,6 +404,19 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("该扫码记录已参与工资结算，无法退回重扫");
         }
 
+        // 下一生产环节已有成功记录则禁止退回重扫
+        String rescanNextStageType = getNextStageScanType(target.getScanType());
+        if (hasText(rescanNextStageType) && hasText(target.getCuttingBundleId())) {
+            long rescanNextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, target.getOrderId())
+                    .eq(ScanRecord::getCuttingBundleId, target.getCuttingBundleId())
+                    .eq(ScanRecord::getScanType, rescanNextStageType)
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (rescanNextCount > 0) {
+                throw new IllegalStateException("下一生产环节已完成扫码，无法退回重扫当前记录");
+            }
+        }
+
         // 校验1小时时间限制
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
@@ -403,9 +427,8 @@ public class ScanRecordOrchestrator {
         String rescanOrderId = TextUtils.safeText(target.getOrderId());
         if (hasText(rescanOrderId)) {
             ProductionOrder rescanOrder = productionOrderService.getById(rescanOrderId);
-            if (rescanOrder != null && "completed".equalsIgnoreCase(
-                    rescanOrder.getStatus() == null ? "" : rescanOrder.getStatus().trim())) {
-                throw new IllegalStateException("订单已完成，无法退回重扫");
+            if (rescanOrder != null && isTerminalOrderStatus(rescanOrder.getStatus())) {
+                throw new IllegalStateException("订单已关闭或完成，无法退回重扫");
             }
         }
 
@@ -779,6 +802,19 @@ public class ScanRecordOrchestrator {
                     tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
         } catch (Exception e) {
             log.error("[resetTracking] 重置失败（不影响主流程）: scanRecordId={}", scanRecordId, e);
+        }
+    }
+
+    /**
+     * 返回下一生产环节的 scanType：cutting→production→quality→warehouse→null
+     */
+    private String getNextStageScanType(String currentScanType) {
+        if (!hasText(currentScanType)) return null;
+        switch (currentScanType.trim().toLowerCase()) {
+            case "cutting":    return "production";
+            case "production": return "quality";
+            case "quality":    return "warehouse";
+            default:           return null;
         }
     }
 }

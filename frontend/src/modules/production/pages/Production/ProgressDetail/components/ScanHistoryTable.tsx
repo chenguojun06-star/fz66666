@@ -20,19 +20,39 @@ interface ScanHistoryTableProps {
   onUndoSuccess?: () => void;
 }
 
+/** 扫码环节顺序：cutting→production→quality→warehouse */
+const NEXT_STAGE: Record<string, string> = {
+  cutting: 'production',
+  production: 'quality',
+  quality: 'warehouse',
+};
+
 /** 判断扫码记录是否可撤回 */
-function canUndoRecord(record: ScanRecord, orderStatus?: string): boolean {
+function canUndoRecord(record: ScanRecord, orderStatus?: string, allRecords?: ScanRecord[]): boolean {
   // 非成功记录不可撤回
   if (record.scanResult !== 'success') return false;
   // 已参与工资结算不可撤回
   if (record.payrollSettlementId) return false;
-  // 订单已完成不可撤回
-  if (orderStatus && orderStatus.toLowerCase() === 'completed') return false;
+  // 订单已完成或已关闭不可撤回
+  if (orderStatus) {
+    const s = orderStatus.toLowerCase();
+    if (s === 'completed' || s === 'closed') return false;
+  }
   // 超过1小时不可撤回
   const scanTime = record.scanTime || record.createTime;
   if (scanTime) {
     const scanMs = new Date(String(scanTime).replace(' ', 'T')).getTime();
     if (!isNaN(scanMs) && Date.now() - scanMs >= 3600 * 1000) return false;
+  }
+  // 下一生产环节已有成功记录则不可撤回
+  const nextType = NEXT_STAGE[record.scanType || ''];
+  if (nextType && allRecords && record.cuttingBundleId) {
+    const hasNext = allRecords.some(
+      r => r.cuttingBundleId === record.cuttingBundleId &&
+           r.scanType === nextType &&
+           r.scanResult === 'success'
+    );
+    if (hasNext) return false;
   }
   return true;
 }
@@ -127,7 +147,7 @@ const ScanHistoryTable: React.FC<ScanHistoryTableProps> = ({ data, loading, orde
       key: 'actions',
       width: 100,
       render: (_: any, record: ScanRecord) => {
-        if (!canUndoRecord(record, orderStatus)) return null;
+        if (!canUndoRecord(record, orderStatus, data)) return null;
         const actions: RowAction[] = [
           {
             key: 'undo',

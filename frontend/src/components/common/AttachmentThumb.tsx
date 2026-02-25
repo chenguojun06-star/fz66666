@@ -43,10 +43,11 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
   return (
     <div
       style={{
-        width: 56,
-        height: 56,
+        width: 48,
+        height: 48,
+        borderRadius: 4,
         overflow: 'hidden',
-        background: '#f5f5f5',
+        background: 'var(--color-bg-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

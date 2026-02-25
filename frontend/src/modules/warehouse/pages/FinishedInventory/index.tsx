@@ -257,20 +257,26 @@ const _FinishedInventory: React.FC = () => {
     {
       title: '图片',
       dataIndex: 'styleImage',
-      width: 90,
+      width: 72,
       fixed: 'left',
       align: 'center',
       render: (_, record) => {
         const imgSrc = record.styleImage ? getAuthedFileUrl(record.styleImage) : undefined;
         return (
-          <Image
-            src={imgSrc}
-            alt={record.styleName || '成品'}
-            width={60}
-            height={80}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+5oiQ5ZOBPC90ZXh0Pjwvc3ZnPg=="
-          />
+          <div style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {imgSrc ? (
+              <Image
+                src={imgSrc}
+                alt={record.styleName || '成品'}
+                width={48}
+                height={48}
+                style={{ objectFit: 'cover' }}
+                preview={false}
+              />
+            ) : (
+              <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+            )}
+          </div>
         );
       },
     },

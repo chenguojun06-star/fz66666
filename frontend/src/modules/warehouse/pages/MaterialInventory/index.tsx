@@ -680,18 +680,24 @@ const _MaterialInventory: React.FC = () => {
     {
       title: '图片',
       key: 'image',
-      width: 90,
+      width: 72,
       fixed: 'left',
       align: 'center',
       render: (_, record) => (
-        <Image
-          src={record.materialImage ? getFullAuthedFileUrl(record.materialImage) : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+54mp5paZPC90ZXh0Pjwvc3ZnPg=="}
-          alt="物料"
-          width={70}
-          height={70}
-          style={{ objectFit: 'cover' }}
-          fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+54mp5paZPC90ZXh0Pjwvc3ZnPg=="
-        />
+        <div style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {record.materialImage ? (
+            <Image
+              src={getFullAuthedFileUrl(record.materialImage)}
+              alt="物料"
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+              preview={false}
+            />
+          ) : (
+            <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+          )}
+        </div>
       ),
     },
     {

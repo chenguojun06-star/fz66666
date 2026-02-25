@@ -118,7 +118,6 @@ const scanPageData = {
     handleMethod: 0, // 处理方式索引（返修/报废）
     remark: '', // 备注
     images: [], // 照片（可选）
-    warehouseIndex: 0, // 仓库选择索引
   },
   // 仓库选项（与PC端一致）
   warehouseOptions: ['A仓', 'B仓'],
