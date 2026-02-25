@@ -11,12 +11,39 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
-const { eventBus } = require('../../../utils/eventBus');
-
+/**
+ * 将值转为正整数，非正整数时返回 fallback
+ * @param {*} value - 待转换的值
+ * @param {number} [fallback=1] - 默认值
+ * @returns {number} 正整数
+ */
 function normalizePositiveInt(value, fallback = 1) {
   const num = parseInt(value, 10);
   if (!Number.isFinite(num) || num <= 0) return fallback;
   return num;
+}
+
+/**
+ * 从 stageResult 构建可用工序选项（过滤已扫工序）
+ * @param {string} processName - 当前工序名
+ * @param {string} progressStage - 当前阶段名
+ * @param {Object} stageResult - 阶段扫码结果
+ * @returns {{options: Array, index: number}} 工序选项与默认选中下标
+ */
+function buildProcessOptions(processName, progressStage, stageResult) {
+  const scannedSet = new Set(stageResult?.scannedProcessNames || []);
+  const allBundleProcesses = stageResult?.allBundleProcesses || [];
+  const options = allBundleProcesses
+    .filter(p => !scannedSet.has(p.processName))
+    .map(p => ({
+      label: `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
+      value: p.processName,
+      scanType: p.scanType || 'production',
+      unitPrice: Number(p.price || p.unitPrice || 0),
+    }));
+  let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);
+  if (index < 0) index = 0;
+  return { options, index };
 }
 
 /**
@@ -27,47 +54,20 @@ function normalizePositiveInt(value, fallback = 1) {
  */
 function showScanResultConfirm(ctx, data) {
   const {
-    processName,
-    progressStage,
-    scanType,
-    quantity,
-    orderNo,
-    bundleNo,
-    scanData,
-    orderDetail,
-    stageResult,
-    parsedData,
+    processName, progressStage, scanType, quantity,
+    orderNo, bundleNo, scanData, orderDetail, stageResult, parsedData,
   } = data;
 
-  // 🔧 动态构建工序选项：100%来自订单工序配置，过滤掉已扫过的子工序
-  const scannedSet = new Set(stageResult?.scannedProcessNames || []);
-  const allBundleProcesses = stageResult?.allBundleProcesses || [];
-
-  // ✅ 严格从后端API动态配置构建，每个订单的子工序和单价都不同
-  const processOptions = allBundleProcesses
-    .filter(p => !scannedSet.has(p.processName))
-    .map(p => ({
-      label: `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
-      value: p.processName,
-      scanType: p.scanType || 'production',
-      unitPrice: Number(p.price || p.unitPrice || 0),
-    }));
+  const { options: processOptions, index: processIndex } =
+    buildProcessOptions(processName, progressStage, stageResult);
 
   if (processOptions.length === 0) {
-    // 所有工序已完成，不应该走到这里，报错提示
     console.error('[ScanResultHandler] 所有工序已扫完，不应弹出确认页');
     toast.error('该菲号所有工序已完成');
     return;
   }
 
-  let processIndex = processOptions.findIndex(
-    opt => opt.value === processName || opt.value === progressStage,
-  );
-  if (processIndex < 0) processIndex = 0;
-
-  // 当前选中的工序单价
   const selectedOption = processOptions[processIndex];
-
   const confirmedQty = normalizePositiveInt(quantity, 1);
 
   ctx.setData({
@@ -86,12 +86,17 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.orderDetail': orderDetail,
     'scanResultConfirm.stageResult': stageResult,
     'scanResultConfirm.parsedData': parsedData,
-    // 次品返修入库标记
-    'scanResultConfirm.isDefectiveReentry': stageResult && stageResult.isDefectiveReentry ? true : false,
-    'scanResultConfirm.defectQty': stageResult && stageResult.defectQty ? stageResult.defectQty : 0,
+    'scanResultConfirm.isDefectiveReentry': !!(stageResult && stageResult.isDefectiveReentry),
+    'scanResultConfirm.defectQty': (stageResult && stageResult.defectQty) || 0,
   });
 }
 
+/**
+ * 数量输入框变更
+ * @param {Object} ctx - Page 上下文
+ * @param {Object} e - 输入事件
+ * @returns {void}
+ */
 function onScanResultQuantityInput(ctx, e) {
   ctx.setData({
     'scanResultConfirm.quantity': e.detail.value,
