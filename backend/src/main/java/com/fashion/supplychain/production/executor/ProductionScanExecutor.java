@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.InventoryValidator;
@@ -252,8 +253,17 @@ public class ProductionScanExecutor {
                         sr.getId()
                     );
                     log.info("工序跟踪记录更新成功: bundleId={}, processCode(子工序)={}, progressStage(父)={}", bundle.getId(), processCode, progressStage);
+                } catch (BusinessException be) {
+                    // ✅ com.fashion.supplychain.common.BusinessException：直接重抛，GlobalExceptionHandler 返回 400+消息
+                    log.warn("工序跟踪拒绝领取，回滚扫码: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
+                    throw be;
+                } catch (com.fashion.supplychain.common.exception.BusinessException | IllegalStateException be2) {
+                    // ✅ 工序跟踪 Orchestrator 业务异常 / 操作人冲突：重新包装为 common BusinessException
+                    log.warn("工序跟踪拒绝领取，回滚扫码: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be2.getMessage());
+                    throw new BusinessException(be2.getMessage());
                 } catch (Exception e) {
-                    log.warn("工序跟踪记录更新失败: bundleId={}, processCode={}", bundle.getId(), processCode, e);
+                    // 非业务异常（DB故障等）：记录为ERROR但不阻断扫码，避免因追踪系统故障导致用户无法扫码
+                    log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processCode={}", bundle.getId(), processCode, e);
                 }
             }
         } catch (DuplicateKeyException dke) {
@@ -414,6 +424,11 @@ public class ProductionScanExecutor {
                 result.put("cuttingBundle", bundle);
             }
             return result;
+        } catch (IllegalStateException ise) {
+            // ✅ Re-throw: "已被他人领取" 是业务规则拒绝，必须反馈给用户
+            log.warn("领取冲突（他人已领取）: orderId={}, processCode={}, msg={}",
+                    order.getId(), processCode, ise.getMessage());
+            throw ise;
         } catch (Exception e) {
             log.warn("尝试更新已有扫码记录失败: orderId={}, requestId={}, scanCode={}",
                     order.getId(), requestId, scanCode, e);
