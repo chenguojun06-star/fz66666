@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +30,12 @@ public class WeChatMiniProgramAuthOrchestrator {
 
     /** Redis key 前缀：pwd:ver:{userId} */
     private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
+
+    /** Redis key：微信接口调用凭证缓存 */
+    private static final String WX_ACCESS_TOKEN_KEY = "wx:access_token";
+
+    /** Redis key 前缀：wx:invite:{token} = tenantId:tenantName */
+    private static final String INVITE_TOKEN_PREFIX = "wx:invite:";
 
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
@@ -264,6 +271,109 @@ public class WeChatMiniProgramAuthOrchestrator {
             return value;
         }
         return value.substring(0, max);
+    }
+
+    // ======================== 邀请二维码 ========================
+
+    /**
+     * 生成邀请二维码（管理员调用）
+     * 在 Redis 中存储 inviteToken → tenantId:tenantName（7天TTL），
+     * 并调用微信 getwxacodeunlimit 接口返回 Base64 小程序码图片。
+     *
+     * @param tenantId   租户ID
+     * @param tenantName 租户名称（用于小程序展示）
+     * @return Map: qrCodeBase64（data:image/png;base64,...）, inviteToken, expiresAt
+     */
+    public Map<String, Object> generateInviteQrCode(Long tenantId, String tenantName) {
+        String token = generateShortToken();
+        String value = tenantId + ":" + (tenantName == null ? "" : tenantName);
+        if (stringRedisTemplate != null) {
+            stringRedisTemplate.opsForValue().set(
+                    INVITE_TOKEN_PREFIX + token, value, Duration.ofDays(7));
+        } else {
+            log.warn("[InviteQr] Redis 不可用，邀请 token 无法持久化 token={}", token);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("inviteToken", token);
+        result.put("expiresAt", LocalDateTime.now().plusDays(7).toString());
+
+        String accessToken = getCachedAccessToken();
+        if (accessToken == null) {
+            log.warn("[InviteQr] 无法获取微信 access_token，仅返回 token 不返回图片");
+            return result;
+        }
+
+        String scene = "inviteToken=" + token;
+        byte[] qrBytes = weChatMiniProgramClient.fetchMiniProgramQrCode(
+                accessToken, scene, "pages/login/index");
+        if (qrBytes != null) {
+            result.put("qrCodeBase64",
+                    "data:image/png;base64," + Base64.getEncoder().encodeToString(qrBytes));
+        } else {
+            log.warn("[InviteQr] 微信接口返回空图片 token={}", token);
+        }
+        return result;
+    }
+
+    /**
+     * 解析邀请 token，返回 {tenantId, tenantName}；token 不存在/已过期返回 null
+     */
+    public Map<String, Object> resolveInviteToken(String token) {
+        if (!StringUtils.hasText(token)) {
+            return null;
+        }
+        String value = null;
+        if (stringRedisTemplate != null) {
+            value = stringRedisTemplate.opsForValue().get(INVITE_TOKEN_PREFIX + token);
+        }
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        int sep = value.indexOf(':');
+        if (sep < 1) {
+            return null;
+        }
+        try {
+            long tenantId = Long.parseLong(value.substring(0, sep));
+            String tenantName = value.substring(sep + 1);
+            Map<String, Object> res = new HashMap<>();
+            res.put("tenantId", tenantId);
+            res.put("tenantName", tenantName);
+            return res;
+        } catch (NumberFormatException e) {
+            log.warn("[InviteQr] resolveInviteToken 解析 tenantId 失败 value={}", value);
+            return null;
+        }
+    }
+
+    /**
+     * 获取并缓存微信 access_token（Redis 90分钟TTL）
+     */
+    private String getCachedAccessToken() {
+        if (stringRedisTemplate != null) {
+            String cached = stringRedisTemplate.opsForValue().get(WX_ACCESS_TOKEN_KEY);
+            if (StringUtils.hasText(cached)) {
+                return cached;
+            }
+        }
+        String fresh = weChatMiniProgramClient.fetchAccessToken();
+        if (fresh != null && stringRedisTemplate != null) {
+            stringRedisTemplate.opsForValue().set(WX_ACCESS_TOKEN_KEY, fresh, Duration.ofMinutes(90));
+        }
+        return fresh;
+    }
+
+    /**
+     * 生成 8 位十六进制短 token（大写）
+     */
+    private String generateShortToken() {
+        String hex = Long.toHexString(System.nanoTime()).toUpperCase();
+        // 取后8位避免前导0过多
+        if (hex.length() >= 8) {
+            return hex.substring(hex.length() - 8);
+        }
+        return String.format("%8s", hex).replace(' ', '0');
     }
 
     /**

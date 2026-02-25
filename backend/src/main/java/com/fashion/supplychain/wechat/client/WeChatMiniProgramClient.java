@@ -3,6 +3,9 @@ package com.fashion.supplychain.wechat.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -10,6 +13,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class WeChatMiniProgramClient {
@@ -97,6 +103,74 @@ public class WeChatMiniProgramClient {
             return ok;
         } catch (Exception e) {
             return Code2SessionResult.fail("解析微信返回失败");
+        }
+    }
+
+    /**
+     * 获取微信接口调用凭证（access_token）
+     * 使用 stable_token 接口，有效期2小时，调用方负责缓存
+     *
+     * @return access_token 字符串，失败返回 null
+     */
+    public String fetchAccessToken() {
+        if (!StringUtils.hasText(appid) || !StringUtils.hasText(secret)) {
+            return null;
+        }
+        String url = "https://api.weixin.qq.com/cgi-bin/stable_token";
+        Map<String, String> body = new HashMap<>();
+        body.put("grant_type", "client_credential");
+        body.put("appid", appid);
+        body.put("secret", secret);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<String> resp = restTemplate.postForEntity(url, request, String.class);
+            String respBody = resp == null ? null : resp.getBody();
+            if (!StringUtils.hasText(respBody)) return null;
+            JsonNode root = objectMapper.readTree(respBody);
+            String token = root.path("access_token").asText(null);
+            return StringUtils.hasText(token) ? token : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 生成小程序码图片（getwxacodeunlimit，不限制扫描次数）
+     * scene 最长 32 字节，page 为小程序页面路径
+     *
+     * @param accessToken 有效的 access_token
+     * @param scene       附带参数（如 "inviteToken=abc123"，最长32字节）
+     * @param page        页面路径（如 "pages/login/index"）
+     * @return 图片字节数组（PNG），失败返回 null
+     */
+    public byte[] fetchMiniProgramQrCode(String accessToken, String scene, String page) {
+        if (!StringUtils.hasText(accessToken)) return null;
+        String url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token="
+                + urlEncode(accessToken);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("scene", scene == null ? "" : scene);
+        body.put("page", page == null ? "pages/login/index" : page);
+        body.put("width", 280);
+        body.put("auto_color", false);
+        body.put("is_hyaline", true);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<byte[]> resp = restTemplate.postForEntity(url, request, byte[].class);
+            byte[] bytes = resp == null ? null : resp.getBody();
+            if (bytes == null || bytes.length < 100) return null;
+            // 微信返回 JSON 错误时 content-type 也是 image/jpeg，检查 PNG magic bytes
+            if (bytes[0] == (byte) 0x89 && bytes[1] == 'P') return bytes;
+            // 非 PNG → 可能是 JSON 错误，忽略
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

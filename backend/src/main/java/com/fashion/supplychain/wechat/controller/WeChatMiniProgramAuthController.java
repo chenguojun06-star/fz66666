@@ -4,9 +4,12 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.wechat.orchestration.WeChatMiniProgramAuthOrchestrator;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -53,6 +56,46 @@ public class WeChatMiniProgramAuthController {
             return Result.fail(400, "需要绑定账号", result);
         }
         return Result.fail((String) result.getOrDefault("message", "登录失败"));
+    }
+
+    // ======================== 邀请二维码 ========================
+
+    /**
+     * 生成邀请员工的小程序码（需要登录，租户管理员使用）
+     * POST /api/wechat/mini-program/invite/generate
+     * Body 可带 tenantId / tenantName，不带则从当前登录上下文读取
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/invite/generate")
+    public Result<?> generateInvite(@RequestBody(required = false) Map<String, Object> body) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String tenantName = null;
+        if (body != null) {
+            if (body.get("tenantId") != null) {
+                try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException ignored) {}
+            }
+            if (body.get("tenantName") != null) {
+                tenantName = body.get("tenantName").toString();
+            }
+        }
+        if (tenantId == null) {
+            return Result.fail("无法确定租户ID，请确保已登录");
+        }
+        Map<String, Object> result = weChatMiniProgramAuthOrchestrator.generateInviteQrCode(tenantId, tenantName);
+        return Result.success(result);
+    }
+
+    /**
+     * 解析邀请 token，返回租户信息（小程序扫码后调用，无需登录）
+     * GET /api/wechat/mini-program/invite/info?token=xxx
+     */
+    @GetMapping("/invite/info")
+    public Result<?> inviteInfo(@RequestParam String token) {
+        Map<String, Object> info = weChatMiniProgramAuthOrchestrator.resolveInviteToken(token);
+        if (info == null) {
+            return Result.fail("邀请链接不存在或已过期");
+        }
+        return Result.success(info);
     }
 
     private static String resolveClientIp(HttpServletRequest request) {
