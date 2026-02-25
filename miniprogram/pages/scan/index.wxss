@@ -1116,6 +1116,12 @@ page {
   flex: 1;
 }
 
+.hdi-operator {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary, #888);
+  margin-left: 8px;
+}
+
 .hdi-action {
   font-size: var(--font-size-xs); /* 备注字体 */
   color: var(--color-primary);

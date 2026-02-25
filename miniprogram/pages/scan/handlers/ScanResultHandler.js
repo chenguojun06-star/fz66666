@@ -165,36 +165,33 @@ async function onConfirmScanResult(ctx) {
       ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
     };
 
+    // api.production.executeScan 使用 ok() 包装：
+    //   成功 → 返回 resp.data = {success:true, message:"...", scanRecord:{id,...}}
+    //   失败 → throw createBizError(resp)，被下方 catch 捕获
     const result = await api.production.executeScan(scanData);
 
-    // 后端返回格式: {code: 200, data: {success: true, message: "..."}, message: ""}
-    // ⚠️ result.success 不存在（实际数据在 result.data 内），必须检查 result.code
-    if (result && result.code === 200) {
-      const scanResult = result.data || {};
+    if (result) {
       // 使用后端返回的消息（领取成功/验收成功/确认成功/已领取等）
-      toast.success(`✅ ${confirm.processName} ${scanResult.message || '扫码成功'}`);
+      toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
 
       closeScanResultConfirm(ctx);
 
-      ctx.setData({
-        lastResult: {
-          success: true,
-          message: `${confirm.processName} ${confirmedQty}件`,
-          orderNo: confirm.orderNo,
-          bundleNo: confirm.bundleNo,
-          processName: confirm.processName,
-          quantity: confirmedQty,
-          displayTime: new Date().toLocaleTimeString(),
-        },
+      // 调用 handleScanSuccess：触发撤回倒计时、addToLocalHistory、loadMyPanel
+      ctx.handleScanSuccess({
+        ...result,
+        // 供 UndoHandler.handleUndo 使用
+        recordId: result.scanRecord && (result.scanRecord.id || result.scanRecord.recordId),
+        processName: confirm.processName,
+        progressStage: confirm.progressStage || confirm.processName,
+        bundleNo: confirm.bundleNo,
+        orderNo: confirm.orderNo,
+        quantity: confirmedQty,
+        scanType: confirm.scanType,
+        success: true,
+        message: `${confirm.processName} ${confirmedQty}件`,
       });
-
-      ctx.loadMyPanel(true);
-
-      if (eventBus && typeof eventBus.emit === 'function') {
-        eventBus.emit('SCAN_SUCCESS', scanResult);
-      }
     } else {
-      toast.error(result?.message || '提交失败');
+      toast.error('提交失败');
     }
   } catch (e) {
     toast.error(e.errMsg || e.message || '提交失败');

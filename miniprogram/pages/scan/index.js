@@ -569,10 +569,18 @@ Page({
   },
 
   /**
-   * 执行撤销操作
+   * 执行撤销操作（WXML 绑定 bindtap="onUndoLast"）
    * @returns {Promise<void>} 无返回值
    */
   async handleUndo() {
+    return UndoHandler.handleUndo(this);
+  },
+
+  /**
+   * WXML bindtap="onUndoLast" 的别名（扫码结果卡片上的撤销按钮）
+   * @returns {Promise<void>}
+   */
+  async onUndoLast() {
     return UndoHandler.handleUndo(this);
   },
 

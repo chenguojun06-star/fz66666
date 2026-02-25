@@ -188,6 +188,7 @@ function _addRecordToGroup(group, record) {
     scanType: record.scanType,
     scanResult: record.scanResult,
     scanCode: record.scanCode || '',
+    operatorName: record.operatorName || record.operator_name || '',
     canRescan: canRescan && !payrollSettled,
     canUndo: canRescan && !payrollSettled,
     payrollSettled: payrollSettled,

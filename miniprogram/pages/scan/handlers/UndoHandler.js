@@ -29,6 +29,9 @@ function startUndoTimer(page, record) {
     undoVisible: true,
     undoCountdown: UNDO_COUNTDOWN_SECONDS,
     undoRecord: record,
+    // 让 WXML 撤回按钮可见（wx:if="{{lastResult.success && undo.canUndo}}"）
+    'undo.canUndo': true,
+    'undo.loading': false,
   });
 
   undoTimer = setInterval(() => {
@@ -60,6 +63,9 @@ function stopUndoTimer(page) {
     undoVisible: false,
     undoCountdown: 0,
     undoRecord: null,
+    // 隐藏撤回按钮
+    'undo.canUndo': false,
+    'undo.loading': false,
   });
 }
 
@@ -93,6 +99,8 @@ async function handleUndo(page) {
         statusText: '已撤销',
         statusClass: 'warning',
       },
+      'undo.canUndo': false,
+      'undo.loading': false,
     });
 
     // 刷新统计
@@ -103,6 +111,7 @@ async function handleUndo(page) {
       eventBus.emit('DATA_REFRESH');
     }
   } catch (e) {
+    page.setData({ 'undo.loading': false });
     toast.error('撤销失败: ' + (e.errMsg || e.message || '未知错误'));
   } finally {
     wx.hideLoading();
