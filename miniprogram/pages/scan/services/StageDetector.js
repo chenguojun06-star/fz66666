@@ -283,11 +283,8 @@ class StageDetector {
     const scanHistory = await this._getScanHistory(orderNo, bundleNo);
 
     // === 步骤3.5：预判质检完成状态 ===
-    // 质检工序两步（quality_receive → quality_confirm）共享同一个 processName（如"质检"）
-    // quality_inspect（验收）是后端遗留步骤，实际不触发，忽略
-    // 只要 quality_receive 成功，该 processName 已出现在 scanHistory，若直接加入 scannedProcessNames
-    // 会导致"质检"被错误地标记为已完成 → remainingProcesses 里没有质检 → 系统误跳到包装/入库
-    // 正确做法：只有两步全部完成（_inferQualityStage='done'）才将质检加入 scannedProcessNames
+    // 质检工序一步（quality_confirm）完成即算已扫
+    // 只有 _inferQualityStage='done' 才将质检加入 scannedProcessNames
     const qualityProcess = countableProcesses.find(p => p.scanType === 'quality');
     let precomputedQualityStage = '';
     let qualityIsFullyDone = false;
@@ -321,16 +318,14 @@ class StageDetector {
       const nextProcess = remainingProcesses[0];
       const doneCount = countableProcesses.length - remainingProcesses.length;
 
-      // 质检工序需要自动推断子阶段（receive/confirm）
-      // 后端 QualityScanExecutor 依赖 qualityStage 参数决定处理逻辑：
-      //   未传或空 → 默认 confirm → 因为没有 quality_receive 记录，直接报 400 "请先领取再录入结果"
+      // 质检工序：直接走 confirm，一步完成
       // 复用步骤3.5的预计算结果，不重复调用 _inferQualityStage
       // 由于 qualityIsFullyDone=true 时质检已被排出 remainingProcesses，
       // 进入此分支时 qualityIsFullyDone 必然为 false，qualityStage 只会是 receive/confirm
       let qualityStage = '';
       if (nextProcess.scanType === 'quality') {
-        qualityStage = precomputedQualityStage || 'receive';
-        if (!qualityStage) qualityStage = 'receive';
+        qualityStage = precomputedQualityStage || 'confirm';
+        if (!qualityStage) qualityStage = 'confirm';
         // 此分支理论上不会出现 'done'（qualityIsFullyDone=true 时质检已排出 remainingProcesses）
         if (qualityStage === 'done') {
           const skipNames = new Set([...scannedProcessNames, nextProcess.processName]);
@@ -528,7 +523,7 @@ class StageDetector {
    * @private
    * @param {string} orderNo - 订单号
    * @param {Array} scanHistory - 当前菲号扫码历史（已过滤的）
-   * @returns {Promise<string>} 'receive' | 'confirm' | 'done'
+   * @returns {Promise<string>} 'confirm' | 'done'
    */
   async _inferQualityStage(orderNo, scanHistory) {
     try {
@@ -543,21 +538,16 @@ class StageDetector {
         r.processCode === code || r.progressStage === code
       );
 
-      const hasReceive = hasScanCode('quality_receive');
       const hasConfirm = hasScanCode('quality_confirm');
 
-      // 质检只有两步：领取 → 录入结果确认
-      // quality_inspect（验收）是后端遗留步骤，实际生产中不触发
-      if (!hasReceive) {
-        return 'receive';   // 第一步：领取
-      }
+      // 质检只有一步：扫码/点处理 → 录入结果 → 提交
       if (!hasConfirm) {
-        return 'confirm';   // 第二步：录入结果+确认
+        return 'confirm';   // 直接录入结果
       }
-      return 'done';        // 两步全部完成
+      return 'done';        // 已完成
     } catch (e) {
-      console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
-      return 'receive';
+      console.warn('[StageDetector] 推断质检阶段失败，默认 confirm:', e);
+      return 'confirm';
     }
   }
 
