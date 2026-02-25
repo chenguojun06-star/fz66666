@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,9 @@ public class QualityScanExecutor {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     /**
      * 执行质检扫码
@@ -185,6 +189,18 @@ public class QualityScanExecutor {
         }
 
         scanRecordService.saveScanRecord(sr);
+
+        // 更新工序跟踪记录：质检确认时将 tracking 表中对应子工序状态置为已扫码
+        // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
+        try {
+            String processName = TextUtils.safeText(params.get("processName"));
+            if (!hasText(processName)) processName = "质检";
+            processTrackingOrchestrator.updateScanRecord(
+                    bundle.getId(), processName, operatorId, operatorName, sr.getId());
+            log.debug("质检工序跟踪已更新: bundleId={}, processName={}", bundle.getId(), processName);
+        } catch (Exception e) {
+            log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
