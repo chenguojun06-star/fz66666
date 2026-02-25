@@ -483,4 +483,4 @@ public class WarehouseScanExecutor {
         }
         log.debug("次品入库验证通过: bundleId={}, defectQty={}, 已入库={}, 本次={}",
                 bundle.getId(), defectQty, alreadyWarehoused, qty);
-    }
+    }}
