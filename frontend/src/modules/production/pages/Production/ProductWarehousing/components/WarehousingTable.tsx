@@ -35,7 +35,7 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
-import { getQualityStatusConfig, getDefectCategoryLabel } from '../utils';
+import { getQualityStatusConfig } from '../utils';
 
 interface WarehousingTableProps {
   loading: boolean;
@@ -71,22 +71,25 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
     {
       title: '图片',
       key: 'cover',
-      width: 72,
+      width: 56,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} size={48} borderRadius={6} />
+        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} size={40} borderRadius={4} />
       )
     },
     {
-      title: '质检入库号',
+      title: '入库号',
       dataIndex: 'warehousingNo',
       key: 'warehousingNo',
-      width: 120,
+      width: 100,
+      ellipsis: true,
       render: (v: any, record: WarehousingType) => {
         const text = String(v || '').trim();
         if (!text) return '-';
+        // 只显示后8位，悬停看全文
+        const short = text.length > 10 ? '...' + text.slice(-8) : text;
         return (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => goToDetail(record, 'inspect')}>
-            {text}
+          <Button type="link" size="small" style={{ padding: 0, fontSize: 12 }} onClick={() => goToDetail(record, 'inspect')} title={text}>
+            {short}
           </Button>
         );
       },
@@ -95,28 +98,33 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 120,
+      width: 110,
       ellipsis: true,
-      render: (v: unknown) => (
-        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
-      ),
+      render: (v: unknown) => {
+        const text = String(v || '').trim();
+        if (!text) return '-';
+        const short = text.length > 10 ? '...' + text.slice(-8) : text;
+        return <span title={text} style={{ fontSize: 12 }}>{short}</span>;
+      },
     },
     {
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: 100,
+      width: 80,
+      ellipsis: true,
     },
     {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',
+      width: 80,
       ellipsis: true,
     },
     {
       title: '附件',
       key: 'attachments',
-      width: 100,
+      width: 60,
       render: (_: any, record: any) => (
         <StyleAttachmentsButton
           styleId={record.styleId}
@@ -129,115 +137,100 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       title: '菲号',
       dataIndex: 'cuttingBundleQrCode',
       key: 'cuttingBundleQrCode',
-      width: 200,
+      width: 130,
       ellipsis: true,
       render: (v: unknown) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        const core = text.split('|')[0] || text;
-        return <span title={text}>{core}</span>;
+        // 提取核心信息：颜色-尺码-序号
+        const parts = text.split('-');
+        const short = parts.length >= 4 ? parts.slice(-3).join('-') : (text.length > 14 ? '...' + text.slice(-12) : text);
+        return <span title={text} style={{ fontSize: 12 }}>{short}</span>;
       },
-    },
-    {
-      title: '裁剪数',
-      dataIndex: 'cuttingQuantity',
-      key: 'cuttingQuantity',
-      width: 80,
-      align: 'right' as const,
-      render: (v: unknown) => v ?? '-',
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      width: 80,
+      width: 60,
+      ellipsis: true,
       render: (v: unknown) => v || '-',
     },
     {
       title: '尺码',
       dataIndex: 'size',
       key: 'size',
-      width: 70,
+      width: 50,
       render: (v: unknown) => v || '-',
     },
     {
-      title: '质检数',
+      title: '裁剪',
+      dataIndex: 'cuttingQuantity',
+      key: 'cuttingQuantity',
+      width: 55,
+      align: 'right' as const,
+      render: (v: unknown) => v ?? '-',
+    },
+    {
+      title: '质检',
       dataIndex: 'warehousingQuantity',
       key: 'warehousingQuantity',
-      width: 80,
+      width: 55,
       align: 'right' as const,
     },
     {
-      title: '合格数',
+      title: '合格',
       dataIndex: 'qualifiedQuantity',
       key: 'qualifiedQuantity',
-      width: 80,
+      width: 55,
       align: 'right' as const,
     },
     {
-      title: '不合格数',
+      title: '不合格',
       dataIndex: 'unqualifiedQuantity',
       key: 'unqualifiedQuantity',
-      width: 90,
+      width: 60,
       align: 'right' as const,
     },
     {
-      title: '仓库',
-      dataIndex: 'warehouse',
-      key: 'warehouse',
-      width: 80,
-    },
-    {
-      title: '质检状态',
+      title: '状态',
       dataIndex: 'qualityStatus',
       key: 'qualityStatus',
-      width: 100,
+      width: 72,
       render: (status: any) => {
         const { text, color } = getQualityStatusConfig(status);
-        return <Tag color={color}>{text}</Tag>;
+        return <Tag color={color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{text}</Tag>;
       },
     },
     {
-      title: '次品处理',
-      key: 'defectHandling',
-      width: 120,
-      render: (_: any, record: any) => {
-        const unqualified = Number(record?.unqualifiedQuantity || 0);
-        if (unqualified <= 0) return '-';
-
-        const category = String(record?.defectCategory || '').trim();
-        const remark = String(record?.repairRemark || '').trim();
-
-        return (
-          <div style={{ fontSize: 'var(--font-size-sm)' }}>
-            {category && <div>类型：{getDefectCategoryLabel(category)}</div>}
-            {remark && <div>方式：{remark}</div>}
-          </div>
-        );
-      },
-    },
-    {
-      title: '质检人员',
+      title: '质检人',
       key: 'qualityOperatorName',
-      width: 120,
+      width: 70,
+      ellipsis: true,
       render: (_: any, record: any) => {
-        // 优先使用 qualityOperatorName，其次 receiverName，再次 warehousingOperatorName
         const name = String(record?.qualityOperatorName || record?.receiverName || record?.warehousingOperatorName || '').trim();
         return name || '-';
       },
     },
     {
-      title: '质检时间',
+      title: '时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 150,
-      render: (value: unknown) => formatDateTime(value),
+      width: 90,
+      render: (value: unknown) => {
+        const s = formatDateTime(value);
+        // 只显示月-日 时:分
+        if (!s || s === '-') return '-';
+        const m = s.match(/(\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+        return m ? <span title={s} style={{ fontSize: 12 }}>{m[1]} {m[2]}</span> : <span style={{ fontSize: 12 }}>{s}</span>;
+      },
     },
 
     {
       title: '操作',
       key: 'action',
       width: 110,
+      fixed: 'right' as const,
       render: (_: any, record: WarehousingType) => {
         const orderId = String((record as any)?.orderId || '').trim();
         const frozen = isOrderFrozen(orderId);
