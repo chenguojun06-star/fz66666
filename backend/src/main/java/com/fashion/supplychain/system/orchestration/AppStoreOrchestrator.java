@@ -338,14 +338,26 @@ public class AppStoreOrchestrator {
             throw new RuntimeException("订单已激活，请勿重复操作");
         }
 
-        // 2. 更新订单状态
+        // 2. 更新订单状态（使用 JdbcTemplate 原生 SQL，永久绕开 MyBatis-Plus 租户拦截器，
+        //    与 adminOrderList 保持一致——超管操作不依赖运行时 UserContext）
+        LocalDateTime now = LocalDateTime.now();
+        int updated;
+        if (remark != null) {
+            updated = jdbcTemplate.update(
+                "UPDATE t_app_order SET status='PAID', payment_method='MANUAL', payment_time=?, remark=?, update_time=? WHERE id=? AND delete_flag=0",
+                now, remark, now, orderId);
+        } else {
+            updated = jdbcTemplate.update(
+                "UPDATE t_app_order SET status='PAID', payment_method='MANUAL', payment_time=?, update_time=? WHERE id=? AND delete_flag=0",
+                now, now, orderId);
+        }
+        if (updated == 0) {
+            throw new RuntimeException("订单状态更新失败，请确认订单存在且未被删除（id=" + orderId + "）");
+        }
+        // 同步内存对象，后续逻辑通过 order 取值
         order.setStatus("PAID");
         order.setPaymentMethod("MANUAL");
-        order.setPaymentTime(LocalDateTime.now());
-        if (remark != null) {
-            order.setRemark(remark);
-        }
-        appOrderService.updateById(order);
+        order.setPaymentTime(now);
 
         // 3. 查询应用信息
         AppStore app = appStoreService.getById(order.getAppId());
