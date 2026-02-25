@@ -25,6 +25,8 @@ export const ensureBoardStatsForOrder = async ({
   const oid = String(order?.id || '').trim();
   if (!oid) return;
   const existing = boardStatsByOrder[oid];
+  // null = 已请求但 API 失败，不再重试；有数据且含全部节点 = 缓存命中
+  if (existing === null) return;
   if (existing && nodes.every((n) => {
     const name = String((n as any)?.name || '').trim();
     return !name || Object.prototype.hasOwnProperty.call(existing, name);
@@ -168,6 +170,9 @@ export const ensureBoardStatsForOrder = async ({
       }
       mergeBoardTimesForOrder(oid, timeStats);
     }
+  } catch {
+    // API 失败时写入 null 标记，防止无限重试（例如云端 DB 缺列导致 500）
+    mergeBoardStatsForOrder(oid, null);
   } finally {
     setBoardLoadingForOrder(oid, false);
   }
