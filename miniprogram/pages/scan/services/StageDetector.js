@@ -229,7 +229,7 @@ class StageDetector {
    * @param {Object} orderDetail - 订单详情
    * @returns {Promise<Object|null>} 工序信息
    */
-  async detectByBundle(orderNo, bundleNo, bundleQuantity, orderDetail) {
+  async detectByBundle(orderNo, bundleNo, bundleQuantity, _orderDetail) {
     // 防护：订单号为空时不应调用菲号检测
     if (!orderNo) {
       throw new Error('订单号为空，无法进行菲号工序检测');
@@ -257,7 +257,7 @@ class StageDetector {
     // 区分入库工序和计数工序
     // 入库工序：scanType='warehouse' 的工序，需要等待其他工序完成后扫码
     // 计数工序：其他所有菲号工序（包括 production 和 quality）
-    const warehouseProcess = bundleProcesses.find(p => p.scanType === 'warehouse');
+    const _warehouseProcess = bundleProcesses.find(p => p.scanType === 'warehouse');
     const countableProcesses = bundleProcesses.filter(p => p.scanType !== 'warehouse');
 
     // === 步骤3：查询该菲号的扫码历史（仅统计 production + quality） ===

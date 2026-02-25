@@ -254,7 +254,7 @@
 
 .modal-head {
   position: relative;
-  padding: 32rpx;
+  padding: 32rpx 80rpx; /* 左右留出80rpx，防止标题文字被左侧和右侧✕键遮挡 */
   font-size: 32rpx;
   font-weight: 600;
   color: var(--color-text-primary);

@@ -11,11 +11,9 @@
 const { getToken, getUserInfo, getStorageValue, isTokenExpired, clearToken } = require('../../../utils/storage');
 const { toastAndRedirect, toast } = require('../../../utils/uiHelper');
 const { errorHandler } = require('../../../utils/errorHandler');
+/* global Behavior */
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-const StockHandler = require('../handlers/StockHandler');
-const UndoHandler = require('../handlers/UndoHandler');
-const HistoryHandler = require('../handlers/HistoryHandler');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus } = require('../../../utils/eventBus');
 

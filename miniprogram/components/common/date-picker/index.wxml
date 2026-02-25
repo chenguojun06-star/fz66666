@@ -6,7 +6,6 @@
     <text class="{{displayValue ? 'dp-value' : 'dp-placeholder'}}">{{displayValue || placeholder}}</text>
     <view class="dp-trigger-right">
       <view wx:if="{{clearable && displayValue}}" class="dp-clear" catchtap="onClear">×</view>
-      <text class="dp-cal-icon">📅</text>
     </view>
   </view>
 

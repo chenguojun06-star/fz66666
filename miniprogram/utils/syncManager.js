@@ -8,8 +8,6 @@ const { DEBUG } = require('../config/debug');
  * syncMgr.startSync('orders', api.production.listOrders, 30000);
  */
 
-const { DEBUG_MODE } = require('../config');
-
 /**
  * 数据同步管理器类
  */
@@ -64,10 +62,6 @@ class SyncManager {
       config,
     });
 
-    if (DEBUG_MODE) {
-      if (DEBUG) {
-      }
-    }
     return true;
   }
 
@@ -87,10 +81,6 @@ class SyncManager {
     this.listeners.delete(taskId);
     this.syncErrors.delete(taskId);
 
-    if (DEBUG_MODE) {
-      if (DEBUG) {
-      }
-    }
     return true;
   }
 
@@ -271,11 +261,6 @@ class SyncManager {
 
       // 如果数据变化，触发回调
       if (hasChanged) {
-        if (DEBUG_MODE) {
-          if (DEBUG) {
-          }
-        }
-
         // 更新缓存
         task.lastData = this._deepClone(newData);
 

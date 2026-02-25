@@ -122,7 +122,6 @@ Page({
       const data = await api.stock.listSamples(params);
 
       const records = (data && data.records) || [];
-      const total = data.total || 0;
 
       // ✅ 直接使用服务端返回的数据，不再客户端过滤
       const list = reset ? records : [...this.data.list, ...records];

@@ -2,7 +2,6 @@ const api = require('../../utils/api');
 const { getUserInfo } = require('../../utils/storage');
 const {
   getRoleDisplayName,
-  getRolePermissions,
   isAdminOrSupervisor,
 } = require('../../utils/permission');
 const { onDataRefresh } = require('../../utils/eventBus');
@@ -67,7 +66,7 @@ Page({
     }
 
     // 订阅数据刷新事件
-    this._unsubscribeRefresh = onDataRefresh(payload => {
+    this._unsubscribeRefresh = onDataRefresh(_payload => {
       // 刷新当前页面数据
       this.refreshAll(true);
     });
@@ -106,15 +105,10 @@ Page({
       // 加载在线人数
       const onlineCount = await api.system.getOnlineCount();
 
-      // 使用预定义的角色权限
-      const permissions = getRolePermissions();
-
       // 如果是管理员，加载待审批用户数量
-      let pendingUserCount = 0;
       if (this.data.showApprovalEntry) {
         try {
-          const result = await api.system.listPendingUsers({ page: 1, pageSize: 1 });
-          pendingUserCount = result?.total || 0;
+          await api.system.listPendingUsers({ page: 1, pageSize: 1 });
         } catch (e) {
           console.error('加载待审批用户数量失败', e);
         }

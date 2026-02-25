@@ -1,9 +1,7 @@
-const { DEBUG } = require('../config/debug');
 /**
  * 小程序统一错误处理器
  * 将后端错误转换为用户友好的提示
  */
-const _DEBUG = DEBUG; // 避免未使用警告
 
 const ErrorType = {
   VALIDATION: 'validation', // 参数验证错误

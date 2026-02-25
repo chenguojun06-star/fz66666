@@ -1,5 +1,5 @@
 const { getToken, setToken, setUserInfo } = require('../../utils/storage');
-const { DEFAULT_BASE_URL, getBaseUrl, setBaseUrl, normalizeBaseUrl } = require('../../config');
+const { getBaseUrl, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
 const { toast, safeNavigate } = require('../../utils/uiHelper');

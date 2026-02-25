@@ -8,7 +8,6 @@
  * @description 解析URL参数格式二维码：?scanCode=xxx&quantity=10&orderNo=xxx
  */
 
-const ParserUtils = require('./ParserUtils');
 const JSONCodeParser = require('./JSONCodeParser');
 
 class URLCodeParser {

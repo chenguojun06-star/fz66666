@@ -8,13 +8,10 @@
  * @description 管理页面生命周期、事件订阅和数据刷新
  */
 
-const { getToken, getUserInfo, getStorageValue } = require('../../../utils/storage');
-const { toastAndRedirect } = require('../../../utils/uiHelper');
+/* global Behavior */
 const ScanHandler = require('../handlers/ScanHandler');
 const ProcurementHandler = require('../handlers/ProcurementHandler');
 const CuttingHandler = require('../handlers/CuttingHandler');
-const HistoryHandler = require('../handlers/HistoryHandler');
-const UndoHandler = require('../handlers/UndoHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus } = require('../../../utils/eventBus');

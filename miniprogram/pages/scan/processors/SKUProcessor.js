@@ -384,6 +384,7 @@ const SKUProcessor = {
             .filter(p => p.processName);
         }
       } catch (e) {
+        // 菲号工序配置读取失败，返回空数组
       }
     }
 
