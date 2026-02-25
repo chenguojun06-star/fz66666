@@ -97,13 +97,4 @@ public class CuttingTaskController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    /**
-     * @deprecated 已废弃，请使用 GET /list?myTasks=true
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/my-tasks")
-    public Result<?> getMyTasks() {
-        return Result.success(cuttingTaskOrchestrator.getMyTasks());
-    }
 }

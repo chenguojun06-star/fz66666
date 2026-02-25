@@ -115,13 +115,4 @@ public class ProductWarehousingController {
         }
     }
 
-    /**
-     * @deprecated 请使用 POST /repair-stats（统一端点支持批量）
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/repair-stats/batch")
-    public Result<?> batchRepairStats(@RequestBody Map<String, Object> body) {
-        return repairStats(null, body);
-    }
 }

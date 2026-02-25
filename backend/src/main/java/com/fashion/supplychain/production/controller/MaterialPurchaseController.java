@@ -135,16 +135,6 @@ public class MaterialPurchaseController {
     }
 
     /**
-     * @deprecated 已废弃，请使用 POST /return-confirm（统一命名风格）
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @PostMapping("/returnConfirm")
-    public Result<?> returnConfirmLegacy(@RequestBody Map<String, Object> body) {
-        return returnConfirm(body);
-    }
-
-    /**
      * 重置退货确认
      */
     @PostMapping("/return-confirm/reset")
@@ -152,39 +142,9 @@ public class MaterialPurchaseController {
         return Result.success(materialPurchaseOrchestrator.resetReturnConfirm(body));
     }
 
-    /**
-     * @deprecated 已废弃，请使用 POST /return-confirm/reset（统一命名风格）
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @PostMapping("/returnConfirm/reset")
-    public Result<?> resetReturnConfirmLegacy(@RequestBody Map<String, Object> body) {
-        return resetReturnConfirm(body);
-    }
-
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(materialPurchaseOrchestrator.delete(id));
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 GET /list?scanCode=xxx&orderNo=xxx
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/by-scan-code")
-    public Result<List<MaterialPurchase>> getByScanCode(@RequestParam Map<String, Object> params) {
-        return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 GET /list?myTasks=true
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/my-tasks")
-    public Result<List<MaterialPurchase>> getMyTasks() {
-        return Result.success(materialPurchaseOrchestrator.getMyTasks());
     }
 
     /**

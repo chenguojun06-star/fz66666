@@ -125,35 +125,6 @@ public class ProductionOrderController {
     }
 
     /**
-     * 根据订单号查询生产订单详情（支持扫码场景）
-     *
-     * @deprecated 已废弃，请使用 GET /list?orderNo={orderNo}
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/by-order-no/{orderNo}")
-    public Result<?> getByOrderNo(@PathVariable String orderNo) {
-        // 内部转发到新接口
-        java.util.Map<String, Object> params = new java.util.HashMap<>();
-        params.put("orderNo", orderNo);
-        return list(params);
-    }
-
-    /**
-     * 根据ID查询生产订单详情（DTO版本，不包含敏感字段）
-     *
-     * @deprecated 已废弃，请使用 GET /detail/{id} 并在前端过滤字段
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/detail-dto/{id}")
-    public Result<ProductionOrderDTO> detailDTO(@PathVariable String id) {
-        ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
-        ProductionOrderDTO dto = productionOrderDtoConverter.toDTO(productionOrder);
-        return Result.success(dto);
-    }
-
-    /**
      * 获取订单流程信息
      */
     @GetMapping("/flow/{id}")
@@ -186,36 +157,12 @@ public class ProductionOrderController {
     }
 
     /**
-     * 保存或更新生产订单（兼容旧版本）
-     *
-     * @deprecated 已废弃，请使用 POST /api/production/order（新增）或 PUT /api/production/order（更新）
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @PostMapping("/save")
-    public Result<?> save(@RequestBody ProductionOrder productionOrder) {
-        return upsert(productionOrder);
-    }
-
-    /**
      * 根据ID删除生产订单（RESTful标准）
      */
     @DeleteMapping("/{id}")
     public Result<?> deleteById(@PathVariable String id) {
         productionOrderOrchestrator.deleteById(id);
         return Result.successMessage("删除成功");
-    }
-
-    /**
-     * 根据ID删除生产订单
-     *
-     * @deprecated 已废弃，请使用 DELETE /api/production/order/{id}（RESTful标准）
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @DeleteMapping("/delete/{id}")
-    public Result<?> delete(@PathVariable String id) {
-        return deleteById(id);
     }
 
     /**

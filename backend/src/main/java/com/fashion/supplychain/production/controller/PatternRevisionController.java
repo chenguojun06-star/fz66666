@@ -175,46 +175,6 @@ public class PatternRevisionController {
     }
 
     /**
-     * @deprecated 请使用 POST /{id}/workflow?action=submit
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/submit")
-    public Result<?> submit(@PathVariable String id) {
-        return workflow(id, "submit", null);
-    }
-
-    /**
-     * @deprecated 请使用 POST /{id}/workflow?action=approve
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/approve")
-    public Result<?> approve(@PathVariable String id, @RequestBody Map<String, String> params) {
-        return workflow(id, "approve", params);
-    }
-
-    /**
-     * @deprecated 请使用 POST /{id}/workflow?action=reject
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/reject")
-    public Result<?> reject(@PathVariable String id, @RequestBody Map<String, String> params) {
-        return workflow(id, "reject", params);
-    }
-
-    /**
-     * @deprecated 请使用 POST /{id}/workflow?action=complete
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/complete")
-    public Result<?> complete(@PathVariable String id) {
-        return workflow(id, "complete", null);
-    }
-
-    /**
      * 获取下一个版本号
      */
     @GetMapping("/next-version")

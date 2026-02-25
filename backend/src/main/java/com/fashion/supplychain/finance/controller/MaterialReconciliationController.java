@@ -85,26 +85,6 @@ public class MaterialReconciliationController {
         }
     }
 
-    /**
-     * @deprecated 请使用 POST /{id}/status-action?action=update&status=xxx
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/update-status")
-    public Result<?> updateStatus(@Valid @RequestBody UpdateStatusRequest body) {
-        return statusAction(body.getId(), "update", body.getStatus(), null);
-    }
-
-    /**
-     * @deprecated 请使用 POST /{id}/status-action?action=return&reason=xxx
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/return")
-    public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
-        return statusAction(body.getId(), "return", null, body.getReason());
-    }
-
     @PostMapping("/backfill")
     public Result<?> backfill() {
         return Result.success(materialReconciliationOrchestrator.backfill());

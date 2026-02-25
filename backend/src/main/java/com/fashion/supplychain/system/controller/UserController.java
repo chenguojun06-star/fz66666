@@ -271,27 +271,6 @@ public class UserController {
     }
 
     /**
-     * @deprecated 请使用 POST /{id}/approval-action?action=approve
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/approve")
-    public Result<?> approveUser(@PathVariable Long id,
-            @RequestBody(required = false) User body) {
-        return approvalAction(id, "approve", body);
-    }
-
-    /**
-     * @deprecated 请使用 POST /{id}/approval-action?action=reject
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{id}/reject")
-    public Result<?> rejectUser(@PathVariable Long id, @RequestBody(required = false) User reason) {
-        return approvalAction(id, "reject", reason);
-    }
-
-    /**
      * 个人修改密码（登录用户本人操作）
      */
     @PreAuthorize("isAuthenticated()")

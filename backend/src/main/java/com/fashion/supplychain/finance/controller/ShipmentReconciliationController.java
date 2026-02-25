@@ -34,16 +34,6 @@ public class ShipmentReconciliationController {
         return Result.success(page);
     }
 
-    /**
-     * @deprecated 已废弃，请使用 GET /list（设置大的pageSize获取全部数据）
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/list-all")
-    public Result<List<ShipmentReconciliation>> listAll() {
-        return Result.success(shipmentReconciliationOrchestrator.listAll());
-    }
-
     @GetMapping("/{id}")
     public Result<ShipmentReconciliation> getById(@PathVariable String id) {
         return Result.success(shipmentReconciliationOrchestrator.getById(id));

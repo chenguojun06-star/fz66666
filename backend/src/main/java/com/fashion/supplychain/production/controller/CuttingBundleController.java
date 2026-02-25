@@ -66,28 +66,4 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleOrchestrator.receive(body));
     }
 
-    /**
-     * @deprecated 已废弃，请使用 GET /list?qrCode=xxx
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/by-code/{qrCode}")
-    public Result<?> getByCode(@PathVariable String qrCode) {
-        return Result.success(cuttingBundleOrchestrator.getByCode(qrCode));
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 GET /list?orderNo=xxx&bundleNo=xxx
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/by-no")
-    public Result<?> getByBundleNo(@RequestParam String orderNo, @RequestParam String bundleNo) {
-        try {
-            Integer bundleNoInt = Integer.parseInt(bundleNo);
-            return Result.success(cuttingBundleOrchestrator.getByBundleNo(orderNo, bundleNoInt));
-        } catch (NumberFormatException e) {
-            return Result.fail("菲号格式错误，必须为数字");
-        }
-    }
 }

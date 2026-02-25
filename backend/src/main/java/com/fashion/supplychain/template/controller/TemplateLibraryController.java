@@ -40,16 +40,6 @@ public class TemplateLibraryController {
         return Result.success(templateLibraryOrchestrator.list(params));
     }
 
-    /**
-     * @deprecated 已废弃，请使用 GET /list?templateType=xxx
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/type/{templateType}")
-    public Result<?> listByType(@PathVariable String templateType) {
-        return Result.success(templateLibraryOrchestrator.listByType(templateType));
-    }
-
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable String id) {
         return Result.success(templateLibraryOrchestrator.detail(id));
@@ -68,16 +58,6 @@ public class TemplateLibraryController {
     @PostMapping
     public Result<?> create(@RequestBody TemplateLibrary tpl) {
         return Result.success(templateLibraryOrchestrator.create(tpl));
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 POST / 或 PUT /
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @PostMapping("/save")
-    public Result<?> save(@RequestBody TemplateLibrary tpl) {
-        return Result.success(templateLibraryOrchestrator.save(tpl));
     }
 
     @PutMapping

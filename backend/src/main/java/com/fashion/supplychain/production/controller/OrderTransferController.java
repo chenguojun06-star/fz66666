@@ -95,22 +95,6 @@ public class OrderTransferController {
     }
 
     /**
-     * @deprecated 已废弃，请使用 GET /list?type=pending
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/pending")
-    public Result<?> queryPendingTransfers(@RequestParam Map<String, Object> params) {
-        try {
-            IPage<OrderTransfer> page = orderTransferService.queryPendingTransfers(params);
-            return Result.success(page);
-        } catch (Exception e) {
-            log.error("查询待处理转移请求失败", e);
-            return Result.fail(e.getMessage());
-        }
-    }
-
-    /**
      * 接受转移请求
      */
     @PostMapping("/accept/{transferId}")
@@ -136,38 +120,6 @@ public class OrderTransferController {
             return success ? Result.success("拒绝成功") : Result.fail("拒绝失败");
         } catch (Exception e) {
             log.error("拒绝转移请求失败", e);
-            return Result.fail(e.getMessage());
-        }
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 GET /list?type=my-transfers
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/my-transfers")
-    public Result<?> queryMyTransfers(@RequestParam Map<String, Object> params) {
-        try {
-            IPage<OrderTransfer> page = orderTransferService.queryMyTransfers(params);
-            return Result.success(page);
-        } catch (Exception e) {
-            log.error("查询我发起的转移记录失败", e);
-            return Result.fail(e.getMessage());
-        }
-    }
-
-    /**
-     * @deprecated 已废弃，请使用 GET /list?type=received
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/received")
-    public Result<?> queryReceivedTransfers(@RequestParam Map<String, Object> params) {
-        try {
-            IPage<OrderTransfer> page = orderTransferService.queryReceivedTransfers(params);
-            return Result.success(page);
-        } catch (Exception e) {
-            log.error("查询收到的转移请求失败", e);
             return Result.fail(e.getMessage());
         }
     }

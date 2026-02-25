@@ -103,17 +103,6 @@ public class MaterialInboundController {
     }
 
     /**
-     * @deprecated 已废弃，请使用 GET /list?purchaseId=xxx
-     * @since 2026-02-01 标记废弃，将在2026-05-01删除
-     */
-    @Deprecated
-    @GetMapping("/by-purchase/{purchaseId}")
-    public Result<?> listByPurchaseId(@PathVariable String purchaseId) {
-        List<MaterialInbound> list = materialInboundService.listByPurchaseId(purchaseId);
-        return Result.success(list);
-    }
-
-    /**
      * 查询入库记录详情
      */
     @GetMapping("/{id}")

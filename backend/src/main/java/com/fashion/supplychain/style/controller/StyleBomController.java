@@ -65,17 +65,6 @@ public class StyleBomController {
         }
     }
 
-    /**
-     * @deprecated 请使用 POST /{styleId}/sync-material-database?async=true
-     * 将在 2026-05-01 移除
-     */
-    @Deprecated
-    @PostMapping("/{styleId}/sync-material-database/async")
-    public Result<Map<String, Object>> syncMaterialDatabaseAsync(@PathVariable Long styleId,
-            @RequestParam(required = false, defaultValue = "0") String force) {
-        return syncMaterialDatabase(styleId, force, true);
-    }
-
     @GetMapping("/sync-jobs/{jobId}")
     public Result<Map<String, Object>> getSyncJob(@PathVariable String jobId) {
         return Result.success(styleBomOrchestrator.getSyncJob(jobId));
