@@ -35,6 +35,8 @@ export interface UniversalCardViewProps {
   loading?: boolean;
   columns?: number; // PC端列数，默认4
   coverField?: string; // 封面图字段名
+  styleIdField?: string; // 款式ID字段名（用于封面回退查询）
+  styleNoField?: string; // 款号字段名（用于封面回退查询）
   titleField: string; // 标题字段名
   subtitleField?: string; // 副标题字段名
   fields: CardField[]; // 显示的字段配置
@@ -51,6 +53,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   loading = false,
   columns = 4,
   coverField = 'coverImage',
+  styleIdField = 'styleId',
+  styleNoField = 'styleNo',
   titleField,
   subtitleField,
   fields,
@@ -120,6 +124,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
         return (
           <Col {...getColSpan()} key={record.id || index}>
+            {(() => {
+              const coverSrc = record?.[coverField];
+              const styleId = record?.[styleIdField];
+              const styleNo = record?.[styleNoField];
+              const hasCoverSource = Boolean(coverSrc || styleId || styleNo);
+              return (
             <Card
               hoverable
               className="universal-card"
@@ -127,10 +137,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               onClick={() => onCardClick?.(record)}
               cover={
                 <div className="universal-card-cover">
-                  {record[coverField] ? (
+                  {hasCoverSource ? (
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                       <StyleCoverThumb
-                        src={record[coverField]}
+                        styleId={styleId}
+                        styleNo={styleNo}
+                        src={coverSrc}
                         size={"100%" as any}
                         borderRadius={0}
                       />
@@ -229,6 +241,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 )}
               </div>
             </Card>
+              );
+            })()}
           </Col>
         );
       })}
