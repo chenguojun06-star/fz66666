@@ -272,7 +272,14 @@ const AppManagementTab: React.FC = () => {
     setLoading(true);
     try {
       const res: any = await tenantAppService.listApps(queryParams);
-      const d = res?.data || res;
+      // 拦截器返回完整 JSON body {code, data, message}，需检查业务状态码
+      if (res?.code !== undefined && res.code !== 200) {
+        message.error(res.message || '加载应用列表失败');
+        setApps([]);
+        setTotal(0);
+        return;
+      }
+      const d = res?.data ?? res;
       setApps(d?.records || []);
       setTotal(d?.total || 0);
     } catch {
