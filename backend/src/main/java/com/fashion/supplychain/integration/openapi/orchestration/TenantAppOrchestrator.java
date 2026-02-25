@@ -446,7 +446,26 @@ public class TenantAppOrchestrator {
                     "  -H 'X-Timestamp: $(date +%%s)' \\\n" +
                     "  -H 'X-Signature: <HMAC-SHA256>' \\\n" +
                     "  -H 'Content-Type: application/json' \\\n" +
-                    "  -d '{\"styleNo\":\"FZ2024001\",\"quantity\":500,\"colors\":[\"红\",\"蓝\"],\"sizes\":[\"S\",\"M\",\"L\"]}'",
+                    "  -d '{\n" +
+                    "    \"styleNo\": \"FZ2024001\",\n" +
+                    "    \"quantity\": 500,\n" +
+                    "    \"colors\": [\"红\", \"蓝\"],\n" +
+                    "    \"sizes\": [\"S\", \"M\", \"L\"],\n" +
+                    "    \"company\": \"客户品牌名\",\n" +
+                    "    \"merchandiser\": \"跟单员姓名\",\n" +
+                    "    \"patternMaker\": \"纸样师姓名\",\n" +
+                    "    \"factoryName\": \"加工厂名称\",\n" +
+                    "    \"expectedShipDate\": \"2026-03-15\",\n" +
+                    "    \"plannedStartDate\": \"2026-03-01\",\n" +
+                    "    \"plannedEndDate\": \"2026-03-14\",\n" +
+                    "    \"processUnitPrices\": [\n" +
+                    "      {\"processName\": \"裁剪\", \"processCode\": \"CUT\", \"unitPrice\": 0.5},\n" +
+                    "      {\"processName\": \"车缝\", \"processCode\": \"SEW\", \"unitPrice\": 2.0},\n" +
+                    "      {\"processName\": \"质检\", \"processCode\": \"QC\",  \"unitPrice\": 0.3}\n" +
+                    "    ],\n" +
+                    "    \"remarks\": \"加急订单\"\n" +
+                    "  }'\n\n" +
+                    "# 提示：不传 processUnitPrices 时，系统自动从款式工序配置带入单价",
                     baseUrl, app.getAppKey());
             case "QUALITY_FEEDBACK":
                 return String.format(

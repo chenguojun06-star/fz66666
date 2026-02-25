@@ -262,11 +262,16 @@ const AppManagementTab: React.FC = () => {
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // 行内编辑URL状态
+  // 行内编辑URL状态（列表行）
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
   const [editingUrlField, setEditingUrlField] = useState<'callbackUrl' | 'externalApiUrl' | null>(null);
   const [editingUrlValue, setEditingUrlValue] = useState('');
   const [_savingUrl, setSavingUrl] = useState(false);
+
+  // 详情弹窗行内编辑URL状态
+  const [detailEditCallbackUrl, setDetailEditCallbackUrl] = useState('');
+  const [detailEditExternalApiUrl, setDetailEditExternalApiUrl] = useState('');
+  const [savingDetailUrl, setSavingDetailUrl] = useState(false);
 
   const fetchApps = useCallback(async () => {
     setLoading(true);
@@ -350,6 +355,8 @@ const AppManagementTab: React.FC = () => {
           const data = res?.data || res;
           setNewSecret(data?.appSecret || null);
           setSelectedApp(data);
+          setDetailEditCallbackUrl(data?.callbackUrl || '');
+          setDetailEditExternalApiUrl(data?.externalApiUrl || '');
           detailModal.open(data);
           message.success('密钥已重置');
           fetchApps();
@@ -401,9 +408,29 @@ const AppManagementTab: React.FC = () => {
       const data = res?.data || res;
       setSelectedApp(data);
       setNewSecret(null);
+      setDetailEditCallbackUrl(data?.callbackUrl || '');
+      setDetailEditExternalApiUrl(data?.externalApiUrl || '');
       detailModal.open(data);
     } catch {
       message.error('加载详情失败');
+    }
+  };
+
+  const handleSaveDetailUrls = async () => {
+    if (!selectedApp) return;
+    setSavingDetailUrl(true);
+    try {
+      await tenantAppService.updateApp(selectedApp.id, {
+        callbackUrl: detailEditCallbackUrl || undefined,
+        externalApiUrl: detailEditExternalApiUrl || undefined,
+      });
+      message.success('配置已保存');
+      setSelectedApp(prev => prev ? { ...prev, callbackUrl: detailEditCallbackUrl, externalApiUrl: detailEditExternalApiUrl } : prev);
+      fetchApps();
+    } catch {
+      message.error('保存失败');
+    } finally {
+      setSavingDetailUrl(false);
     }
   };
 
@@ -581,7 +608,14 @@ const AppManagementTab: React.FC = () => {
         title={`应用详情 - ${selectedApp?.appName || ''}`}
         onCancel={() => { detailModal.close(); setNewSecret(null); }}
         width="60vw"
-        footer={<Button onClick={() => { detailModal.close(); setNewSecret(null); }}>关闭</Button>}
+        footer={
+          <Space>
+            <Button onClick={() => { detailModal.close(); setNewSecret(null); }}>关闭</Button>
+            <Button type="primary" loading={savingDetailUrl} onClick={handleSaveDetailUrls}>
+              保存配置
+            </Button>
+          </Space>
+        }
       >
         {selectedApp && (
           <div style={{ padding: '0 8px' }}>
@@ -617,8 +651,26 @@ const AppManagementTab: React.FC = () => {
               <Descriptions.Item label="状态">
                 <Badge status={selectedApp.status === 'active' ? 'success' : 'error'} text={selectedApp.statusName} />
               </Descriptions.Item>
-              <Descriptions.Item label="回调地址" span={2}>{selectedApp.callbackUrl || '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户API">{selectedApp.externalApiUrl || '-'}</Descriptions.Item>
+              <Descriptions.Item label="回调地址" span={2}>
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    value={detailEditCallbackUrl}
+                    onChange={e => setDetailEditCallbackUrl(e.target.value)}
+                    placeholder="https://your-domain.com/webhook（我们主动推送数据到此地址）"
+                    style={{ fontSize: 12 }}
+                  />
+                </Space.Compact>
+              </Descriptions.Item>
+              <Descriptions.Item label="客户API" span={2}>
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    value={detailEditExternalApiUrl}
+                    onChange={e => setDetailEditExternalApiUrl(e.target.value)}
+                    placeholder="https://your-domain.com/api（系统主动调用客户系统时使用）"
+                    style={{ fontSize: 12 }}
+                  />
+                </Space.Compact>
+              </Descriptions.Item>
               <Descriptions.Item label="每日配额">{selectedApp.dailyQuota ? `${selectedApp.dailyUsed || 0} / ${selectedApp.dailyQuota}` : '不限制'}</Descriptions.Item>
               <Descriptions.Item label="总调用次数">{selectedApp.totalCalls?.toLocaleString() || '0'}</Descriptions.Item>
               <Descriptions.Item label="创建时间">{selectedApp.createTime}</Descriptions.Item>

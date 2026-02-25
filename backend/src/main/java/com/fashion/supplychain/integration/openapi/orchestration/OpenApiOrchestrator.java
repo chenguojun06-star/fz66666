@@ -168,16 +168,27 @@ public class OpenApiOrchestrator {
 
     /**
      * 客户系统创建生产订单 — 真实创建订单，可在"我的订单"页面查看
-     * 请求体示例：
+     * 请求体示例（完整字段）：
      * {
-     *   "styleNo": "FZ2024001",
-     *   "company": "客户品牌名",
-     *   "quantity": 500,
-     *   "colors": ["红", "蓝"],
-     *   "sizes": ["S", "M", "L"],
-     *   "expectedShipDate": "2026-03-15",
-     *   "remarks": "加急订单"
+     *   "styleNo": "FZ2024001",           // 必填：款号（匹配系统款式）
+     *   "company": "客户品牌名",           // 客户/品牌
+     *   "quantity": 500,                  // 必填：订单数量
+     *   "colors": ["红", "蓝"],           // 颜色列表
+     *   "sizes": ["S", "M", "L"],         // 尺码列表
+     *   "expectedShipDate": "2026-03-15", // 预计出货日期
+     *   "remarks": "加急订单",            // 备注
+     *   "merchandiser": "跟单员姓名",      // 跟单员
+     *   "patternMaker": "纸样师姓名",      // 纸样师
+     *   "productCategory": "上衣",        // 品类
+     *   "factoryName": "XX加工厂",        // 指定加工厂名称
+     *   "plannedStartDate": "2026-03-01", // 计划开工日期（yyyy-MM-dd）
+     *   "plannedEndDate": "2026-03-14",   // 计划完工日期（yyyy-MM-dd）
+     *   "processUnitPrices": [           // 自定义工序单价（不传则自动从款式工序表带入）
+     *     { "processName": "裁剪", "processCode": "CUT", "unitPrice": 0.5 },
+     *     { "processName": "车缝", "processCode": "SEW", "unitPrice": 2.0 }
+     *   ]
      * }
+     * 注意：不传 processUnitPrices 时，系统自动读取款式（styleNo）的已配置工序单价
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createExternalOrder(TenantApp app, String body) {
@@ -227,10 +238,18 @@ public class OpenApiOrchestrator {
                 order.setStyleId(String.valueOf(style.getId()));
                 order.setStyleNo(style.getStyleNo());
                 order.setStyleName(style.getStyleName());
+                // 款式带入品类（StyleInfo.category → ProductionOrder.productCategory）
+                if (StringUtils.hasText(style.getCategory())) order.setProductCategory(style.getCategory());
             } else {
                 order.setStyleNo(styleNo);
                 order.setStyleName(styleNo + " (待关联)");
             }
+
+            // 请求体字段覆盖默认值
+            if (request.get("merchandiser") != null) order.setMerchandiser((String) request.get("merchandiser"));
+            if (request.get("patternMaker") != null) order.setPatternMaker((String) request.get("patternMaker"));
+            if (request.get("productCategory") != null) order.setProductCategory((String) request.get("productCategory"));
+            if (request.get("factoryName") != null) order.setFactoryName((String) request.get("factoryName"));
 
             // 设置客户/公司
             String company = (String) request.get("company");
@@ -252,15 +271,86 @@ public class OpenApiOrchestrator {
             if (request.get("expectedShipDate") != null) {
                 try {
                     order.setExpectedShipDate(LocalDate.parse((String) request.get("expectedShipDate")));
-                } catch (Exception ignored) {
-                    // 日期格式错误忽略
+                } catch (Exception ignored) { }
+            }
+
+            // 设置计划开工/完工日期
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            if (request.get("plannedStartDate") != null) {
+                try {
+                    order.setPlannedStartDate(LocalDate.parse((String) request.get("plannedStartDate"), dateFormatter).atStartOfDay());
+                } catch (Exception ignored) { }
+            }
+            if (request.get("plannedEndDate") != null) {
+                try {
+                    order.setPlannedEndDate(LocalDate.parse((String) request.get("plannedEndDate"), dateFormatter).atTime(23, 59, 59));
+                } catch (Exception ignored) { }
+            }
+
+            // ===== 构建工序单价 progressWorkflowJson =====
+            // 优先用请求体传入的 processUnitPrices，否则自动从款式工序表（t_style_process）带入
+            String progressWorkflowJson = null;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> processUnitPrices = (List<Map<String, Object>>) request.get("processUnitPrices");
+
+            if (processUnitPrices != null && !processUnitPrices.isEmpty()) {
+                // 方式一：请求体直接传入工序单价
+                List<Map<String, Object>> nodes = new ArrayList<>();
+                for (Map<String, Object> p : processUnitPrices) {
+                    String pName = p.get("processName") != null ? String.valueOf(p.get("processName")).trim() : null;
+                    if (!StringUtils.hasText(pName)) continue;
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("name", pName);
+                    if (p.get("processCode") != null) node.put("processCode", String.valueOf(p.get("processCode")).trim());
+                    node.put("unitPrice", p.get("unitPrice") != null ? p.get("unitPrice") : 0);
+                    nodes.add(node);
+                }
+                if (!nodes.isEmpty()) {
+                    Map<String, Object> workflow = new LinkedHashMap<>();
+                    workflow.put("nodes", nodes);
+                    progressWorkflowJson = objectMapper.writeValueAsString(workflow);
+                    log.info("[OpenAPI] 使用请求体传入工序单价: orderNo={}, 工序数={}", orderNo, nodes.size());
+                }
+            } else if (style != null) {
+                // 方式二：自动从款式工序表（t_style_process）读取工序单价
+                LambdaQueryWrapper<StyleProcess> processWrapper = new LambdaQueryWrapper<>();
+                processWrapper.eq(StyleProcess::getStyleId, style.getId());
+                processWrapper.orderByAsc(StyleProcess::getSortOrder);
+                List<StyleProcess> styleProcesses = styleProcessService.list(processWrapper);
+                if (styleProcesses != null && !styleProcesses.isEmpty()) {
+                    List<Map<String, Object>> nodes = new ArrayList<>();
+                    for (StyleProcess sp : styleProcesses) {
+                        Map<String, Object> node = new LinkedHashMap<>();
+                        node.put("name", sp.getProcessName());
+                        if (StringUtils.hasText(sp.getProcessCode())) node.put("processCode", sp.getProcessCode());
+                        if (StringUtils.hasText(sp.getProgressStage())) node.put("stage", sp.getProgressStage());
+                        node.put("unitPrice", sp.getPrice() != null ? sp.getPrice() : BigDecimal.ZERO);
+                        node.put("standardTime", sp.getStandardTime() != null ? sp.getStandardTime() : 0);
+                        nodes.add(node);
+                    }
+                    Map<String, Object> workflow = new LinkedHashMap<>();
+                    workflow.put("nodes", nodes);
+                    progressWorkflowJson = objectMapper.writeValueAsString(workflow);
+                    log.info("[OpenAPI] 自动带入款式工序单价: orderNo={}, styleNo={}, 工序数={}", orderNo, styleNo, nodes.size());
                 }
             }
+            order.setProgressWorkflowJson(progressWorkflowJson);
 
             // 保存订单
             productionOrderService.save(order);
-            log.info("[OpenAPI] 第三方下单成功: orderNo={}, styleNo={}, quantity={}, 来源={}",
-                    orderNo, styleNo, quantity, app.getAppName());
+            log.info("[OpenAPI] 第三方下单成功: orderNo={}, styleNo={}, quantity={}, 来源={}, 工序单价={}",
+                    orderNo, styleNo, quantity, app.getAppName(), progressWorkflowJson != null ? "已配置" : "未配置（款式无工序）");
+
+            // 汇总工序单价信息（用于返回给客户）
+            List<Map<String, Object>> processInfo = new ArrayList<>();
+            if (StringUtils.hasText(progressWorkflowJson)) {
+                try {
+                    Map<String, Object> wf = objectMapper.readValue(progressWorkflowJson, new TypeReference<Map<String, Object>>() {});
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> nodes = (List<Map<String, Object>>) wf.get("nodes");
+                    if (nodes != null) processInfo = nodes;
+                } catch (Exception ignored) { }
+            }
 
             // 构建返回
             Map<String, Object> result = new LinkedHashMap<>();
@@ -272,6 +362,15 @@ public class OpenApiOrchestrator {
             result.put("styleName", order.getStyleName());
             result.put("company", order.getCompany());
             result.put("quantity", quantity);
+            result.put("merchandiser", order.getMerchandiser());
+            result.put("patternMaker", order.getPatternMaker());
+            result.put("productCategory", order.getProductCategory());
+            result.put("factoryName", order.getFactoryName());
+            result.put("plannedStartDate", order.getPlannedStartDate() != null ? order.getPlannedStartDate().toLocalDate().toString() : null);
+            result.put("plannedEndDate", order.getPlannedEndDate() != null ? order.getPlannedEndDate().toLocalDate().toString() : null);
+            result.put("expectedShipDate", order.getExpectedShipDate());
+            result.put("processUnitPrices", processInfo);
+            result.put("processCount", processInfo.size());
             result.put("orderStatus", "pending");
             result.put("createdAt", order.getCreateTime().toString());
             result.put("viewUrl", "/production?orderNo=" + orderNo);
