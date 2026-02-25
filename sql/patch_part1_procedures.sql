@@ -9,8 +9,15 @@
 -- ============================================================
 
 -- ======================== PART 1/3: 工具存储过程 ========================
+-- ⚠️ 图形工具（TablePlus/DMS/Navicat）需支持 DELIMITER 指令，
+--    或把整个 PART 1 整体粘贴执行（不要按语句逐条执行）。
+--    若工具不支持 DELIMITER，请改用 MySQL CLI：
+--      mysql -h<host> -P<port> -u<user> -p<pwd> <dbname> < patch_part1_procedures.sql
+
 DROP PROCEDURE IF EXISTS _add_col;
 DROP PROCEDURE IF EXISTS _add_idx;
+
+DELIMITER $$
 
 CREATE PROCEDURE _add_col(IN tbl VARCHAR(64), IN col VARCHAR(64), IN def TEXT)
 BEGIN
@@ -21,7 +28,7 @@ BEGIN
     SET @s = CONCAT('ALTER TABLE `',tbl,'` ADD COLUMN `',col,'` ',def);
     PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
   END IF;
-END;
+END$$
 
 CREATE PROCEDURE _add_idx(IN tbl VARCHAR(64), IN idx VARCHAR(64), IN def TEXT)
 BEGIN
@@ -32,7 +39,9 @@ BEGIN
     SET @s = CONCAT('ALTER TABLE `',tbl,'` ADD ',def);
     PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
   END IF;
-END;
+END$$
+
+DELIMITER ;
 
 SELECT 'Part 1 DONE' AS status;
 -- ======================== END PART 1 ========================

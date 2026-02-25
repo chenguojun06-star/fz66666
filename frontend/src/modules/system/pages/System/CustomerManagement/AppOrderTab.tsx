@@ -102,7 +102,10 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
       message.success(`订单 ${order.orderNo} 激活成功`);
       activateModal.close();
       setRemark('');
-      resultModal.open(result);
+      resultModal.open({
+        ...result,
+        orderNo: result?.orderNo || order?.orderNo || '',
+      });
       fetchData();
       // 通知父组件刷新待处理数量（清除红点）
       onOrderActivated?.();

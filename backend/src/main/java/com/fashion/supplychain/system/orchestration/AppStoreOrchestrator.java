@@ -406,11 +406,12 @@ public class AppStoreOrchestrator {
         log.info("[人工开通] 订单激活成功: {} - 租户{} - 应用{} - 到期{}",
                 order.getOrderNo(), order.getTenantId(), app.getAppName(), endTime);
 
+        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("subscription", subscription);
-        responseData.put("orderNo", order.getOrderNo());
-        responseData.put("activatedAt", startTime);
-        responseData.put("expireAt", endTime);
+        responseData.put("orderNo", order.getOrderNo() != null ? order.getOrderNo() : "");
+        responseData.put("activatedAt", startTime != null ? startTime.format(dtf) : "");
+        responseData.put("expireAt", endTime != null ? endTime.format(dtf) : "");
         responseData.put("apiCredentials", Map.of(
                 "appKey", appCredentials.getAppKey(),
                 "appSecret", appCredentials.getAppSecret()
