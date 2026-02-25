@@ -152,6 +152,26 @@ export const buildProductionSheetHtml = (payload: any) => {
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
 
+  // 样衣审核
+  const reviewStatusLabel = (s: unknown) => {
+    if (s === 'PASS')   return '<span style="color:#52c41a;font-weight:600">✅ 通过</span>';
+    if (s === 'REWORK') return '<span style="color:#faad14;font-weight:600">⚠️ 需修改</span>';
+    if (s === 'REJECT') return '<span style="color:#ff4d4f;font-weight:600">❌ 不通过</span>';
+    return '<span style="color:#aaa">未审核</span>';
+  };
+  const sampleReviewHtml = style.sampleReviewStatus ? `
+    <div class="section">
+      <div class="section-title">样衣审核</div>
+      <table>
+        <tbody>
+          <tr><td style="width:100px">审核结论</td><td>${reviewStatusLabel(style.sampleReviewStatus)}</td></tr>
+          <tr><td>审核人</td><td>${esc(style.sampleReviewer || '-')}</td></tr>
+          <tr><td>审核时间</td><td>${esc(String(style.sampleReviewTime || '-').replace('T', ' ').slice(0, 16))}</td></tr>
+          ${style.sampleReviewComment ? `<tr><td style="vertical-align:top">审核评语</td><td style="white-space:pre-wrap">${esc(style.sampleReviewComment)}</td></tr>` : ''}
+        </tbody>
+      </table>
+    </div>` : '';
+
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -213,6 +233,8 @@ export const buildProductionSheetHtml = (payload: any) => {
         </tbody>
       </table>
     </div>
+
+    ${sampleReviewHtml}
 
     <div class="section">
       <div class="section-title">尺寸表</div>

@@ -577,4 +577,26 @@ public class StyleInfoOrchestrator {
                 return today.atStartOfDay();
         }
     }
+
+    /**
+     * 保存样衣审核结论（评语可选）
+     *
+     * @param id            款式ID
+     * @param reviewStatus  审核状态：PASS / REWORK / REJECT
+     * @param reviewComment 审核评语（可为空）
+     * @return 更新后的款式信息
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
+        StyleInfo style = styleInfoService.getById(id);
+        if (style == null) {
+            throw new RuntimeException("款式不存在：" + id);
+        }
+        style.setSampleReviewStatus(reviewStatus);
+        style.setSampleReviewComment(reviewComment);
+        style.setSampleReviewer(UserContext.username());
+        style.setSampleReviewTime(LocalDateTime.now());
+        styleInfoService.updateById(style);
+        return styleInfoService.getById(id);
+    }
 }

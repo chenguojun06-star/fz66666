@@ -238,6 +238,18 @@ public class StyleInfo {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sampleCompletedTime;
 
+    /** 样衣审核状态：PASS / REWORK / REJECT，null 表示未审核 */
+    private String sampleReviewStatus;
+
+    /** 样衣审核评语（选填） */
+    private String sampleReviewComment;
+
+    /** 样衣审核人 */
+    private String sampleReviewer;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sampleReviewTime;
+
     @TableField(exist = false)
     private String progressNode;
 

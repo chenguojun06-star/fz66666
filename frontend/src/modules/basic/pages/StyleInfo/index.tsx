@@ -464,6 +464,11 @@ const StyleInfoDetailPage: React.FC = () => {
                     productionStartTime={(currentStyle as any)?.productionStartTime}
                     productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
+                    sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
+                    sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
+                    sampleReviewer={(currentStyle as any)?.sampleReviewer}
+                    sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
                   />
                 )
               },

@@ -1,11 +1,24 @@
-import React from 'react';
-import { Button, Input, Space, message } from 'antd';
+import React, { useState } from 'react';
+import { Button, Input, Space, message, Modal, Form, Select, Tag, Badge } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 
 import { safePrint } from '@/utils/safePrint';
 import StyleStageControlBar from './StyleStageControlBar';
 
+const REVIEW_STATUS_OPTIONS = [
+  { label: '✅ 通过', value: 'PASS' },
+  { label: '⚠️ 需修改', value: 'REWORK' },
+  { label: '❌ 不通过', value: 'REJECT' },
+];
+
+const reviewStatusTag = (status?: string | null) => {
+  if (!status) return null;
+  if (status === 'PASS')   return <Tag color="success">通过</Tag>;
+  if (status === 'REWORK') return <Tag color="warning">需修改</Tag>;
+  if (status === 'REJECT') return <Tag color="error">不通过</Tag>;
+  return <Tag>{status}</Tag>;
+};
 
 interface Props {
   styleId: string | number;
@@ -25,6 +38,12 @@ interface Props {
   productionStartTime?: string;
   productionCompletedTime?: string;
   onRefresh?: () => void;
+  // 样衣审核
+  sampleCompleted?: boolean;
+  sampleReviewStatus?: string | null;
+  sampleReviewComment?: string | null;
+  sampleReviewer?: string | null;
+  sampleReviewTime?: string | null;
 }
 
 const StyleProductionTab: React.FC<Props> = ({
@@ -45,7 +64,47 @@ const StyleProductionTab: React.FC<Props> = ({
   productionStartTime,
   productionCompletedTime,
   onRefresh,
+  sampleCompleted,
+  sampleReviewStatus,
+  sampleReviewComment,
+  sampleReviewer,
+  sampleReviewTime,
 }) => {
+
+  // ---- 样衣审核 Modal ----
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewForm] = Form.useForm();
+
+  const openReviewModal = () => {
+    reviewForm.setFieldsValue({
+      reviewStatus: sampleReviewStatus || undefined,
+      reviewComment: sampleReviewComment || '',
+    });
+    setReviewModalVisible(true);
+  };
+
+  const handleReviewSave = async () => {
+    try {
+      const values = await reviewForm.validateFields();
+      setReviewSaving(true);
+      const res = await api.post<{ code: number; message: string }>(`/style/info/${styleId}/sample-review`, {
+        reviewStatus: values.reviewStatus,
+        reviewComment: values.reviewComment || null,
+      });
+      if (res.code === 200) {
+        message.success('审核记录已保存');
+        setReviewModalVisible(false);
+        onRefresh?.();
+      } else {
+        message.error(res.message || '保存失败');
+      }
+    } catch {
+      // form validation error, ignore
+    } finally {
+      setReviewSaving(false);
+    }
+  };
 
   const downloadHtmlFile = (fileName: string, html: string) => {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -137,6 +196,50 @@ const StyleProductionTab: React.FC<Props> = ({
         onRefresh={onRefresh}
         extraInfo={<span>款号：<span style={{ fontWeight: 500 }}>{styleNo || '-'}</span></span>}
       />
+
+      {/* ===== 样衣审核区域 ===== */}
+      <div style={{
+        border: '1px solid var(--neutral-border, #e8e8e8)',
+        borderRadius: 8,
+        padding: '12px 16px',
+        marginBottom: 16,
+        background: sampleReviewStatus === 'PASS'
+          ? 'rgba(82,196,26,0.04)'
+          : sampleReviewStatus === 'REWORK'
+            ? 'rgba(250,173,20,0.05)'
+            : sampleReviewStatus === 'REJECT'
+              ? 'rgba(255,77,79,0.04)'
+              : 'var(--neutral-bg, #fafafa)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sampleReviewStatus ? 8 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>样衣审核</span>
+            {reviewStatusTag(sampleReviewStatus)}
+            {!sampleReviewStatus && !sampleCompleted && (
+              <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+                （样衣完成后可添加审核记录）
+              </span>
+            )}
+          </div>
+          {sampleCompleted && (
+            <Button size="small" onClick={openReviewModal}>
+              {sampleReviewStatus ? '修改审核' : '记录审核'}
+            </Button>
+          )}
+        </div>
+        {sampleReviewStatus && (
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-secondary)', lineHeight: '1.8' }}>
+            {sampleReviewer && <span style={{ marginRight: 16 }}>审核人：<span style={{ color: 'var(--neutral-text)' }}>{sampleReviewer}</span></span>}
+            {sampleReviewTime && <span>时间：<span style={{ color: 'var(--neutral-text)' }}>{String(sampleReviewTime).replace('T', ' ').slice(0, 16)}</span></span>}
+            {sampleReviewComment && (
+              <div style={{ marginTop: 4, color: 'var(--neutral-text)', whiteSpace: 'pre-wrap' }}>
+                评语：{sampleReviewComment}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <div>
           <span style={{ fontWeight: 500 }}>生产要求</span>
@@ -176,6 +279,40 @@ const StyleProductionTab: React.FC<Props> = ({
           lineHeight: '1.8'
         }}
       />
+
+      {/* 样衣审核 Modal */}
+      <Modal
+        title="样衣审核记录"
+        open={reviewModalVisible}
+        onCancel={() => setReviewModalVisible(false)}
+        onOk={handleReviewSave}
+        confirmLoading={reviewSaving}
+        okText="保存"
+        cancelText="取消"
+        width={480}
+        destroyOnClose
+      >
+        <Form form={reviewForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item
+            name="reviewStatus"
+            label="审核结论"
+            rules={[{ required: true, message: '请选择审核结论' }]}
+          >
+            <Select placeholder="请选择审核结论" options={REVIEW_STATUS_OPTIONS} />
+          </Form.Item>
+          <Form.Item
+            name="reviewComment"
+            label="审核评语（选填）"
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="可填写审核意见、改进建议等（不填写也可保存）"
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
