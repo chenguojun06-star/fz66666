@@ -233,12 +233,18 @@ function groupScanRecords(records) {
     g.items.forEach(item => {
       if (!item.canRescan) return; // 已禁止的不需再判断
       const nextType = NEXT_STAGE_MAP[item.scanType];
-      if (nextType && item.cuttingBundleId) {
-        const hasNext = records.some(r =>
-          r.cuttingBundleId === item.cuttingBundleId &&
-          r.scanType === nextType &&
-          r.scanResult === 'success'
-        );
+      if (nextType) {
+        // 优先用 cuttingBundleId 精确匹配；若 cuttingBundleId 缺失则用 orderNo+bundleNo 兜底
+        const hasNext = records.some(r => {
+          if (r.scanType !== nextType || r.scanResult !== 'success') return false;
+          if (item.cuttingBundleId && r.cuttingBundleId) {
+            return r.cuttingBundleId === item.cuttingBundleId;
+          }
+          // cuttingBundleId 缺失时，用 orderNo + cuttingBundleNo/bundleNo 作兜底匹配
+          const itemBundle = String(item.cuttingBundleNo || item.bundleNo || '');
+          const rBundle = String(r.cuttingBundleNo || r.bundleNo || '');
+          return r.orderNo === item.orderNo && itemBundle && rBundle && itemBundle === rBundle;
+        });
         if (hasNext) {
           item.canRescan = false;
           item.canUndo = false;

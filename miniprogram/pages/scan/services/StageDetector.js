@@ -279,12 +279,37 @@ class StageDetector {
     const _warehouseProcess = bundleProcesses.find(p => p.scanType === 'warehouse');
     const countableProcesses = bundleProcesses.filter(p => p.scanType !== 'warehouse');
 
-    // === 步骤3：查询该菲号的扫码历史（仅统计 production + quality） ===
+    // === 步骤3：查询该菲号的扫码历史（仅统计 production + quality 的成功记录） ===
     const scanHistory = await this._getScanHistory(orderNo, bundleNo);
 
-    // 🔧 改进：按已扫工序名精确过滤，而不是按扫码次数顺序匹配
+    // === 步骤3.5：预判质检完成状态 ===
+    // 质检工序三步（quality_receive → quality_inspect → quality_confirm）共享同一个 processName（如"质检"）
+    // 只要 quality_receive 成功，该 processName 已出现在 scanHistory，若直接加入 scannedProcessNames
+    // 会导致"质检"被错误地标记为已完成 → remainingProcesses 里没有质检 → 系统误跳到包装/入库
+    // 正确做法：只有三步全部完成（_inferQualityStage='done'）才将质检加入 scannedProcessNames
+    const qualityProcess = countableProcesses.find(p => p.scanType === 'quality');
+    let precomputedQualityStage = '';
+    let qualityIsFullyDone = false;
+    if (qualityProcess) {
+      const hasAnyQualityScan = scanHistory.some(r => r.processName === qualityProcess.processName);
+      if (hasAnyQualityScan) {
+        precomputedQualityStage = await this._inferQualityStage(orderNo, scanHistory);
+        qualityIsFullyDone = precomputedQualityStage === 'done';
+      }
+    }
+
+    // 🔧 修复：quality 工序三步骤共享 processName，必须三步全部完成才算"已扫"
     const scannedProcessNames = new Set(
-      scanHistory.map(r => r.processName).filter(Boolean)
+      scanHistory
+        .map(r => r.processName)
+        .filter(name => {
+          if (!name) return false;
+          // 质检工序：只有全部完成才放入 scannedProcessNames
+          if (qualityProcess && name === qualityProcess.processName) {
+            return qualityIsFullyDone;
+          }
+          return true;
+        })
     );
     const remainingProcesses = countableProcesses.filter(
       p => !scannedProcessNames.has(p.processName)
@@ -298,10 +323,15 @@ class StageDetector {
       // 🔧 修复：quality 类型工序需要自动推断子阶段（receive/inspect/confirm）
       // 后端 QualityScanExecutor 依赖 qualityStage 参数决定处理逻辑：
       //   未传或空 → 默认 confirm → 因为没有 quality_receive 记录，直接报 400 "请先领取再确认"
+      // 复用步骤3.5的预计算结果，不重复调用 _inferQualityStage
+      // 由于 qualityIsFullyDone=true 时质检已被排出 remainingProcesses，
+      // 进入此分支时 qualityIsFullyDone 必然为 false，qualityStage 只会是 receive/inspect/confirm
       let qualityStage = '';
       if (nextProcess.scanType === 'quality') {
-        qualityStage = await this._inferQualityStage(orderNo, scanHistory);
-        // 质检三步均已完成 → 跳过，寻找下一个未完成工序
+        qualityStage = precomputedQualityStage || 'receive';
+        // 防御性检查：若预计算时没有历史记录（precomputedQualityStage=''），默认从 receive 开始
+        if (!qualityStage) qualityStage = 'receive';
+        // 此分支理论上不会出现 'done'（qualityIsFullyDone=true 时质检已排出 remainingProcesses）
         if (qualityStage === 'done') {
           const skipNames = new Set([...scannedProcessNames, nextProcess.processName]);
           const afterQuality = countableProcesses.filter(p => !skipNames.has(p.processName));
