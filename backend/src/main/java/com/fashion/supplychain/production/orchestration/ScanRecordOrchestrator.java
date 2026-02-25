@@ -766,6 +766,15 @@ public class ScanRecordOrchestrator {
     }
 
     /**
+     * 判断订单是否处于终结状态（已完成/已关闭），终结状态不允许扫码或撤回。
+     */
+    private boolean isTerminalOrderStatus(String status) {
+        if (status == null) return false;
+        String s = status.trim().toLowerCase();
+        return "completed".equals(s) || "cancelled".equals(s) || "closed".equals(s);
+    }
+
+    /**
      * 撤回/退回重扫后，把关联的 ProcessTracking 状态还原为 pending。
      * 两端（手机+PC）撤回走同一条 undo/rescan 路径，此方法统一处理联动。
      *
