@@ -360,14 +360,14 @@
           </view>
           <view wx:else class="result-hint">
             <text class="hint-icon">💡</text>
-            <text class="hint-text">确认工序无误后，点击"领取记录"提交</text>
+            <text class="hint-text">{{scanResultConfirm.scanData.qualityStage === 'confirm' ? '填写质检结果，点击"录入结果"提交' : '确认工序无误后，点击"领取记录"提交'}}</text>
           </view>
         </view>
       </view>
       <view class="modal-foot">
         <view class="modal-btn cancel" bindtap="closeScanResultConfirm">取消</view>
         <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" bindtap="onConfirmScanResult">
-          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanData.qualityStage === 'inspect' ? '确认验收' : scanResultConfirm.scanData.qualityStage === 'confirm' ? '确认入库' : '领取记录'))}}
+          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取记录'))}}
         </view>
       </view>
     </view>
