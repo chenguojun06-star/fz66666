@@ -19,6 +19,8 @@ export interface Tutorial {
   tags: string[];
 }
 
+import type React from 'react';
+
 /** 分类定义 */
 export interface TutorialCategory {
   key: string;

@@ -2,6 +2,7 @@
   "navigationBarTitleText": "我的工资",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "floating-bell": "/components/floating-bell/index"
+    "floating-bell": "/components/floating-bell/index",
+    "date-picker": "/components/common/date-picker/index"
   }
 }

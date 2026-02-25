@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Button, Card, Col, Input, Row, Space, Statistic, Form, Select, DatePicker, Upload } from 'antd';
-import { DownloadOutlined, PrinterOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, Card, Col, Input, Row, Space, Form, Select, DatePicker, Upload } from 'antd';
+
 import PageStatCards from '@/components/common/PageStatCards';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -31,7 +31,7 @@ export const buildProductionSheetHtml = (payload: any) => {
   const sizeList = Array.isArray(payload?.sizeList) ? payload.sizeList : [];
   const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const _origin = typeof window !== 'undefined' ? window.location.origin : '';
   const resolveUrl = (u: any) => {
     const s = String(u ?? '').trim();
     if (!s) return '';

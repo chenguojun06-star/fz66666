@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, message, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, message, Tag } from 'antd';
+
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -77,7 +77,7 @@ const MaterialPickingList: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (v: string) => <Tag color="green">已完成</Tag>,
+      render: (_v: string) => <Tag color="green">已完成</Tag>,
     },
     {
       title: '备注',

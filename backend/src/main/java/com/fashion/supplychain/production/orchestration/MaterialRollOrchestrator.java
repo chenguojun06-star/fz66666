@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialInbound;
@@ -181,13 +182,16 @@ public class MaterialRollOrchestrator {
             if (!"ISSUED".equals(roll.getStatus())) {
                 throw new RuntimeException("该料卷当前状态为「" + statusLabel(roll.getStatus()) + "」，无需退回");
             }
-            roll.setStatus("IN_STOCK");
-            roll.setIssuedOrderNo(null);
-            roll.setIssuedTime(null);
-            roll.setIssuedById(null);
-            roll.setIssuedByName(null);
-            roll.setUpdateTime(LocalDateTime.now());
-            materialRollService.updateById(roll);
+            // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL（updateById 默认跳过 null 字段）
+            LambdaUpdateWrapper<MaterialRoll> rollUw = new LambdaUpdateWrapper<>();
+            rollUw.eq(MaterialRoll::getId, roll.getId())
+                  .set(MaterialRoll::getStatus, "IN_STOCK")
+                  .set(MaterialRoll::getIssuedOrderNo, null)
+                  .set(MaterialRoll::getIssuedTime, null)
+                  .set(MaterialRoll::getIssuedById, null)
+                  .set(MaterialRoll::getIssuedByName, null)
+                  .set(MaterialRoll::getUpdateTime, LocalDateTime.now());
+            materialRollService.update(rollUw);
 
             result.put("action", "return");
             result.put("newStatus", "IN_STOCK");

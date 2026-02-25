@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Space, Table, Tabs, Tag, message } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -9,7 +9,7 @@ import { ProductionOrderHeader } from '@/components/StyleAssets';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
-import { generateRowKey } from '@/utils/idGenerator';
+
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';

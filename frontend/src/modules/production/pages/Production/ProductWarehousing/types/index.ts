@@ -1,4 +1,4 @@
-import { UploadFile } from 'antd/es/upload/interface';
+
 
 /**
  * Extended warehousing record with all fields that may appear in

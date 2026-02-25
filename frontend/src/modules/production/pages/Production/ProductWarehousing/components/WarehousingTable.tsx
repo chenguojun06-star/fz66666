@@ -28,14 +28,14 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
     <img src="${qrDataUrl}" width="200" height="200" />
     <div class="no">${warehousingNo}</div>
     ${orderNo ? `<div class="order">订单号：${orderNo}</div>` : ''}
-  </div><script>window.onload=()=>{ window.print(); window.close(); }<\/script></body></html>`;
+  </div><script>window.onload=()=>{ window.print(); window.close(); }</script></body></html>`;
   const win = window.open('', '_blank', 'width=400,height=400');
   if (win) { win.document.write(html); win.document.close(); }
 }
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
-import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel } from '../utils';
+import { getQualityStatusConfig, getDefectCategoryLabel } from '../utils';
 
 interface WarehousingTableProps {
   loading: boolean;
@@ -54,7 +54,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   queryParams,
   setQueryParams,
   isOrderFrozen,
-  isMobile,
+  isMobile: _isMobile,
 }) => {
   const navigate = useNavigate();
 

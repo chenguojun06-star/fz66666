@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, App, Table } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { SaveOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
+import { SaveOutlined, LockOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';

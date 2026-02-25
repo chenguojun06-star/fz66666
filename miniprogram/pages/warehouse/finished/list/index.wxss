@@ -262,6 +262,7 @@
 .modal-body {
   padding: 20rpx;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
 }
 

@@ -55,7 +55,8 @@ const scanLifecycleMixin = Behavior({
     }
 
     await this.checkLoginStatus();
-    this.loadLocalHistory();
+    // 延迟加载本地历史缓存，不阻塞首屏渲染（历史记录是次要内容）
+    setTimeout(() => this.loadLocalHistory(), 80);
   },
 
   /**

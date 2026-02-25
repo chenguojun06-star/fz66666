@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, Button, Upload, Tag, Space, Modal } from 'antd';
 import {
-  UploadOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
   FileOutlined,
   FileImageOutlined,
   FilePdfOutlined,
-  PrinterOutlined,
 } from '@ant-design/icons';
 import { StyleAttachment } from '@/types/style';
 import api from '@/utils/api';

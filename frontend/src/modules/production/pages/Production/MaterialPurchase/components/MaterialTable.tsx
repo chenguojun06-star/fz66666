@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -84,7 +84,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 120,
-      render: (v: any, record: MaterialPurchaseType) => {
+      render: (v: any, _record: MaterialPurchaseType) => {
         const styleNo = String(v || '').trim();
         return (
           <a

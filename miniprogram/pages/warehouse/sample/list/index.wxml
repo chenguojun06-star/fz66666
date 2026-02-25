@@ -225,11 +225,11 @@
           </view>
           <view class="form-item">
             <text class="label">预计归还时间</text>
-            <picker mode="date" value="{{operationModal.returnDate}}" bindchange="onDateChange">
-              <view class="picker">
-                {{operationModal.returnDate || '请选择日期'}}
-              </view>
-            </picker>
+            <date-picker
+              value="{{operationModal.returnDate}}"
+              placeholder="请选择日期"
+              bindchange="onDateChange"
+            />
           </view>
         </block>
 

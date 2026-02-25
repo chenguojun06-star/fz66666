@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
     return ALL_QUICK_ENTRIES;
   });
 
-  const [stats, setStats] = useState<DashboardStats>({
+  const [_stats, setStats] = useState<DashboardStats>({
     sampleDevelopmentCount: 0,
     productionOrderCount: 0,
     orderQuantityTotal: 0,
@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
     setSearchOptions([]);
   };
 
-  const resetDashboardData = () => {
+  const _resetDashboardData = () => {
     setStats({
       sampleDevelopmentCount: 0,
       productionOrderCount: 0,
@@ -265,14 +265,14 @@ const Dashboard: React.FC = () => {
 
   // 处理活动点击，跳转到对应页面
   const handleActivityClick = (activity: RecentActivity) => {
-    const { type, id, content } = activity;
+    const { type, id: _id, content } = activity;
 
     switch (type) {
       case 'style':
         // 款式：跳转到样衣开发页面
         navigate('/style-info');
         break;
-      case 'production':
+      case 'production': {
         // 生产订单：从content中提取订单号跳转
         const orderNoMatch = content.match(/订单\s+([A-Z0-9]+)/);
         if (orderNoMatch && orderNoMatch[1]) {
@@ -281,6 +281,7 @@ const Dashboard: React.FC = () => {
           navigate('/production');
         }
         break;
+      }
       case 'scan':
         // 扫码记录：跳转到扫码记录页面
         navigate('/production/scan-records');

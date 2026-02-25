@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -1345,11 +1346,18 @@ public class ProductWarehousingOrchestrator {
         orderPatch.setCompletedQuantity(qualifiedSum);
         if ("completed".equals(String.valueOf(order.getStatus()))
                 && (order.getOrderQuantity() == null || qualifiedSum < order.getOrderQuantity())) {
-            orderPatch.setStatus("production");
-            orderPatch.setActualEndDate(null);
+            // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+            LambdaUpdateWrapper<ProductionOrder> undoCompleteUw = new LambdaUpdateWrapper<>();
+            undoCompleteUw.eq(ProductionOrder::getId, oid)
+                          .set(ProductionOrder::getCompletedQuantity, qualifiedSum)
+                          .set(ProductionOrder::getStatus, "production")
+                          .set(ProductionOrder::getActualEndDate, null)
+                          .set(ProductionOrder::getUpdateTime, now);
+            productionOrderService.update(undoCompleteUw);
+        } else {
+            orderPatch.setUpdateTime(now);
+            productionOrderService.updateById(orderPatch);
         }
-        orderPatch.setUpdateTime(now);
-        productionOrderService.updateById(orderPatch);
 
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();

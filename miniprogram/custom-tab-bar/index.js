@@ -1,6 +1,9 @@
 const { safeNavigate } = require('../utils/uiHelper');
 
 Component({
+  options: {
+    styleIsolation: 'apply-shared', // 继承 page 级 CSS 变量（--color-primary 等）
+  },
   data: {
     selected: 0,
     list: [

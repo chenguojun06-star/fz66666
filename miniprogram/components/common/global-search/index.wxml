@@ -18,7 +18,7 @@
     <text class="close-results" bindtap="onClose">✕</text>
   </view>
   <scroll-view class="results-list" scroll-y>
-    <view wx:for="{{results}}" wx:key="id" class="result-item" bindtap="onItemTap" data-item="{{item}}">
+    <view wx:for="{{results}}" wx:key="id" class="result-item" hover-class="result-item-hover" hover-stay-time="100" bindtap="onItemTap" data-item="{{item}}">
       <view class="result-header">
         <text class="result-type">{{item.typeText}}</text>
         <text class="result-status" style="color: {{item.statusColor}}">{{item.statusText}}</text>

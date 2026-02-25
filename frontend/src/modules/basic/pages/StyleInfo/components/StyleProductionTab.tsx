@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Input, Space, message } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
-import { formatDateTime } from '@/utils/datetime';
+
 import { safePrint } from '@/utils/safePrint';
 import StyleStageControlBar from './StyleStageControlBar';
 
@@ -35,12 +35,12 @@ const StyleProductionTab: React.FC<Props> = ({
   productionReqLocked,
   productionReqEditable,
   productionReqSaving,
-  productionReqRollbackSaving,
+  productionReqRollbackSaving: _productionReqRollbackSaving,
   onProductionReqChange,
   onProductionReqSave,
-  onProductionReqReset,
-  onProductionReqRollback,
-  productionReqCanRollback,
+  onProductionReqReset: _onProductionReqReset,
+  onProductionReqRollback: _onProductionReqRollback,
+  productionReqCanRollback: _productionReqCanRollback,
   productionAssignee,
   productionStartTime,
   productionCompletedTime,

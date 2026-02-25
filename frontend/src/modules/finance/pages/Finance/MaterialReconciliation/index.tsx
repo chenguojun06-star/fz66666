@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Dropdown, Input, Select, Space, Tag, Form, message, Modal } from 'antd';
-import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SendOutlined } from '@ant-design/icons';
+import { Button, Card, Dropdown, Input, Select, Tag, Form, message, Modal } from 'antd';
+
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -26,7 +26,7 @@ import type { Dayjs } from 'dayjs';
 const { Option } = Select;
 
 const MaterialReconciliation: React.FC = () => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user } = useAuth(); // 获取当前用户信息
   const { isMobile, modalWidth } = useViewport();
   const reconModal = useModal<MaterialReconType>();
@@ -36,7 +36,7 @@ const MaterialReconciliation: React.FC = () => {
     pageSize: 10
   });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [filterForm] = Form.useForm();
+  const [_filterForm] = Form.useForm();
   const saveFormRef = React.useRef<(() => Promise<void>) | null>(null);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;

@@ -31,7 +31,7 @@ page {
   background: rgba(224, 242, 254, 0.5);
   border-radius: 50%;
 }
-.month-arrow:active {
+.month-arrow-hover {
   background: rgba(224, 242, 254, 0.9);
   transform: scale(0.9);
 }
@@ -84,7 +84,7 @@ page {
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
-.search-btn:active { opacity: 0.7; transform: scale(0.96); }
+.search-btn-hover { opacity: 0.7; transform: scale(0.96); }
 .clear-btn {
   padding: 5px 12px;
   font-size: var(--font-size-sm);
@@ -94,7 +94,7 @@ page {
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
-.clear-btn:active { opacity: 0.7; }
+.clear-btn-hover { opacity: 0.7; }
 
 /* ===== 汇总卡片 ===== */
 .summary-card {
@@ -127,8 +127,10 @@ page {
 }
 .summary-item.summary-hl .summary-num {
   color: var(--color-primary);
+  font-size: 20px;
+  font-weight: 800;
 }
-.summary-item.summary-hl:active {
+.summary-item.summary-hl-hover {
   transform: scale(0.98);
 }
 .summary-label {
@@ -173,7 +175,7 @@ page {
   border-bottom: 1px solid var(--color-border-light, rgba(226,232,240,0.5));
 }
 .table-row:last-child { border-bottom: none; }
-.table-row:active { background: rgba(224, 242, 254, 0.2); }
+.table-row-hover { background: rgba(224, 242, 254, 0.2); }
 .td {
   font-size: var(--font-size-xs);
   color: var(--color-text-primary);
@@ -221,6 +223,6 @@ page {
   color: var(--color-primary);
   font-weight: 500;
 }
-.load-more:active { opacity: 0.7; }
+.load-more-hover { opacity: 0.7; }
 .no-more-row { border: none; background: transparent; }
 .no-more-text { color: var(--color-text-disabled); font-weight: 400; }

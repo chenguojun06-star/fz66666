@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Button, Tag, Space, message, Input, Descriptions, Select, Typography, Alert } from 'antd';
-import { CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Tag, Space, message, Input, Descriptions, Select, Typography, Alert, Tooltip } from 'antd';import { CheckCircleOutlined, ReloadOutlined, BellOutlined, BellFilled } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -9,8 +8,9 @@ import { useModal } from '@/hooks';
 import { appStoreService } from '@/services/system/appStore';
 import type { AppOrder } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
+import request from '@/utils/api';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   PENDING: { label: '待处理', color: 'orange' },
@@ -31,6 +31,7 @@ const SUB_TYPE: Record<string, { label: string; color: string }> = {
  * 应用订单管理 Tab（超级管理员）
  * - 查看所有客户提交的应用购买订单
  * - 手动激活待处理订单（创建订阅 + API凭证）
+ * - 配置 Server酱微信通知（客户下单后推送到管理员微信）
  */
 const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActivated }) => {
   const [data, setData] = useState<AppOrder[]>([]);
@@ -38,6 +39,13 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [activating, setActivating] = useState(false);
   const [remark, setRemark] = useState('');
+
+  // 通知配置状态
+  const [notifyConfigured, setNotifyConfigured] = useState(false);
+  const [notifyMaskedKey, setNotifyMaskedKey] = useState('');
+  const notifyModal = useModal<null>();
+  const [serverChanKey, setServerChanKey] = useState('');
+  const [savingNotify, setSavingNotify] = useState(false);
 
   const activateModal = useModal<AppOrder>();
   const resultModal = useModal<any>();
@@ -55,7 +63,31 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
     }
   }, [statusFilter]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const fetchNotifyConfig = useCallback(async () => {
+    try {
+      const res: any = await request.get('/system/app-store/admin/notify-config');
+      const d = res?.data || res;
+      setNotifyConfigured(d?.configured || false);
+      setNotifyMaskedKey(d?.maskedKey || '');
+    } catch { /* 忽略 */ }
+  }, []);
+
+  useEffect(() => { fetchData(); fetchNotifyConfig(); }, [fetchData, fetchNotifyConfig]);
+
+  const handleSaveNotify = async () => {
+    setSavingNotify(true);
+    try {
+      await request.post('/system/app-store/admin/notify-config', { serverChanKey });
+      message.success(serverChanKey ? '通知配置已保存，客户下单后将推送到您的微信' : '已清除通知配置');
+      notifyModal.close();
+      setServerChanKey('');
+      fetchNotifyConfig();
+    } catch (e: any) {
+      message.error(e?.message || '保存失败');
+    } finally {
+      setSavingNotify(false);
+    }
+  };
 
   const handleActivate = async () => {
     const order = activateModal.data;
@@ -186,6 +218,14 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
           ]}
         />
         <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>刷新</Button>
+        <Tooltip title={notifyConfigured ? `微信通知已开启 (${notifyMaskedKey})` : '未配置微信通知，客户下单后您不会收到提醒'}>
+          <Button
+            icon={notifyConfigured ? <BellFilled style={{ color: '#52c41a' }} /> : <BellOutlined />}
+            onClick={() => { setServerChanKey(''); notifyModal.open(null); }}
+          >
+            {notifyConfigured ? '通知已开启' : '设置通知'}
+          </Button>
+        </Tooltip>
         {pendingCount > 0 && (
           <Alert
             message={`有 ${pendingCount} 个待处理订单`}
@@ -288,20 +328,69 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
                 <Text strong>API 凭证（请妥善保管）：</Text>
                 <Descriptions column={1} bordered size="small" style={{ marginTop: 8 }}>
                   <Descriptions.Item label="App Key">
-                    <Space>
-                      <Paragraph copyable style={{ marginBottom: 0 }}>{resultModal.data.apiCredentials.appKey}</Paragraph>
-                    </Space>
+                    <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{resultModal.data.apiCredentials.appKey}</Typography.Paragraph>
                   </Descriptions.Item>
                   <Descriptions.Item label="App Secret">
-                    <Space>
-                      <Paragraph copyable style={{ marginBottom: 0 }}>{resultModal.data.apiCredentials.appSecret}</Paragraph>
-                    </Space>
+                    <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{resultModal.data.apiCredentials.appSecret}</Typography.Paragraph>
                   </Descriptions.Item>
                 </Descriptions>
               </div>
             )}
           </>
         )}
+      </ResizableModal>
+
+      {/* Server酱微信通知配置弹窗 */}
+      <ResizableModal
+        title="配置微信通知"
+        open={notifyModal.visible}
+        onCancel={() => notifyModal.close()}
+        defaultWidth="40vw"
+        defaultHeight="50vh"
+        footer={
+          <Space>
+            <Button onClick={() => notifyModal.close()}>取消</Button>
+            <Button
+              onClick={() => { setServerChanKey(''); handleSaveNotify(); }}
+              danger
+              disabled={!notifyConfigured}
+            >
+              清除通知
+            </Button>
+            <Button type="primary" loading={savingNotify} onClick={handleSaveNotify} disabled={!serverChanKey}>
+              保存
+            </Button>
+          </Space>
+        }
+      >
+        <Alert
+          message="配置后，每当客户在应用商店提交购买订单，系统自动推送微信通知到您的手机。"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <div style={{ marginBottom: 12 }}>
+          <Text strong>获取 Server酱 SendKey：</Text>
+          <ol style={{ marginTop: 8, paddingLeft: 20, fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 2 }}>
+            <li>用微信扫码登录 <a href="https://sct.ftqq.com/" target="_blank" rel="noreferrer">sct.ftqq.com</a></li>{/* cspell:disable-line */}
+            <li>点击「SendKey」复制您的专属Key</li>
+            <li>粘贴到下方输入框保存</li>
+          </ol>
+        </div>
+        {notifyConfigured && (
+          <Alert
+            message={`当前已配置：${notifyMaskedKey}`}
+            type="success"
+            showIcon
+            style={{ marginBottom: 12 }}
+          />
+        )}
+        <Input
+          placeholder="粘贴您的 Server酱 SendKey（如：SCT123456789...）"
+          value={serverChanKey}
+          onChange={e => setServerChanKey(e.target.value)}
+          allowClear
+        />
       </ResizableModal>
     </div>
   );

@@ -2,6 +2,6 @@
   border-bottom: none;
 }
 
-.result-item:active {
+.result-item-hover {
   background: rgba(224, 242, 254, 0.3);
 }

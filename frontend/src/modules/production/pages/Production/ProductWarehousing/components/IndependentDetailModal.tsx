@@ -52,7 +52,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
   // Derive styleId/styleNo for production sheet and size chart tabs
   const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
-  const styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
+  const _styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
 
   // Fetch style description (生产制单) from style info API
   const [styleDescription, setStyleDescription] = useState('');

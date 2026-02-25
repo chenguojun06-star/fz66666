@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Input, Select, Space } from 'antd';
+import { Card, Input, Select, Space } from 'antd';
 import { StyleQueryParams } from '@/types/style';
 
 interface StyleFilterPanelProps {
@@ -18,7 +18,7 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   queryParams,
   onQueryChange,
   onSearch,
-  loading = false,
+  loading: _loading = false,
   extra
 }) => {
   const progressNodeOptions = [

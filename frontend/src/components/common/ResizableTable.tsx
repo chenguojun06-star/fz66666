@@ -5,7 +5,7 @@ import type { TableProps } from 'antd';
 /**
  * 任意记录类型定义
  */
-type AnyRecord = Record<string, unknown>;
+type _AnyRecord = Record<string, unknown>;
 
 /**
  * 可调整列宽的表格属性

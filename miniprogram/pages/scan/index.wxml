@@ -72,14 +72,14 @@
 
   <!-- ② 快捷入口卡片（历史记录 | 当月记录） -->
   <view class="quick-entry-row">
-    <view class="quick-entry-card" bindtap="onGoToHistory">
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToHistory">
       <text class="qe-icon">📋</text>
       <view class="qe-text">
         <text class="qe-title">历史记录</text>
         <text class="qe-desc">全部扫码记录</text>
       </view>
     </view>
-    <view class="quick-entry-card" bindtap="onGoToMonthly">
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToMonthly">
       <text class="qe-icon">📅</text>
       <view class="qe-text">
         <text class="qe-title">当月记录</text>
@@ -93,7 +93,7 @@
     <view class="res-top">
       <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
       <text class="res-msg">{{lastResult.message}}</text>
-      <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
+      <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
     </view>
     <view class="res-info">
       <text wx:if="{{lastResult.orderNo}}" class="res-order">{{lastResult.orderNo}}</text>
@@ -112,7 +112,7 @@
   <!-- ④ 扫码区（一行：扫码主键） -->
   <view class="scan-area-big">
     <view class="scan-row">
-      <view class="scan-btn-big {{loading ? 'off' : ''}}" bindtap="onScan">
+      <view class="scan-btn-big {{loading ? 'off' : ''}}" hover-class="scan-btn-big-hover" hover-stay-time="100" bindtap="onScan">
         <text class="scan-btn-icon">📷</text>
         <view class="scan-btn-text-group">
           <text class="scan-btn-main">{{loading ? '识别中...' : '扫码识别'}}</text>
@@ -142,7 +142,7 @@
       <view wx:if="{{item.color}}" class="ptc-name">颜色: {{item.color}}</view>
       <view class="ptc-footer">
         <text class="ptc-count">数量: {{item.orderQuantity || 0}}</text>
-        <view class="ptc-btn" bindtap="onHandleCutting" data-task-id="{{item.id}}">开始裁剪</view>
+        <view class="ptc-btn" hover-class="ptc-btn-hover" hover-stay-time="100" bindtap="onHandleCutting" data-task-id="{{item.id}}">开始裁剪</view>
       </view>
     </view>
   </view>
@@ -160,7 +160,7 @@
       <view wx:if="{{item.styleName}}" class="ptc-name">{{item.styleName}}</view>
       <view class="ptc-footer">
         <text class="ptc-count">{{item.totalCount}}项待采购</text>
-        <view class="ptc-btn" bindtap="onHandleProcurement" data-order-no="{{item.orderNo}}">填写数量</view>
+        <view class="ptc-btn" hover-class="ptc-btn-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-order-no="{{item.orderNo}}">填写数量</view>
       </view>
     </view>
   </view>
@@ -173,7 +173,7 @@
     <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无今日记录</view>
 
     <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
-      <view class="hist-group-header" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
+      <view class="hist-group-header" hover-class="hist-group-header-hover" hover-stay-time="100" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
         <view class="hgh-top">
           <view class="hgh-main">
             <text class="hgh-order">{{item.orderNo}}</text>
@@ -214,15 +214,15 @@
           </view>
           <view class="hdi-row">
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
-            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
-            <view wx:if="{{record.isQualityReceive}}" class="hdi-action" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
-            <view wx:if="{{(record.scanResult === 'success' || record.scanResult === 'qualified') && record.canRescan}}" class="hdi-action rescan-btn" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
+            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
+            <view wx:if="{{record.isQualityReceive}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
+            <view wx:if="{{(record.scanResult === 'success' || record.scanResult === 'qualified') && record.canRescan}}" class="hdi-action rescan-btn" hover-class="hdi-action-hover" hover-stay-time="100" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
           </view>
         </view>
       </view>
     </view>
 
-    <view class="load-more" bindtap="loadMoreMyHistory">
+    <view class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="loadMoreMyHistory">
       <text wx:if="{{my.loadingHistory}}">加载中...</text>
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>
       <text wx:else class="no-more">— END —</text>
@@ -234,7 +234,7 @@
     <view class="modal-box rescan-box">
       <view class="modal-head rescan-head">
         <text>退回重扫</text>
-        <view class="modal-close" catchtap="onCancelRescan">✕</view>
+        <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="onCancelRescan">✕</view>
       </view>
       <view class="modal-body">
         <view class="rescan-info">
@@ -261,8 +261,8 @@
         </view>
       </view>
       <view class="modal-foot">
-        <view class="rescan-cancel" catchtap="onCancelRescan">取消</view>
-        <view class="rescan-confirm {{rescanConfirm.loading ? 'disabled' : ''}}" catchtap="onConfirmRescan">
+        <view class="rescan-cancel" hover-class="rescan-cancel-hover" hover-stay-time="100" catchtap="onCancelRescan">取消</view>
+        <view class="rescan-confirm {{rescanConfirm.loading ? 'disabled' : ''}}" hover-class="rescan-confirm-hover" hover-stay-time="100" catchtap="onConfirmRescan">
           {{rescanConfirm.loading ? '处理中...' : '确认退回'}}
         </view>
       </view>
@@ -371,8 +371,8 @@
         <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTasks && scanConfirm.cuttingTasks.length}}" class="purchase-modal-list">
           <!-- 一键导入按钮（仅来自"我的任务"时显示） -->
           <view wx:if="{{scanConfirm.fromMyTasks}}" class="cutting-action-bar">
-            <view class="cutting-btn auto" bindtap="onAutoImportCutting">一键导入(20件/扎)</view>
-            <view class="cutting-btn clear" bindtap="onClearCuttingInput">清空</view>
+            <view class="cutting-btn auto" hover-class="cutting-btn-hover" hover-stay-time="100" bindtap="onAutoImportCutting">一键导入(20件/扎)</view>
+            <view class="cutting-btn clear" hover-class="cutting-btn-hover" hover-stay-time="100" bindtap="onClearCuttingInput">清空</view>
           </view>
 
           <view wx:for="{{scanConfirm.cuttingTasks}}" wx:key="index" class="purchase-modal-item">
@@ -570,30 +570,30 @@
         </view>
       </view>
       <view class="modal-btns">
-        <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
+        <view class="mbtn cancel" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onCancelScan">取消</view>
         <!-- 裁剪模式：扫码时只显示"领取任务"（未领取状态） -->
-        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && !scanConfirm.cuttingTaskReceived && !scanConfirm.fromMyTasks}}" class="mbtn" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && !scanConfirm.cuttingTaskReceived && !scanConfirm.fromMyTasks}}" class="mbtn" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
           {{scanConfirm.loading ? '...' : '领取任务'}}
         </view>
         <!-- 裁剪模式：来自"我的任务"显示"确认裁剪" -->
-        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.fromMyTasks}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onRegenerateCuttingBundles">
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.fromMyTasks}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onRegenerateCuttingBundles">
           {{scanConfirm.loading ? '...' : '确认裁剪'}}
         </view>
         <!-- 采购模式 -->
         <!-- BOM回退模式：仅显示参考信息，不允许操作 -->
-        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.bomFallback}}" class="mbtn" style="background: #999; opacity: 0.7;" bindtap="closeScanConfirm">
+        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.bomFallback}}" class="mbtn" hover-class="mbtn-hover" hover-stay-time="100" style="background: #999; opacity: 0.7;" bindtap="closeScanConfirm">
           关闭（请先在PC端创建采购任务）
         </view>
         <!-- 扫码领取：只显示"领取任务"按钮 -->
-        <view wx:if="{{scanConfirm.detail.isProcurement && !scanConfirm.fromMyTasks && !scanConfirm.bomFallback}}" class="mbtn" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
+        <view wx:if="{{scanConfirm.detail.isProcurement && !scanConfirm.fromMyTasks && !scanConfirm.bomFallback}}" class="mbtn" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
           {{scanConfirm.loading ? '...' : '领取任务'}}
         </view>
         <!-- 来自"我的任务"：只显示"确认提交"按钮 -->
-        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.fromMyTasks && !scanConfirm.bomFallback}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onSubmitProcurement">
+        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.fromMyTasks && !scanConfirm.bomFallback}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onSubmitProcurement">
           {{scanConfirm.loading ? '...' : '确认提交'}}
         </view>
         <!-- 其他模式 -->
-        <view wx:if="{{!scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪'}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
+        <view wx:if="{{!scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪'}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onConfirmScan">
           {{scanConfirm.loading ? '...' : (scanConfirm.detail.isQualityReceive ? '领取' : '确认')}}
         </view>
       </view>
@@ -607,7 +607,7 @@
   <view class="modal-container" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">质检结果录入</text>
-      <view class="modal-close" catchtap="closeQualityModal">×</view>
+      <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closeQualityModal">×</view>
     </view>
 
     <view class="modal-body">
@@ -759,7 +759,7 @@
   <view class="modal-container" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">物料采购</text>
-      <view class="modal-close" catchtap="closeProcurementModal">×</view>
+      <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closeProcurementModal">×</view>
     </view>
 
     <view class="modal-body">
@@ -812,7 +812,7 @@
   <view class="modal-container" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">🧵 样板生产</text>
-      <view class="modal-close" catchtap="closePatternConfirm">×</view>
+      <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closePatternConfirm">×</view>
     </view>
 
     <view class="modal-body">

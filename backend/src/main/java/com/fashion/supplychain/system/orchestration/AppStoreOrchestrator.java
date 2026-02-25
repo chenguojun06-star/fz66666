@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.OutputStream;
@@ -63,21 +64,45 @@ public class AppStoreOrchestrator {
     @Autowired
     private UserService userService;
 
-    /** Server酱 SendKey，设置环境变量 NOTIFY_SERVERCHAN_KEY 即可启用微信通知 */
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    /** Server酱 SendKey，优先从数据库读取（t_param_config），其次用环境变量 */
     @Value("${notify.serverchan.key:}")
-    private String serverChanKey;
+    private String serverChanKeyEnv;
+
+    /**
+     * 获取 Server酱 Key（优先数据库，支持后台热更新，无需重启）
+     */
+    private String getServerChanKey() {
+        if (jdbcTemplate != null) {
+            try {
+                List<String> rows = jdbcTemplate.queryForList(
+                    "SELECT param_value FROM t_param_config WHERE param_key = 'notify.serverchan.key' LIMIT 1",
+                    String.class);
+                if (!rows.isEmpty() && rows.get(0) != null && !rows.get(0).isBlank()) {
+                    return rows.get(0).trim();
+                }
+            } catch (Exception e) {
+                log.debug("[Server酱] 从数据库读取Key失败，降级使用环境变量: {}", e.getMessage());
+            }
+        }
+        return serverChanKeyEnv;
+    }
 
     /**
      * 发送微信通知（通过 Server酱，免费，直接推送到管理员个人微信"服务通知"）
-     * 配置方式：设置环境变量 NOTIFY_SERVERCHAN_KEY=你的SendKey
+     * 配置方式一：后台「应用订单」→ 右上角「通知设置」填入 SendKey（推荐，热更新）
+     * 配置方式二：设置环境变量 NOTIFY_SERVERCHAN_KEY=你的SendKey
      * 获取 SendKey：微信扫码登录 https://sct.ftqq.com/
      */
     private void sendWechatNotify(String title, String content) {
-        if (serverChanKey == null || serverChanKey.isBlank()) {
+        String key = getServerChanKey();
+        if (key == null || key.isBlank()) {
             return; // 未配置，静默跳过
         }
         try {
-            String apiUrl = "https://sctapi.ftqq.com/" + serverChanKey.trim() + ".send";
+            String apiUrl = "https://sctapi.ftqq.com/" + key + ".send";
             String body = "title=" + URLEncoder.encode(title, StandardCharsets.UTF_8)
                     + "&desp=" + URLEncoder.encode(content, StandardCharsets.UTF_8);
             HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();

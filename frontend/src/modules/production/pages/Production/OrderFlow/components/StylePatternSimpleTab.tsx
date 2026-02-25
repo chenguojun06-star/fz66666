@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Tabs, Spin, message, List, Button, Space, Tag } from 'antd';
-import { DownloadOutlined, FileOutlined, ReloadOutlined } from '@ant-design/icons';
+import { FileOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';

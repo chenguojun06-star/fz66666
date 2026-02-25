@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Select, Space, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -65,7 +65,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   const [form] = Form.useForm();
 
   // 工艺类型选项
-  const processTypeOptions = [
+  const _processTypeOptions = [
     { value: 'embroidery', label: '刺绣' },
     { value: 'printing', label: '印花' },
     { value: 'washing', label: '水洗' },

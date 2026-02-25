@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
@@ -130,13 +131,14 @@ public class MaterialDatabaseOrchestrator {
             throw new IllegalArgumentException("退回原因不能为空");
         }
         MaterialDatabase current = getById(id);
-        MaterialDatabase patch = new MaterialDatabase();
-        patch.setId(current.getId());
-        patch.setStatus("pending");
-        patch.setCompletedTime(null);
-        patch.setReturnReason(reason.trim());
-        patch.setUpdateTime(LocalDateTime.now());
-        boolean ok = materialDatabaseService.updateById(patch);
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+        LambdaUpdateWrapper<MaterialDatabase> retUw = new LambdaUpdateWrapper<>();
+        retUw.eq(MaterialDatabase::getId, current.getId())
+             .set(MaterialDatabase::getStatus, "pending")
+             .set(MaterialDatabase::getCompletedTime, null)
+             .set(MaterialDatabase::getReturnReason, reason.trim())
+             .set(MaterialDatabase::getUpdateTime, LocalDateTime.now());
+        boolean ok = materialDatabaseService.update(retUw);
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }

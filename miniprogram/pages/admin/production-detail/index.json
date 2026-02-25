@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "生产详情",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "date-picker": "/components/common/date-picker/index"
+  }
 }

@@ -736,16 +736,17 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String add = r.isEmpty() ? (prefix + who + " " + time) : (prefix + who + " " + time + " 原因:" + r);
         remark = remark.isEmpty() ? add : (remark + "；" + add);
 
-        MaterialPurchase patch = new MaterialPurchase();
-        patch.setId(purchaseId);
-        patch.setReturnConfirmed(0);
-        patch.setReturnQuantity(null);
-        patch.setReturnConfirmerId(null);
-        patch.setReturnConfirmerName(null);
-        patch.setReturnConfirmTime(null);
-        patch.setRemark(remark);
-        patch.setUpdateTime(LocalDateTime.now());
-        return this.updateById(patch);
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+        LambdaUpdateWrapper<MaterialPurchase> retConfirmUw = new LambdaUpdateWrapper<>();
+        retConfirmUw.eq(MaterialPurchase::getId, purchaseId)
+                    .set(MaterialPurchase::getReturnConfirmed, 0)
+                    .set(MaterialPurchase::getReturnQuantity, null)
+                    .set(MaterialPurchase::getReturnConfirmerId, null)
+                    .set(MaterialPurchase::getReturnConfirmerName, null)
+                    .set(MaterialPurchase::getReturnConfirmTime, null)
+                    .set(MaterialPurchase::getRemark, remark)
+                    .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+        return this.update(retConfirmUw);
     }
 
     /**

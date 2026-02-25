@@ -2,6 +2,7 @@
   "navigationBarTitleText": "历史记录",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "scan-record-table": "../../../components/scan-record-table"
+    "scan-record-table": "../../../components/scan-record-table",
+    "date-picker": "/components/common/date-picker/index"
   }
 }

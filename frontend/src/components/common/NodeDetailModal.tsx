@@ -9,7 +9,7 @@ import api from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useAuth } from '@/utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getScanTypeFromNodeKey, matchRecordToStage } from '@/utils/productionStage';
+import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
 
@@ -17,7 +17,7 @@ const { Text } = Typography;
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD HH:mm') : '-');
 
-const patternOperationLabels: Record<string, { text: string; color: string }> = {
+const _patternOperationLabels: Record<string, { text: string; color: string }> = {
   RECEIVE: { text: '领取', color: 'blue' },
   PLATE: { text: '车板', color: 'purple' },
   FOLLOW_UP: { text: '跟单', color: 'cyan' },
@@ -180,7 +180,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 }) => {
   const { message } = App.useApp();
   const { user } = useAuth(); // 获取当前用户
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -188,7 +188,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [nodeOperations, setNodeOperations] = useState<NodeOperations>({});
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
-  const [orderDetail, setOrderDetail] = useState<Record<string, unknown> | null>(null);
+  const [_orderDetail, setOrderDetail] = useState<Record<string, unknown> | null>(null);
   const [orderSummary, setOrderSummary] = useState<{ orderNo?: string; styleNo?: string; orderQuantity?: number }>({
     orderNo,
   });
@@ -451,9 +451,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
   }, [filteredScanRecords]);
 
-  const formatHistoryTime = useCallback((value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-'), []);
+  const _formatHistoryTime = useCallback((value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-'), []);
 
-  const formatScanDetail = useCallback((record: ScanRecord) => {
+  const _formatScanDetail = useCallback((record: ScanRecord) => {
     const parts: string[] = [];
     const nodeLabel = normalizeText(record.processName || record.progressStage);
     if (nodeLabel) parts.push(nodeLabel);

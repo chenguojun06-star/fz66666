@@ -3,8 +3,8 @@ import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload, messa
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import type { UploadChangeParam } from 'antd/es/upload';
 import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
-import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+
+
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import SupplierSelect from '@/components/common/SupplierSelect';

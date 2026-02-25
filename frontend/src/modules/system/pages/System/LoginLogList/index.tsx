@@ -20,7 +20,7 @@ const LoginLogList: React.FC = () => {
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { isMobile } = useViewport();
+  const { isMobile: _isMobile } = useViewport();
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);

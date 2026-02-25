@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
@@ -1446,13 +1447,16 @@ public class MaterialPurchaseOrchestrator {
                     .list();
 
                 for (MaterialPurchase purchase : relatedPurchases) {
-                    purchase.setStatus(MaterialConstants.STATUS_PENDING);
-                    purchase.setReceivedTime(null);
-                    purchase.setReceiverId(null);
-                    purchase.setReceiverName(null);
-                    purchase.setArrivedQuantity(0);
-                    purchase.setUpdateTime(LocalDateTime.now());
-                    materialPurchaseService.updateById(purchase);
+                    // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+                    LambdaUpdateWrapper<MaterialPurchase> purchaseUw = new LambdaUpdateWrapper<>();
+                    purchaseUw.eq(MaterialPurchase::getId, purchase.getId())
+                              .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                              .set(MaterialPurchase::getReceivedTime, null)
+                              .set(MaterialPurchase::getReceiverId, null)
+                              .set(MaterialPurchase::getReceiverName, null)
+                              .set(MaterialPurchase::getArrivedQuantity, 0)
+                              .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+                    materialPurchaseService.update(purchaseUw);
                     log.info("✅ 采购任务已恢复: purchaseId={}, materialCode={}", purchase.getId(), purchase.getMaterialCode());
                 }
             }

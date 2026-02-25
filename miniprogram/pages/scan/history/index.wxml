@@ -2,19 +2,15 @@
   <!-- 头部筛选区域 -->
   <view class="filter-section">
     <view class="date-row">
-      <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
-        <view class="date-picker">
-          <text class="date-label">开始</text>
-          <text class="date-value">{{startDate}}</text>
-        </view>
-      </picker>
+      <view class="date-col">
+        <text class="date-label">开始</text>
+        <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
+      </view>
       <text class="date-separator">—</text>
-      <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
-        <view class="date-picker">
-          <text class="date-label">结束</text>
-          <text class="date-value">{{endDate}}</text>
-        </view>
-      </picker>
+      <view class="date-col">
+        <text class="date-label">结束</text>
+        <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
+      </view>
     </view>
     <view class="search-row">
       <view class="search-box">

@@ -1,6 +1,6 @@
 // 屏蔽腾讯云 CloudBase 宿主环境注入的 SDK 噪音日志
 // 这些日志与业务无关（CloudBase 客户端DB SDK尝试初始化但找不到配置，正常现象）
-;(function suppressCloudBaseNoise() {
+(function suppressCloudBaseNoise() {
   const NOISE = ['[lite]', '@@ multi_tenant', '[ASSERT]', 'single-spa minified', 'res_test'];
   const wrap = (fn: (...args: unknown[]) => void) => (...args: unknown[]) => {
     const msg = String(args[0] ?? '');

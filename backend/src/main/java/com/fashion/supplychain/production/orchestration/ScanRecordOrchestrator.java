@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -453,10 +454,13 @@ public class ScanRecordOrchestrator {
                             .eq(CuttingTask::getProductionOrderId, oid)
                             .last("limit 1"));
                     if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
-                        cuttingTask.setStatus("received");
-                        cuttingTask.setBundledTime(null);
-                        cuttingTask.setUpdateTime(LocalDateTime.now());
-                        cuttingTaskService.updateById(cuttingTask);
+                        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+                        LambdaUpdateWrapper<CuttingTask> cTaskUw = new LambdaUpdateWrapper<>();
+                        cTaskUw.eq(CuttingTask::getId, cuttingTask.getId())
+                               .set(CuttingTask::getStatus, "received")
+                               .set(CuttingTask::getBundledTime, null)
+                               .set(CuttingTask::getUpdateTime, LocalDateTime.now());
+                        cuttingTaskService.update(cTaskUw);
                         log.info("[rescan] 裁剪任务状态已退回到received: taskId={}, orderId={}", cuttingTask.getId(), oid);
                     }
                 } catch (Exception e) {
@@ -758,15 +762,19 @@ public class ScanRecordOrchestrator {
                 log.warn("[resetTracking] 该工序跟踪记录已结算，跳过重置: trackingId={}", tracking.getId());
                 return;
             }
-            ProductionProcessTracking reset = new ProductionProcessTracking();
-            reset.setId(tracking.getId());
-            reset.setScanStatus("pending");
-            reset.setScanTime(null);
-            reset.setScanRecordId(null);
-            reset.setOperatorId(null);
-            reset.setOperatorName(null);
-            reset.setSettlementAmount(null);
-            processTrackingService.updateById(reset);
+            // ⚠️ 必须用 LambdaUpdateWrapper 显式 SET NULL
+            // updateById 默认跳过 null 字段（MyBatis-Plus NOT_NULL 策略），
+            // 直接 set null 不会真正清空数据库字段，导致撤回后扫码时间/操作人仍残留显示。
+            LambdaUpdateWrapper<ProductionProcessTracking> uw =
+                    new LambdaUpdateWrapper<>();
+            uw.eq(ProductionProcessTracking::getId, tracking.getId())
+              .set(ProductionProcessTracking::getScanStatus, "pending")
+              .set(ProductionProcessTracking::getScanTime, null)
+              .set(ProductionProcessTracking::getScanRecordId, null)
+              .set(ProductionProcessTracking::getOperatorId, null)
+              .set(ProductionProcessTracking::getOperatorName, null)
+              .set(ProductionProcessTracking::getSettlementAmount, null);
+            processTrackingService.update(uw);
             log.info("[resetTracking] 工序跟踪已还原为 pending: trackingId={}, 菲号={}, 工序={}",
                     tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
         } catch (Exception e) {

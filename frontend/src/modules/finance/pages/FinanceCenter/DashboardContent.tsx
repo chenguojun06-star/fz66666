@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Statistic, Select } from 'antd';
+import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/charts';
 import { StatsGrid } from '@/components/common/StatsGrid';

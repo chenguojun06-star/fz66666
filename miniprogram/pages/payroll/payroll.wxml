@@ -45,12 +45,14 @@
 
   <!-- 自定义时间选择 -->
   <view class="custom-date" wx:if="{{timeFilter === 'custom'}}">
-    <picker mode="date" value="{{startDate}}" end="{{endDate}}" bindchange="onStartDateChange">
-      <view class="date-picker">开始：{{startDate}}</view>
-    </picker>
-    <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDateChange">
-      <view class="date-picker">结束：{{endDate}}</view>
-    </picker>
+    <view class="date-col">
+      <text class="date-label">开始</text>
+      <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
+    </view>
+    <view class="date-col" style="margin-top: 10px;">
+      <text class="date-label">结束</text>
+      <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
+    </view>
   </view>
 
   <!-- 工序明细列表 -->

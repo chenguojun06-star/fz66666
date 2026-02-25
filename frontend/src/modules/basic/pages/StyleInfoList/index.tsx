@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Modal } from 'antd';
-import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, ReloadOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import api from '@/utils/api';

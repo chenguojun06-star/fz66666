@@ -33,7 +33,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   onClose,
   onSubmit,
   setWarehouse,
-  width,
+  width: _width,
 }) => {
   return (
     <ResizableModal

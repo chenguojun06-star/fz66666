@@ -1,5 +1,6 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
@@ -65,13 +66,16 @@ public class ExpenseReimbursementOrchestrator {
             throw new RuntimeException("只能编辑自己的报销单");
         }
 
-        entity.setUpdateBy(UserContext.username());
-        entity.setUpdateTime(LocalDateTime.now());
-        // 重新提交后状态恢复为待审批
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
+        LambdaUpdateWrapper<ExpenseReimbursement> resubmitUw = new LambdaUpdateWrapper<>();
+        resubmitUw.eq(ExpenseReimbursement::getId, entity.getId())
+                  .set(ExpenseReimbursement::getUpdateBy, UserContext.username())
+                  .set(ExpenseReimbursement::getUpdateTime, LocalDateTime.now())
+                  .set(ExpenseReimbursement::getStatus, "pending")
+                  .set(ExpenseReimbursement::getApprovalRemark, null);
+        expenseReimbursementService.update(resubmitUw);
         entity.setStatus("pending");
         entity.setApprovalRemark(null);
-
-        expenseReimbursementService.updateById(entity);
         log.info("报销单更新: id={}, no={}", entity.getId(), existing.getReimbursementNo());
 
         return entity;

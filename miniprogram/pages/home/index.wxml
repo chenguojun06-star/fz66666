@@ -76,11 +76,11 @@
 
     <view class="home-section-title">快捷入口</view>
     <view class="home-entries">
-      <view class="home-entry" data-tab="orders_production" bindtap="goWork">生产</view>
-      <view class="home-entry" data-tab="warehousing" bindtap="goWork">入库</view>
-      <view class="home-entry" data-tab="exceptions" bindtap="goWork">异常</view>
-      <view class="home-entry" bindtap="goScan">扫码</view>
-      <view class="home-entry" bindtap="goAdmin">我的</view>
+      <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" data-tab="orders_production" bindtap="goWork">生产</view>
+      <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" data-tab="warehousing" bindtap="goWork">入库</view>
+      <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" data-tab="exceptions" bindtap="goWork">异常</view>
+      <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goScan">扫码</view>
+      <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goAdmin">我的</view>
     </view>
 
     <view class="home-section-title">最近动态</view>

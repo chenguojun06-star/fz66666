@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Tag, Space, Image } from 'antd';
-import { CheckCircleOutlined, InboxOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Card, Tag } from 'antd';
+
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -28,7 +28,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     queryParams,
     setQueryParams,
     fetchWarehousingList,
-    openDialog,
+    openDialog: _openDialog,
     closeDialog,
     visible,
     currentWarehousing,

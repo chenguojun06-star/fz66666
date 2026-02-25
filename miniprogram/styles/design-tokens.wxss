@@ -1,69 +1,71 @@
 /**
- * 服装供应链系统 - 设计 Token
+ * 服装供应链系统 - 设计 Token  v3.0
  *
- * 统一的设计变量定义，包括颜色、圆角、间距、阴影等
- * 与 PC 端设计规范保持一致
+ * 视觉升级：更鲜明的蓝-靛渐变、更好的对比度、带蓝调的阴影
  *
- * @version 2.0
- * @date 2026-01-24
+ * @version 3.0
+ * @date 2026-02-25
  */
 
 /* 页面级 CSS 变量定义（组件通过 styleIsolation: apply-shared 继承）*/
 page {
   /* ========== 颜色系统 ========== */
 
-  /* ⚠️ 主色调 - 浅蓝渐变（与 PC 端统一，禁止使用紫色渐变）*/
-  --color-primary: #3b82f6;
-  --gradient-primary: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
-  --gradient-primary-solid: linear-gradient(
-    135deg,
-    #e0f2fe 0%,
-    #e0e7ff 100%
-  ); /* 实色版本，与主渐变相同 */
+  /* 主色调 - 宝蓝（比之前更饱和，禁止使用紫色渐变）*/
+  --color-primary: #2563eb;
+
+  /* 浅色渐变 —— 用于卡片背景、tag填充（蓝-靛，更可见）*/
+  --gradient-primary: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+  --gradient-primary-solid: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
   --gradient-primary-alpha: linear-gradient(
     135deg,
-    rgba(224, 242, 254, 0.9) 0%,
-    rgba(224, 242, 254, 0.7) 100%
-  ); /* 半透明版本 */
-  --gradient-card: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+    rgba(219, 234, 254, 0.92) 0%,
+    rgba(237, 233, 254, 0.75) 100%
+  );
+  --gradient-card: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+
+  /* 实色深蓝渐变 —— 专用于主 CTA 按钮（白字）*/
+  --gradient-action: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+
+  /* 进度条渐变（绿蓝渐变）*/
+  --gradient-progress: linear-gradient(90deg, #10b981 0%, #2563eb 100%);
 
   /* 辅助色 - 蓝色系 */
-  --color-blue: #3b82f6;
-  --color-blue-light: rgba(224, 242, 254, 0.8);
-  --color-blue-lighter: rgba(224, 242, 254, 0.3);
+  --color-blue: #2563eb;
+  --color-blue-light: rgba(219, 234, 254, 0.8);
+  --color-blue-lighter: rgba(219, 234, 254, 0.3);
 
   /* 功能色 */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
 
-  /* 中性色 */
-  --color-bg-page: #f7f8fa;
+  /* 中性色 —— 页面背景略带蓝调，与白色卡片形成清晰层次 */
+  --color-bg-page: #eef2f8;
   --color-bg-card: #ffffff;
-  --color-bg-gray: #f3f4f6;
-  --color-bg-light: #f9fafb;
+  --color-bg-gray: #e8ecf4;
+  --color-bg-light: #f5f8ff;
 
-  --color-border: rgba(147, 197, 253, 0.5); /* 浅蓝色边框 */
-  --color-border-light: rgba(224, 242, 254, 0.6); /* 更浅的蓝色边框 */
-  --color-border-blue: rgba(147, 197, 253, 0.5); /* 浅蓝色边框别名 */
+  /* 边框 —— 稍微更可见的蓝色边框 */
+  --color-border: rgba(96, 165, 250, 0.45);
+  --color-border-light: rgba(147, 197, 253, 0.4);
+  --color-border-blue: rgba(96, 165, 250, 0.45);
 
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-disabled: #9ca3af;
+  /* 文字 —— 二级文字加深以改善对比度 */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-disabled: #94a3b8;
   --color-text-white: #ffffff;
 
   /* ========== 圆角系统 ========== */
-
-  /* 标准圆角 */
-  --radius-sm: 8px; /* 小圆角 - 小按钮、标签 */
-  --radius-md: 12px; /* 中圆角 - 卡片、输入框 */
-  --radius-lg: 16px; /* 大圆角 - 主要卡片 */
-  --radius-xl: 18px; /* 特大圆角 - 容器 */
-  --radius-full: 999px; /* 全圆角 - 按钮、标签、搜索框 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 18px;
+  --radius-full: 999px;
 
   /* ========== 间距系统 ========== */
-
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -71,25 +73,20 @@ page {
   --spacing-xl: 20px;
   --spacing-xxl: 24px;
 
-  /* ========== 阴影系统 ========== */
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.15);
-
-  /* 进度条渐变（绿蓝渐变，与 PC 端统一） */
-  --gradient-progress: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  /* ========== 阴影系统 —— 带蓝调，卡片层次感更明显 ========== */
+  --shadow-sm: 0 1px 3px rgba(15, 80, 180, 0.07);
+  --shadow-md: 0 2px 10px rgba(15, 80, 180, 0.09);
+  --shadow-lg: 0 4px 18px rgba(15, 80, 180, 0.11);
+  --shadow-xl: 0 8px 28px rgba(15, 80, 180, 0.14);
+  --shadow-modal: 0 20px 50px rgba(15, 80, 180, 0.18);
 
   /* ========== 字体系统 ========== */
-
-  --font-size-xs: 11px; /* 辅助文字 */
-  --font-size-sm: 12px; /* 小文字 */
-  --font-size-base: 14px; /* 正文 */
-  --font-size-lg: 16px; /* 二级标题 */
-  --font-size-xl: 18px; /* 一级标题 */
-  --font-size-2xl: 20px; /* 数值强调 */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;

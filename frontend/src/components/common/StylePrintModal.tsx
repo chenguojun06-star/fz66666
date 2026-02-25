@@ -5,7 +5,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Checkbox, Button, Space, Spin, Tag, message, QRCode } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { ProductionOrder } from '@/types/production';
 
 type UseOrderSyncParams = {
@@ -21,10 +21,10 @@ type UseOrderSyncParams = {
  */
 export const useOrderSync = ({
   fetchOrders,
-  fetchOrderDetail,
-  fetchScanHistory,
-  activeOrderRef,
-  setActiveOrder,
+  fetchOrderDetail: _fetchOrderDetail,
+  fetchScanHistory: _fetchScanHistory,
+  activeOrderRef: _activeOrderRef,
+  setActiveOrder: _setActiveOrder,
   orderSyncingRef,
 }: UseOrderSyncParams) => {
   const fetchOrdersRef = useRef(fetchOrders);
@@ -35,7 +35,7 @@ export const useOrderSync = ({
   }, [fetchOrders]);
 
   useEffect(() => {
-    let cancelled = false;
+    let _cancelled = false;
 
     const run = async () => {
       // 防止并发刷新
@@ -55,7 +55,7 @@ export const useOrderSync = ({
     const timer = window.setInterval(run, 30000);
 
     return () => {
-      cancelled = true;
+      _cancelled = true;
       window.clearInterval(timer);
     };
   }, [orderSyncingRef]);

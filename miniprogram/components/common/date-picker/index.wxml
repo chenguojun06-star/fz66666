@@ -1,0 +1,36 @@
+<!-- 自定义日期选择器：底部浮层，不影响页面布局 -->
+<view class="dp-root">
+
+  <!-- 触发行 -->
+  <view class="dp-trigger {{displayValue ? 'dp-trigger--has-value' : ''}}" bindtap="onOpen">
+    <text class="{{displayValue ? 'dp-value' : 'dp-placeholder'}}">{{displayValue || placeholder}}</text>
+    <view class="dp-trigger-right">
+      <view wx:if="{{clearable && displayValue}}" class="dp-clear" catchtap="onClear">×</view>
+      <text class="dp-cal-icon">📅</text>
+    </view>
+  </view>
+
+  <!-- 遮罩 -->
+  <view wx:if="{{visible}}" class="dp-mask" bindtap="onCancel" />
+
+  <!-- 底部浮层面板：用 wx:if 控制，避免 fixed 定位在 overflow 容器内产生遮挡 -->
+  <view wx:if="{{visible}}" class="dp-sheet dp-sheet--open">
+    <view class="dp-sheet-header">
+      <view class="dp-sheet-cancel" bindtap="onCancel">取消</view>
+      <text class="dp-sheet-preview">{{pendingValue || '请选择日期'}}</text>
+      <view class="dp-sheet-confirm" bindtap="onConfirm">确定</view>
+    </view>
+    <picker-view class="dp-picker-view" value="{{indices}}" bindchange="onPickerChange" indicator-class="dp-indicator">
+      <picker-view-column>
+        <view wx:for="{{years}}" wx:key="*this" class="dp-col-item">{{item}}年</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{months}}" wx:key="*this" class="dp-col-item">{{item}}月</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{days}}" wx:key="*this" class="dp-col-item">{{item}}日</view>
+      </picker-view-column>
+    </picker-view>
+  </view>
+
+</view>

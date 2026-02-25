@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Input, Space, Tag } from 'antd';
+import { App } from 'antd';
 import api from '@/utils/api';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
-import { formatDateTime } from '@/utils/datetime';
+
 import type { StyleAttachment } from '@/types/style';
 import StyleAttachmentTab from './StyleAttachmentTab';
 import StyleStageControlBar from './StyleStageControlBar';

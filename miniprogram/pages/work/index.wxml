@@ -59,11 +59,11 @@
 
     <!-- 标签栏在搜索栏下面 -->
     <view class="tabbar">
-      <view class="tab {{activeTab === 'all' ? 'tab-active' : ''}}" data-tab="all" bindtap="onTab">全部</view>
-      <view class="tab {{activeTab === 'procurement' ? 'tab-active' : ''}}" data-tab="procurement" bindtap="onTab">采购</view>
-      <view class="tab {{activeTab === 'cutting' ? 'tab-active' : ''}}" data-tab="cutting" bindtap="onTab">裁剪</view>
-      <view class="tab {{activeTab === 'sewing' ? 'tab-active' : ''}}" data-tab="sewing" bindtap="onTab">车缝</view>
-      <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
+      <view class="tab {{activeTab === 'all' ? 'tab-active' : ''}}" data-tab="all" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">全部</view>
+      <view class="tab {{activeTab === 'procurement' ? 'tab-active' : ''}}" data-tab="procurement" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">采购</view>
+      <view class="tab {{activeTab === 'cutting' ? 'tab-active' : ''}}" data-tab="cutting" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">裁剪</view>
+      <view class="tab {{activeTab === 'sewing' ? 'tab-active' : ''}}" data-tab="sewing" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">车缝</view>
+      <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">入库</view>
     </view>
 
     <!-- 订单列表 -->

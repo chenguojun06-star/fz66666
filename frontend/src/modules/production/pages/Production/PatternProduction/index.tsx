@@ -20,7 +20,7 @@ import { formatDateTime } from '@/utils/datetime';
 import './style.css';
 import type { Dayjs } from 'dayjs';
 
-interface ProgressNode {
+interface _ProgressNode {
   id: string;
   name: string;
   unitPrice?: number;
@@ -85,7 +85,7 @@ const stageToKey: Record<string, string> = {
 };
 
 /** 从 progressNodes 中读某个 stage 的进度（兼容英文key和中文key） */
-const getNodePercent = (progressNodes: Record<string, number>, stageName: string): number => {
+const _getNodePercent = (progressNodes: Record<string, number>, stageName: string): number => {
   const key = stageToKey[stageName] || stageName;
   if (progressNodes[key] !== undefined) return progressNodes[key] as number;
   if (progressNodes[stageName] !== undefined) return progressNodes[stageName] as number;

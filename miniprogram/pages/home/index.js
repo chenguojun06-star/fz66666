@@ -83,8 +83,8 @@ Page({
     }
     this.loadStats();
 
-    // 加载提醒列表
-    this.loadReminders();
+    // 加载提醒列表（延迟执行，不阻塞首屏渲染）
+    setTimeout(() => this.loadReminders(), 100);
   },
 
   onPullDownRefresh() {

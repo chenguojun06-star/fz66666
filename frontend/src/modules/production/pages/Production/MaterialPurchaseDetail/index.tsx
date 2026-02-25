@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin, Alert } from 'antd';
-import { ArrowLeftOutlined, CheckCircleOutlined, PrinterOutlined } from '@ant-design/icons';
+
 import StylePrintModal from '@/components/common/StylePrintModal';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -113,7 +113,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const headerStyleId = order?.styleId ?? (purchaseList[0] as any)?.styleId;
   const headerStyleCover = order?.styleCover ?? (purchaseList[0] as any)?.styleCover ?? null;
   const headerColor = String(order?.color ?? (purchaseList[0] as any)?.color ?? '').trim();
-  const headerQrValue = headerOrderNo
+  const _headerQrValue = headerOrderNo
     ? JSON.stringify({
       type: 'order',
       orderNo: headerOrderNo,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { EyeOutlined } from '@ant-design/icons';
+
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';

@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（37个编排器）
-> **测试覆盖率**：核心编排器 100% | 代码优化 -45%（1677→923行）
-> **最后更新**：2026-02-05 | **AI指令版本**：v3.4
+> **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（51个编排器）
+> **测试覆盖率**：核心编排器 100% | 代码优化（TemplateCenter 1912→900行）
+> **最后更新**：2026-03-01 | **AI指令版本**：v3.5
 
 ---
 
@@ -85,7 +85,7 @@ Controller → Orchestrator → Service → Mapper
 - **React 18.2** + **TypeScript** + **Vite**
 - **Ant Design 6.1**（组件库）
 - **Zustand**（状态管理，替代 Redux）
-- **ECharts**（图表）+ **Lottie**（动画）
+- **ECharts**（图表）
 - 路由：React Router v6
 
 ### 小程序
@@ -107,8 +107,8 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 **关键约束**（代码审查必查项）：
-- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（37个编排器）
-  - **分布**：production(12) + finance(7) + style(5) + template(2) + warehouse(2) + system(6) + wechat(1) + dashboard(1) + datacenter(1)
+- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（51个编排器）
+  - **分布**：production(17) + finance(10) + style(6) + template(2) + warehouse(2) + system(9) + wechat(1) + dashboard(1) + datacenter(1) + integration(2) = **51个**
   - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`, `ReconciliationStatusOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
@@ -171,27 +171,33 @@ return Result.error("订单号重复");  // { code: 500, message: "订单号重�
 backend/src/main/java/com/fashion/supplychain/
 ├── production/            # 生产模块（核心）
 │   ├── controller/        # REST 端点
-│   ├── orchestration/     # 业务编排器（12个）
+│   ├── orchestration/     # 业务编排器（17个）
 │   ├── service/           # 领域服务（单一职责）
 │   ├── mapper/            # MyBatis 数据访问
 │   ├── entity/            # 实体类
 │   ├── dto/               # 数据传输对象
 │   ├── helper/            # 辅助类
 │   └── util/              # 工具类
-├── style/                 # 款式管理（5个编排器）
+├── style/                 # 款式管理（6个编排器）
 ├── finance/               # 财务结算（10个编排器：PayrollAggregation/WagePayment/ReconciliationBackfill/MaterialReconciliationSync/MaterialReconciliation/PayrollSettlement/ReconciliationStatus/ShipmentReconciliation/ExpenseReimbursement/OrderProfit）
 ├── warehouse/             # 仓库管理（2个编排器）
-├── stock/                 # 库存管理（1个编排器）
-├── system/                # 系统管理（6个编排器）
+├── system/                # 系统管理（9个编排器：AppStore/ExcelImport/Tenant/User/Role/Permission/Dict/Factory/Serial）
 ├── template/              # 模板库（2个编排器）
 ├── wechat/                # 微信集成（1个编排器）
 ├── dashboard/             # 仪表板（1个编排器）
 ├── datacenter/            # 数据中心（1个编排器）
 ├── payroll/               # ⚠️ 空包（历史遗留，工资管理已全部迁移至 finance/ 模块，此包仅有1个空文件，禁止再往此包新增代码）
-├── integration/           # 第三方集成
-├── common/                # 公共组件（Result, UserContext）
+├── integration/           # 第三方集成（2个编排器：OpenApi/TenantApp）
+├── common/                # 公共组件（Result, UserContext, CosService）
 └── config/                # 配置类
 ```
+
+> **新增功能说明（2026-02-至今）**：
+> - **腾讯云 COS 文件存储**：`common/CosService.java` — 统一处理文件上传/下载，替代本地文件系统。调用 `cosService.uploadFile(file)` 返回访问 URL
+> - **Excel 批量导入**：`ExcelImportOrchestrator` + `ExcelImportController` — 支持生产订单、工序等数据的 Excel 批量导入，前端对应 `modules/basic/pages/DataImport/`
+> - **问题反馈**：`UserFeedbackController` / `UserFeedbackService` — 用户在系统内提交问题反馈，存储到 `t_user_feedback` 表
+> - **系统状态监控**：`SystemStatusController` — 提供系统健康状态端点（CPU/内存/DB连接池）
+> - **应用商店重构**：`AppStoreOrchestrator` — 租户开通/关闭模块权限，对应 PC 端个人中心"应用管理"
 
 ### 前端目录结构（模块化）
 ```
@@ -332,7 +338,7 @@ docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e 
 ```
 
 ### 数据库版本控制
-- **变更脚本**：手动 SQL 脚本（未使用 Flyway/Liquibase）
+- **变更脚本**：Flyway 自动迁移（`backend/src/main/resources/db/migration/V*.sql`）
 - **备份策略**：定期备份到 `backups/` 目录
 - **数据卷管理**：Docker volume 持久化，删除容器不会丢失数据
 - **详细文档**：[deployment/数据库配置.md](deployment/数据库配置.md)
@@ -511,11 +517,12 @@ open target/site/jacoco/index.html
 - Service：**70%+**（推荐）
 - Entity：**不要求**（Getter/Setter 无价值）
 
-**最新成果**（2026-02-03/04）：
+**最新成果**（2026-02-03/04 ~ 2026-03-01）：
 - ✅ `ScanRecordOrchestrator`：100%覆盖率（29个单元测试）
 - ✅ 代码优化：1677行 → 923行（-45%）
 - ✅ 测试框架：3个Executor完整测试结构（36个测试用例）
 - ✅ CI/CD：GitHub Actions自动测试配置完成
+- ✅ `TemplateCenter/index.tsx`：1912行 → 900行（拆分为4个子组件）
 
 ---
 
@@ -775,6 +782,7 @@ SKU = styleNo + color + size
 - `Production/List/index.tsx`（2513 行）- 需拆分为独立的列表、过滤、导出组件
 - `Cutting/index.tsx`（2190 行）- 需提取裁剪逻辑 Hook
 - `ScanRecordOrchestrator.java`（1891 行）- 需拆分工序识别和库存计算逻辑
+- ✅ ~~`TemplateCenter/index.tsx`（1912 行）~~ - 已拆分（900行 + 4个子组件）
 
 ### API 端点数限制
 - ⚠️ **单 Controller >15 端点**：考虑拆分职责

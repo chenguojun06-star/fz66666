@@ -507,7 +507,7 @@ const _MaterialInventory: React.FC = () => {
     try {
       setGeneratingRolls(true);
       const values = await rollForm.validateFields();
-      const { inboundId, materialCode, materialName } = rollModal.data!;
+      const { inboundId, materialCode: _materialCode, materialName: _materialName } = rollModal.data!;
       const res = await api.post('/production/material/roll/generate', {
         inboundId: inboundId || undefined,
         rollCount: values.rollCount,

@@ -1,9 +1,9 @@
 <view class="container">
   <!-- 月份选择 -->
   <view class="month-selector">
-    <view class="month-arrow" bindtap="onPrevMonth">‹</view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">‹</view>
     <text class="month-text">{{displayMonth}}</text>
-    <view class="month-arrow" bindtap="onNextMonth">›</view>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">›</view>
   </view>
 
   <!-- 搜索 -->
@@ -13,8 +13,8 @@
         <text class="search-icon">🔍</text>
         <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
       </view>
-      <view class="search-btn" bindtap="onSearch">搜索</view>
-      <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">重置</view>
+      <view class="search-btn" hover-class="search-btn-hover" hover-stay-time="100" bindtap="onSearch">搜索</view>
+      <view class="clear-btn" hover-class="clear-btn-hover" hover-stay-time="100" wx:if="{{searchKeyword}}" bindtap="onClearSearch">重置</view>
     </view>
   </view>
 
@@ -32,7 +32,7 @@
       <text class="summary-num">{{summary.recordCount || 0}}</text>
       <text class="summary-label">记录数</text>
     </view>
-    <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter">
+    <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" hover-class="summary-item-hl-hover" hover-stay-time="100" bindtap="onTogglePayableFilter">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
       <text class="summary-label">工资汇总（{{summary.payableRecordCount || 0}}条）</text>
     </view>
@@ -56,7 +56,7 @@
   </view>
 
   <!-- 加载更多 -->
-  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" bindtap="onLoadMore">
+  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="onLoadMore">
     <text>加载更多</text>
   </view>
   <view wx:if="{{!loading && !hasMore && records.length > 0}}" class="load-more no-more-row">

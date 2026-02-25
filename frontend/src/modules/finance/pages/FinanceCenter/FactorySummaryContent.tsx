@@ -11,7 +11,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
-import styles from './FinishedSettlementContent.module.css';
+
 
 /** 工厂汇总行数据 */
 interface FactorySummaryRow {

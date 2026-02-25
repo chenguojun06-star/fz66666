@@ -153,6 +153,11 @@ async function onConfirmScanResult(ctx) {
       scanType: confirm.scanType,
       unitPrice: confirm.unitPrice || 0,
       quantity: confirmedQty,
+      // 🔧 修复：明确携带 qualityStage，防止被 spread 覆盖或遗漏
+      // quality 类型工序必须传此字段，否则后端默认走 confirm 阶段 → "请先领取再确认" 400
+      qualityStage: confirm.scanData && confirm.scanData.qualityStage
+        ? confirm.scanData.qualityStage
+        : '',
     };
 
     const result = await api.production.executeScan(scanData);

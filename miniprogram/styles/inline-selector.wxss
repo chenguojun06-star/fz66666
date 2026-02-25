@@ -31,8 +31,8 @@
 }
 
 .inline-selector-hint {
-  font-size: 10px;
-  color: var(--color-text-disabled, #94a3b8);
+  font-size: 11px; /* 从10px提升刱1px，字件越小对比度要求越高 */
+  color: var(--color-text-secondary, #475569); /* 升级至secondary，disabled(#94a3b8)对比度仅基基 2:1 */
 }
 
 /* === 滚动列表 === */
@@ -120,6 +120,6 @@
 }
 
 .inline-selector-item.active .inline-selector-extra {
-  color: var(--color-primary, #667eea);
+  color: var(--color-primary, #2563eb); /* 修正fallback为正确的深蓝色，原#667eea对比度仅3.4:1不足 */
   font-weight: 600;
 }

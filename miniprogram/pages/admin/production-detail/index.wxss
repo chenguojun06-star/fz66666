@@ -100,7 +100,7 @@ page {
   white-space: nowrap;
 }
 
-.search-btn:active {
+.search-btn-hover {
   opacity: 0.7;
   transform: scale(0.96);
 }
@@ -116,7 +116,7 @@ page {
   white-space: nowrap;
 }
 
-.clear-btn:active {
+.clear-btn-hover {
   opacity: 0.7;
 }
 
@@ -150,7 +150,7 @@ page {
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
 }
 
-.tab-item:active {
+.tab-item-hover {
   opacity: 0.8;
 }
 
@@ -163,6 +163,7 @@ page {
   background: var(--color-bg-card);
   max-height: calc(100vh - 300px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   white-space: nowrap;
 }
 
@@ -201,7 +202,7 @@ page {
   border-bottom: none;
 }
 
-.table-row:active {
+.table-row-hover {
   background: rgba(224, 242, 254, 0.2);
 }
 
@@ -247,7 +248,7 @@ page {
   font-weight: 500;
 }
 
-.delete-btn:active {
+.delete-btn-hover {
   background: rgba(239, 68, 68, 0.15);
   transform: scale(0.95);
 }
@@ -308,7 +309,7 @@ page {
   font-weight: 500;
 }
 
-.load-more:active {
+.load-more-hover {
   opacity: 0.7;
 }
 
@@ -349,7 +350,7 @@ page {
   white-space: nowrap;
 }
 
-.go-scan-btn:active {
+.go-scan-btn-hover {
   opacity: 0.7;
   transform: scale(0.96);
 }

@@ -3,8 +3,8 @@
  * 功能：显示订单基本信息、进度条、操作按钮
  */
 import React from 'react';
-import { Card, Tag, Button, Space, Progress } from 'antd';
-import { EyeOutlined, ScanOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Tag, Button, Progress } from 'antd';
+
 import { ProductionOrder } from '@/types/production';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';

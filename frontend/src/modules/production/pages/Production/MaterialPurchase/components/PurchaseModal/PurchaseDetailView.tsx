@@ -1,12 +1,12 @@
 import React from 'react';
-import { Button, Card, Collapse, Space, Tag, message } from 'antd';
-import type { MenuProps } from 'antd';
+import { Button, Card, Collapse, Space, Tag } from 'antd';
+
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
-import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal } from '../../utils';
 
 // 已回料确认行的样式
@@ -57,9 +57,9 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   detailFrozen,
   isMobile,
   isSupervisorOrAbove,
-  sortField,
-  sortOrder,
-  onSort,
+  sortField: _sortField,
+  sortOrder: _sortOrder,
+  onSort: _onSort,
   onReceive,
   onConfirmReturn,
   onReturnReset,

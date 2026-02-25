@@ -17,7 +17,7 @@ const ValidationRules = {
     required: true,
     minLength: 3,
     maxLength: 20,
-    pattern: /^[a-zA-Z0-9_\-]+$/,
+    pattern: /^[a-zA-Z0-9_-]+$/,
     message: '账号长度 3-20 位，只能包含字母、数字、下划线、连字符',
   },
   password: {

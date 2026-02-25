@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
-import { PlusOutlined, SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { Tabs, Button, Tag, Space, message, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
+import { SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import IntegrationGuideTab from './IntegrationGuideTab';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -266,7 +266,7 @@ const AppManagementTab: React.FC = () => {
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
   const [editingUrlField, setEditingUrlField] = useState<'callbackUrl' | 'externalApiUrl' | null>(null);
   const [editingUrlValue, setEditingUrlValue] = useState('');
-  const [savingUrl, setSavingUrl] = useState(false);
+  const [_savingUrl, setSavingUrl] = useState(false);
 
   const fetchApps = useCallback(async () => {
     setLoading(true);

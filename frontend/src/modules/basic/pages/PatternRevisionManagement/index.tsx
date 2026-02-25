@@ -11,15 +11,7 @@ import {
   Modal,
   DatePicker,
 } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  SendOutlined,
-} from '@ant-design/icons';
+
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';

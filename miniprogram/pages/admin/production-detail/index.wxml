@@ -3,19 +3,15 @@
   <view class="filter-section">
     <!-- 日期选择行 -->
     <view class="date-row">
-      <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
-        <view class="date-picker">
-          <text class="date-label">开始</text>
-          <text class="date-value">{{startDate}}</text>
-        </view>
-      </picker>
+      <view class="date-col">
+        <text class="date-label">开始</text>
+        <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
+      </view>
       <text class="date-separator">—</text>
-      <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
-        <view class="date-picker">
-          <view class="date-label">结束</view>
-          <view class="date-value">{{endDate}}</view>
-        </view>
-      </picker>
+      <view class="date-col">
+        <text class="date-label">结束</text>
+        <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
+      </view>
     </view>
 
     <!-- 搜索行 -->
@@ -24,14 +20,14 @@
         <text class="search-icon">🔍</text>
         <input class="search-input" placeholder="订单号 / 款号" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
       </view>
-      <view class="search-btn" bindtap="onSearch">搜索</view>
-      <view class="clear-btn" bindtap="onClearSearch" wx:if="{{searchKeyword}}">重置</view>
+      <view class="search-btn" hover-class="search-btn-hover" hover-stay-time="100" bindtap="onSearch">搜索</view>
+      <view class="clear-btn" hover-class="clear-btn-hover" hover-stay-time="100" bindtap="onClearSearch" wx:if="{{searchKeyword}}">重置</view>
     </view>
   </view>
 
   <!-- Tab 切换 -->
   <view class="tab-row">
-    <view wx:for="{{tabs}}" wx:key="key" class="tab-item {{activeTab === index ? 'tab-active' : ''}}" data-index="{{index}}" bindtap="onTabChange">
+    <view wx:for="{{tabs}}" wx:key="key" class="tab-item {{activeTab === index ? 'tab-active' : ''}}" hover-class="tab-item-hover" hover-stay-time="100" data-index="{{index}}" bindtap="onTabChange">
       <text>{{item.label}}</text>
     </view>
   </view>
@@ -79,7 +75,7 @@
   </view>
 
   <!-- 加载更多 -->
-  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" bindtap="onLoadMore">
+  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="onLoadMore">
     <text>加载更多</text>
   </view>
 </view>

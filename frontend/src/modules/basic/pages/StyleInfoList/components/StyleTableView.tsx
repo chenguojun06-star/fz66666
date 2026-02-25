@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+
 import type { MenuProps } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';

@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.*;
@@ -366,17 +367,25 @@ public class TenantOrchestrator {
         userService.save(owner);
 
         // 更新租户：激活状态，回填 ownerUserId，清空明文申请密码，设置编码
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL，applyPassword 存安全凭据必须真正清空
+        String activateUsername = !finalUsername.equals(tenant.getApplyUsername()) ? finalUsername : tenant.getApplyUsername();
+        if (!finalUsername.equals(tenant.getApplyUsername())) {
+            log.info("[用户名冲突自动解决] 原始={} → 最终={}", tenant.getApplyUsername(), finalUsername);
+        }
+        LambdaUpdateWrapper<Tenant> activateUw = new LambdaUpdateWrapper<>();
+        activateUw.eq(Tenant::getId, tenant.getId())
+                  .set(Tenant::getTenantCode, tenantCode)
+                  .set(Tenant::getOwnerUserId, owner.getId())
+                  .set(Tenant::getStatus, "active")
+                  .set(Tenant::getApplyPassword, null)
+                  .set(Tenant::getApplyUsername, activateUsername)
+                  .set(Tenant::getUpdateTime, LocalDateTime.now());
+        tenantService.update(activateUw);
+        // 回填内存对象供后续日志/返回值使用
         tenant.setTenantCode(tenantCode);
         tenant.setOwnerUserId(owner.getId());
         tenant.setStatus("active");
-        tenant.setApplyPassword(null); // 激活后清空申请密码
-        // 如果用户名发生了变更，同步更新申请记录
-        if (!finalUsername.equals(tenant.getApplyUsername())) {
-            log.info("[用户名冲突自动解决] 原始={} → 最终={}", tenant.getApplyUsername(), finalUsername);
-            tenant.setApplyUsername(finalUsername);
-        }
-        tenant.setUpdateTime(LocalDateTime.now());
-        tenantService.updateById(tenant);
+        tenant.setApplyUsername(activateUsername);
 
         log.info("[申请通过] tenantId={} 工厂={} 账号={} 已激活", tenantId, tenant.getTenantName(), finalUsername);
         Map<String, Object> result = new HashMap<>();
@@ -429,11 +438,14 @@ public class TenantOrchestrator {
         if (tenant == null) throw new IllegalArgumentException("租户申请不存在");
         if (!"pending_review".equals(tenant.getStatus())) throw new IllegalStateException("该申请不是待审核状态");
 
-        tenant.setStatus("rejected");
-        tenant.setRemark("拒绝原因: " + (StringUtils.hasText(reason) ? reason : "无"));
-        tenant.setApplyPassword(null);
-        tenant.setUpdateTime(LocalDateTime.now());
-        tenantService.updateById(tenant);
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL（applyPassword 需要真正清空，否则存在安全隐患）
+        LambdaUpdateWrapper<Tenant> rejectUw = new LambdaUpdateWrapper<>();
+        rejectUw.eq(Tenant::getId, tenant.getId())
+                .set(Tenant::getStatus, "rejected")
+                .set(Tenant::getRemark, "拒绝原因: " + (StringUtils.hasText(reason) ? reason : "无"))
+                .set(Tenant::getApplyPassword, null)
+                .set(Tenant::getUpdateTime, LocalDateTime.now());
+        tenantService.update(rejectUw);
         log.info("[申请拒绝] tenantId={} 工厂={} 原因={}", tenantId, tenant.getTenantName(), reason);
         return true;
     }

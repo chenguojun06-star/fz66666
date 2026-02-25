@@ -3,7 +3,7 @@ import { Card, Badge, Spin } from 'antd';
 import { ClockCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
-import { errorHandler } from '@/utils/errorHandling';
+
 import './DeliveryAlert.css';
 
 interface DeliveryOrder {

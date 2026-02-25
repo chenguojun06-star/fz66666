@@ -64,7 +64,31 @@
     "bindtap",
     "bindinput",
     "Appstore",
-    "elif"
+    "elif",
+    "rgba",
+    "nowrap",
+    "mbtn",
+    "tabbar",
+    "iconfont",
+    "minmax",
+    "rpx",
+    "wxss",
+    "wxml",
+    "weui",
+    "catchhover",
+    "bindchange",
+    "bindblur",
+    "bindfocus",
+    "bindconfirm",
+    "bindsubmit",
+    "bindscroll",
+    "bindtouchstart",
+    "bindtouchmove",
+    "bindtouchend",
+    "catchtap",
+    "multiplex",
+    "behaviours",
+    "behaviors"
   ],
   "ignorePaths": [
     "node_modules",
@@ -75,7 +99,9 @@
     "logs/",
     "archive/",
     "backups/",
-    "*.sql"
+    "*.sql",
+    "miniprogram/**/*.wxss",
+    "miniprogram/**/*.wxml"
   ],
   "enableFiletypes": [
     "javascript",

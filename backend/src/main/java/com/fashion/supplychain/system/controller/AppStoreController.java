@@ -16,6 +16,7 @@ import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +48,9 @@ public class AppStoreController {
 
     @Autowired
     private AppStoreOrchestrator appStoreOrchestrator;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * 获取应用列个表
@@ -265,6 +269,56 @@ public class AppStoreController {
         }
         wrapper.orderByDesc("create_time");
         return Result.success(appOrderService.list(wrapper));
+    }
+
+    /**
+     * 【管理员】获取通知配置（Server酱Key脱敏返回）
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @GetMapping("/admin/notify-config")
+    public Result<Map<String, Object>> getNotifyConfig() {
+        Map<String, Object> config = new java.util.HashMap<>();
+        String key = "";
+        if (jdbcTemplate != null) {
+            try {
+                java.util.List<String> rows = jdbcTemplate.queryForList(
+                    "SELECT param_value FROM t_param_config WHERE param_key = 'notify.serverchan.key' LIMIT 1",
+                    String.class);
+                key = rows.isEmpty() ? "" : (rows.get(0) == null ? "" : rows.get(0));
+            } catch (Exception e) {
+                log.warn("读取通知配置失败: {}", e.getMessage());
+            }
+        }
+        // 脱敏：只显示前6位和后4位
+        String masked = key.isBlank() ? "" :
+            (key.length() > 10 ? key.substring(0, 6) + "****" + key.substring(key.length() - 4) : "已配置");
+        config.put("configured", !key.isBlank());
+        config.put("maskedKey", masked);
+        return Result.success(config);
+    }
+
+    /**
+     * 【管理员】保存Server酱通知Key（保存到数据库，热更新无需重启）
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/admin/notify-config")
+    public Result<Void> saveNotifyConfig(@RequestBody Map<String, String> body) {
+        String key = body.getOrDefault("serverChanKey", "").trim();
+        if (jdbcTemplate == null) {
+            return Result.fail("数据库连接不可用");
+        }
+        try {
+            jdbcTemplate.update(
+                "INSERT INTO t_param_config (param_key, param_value, param_desc) VALUES (?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE param_value = VALUES(param_value)",
+                "notify.serverchan.key", key,
+                "Server酱微信推送Key（在 sct.ftqq.com 获取）");
+            log.info("[通知配置] 超管更新Server酱Key: configured={}", !key.isBlank());
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("保存通知配置失败", e);
+            return Result.fail("保存失败：" + e.getMessage());
+        }
     }
 
     /**

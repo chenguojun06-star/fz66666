@@ -1,0 +1,265 @@
+/* 自定义日期选择器 - 底部浮层风格（覆盖旧内嵌样式） */
+
+.dp-root {
+  width: 100%;
+  position: relative;
+}
+
+/* ===== 触发行 ===== */
+.dp-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 40px;
+  background: #f4f6f9;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  box-sizing: border-box;
+}
+
+.dp-trigger--has-value {
+  border-color: var(--color-primary, #3b82f6);
+  background: #eff6ff;
+}
+
+.dp-value {
+  font-size: 14px;
+  color: #1f2937;
+  flex: 1;
+}
+
+.dp-placeholder {
+  font-size: 14px;
+  color: #9ca3af;
+  flex: 1;
+}
+
+.dp-trigger-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-clear {
+  font-size: 16px;
+  color: #9ca3af;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.dp-cal-icon {
+  font-size: 15px;
+  opacity: 0.6;
+}
+
+/* ===== 遮罩 ===== */
+.dp-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+}
+
+/* ===== 底部浮层面板 ===== */
+/* 用 wx:if 控制显隐，入场用 animation 实现滑入效果 */
+@keyframes dp-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.dp-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background: #ffffff;
+  border-radius: 16px 16px 0 0;
+  transform: translateY(0);
+  animation: dp-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
+  /* 底部安全区 */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 面板头部 */
+.dp-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dp-sheet-cancel {
+  font-size: 16px;
+  color: #6b7280;
+  padding: 4px 0;
+  min-width: 48px;
+}
+
+.dp-sheet-preview {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: 1px;
+}
+
+.dp-sheet-confirm {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  padding: 4px 0;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* picker-view 三列 */
+.dp-picker-view {
+  width: 100%;
+  height: 240px;
+}
+
+.dp-indicator {
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dp-col-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  font-size: 17px;
+  color: #1f2937;
+  line-height: 48px;
+}
+
+.dp-wrap {
+  width: 100%;
+}
+
+/* ===== 触发行 ===== */
+.dp-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  transition: border-color 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.dp-trigger--open {
+  border-color: var(--color-primary, #3b82f6);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.dp-trigger-value {
+  font-size: 15px;
+  color: #1f2937;
+  flex: 1;
+}
+
+.dp-trigger-placeholder {
+  color: #9ca3af;
+}
+
+.dp-trigger-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dp-clear {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.dp-arrow {
+  font-size: 18px;
+  color: #9ca3af;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.25s ease;
+  transform-origin: center 60%;
+}
+
+.dp-arrow--up {
+  transform: rotate(180deg);
+}
+
+/* ===== 展开面板 ===== */
+.dp-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  background: #ffffff;
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-top: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.dp-panel--open {
+  max-height: 340px;
+  opacity: 1;
+}
+
+/* 面板头部：预览 + 确定按钮 */
+.dp-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dp-preview {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+}
+
+.dp-confirm-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-primary, #3b82f6);
+  padding: 5px 16px;
+  border-radius: 999px;
+}
+
+/* ===== picker-view ===== */
+.dp-picker-view {
+  width: 100%;
+  height: 220px;
+}
+
+/* 每个滚轮列的选中指示器 */
+.dp-indicator {
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* 每个选项 */
+.dp-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  font-size: 16px;
+  color: #374151;
+  line-height: 44px;
+}

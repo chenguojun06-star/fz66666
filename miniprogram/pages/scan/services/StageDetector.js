@@ -275,6 +275,15 @@ class StageDetector {
     if (remainingProcesses.length > 0) {
       const nextProcess = remainingProcesses[0];
       const doneCount = countableProcesses.length - remainingProcesses.length;
+
+      // 🔧 修复：quality 类型工序需要自动推断子阶段（receive/inspect/confirm）
+      // 后端 QualityScanExecutor 依赖 qualityStage 参数决定处理逻辑：
+      //   未传或空 → 默认 confirm → 因为没有 quality_receive 记录，直接报 400 "请先领取再确认"
+      let qualityStage = '';
+      if (nextProcess.scanType === 'quality') {
+        qualityStage = await this._inferQualityStage(orderNo, scanHistory);
+      }
+
       return {
         processName: nextProcess.processName,
         progressStage: nextProcess.progressStage || nextProcess.processName,
@@ -286,6 +295,8 @@ class StageDetector {
         isDuplicate: false,
         quantity: accurateQuantity,
         unitPrice: Number(nextProcess.price || 0),
+        // 质检子阶段（仅 quality 类型工序有值）
+        qualityStage,
         // 🆕 携带已扫工序信息，供工序选择器过滤
         scannedProcessNames: [...scannedProcessNames],
         allBundleProcesses: countableProcesses,
@@ -357,6 +368,47 @@ class StageDetector {
 
     // 查询失败或无数据，使用备用值
     return fallbackQuantity || 10; // 默认10件
+  }
+
+  /**
+   * 根据质检扫码历史推断当前应执行的质检子阶段
+   *
+   * 质检三步骤：receive（领取）→ inspect（验收）→ confirm（确认入库）
+   * 通过查询 processCode 字段判断已完成到哪一步
+   *
+   * @private
+   * @param {string} orderNo - 订单号
+   * @param {Array} scanHistory - 当前菲号扫码历史（已过滤的）
+   * @returns {Promise<string>} 'receive' | 'inspect' | 'confirm'
+   */
+  async _inferQualityStage(orderNo, scanHistory) {
+    try {
+      // 从已有扫码历史里查找 quality 子阶段记录
+      // processCode 存储为 'quality_receive' / 'quality_inspect'
+      const qualityRecords = scanHistory.filter(r => {
+        const scanType = (r.scanType || '').toLowerCase();
+        return scanType === 'quality';
+      });
+
+      const hasScanCode = (code) => qualityRecords.some(r =>
+        r.processCode === code || r.progressStage === code
+      );
+
+      const hasReceive = hasScanCode('quality_receive');
+      const hasInspect = hasScanCode('quality_inspect');
+
+      // 根据已完成阶段决定下一步
+      if (!hasReceive) {
+        return 'receive';   // 第一步：领取
+      }
+      if (!hasInspect) {
+        return 'inspect';   // 第二步：验收
+      }
+      return 'confirm';     // 第三步：确认入库
+    } catch (e) {
+      console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
+      return 'receive';
+    }
   }
 
   /**

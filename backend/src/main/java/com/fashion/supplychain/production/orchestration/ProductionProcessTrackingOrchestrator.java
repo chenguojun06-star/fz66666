@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.exception.BusinessException;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -359,16 +360,19 @@ public class ProductionProcessTrackingOrchestrator {
             throw new BusinessException("该记录已结算，不能重置");
         }
 
-        // 重置状态
-        tracking.setScanStatus("reset");
-        tracking.setScanTime(null);
-        tracking.setScanRecordId(null);
-        tracking.setOperatorId(null);
-        tracking.setOperatorName(null);
-        tracking.setSettlementAmount(null);
-        tracking.setUpdater(UserContext.username() != null ? UserContext.username() : "system");
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL（updateById 默认跳过 null 字段）
+        LambdaUpdateWrapper<ProductionProcessTracking> resetUw = new LambdaUpdateWrapper<>();
+        resetUw.eq(ProductionProcessTracking::getId, tracking.getId())
+               .set(ProductionProcessTracking::getScanStatus, "reset")
+               .set(ProductionProcessTracking::getScanTime, null)
+               .set(ProductionProcessTracking::getScanRecordId, null)
+               .set(ProductionProcessTracking::getOperatorId, null)
+               .set(ProductionProcessTracking::getOperatorName, null)
+               .set(ProductionProcessTracking::getSettlementAmount, null)
+               .set(ProductionProcessTracking::getUpdater,
+                       UserContext.username() != null ? UserContext.username() : "system");
 
-        boolean success = trackingService.updateById(tracking);
+        boolean success = trackingService.update(resetUw);
 
         log.info("管理员重置扫码记录：ID={}, 菲号={}, 工序={}, 原操作人={}, 原因={}",
                 trackingId, tracking.getBundleNo(), tracking.getProcessName(),

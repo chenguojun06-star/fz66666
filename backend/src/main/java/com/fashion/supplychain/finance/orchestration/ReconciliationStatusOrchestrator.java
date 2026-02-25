@@ -1,5 +1,6 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
@@ -290,7 +291,24 @@ public class ReconciliationStatusOrchestrator {
                     mr.setReReviewAt(now);
                     mr.setReReviewReason(reason);
                 }
-                boolean ok = materialReconciliationService.updateById(mr);
+                // ⚠️ 用 LambdaUpdateWrapper 确保时间戳字段真正清空
+                LambdaUpdateWrapper<MaterialReconciliation> mrUw = new LambdaUpdateWrapper<>();
+                mrUw.eq(MaterialReconciliation::getId, mr.getId())
+                    .set(MaterialReconciliation::getStatus, mr.getStatus())
+                    .set(MaterialReconciliation::getUpdateTime, mr.getUpdateTime())
+                    .set(MaterialReconciliation::getRemark, mr.getRemark())
+                    .set(MaterialReconciliation::getUpdateBy, mr.getUpdateBy())
+                    .set(MaterialReconciliation::getCreateBy, mr.getCreateBy());
+                if ("verified".equals(from)) {
+                    mrUw.set(MaterialReconciliation::getVerifiedAt, null);
+                } else if ("approved".equals(from)) {
+                    mrUw.set(MaterialReconciliation::getApprovedAt, null);
+                } else if ("paid".equals(from)) {
+                    mrUw.set(MaterialReconciliation::getPaidAt, null)
+                        .set(MaterialReconciliation::getReReviewAt, now)
+                        .set(MaterialReconciliation::getReReviewReason, reason);
+                }
+                boolean ok = materialReconciliationService.update(mrUw);
                 if (!ok) {
                     throw new IllegalStateException("退回失败");
                 }
@@ -340,7 +358,24 @@ public class ReconciliationStatusOrchestrator {
                     sr.setReReviewAt(now);
                     sr.setReReviewReason(reason);
                 }
-                boolean ok = shipmentReconciliationService.updateById(sr);
+                // ⚠️ 用 LambdaUpdateWrapper 确保时间戳字段真正清空
+                LambdaUpdateWrapper<ShipmentReconciliation> srUw = new LambdaUpdateWrapper<>();
+                srUw.eq(ShipmentReconciliation::getId, sr.getId())
+                    .set(ShipmentReconciliation::getStatus, sr.getStatus())
+                    .set(ShipmentReconciliation::getUpdateTime, sr.getUpdateTime())
+                    .set(ShipmentReconciliation::getRemark, sr.getRemark())
+                    .set(ShipmentReconciliation::getUpdateBy, sr.getUpdateBy())
+                    .set(ShipmentReconciliation::getCreateBy, sr.getCreateBy());
+                if ("verified".equals(from)) {
+                    srUw.set(ShipmentReconciliation::getVerifiedAt, null);
+                } else if ("approved".equals(from)) {
+                    srUw.set(ShipmentReconciliation::getApprovedAt, null);
+                } else if ("paid".equals(from)) {
+                    srUw.set(ShipmentReconciliation::getPaidAt, null)
+                        .set(ShipmentReconciliation::getReReviewAt, now)
+                        .set(ShipmentReconciliation::getReReviewReason, reason);
+                }
+                boolean ok = shipmentReconciliationService.update(srUw);
                 if (!ok) {
                     throw new IllegalStateException("退回失败");
                 }

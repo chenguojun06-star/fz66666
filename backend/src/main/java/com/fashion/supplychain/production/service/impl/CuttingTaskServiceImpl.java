@@ -557,13 +557,16 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         LocalDateTime now = LocalDateTime.now();
-        task.setStatus("pending");
-        task.setReceiverId(null);
-        task.setReceiverName(null);
-        task.setReceivedTime(null);
-        task.setBundledTime(null);
-        task.setUpdateTime(now);
-        return this.updateById(task);
+        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL（updateById 默认跳过 null 字段）
+        LambdaUpdateWrapper<CuttingTask> cuttingUw = new LambdaUpdateWrapper<>();
+        cuttingUw.eq(CuttingTask::getId, task.getId())
+                 .set(CuttingTask::getStatus, "pending")
+                 .set(CuttingTask::getReceiverId, null)
+                 .set(CuttingTask::getReceiverName, null)
+                 .set(CuttingTask::getReceivedTime, null)
+                 .set(CuttingTask::getBundledTime, null)
+                 .set(CuttingTask::getUpdateTime, now);
+        return this.update(cuttingUw);
     }
 
     @Override

@@ -52,6 +52,7 @@
   padding: 40rpx;
   max-height: 800rpx;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .order-info {

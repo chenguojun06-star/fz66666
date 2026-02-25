@@ -14,7 +14,7 @@ page {
   border-bottom: none;
 }
 
-.result-item:active {
+.result-item-hover {
   background: rgba(224, 242, 254, 0.3);
 }
 
@@ -105,7 +105,7 @@ page {
   justify-content: center;
   z-index: 999;
 }
-.reminder-btn:active {
+.reminder-btn-hover {
   background: rgba(224, 242, 254, 0.8);
 }
 
@@ -176,13 +176,14 @@ page {
   color: var(--color-text-secondary);
   font-size: var(--font-size-xl); /* 一级标题/图标 */
 }
-.reminder-panel-close:active {
+.reminder-panel-close-hover {
   background: rgba(224, 242, 254, 0.8);
 }
 
 .reminder-panel-content {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 12px;
 }
 
@@ -200,7 +201,7 @@ page {
   padding: 12px;
   margin-bottom: 10px;
 }
-.reminder-item:active {
+.reminder-item-hover {
   background: rgba(224, 242, 254, 0.8);
 }
 
@@ -252,7 +253,7 @@ page {
   margin-bottom: 8px;
 }
 
-.btn-secondary:active {
+.btn-secondary-hover {
   background: rgba(224, 242, 254, 0.8); /* 很浅的雾蓝色 */
 }
 
@@ -332,7 +333,7 @@ page {
   background: var(--color-bg-card);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-head {
@@ -415,7 +416,7 @@ page {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
 }
 
 .home-stat-item {
@@ -530,9 +531,9 @@ page {
 }
 
 .home-entry {
-  border: 1px solid rgba(224, 242, 254, 0.9);
-  background: rgba(224, 242, 254, 0.8);
-  color: var(--color-text-primary);
+  border: none;
+  background: var(--gradient-action);
+  color: #ffffff;
   border-radius: var(--radius-full);
   padding: 3px 8px;
   text-align: center;
@@ -542,11 +543,11 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.30);
 }
 
-.home-entry:active {
-  background: rgba(186, 230, 253, 0.9);
+.home-entry-hover {
+  opacity: 0.85;
 }
 
 .home-activity {

@@ -79,16 +79,21 @@ public class CuttingTaskController {
             task.setRemarks(String.valueOf(payload.get("remarks")));
         }
 
+        // ⚠️ 用 LambdaUpdateWrapper 显式处理，确保 null 值能真正写入数据库
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<com.fashion.supplychain.production.entity.CuttingTask> qeUw =
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
+        qeUw.eq(com.fashion.supplychain.production.entity.CuttingTask::getId, task.getId());
+        if (payload.containsKey("remarks")) {
+            qeUw.set(com.fashion.supplychain.production.entity.CuttingTask::getRemarks,
+                    String.valueOf(payload.get("remarks")));
+        }
         if (payload.containsKey("expectedShipDate")) {
             Object val = payload.get("expectedShipDate");
-            if (val != null && !String.valueOf(val).trim().isEmpty()) {
-                task.setExpectedShipDate(java.time.LocalDate.parse(String.valueOf(val)));
-            } else {
-                task.setExpectedShipDate(null);
-            }
+            java.time.LocalDate dateVal = (val != null && !String.valueOf(val).trim().isEmpty())
+                    ? java.time.LocalDate.parse(String.valueOf(val)) : null;
+            qeUw.set(com.fashion.supplychain.production.entity.CuttingTask::getExpectedShipDate, dateVal);
         }
-
-        boolean success = cuttingTaskService.updateById(task);
+        boolean success = cuttingTaskService.update(qeUw);
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 

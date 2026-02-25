@@ -6,7 +6,7 @@
     <view class="title-row">
       <view class="title-left-group">
         <view class="title">我的</view>
-        <view class="logout-btn" bindtap="onLogout">
+        <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
           <text class="logout-text">退出</text>
         </view>
       </view>
@@ -126,7 +126,7 @@
         <text class="user-info-label">当月工资</text>
         <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
       </view>
-      <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" bindtap="refreshAll">
+      <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" hover-class="user-info-item-hover" hover-stay-time="100" bindtap="refreshAll">
         <text class="user-info-label">刷新</text>
       </view>
     </view>

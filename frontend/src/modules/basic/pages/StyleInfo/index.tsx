@@ -183,7 +183,7 @@ const StyleInfoDetailPage: React.FC = () => {
   );
   const [productionSaving, setProductionSaving] = useState(false);
   const [productionRollbackSaving, setProductionRollbackSaving] = useState(false);
-  const productionReqLocked = false;
+  const _productionReqLocked = false;
   const productionReqEditable = true;
 
   // ===== 5. 辅助函数 =====

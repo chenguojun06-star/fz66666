@@ -105,8 +105,8 @@
         </view>
       </view>
       <view class="modal-footer">
-        <view class="modal-btn cancel" bindtap="cancelApprove">取消</view>
-        <view class="modal-btn confirm" bindtap="confirmApprove">批准并分配角色</view>
+        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelApprove">取消</view>
+        <view class="modal-btn confirm" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmApprove">批准并分配角色</view>
       </view>
     </view>
   </view>
@@ -137,8 +137,8 @@
         </view>
       </view>
       <view class="modal-footer">
-        <view class="modal-btn cancel" bindtap="cancelReject">取消</view>
-        <view class="modal-btn confirm danger" bindtap="confirmReject">确定拒绝</view>
+        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelReject">取消</view>
+        <view class="modal-btn confirm danger" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmReject">确定拒绝</view>
       </view>
     </view>
   </view>

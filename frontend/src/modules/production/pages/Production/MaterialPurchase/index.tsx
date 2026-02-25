@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message as antdMessage, Segmented, Tooltip, Tabs, Modal, Collapse } from 'antd';
-import { DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Card, Input, Select, Form, InputNumber, message as antdMessage, Segmented, Tooltip, Tabs, Modal } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
@@ -10,7 +10,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams, MaterialDatabase, MaterialDatabaseQueryParams, ProductionOrder } from '@/types/production';
 import api, { parseProductionOrderLines, unwrapApiData, useProductionOrderFrozenCache } from '@/utils/api';
-import { getMaterialTypeCategory, getMaterialTypeSortKey, normalizeMaterialType, getMaterialTypeLabel } from '@/utils/materialType';
+import { getMaterialTypeSortKey, normalizeMaterialType, getMaterialTypeLabel } from '@/utils/materialType';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
@@ -46,14 +46,14 @@ const MaterialPurchase: React.FC = () => {
   const [messageApi, contextHolder] = antdMessage.useMessage();
   const message = messageApi;
   const location = useLocation();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user } = useAuth();
   const { isMobile, modalWidth } = useViewport();
 
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // 页签切换状态
-  const [activeTabKey, setActiveTabKey] = useState<MaterialPurchaseTabKey>(() => {
+  const [activeTabKey, _setActiveTabKey] = useState<MaterialPurchaseTabKey>(() => {
     if (typeof window === 'undefined') return 'purchase';
     try {
       const cached = sessionStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
@@ -156,10 +156,10 @@ const MaterialPurchase: React.FC = () => {
 
   // 辅料数据库相关状态
   const materialDatabaseModal = useModal<MaterialDatabaseModalData>();
-  const [materialDatabaseList, setMaterialDatabaseList] = useState<MaterialDatabase[]>([]);
-  const [materialDatabaseLoading, setMaterialDatabaseLoading] = useState(false);
-  const [materialDatabaseTotal, setMaterialDatabaseTotal] = useState(0);
-  const [materialDatabaseQueryParams, setMaterialDatabaseQueryParams] = useState<MaterialDatabaseQueryParams>(() => {
+  const [_materialDatabaseList, setMaterialDatabaseList] = useState<MaterialDatabase[]>([]);
+  const [_materialDatabaseLoading, setMaterialDatabaseLoading] = useState(false);
+  const [_materialDatabaseTotal, setMaterialDatabaseTotal] = useState(0);
+  const [materialDatabaseQueryParams, _setMaterialDatabaseQueryParams] = useState<MaterialDatabaseQueryParams>(() => {
     const base: MaterialDatabaseQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
     if (typeof window === 'undefined') return base;
     try {
@@ -180,7 +180,7 @@ const MaterialPurchase: React.FC = () => {
     }
   });
   const [materialDatabaseForm] = Form.useForm();
-  const [materialDatabaseImageFiles, setMaterialDatabaseImageFiles] = useState<UploadFile[]>([]);
+  const [_materialDatabaseImageFiles, setMaterialDatabaseImageFiles] = useState<UploadFile[]>([]);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -508,7 +508,7 @@ const MaterialPurchase: React.FC = () => {
     }
   };
 
-  const ensureOrderExistCache = useCallback(async (orderNos: string[]) => {
+  const _ensureOrderExistCache = useCallback(async (orderNos: string[]) => {
     const cache = orderExistCacheRef.current;
     const pending = orderNos.filter((no) => !cache.has(no));
     if (!pending.length) return;
@@ -691,7 +691,7 @@ const MaterialPurchase: React.FC = () => {
   }, [location.search]);
 
   // 面辅料数据库 helper
-  const openMaterialDatabaseDialog = (mode: 'create' | 'edit', material?: MaterialDatabase) => {
+  const _openMaterialDatabaseDialog = (mode: 'create' | 'edit', material?: MaterialDatabase) => {
     if (mode === 'create') {
       const formattedNow = toLocalDateTimeInputValue();
       materialDatabaseForm.setFieldsValue({
@@ -777,7 +777,7 @@ const MaterialPurchase: React.FC = () => {
     quickEditModal.open(record);
   };
 
-  const openPurchaseSheet = (autoPrint: boolean) => {
+  const openPurchaseSheet = (_autoPrint: boolean) => {
     const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs);
     const success = safePrint(html, '采购单');
     if (!success) {
@@ -910,7 +910,7 @@ const MaterialPurchase: React.FC = () => {
       if (mergeableCount > 0) {
         // 2. 有可合并的任务，弹出确认提示
         const materialInfo = String(record?.materialName || '').trim();
-        const mergeDetail = mergeableItems.map((item) => {
+        const _mergeDetail = mergeableItems.map((item) => {
           const orderLabel = item.orderNo ? `订单${item.orderNo}` : (item.styleNo ? `款号${item.styleNo}` : '');
           return `${orderLabel} ${item.materialName || ''} ${item.purchaseQuantity || 0}${item.unit || ''}`;
         }).join('\n');

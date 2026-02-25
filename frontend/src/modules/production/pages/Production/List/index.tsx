@@ -43,7 +43,7 @@ import {
   useProgressTracking,
   useProductionStats,
 } from './hooks';
-import { safeString, getStatusConfig, mainStages, matchStageKey, formatCompletionTime } from './utils';
+import { safeString, getStatusConfig, mainStages, formatCompletionTime } from './utils';
 
 const { Option } = Select;
 
@@ -132,10 +132,10 @@ const ProductionList: React.FC = () => {
   const {
     processDetailVisible, processDetailRecord, processDetailType,
     processDetailActiveTab, setProcessDetailActiveTab,
-    procurementStatus, processStatus, processDetailNodeOperations,
+    procurementStatus, processStatus, processDetailNodeOperations: _processDetailNodeOperations,
     openProcessDetail, closeProcessDetail, syncProcessFromTemplate, saveDelegation,
     childProcessesByStage, activeStageKeys,
-    factories, factoriesLoading, delegationData, setDelegationData,
+    factories: _factories, factoriesLoading: _factoriesLoading, delegationData, setDelegationData,
   } = useProcessDetail({ message, fetchProductionList });
 
   const {

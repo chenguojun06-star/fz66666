@@ -6,7 +6,7 @@ import BatchSelectionPanel from './BatchSelectionPanel';
 import UnqualifiedUpload from './UnqualifiedUpload';
 import { useWarehousingForm } from '../hooks/useWarehousingForm';
 
-const { Option } = Select;
+const { Option: _Option } = Select;
 
 interface WarehousingFormFieldsProps {
   hook: ReturnType<typeof useWarehousingForm>;

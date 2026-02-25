@@ -10,7 +10,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
 import { App, Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
 import type { UploadFile } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, UploadOutlined, FileSearchOutlined, BankOutlined } from '@ant-design/icons';
+import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation } from 'react-router-dom';

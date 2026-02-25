@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { App, Button, Input, InputNumber, Modal, Space, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { SaveOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+
 import api, { toNumberSafe } from '@/utils/api';
 import StyleStageControlBar from './StyleStageControlBar';
 
