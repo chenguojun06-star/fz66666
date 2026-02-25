@@ -105,7 +105,7 @@ public class WarehouseScanExecutor {
             validateBundleWarehousingQuantity(bundle, qty);
             // ★ 生产前置校验：该菲号必须有生产扫码记录（含包装工序）才能入库
             validateProductionPrerequisite(order.getId(), bundle.getId());
-            // ★ 质检前置校验：必须有 quality_confirm 记录才能入库
+            // ★ 质检前置校验：必须有质检确认记录（quality_receive + confirmTime 不为空）才能入库
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
         }
 
@@ -395,8 +395,12 @@ public class WarehouseScanExecutor {
     }
 
     /**
-     * 质检前置校验：入库前必须已录入质检结果（quality_confirm 记录）
+     * 质检前置校验：入库前必须已录入质检结果（quality_receive 记录 + confirmTime 不为空）
      * 业务规则：质检 → 包装 → 入库，质检结果是必经步骤
+     *
+     * 🔧 修复(2026-02-25)：handleConfirm 只更新现有 quality_receive 记录的 confirmTime，
+     * 不创建 quality_confirm 记录。改为查询 quality_receive + confirmTime IS NOT NULL，
+     * 与小程序 StageDetector 的修复保持一致。
      */
     private void validateQualityConfirmBeforeWarehousing(String orderId, String bundleId) {
         if (!hasText(orderId) || !hasText(bundleId)) {
@@ -407,8 +411,9 @@ public class WarehouseScanExecutor {
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanType, "quality")
-                    .eq(ScanRecord::getProcessCode, "quality_confirm")
-                    .eq(ScanRecord::getScanResult, "success"));
+                    .eq(ScanRecord::getProcessCode, "quality_receive")
+                    .eq(ScanRecord::getScanResult, "success")
+                    .isNotNull(ScanRecord::getConfirmTime));
             if (confirmCount <= 0) {
                 throw new IllegalStateException("温馨提示：该菲号还未录入质检结果哦～请先完成质检后再入库");
             }
@@ -420,16 +425,20 @@ public class WarehouseScanExecutor {
     }
 
     /**
-     * 次品返修入库：从 quality_confirm 的 remark 中读取次品件数
+     * 次品返修入库：从质检确认记录的 remark 中读取次品件数
      * remark 格式：unqualified|[category]|[remark]|defectQty=N
+     *
+     * 🔧 修复(2026-02-25)：quality_confirm processCode 从未被写入，
+     * 改为查询 quality_receive + confirmTime IS NOT NULL。
      */
     private int extractDefectQtyFromBundle(String orderId, String bundleId) {
         try {
             ScanRecord confirmRecord = scanRecordService.lambdaQuery()
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getProcessCode, "quality_confirm")
+                    .eq(ScanRecord::getProcessCode, "quality_receive")
                     .eq(ScanRecord::getScanResult, "success")
+                    .isNotNull(ScanRecord::getConfirmTime)
                     .last("LIMIT 1")
                     .one();
             if (confirmRecord == null) return 0;

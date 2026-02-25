@@ -289,10 +289,14 @@ class StageDetector {
     let precomputedQualityStage = '';
     let qualityIsFullyDone = false;
     if (qualityProcess) {
-      const hasAnyQualityScan = scanHistory.some(r => r.processName === qualityProcess.processName);
+      // 🔧 修复：用 scanType 匹配而非 processName，避免 "质检领取" !== "质检" 的问题
+      const hasAnyQualityScan = scanHistory.some(r => (r.scanType || '').toLowerCase() === 'quality');
       if (hasAnyQualityScan) {
         precomputedQualityStage = await this._inferQualityStage(orderNo, scanHistory);
         qualityIsFullyDone = precomputedQualityStage === 'done';
+      } else {
+        // 无任何质检记录，默认需要先领取
+        precomputedQualityStage = 'receive';
       }
     }
 
@@ -324,8 +328,8 @@ class StageDetector {
       // 进入此分支时 qualityIsFullyDone 必然为 false，qualityStage 只会是 receive/confirm
       let qualityStage = '';
       if (nextProcess.scanType === 'quality') {
-        qualityStage = precomputedQualityStage || 'confirm';
-        if (!qualityStage) qualityStage = 'confirm';
+        qualityStage = precomputedQualityStage || 'receive';
+        if (!qualityStage) qualityStage = 'receive';
         // 此分支理论上不会出现 'done'（qualityIsFullyDone=true 时质检已排出 remainingProcesses）
         if (qualityStage === 'done') {
           const skipNames = new Set([...scannedProcessNames, nextProcess.processName]);
@@ -353,8 +357,9 @@ class StageDetector {
             const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
             if (!isWarehoused) {
               // 检测质检结果是否为次品 → 次品返修入库模式
+              // 🔧 修复：确认完成用 confirmTime 判断，不再查 processCode='quality_confirm'
               const confirmRec = scanHistory.find(r =>
-                r.processCode === 'quality_confirm' && r.scanResult === 'success'
+                r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
               );
               const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
               const defectQty = isUnqualified
@@ -418,9 +423,9 @@ class StageDetector {
     if (_warehouseProcess) {
       const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
       if (!isWarehoused) {
-        // 检测质检次品返修入库模式
+        // 🔧 修复：确认完成用 confirmTime 判断，不再查 processCode='quality_confirm'
         const confirmRec = scanHistory.find(r =>
-          r.processCode === 'quality_confirm' && r.scanResult === 'success'
+          r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
         );
         const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
         const defectQty = isUnqualified
@@ -528,26 +533,29 @@ class StageDetector {
   async _inferQualityStage(orderNo, scanHistory) {
     try {
       // 从已有扫码历史里查找 quality 子阶段记录
-      // processCode 存储为 'quality_receive' / 'quality_confirm'
       const qualityRecords = scanHistory.filter(r => {
         const scanType = (r.scanType || '').toLowerCase();
         return scanType === 'quality';
       });
 
-      const hasScanCode = (code) => qualityRecords.some(r =>
-        r.processCode === code || r.progressStage === code
+      // 查找 quality_receive 记录（领取阶段）
+      const receiveRecord = qualityRecords.find(r =>
+        r.processCode === 'quality_receive'
       );
 
-      const hasConfirm = hasScanCode('quality_confirm');
-
-      // 质检只有一步：扫码/点处理 → 录入结果 → 提交
-      if (!hasConfirm) {
-        return 'confirm';   // 直接录入结果
+      if (!receiveRecord) {
+        return 'receive';   // 无领取记录 → 需要先领取
       }
-      return 'done';        // 已完成
+
+      // 检查 confirmTime 是否已设置（后端 handleConfirm 会写入此字段）
+      if (receiveRecord.confirmTime) {
+        return 'done';      // 已完成质检确认
+      }
+
+      return 'confirm';     // 已领取未确认 → 需要录入结果
     } catch (e) {
-      console.warn('[StageDetector] 推断质检阶段失败，默认 confirm:', e);
-      return 'confirm';
+      console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
+      return 'receive';
     }
   }
 

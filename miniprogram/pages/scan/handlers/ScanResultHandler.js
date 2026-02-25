@@ -88,6 +88,11 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.parsedData': parsedData,
     'scanResultConfirm.isDefectiveReentry': !!(stageResult && stageResult.isDefectiveReentry),
     'scanResultConfirm.defectQty': (stageResult && stageResult.defectQty) || 0,
+    // 新增：领取/开始时间与录入结果/完成时间
+    'scanResultConfirm.receiveTime': scanData && scanData.receiveTime ? scanData.receiveTime : '',
+    'scanResultConfirm.confirmTime': scanData && scanData.confirmTime ? scanData.confirmTime : '',
+    // 一行显示：开始时间 | 结束时间
+    'scanResultConfirm.timeDisplay': `${scanData && scanData.receiveTime ? scanData.receiveTime : '—'} | ${scanData && scanData.confirmTime ? scanData.confirmTime : '—'}`,
   });
 }
 
@@ -133,6 +138,12 @@ function onProcessScrollSelect(ctx, e) {
     'scanResultConfirm.scanType': option.scanType,
     'scanResultConfirm.unitPrice': option.unitPrice || 0,
   });
+  // 🔧 修复：切换到 quality 工序时同步 qualityStage
+  if (option.scanType === 'quality') {
+    const existingScanData = ctx.data.scanResultConfirm.scanData || {};
+    existingScanData.qualityStage = existingScanData.qualityStage || 'receive';
+    ctx.setData({ 'scanResultConfirm.scanData': existingScanData });
+  }
 }
 
 /**

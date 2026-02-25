@@ -131,9 +131,10 @@ public class QualityScanExecutor {
             validateInspectAfterReceive(order.getId(), bundle.getId(), operatorId, operatorName);
         }
 
-        // 创建新记录
+        // 创建新记录（领取时写 receiveTime）
         ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
                                           qty, stageCode, stageName, colorResolver, sizeResolver);
+        sr.setReceiveTime(LocalDateTime.now());
         scanRecordService.saveScanRecord(sr);
 
         Map<String, Object> result = new HashMap<>();
@@ -154,28 +155,30 @@ public class QualityScanExecutor {
                                               ProductionOrder order, CuttingBundle bundle, int qty,
                                               java.util.function.Function<String, String> colorResolver,
                                               java.util.function.Function<String, String> sizeResolver) {
-        // 幂等：已录入则直接返回
-        ScanRecord existingConfirm = findQualityStageRecord(order.getId(), bundle.getId(), "quality_confirm");
-        if (existingConfirm != null && hasText(existingConfirm.getId())) {
+        // 查找领取记录
+        ScanRecord existed = findQualityStageRecord(order.getId(), bundle.getId(), "quality_receive");
+        if (existed == null || !hasText(existed.getId())) {
+            throw new IllegalStateException("请先领取质检任务");
+        }
+        // 已录入则直接返回
+        if (existed.getConfirmTime() != null) {
             Map<String, Object> dup = new HashMap<>();
             dup.put("success", true);
             dup.put("duplicate", true);
             dup.put("message", "质检结果已录入，请进行包装工序");
-            dup.put("scanRecord", existingConfirm);
+            dup.put("scanRecord", existed);
             return dup;
         }
 
         String qualityResult = parseQualityResultFromParams(params);
         boolean isUnqualified = "unqualified".equalsIgnoreCase(qualityResult);
 
-        // 构建质检确认 ScanRecord（只记录结果，不创建 ProductWarehousing）
-        ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
-                                          qty, "quality_confirm", "质检确认", colorResolver, sizeResolver);
+        // 更新已有记录，写 confirmTime
+        existed.setConfirmTime(LocalDateTime.now());
         // 将质检结果存入 remark；不合格时格式：unqualified|[category]|[remark]|defectQty=N
         String defectCategory = TextUtils.safeText(params.get("defectCategory"));
         String defectRemark = TextUtils.safeText(params.get("defectRemark"));
         if (isUnqualified) {
-            // 读取小程序传入的次品件数，未填则默认等于全批
             Integer defectQtyParam = NumberUtils.toInt(params.get("defectQuantity"));
             int defectQty = (defectQtyParam != null && defectQtyParam > 0) ? defectQtyParam : qty;
             String remarkBase = hasText(defectCategory)
@@ -183,14 +186,12 @@ public class QualityScanExecutor {
                       + (hasText(defectRemark) ? "|" + defectRemark : "")
                       + "|defectQty=" + defectQty
                     : "unqualified|defectQty=" + defectQty;
-            sr.setRemark(remarkBase);
+            existed.setRemark(remarkBase);
         } else {
-            sr.setRemark(qualityResult);
+            existed.setRemark(qualityResult);
         }
 
-        // 不合格时的图片等附加信息（单独处理，不影响 remark 格式）
-
-        scanRecordService.saveScanRecord(sr);
+        scanRecordService.updateById(existed);
 
         // 更新工序跟踪记录：质检确认时将 tracking 表中对应子工序状态置为已扫码
         // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
@@ -198,7 +199,7 @@ public class QualityScanExecutor {
             String processName = TextUtils.safeText(params.get("processName"));
             if (!hasText(processName)) processName = "质检";
             processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(), processName, operatorId, operatorName, sr.getId());
+                bundle.getId(), processName, operatorId, operatorName, existed.getId());
             log.debug("质检工序跟踪已更新: bundleId={}, processName={}", bundle.getId(), processName);
         } catch (Exception e) {
             log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e);
@@ -207,7 +208,7 @@ public class QualityScanExecutor {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", isUnqualified ? "不合格已录入，请安排返修" : "质检合格，请进行包装工序");
-        result.put("scanRecord", sr);
+        result.put("scanRecord", existed);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
         return result;
@@ -517,7 +518,9 @@ public class QualityScanExecutor {
         sr.setQuantity(qty);
         sr.setProcessCode(stageCode);
         sr.setProgressStage(stageName);
-        sr.setProcessName(stageName);
+        // processName 统一用工序模板中的名称"质检"，而非 stageName("质检领取"/"质检确认")
+        // 这样小程序 _inferQualityStage 可以用 scanType=quality 匹配，processName 也一致
+        sr.setProcessName("质检");
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
         sr.setScanTime(LocalDateTime.now());

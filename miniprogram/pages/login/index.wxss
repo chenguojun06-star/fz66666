@@ -14,7 +14,7 @@ page {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 80rpx 48rpx 40rpx;
+  padding: 80rpx 48rpx calc(40rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow: hidden;
   background: #0b2d5c;

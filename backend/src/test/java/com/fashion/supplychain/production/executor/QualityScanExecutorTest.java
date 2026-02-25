@@ -180,11 +180,11 @@ class QualityScanExecutorTest {
         mockBundle.setProductionOrderId("order-001");
         when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
 
-        // Mock 领取记录存在；confirm 记录不存在（无重复）
+        // Mock 领取记录存在（handleConfirm 更新该记录的 confirmTime）
         ScanRecord receiveRecord = new ScanRecord();
         receiveRecord.setId("receive-001");
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-            .thenReturn(receiveRecord, null);
+            .thenReturn(receiveRecord);
 
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
@@ -201,9 +201,13 @@ class QualityScanExecutorTest {
         );
 
         // Then: handleConfirm 只录质检结果不入库（WarehouseScanExecutor 负责入库）
+        // handleConfirm 调用 updateById 更新现有 quality_receive 记录，而非 saveScanRecord
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"), "质检确认应返回 success=true");
-        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
+        verify(scanRecordService).updateById(argThat(record ->
+                record.getConfirmTime() != null &&
+                record.getRemark() != null && record.getRemark().startsWith("unqualified")
+        ));
     }
 
     @Test
@@ -220,11 +224,11 @@ class QualityScanExecutorTest {
         mockBundle.setProductionOrderId("order-001");
         when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
 
-        // Mock 领取记录存在；confirm 记录不存在（无重复）
+        // Mock 领取记录存在（handleConfirm 更新其 confirmTime）
         ScanRecord receiveRecord = new ScanRecord();
         receiveRecord.setId("receive-001");
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-            .thenReturn(receiveRecord, null);
+            .thenReturn(receiveRecord);
 
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
@@ -240,10 +244,13 @@ class QualityScanExecutorTest {
                 sizeResolver
         );
 
-        // Then: handleConfirm 只录质检结果，入库由 WarehouseScanExecutor 负责
+        // Then: handleConfirm 调用 updateById 更新现有 receive 记录（设置 confirmTime + remark）
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"), "应该返回success=true");
-        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
+        verify(scanRecordService).updateById(argThat(record ->
+                record.getConfirmTime() != null &&
+                "qualified".equals(record.getRemark())
+        ));
     }
 
     @Test
@@ -256,19 +263,21 @@ class QualityScanExecutorTest {
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         ScanRecord rcv = new ScanRecord(); rcv.setId("rcv-001");
-        // 第一次 getOne → receive 记录存在；第二次 → 无重复 confirm 记录
+        // handleConfirm 查找现有 quality_receive 记录并更新其 confirmTime
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-                .thenReturn(rcv, null);
+                .thenReturn(rcv);
 
         // When: 执行返修结果录入
         Map<String, Object> result = executor.execute(
                 baseParams, "req-repair-001", "op-001", "王五",
                 mockOrder, colorResolver, sizeResolver);
 
-        // Then: 只保存扫码记录，不调用入库相关方法
+        // Then: handleConfirm 调用 updateById 更新现有记录，不调用 saveScanRecord
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"), "返修结果录入应成功");
-        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
+        verify(scanRecordService).updateById(argThat(record ->
+                record.getConfirmTime() != null
+        ));
     }
 
     @Test
@@ -342,19 +351,21 @@ class QualityScanExecutorTest {
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         ScanRecord rcv = new ScanRecord(); rcv.setId("rcv-def");
-        // 第一次 getOne → receive 记录存在；第二次 → 无重复 confirm 记录
+        // handleConfirm 查找现有 quality_receive 记录并更新其 confirmTime
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-                .thenReturn(rcv, null);
+                .thenReturn(rcv);
 
         // When: 默认走 confirm 路径
         Map<String, Object> result = executor.execute(
                 baseParams, "req-default-001", "op-001", "王五",
                 mockOrder, colorResolver, sizeResolver);
 
-        // Then: 应进入 confirm 路径保存扫码记录（入库由 WarehouseScanExecutor 负责）
+        // Then: handleConfirm 调用 updateById 更新现有 receive 记录的 confirmTime
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"), "默认 confirm 路径应成功");
-        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
+        verify(scanRecordService).updateById(argThat(record ->
+                record.getConfirmTime() != null
+        ));
     }
 
     @Test

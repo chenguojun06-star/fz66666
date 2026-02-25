@@ -57,6 +57,17 @@ public class ScanRecord {
     private BigDecimal unitPrice;
 
     private BigDecimal totalAmount;
+        /**
+         * 领取/开始时间
+         */
+        @TableField("receive_time")
+        private LocalDateTime receiveTime;
+
+        /**
+         * 录入结果/完成时间
+         */
+        @TableField("confirm_time")
+        private LocalDateTime confirmTime;
 
     private String settlementStatus;
 

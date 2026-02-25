@@ -301,13 +301,29 @@ Page({
       }
     }
     setBaseUrl(apiBaseUrl);
-    this.setData({ envVersion, showDevFields, apiBaseUrl });
 
     // 正式/体验版：先静默尝试 openid 一键登录（已绑定则无需选公司）
-    const shouldAutoWechat = envVersion === 'trial' || envVersion === 'release';
-    if (shouldAutoWechat && !autoWechatTried) {
+    const shouldAutoWechat = (envVersion === 'trial' || envVersion === 'release') && !autoWechatTried;
+
+    // ✅ 延迟到初始渲染完成后再 setData，避免 FLOW_INITIAL_CREATION 冲突
+    await new Promise(resolve => {
+      if (typeof wx.nextTick === 'function') {
+        wx.nextTick(resolve);
+      } else {
+        setTimeout(resolve, 50);
+      }
+    });
+
+    // ✅ 合并 setData 调用，减少渲染次数
+    this.setData({
+      envVersion,
+      showDevFields,
+      apiBaseUrl,
+      wechatChecking: shouldAutoWechat,
+    });
+
+    if (shouldAutoWechat) {
       autoWechatTried = true;
-      this.setData({ wechatChecking: true });
       const loggedIn = await tryAutoWechatLogin();
       this.setData({ wechatChecking: false });
       if (loggedIn) return; // 登录成功，页面已跳转，无需继续

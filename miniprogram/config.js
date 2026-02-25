@@ -73,21 +73,22 @@ function getBaseUrl() {
         // 自动清理已过期的旧 IP 地址缓存
         // 如果 Storage 中的地址不是当前 DEFAULT_BASE_URL 且不是 FALLBACK，
         // 且是一个内网 IP 地址，则认为已过期，用 DEFAULT_BASE_URL 替换
-        if (v && v !== DEFAULT_BASE_URL && v !== FALLBACK_BASE_URL) {
-          // 1. Storage 里存的是占位符（未上线时曾写入）→ 清除，降级到 FALLBACK
+        if (v) {
+          // 1. Storage 里存的是占位符（未上线时曾写入）→ 清除，降级到默认云地址
           if (isPlaceholderUrl(v)) {
             try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
             return isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
           }
-          // 2. Storage 里存的是旧的内网 IP → 也清除，用当前地址替代
-          const isOldLanIp = /^https?:\/\/192\.168\.\d+\.\d+:\d+/i.test(v);
-          if (isOldLanIp) {
+          // 2. Storage 里存的是任意内网 IP（包括 FALLBACK_BASE_URL 本身）→ 替换为云地址
+          // 注意：不能用 v !== FALLBACK_BASE_URL 排除，否则旧 FALLBACK 被跳过、导致 ERR_ADDRESS_UNREACHABLE
+          const isAnyLanIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(:\d+)?(\/|$)/i.test(v);
+          if (isAnyLanIp) {
+            // 云端部署时，内网地址不可达，强制替换为云地址
             const fresh = isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
             try { wx.setStorageSync('api_base_url', fresh); } catch (_) { /* ignore */ }
             return fresh;
           }
-        }
-        if (v) {
+          // 3. 其他合法地址（如手动配置的云地址）直接使用
           return v;
         }
       }

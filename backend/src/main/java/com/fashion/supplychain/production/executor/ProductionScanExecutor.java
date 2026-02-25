@@ -211,7 +211,21 @@ public class ProductionScanExecutor {
                              : childProcessName;
 
         String color = colorResolver.apply(null);
+        // 🔧 修复(2026-02-25)：orchestrator 传入的 resolver 未携带 bundle/order 上下文，
+        // executor 内部已解析出 bundle 和 order，在此 fallback 确保 ORDER 模式也有颜色/尺码
+        if (!hasText(color) && bundle != null) {
+            color = TextUtils.safeText(bundle.getColor());
+        }
+        if (!hasText(color) && order != null) {
+            color = TextUtils.safeText(order.getColor());
+        }
         String size = sizeResolver.apply(null);
+        if (!hasText(size) && bundle != null) {
+            size = TextUtils.safeText(bundle.getSize());
+        }
+        if (!hasText(size) && order != null) {
+            size = TextUtils.safeText(order.getSize());
+        }
 
         // 尝试更新已有记录
         Map<String, Object> updateResult = tryUpdateExistingBundleScanRecord(
