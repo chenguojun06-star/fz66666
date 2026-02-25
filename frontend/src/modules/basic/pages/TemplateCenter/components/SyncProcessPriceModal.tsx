@@ -556,7 +556,6 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
               if (styleInputVal.trim() && !selectedStyleId) handleSelectStyle(styleInputVal.trim());
             }}
             allowClear
-            loading={styleNoLoading}
             disabled={isBusy}
           />
           {selectedStyleId && <Tag color="success">{data.length} 道工序</Tag>}

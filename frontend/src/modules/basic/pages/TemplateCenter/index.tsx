@@ -889,9 +889,7 @@ const TemplateCenter: React.FC = () => {
       {/* 按款号批量刷新工序进度单价 */}
       <SyncProcessPriceModal
         open={syncPriceOpen}
-        styleNoOptions={styleNoOptions}
         onCancel={() => setSyncPriceOpen(false)}
-        onSearch={fetchStyleNoOptions}
       />
     </Layout>
   );
