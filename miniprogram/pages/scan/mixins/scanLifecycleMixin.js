@@ -54,6 +54,8 @@ const scanLifecycleMixin = Behavior({
     await this.checkLoginStatus();
     // 延迟加载本地历史缓存，不阻塞首屏渲染（历史记录是次要内容）
     setTimeout(() => this.loadLocalHistory(), 80);
+    // 异步加载仓库选项（不阻塞页面显示）
+    this._loadWarehouseOptions();
   },
 
   /**
@@ -197,6 +199,29 @@ const scanLifecycleMixin = Behavior({
      */
     handleRemoteScanSuccess() {
       this.loadMyPanel(true);
+    },
+
+    /**
+     * 从字典API加载仓库选项，失败时保留默认值
+     * @returns {Promise<void>}
+     */
+    async _loadWarehouseOptions() {
+      try {
+        const res = await api.system.getDictList('warehouse_location');
+        const records = res?.data?.records || res?.data || [];
+        if (Array.isArray(records) && records.length > 0) {
+          const options = records
+            .filter(item => item.dictLabel)
+            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+            .map(item => item.dictLabel);
+          if (options.length > 0) {
+            this.setData({ warehouseOptions: options });
+          }
+        }
+      } catch (e) {
+        // 静默失败，保留默认 ['A仓', 'B仓']
+        console.warn('[scan] 加载仓库选项失败，使用默认值', e);
+      }
     },
   },
 });

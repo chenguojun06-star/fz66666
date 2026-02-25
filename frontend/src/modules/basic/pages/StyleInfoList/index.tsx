@@ -60,9 +60,8 @@ const StyleInfoListPage: React.FC = () => {
   const [maintenanceRecord, setMaintenanceRecord] = useState<StyleInfo | null>(null);
   const [maintenanceReason, setMaintenanceReason] = useState('');
 
-  // 字典选项
+  // 字典选项（品类，用于表格展示代码转标签）
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
-  const [_seasonOptions, _setSeasonOptions] = useState<{ label: string; value: string }[]>([]);
 
   // 初始化加载
   useEffect(() => {
@@ -76,12 +75,24 @@ const StyleInfoListPage: React.FC = () => {
     fetchList();
   }, [queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
 
-  // 加载品类选项（硬编码，不依赖API）
-  const loadCategoryOptions = () => {
+  // 加载品类选项（从字典API动态加载，用于表格代码转标签）
+  const loadCategoryOptions = async () => {
+    try {
+      const res = await api.get<{ code: number; data: { records?: { dictCode: string; dictLabel: string }[] } }>(        '/system/dict/list', { params: { dictType: 'category', page: 1, pageSize: 100 } }
+      );
+      if (res.code === 200) {
+        const records = (res.data as any)?.records || [];
+        if (records.length) {
+          setCategoryOptions(records.map((r: any) => ({ label: r.dictLabel, value: r.dictCode })));
+          return;
+        }
+      }
+    } catch (_) { /* 静默失败 */ }
+    // 默认备用
     setCategoryOptions([
-      { label: '女装', value: 'WOMAN' },
-      { label: '男装', value: 'MAN' },
-      { label: '童装', value: 'KIDS' }
+      { label: '女装', value: 'WOMAN' }, { label: '男装', value: 'MAN' },
+      { label: '童装', value: 'KIDS' }, { label: '女童装', value: 'WCMAN' },
+      { label: '男女同款', value: 'UNISEX' },
     ]);
   };
 

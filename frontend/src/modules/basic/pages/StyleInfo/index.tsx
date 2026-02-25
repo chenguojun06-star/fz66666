@@ -38,8 +38,6 @@ const StyleInfoDetailPage: React.FC = () => {
     setActiveTabKey,
     editLocked,
     setEditLocked,
-    categoryOptions,
-    seasonOptions,
     isNewPage,
     isDetailPage,
     fetchDetail,
@@ -335,8 +333,6 @@ const StyleInfoDetailPage: React.FC = () => {
               currentStyle={currentStyle}
               editLocked={editLocked}
               isNewPage={isNewPage}
-              categoryOptions={categoryOptions}
-              seasonOptions={seasonOptions}
               isFieldLocked={isFieldLocked}
               pendingImages={pendingImages}
               onPendingImagesChange={setPendingImages}

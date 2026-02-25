@@ -18,8 +18,6 @@ export const useStyleDetail = (styleId?: string) => {
   const [currentStyle, setCurrentStyle] = useState<StyleInfo | null>(null);
   const [activeTabKey, setActiveTabKey] = useState('1');
   const [editLocked, setEditLocked] = useState(false);
-  const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
-  const [seasonOptions, setSeasonOptions] = useState<{ label: string; value: string }[]>([]);
 
   const lastEmptyHintTabKeyRef = useRef<string | null>(null);
 
@@ -63,24 +61,6 @@ export const useStyleDetail = (styleId?: string) => {
   };
 
   /**
-   * 加载字典选项（硬编码）
-   */
-  const loadDictOptions = () => {
-    // 直接使用硬编码的品类和季节选项，不依赖后端API
-    setCategoryOptions([
-      { label: '女装', value: 'WOMAN' },
-      { label: '男装', value: 'MAN' },
-      { label: '童装', value: 'KID' }
-    ]);
-    setSeasonOptions([
-      { label: '春季', value: 'SPRING' },
-      { label: '夏季', value: 'SUMMER' },
-      { label: '秋季', value: 'AUTUMN' },
-      { label: '冬季', value: 'WINTER' }
-    ]);
-  };
-
-  /**
    * 重置表单和状态
    */
   const resetForm = () => {
@@ -89,11 +69,6 @@ export const useStyleDetail = (styleId?: string) => {
     setEditLocked(false);
     setActiveTabKey('1');
   };
-
-  // 初始化加载
-  useEffect(() => {
-    loadDictOptions();
-  }, []);
 
   // 加载详情（当styleId变化时）
   useEffect(() => {
@@ -140,8 +115,6 @@ export const useStyleDetail = (styleId?: string) => {
     setActiveTabKey,
     editLocked,
     setEditLocked,
-    categoryOptions,
-    seasonOptions,
     lastEmptyHintTabKeyRef,
 
     // 表单

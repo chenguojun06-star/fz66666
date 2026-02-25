@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, InputNumber, Select, Row, Col, FormInstance } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
@@ -10,8 +11,6 @@ interface StyleBasicInfoFormProps {
   currentStyle: StyleInfo | null;
   editLocked: boolean;
   isNewPage: boolean;
-  categoryOptions: { label: string; value: string }[];
-  seasonOptions: { label: string; value: string }[];
   isFieldLocked: (fieldValue: any) => boolean;
   pendingImages: File[];
   onPendingImagesChange: (files: File[]) => void;
@@ -61,8 +60,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   currentStyle,
   editLocked,
   isNewPage,
-  categoryOptions,
-  seasonOptions,
   isFieldLocked,
   pendingImages,
   onPendingImagesChange,
@@ -109,17 +106,17 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
-                  <Input placeholder="请输入款名" disabled={editLocked} />
+                  <DictAutoComplete dictType="style_name" placeholder="请输入或选择款名（如：连衣裙、T恤）" disabled={editLocked} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                  <Select placeholder="请选择品类" options={categoryOptions} disabled={isFieldLocked(currentStyle?.category)} />
+                  <DictAutoComplete dictType="category" placeholder="请选择或输入品类" disabled={isFieldLocked(currentStyle?.category)} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="season" label="季节">
-                  <Select placeholder="请选择季节" options={seasonOptions} disabled={isFieldLocked(currentStyle?.season)} />
+                  <DictAutoComplete dictType="season" placeholder="请选择季节" disabled={isFieldLocked(currentStyle?.season)} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
@@ -162,16 +159,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="plateType" label="板类">
-                  <Select placeholder="请选择板类" disabled={isFieldLocked((currentStyle as any)?.plateType)}>
-                    <Select.Option value="首单">首单</Select.Option>
-                    <Select.Option value="复板">复板</Select.Option>
-                    <Select.Option value="公司版">公司版</Select.Option>
-                    <Select.Option value="复板1">复板1</Select.Option>
-                    <Select.Option value="复板2">复板2</Select.Option>
-                    <Select.Option value="复板3">复板3</Select.Option>
-                    <Select.Option value="复板4">复板4</Select.Option>
-                    <Select.Option value="复板5">复板5</Select.Option>
-                  </Select>
+                  <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked((currentStyle as any)?.plateType)} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>

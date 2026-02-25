@@ -674,4 +674,38 @@ Page({
   async submitPatternScanAll() {
     await PatternHandler.submitPatternScanAll(this);
   },
+
+  // ==================== 仓库选择（入库扫码时显示）====================
+
+  /**
+   * 点击仓库快捷选项 chip
+   * @param {Object} e - 事件对象
+   * @returns {void}
+   */
+  onWarehouseChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    // 再次点击同一仓库则取消选择
+    if (this.data.warehouse === value) {
+      this.setData({ warehouse: '' });
+    } else {
+      this.setData({ warehouse: value });
+    }
+  },
+
+  /**
+   * 手动输入仓库代码
+   * @param {Object} e - 事件对象
+   * @returns {void}
+   */
+  onWarehouseCodeInput(e) {
+    this.setData({ warehouse: e.detail.value });
+  },
+
+  /**
+   * 清除仓库选择
+   * @returns {void}
+   */
+  onWarehouseClear() {
+    this.setData({ warehouse: '' });
+  },
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -94,6 +95,8 @@ const OrderManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const [factories, setFactories] = useState<Factory[]>([]);
+  const [factoryQuickAddName, setFactoryQuickAddName] = useState('');
+  const [factoryQuickAdding, setFactoryQuickAdding] = useState(false);
   const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
 
   // ===== 弹窗状态（保留原状，未迁移到 useModal）=====
@@ -869,6 +872,32 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  // 工厂快速新增：在选择工厂下拉框中直接添加新工厂
+  const quickAddFactory = async () => {
+    const name = factoryQuickAddName.trim();
+    if (!name) {
+      message.warning('请输入工厂名称');
+      return;
+    }
+    setFactoryQuickAdding(true);
+    try {
+      const res = await api.post<{ code: number; message: string; data: Factory }>('/system/factory', { factoryName: name });
+      if (res.code === 200 && res.data) {
+        await fetchFactories();
+        // 新增后自动选中新工厂
+        form.setFieldsValue({ factoryId: res.data.id });
+        setFactoryQuickAddName('');
+        message.success(`已添加工厂"${name}"并自动选中`);
+      } else {
+        message.error(res.message || '新增工厂失败');
+      }
+    } catch {
+      message.error('新增工厂失败，请稍后重试');
+    } finally {
+      setFactoryQuickAdding(false);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } });
@@ -1498,6 +1527,30 @@ const OrderManagement: React.FC = () => {
                               options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
                               showSearch
                               optionFilterProp="label"
+                              allowClear
+                              dropdownRender={(menu) => (
+                                <>
+                                  {menu}
+                                  <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #f0f0f0)' }}>
+                                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>找不到工厂？直接新增：</div>
+                                    <Space.Compact style={{ width: '100%' }}>
+                                      <Input
+                                        size="small"
+                                        placeholder="输入工厂名称"
+                                        value={factoryQuickAddName}
+                                        onChange={e => setFactoryQuickAddName(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); quickAddFactory(); } }}
+                                      />
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        loading={factoryQuickAdding}
+                                        onClick={quickAddFactory}
+                                      >新增</Button>
+                                    </Space.Compact>
+                                  </div>
+                                </>
+                              )}
                             />
                           </Form.Item>
                         </Col>
@@ -1525,16 +1578,11 @@ const OrderManagement: React.FC = () => {
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
                           <Form.Item name="productCategory" label="品类">
-                            <Select
-                              placeholder="请选择品类（选填）"
+                            <DictAutoComplete
+                              dictType="category"
+                              placeholder="请选择或输入品类（选填）"
                               allowClear
-                              options={[
-                                { value: 'WOMAN', label: '女装' },
-                                { value: 'MAN', label: '男装' },
-                                { value: 'KID', label: '童装' },
-                                { value: 'WCMAN', label: '女童装' },
-                                { value: 'UNISEX', label: '男女同款' },
-                              ]}
+                              style={{ width: '100%' }}
                             />
                           </Form.Item>
                         </Col>

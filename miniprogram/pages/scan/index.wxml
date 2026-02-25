@@ -122,7 +122,28 @@
     </view>
     <!-- 入库扫码时显示仓库选择（独立一行，不占扫码主键位） -->
     <view wx:if="{{scanType === 'warehouse'}}" class="warehouse-input-row">
-      <input class="warehouse-input-field" placeholder="仓库编号（选填）" value="{{warehouseCode}}" bindinput="onWarehouseCodeInput" />
+      <view class="warehouse-label">目标仓库（选填）：</view>
+      <!-- 预设仓库快速选择 -->
+      <view class="warehouse-option-row">
+        <view
+          wx:for="{{warehouseOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{warehouse === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onWarehouseChipTap"
+          data-value="{{item}}"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{warehouse ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onWarehouseClear"
+        >清除</view>
+      </view>
+      <!-- 自定义仓库代码输入 -->
+      <input
+        class="warehouse-input-field"
+        placeholder="或手动输入仓库编号"
+        value="{{warehouse}}"
+        bindinput="onWarehouseCodeInput"
+      />
     </view>
     <view class="scan-mode-tip">
       <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>

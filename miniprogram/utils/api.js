@@ -240,6 +240,10 @@ const system = {
   myFeedbackList(params) {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
+  // 字典数据
+  getDictList(dictType) {
+    return ok('/api/system/dict/list', 'GET', { dictType, pageSize: 100 });
+  },
 };
 
 const style = {

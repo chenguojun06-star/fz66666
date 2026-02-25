@@ -40,6 +40,8 @@ const DICT_TYPES = [
   { value: 'order_status', label: '订单状态', description: '订单流程状态' },
   { value: 'payment_method', label: '结算方式', description: '付款方式：月结、现结等' },
   { value: 'warehouse_location', label: '仓库', description: '仓库库位：A仓、B仓、成品仓、面辅料仓等，可在此维护仓库列表' },
+  { value: 'plate_type', label: '板类', description: '样衣版次类型：首单、复板、公司版等' },
+  { value: 'style_name', label: '品名', description: '服装品名/品类：连衣裙、T恤、衬衫、裤子、外套等' },
 ];
 
 const DictManage: React.FC = () => {
@@ -86,7 +88,9 @@ const DictManage: React.FC = () => {
       category: [
         { dictType: 'category', dictCode: 'WOMAN', dictLabel: '女装', sortOrder: 1 },
         { dictType: 'category', dictCode: 'MAN', dictLabel: '男装', sortOrder: 2 },
-        { dictType: 'category', dictCode: 'KID', dictLabel: '童装', sortOrder: 3 },
+        { dictType: 'category', dictCode: 'KIDS', dictLabel: '童装', sortOrder: 3 },
+        { dictType: 'category', dictCode: 'WCMAN', dictLabel: '女童装', sortOrder: 4 },
+        { dictType: 'category', dictCode: 'UNISEX', dictLabel: '男女同款', sortOrder: 5 },
         { dictType: 'category', dictCode: 'SPORT', dictLabel: '运动装', sortOrder: 4 },
         { dictType: 'category', dictCode: 'UNDERWEAR', dictLabel: '内衣', sortOrder: 5 },
       ],
@@ -215,6 +219,33 @@ const DictManage: React.FC = () => {
         { dictType: 'payment_method', dictCode: 'IMMEDIATE', dictLabel: '现结', sortOrder: 2 },
         { dictType: 'payment_method', dictCode: 'ADVANCE', dictLabel: '预付款', sortOrder: 3 },
         { dictType: 'payment_method', dictCode: 'AFTER_DELIVERY', dictLabel: '货到付款', sortOrder: 4 },
+      ],
+      plate_type: [
+        { dictType: 'plate_type', dictCode: 'FIRST', dictLabel: '首单', sortOrder: 1 },
+        { dictType: 'plate_type', dictCode: 'REPLATE', dictLabel: '复板', sortOrder: 2 },
+        { dictType: 'plate_type', dictCode: 'COMPANY', dictLabel: '公司版', sortOrder: 3 },
+        { dictType: 'plate_type', dictCode: 'REPLATE1', dictLabel: '复板1', sortOrder: 4 },
+        { dictType: 'plate_type', dictCode: 'REPLATE2', dictLabel: '复板2', sortOrder: 5 },
+        { dictType: 'plate_type', dictCode: 'REPLATE3', dictLabel: '复板3', sortOrder: 6 },
+        { dictType: 'plate_type', dictCode: 'REPLATE4', dictLabel: '复板4', sortOrder: 7 },
+        { dictType: 'plate_type', dictCode: 'REPLATE5', dictLabel: '复板5', sortOrder: 8 },
+      ],
+      style_name: [
+        { dictType: 'style_name', dictCode: 'DRESS', dictLabel: '连衣裙', sortOrder: 1 },
+        { dictType: 'style_name', dictCode: 'TSHIRT', dictLabel: 'T恤', sortOrder: 2 },
+        { dictType: 'style_name', dictCode: 'SHIRT', dictLabel: '衬衫', sortOrder: 3 },
+        { dictType: 'style_name', dictCode: 'PANTS', dictLabel: '裤子', sortOrder: 4 },
+        { dictType: 'style_name', dictCode: 'SKIRT', dictLabel: '裙子', sortOrder: 5 },
+        { dictType: 'style_name', dictCode: 'JACKET', dictLabel: '外套', sortOrder: 6 },
+        { dictType: 'style_name', dictCode: 'COAT', dictLabel: '大衣', sortOrder: 7 },
+        { dictType: 'style_name', dictCode: 'SWEATER', dictLabel: '毛衣', sortOrder: 8 },
+        { dictType: 'style_name', dictCode: 'HOODIE', dictLabel: '卫衣', sortOrder: 9 },
+        { dictType: 'style_name', dictCode: 'JEANS', dictLabel: '牛仔裤', sortOrder: 10 },
+        { dictType: 'style_name', dictCode: 'SHORTS', dictLabel: '短裤', sortOrder: 11 },
+        { dictType: 'style_name', dictCode: 'POLO', dictLabel: 'POLO衫', sortOrder: 12 },
+        { dictType: 'style_name', dictCode: 'TANKDRESS', dictLabel: '连衣裙裙', sortOrder: 13 },
+        { dictType: 'style_name', dictCode: 'WINDBREAKER', dictLabel: '风衣', sortOrder: 14 },
+        { dictType: 'style_name', dictCode: 'DOWN', dictLabel: '羽绒服', sortOrder: 15 },
       ],
       warehouse_location: [
         { dictType: 'warehouse_location', dictCode: 'WH_A', dictLabel: 'A仓', sortOrder: 1 },

@@ -2,6 +2,8 @@ package com.fashion.supplychain.integration.record.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.entity.LogisticsRecord;
 import com.fashion.supplychain.integration.record.entity.PaymentRecord;
@@ -13,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 集成跟踪记录服务
@@ -218,5 +222,81 @@ public class IntegrationRecordService {
     /** 查询未处理的回调日志（用于补偿/重跑） */
     public List<IntegrationCallbackLog> getUnprocessedCallbacks(int limit) {
         return callbackLogMapper.findUnprocessed(limit);
+    }
+
+    // =========================================================
+    // 面板分页查询（IntegrationDashboardController 调用）
+    // =========================================================
+
+    /** 支付流水分页（前端传 page / pageSize / channel / status / orderId） */
+    public IPage<PaymentRecord> getPaymentRecordsPage(Map<String, Object> params) {
+        int page = parseIntParam(params, "page", 1);
+        int pageSize = parseIntParam(params, "pageSize", 10);
+        LambdaQueryWrapper<PaymentRecord> wrapper = new LambdaQueryWrapper<PaymentRecord>()
+                .eq(notBlank(params, "channel"), PaymentRecord::getChannel, params.get("channel"))
+                .eq(notBlank(params, "status"), PaymentRecord::getStatus, params.get("status"))
+                .like(notBlank(params, "orderId"), PaymentRecord::getOrderId, params.get("orderId"))
+                .orderByDesc(PaymentRecord::getCreatedTime);
+        return paymentRecordMapper.selectPage(new Page<>(page, pageSize), wrapper);
+    }
+
+    /** 物流运单分页（前端传 page / pageSize / companyCode / status / orderId） */
+    public IPage<LogisticsRecord> getLogisticsRecordsPage(Map<String, Object> params) {
+        int page = parseIntParam(params, "page", 1);
+        int pageSize = parseIntParam(params, "pageSize", 10);
+        LambdaQueryWrapper<LogisticsRecord> wrapper = new LambdaQueryWrapper<LogisticsRecord>()
+                .eq(notBlank(params, "companyCode"), LogisticsRecord::getCompanyCode, params.get("companyCode"))
+                .eq(notBlank(params, "status"), LogisticsRecord::getStatus, params.get("status"))
+                .like(notBlank(params, "orderId"), LogisticsRecord::getOrderId, params.get("orderId"))
+                .orderByDesc(LogisticsRecord::getCreatedTime);
+        return logisticsRecordMapper.selectPage(new Page<>(page, pageSize), wrapper);
+    }
+
+    /** 回调日志分页（前端传 page / pageSize / type / channel / processed） */
+    public IPage<IntegrationCallbackLog> getCallbackLogsPage(Map<String, Object> params) {
+        int page = parseIntParam(params, "page", 1);
+        int pageSize = parseIntParam(params, "pageSize", 10);
+        Object processedParam = params.get("processed");
+        Boolean processed = processedParam != null ? Boolean.parseBoolean(String.valueOf(processedParam)) : null;
+        LambdaQueryWrapper<IntegrationCallbackLog> wrapper = new LambdaQueryWrapper<IntegrationCallbackLog>()
+                .eq(notBlank(params, "type"), IntegrationCallbackLog::getType, params.get("type"))
+                .eq(notBlank(params, "channel"), IntegrationCallbackLog::getChannel, params.get("channel"))
+                .eq(processed != null, IntegrationCallbackLog::getProcessed, processed)
+                .orderByDesc(IntegrationCallbackLog::getCreatedTime);
+        return callbackLogMapper.selectPage(new Page<>(page, pageSize), wrapper);
+    }
+
+    /** 面板统计数据（近7天流水量 + 未处理回调数） */
+    public Map<String, Object> getDashboardStats() {
+        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        long paymentCount = paymentRecordMapper.selectCount(
+                new LambdaQueryWrapper<PaymentRecord>().ge(PaymentRecord::getCreatedTime, since));
+        long logisticsCount = logisticsRecordMapper.selectCount(
+                new LambdaQueryWrapper<LogisticsRecord>().ge(LogisticsRecord::getCreatedTime, since));
+        long unprocessed = callbackLogMapper.selectCount(
+                new LambdaQueryWrapper<IntegrationCallbackLog>().eq(IntegrationCallbackLog::getProcessed, false));
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("paymentCount7d", paymentCount);
+        stats.put("logisticsCount7d", logisticsCount);
+        stats.put("unprocessedCallbacks", unprocessed);
+        return stats;
+    }
+
+    // =========================================================
+    // 工具方法
+    // =========================================================
+
+    private boolean notBlank(Map<String, Object> params, String key) {
+        Object v = params.get(key);
+        return v != null && !String.valueOf(v).isBlank();
+    }
+
+    private int parseIntParam(Map<String, Object> params, String key, int defaultVal) {
+        try {
+            Object v = params.get(key);
+            return v != null ? Integer.parseInt(String.valueOf(v)) : defaultVal;
+        } catch (NumberFormatException e) {
+            return defaultVal;
+        }
     }
 }

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Form, Input, Select, Row, Col } from 'antd';
+import { Form, Input, Row, Col } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-
-const { Option } = Select;
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 
 interface SimpleWarehousingModalProps {
   open: boolean;
@@ -83,14 +82,13 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
           </Col>
           <Col span={24}>
             <Form.Item label="仓库" required>
-              <Select
-                placeholder="请选择仓库"
+              <DictAutoComplete
+                dictType="warehouse_location"
+                placeholder="请选择或输入仓库"
                 value={warehouse || undefined}
                 onChange={(v) => setWarehouse(String(v || '').trim())}
-              >
-                <Option value="A仓">A仓</Option>
-                <Option value="B仓">B仓</Option>
-              </Select>
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
         </Row>

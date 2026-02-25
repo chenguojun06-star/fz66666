@@ -59,6 +59,8 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       MEN: '男装',
       KID: '童装',
       KIDS: '童装',
+      WCMAN: '女童装',
+      UNISEX: '男女同款',
     };
     return map[code] || code;
   };

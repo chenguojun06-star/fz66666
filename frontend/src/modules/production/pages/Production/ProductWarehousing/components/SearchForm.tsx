@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from 'antd';
+import api from '@/utils/api';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { WarehousingQueryParams } from '@/types/production';
@@ -14,6 +15,20 @@ interface SearchFormProps {
 
 const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, onSearch, extra }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [warehouseOptions, setWarehouseOptions] = useState<{ label: string; value: string }[]>([
+    { label: 'A仓', value: 'A仓' }, { label: 'B仓', value: 'B仓' },
+  ]);
+
+  useEffect(() => {
+    api.get<{ code: number; data: { records?: { dictCode: string; dictLabel: string }[] } }>(
+      '/system/dict/list', { params: { dictType: 'warehouse_location', page: 1, pageSize: 100 } }
+    ).then(res => {
+      if (res.code === 200) {
+        const records = (res.data as any)?.records || [];
+        if (records.length) setWarehouseOptions(records.map((r: any) => ({ label: r.dictLabel, value: r.dictLabel })));
+      }
+    }).catch(() => {});
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setQueryParams({ ...queryParams, warehousingNo: value, page: 1 });
@@ -41,8 +56,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
             onStatusChange={handleStatusChange}
             statusOptions={[
               { label: '全部', value: '' },
-              { label: 'A仓', value: 'A仓' },
-              { label: 'B仓', value: 'B仓' },
+              ...warehouseOptions,
             ]}
           />
         )}

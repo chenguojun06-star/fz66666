@@ -77,6 +77,7 @@ export const paths = {
   customerManagement: '/system/customer',
   appStore: '/system/app-store',
   dataImport: '/system/data-import',
+  integrationCenter: '/integration/center',
 } as const;
 
 export const permissionCodes = {
@@ -119,6 +120,7 @@ export const permissionCodes = {
   customerManagement: 'MENU_CUSTOMER',
   appStore: 'MENU_APP_STORE_VIEW',
   dataImport: 'MENU_DATA_IMPORT',
+  integrationCenter: 'MENU_INTEGRATION',
 } as const;
 
 export type MenuItem = {
@@ -225,6 +227,12 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(ApiOutlined),
     path: paths.tenantManagement,
   },
+  {
+    title: '集成对接中心',
+    key: 'integrationCenter',
+    icon: React.createElement(ApiOutlined),
+    path: paths.integrationCenter,
+  },
 ];
 
 export const routeToPermissionCode: Record<string, string> = {
@@ -265,6 +273,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.customerManagement]: permissionCodes.customerManagement,
   [paths.appStore]: permissionCodes.appStore,
   [paths.dataImport]: permissionCodes.dataImport,
+  [paths.integrationCenter]: permissionCodes.integrationCenter,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */
