@@ -1,0 +1,64 @@
+<scroll-view class="page" scroll-y="{{true}}">
+  <view class="section">
+    <text class="title">云裳智链 隐私保护指引</text>
+    <text class="update-date">更新日期：2026年2月25日</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">一、引言</text>
+    <text class="body">云裳智链（以下简称"我们"）深知个人信息对您的重要性。本指引说明我们如何收集、使用和保护您在使用本小程序期间产生的信息，请您仔细阅读。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">二、我们收集的信息</text>
+    <text class="sub-heading">2.1 账号信息</text>
+    <text class="body">注册或登录时，您需提供用户名、密码及所属公司名称，用于身份验证和账号管理。</text>
+    <text class="sub-heading">2.2 微信身份信息</text>
+    <text class="body">使用微信一键登录时，我们会获取您的微信 OpenID，用于将微信账号与系统账号绑定，实现免密登录。我们不会获取您的微信昵称、头像或手机号。</text>
+    <text class="sub-heading">2.3 生产业务数据</text>
+    <text class="body">您在使用扫码、质检、入库等功能时产生的扫码记录、工序进度、数量等数据，全部归属于您所在工厂/企业，仅用于生产管理目的。</text>
+    <text class="sub-heading">2.4 设备权限</text>
+    <text class="body">• 摄像头：用于扫描工序条码（二维码/条形码）及拍摄质检现场照片，不用于其他任何目的。
+• 相册：用于从相册选取质检现场照片上传，不读取任何其他文件。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">三、信息的使用</text>
+    <text class="body">我们收集的信息仅用于以下目的：
+• 提供生产管理功能（扫码记录、工序追踪、库存管理）
+• 账号登录与身份验证
+• 向您所在工厂管理员展示生产数据统计
+我们不会将您的信息用于广告推送、数据挖掘或出售给第三方。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">四、信息的存储与安全</text>
+    <text class="body">• 数据存储于腾讯云服务器（中国境内），受腾讯云安全防护保障。
+• 传输采用 HTTPS 加密，防止数据在传输过程中被截取。
+• 您的密码经过加密存储，我们无法获取明文密码。
+• 数据按企业/租户隔离，不同公司的数据互相不可见。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">五、您的权利</text>
+    <text class="body">您有权：
+• 查阅您的个人信息
+• 要求更正不准确的信息
+• 申请注销账号并删除相关数据
+请联系您所在工厂的系统管理员，或通过小程序内反馈功能与我们联系。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">六、未成年人保护</text>
+    <text class="body">本小程序面向成年员工使用，不向 18 周岁以下未成年人提供服务。如发现未成年人使用，请联系管理员处理。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">七、联系我们</text>
+    <text class="body">如您对本隐私保护指引有任何疑问，可通过小程序内「我的 → 问题反馈」功能联系我们。</text>
+  </view>
+
+  <view class="footer">
+    <text>© 2026 云裳智链. 保留所有权利.</text>
+  </view>
+</scroll-view>

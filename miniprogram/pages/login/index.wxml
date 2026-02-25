@@ -28,6 +28,13 @@
 
     <!-- 登录表单（openid 未绑定时 / 开发环境） -->
     <block wx:if="{{!wechatChecking}}">
+
+    <!-- 邀请横幅：管理员扫码邀请员工时显示 -->
+    <view wx:if="{{inviteBanner}}" class="invite-banner">
+      <text class="invite-banner-icon">🎉</text>
+      <text class="invite-banner-text">{{inviteBanner}}</text>
+    </view>
+
     <view class="login-field">
       <view class="login-label"><text class="login-label-required">*</text> 公司</view>
       <view class="login-input-wrap">
@@ -38,9 +45,9 @@
           value="{{tenantSearchText}}"
           bindinput="onTenantSearch"
           bindfocus="onTenantSearchFocus"
-          disabled="{{loading || tenantsLoading}}"
+          disabled="{{loading || tenantsLoading || inviteTenantFixed}}"
         />
-        <text wx:if="{{selectedTenantName}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
+        <text wx:if="{{selectedTenantName && !inviteTenantFixed}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
       </view>
       <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">✓ 已选择：{{selectedTenantName}}</view>
       <!-- 搜索结果下拉 -->

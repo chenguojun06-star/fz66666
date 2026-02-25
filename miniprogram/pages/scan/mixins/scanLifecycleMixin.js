@@ -44,10 +44,20 @@ const scanLifecycleMixin = Behavior({
     if (eventBus && typeof eventBus.on === 'function') {
       const unsubData = eventBus.on('DATA_REFRESH', this.handleDataRefresh.bind(this));
       const unsubScan = eventBus.on('SCAN_SUCCESS', this.handleRemoteScanSuccess.bind(this));
+      // 隐私授权弹窗（微信审核必须）
+      const unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
+        try {
+          const dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') {
+            dialog.showDialog(resolve);
+          }
+        } catch (_) { /* 组件不存在时静默忽略 */ }
+      });
 
       this.unsubscribeEvents = () => {
         if (unsubData) { unsubData(); }
         if (unsubScan) { unsubScan(); }
+        if (unsubPrivacy) { unsubPrivacy(); }
       };
     }
 

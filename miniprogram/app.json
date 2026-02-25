@@ -17,9 +17,12 @@
     "pages/warehouse/material/alerts/index",
     "pages/warehouse/material/detail-page/index",
     "pages/warehouse/material/scan/index",
-    "pages/warehouse/order-ranking/index"
+    "pages/warehouse/order-ranking/index",
+    "pages/privacy/index"
   ],
-  "usingComponents": {},
+  "usingComponents": {
+    "privacy-dialog": "/components/privacy-dialog/index"
+  },
   "tabBar": {
     "custom": true,
     "color": "#8e8e93",
@@ -53,5 +56,11 @@
   },
   "lazyCodeLoading": "requiredComponents",
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "__usePrivacyCheck__": true,
+  "permission": {
+    "scope.camera": {
+      "desc": "用于扫描工序条码及上传质检现场照片"
+    }
+  }
 }

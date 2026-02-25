@@ -194,6 +194,28 @@ page {
   padding-left: 4rpx;
 }
 
+/* 邀请横幅 */
+.invite-banner {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #e6f4ff, #f0f9ff);
+  border: 1rpx solid #91caff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+.invite-banner-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.invite-banner-text {
+  font-size: 26rpx;
+  color: #1677ff;
+  line-height: 1.5;
+  flex: 1;
+}
+
 /* 搜索结果下拉 */
 .tenant-results {
   background: #fff;

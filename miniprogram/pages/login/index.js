@@ -240,6 +240,45 @@ Page({
     showPassword: false,
     // 是否正在尝试微信快速登录（验证 openid 绑定状态中）
     wechatChecking: false,
+    // 邀请模式：管理员扫码邀请员工时显示
+    inviteBanner: '',         // 如"由 XX 工厂邀请加入"
+    inviteTenantFixed: false, // true 时锁定公司选择字段
+  },
+
+  onLoad(options) {
+    // 解析微信扫码 scene 参数（getwxacodeunlimit 扫码时会将 scene 放入 options.scene）
+    if (options && options.scene) {
+      try {
+        const scene = decodeURIComponent(options.scene);
+        const match = scene.match(/inviteToken=([A-Fa-f0-9]+)/);
+        if (match && match[1]) {
+          this._loadInviteTenant(match[1]);
+        }
+      } catch (_) { /* 忽略解析失败 */ }
+    }
+  },
+
+  /**
+   * 通过邀请 token 加载租户信息并预填公司
+   */
+  async _loadInviteTenant(token) {
+    if (!token) return;
+    try {
+      const resp = await api.wechat.inviteInfo(token);
+      if (resp && resp.code === 200 && resp.data && resp.data.tenantId) {
+        const { tenantId, tenantName } = resp.data;
+        const name = tenantName || '';
+        this.setData({
+          selectedTenantId: tenantId,
+          selectedTenantName: name,
+          tenantSearchText: name,
+          inviteBanner: name ? `由「${name}」邀请加入，输入账号密码即可绑定微信` : '扫码邀请，输入账号密码即可绑定微信',
+          inviteTenantFixed: true,
+        });
+      }
+    } catch (e) {
+      console.warn('[Login] 解析邀请 token 失败', e);
+    }
   },
 
   async onShow() {

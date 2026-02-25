@@ -1,0 +1,22 @@
+<!-- 隐私保护授权弹窗 -->
+<!-- 微信要求：「同意」按钮必须使用 open-type="agreePrivacyAuthorization" -->
+<view wx:if="{{show}}" class="privacy-mask">
+  <view class="privacy-box">
+    <view class="privacy-title">隐私保护说明</view>
+    <view class="privacy-content">
+      <text>感谢您使用{{appName || '云裳智链'}}。\n\n本小程序在以下情况会访问您的设备权限：\n\n• 扫码功能：使用摄像头扫描工序条码（仅用于生产管理）\n• 上传照片：使用摄像头或相册上传质检现场照片\n\n我们承诺不会将您的数据用于上述功能以外的任何用途，也不会向任何第三方出售或共享您的个人信息。\n\n详情请阅读《隐私保护指引》。</text>
+    </view>
+    <view class="privacy-link" bindtap="onViewPrivacy">查看完整《隐私保护指引》</view>
+    <view class="privacy-actions">
+      <view class="privacy-btn-refuse" bindtap="onDisagree">暂不同意</view>
+      <!-- 关键：必须使用 open-type="agreePrivacyAuthorization" -->
+      <button
+        id="agree-btn"
+        class="privacy-btn-agree"
+        open-type="agreePrivacyAuthorization"
+        bindagreeprivacyauthorization="onAgreePrivacy">
+        同意并继续
+      </button>
+    </view>
+  </view>
+</view>

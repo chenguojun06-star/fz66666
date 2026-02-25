@@ -2,6 +2,14 @@
   "rules": [
     {
       "action": "allow",
+      "page": "pages/home/index"
+    },
+    {
+      "action": "allow",
+      "page": "pages/login/index"
+    },
+    {
+      "action": "disallow",
       "page": "*"
     }
   ]

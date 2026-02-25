@@ -1,23 +1,20 @@
 /**
- * 默认API地址配置
+ * API 地址配置
  *
  * 回退策略（按优先级）：
  * 1. Storage 中保存的地址（api_base_url）
- * 2. DEFAULT_BASE_URL（生产 HTTPS 域名）
+ * 2. DEFAULT_BASE_URL（生产微信云托管地址）
  * 3. FALLBACK_BASE_URL（开发备用）
  *
- * 上线前必须修改：
- * - 将 DEFAULT_BASE_URL 改为微信云托管后端 HTTPS 地址
- *   格式示例：https://xxxxx-xxxxxx.ap-shanghai.service.tcloudbase.com
- *   或绑定自定义域名：https://api.your-domain.com
- * - 该域名必须在微信公众平台「开发→开发管理→服务器域名」中添加为 request 合法域名
+ * 合法域名：已在微信公众平台「开发→开发管理→服务器域名」配置
+ *   backend-226678-6-1405390085.sh.run.tcloudbase.com
  *
  * 本地开发：
  * - 在「微信开发者工具→详情→本地设置」中勾选「不校验合法域名」
  * - 在登录页手动输入本机地址（如 http://192.168.x.x:8088）
  */
-// ⚠️ 上线前替换为实际的微信云托管后端地址（必须 HTTPS）
-const DEFAULT_BASE_URL = 'https://backend-226678-6-1405390085.sh.run.tcloudbase.com';  // TODO: 替换为微信云托管后端地址
+// 生产后端地址（微信云托管，已配置）
+const DEFAULT_BASE_URL = 'https://backend-226678-6-1405390085.sh.run.tcloudbase.com';
 const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备用（内网 IP）
 
 /**

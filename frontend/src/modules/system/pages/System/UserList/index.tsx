@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, QrcodeOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -59,6 +59,11 @@ const UserList: React.FC = () => {
   // 收款账户管理
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountUser, setAccountUser] = useState<{ id: string; name: string }>({ id: '', name: '' });
+
+  // 邀请二维码
+  const [inviteQr, setInviteQr] = useState<{ open: boolean; loading: boolean; qrBase64?: string; expiresAt?: string }>({
+    open: false, loading: false,
+  });
 
   // 表单验证规则
   const formRules = {
@@ -453,6 +458,24 @@ const UserList: React.FC = () => {
     setPermTree([]);
     setPermCheckedIds(new Set());
     form.resetFields();
+  };
+
+  /** 生成邀请员工二维码 */
+  const handleGenerateInvite = async () => {
+    setInviteQr({ open: true, loading: true });
+    try {
+      const resp = await api.post('/api/wechat/mini-program/invite/generate', {});
+      const result = resp?.data;
+      if (result?.code === 200 && result?.data) {
+        setInviteQr({ open: true, loading: false, qrBase64: result.data.qrCodeBase64, expiresAt: result.data.expiresAt });
+      } else {
+        message.error('生成邀请码失败：' + (result?.message || '未知错误'));
+        setInviteQr({ open: false, loading: false });
+      }
+    } catch (e: any) {
+      message.error('生成邀请码失败');
+      setInviteQr({ open: false, loading: false });
+    }
   };
 
   const openRemarkModal = (
@@ -942,9 +965,17 @@ const UserList: React.FC = () => {
                 </Button>
               </Space>
               {canManageUsers && (
-                <Button type="primary" onClick={() => openDialog()}>
-                  新增用户
-                </Button>
+                <Space>
+                  <Button
+                    icon={<QrcodeOutlined />}
+                    onClick={handleGenerateInvite}
+                  >
+                    邀请员工
+                  </Button>
+                  <Button type="primary" onClick={() => openDialog()}>
+                    新增用户
+                  </Button>
+                </Space>
               )}
             </div>
           </Card>
@@ -1208,6 +1239,43 @@ const UserList: React.FC = () => {
           ownerName={accountUser.name}
           onClose={() => setAccountModalOpen(false)}
         />
+
+        {/* 邀请员工二维码弹窗 */}
+        <ResizableModal
+          title="邀请员工扫码绑定微信"
+          open={inviteQr.open}
+          onCancel={() => setInviteQr({ open: false, loading: false })}
+          footer={null}
+          defaultWidth="30vw"
+          defaultHeight="50vh"
+        >
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            {inviteQr.loading ? (
+              <div style={{ padding: '48px 0' }}>
+                <span>正在生成二维码...</span>
+              </div>
+            ) : inviteQr.qrBase64 ? (
+              <>
+                <img
+                  src={inviteQr.qrBase64}
+                  alt="邀请二维码"
+                  style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }}
+                />
+                <div style={{ color: '#666', fontSize: 13 }}>
+                  员工用微信扫码后，输入系统账号密码即可完成绑定
+                </div>
+                {inviteQr.expiresAt && (
+                  <div style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
+                    有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ color: '#999', padding: '24px 0' }}>二维码生成失败，请重试</div>
+            )}
+          </div>
+        </ResizableModal>
+
     </Layout>
   );
 };

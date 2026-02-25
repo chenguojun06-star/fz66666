@@ -97,20 +97,19 @@ const InspectionDetail: React.FC = () => {
     briefing?.order?.orderNo,
   );
 
-  /* ---- 自动初始化订单（更可靠地替代 hook 内 500ms 超时） ---- */
+  /* ---- 自动初始化订单（直接使用 URL orderId + orderDetail，避免 orderOptions 竞态条件） ---- */
   const autoInitRef = useRef(false);
   useEffect(() => {
-    if (autoInitRef.current || !briefing?.order?.orderNo) return;
-    const opts = formHook.orderOptions;
-    if (!opts?.length) return;
+    if (autoInitRef.current) return;
+    if (!orderId || !orderDetail) return;
     if (formHook.form.getFieldValue('orderId')) { autoInitRef.current = true; return; }
-    const match = opts.find((o: any) => o.orderNo === briefing.order.orderNo);
-    if (match) {
-      formHook.handleOrderChange(match.id, { data: match });
-      autoInitRef.current = true;
-    }
+    // 直接从 URL 参数设置 orderId，无需从下拉列表匹配
+    formHook.form.setFieldValue('orderId', orderId);
+    // 使用 orderDetail 作为 option.data，触发菲号/款式等关联数据加载
+    void formHook.handleOrderChange(orderId, { data: orderDetail });
+    autoInitRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [briefing, formHook.orderOptions]);
+  }, [orderId, orderDetail]);
 
   /* ==================== 数据获取 ==================== */
   const fetchBriefing = useCallback(async () => {

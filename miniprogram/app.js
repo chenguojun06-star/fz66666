@@ -10,12 +10,24 @@ App({
   globalData: {
     token: '',
     eventBus, // 全局事件总线（使用utils/eventBus.js中的实现）
+    /** 隐私授权 resolve 函数，由当前页的 privacy-dialog 组件消费 */
+    privacyResolve: null,
   },
 
   onLaunch() {
     // 生产环境禁用 console.log 输出（保留 warn/error）
     if (!DEBUG_MODE) {
       console.log = () => {};
+    }
+
+    // ✅ 隐私保护授权监听（基础库 2.32.3+，2023-09-15 微信强制要求）
+    // 当用户触发需要隐私授权的 API（扫码/选图等）时，通过 eventBus 通知当前页面弹窗
+    if (typeof wx.onNeedPrivacyAuthorization === 'function') {
+      wx.onNeedPrivacyAuthorization(resolve => {
+        this.globalData.privacyResolve = resolve;
+        // 通知当前活跃页面显示隐私弹窗
+        eventBus.emit('showPrivacyDialog', resolve);
+      });
     }
 
     // 清理过期提醒（超过7天）

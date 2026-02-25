@@ -1,7 +1,7 @@
 const api = require('../../utils/api');
 const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
-const { onDataRefresh } = require('../../utils/eventBus');
+const { onDataRefresh, eventBus } = require('../../utils/eventBus');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 
 
@@ -116,12 +116,27 @@ Page({
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
     }
+    if (this._unsubPrivacy) {
+      this._unsubPrivacy();
+    }
 
     // 订阅数据刷新事件
     this._unsubscribeRefresh = onDataRefresh(_payload => {
       // 刷新当前页面数据
       this.loadOrders(true);
     });
+
+    // 订阅隐私授权弹窗事件（微信审核必须）
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
+        try {
+          const dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') {
+            dialog.showDialog(resolve);
+          }
+        } catch (_) { /* 静默忽略 */ }
+      });
+    }
   },
 
   onPullDownRefresh() {

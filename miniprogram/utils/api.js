@@ -308,6 +308,10 @@ const wechat = {
   miniProgramLogin(payload) {
     return raw('/api/wechat/mini-program/login', 'POST', payload || {}, { skipAuthRedirect: true });
   },
+  /** 解析邀请 token，返回 {tenantId, tenantName}（公开接口，不需要登录） */
+  inviteInfo(token) {
+    return raw(`/api/wechat/mini-program/invite/info?token=${encodeURIComponent(token)}`, 'GET', null, { skipAuthRedirect: true });
+  },
 };
 
 const common = {
