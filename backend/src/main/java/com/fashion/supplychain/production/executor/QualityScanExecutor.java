@@ -154,12 +154,6 @@ public class QualityScanExecutor {
                                               ProductionOrder order, CuttingBundle bundle, int qty,
                                               java.util.function.Function<String, String> colorResolver,
                                               java.util.function.Function<String, String> sizeResolver) {
-        // 必须先领取才能录入结果
-        ScanRecord receivedStage = findQualityStageRecord(order.getId(), bundle.getId(), "quality_receive");
-        if (receivedStage == null || !hasText(receivedStage.getId())) {
-            throw new IllegalStateException("请先领取质检任务再录入结果");
-        }
-
         // 幂等：已录入则直接返回
         ScanRecord existingConfirm = findQualityStageRecord(order.getId(), bundle.getId(), "quality_confirm");
         if (existingConfirm != null && hasText(existingConfirm.getId())) {
