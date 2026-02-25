@@ -12,10 +12,13 @@ import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -57,6 +60,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
+
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
@@ -183,6 +189,15 @@ public class ProductionOrderQueryService {
         priceFillHelper.fillProgressNodeUnitPrices(productionOrders);
     }
 
+    /**
+     * 填充订单款式封面图——与 PC 端 StyleCoverThumb 保持相同数据源。
+     *
+     * 策略（两级回退）：
+     * 1. 优先读 t_style_info.cover（无 ENABLED 过滤，避免非 ENABLED 款式的订单被置 null）
+     * 2. 若仍为空，再从 t_style_attachment 取该款式的第一张图片（PC 端的做法）
+     *
+     * 这样无论款式状态如何、cover 字段是否为空，小程序和 PC 看到的图片永远一致。
+     */
     private void fillStyleCover(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -196,25 +211,74 @@ public class ProductionOrderQueryService {
             return;
         }
 
+        // ── 第一级：t_style_info.cover（去掉 ENABLED 过滤，所有状态的款式都取） ──
         List<StyleInfo> styles = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
-                .in(StyleInfo::getStyleNo, styleNos)
-                .eq(StyleInfo::getStatus, "ENABLED"));
+                .in(StyleInfo::getStyleNo, styleNos));
 
-        Map<String, String> coverMap = new HashMap<>();
+        // styleNo → cover URL
+        Map<String, String> coverByStyleNo = new HashMap<>();
+        // styleNo → styleId（Long），用于第二级查附件
+        Map<String, Long> styleIdByStyleNo = new HashMap<>();
         if (styles != null) {
             for (StyleInfo s : styles) {
-                if (s != null && StringUtils.hasText(s.getStyleNo())) {
-                    coverMap.put(s.getStyleNo(), s.getCover());
+                if (s == null || !StringUtils.hasText(s.getStyleNo())) continue;
+                styleIdByStyleNo.put(s.getStyleNo(), s.getId());
+                if (StringUtils.hasText(s.getCover())) {
+                    coverByStyleNo.put(s.getStyleNo(), s.getCover());
                 }
             }
         }
 
+        // 第一次赋值
         for (ProductionOrder order : records) {
-            if (order == null) {
-                continue;
+            if (order == null || !StringUtils.hasText(order.getStyleNo())) continue;
+            String cover = coverByStyleNo.get(order.getStyleNo());
+            if (StringUtils.hasText(cover)) {
+                order.setStyleCover(cover);
             }
-            if (StringUtils.hasText(order.getStyleNo())) {
-                order.setStyleCover(coverMap.get(order.getStyleNo()));
+        }
+
+        // ── 第二级：对仍无封面的订单，从 t_style_attachment 取第一张图片（PC 端同款逻辑） ──
+        List<Long> missingStyleIds = records.stream()
+                .filter(o -> o != null && !StringUtils.hasText(o.getStyleCover())
+                        && StringUtils.hasText(o.getStyleNo())
+                        && styleIdByStyleNo.containsKey(o.getStyleNo()))
+                .map(o -> styleIdByStyleNo.get(o.getStyleNo()))
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (!missingStyleIds.isEmpty()) {
+            List<StyleAttachment> attachments = styleAttachmentService.list(
+                    new LambdaQueryWrapper<StyleAttachment>()
+                            .in(StyleAttachment::getStyleId, missingStyleIds.stream()
+                                    .map(String::valueOf).collect(Collectors.toList()))
+                            .like(StyleAttachment::getFileType, "image")
+                            .eq(StyleAttachment::getStatus, "active")
+                            .orderByAsc(StyleAttachment::getCreateTime));
+
+            // styleId → 第一张图片 URL
+            Map<Long, String> attachCoverByStyleId = new HashMap<>();
+            if (attachments != null) {
+                for (StyleAttachment a : attachments) {
+                    if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
+                    try {
+                        Long sid = Long.valueOf(a.getStyleId());
+                        attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            // 最终回写
+            for (ProductionOrder order : records) {
+                if (order == null || StringUtils.hasText(order.getStyleCover())) continue;
+                String styleNo = order.getStyleNo();
+                if (!StringUtils.hasText(styleNo)) continue;
+                Long sid = styleIdByStyleNo.get(styleNo);
+                if (sid == null) continue;
+                String attachCover = attachCoverByStyleId.get(sid);
+                if (StringUtils.hasText(attachCover)) {
+                    order.setStyleCover(attachCover);
+                }
             }
         }
     }
