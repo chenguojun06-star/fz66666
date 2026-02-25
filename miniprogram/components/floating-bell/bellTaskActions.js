@@ -50,7 +50,16 @@ function handleQualityTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
-  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
+
+  // 若当前已在扫码页（同一 tab），wx.switchTab 不会重新触发 onShow，
+  // 直接调用页面实例的 checkPendingQualityTask 确保弹窗弹出
+  const pages = getCurrentPages();
+  const currentPage = pages[pages.length - 1];
+  if (currentPage && typeof currentPage.checkPendingQualityTask === 'function') {
+    currentPage.checkPendingQualityTask();
+  } else {
+    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
+  }
 }
 
 /**

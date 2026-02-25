@@ -14,7 +14,10 @@
 
     <!-- 用户信息 -->
     <view wx:if="{{userInfo}}" class="user-profile-card">
-      <view class="profile-avatar">{{avatarLetter}}</view>
+      <view class="profile-avatar">
+        <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;"/>
+        <text wx:else>{{avatarLetter}}</text>
+      </view>
       <view class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</view>
       <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
       <view wx:if="{{showApprovalEntry}}" class="profile-online">

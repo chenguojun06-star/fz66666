@@ -1,5 +1,6 @@
 const api = require('../../utils/api');
-const { getUserInfo } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo } = require('../../utils/storage');
+const { getBaseUrl } = require('../../config');
 const {
   getRoleDisplayName,
   isAdminOrSupervisor,
@@ -93,7 +94,44 @@ Page({
     const roleDisplayName = getRoleDisplayName();
     const userName = userInfo?.name || userInfo?.username || '未知';
     const avatarLetter = userName.charAt(0);
-    this.setData({ userInfo, roleDisplayName, avatarLetter });
+
+    // 构造头像完整URL（PC端上传的头像为 /api/file/tenant-download/... 格式，需附加token）
+    let avatarImgUrl = '';
+    const rawAvatar = userInfo?.avatarUrl || userInfo?.avatar || userInfo?.headUrl || '';
+    if (rawAvatar) {
+      if (rawAvatar.startsWith('http://') || rawAvatar.startsWith('https://')) {
+        avatarImgUrl = rawAvatar;
+      } else {
+        const token = getToken();
+        const base = getBaseUrl().replace(/\/$/, '');
+        const sep = rawAvatar.includes('?') ? '&' : '?';
+        avatarImgUrl = `${base}${rawAvatar}${sep}token=${encodeURIComponent(token)}`;
+      }
+    }
+
+    this.setData({ userInfo, roleDisplayName, avatarLetter, avatarImgUrl });
+
+    // 后台从服务器刷新用户信息，PC端改了头像无需重新登录即可同步
+    api.system.getMe().then(res => {
+      const freshUser = res?.data || res;
+      if (!freshUser || !freshUser.name) return;
+      setUserInfo(freshUser);
+      const freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
+      let freshImgUrl = '';
+      if (freshAvatar) {
+        if (freshAvatar.startsWith('http://') || freshAvatar.startsWith('https://')) {
+          freshImgUrl = freshAvatar;
+        } else {
+          const token = getToken();
+          const base = getBaseUrl().replace(/\/$/, '');
+          const sep = freshAvatar.includes('?') ? '&' : '?';
+          freshImgUrl = `${base}${freshAvatar}${sep}token=${encodeURIComponent(token)}`;
+        }
+      }
+      if (freshImgUrl !== avatarImgUrl) {
+        this.setData({ avatarImgUrl: freshImgUrl });
+      }
+    }).catch(() => {}); // 静默失败，不影响页面
   },
 
   async loadSystemInfo() {
