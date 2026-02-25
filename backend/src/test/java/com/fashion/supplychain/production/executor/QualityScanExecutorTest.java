@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.executor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class QualityScanExecutorTest {
 
     @Mock
     private SKUService skuService;
+
+    @Mock
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @InjectMocks
     private QualityScanExecutor executor;
@@ -176,16 +180,12 @@ class QualityScanExecutorTest {
         mockBundle.setProductionOrderId("order-001");
         when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
 
-        // Mock 领取记录
+        // Mock 领取记录存在；confirm 记录不存在（无重复）
         ScanRecord receiveRecord = new ScanRecord();
         receiveRecord.setId("receive-001");
-        ScanRecord inspectRecord = new ScanRecord();
-        inspectRecord.setId("inspect-001");
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-            .thenReturn(receiveRecord, inspectRecord, null);
+            .thenReturn(receiveRecord, null);
 
-        // Mock 入库保存
-        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
@@ -200,9 +200,10 @@ class QualityScanExecutorTest {
                 sizeResolver
         );
 
-        // Then: 验证ProductWarehousing记录创建
+        // Then: handleConfirm 只录质检结果不入库（WarehouseScanExecutor 负责入库）
         assertNotNull(result);
-        verify(productWarehousingService, times(1)).saveWarehousingAndUpdateOrder(any(ProductWarehousing.class));
+        assertTrue((Boolean) result.get("success"), "质检确认应返回 success=true");
+        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test
@@ -219,16 +220,12 @@ class QualityScanExecutorTest {
         mockBundle.setProductionOrderId("order-001");
         when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
 
-        // Mock 领取和验收记录
+        // Mock 领取记录存在；confirm 记录不存在（无重复）
         ScanRecord receiveRecord = new ScanRecord();
         receiveRecord.setId("receive-001");
-        ScanRecord inspectRecord = new ScanRecord();
-        inspectRecord.setId("inspect-001");
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-            .thenReturn(receiveRecord, inspectRecord, null);
+            .thenReturn(receiveRecord, null);
 
-        // Mock 入库保存
-        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
@@ -243,44 +240,35 @@ class QualityScanExecutorTest {
                 sizeResolver
         );
 
-        // Then: 验证成品入库
+        // Then: handleConfirm 只录质检结果，入库由 WarehouseScanExecutor 负责
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"), "应该返回success=true");
+        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test
     void testComputeRemainingRepairQuantity_WithRepairPool() {
-        // Given: 返修场景，qualityResult=repaired
+        // Given: 返修场景，qualityResult=repaired → handleConfirm 只录结果不入库
+        // 入库由 WarehouseScanExecutor 独立负责
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "repaired");
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         ScanRecord rcv = new ScanRecord(); rcv.setId("rcv-001");
-        ScanRecord ins = new ScanRecord(); ins.setId("ins-001");
+        // 第一次 getOne → receive 记录存在；第二次 → 无重复 confirm 记录
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-                .thenReturn(rcv, ins, null);
+                .thenReturn(rcv, null);
 
-        // Mock validateNotDuplicateWarehousing → 返回空列表（无重复记录）
-        // Mock computeRemainingRepairQuantity 需要: getById + productWarehousingService.list
-        when(cuttingBundleService.getById("bundle-001")).thenReturn(mockBundle);
-
-        // 第一次 list（validateNotDuplicateWarehousing）: 返回空，避免重复入库异常
-        // 第二次 list（computeRemainingRepairQuantity）: 返回 0 已入库，计算 50-0=50 可返修
-        when(productWarehousingService.list(any(LambdaQueryWrapper.class)))
-                .thenReturn(java.util.Collections.emptyList(),
-                            java.util.Collections.emptyList());
-        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
-
-        // When: 执行返修入库
+        // When: 执行返修结果录入
         Map<String, Object> result = executor.execute(
                 baseParams, "req-repair-001", "op-001", "王五",
                 mockOrder, colorResolver, sizeResolver);
 
-        // Then: 调用了 productWarehousingService.list 计算返修数量
+        // Then: 只保存扫码记录，不调用入库相关方法
         assertNotNull(result);
-        assertTrue((Boolean) result.get("success"), "返修入库应成功");
-        verify(productWarehousingService, atLeastOnce()).list(any(LambdaQueryWrapper.class));
+        assertTrue((Boolean) result.get("success"), "返修结果录入应成功");
+        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test
@@ -354,19 +342,19 @@ class QualityScanExecutorTest {
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         ScanRecord rcv = new ScanRecord(); rcv.setId("rcv-def");
-        ScanRecord ins = new ScanRecord(); ins.setId("ins-def");
+        // 第一次 getOne → receive 记录存在；第二次 → 无重复 confirm 记录
         when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
-                .thenReturn(rcv, ins, null);
-        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
+                .thenReturn(rcv, null);
 
-        // When: 默认走 confirm 路径（入库）
+        // When: 默认走 confirm 路径
         Map<String, Object> result = executor.execute(
                 baseParams, "req-default-001", "op-001", "王五",
                 mockOrder, colorResolver, sizeResolver);
 
-        // Then: 应进入 confirm 路径产生入库记录
+        // Then: 应进入 confirm 路径保存扫码记录（入库由 WarehouseScanExecutor 负责）
         assertNotNull(result);
-        verify(productWarehousingService, times(1)).saveWarehousingAndUpdateOrder(any(ProductWarehousing.class));
+        assertTrue((Boolean) result.get("success"), "默认 confirm 路径应成功");
+        verify(scanRecordService).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test

@@ -10,13 +10,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import java.time.LocalDateTime;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -40,6 +44,14 @@ class ReconciliationStatusOrchestratorTest {
     @AfterEach
     void tearDown() {
         UserContext.clear();
+    }
+
+    @BeforeAll
+    static void initLambdaCache() {
+        // returnToPrevious 方法内部使用 LambdaUpdateWrapper，需要预先注册实体的 lambda 缓存
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, MaterialReconciliation.class);
+        TableInfoHelper.initTableInfo(assistant, ShipmentReconciliation.class);
     }
 
     @Test
@@ -158,21 +170,20 @@ class ReconciliationStatusOrchestratorTest {
         mr.setRemark("old");
         mr.setTenantId(1L);
         when(materialReconciliationService.getById("1")).thenReturn(mr);
-        when(materialReconciliationService.updateById(any(MaterialReconciliation.class))).thenReturn(true);
+        // returnToPrevious 内部使用 LambdaUpdateWrapper 调 update()，不是 updateById()
+        when(materialReconciliationService.update(any())).thenReturn(true);
 
         String msg = orchestrator.returnMaterialToPrevious("1", "原因");
         assertEquals("退回成功", msg);
 
-        ArgumentCaptor<MaterialReconciliation> captor = ArgumentCaptor.forClass(MaterialReconciliation.class);
-        verify(materialReconciliationService).updateById(captor.capture());
-
-        MaterialReconciliation saved = captor.getValue();
-        assertEquals("pending", saved.getStatus());
-        assertNotNull(saved.getUpdateTime());
-        assertTrue(saved.getRemark().startsWith("old\n"));
-        assertTrue(saved.getRemark().contains("[tom]"));
-        assertTrue(saved.getRemark().contains("[RETURN]"));
-        assertTrue(saved.getRemark().contains("原因"));
+        // 直接验证 mr 对象被修改（与 LambdaUpdateWrapper 里的 set 对应）
+        assertEquals("pending", mr.getStatus());
+        assertNotNull(mr.getUpdateTime());
+        assertTrue(mr.getRemark().startsWith("old\n"));
+        assertTrue(mr.getRemark().contains("[tom]"));
+        assertTrue(mr.getRemark().contains("[RETURN]"));
+        assertTrue(mr.getRemark().contains("原因"));
+        verify(materialReconciliationService).update(any());
     }
 
     @Test
@@ -185,21 +196,20 @@ class ReconciliationStatusOrchestratorTest {
         sr.setTenantId(1L);
         sr.setPaidAt(LocalDateTime.now().minusDays(1));
         when(shipmentReconciliationService.getById("1")).thenReturn(sr);
-        when(shipmentReconciliationService.updateById(any(ShipmentReconciliation.class))).thenReturn(true);
+        // returnToPrevious 内部使用 LambdaUpdateWrapper 调 update()，不是 updateById()
+        when(shipmentReconciliationService.update(any())).thenReturn(true);
 
         String msg = orchestrator.returnShipmentToPrevious("1", "原因");
         assertEquals("退回成功", msg);
 
-        ArgumentCaptor<ShipmentReconciliation> captor = ArgumentCaptor.forClass(ShipmentReconciliation.class);
-        verify(shipmentReconciliationService).updateById(captor.capture());
-
-        ShipmentReconciliation saved = captor.getValue();
-        assertEquals("approved", saved.getStatus());
-        assertNull(saved.getPaidAt());
-        assertNotNull(saved.getReReviewAt());
-        assertEquals("原因", saved.getReReviewReason());
-        assertTrue(saved.getRemark().contains("[tom]"));
-        assertTrue(saved.getRemark().contains("[RETURN]"));
+        // 直接验证 sr 对象被修改
+        assertEquals("approved", sr.getStatus());
+        assertNull(sr.getPaidAt());
+        assertNotNull(sr.getReReviewAt());
+        assertEquals("原因", sr.getReReviewReason());
+        assertTrue(sr.getRemark().contains("[tom]"));
+        assertTrue(sr.getRemark().contains("[RETURN]"));
+        verify(shipmentReconciliationService).update(any());
     }
 
     private static void setUser(String username, String role) {
