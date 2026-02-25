@@ -27,7 +27,7 @@ export const productionCuttingApi = {
 
 export const productionScanApi = {
   execute: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: unknown }>('/production/scan/execute', payload),
-  listByOrderId: (orderId: string, params: Record<string, unknown>) => api.get<{ code: number; data: unknown[] }>(`/production/scan/order/${encodeURIComponent(String(orderId || '').trim())}`, { params }),
+  listByOrderId: (orderId: string, params: Record<string, unknown>) => api.get<{ code: number; data: unknown[] }>(`/production/scan/list`, { params: { orderId: String(orderId || '').trim(), ...params } }),
   create: (payload: any) => api.post<any>('/production/scan/execute', payload),
   rollback: (orderId: any, payload?: any) => api.post<any>('/production/scan/rollback', { orderId, ...(payload || {}) }),
   /** 撤回扫码记录（1小时内、未结算、订单未完成） */
