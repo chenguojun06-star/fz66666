@@ -20,19 +20,19 @@ CREATE TABLE IF NOT EXISTS `t_unit_price_audit_log` (
     INDEX `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='单价修改审计日志表';
 
--- 2. 为款号附件表添加版本管理字段（ADD COLUMN IF NOT EXISTS 保证幂等）
+-- 2. 为款号附件表添加版本管理字段（ADD COLUMN 保证幂等）
 ALTER TABLE `t_style_attachment`
-    ADD COLUMN IF NOT EXISTS `biz_type`       VARCHAR(30)  DEFAULT 'general'
+    ADD COLUMN `biz_type`       VARCHAR(30)  DEFAULT 'general'
         COMMENT '业务类型: general/pattern/pattern_grading/workorder',
-    ADD COLUMN IF NOT EXISTS `version`        INT          DEFAULT 1
+    ADD COLUMN `version`        INT          DEFAULT 1
         COMMENT '版本号',
-    ADD COLUMN IF NOT EXISTS `version_remark` VARCHAR(200) DEFAULT NULL
+    ADD COLUMN `version_remark` VARCHAR(200) DEFAULT NULL
         COMMENT '版本说明',
-    ADD COLUMN IF NOT EXISTS `status`         VARCHAR(20)  DEFAULT 'active'
+    ADD COLUMN `status`         VARCHAR(20)  DEFAULT 'active'
         COMMENT '状态: active/archived',
-    ADD COLUMN IF NOT EXISTS `uploader`       VARCHAR(50)  DEFAULT NULL
+    ADD COLUMN `uploader`       VARCHAR(50)  DEFAULT NULL
         COMMENT '上传人',
-    ADD COLUMN IF NOT EXISTS `parent_id`      VARCHAR(36)  DEFAULT NULL
+    ADD COLUMN `parent_id`      VARCHAR(36)  DEFAULT NULL
         COMMENT '父版本ID';
 
 CREATE INDEX IF NOT EXISTS `idx_style_attachment_biz_type` ON `t_style_attachment` (`biz_type`);
@@ -54,13 +54,13 @@ CREATE TABLE IF NOT EXISTS `t_pattern_check_config` (
 
 -- 4. 为款号信息表添加纸样相关字段
 ALTER TABLE `t_style_info`
-    ADD COLUMN IF NOT EXISTS `pattern_status`       VARCHAR(20) DEFAULT 'pending'
+    ADD COLUMN `pattern_status`       VARCHAR(20) DEFAULT 'pending'
         COMMENT '纸样状态: pending/in_progress/completed',
-    ADD COLUMN IF NOT EXISTS `pattern_started_at`   DATETIME DEFAULT NULL
+    ADD COLUMN `pattern_started_at`   DATETIME DEFAULT NULL
         COMMENT '纸样开始时间',
-    ADD COLUMN IF NOT EXISTS `pattern_completed_at` DATETIME DEFAULT NULL
+    ADD COLUMN `pattern_completed_at` DATETIME DEFAULT NULL
         COMMENT '纸样完成时间',
-    ADD COLUMN IF NOT EXISTS `grading_status`       VARCHAR(20) DEFAULT 'pending'
+    ADD COLUMN `grading_status`       VARCHAR(20) DEFAULT 'pending'
         COMMENT '放码状态: pending/in_progress/completed',
-    ADD COLUMN IF NOT EXISTS `grading_completed_at` DATETIME DEFAULT NULL
+    ADD COLUMN `grading_completed_at` DATETIME DEFAULT NULL
         COMMENT '放码完成时间';

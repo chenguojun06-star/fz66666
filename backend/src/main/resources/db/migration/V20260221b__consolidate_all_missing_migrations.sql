@@ -45,12 +45,12 @@ CREATE TABLE IF NOT EXISTS `t_operation_log` (
 
 -- t_material_stock 乐观锁版本号
 ALTER TABLE `t_material_stock`
-    ADD COLUMN IF NOT EXISTS `version` INT DEFAULT 0
+    ADD COLUMN `version` INT DEFAULT 0
     COMMENT '乐观锁版本号（并发库存操作防覆盖）';
 
 -- t_production_order 乐观锁版本号
 ALTER TABLE `t_production_order`
-    ADD COLUMN IF NOT EXISTS `version` INT DEFAULT 0
+    ADD COLUMN `version` INT DEFAULT 0
     COMMENT '乐观锁版本号';
 
 -- 生产订单索引（ADD COLUMN 后补充）
@@ -59,14 +59,14 @@ CREATE INDEX IF NOT EXISTS `idx_factory_id`    ON `t_production_order` (`factory
 
 -- t_sample_stock 乐观锁版本号
 ALTER TABLE `t_sample_stock`
-    ADD COLUMN IF NOT EXISTS `version` INT DEFAULT 0
+    ADD COLUMN `version` INT DEFAULT 0
     COMMENT '乐观锁版本号（并发库存操作防覆盖）';
 
 
 -- ======================================================================
 -- Part 2: 多租户SaaS架构 - t_tenant 表 + 全业务表 tenant_id 字段
 -- (来自 V20260206__multi_tenant_saas.sql)
--- 注意: 使用 MySQL 8.0 的 ADD COLUMN IF NOT EXISTS 语法代替存储过程
+-- 注意: 使用 MySQL 8.0 的 ADD COLUMN 语法代替存储过程
 -- ======================================================================
 
 CREATE TABLE IF NOT EXISTS `t_tenant` (
@@ -89,128 +89,128 @@ CREATE TABLE IF NOT EXISTS `t_tenant` (
 
 -- ---- 为 t_user 添加租户相关字段 ----
 ALTER TABLE `t_user`
-    ADD COLUMN IF NOT EXISTS `tenant_id`       BIGINT     DEFAULT NULL COMMENT '所属租户ID',
-    ADD COLUMN IF NOT EXISTS `is_tenant_owner` TINYINT(1) DEFAULT 0   COMMENT '是否为租户主账号';
+    ADD COLUMN `tenant_id`       BIGINT     DEFAULT NULL COMMENT '所属租户ID',
+    ADD COLUMN `is_tenant_owner` TINYINT(1) DEFAULT 0   COMMENT '是否为租户主账号';
 CREATE INDEX IF NOT EXISTS `idx_user_tenant_id` ON `t_user` (`tenant_id`);
 
 -- ---- 生产模块 ----
-ALTER TABLE `t_production_order`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_production_order`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_po_tenant_id`   ON `t_production_order` (`tenant_id`);
 
-ALTER TABLE `t_production_process_tracking` ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_production_process_tracking` ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ppt_tenant_id`  ON `t_production_process_tracking` (`tenant_id`);
 
-ALTER TABLE `t_cutting_task`               ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_cutting_task`               ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ct_tenant_id`   ON `t_cutting_task` (`tenant_id`);
 
-ALTER TABLE `t_cutting_bundle`             ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_cutting_bundle`             ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_cb_tenant_id`   ON `t_cutting_bundle` (`tenant_id`);
 
-ALTER TABLE `t_scan_record`                ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_scan_record`                ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sr_tenant_id`   ON `t_scan_record` (`tenant_id`);
 
-ALTER TABLE `t_secondary_process`          ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_secondary_process`          ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sp_tenant_id`   ON `t_secondary_process` (`tenant_id`);
 
 -- ---- 款式模块 ----
-ALTER TABLE `t_style_info`                 ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_info`                 ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_si_tenant_id`   ON `t_style_info` (`tenant_id`);
 
-ALTER TABLE `t_style_bom`                  ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_bom`                  ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sb_tenant_id`   ON `t_style_bom` (`tenant_id`);
 
-ALTER TABLE `t_style_process`              ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_process`              ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_spr_tenant_id`  ON `t_style_process` (`tenant_id`);
 
-ALTER TABLE `t_style_attachment`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_attachment`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sa_tenant_id`   ON `t_style_attachment` (`tenant_id`);
 
-ALTER TABLE `t_style_size`                 ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_size`                 ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ss_tenant_id`   ON `t_style_size` (`tenant_id`);
 
-ALTER TABLE `t_style_size_price`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_size_price`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ssp_tenant_id`  ON `t_style_size_price` (`tenant_id`);
 
-ALTER TABLE `t_style_quotation`            ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_quotation`            ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sq_tenant_id`   ON `t_style_quotation` (`tenant_id`);
 
-ALTER TABLE `t_style_operation_log`        ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_style_operation_log`        ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sol_tenant_id`  ON `t_style_operation_log` (`tenant_id`);
 
 -- ---- 面辅料/仓库模块 ----
-ALTER TABLE `t_material_database`          ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_database`          ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_md_tenant_id`   ON `t_material_database` (`tenant_id`);
 
-ALTER TABLE `t_material_stock`             ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_stock`             ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ms_tenant_id`   ON `t_material_stock` (`tenant_id`);
 
-ALTER TABLE `t_material_inbound`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_inbound`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mi_tenant_id`   ON `t_material_inbound` (`tenant_id`);
 
-ALTER TABLE `t_material_inbound_sequence`  ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_inbound_sequence`  ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mis_tenant_id`  ON `t_material_inbound_sequence` (`tenant_id`);
 
-ALTER TABLE `t_material_picking`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_picking`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mp_tenant_id`   ON `t_material_picking` (`tenant_id`);
 
-ALTER TABLE `t_material_picking_item`      ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_picking_item`      ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mpi_tenant_id`  ON `t_material_picking_item` (`tenant_id`);
 
-ALTER TABLE `t_material_purchase`          ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_purchase`          ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mpu_tenant_id`  ON `t_material_purchase` (`tenant_id`);
 
 -- ---- 成品模块 ----
-ALTER TABLE `t_product_sku`                ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_product_sku`                ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ps_tenant_id`   ON `t_product_sku` (`tenant_id`);
 
-ALTER TABLE `t_product_warehousing`        ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_product_warehousing`        ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_pw_tenant_id`   ON `t_product_warehousing` (`tenant_id`);
 
-ALTER TABLE `t_product_outstock`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_product_outstock`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_pos_tenant_id`  ON `t_product_outstock` (`tenant_id`);
 
 -- ---- 样衣模块 ----
-ALTER TABLE `t_sample_stock`               ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_sample_stock`               ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sst_tenant_id`  ON `t_sample_stock` (`tenant_id`);
 
-ALTER TABLE `t_sample_loan`                ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_sample_loan`                ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_sl_tenant_id`   ON `t_sample_loan` (`tenant_id`);
 
 -- ---- 财务模块 ----
-ALTER TABLE `t_material_reconciliation`         ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_material_reconciliation`         ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_mr_tenant_id`   ON `t_material_reconciliation` (`tenant_id`);
 
-ALTER TABLE `t_order_reconciliation_approval`   ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_order_reconciliation_approval`   ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ora_tenant_id`  ON `t_order_reconciliation_approval` (`tenant_id`);
 
-ALTER TABLE `t_shipment_reconciliation`         ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_shipment_reconciliation`         ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_shr_tenant_id`  ON `t_shipment_reconciliation` (`tenant_id`);
 
-ALTER TABLE `t_payroll_settlement`              ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_payroll_settlement`              ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_pse_tenant_id`  ON `t_payroll_settlement` (`tenant_id`);
 
-ALTER TABLE `t_payroll_settlement_item`         ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_payroll_settlement_item`         ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_psi_tenant_id`  ON `t_payroll_settlement_item` (`tenant_id`);
 
-ALTER TABLE `t_deduction_item`                  ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_deduction_item`                  ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_di_tenant_id`   ON `t_deduction_item` (`tenant_id`);
 
 -- ---- 工厂/基础数据 ----
-ALTER TABLE `t_factory`                    ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_factory`                    ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_f_tenant_id`    ON `t_factory` (`tenant_id`);
 
 -- ---- 版型模块 ----
-ALTER TABLE `t_pattern_production`         ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_pattern_production`         ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_pp_tenant_id`   ON `t_pattern_production` (`tenant_id`);
 
-ALTER TABLE `t_pattern_revision`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_pattern_revision`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_pr_tenant_id`   ON `t_pattern_revision` (`tenant_id`);
 
 -- ---- 模板库 ----
-ALTER TABLE `t_template_library`           ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_template_library`           ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_tl_tenant_id`   ON `t_template_library` (`tenant_id`);
 
-ALTER TABLE `t_template_operation_log`     ADD COLUMN IF NOT EXISTS `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+ALTER TABLE `t_template_operation_log`     ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 
 
 -- ======================================================================
@@ -564,11 +564,11 @@ ORDER BY `po`.`create_time` DESC;
 -- ======================================================================
 
 ALTER TABLE `order_transfer`
-    ADD COLUMN IF NOT EXISTS `transfer_type`   VARCHAR(10)  NOT NULL DEFAULT 'user'
+    ADD COLUMN `transfer_type`   VARCHAR(10)  NOT NULL DEFAULT 'user'
         COMMENT '转移类型: user=转人员, factory=转工厂',
-    ADD COLUMN IF NOT EXISTS `to_factory_id`   VARCHAR(36)  NULL
+    ADD COLUMN `to_factory_id`   VARCHAR(36)  NULL
         COMMENT '目标工厂ID（transfer_type=factory时使用）',
-    ADD COLUMN IF NOT EXISTS `to_factory_name` VARCHAR(100) NULL
+    ADD COLUMN `to_factory_name` VARCHAR(100) NULL
         COMMENT '目标工厂名称（冗余）';
 
 CREATE INDEX IF NOT EXISTS `idx_order_transfer_tenant_type`
@@ -640,7 +640,7 @@ ALTER TABLE `t_wage_payment`
 
 -- 新增工厂类型字段（默认所有工厂为 EXTERNAL 外部工厂）
 ALTER TABLE `t_factory`
-    ADD COLUMN IF NOT EXISTS `factory_type` VARCHAR(20) NOT NULL DEFAULT 'EXTERNAL'
+    ADD COLUMN `factory_type` VARCHAR(20) NOT NULL DEFAULT 'EXTERNAL'
     COMMENT '工厂类型: INTERNAL=本厂内部按人员结算, EXTERNAL=外部工厂按工厂结算';
 
 
@@ -651,7 +651,7 @@ ALTER TABLE `t_factory`
 -- ======================================================================
 
 ALTER TABLE `t_user`
-    ADD COLUMN IF NOT EXISTS `openid` VARCHAR(128) DEFAULT NULL
+    ADD COLUMN `openid` VARCHAR(128) DEFAULT NULL
     COMMENT '微信小程序 openid（用于一键免密登录）';
 
 CREATE INDEX IF NOT EXISTS `idx_t_user_openid` ON `t_user` (`openid`);

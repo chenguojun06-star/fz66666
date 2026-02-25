@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `t_material_inbound_sequence` (
 
 -- 采购表补充入库记录关联字段
 ALTER TABLE `t_material_purchase`
-    ADD COLUMN IF NOT EXISTS `inbound_record_id` VARCHAR(32) DEFAULT NULL
+    ADD COLUMN `inbound_record_id` VARCHAR(32) DEFAULT NULL
     COMMENT '最新入库单ID';
 CREATE INDEX IF NOT EXISTS `idx_mpu_inbound_record_id` ON `t_material_purchase` (`inbound_record_id`);
 
@@ -150,11 +150,11 @@ CREATE TABLE IF NOT EXISTS `t_expense_reimbursement` (
 -- Part 4：t_style_bom 库存检查字段
 -- ======================================================================
 ALTER TABLE `t_style_bom`
-    ADD COLUMN IF NOT EXISTS `stock_status`      VARCHAR(20) DEFAULT NULL
+    ADD COLUMN `stock_status`      VARCHAR(20) DEFAULT NULL
         COMMENT '库存状态: sufficient/insufficient/none/unchecked',
-    ADD COLUMN IF NOT EXISTS `available_stock`   INT         DEFAULT NULL
+    ADD COLUMN `available_stock`   INT         DEFAULT NULL
         COMMENT '可用库存（quantity - locked_quantity）',
-    ADD COLUMN IF NOT EXISTS `required_purchase` INT         DEFAULT NULL
+    ADD COLUMN `required_purchase` INT         DEFAULT NULL
         COMMENT '需采购数量（需求量 - 可用库存，最小为0）';
 
 
@@ -162,17 +162,17 @@ ALTER TABLE `t_style_bom`
 -- Part 5：物料对账表补充字段
 -- ======================================================================
 ALTER TABLE `t_material_reconciliation`
-    ADD COLUMN IF NOT EXISTS `source_type`              VARCHAR(20)  DEFAULT NULL
+    ADD COLUMN `source_type`              VARCHAR(20)  DEFAULT NULL
         COMMENT '采购类型: order=批量订单, sample=样衣开发',
-    ADD COLUMN IF NOT EXISTS `pattern_production_id`    VARCHAR(36)  DEFAULT NULL
+    ADD COLUMN `pattern_production_id`    VARCHAR(36)  DEFAULT NULL
         COMMENT '样衣生产ID（source_type=sample时使用）',
-    ADD COLUMN IF NOT EXISTS `expected_arrival_date`    DATETIME     DEFAULT NULL
+    ADD COLUMN `expected_arrival_date`    DATETIME     DEFAULT NULL
         COMMENT '预计到货日期',
-    ADD COLUMN IF NOT EXISTS `actual_arrival_date`      DATETIME     DEFAULT NULL
+    ADD COLUMN `actual_arrival_date`      DATETIME     DEFAULT NULL
         COMMENT '实际到货日期',
-    ADD COLUMN IF NOT EXISTS `inbound_date`             DATETIME     DEFAULT NULL
+    ADD COLUMN `inbound_date`             DATETIME     DEFAULT NULL
         COMMENT '入库日期',
-    ADD COLUMN IF NOT EXISTS `warehouse_location`       VARCHAR(100) DEFAULT NULL
+    ADD COLUMN `warehouse_location`       VARCHAR(100) DEFAULT NULL
         COMMENT '仓库库区';
 
 
@@ -182,86 +182,86 @@ ALTER TABLE `t_material_reconciliation`
 
 -- t_material_purchase 创建人/更新人
 ALTER TABLE `t_material_purchase`
-    ADD COLUMN IF NOT EXISTS `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
-    ADD COLUMN IF NOT EXISTS `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
-    ADD COLUMN IF NOT EXISTS `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名';
+    ADD COLUMN `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
+    ADD COLUMN `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
+    ADD COLUMN `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名';
 CREATE INDEX IF NOT EXISTS `idx_mpu_creator_id` ON `t_material_purchase` (`creator_id`);
 
 -- t_product_outstock 出库操作人/创建人
 ALTER TABLE `t_product_outstock`
-    ADD COLUMN IF NOT EXISTS `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '出库操作人ID',
-    ADD COLUMN IF NOT EXISTS `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '出库操作人姓名',
-    ADD COLUMN IF NOT EXISTS `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名';
+    ADD COLUMN `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '出库操作人ID',
+    ADD COLUMN `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '出库操作人姓名',
+    ADD COLUMN `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名';
 CREATE INDEX IF NOT EXISTS `idx_pos_operator_id` ON `t_product_outstock` (`operator_id`);
 CREATE INDEX IF NOT EXISTS `idx_pos_creator_id`  ON `t_product_outstock` (`creator_id`);
 
 -- t_cutting_bundle 创建人/操作人
 ALTER TABLE `t_cutting_bundle`
-    ADD COLUMN IF NOT EXISTS `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
-    ADD COLUMN IF NOT EXISTS `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '最后扫码操作人ID',
-    ADD COLUMN IF NOT EXISTS `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名';
+    ADD COLUMN `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
+    ADD COLUMN `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '最后扫码操作人ID',
+    ADD COLUMN `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名';
 CREATE INDEX IF NOT EXISTS `idx_cb_creator_id`  ON `t_cutting_bundle` (`creator_id`);
 CREATE INDEX IF NOT EXISTS `idx_cb_operator_id` ON `t_cutting_bundle` (`operator_id`);
 
 -- t_style_quotation 创建/更新/审核人
 ALTER TABLE `t_style_quotation`
-    ADD COLUMN IF NOT EXISTS `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
-    ADD COLUMN IF NOT EXISTS `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
-    ADD COLUMN IF NOT EXISTS `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名',
-    ADD COLUMN IF NOT EXISTS `auditor_id`   VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
-    ADD COLUMN IF NOT EXISTS `auditor_name` VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
-    ADD COLUMN IF NOT EXISTS `audit_time`   DATETIME     DEFAULT NULL COMMENT '审核时间';
+    ADD COLUMN `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
+    ADD COLUMN `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
+    ADD COLUMN `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名',
+    ADD COLUMN `auditor_id`   VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
+    ADD COLUMN `auditor_name` VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
+    ADD COLUMN `audit_time`   DATETIME     DEFAULT NULL COMMENT '审核时间';
 CREATE INDEX IF NOT EXISTS `idx_sq_creator_id` ON `t_style_quotation` (`creator_id`);
 CREATE INDEX IF NOT EXISTS `idx_sq_auditor_id` ON `t_style_quotation` (`auditor_id`);
 
 -- t_payroll_settlement 审核/确认人
 ALTER TABLE `t_payroll_settlement`
-    ADD COLUMN IF NOT EXISTS `auditor_id`    VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
-    ADD COLUMN IF NOT EXISTS `auditor_name`  VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
-    ADD COLUMN IF NOT EXISTS `audit_time`    DATETIME     DEFAULT NULL COMMENT '审核时间',
-    ADD COLUMN IF NOT EXISTS `confirmer_id`  VARCHAR(32)  DEFAULT NULL COMMENT '确认人ID',
-    ADD COLUMN IF NOT EXISTS `confirmer_name` VARCHAR(100) DEFAULT NULL COMMENT '确认人姓名',
-    ADD COLUMN IF NOT EXISTS `confirm_time`  DATETIME     DEFAULT NULL COMMENT '确认时间';
+    ADD COLUMN `auditor_id`    VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
+    ADD COLUMN `auditor_name`  VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
+    ADD COLUMN `audit_time`    DATETIME     DEFAULT NULL COMMENT '审核时间',
+    ADD COLUMN `confirmer_id`  VARCHAR(32)  DEFAULT NULL COMMENT '确认人ID',
+    ADD COLUMN `confirmer_name` VARCHAR(100) DEFAULT NULL COMMENT '确认人姓名',
+    ADD COLUMN `confirm_time`  DATETIME     DEFAULT NULL COMMENT '确认时间';
 CREATE INDEX IF NOT EXISTS `idx_pse_auditor_id`   ON `t_payroll_settlement` (`auditor_id`);
 CREATE INDEX IF NOT EXISTS `idx_pse_confirmer_id` ON `t_payroll_settlement` (`confirmer_id`);
 
 -- t_cutting_task 创建/更新人
 ALTER TABLE `t_cutting_task`
-    ADD COLUMN IF NOT EXISTS `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
-    ADD COLUMN IF NOT EXISTS `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
-    ADD COLUMN IF NOT EXISTS `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名';
+    ADD COLUMN `creator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
+    ADD COLUMN `updater_id`   VARCHAR(32)  DEFAULT NULL COMMENT '更新人ID',
+    ADD COLUMN `updater_name` VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名';
 CREATE INDEX IF NOT EXISTS `idx_ct_creator_id` ON `t_cutting_task` (`creator_id`);
 
 -- t_secondary_process 创建/领取/操作人
 ALTER TABLE `t_secondary_process`
-    ADD COLUMN IF NOT EXISTS `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
-    ADD COLUMN IF NOT EXISTS `assignee_id`   VARCHAR(32)  DEFAULT NULL COMMENT '领取人ID',
-    ADD COLUMN IF NOT EXISTS `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '完成操作人ID',
-    ADD COLUMN IF NOT EXISTS `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '完成操作人姓名';
+    ADD COLUMN `creator_id`    VARCHAR(32)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `creator_name`  VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名',
+    ADD COLUMN `assignee_id`   VARCHAR(32)  DEFAULT NULL COMMENT '领取人ID',
+    ADD COLUMN `operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '完成操作人ID',
+    ADD COLUMN `operator_name` VARCHAR(100) DEFAULT NULL COMMENT '完成操作人姓名';
 CREATE INDEX IF NOT EXISTS `idx_spc_creator_id`  ON `t_secondary_process` (`creator_id`);
 CREATE INDEX IF NOT EXISTS `idx_spc_assignee_id` ON `t_secondary_process` (`assignee_id`);
 
 -- t_pattern_production 领取/纸样师傅ID
 ALTER TABLE `t_pattern_production`
-    ADD COLUMN IF NOT EXISTS `receiver_id`      VARCHAR(32) DEFAULT NULL COMMENT '领取人ID',
-    ADD COLUMN IF NOT EXISTS `pattern_maker_id` VARCHAR(32) DEFAULT NULL COMMENT '纸样师傅ID';
+    ADD COLUMN `receiver_id`      VARCHAR(32) DEFAULT NULL COMMENT '领取人ID',
+    ADD COLUMN `pattern_maker_id` VARCHAR(32) DEFAULT NULL COMMENT '纸样师傅ID';
 CREATE INDEX IF NOT EXISTS `idx_pp_receiver_id`      ON `t_pattern_production` (`receiver_id`);
 CREATE INDEX IF NOT EXISTS `idx_pp_pattern_maker_id` ON `t_pattern_production` (`pattern_maker_id`);
 
 -- t_shipment_reconciliation 对账/审核人
 ALTER TABLE `t_shipment_reconciliation`
-    ADD COLUMN IF NOT EXISTS `reconciliation_operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '对账操作人ID',
-    ADD COLUMN IF NOT EXISTS `reconciliation_operator_name` VARCHAR(100) DEFAULT NULL COMMENT '对账操作人姓名',
-    ADD COLUMN IF NOT EXISTS `reconciliation_time`          DATETIME     DEFAULT NULL COMMENT '对账时间',
-    ADD COLUMN IF NOT EXISTS `auditor_id`                   VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
-    ADD COLUMN IF NOT EXISTS `auditor_name`                 VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
-    ADD COLUMN IF NOT EXISTS `audit_time`                   DATETIME     DEFAULT NULL COMMENT '审核时间';
+    ADD COLUMN `reconciliation_operator_id`   VARCHAR(32)  DEFAULT NULL COMMENT '对账操作人ID',
+    ADD COLUMN `reconciliation_operator_name` VARCHAR(100) DEFAULT NULL COMMENT '对账操作人姓名',
+    ADD COLUMN `reconciliation_time`          DATETIME     DEFAULT NULL COMMENT '对账时间',
+    ADD COLUMN `auditor_id`                   VARCHAR(32)  DEFAULT NULL COMMENT '审核人ID',
+    ADD COLUMN `auditor_name`                 VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',
+    ADD COLUMN `audit_time`                   DATETIME     DEFAULT NULL COMMENT '审核时间';
 CREATE INDEX IF NOT EXISTS `idx_shr_reconciliation_operator_id` ON `t_shipment_reconciliation` (`reconciliation_operator_id`);
 CREATE INDEX IF NOT EXISTS `idx_shr_auditor_id`                 ON `t_shipment_reconciliation` (`auditor_id`);
 
@@ -270,8 +270,8 @@ CREATE INDEX IF NOT EXISTS `idx_shr_auditor_id`                 ON `t_shipment_r
 -- Part 7：生产订单创建人追踪（来自 20260201 脚本）
 -- ======================================================================
 ALTER TABLE `t_production_order`
-    ADD COLUMN IF NOT EXISTS `created_by_id`   VARCHAR(50)  DEFAULT NULL COMMENT '创建人ID',
-    ADD COLUMN IF NOT EXISTS `created_by_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名';
+    ADD COLUMN `created_by_id`   VARCHAR(50)  DEFAULT NULL COMMENT '创建人ID',
+    ADD COLUMN `created_by_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名';
 
 CREATE INDEX IF NOT EXISTS `idx_po_created_by_id` ON `t_production_order` (`created_by_id`);
 

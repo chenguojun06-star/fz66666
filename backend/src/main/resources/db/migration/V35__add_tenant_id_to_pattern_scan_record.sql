@@ -4,7 +4,7 @@
 --       INSERT/SELECT 均报 "Unknown column 'tenant_id' in 'field list'"
 
 ALTER TABLE t_pattern_scan_record
-    ADD COLUMN IF NOT EXISTS tenant_id BIGINT NULL COMMENT '租户ID，多租户数据隔离' AFTER delete_flag;
+    ADD COLUMN tenant_id BIGINT NULL COMMENT '租户ID，多租户数据隔离' AFTER delete_flag;
 
 -- 避免重复创建索引
 SET @exist := (
