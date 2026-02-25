@@ -123,10 +123,9 @@ jobs:
     - name: 部署后端 + 前端到微信云托管
       if: ${{ env.CLOUDBASE_ENV_ID != '' && env.CLOUDBASE_SECRET_ID != '' }}
       run: |
+        tcb login --apiKeyId "${CLOUDBASE_SECRET_ID}" --apiKey "${CLOUDBASE_SECRET_KEY}"
         tcb framework deploy \
           --envId "${CLOUDBASE_ENV_ID}" \
-          --secretId "${CLOUDBASE_SECRET_ID}" \
-          --secretKey "${CLOUDBASE_SECRET_KEY}" \
           --verbose
 
   notify:
