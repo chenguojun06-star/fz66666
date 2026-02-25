@@ -111,14 +111,15 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         throw new Error(res.message || '激活失败');
       }
       const result = res?.data || res;
-      message.success(`订单 ${order.orderNo} 激活成功`);
       activateModal.close();
       setRemark('');
+      // 先刷新列表，让状态立即变为「已激活」，再弹出结果弹窗
+      await fetchData();
+      message.success(`订单 ${order.orderNo} 激活成功`);
       resultModal.open({
         ...result,
         orderNo: result?.orderNo || order?.orderNo || '',
       });
-      fetchData();
       // 通知父组件刷新待处理数量（清除红点）
       onOrderActivated?.();
     } catch (e: any) {
