@@ -105,15 +105,6 @@ Page({
       // 加载在线人数
       const onlineCount = await api.system.getOnlineCount();
 
-      // 如果是管理员，加载待审批用户数量
-      if (this.data.showApprovalEntry) {
-        try {
-          await api.system.listPendingUsers({ page: 1, pageSize: 1 });
-        } catch (e) {
-          console.error('加载待审批用户数量失败', e);
-        }
-      }
-
       // 加载租户信息（用于邀请员工）——平台管理员无 tenantId不展示
       const userInfo = getUserInfo();
       const hasTenant = !!(userInfo && userInfo.tenantId);
