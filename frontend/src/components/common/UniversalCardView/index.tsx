@@ -114,6 +114,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
           ? progressConfig.calculate(record) >= 100
           : false;
+        const coverSrc = record?.[coverField];
+        const styleId = record?.[styleIdField];
+        const styleNo = record?.[styleNoField];
+        const hasCoverSource = Boolean(coverSrc || styleId || styleNo);
         // 过滤操作按钮：已完成的订单移除编辑按钮
         const actionButtons = actions?.(record)?.filter(action => {
           if (!action || action.type === 'divider') return false;
@@ -124,12 +128,6 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
         return (
           <Col {...getColSpan()} key={record.id || index}>
-            {(() => {
-              const coverSrc = record?.[coverField];
-              const styleId = record?.[styleIdField];
-              const styleNo = record?.[styleNoField];
-              const hasCoverSource = Boolean(coverSrc || styleId || styleNo);
-              return (
             <Card
               hoverable
               className="universal-card"
@@ -241,8 +239,6 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 )}
               </div>
             </Card>
-              );
-            })()}
           </Col>
         );
       })}
