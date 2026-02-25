@@ -21,6 +21,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -258,17 +259,44 @@ public class AppStoreController {
     }
 
     /**
-     * 【管理员】查看所有待处理订单（用于跟进人工开通）
+     * 【管理员】查看所有租户的应用购买订单
+     * ⚠️ 使用 JdbcTemplate 原生 SQL，彻底绕开 MyBatis-Plus 租户拦截器
+     * 超管必须能看到全部租户的订单，不受任何租户过滤影响
      */
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/admin/order-list")
     public Result<List<AppOrder>> adminOrderList(@RequestBody(required = false) Map<String, Object> params) {
-        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
-        if (params != null && params.containsKey("status")) {
-            wrapper.eq("status", params.get("status"));
+        try {
+            StringBuilder sql = new StringBuilder(
+                "SELECT id, order_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
+                "order_type, subscription_type, user_count, unit_price, total_amount, " +
+                "discount_amount, actual_amount, status, payment_method, payment_time, " +
+                "contact_name, contact_phone, contact_email, company_name, " +
+                "invoice_required, invoice_title, invoice_tax_no, remark, created_by, " +
+                "create_time, update_time " +
+                "FROM t_app_order WHERE delete_flag = 0"
+            );
+            List<Object> args = new ArrayList<>();
+
+            String statusFilter = (params != null && params.containsKey("status") && params.get("status") != null)
+                    ? params.get("status").toString().trim() : "";
+            if (!statusFilter.isEmpty()) {
+                sql.append(" AND status = ?");
+                args.add(statusFilter);
+            }
+            sql.append(" ORDER BY create_time DESC");
+
+            List<AppOrder> orders = jdbcTemplate.query(
+                sql.toString(), args.toArray(),
+                new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class)
+            );
+            log.info("[AdminOrderList] 超管查询全量订单：共 {} 条，状态过滤={}",
+                    orders.size(), statusFilter.isEmpty() ? "全部" : statusFilter);
+            return Result.success(orders);
+        } catch (Exception e) {
+            log.error("[AdminOrderList] 查询失败", e);
+            return Result.fail("查询订单失败：" + e.getMessage());
         }
-        wrapper.orderByDesc("create_time");
-        return Result.success(appOrderService.list(wrapper));
     }
 
     /**
