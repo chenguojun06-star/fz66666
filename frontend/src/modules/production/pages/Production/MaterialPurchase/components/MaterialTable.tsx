@@ -1,5 +1,5 @@
-import React from 'react';
-import { Tag } from 'antd';
+import React, { useCallback, useState } from 'react';
+import { Tag, App, Input } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
 import { getStatusConfig } from '../utils';
+import api from '@/utils/api';
 
 interface MaterialTableProps {
   loading: boolean;
@@ -22,6 +23,7 @@ interface MaterialTableProps {
   isMobile: boolean;
   onView: (record: MaterialPurchaseType) => void;
   onEdit: (record: MaterialPurchaseType) => void;
+  onRefresh?: () => void;
   sortField: string;
   sortOrder: 'asc' | 'desc';
   onSort: (field: string, order: 'asc' | 'desc') => void;
@@ -40,6 +42,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   isMobile,
   onView,
   onEdit,
+  onRefresh,
   sortField,
   sortOrder,
   onSort,
@@ -49,6 +52,53 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   isOrderFrozenForRecord,
 }) => {
   const navigate = useNavigate();
+  const { message, modal } = App.useApp();
+  const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+
+  /** 撤回采购领取/到货登记 */
+  const handleCancelReceive = useCallback((record: MaterialPurchaseType) => {
+    let reason = '';
+    modal.confirm({
+      title: '撤回采购领取',
+      width: 440,
+      content: (
+        <div>
+          <p style={{ marginBottom: 8 }}>
+            确定撤回「{record.materialName || record.materialCode}」的领取记录？
+          </p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 12 }}>
+            领取人：{record.receiverName || '-'}，到货数量：{record.arrivedQuantity || 0} {record.unit || ''}
+          </p>
+          <p style={{ fontSize: 13, marginBottom: 4 }}>撤回原因：</p>
+          <Input.TextArea
+            placeholder="请填写撤回原因（必填）"
+            autoSize={{ minRows: 2, maxRows: 4 }}
+            onChange={e => { reason = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '确认撤回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        if (!reason.trim()) {
+          message.error('请填写撤回原因');
+          throw new Error('请填写撤回原因');
+        }
+        setCancelLoading(record.id as string);
+        try {
+          await api.post('/production/purchase/cancel-receive', {
+            purchaseId: record.id,
+            reason: reason.trim(),
+          });
+          message.success('领取已撤回，采购单已恢复为待处理');
+          onRefresh?.();
+        } finally {
+          setCancelLoading(null);
+        }
+      },
+    });
+  }, [modal, message, onRefresh]);
 
   const cleanRemark = (value: unknown) => {
     const raw = String(value || '').trim();
@@ -320,10 +370,14 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
     {
       title: '操作',
       key: 'action',
-      width: 80,
+      width: 120,
       fixed: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const frozen = isOrderFrozenForRecord(record);
+        // 已领取/已到货状态可撤回（pending/cancelled 不可撤回）
+        const canCancelReceive = !frozen
+          && record.status !== 'pending'
+          && record.status !== 'cancelled';
         return (
           <RowActions
             actions={[
@@ -339,6 +393,13 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 disabled: frozen,
                 onClick: () => onEdit(record),
               },
+              ...(canCancelReceive ? [{
+                key: 'cancelReceive',
+                label: cancelLoading === record.id ? '撤回中...' : '撤回领取',
+                danger: true as const,
+                disabled: cancelLoading === record.id,
+                onClick: () => handleCancelReceive(record),
+              }] : []),
             ]}
           />
         );

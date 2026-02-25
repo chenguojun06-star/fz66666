@@ -6,8 +6,10 @@ import {
   StopOutlined,
   CopyOutlined,
   QuestionCircleOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
+import ChannelConfigModal from './ChannelConfigModal';
 
 interface ChannelInfo {
   name: string;
@@ -47,6 +49,8 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<ChannelInfo[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [configChannel, setConfigChannel] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -157,12 +161,34 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                       </div>
                     )}
                   </div>
+
+                  <Divider style={{ margin: '8px 0' }} />
+
+                  <Button
+                    type="primary"
+                    ghost
+                    icon={<SettingOutlined />}
+                    block
+                    onClick={() => {
+                      setConfigChannel(ch.code);
+                      setConfigModalOpen(true);
+                    }}
+                  >
+                    {ch.mode === 'LIVE' ? '修改配置' : '立即配置'}
+                  </Button>
                 </Card>
               </Badge.Ribbon>
             </Col>
           );
         })}
       </Row>
+
+      <ChannelConfigModal
+        open={configModalOpen}
+        channelCode={configChannel}
+        onClose={() => setConfigModalOpen(false)}
+        onSaved={() => fetchData()}
+      />
     </Spin>
   );
 };

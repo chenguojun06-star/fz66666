@@ -1381,6 +1381,62 @@ public class MaterialPurchaseOrchestrator {
     }
 
     /**
+     * 撤回采购领取（到货登记）操作
+     * 将已领取/已到货的采购任务恢复为待处理状态，清空到货数量和领取人信息
+     * @param body { purchaseId, reason }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> cancelReceive(Map<String, Object> body) {
+        String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
+        String reason = ParamUtils.toTrimmedString(body == null ? null : body.get("reason"));
+
+        if (!org.springframework.util.StringUtils.hasText(purchaseId)) {
+            throw new IllegalArgumentException("采购单ID不能为空");
+        }
+        if (!org.springframework.util.StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("撤回原因不能为空");
+        }
+
+        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() == 1)) {
+            throw new NoSuchElementException("采购单不存在或已删除");
+        }
+
+        String currentStatus = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
+        if (MaterialConstants.STATUS_PENDING.equals(currentStatus)) {
+            throw new IllegalStateException("该采购单尚未领取，无需撤回");
+        }
+        if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
+            throw new IllegalStateException("该采购单已取消，不可操作");
+        }
+
+        String operator = UserContext.username();
+        String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
+        String newRemark = "【撤回领取】" + reason + " | 操作人: " + operator + (existingRemark.isEmpty() ? "" : " | 原备注: " + existingRemark);
+
+        LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<>();
+        uw.eq(MaterialPurchase::getId, purchaseId)
+          .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+          .set(MaterialPurchase::getArrivedQuantity, 0)
+          .set(MaterialPurchase::getReceiverId, null)
+          .set(MaterialPurchase::getReceiverName, null)
+          .set(MaterialPurchase::getReceivedTime, null)
+          .set(MaterialPurchase::getRemark, newRemark)
+          .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+        materialPurchaseService.update(uw);
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("purchaseId", purchaseId);
+        result.put("purchaseNo", purchase.getPurchaseNo());
+        result.put("materialName", purchase.getMaterialName());
+        result.put("status", MaterialConstants.STATUS_PENDING);
+        result.put("reason", reason);
+        log.info("✅ 采购领取已撤回: purchaseId={}, purchaseNo={}, operator={}, reason={}",
+                purchaseId, purchase.getPurchaseNo(), operator, reason);
+        return result;
+    }
+
+    /**
      * 撤销出库单（主管以上权限）
      * 回退库存，恢复采购任务状态，需填写备注原因
      * @param body { pickingId, reason }

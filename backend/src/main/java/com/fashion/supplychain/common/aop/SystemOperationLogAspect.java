@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -34,6 +35,11 @@ public class SystemOperationLogAspect {
     private ProductionOrderService productionOrderService;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 只记录异常/重要操作，正常业务流转不记录 */
+    private static final Set<String> LOGGED_OPERATIONS = Set.of(
+        "报废", "修改", "转移", "删除", "关单", "驳回", "撤销", "删除扫码链"
+    );
 
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
     private static final String[] SKIP_PREFIXES = {
@@ -70,9 +76,15 @@ public class SystemOperationLogAspect {
             return pjp.proceed();
         }
 
+        String operation    = resolveOperationByUri(uri, method, request);
+
+        // 只记录异常/重要操作（报废、修改、转单、删除、关单、驳回、撤销），正常流转不记录
+        if (!LOGGED_OPERATIONS.contains(operation)) {
+            return pjp.proceed();
+        }
+
         String module       = resolveModule(uri);
         String targetType   = resolveTargetType(uri);
-        String operation    = resolveOperationByUri(uri, method, request);
         String operatorName = resolveOperator();
         String ip           = request == null ? null : request.getRemoteAddr();
         String reason       = extractReason(pjp.getArgs());
@@ -444,24 +456,25 @@ public class SystemOperationLogAspect {
     }
 
     /**
-     * 当返回值无法提取名称时（如 stage-action 返回 Boolean），
-     * 根据 URI 路径判断实体类型，用 args 中第一个 Long 参数作为 id 查库。
+     * 当返回值无法提取名称时（如报废返回消息字符串），
+     * 根据 URI 路径判断实体类型，用 args 中的 id 查库获取订单号+款号。
+     * 支持 Long 和 String UUID 两种 ID 类型。
      * 样衣开发 → 款号；生产订单 → 订单号(款号)
      */
     private String resolveEntityNameFromUri(String uri, Object[] args) {
         if (uri == null) return null;
-        Long id = extractFirstLong(args);
-        if (id == null) return null;
+        String entityId = extractEntityId(args);
+        if (entityId == null) return null;
         try {
             if (uri.contains("/style/")) {
                 if (styleInfoService != null) {
-                    var style = styleInfoService.getById(id);
+                    var style = styleInfoService.getById(entityId);
                     return style != null ? style.getStyleNo() : null;
                 }
             }
             if (uri.contains("/production/") || uri.contains("/cutting/")) {
                 if (productionOrderService != null) {
-                    var order = productionOrderService.getById(id);
+                    var order = productionOrderService.getById(entityId);
                     if (order != null) {
                         String orderNo = order.getOrderNo();
                         String styleNo = order.getStyleNo();
@@ -476,11 +489,37 @@ public class SystemOperationLogAspect {
         return null;
     }
 
-    /** 从方法参数中取第一个 Long（对应 @PathVariable Long id）*/
-    private Long extractFirstLong(Object[] args) {
+    /**
+     * 从方法参数中提取实体 ID（支持 Long 和 String UUID）。
+     * 优先级：Long参数 → DTO对象的getId() → Map中的id字段
+     */
+    private String extractEntityId(Object[] args) {
         if (args == null) return null;
+        // 1. 优先取 Long 类型参数（@PathVariable Long id）
         for (Object a : args) {
-            if (a instanceof Long) return (Long) a;
+            if (a instanceof Long) return String.valueOf(a);
+        }
+        // 2. 从 DTO 对象中反射取 getId()（如 ScrapOrderRequest.getId()）
+        for (Object a : args) {
+            if (a == null || a instanceof String || a instanceof Number
+                    || a instanceof Boolean || a instanceof Map) continue;
+            try {
+                Object id = a.getClass().getMethod("getId").invoke(a);
+                if (id != null) {
+                    String s = String.valueOf(id).trim();
+                    if (!s.isEmpty()) return s;
+                }
+            } catch (Exception ignored) {}
+        }
+        // 3. 从 Map 参数中取 id 字段
+        for (Object a : args) {
+            if (a instanceof Map) {
+                Object id = ((Map<?,?>) a).get("id");
+                if (id != null) {
+                    String s = String.valueOf(id).trim();
+                    if (!s.isEmpty()) return s;
+                }
+            }
         }
         return null;
     }

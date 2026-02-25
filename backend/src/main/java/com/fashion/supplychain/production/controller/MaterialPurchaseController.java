@@ -186,6 +186,16 @@ public class MaterialPurchaseController {
     }
 
     /**
+     * 撤回采购领取/到货登记
+     * 将采购单恢复为待处理状态，清空到货数量和领取人
+     * 参数：{ purchaseId, reason }
+     */
+    @PostMapping("/cancel-receive")
+    public Result<?> cancelReceive(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.cancelReceive(body));
+    }
+
+    /**
      * 撤销出库单（主管以上权限）
      * 回退库存，恢复采购任务状态
      * 参数：{ pickingId, reason }

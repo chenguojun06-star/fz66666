@@ -1339,6 +1339,7 @@ const MaterialPurchase: React.FC = () => {
                       isMobile={isMobile}
                       onView={(record) => openDialogSafe('view', record)}
                       onEdit={(record) => openQuickEditSafe(record)}
+                      onRefresh={() => setQueryParams(p => ({ ...p }))}
                       sortField={sortField}
                       sortOrder={sortOrder}
                       onSort={handleSort}

@@ -286,10 +286,19 @@ public class ScanRecordOrchestrator {
             }
         }
 
-        // 1小时时间限制
+        // 时间限制：管理员8小时，普通用户1小时
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
-        if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("只能撤回1小时内的扫码记录");
+        if (scanTime != null) {
+            UserContext timeCtx = UserContext.get();
+            String timeRole = timeCtx == null ? null : timeCtx.getRole();
+            boolean isAdmin = timeRole != null && (timeRole.contains("admin") || timeRole.contains("manager")
+                    || timeRole.contains("supervisor") || timeRole.contains("主管") || timeRole.contains("管理员"));
+            int limitHours = isAdmin ? 8 : 1;
+            if (scanTime.plusHours(limitHours).isBefore(LocalDateTime.now())) {
+                throw new IllegalStateException(isAdmin
+                        ? "只能撤回8小时内的扫码记录（管理员权限）"
+                        : "只能撤回1小时内的扫码记录，如需撤回请联系管理员");
+            }
         }
 
         // 已完成订单禁止撤回
