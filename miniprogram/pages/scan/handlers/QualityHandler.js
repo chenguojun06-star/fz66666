@@ -94,37 +94,27 @@ function onDeleteQualityImage(page, e) {
 }
 
 /**
- * 构建质检payload基础数据
+ * 构建质检确认 (quality_confirm) payload
+ * 调用 executeScan，只记录质检结果，不入库
  * @private
  */
-function _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
+function _buildQualityBasePayload(detail, qualityModal, userInfo) {
   const totalQty = detail.quantity || 1;
   const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
 
-  // 计算不合格数量（用户输入）和合格数量
-  let unqualifiedQty = 0;
-  if (qualityModal.result === 'unqualified') {
-    unqualifiedQty = parseInt(qualityModal.unqualifiedQuantity, 10) || 0;
-    if (unqualifiedQty > totalQty) unqualifiedQty = totalQty;
-    if (unqualifiedQty <= 0) unqualifiedQty = totalQty; // 选了不合格但没填数量，默认全部不合格
-  }
-  const qualifiedQty = totalQty - unqualifiedQty;
-
   return {
-    orderNo: detail.orderNo,
+    scanCode: detail.scanCode || '',
+    scanType: 'quality',
+    qualityStage: 'confirm',
+    qualityResult: qualityModal.result, // 'qualified' | 'unqualified'
+    orderNo: detail.orderNo || '',
     orderId: detail.orderId || '',
     styleNo: detail.styleNo || '',
     cuttingBundleId: detail.bundleId || '',
     cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
-    cuttingBundleQrCode: detail.scanCode || '',
-    warehousingQuantity: totalQty,
-    qualifiedQuantity: qualifiedQty,
-    unqualifiedQuantity: unqualifiedQty,
-    qualityStatus: qualityModal.result,
-    warehousingType: 'manual',
-    warehouse: warehouse,
-    receiverId: userInfo.id,
-    receiverName: userInfo.realName || userInfo.username,
+    quantity: totalQty,
+    operatorId: userInfo.id || '',
+    operatorName: userInfo.realName || userInfo.username || '',
   };
 }
 
@@ -152,15 +142,15 @@ function _handleUnqualifiedInfo(page, qualityModal, payload) {
 }
 
 /**
- * 提交入库结果
+ * 提交质检结果（只记录结果，不入库）
  */
 async function submitQualityResult(page) {
-  const { qualityModal, warehouseOptions } = page.data;
+  const { qualityModal } = page.data;
   const detail = qualityModal.detail;
   const userInfo = getUserInfo();
 
   if (!detail) {
-    toast.error('入库数据异常');
+    toast.error('质检数据异常');
     return;
   }
   if (!userInfo || !userInfo.id) {
@@ -172,16 +162,18 @@ async function submitQualityResult(page) {
     return;
   }
 
-  const selectedWarehouse = warehouseOptions[qualityModal.warehouseIndex] || 'A仓';
   wx.showLoading({ title: '提交中...', mask: true });
 
   try {
-    const payload = _buildQualityBasePayload(detail, qualityModal, userInfo, selectedWarehouse);
+    const payload = _buildQualityBasePayload(detail, qualityModal, userInfo);
     if (qualityModal.result === 'unqualified') {
       _handleUnqualifiedInfo(page, qualityModal, payload);
     }
-    await api.production.saveWarehousing(payload);
-    toast.success(qualityModal.result === 'qualified' ? '质检合格，已入库' : '已记录不合格');
+    await api.production.executeScan(payload);
+    const successMsg = qualityModal.result === 'qualified'
+      ? '质检合格已记录，请进行包装工序'
+      : '不合格已记录✅';
+    toast.success(successMsg);
     closeQualityModal(page);
     page.loadMyPanel(true);
   } catch (e) {

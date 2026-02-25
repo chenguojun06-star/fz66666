@@ -100,8 +100,8 @@ public class QualityScanExecutor {
                                          qualityStage, colorResolver, sizeResolver);
         }
 
-        // 确认阶段（入库）
-        return handleConfirm(params, requestId, operatorId, operatorName, order, bundle, qty);
+        // 确认阶段（只录入质检结果，不入库）
+        return handleConfirm(params, requestId, operatorId, operatorName, order, bundle, qty, colorResolver, sizeResolver);
     }
 
     /**
@@ -142,66 +142,56 @@ public class QualityScanExecutor {
     }
 
     /**
-     * 处理确认阶段（质检入库）
+     * 处理确认阶段（只录入质检结果，不触发入库）
+     * 业务说明：质检结果录入后，还需经过包装工序（双端均有记录），最终由 WarehouseScanExecutor 独立入库
      */
     private Map<String, Object> handleConfirm(Map<String, Object> params, String requestId,
                                               String operatorId, String operatorName,
-                                              ProductionOrder order, CuttingBundle bundle, int qty) {
-        // 验证必须先领取和验收
+                                              ProductionOrder order, CuttingBundle bundle, int qty,
+                                              java.util.function.Function<String, String> colorResolver,
+                                              java.util.function.Function<String, String> sizeResolver) {
+        // 必须先领取才能录入结果
         ScanRecord receivedStage = findQualityStageRecord(order.getId(), bundle.getId(), "quality_receive");
         if (receivedStage == null || !hasText(receivedStage.getId())) {
-            throw new IllegalStateException("请先领取再确认");
+            throw new IllegalStateException("请先领取质检任务再录入结果");
         }
-        ScanRecord inspectedStage = findQualityStageRecord(order.getId(), bundle.getId(), "quality_inspect");
-        if (inspectedStage == null || !hasText(inspectedStage.getId())) {
-            throw new IllegalStateException("请先验收再确认");
+
+        // 幂等：已录入则直接返回
+        ScanRecord existingConfirm = findQualityStageRecord(order.getId(), bundle.getId(), "quality_confirm");
+        if (existingConfirm != null && hasText(existingConfirm.getId())) {
+            Map<String, Object> dup = new HashMap<>();
+            dup.put("success", true);
+            dup.put("duplicate", true);
+            dup.put("message", "质检结果已录入，请进行包装工序");
+            dup.put("scanRecord", existingConfirm);
+            return dup;
         }
 
         String qualityResult = parseQualityResultFromParams(params);
         boolean isUnqualified = "unqualified".equalsIgnoreCase(qualityResult);
-        boolean isRepaired = "repaired".equalsIgnoreCase(qualityResult);
 
-        // 检查是否已入库
-        validateNotDuplicateWarehousing(order.getId(), bundle.getId(), isUnqualified);
+        // 构建质检确认 ScanRecord（只记录结果，不创建 ProductWarehousing）
+        ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
+                                          qty, "quality_confirm", "质检确认", colorResolver, sizeResolver);
+        // 将质检结果存入 remark 供后续查询使用
+        sr.setRemark(qualityResult);
 
-        // 返修处理
-        int availableQuantity = 0;
-        boolean qtyAdjusted = false;
-        if (isRepaired) {
-            availableQuantity = computeRemainingRepairQuantity(order.getId(), bundle.getId(), null);
-            if (availableQuantity <= 0) {
-                throw new IllegalStateException("该菲号无可返修入库数量");
-            }
-            if (qty > availableQuantity) {
-                qty = availableQuantity;
-                qtyAdjusted = true;
-            }
+        // 不合格时附加缺陷信息
+        String defectCategory = TextUtils.safeText(params.get("defectCategory"));
+        String defectRemark = TextUtils.safeText(params.get("defectRemark"));
+        if (isUnqualified && hasText(defectCategory)) {
+            sr.setRemark(qualityResult + "|" + defectCategory
+                         + (hasText(defectRemark) ? "|" + defectRemark : ""));
         }
 
-        // 创建入库记录
-        ProductWarehousing w = buildWarehousingRecord(params, order, bundle, receivedStage, qty,
-                                                      isUnqualified, isRepaired);
-        boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
-        if (!ok) {
-            throw new IllegalStateException("质检失败");
-        }
-
-        // 查询生成的扫码记录
-        ScanRecord sr = findWarehousingGeneratedRecord(w.getId());
+        scanRecordService.saveScanRecord(sr);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
-        result.put("message", isUnqualified ? "次品已录入" : (isRepaired ? "返修入库成功" : "质检成功"));
-        if (qtyAdjusted && availableQuantity > 0) {
-            result.put("message", "该菲号只可返修入库数量为" + availableQuantity + "，本次按" + qty + "录入");
-        }
+        result.put("message", isUnqualified ? "不合格已录入，请安排返修" : "质检合格，请进行包装工序");
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
-        if (isRepaired) {
-            result.put("availableQuantity", availableQuantity);
-            result.put("usedQuantity", qty);
-        }
         return result;
     }
 

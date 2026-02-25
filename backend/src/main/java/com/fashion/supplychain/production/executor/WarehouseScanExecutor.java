@@ -99,6 +99,9 @@ public class WarehouseScanExecutor {
         // ★ 生产前置校验：该菲号必须有生产扫码记录才能入库
         validateProductionPrerequisite(order.getId(), bundle.getId());
 
+        // ★ 质检前置校验：必须有 quality_confirm 记录（质检结果已录入）才能入库
+        validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
+
         // 验证数量不超过订单数量
         inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
 
@@ -381,6 +384,31 @@ public class WarehouseScanExecutor {
             throw e;
         } catch (Exception e) {
             log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
+    }
+
+    /**
+     * 质检前置校验：入库前必须已录入质检结果（quality_confirm 记录）
+     * 业务规则：质检 → 包装 → 入库，质检结果是必经步骤
+     */
+    private void validateQualityConfirmBeforeWarehousing(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) {
+            return;
+        }
+        try {
+            long confirmCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "quality")
+                    .eq(ScanRecord::getProcessCode, "quality_confirm")
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (confirmCount <= 0) {
+                throw new IllegalStateException("温馨提示：该菲号还未录入质检结果哦～请先完成质检后再入库");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
         }
     }
 }

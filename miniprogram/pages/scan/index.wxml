@@ -720,26 +720,12 @@
         </view>
       </view>
 
-      <!-- 选择仓库（合格时才显示入库仓库选择） -->
-      <view wx:if="{{qualityModal.result === 'qualified'}}" class="qm-section">
-        <text class="qm-section-title">入库仓库 <text style="color: #ef4444;">*</text></text>
-        <view class="inline-selector">
-          <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
-            <view
-              wx:for="{{warehouseOptions}}"
-              wx:key="index"
-              class="inline-selector-item {{qualityModal.warehouseIndex == index ? 'active' : ''}}"
-              data-index="{{index}}"
-              data-field="warehouseIndex"
-              bindtap="onQmSelectorTap">
-              <view class="inline-selector-left">
-                <view class="inline-selector-radio {{qualityModal.warehouseIndex == index ? 'checked' : ''}}">
-                  <view wx:if="{{qualityModal.warehouseIndex == index}}" class="inline-selector-radio-dot"></view>
-                </view>
-                <text class="inline-selector-label">{{item}}</text>
-              </view>
-            </view>
-          </scroll-view>
+      <!-- 提示：质检结果提交后请进行包装工序，包装完成后方可入库 -->
+      <view class="qm-section">
+        <view style="background:#f0f9eb;border-radius:8rpx;padding:16rpx 20rpx;color:#67c23a;font-size:24rpx;line-height:1.6;">
+          <text wx:if="{{qualityModal.result === 'qualified'}}">✅ 合格后请完成包装工序，再由仓库人员扫码入库</text>
+          <text wx:if="{{qualityModal.result === 'unqualified'}}">⚠️ 不合格品将记录在案，请安排返修处理</text>
+          <text wx:if="{{!qualityModal.result}}">请先选择质检结果</text>
         </view>
       </view>
     </view>
@@ -747,7 +733,7 @@
     <view class="modal-footer">
       <button class="modal-btn cancel" bindtap="closeQualityModal">取消</button>
       <button class="modal-btn confirm" bindtap="submitQualityResult" disabled="{{!qualityModal.result}}">
-        {{qualityModal.result === 'qualified' ? '确认入库' : (qualityModal.result === 'unqualified' ? '提交不合格' : '请先选择结果')}}
+        {{qualityModal.result === 'qualified' ? '提交质检合格' : (qualityModal.result === 'unqualified' ? '提交不合格' : '请先选择结果')}}
       </button>
     </view>
   </view>

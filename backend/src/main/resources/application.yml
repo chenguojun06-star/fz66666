@@ -189,3 +189,52 @@ wechat:
 notify:
   serverchan:
     key: ${NOTIFY_SERVERCHAN_KEY:}
+
+# ============================================================
+# 第三方集成配置（拿到密钥后填入，并设置 enabled: true）
+# 默认全部 disabled，系统以 Mock 模式运行，不影响正常使用
+# ============================================================
+
+# 支付宝（申请：https://openhome.alipay.com/dev/workspace）
+alipay:
+  enabled: false              # ← 改为 true 开启真实支付
+  app-id: ""                  # 支付宝 AppID
+  private-key: ""             # RSA2 私钥（PKCS8格式，不含头尾 -----BEGIN...）
+  public-key: ""              # 支付宝公钥（不含头尾）
+  gateway-url: "https://openapi.alipay.com/gateway.do"
+  sandbox-url: "https://openapi-sandbox.dl.alipaydev.com/gateway.do"
+  sandbox: false              # 开发阶段改为 true 使用沙箱环境
+  notify-url: "https://你的域名/api/webhook/payment/alipay"
+  return-url: "https://你的域名/payment/result"
+  timeout-express: "30m"      # 支付超时时间
+
+# 微信支付（申请：https://pay.weixin.qq.com）
+wechat-pay:
+  enabled: false
+  app-id: ""                  # 公众号 / 小程序 / APP 的 AppID
+  mch-id: ""                  # 商户号
+  api-v3-key: ""              # API V3 密钥（32位）
+  serial-no: ""               # 商户证书序列号
+  private-key-path: "classpath:cert/apiclient_key.pem"  # PEM证书路径
+  notify-url: "https://你的域名/api/webhook/payment/wechat"
+
+# 顺丰速运（申请：https://open.sf-express.com）
+sf-express:
+  enabled: false
+  app-key: ""                 # 顺丰 AppKey
+  app-secret: ""              # 顺丰 AppSecret（每月更新，系统自动生成提醒）
+  customer-code: ""           # 顺丰客户编码（可选，影响运费折扣）
+  api-url: "https://sfapi.sf-express.com/std/service"
+  sandbox-url: "https://sfapi-sbox.sf-express.com/std/service"
+  sandbox: false
+  notify-url: "https://你的域名/api/webhook/logistics/sf"
+
+# 申通快递（申请：https://open.sto.cn）
+sto-express:
+  enabled: false
+  app-key: ""
+  app-secret: ""
+  partner-id: ""              # 合作伙伴ID（可选）
+  api-url: "https://ecapi.sto.cn/api/"
+  sandbox: false
+  notify-url: "https://你的域名/api/webhook/logistics/sto"
