@@ -571,7 +571,12 @@ class StageDetector {
         // 统计 production 和 quality 类型的扫码记录
         const isValidScan = scanType === 'production' || scanType === 'quality';
 
-        return !isSystemGenerated && isValidScan;
+        // ✅ 修复：只统计扫码成功的记录，失败记录不应阻断工序流转
+        // 原因：若某次扫码 scanResult='fail'，该工序实际未完成，
+        //       不能将其计入 scannedProcessNames，否则下次扫同一菲号会跳到错误的下一工序
+        const isSuccess = record.scanResult === 'success';
+
+        return !isSystemGenerated && isValidScan && isSuccess;
       });
 
       return manualRecords;
