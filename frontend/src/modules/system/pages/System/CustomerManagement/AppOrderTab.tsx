@@ -55,7 +55,14 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
     try {
       const params = statusFilter ? { status: statusFilter } : undefined;
       const res: any = await appStoreService.adminOrderList(params);
-      setData(res?.data || res || []);
+      // 检查业务状态码，拦截器返回完整 JSON body {code, data, message}
+      if (res?.code !== undefined && res.code !== 200) {
+        message.error(res.message || '加载订单列表失败');
+        setData([]);
+        return;
+      }
+      const list = res?.data ?? res;
+      setData(Array.isArray(list) ? list : []);
     } catch {
       message.error('加载订单列表失败');
     } finally {
@@ -98,6 +105,11 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         orderId: order.id,
         remark: remark || undefined,
       });
+      // 检查业务状态码：拦截器返回完整 JSON body {code, data, message}
+      // 若后端返回 Result.fail() (HTTP 200 + code≠200)，需在此抛出，否则会显示空弹窗
+      if (res?.code !== undefined && res.code !== 200) {
+        throw new Error(res.message || '激活失败');
+      }
       const result = res?.data || res;
       message.success(`订单 ${order.orderNo} 激活成功`);
       activateModal.close();

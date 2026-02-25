@@ -167,9 +167,12 @@ async function onConfirmScanResult(ctx) {
 
     const result = await api.production.executeScan(scanData);
 
-    if (result && result.success !== false) {
+    // 后端返回格式: {code: 200, data: {success: true, message: "..."}, message: ""}
+    // ⚠️ result.success 不存在（实际数据在 result.data 内），必须检查 result.code
+    if (result && result.code === 200) {
+      const scanResult = result.data || {};
       // 使用后端返回的消息（领取成功/验收成功/确认成功/已领取等）
-      toast.success(`✅ ${confirm.processName} ${result.message || '领取成功'}`);
+      toast.success(`✅ ${confirm.processName} ${scanResult.message || '扫码成功'}`);
 
       closeScanResultConfirm(ctx);
 
@@ -188,7 +191,7 @@ async function onConfirmScanResult(ctx) {
       ctx.loadMyPanel(true);
 
       if (eventBus && typeof eventBus.emit === 'function') {
-        eventBus.emit('SCAN_SUCCESS', result);
+        eventBus.emit('SCAN_SUCCESS', scanResult);
       }
     } else {
       toast.error(result?.message || '提交失败');

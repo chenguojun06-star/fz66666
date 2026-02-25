@@ -408,7 +408,9 @@ public class AppStoreOrchestrator {
 
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Map<String, Object> responseData = new HashMap<>();
-        responseData.put("subscription", subscription);
+        // 不再放入整个 subscription 实体（含 LocalDateTime 字段），避免潜在的序列化问题
+        // 前端只需要以下扁平化字段
+        responseData.put("subscriptionNo", subscription.getSubscriptionNo());
         responseData.put("orderNo", order.getOrderNo() != null ? order.getOrderNo() : "");
         responseData.put("activatedAt", startTime != null ? startTime.format(dtf) : "");
         responseData.put("expireAt", endTime != null ? endTime.format(dtf) : "");

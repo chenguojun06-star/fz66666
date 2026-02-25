@@ -15,9 +15,12 @@ server {
     index index.html;
 
     # ---- 静态资源缓存策略 ----
+    # ⚠️ nginx add_header 继承规则：只要 location 有任何 add_header，就不继承父级 add_header
+    # 因此必须在此处重复声明 CSP，否则 JS/CSS 响应头里没有 CSP
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: https:;" always;
         try_files $uri =404;
     }
 
