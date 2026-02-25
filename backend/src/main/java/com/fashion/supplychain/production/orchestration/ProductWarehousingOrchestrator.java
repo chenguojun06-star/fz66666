@@ -1449,55 +1449,32 @@ public class ProductWarehousingOrchestrator {
     }
 
     /**
-     * 验证入库前置条件：包装工序必须有扫码记录归属人才能入库
-     * 业务规则：尾部父节点下的包装子工序（包装/打包/入袋等）有记录归属人即可入库
-     * 同时保留原有的生产扫码记录检查
-     * PC端直接入库和扫码入库共用此校验，确保业务逻辑一致
+     * 验证质检前置条件：该菲号必须有生产扫码记录才能进行质检入库
+     * 业务规则：车缝等生产工序完成 → 质检（合格/不合格）→ 包装 → 入库
+     * PC端质检入库接口（save/batchSave）使用此校验，不检查包装（包装在质检之后）
+     * ⚠️ 小程序仓库扫码入库使用 WarehouseScanExecutor.validateProductionPrerequisite，
+     *    那里才需要检查包装完成。两个校验职责不同，请勿混淆。
      */
     private void validateProductionPrerequisiteForWarehousing(String orderId, String bundleId) {
         if (!StringUtils.hasText(orderId) || !StringUtils.hasText(bundleId)) {
             return;
         }
         try {
-            // 1. 基础检查：至少有生产扫码记录
+            // 基础检查：至少有生产扫码记录（车缝等子工序完成即可做质检）
             long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanType, "production")
                     .eq(ScanRecord::getScanResult, "success"));
             if (productionCount <= 0) {
-                throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序后再入库");
+                throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成车缝等生产工序后再质检");
             }
-
-            // 2. 包装前置检查：包装工序必须有扫码记录归属人
-            //    包装同义词：包装、打包、入袋、后整、装箱、封箱、贴标
-            long packingCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .isNotNull(ScanRecord::getOperatorId)
-                    .and(w -> w
-                            .eq(ScanRecord::getProcessCode, "包装")
-                            .or().eq(ScanRecord::getProcessCode, "打包")
-                            .or().eq(ScanRecord::getProcessCode, "入袋")
-                            .or().eq(ScanRecord::getProcessCode, "后整")
-                            .or().eq(ScanRecord::getProcessCode, "装箱")
-                            .or().eq(ScanRecord::getProcessCode, "封箱")
-                            .or().eq(ScanRecord::getProcessCode, "贴标")
-                            .or().eq(ScanRecord::getProcessCode, "packing")
-                            .or().eq(ScanRecord::getProcessName, "包装")
-                            .or().eq(ScanRecord::getProcessName, "打包")
-                            .or().eq(ScanRecord::getProcessName, "入袋")
-                            .or().eq(ScanRecord::getProcessName, "后整")
-                            .or().eq(ScanRecord::getProcessName, "装箱")));
-            if (packingCount <= 0) {
-                throw new IllegalStateException("温馨提示：该菲号还未完成包装工序哦～请先完成包装扫码后再入库");
-            }
+            // ✅ 不检查包装：质检操作在包装之前，车缝子工序扫码完成即可质检
+            // ✅ 包装检查仅在 WarehouseScanExecutor（小程序入库扫码）中执行
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查入库前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
         }
     }
 
