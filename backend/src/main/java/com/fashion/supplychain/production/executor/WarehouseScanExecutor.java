@@ -88,19 +88,26 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("进度节点已完成，该订单已结束入库");
         }
 
-        // 检查是否有次品待返修（只检查最后一条记录状态）
-        if (isBundleBlockedForWarehousingStatus(order.getId(), bundle.getId())) {
-            throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
+        // 判断是否为次品返修入库（跳过包装前置检查）
+        boolean isDefectiveReentry = "true".equalsIgnoreCase(
+                TextUtils.safeText(params.get("isDefectiveReentry")));
+
+        if (isDefectiveReentry) {
+            // 次品返修入库：必须有质检confirm记录，只验证次品件数上限，跳过包装检查
+            validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
+            validateDefectiveReentryQty(order.getId(), bundle, qty);
+        } else {
+            // 正常入库：检查是否有次品待返修阻止
+            if (isBundleBlockedForWarehousingStatus(order.getId(), bundle.getId())) {
+                throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
+            }
+            // ★ 验证单个菲号累计入库数量不超过菲号裁剪数量
+            validateBundleWarehousingQuantity(bundle, qty);
+            // ★ 生产前置校验：该菲号必须有生产扫码记录（含包装工序）才能入库
+            validateProductionPrerequisite(order.getId(), bundle.getId());
+            // ★ 质检前置校验：必须有 quality_confirm 记录才能入库
+            validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
         }
-
-        // ★ 新增：验证单个菲号累计入库数量不超过菲号裁剪数量
-        validateBundleWarehousingQuantity(bundle, qty);
-
-        // ★ 生产前置校验：该菲号必须有生产扫码记录才能入库
-        validateProductionPrerequisite(order.getId(), bundle.getId());
-
-        // ★ 质检前置校验：必须有 quality_confirm 记录（质检结果已录入）才能入库
-        validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
 
         // 验证数量不超过订单数量
         inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
@@ -411,4 +418,69 @@ public class WarehouseScanExecutor {
             log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
         }
     }
-}
+
+    /**
+     * 次品返修入库：从 quality_confirm 的 remark 中读取次品件数
+     * remark 格式：unqualified|[category]|[remark]|defectQty=N
+     */
+    private int extractDefectQtyFromBundle(String orderId, String bundleId) {
+        try {
+            ScanRecord confirmRecord = scanRecordService.lambdaQuery()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getProcessCode, "quality_confirm")
+                    .eq(ScanRecord::getScanResult, "success")
+                    .last("LIMIT 1")
+                    .one();
+            if (confirmRecord == null) return 0;
+            String remark = TextUtils.safeText(confirmRecord.getRemark());
+            if (!remark.startsWith("unqualified")) return 0;
+            for (String part : remark.split("\\|")) {
+                if (part.startsWith("defectQty=")) {
+                    try {
+                        return Integer.parseInt(part.substring("defectQty=".length()));
+                    } catch (NumberFormatException ignore) {
+                        // fall through
+                    }
+                }
+            }
+            // 未找到 defectQty 标记，默认全批次品
+            return confirmRecord.getQuantity() != null ? confirmRecord.getQuantity() : 0;
+        } catch (Exception e) {
+            log.warn("读取次品件数失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            return 0;
+        }
+    }
+
+    /**
+     * 次品返修入库数量验证：不超过 quality_confirm 记录的次品件数
+     */
+    private void validateDefectiveReentryQty(String orderId, CuttingBundle bundle, int qty) {
+        int defectQty = extractDefectQtyFromBundle(orderId, bundle.getId());
+        if (defectQty <= 0) {
+            throw new IllegalStateException("未找到次品质检记录，无法进行次品入库");
+        }
+        // 已入库的次品件数（同一菲号的所有合格入库记录之和）
+        int alreadyWarehoused;
+        try {
+            alreadyWarehoused = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .select(ProductWarehousing::getQualifiedQuantity)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .eq(ProductWarehousing::getQualityStatus, "qualified"))
+                    .stream()
+                    .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("查询次品已入库数量失败: bundleId={}", bundle.getId(), e);
+            alreadyWarehoused = 0;
+        }
+        if (alreadyWarehoused + qty > defectQty) {
+            throw new IllegalArgumentException(String.format(
+                    "次品入库数量超限！次品件数=%d，已入库=%d，本次=%d，超出%d件",
+                    defectQty, alreadyWarehoused, qty, (alreadyWarehoused + qty - defectQty)));
+        }
+        log.debug("次品入库验证通过: bundleId={}, defectQty={}, 已入库={}, 本次={}",
+                bundle.getId(), defectQty, alreadyWarehoused, qty);
+    }

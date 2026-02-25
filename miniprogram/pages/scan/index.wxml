@@ -352,7 +352,12 @@
             </scroll-view>
           </view>
 
-          <view class="result-hint">
+          <!-- 次品返修入库提示 -->
+          <view wx:if="{{scanResultConfirm.isDefectiveReentry}}" class="result-hint defect-hint">
+            <text class="hint-icon">⚠️</text>
+            <text class="hint-text">此菲号有 {{scanResultConfirm.defectQty}} 件次品，返修后直接入库，入库数量不能超过次品数</text>
+          </view>
+          <view wx:else class="result-hint">
             <text class="hint-icon">💡</text>
             <text class="hint-text">确认工序无误后，点击"领取记录"提交</text>
           </view>
@@ -361,7 +366,7 @@
       <view class="modal-foot">
         <view class="modal-btn cancel" bindtap="closeScanResultConfirm">取消</view>
         <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" bindtap="onConfirmScanResult">
-          {{scanResultConfirm.loading ? '提交中...' : '领取记录'}}
+          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanData.qualityStage === 'inspect' ? '确认验收' : scanResultConfirm.scanData.qualityStage === 'confirm' ? '确认入库' : '领取记录'))}}
         </view>
       </view>
     </view>
@@ -385,7 +390,7 @@
           <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.sizeDetails}}" class="cf-item compact"><text class="cf-k">码数明细</text><text class="cf-v wrap">{{scanConfirm.detail.sizeDetails}}</text></view>
-          <view wx:if="{{scanConfirm.detail.progressStage && !scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
+          <view wx:if="{{(scanConfirm.detail.processName || scanConfirm.detail.progressStage) && !scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">工序</text><text class="cf-v">{{scanConfirm.detail.processName || scanConfirm.detail.progressStage}}</text></view>
         </view>
 
         <!--裁剪任务列表 - 在弹窗中显示 -->

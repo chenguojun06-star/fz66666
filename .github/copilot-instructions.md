@@ -1228,3 +1228,128 @@ ls -1 test-*.sh           # 列出所有测试脚本
 
 ---
 
+## 📊 生产进度数据流规范（核查验证版 v1.0，2026-03）
+
+> 本节描述"我的订单"与"生产进度"两个 Tab 中进度球/弹窗/手机端的**数据唯一来源与显示一致性**，修改相关逻辑前必须阅读。
+
+### 一、覆盖页面与组件
+
+| 页面/组件 | 路径 | 说明 |
+|-----------|------|------|
+| 我的订单 + 生产进度（列表视图） | `ProgressDetail/index.tsx` + `hooks/useProgressColumns.tsx` | **同一套列定义**，两 Tab 共用 |
+| 进度球点击弹窗 | `components/common/NodeDetailModal.tsx` | 弹窗头部统计来自父组件传入，明细来自独立 API |
+| 进度球数据计算 | `ProgressDetail/hooks/useBoardStats.ts` | 唯一数据源 |
+| 卡片视图（两 Tab） | `index.tsx` → `UniversalCardView` | 只显示 `productionProgress`，**不显示工序球** |
+| `ModernProgressBoard` 组件 | `components/ModernProgressBoard.tsx` | ⚠️ 孤立组件，当前**未被任何地方导入**，属于死代码 |
+
+---
+
+### 二、进度球数据来源（boardStats）
+
+**数据计算入口**：`useBoardStats.ts`
+
+```
+1. API：productionScanApi.listByOrderId(orderId, { page:1, pageSize:500 })
+2. 过滤：scanResult === 'success'  AND  quantity > 0
+3. 匹配节点（节点名模糊匹配）：
+       stageNameMatches(nodeName, r.progressStage)   // 父节点名字段
+    OR stageNameMatches(nodeName, r.processName)      // 子工序名字段
+4. 数量：所有匹配记录的 quantity 求和
+    →  boardStatsByOrder[orderId][nodeName]
+5. 时间：所有匹配记录中最大的 scanTime
+    →  boardTimesByOrder[orderId][nodeName]
+```
+
+**兜底逻辑**（当无扫码记录时）：
+- `裁剪` 节点：若 `cuttingQuantity > 0`，则强制 `max(scanned, cuttingQuantity)`
+- 其他节点：`sewingCompletionRate / procurementCompletionRate` 等订单级字段 × 基数，取 max
+
+**缓存刷新**：调用 `fetchOrders()` 拉取最新订单列表后，自动清空 boardStats 缓存（`setBoardStatsByOrder({})` + `boardStatsLoadingRef.current = {}`），触发重新拉取，确保进度球与扫码记录同步。
+
+---
+
+### 三、进度球渲染逻辑（useProgressColumns.tsx）
+
+```typescript
+// 每个工序列（采购/裁剪/二次工艺/车缝/尾部/入库）渲染公式：
+const totalQty    = Number(record.cuttingQuantity || record.orderQuantity) || 0;
+const completedQty = boardStatsByOrder[orderId][nodeName] || 0;
+const percent      = Math.min(100, Math.round(completedQty / totalQty * 100));
+const completionTime = boardTimesByOrder[orderId][nodeName] || '';
+
+// 球上方显示：formatCompletionTime(completionTime)  →  "MM-dd HH:mm"
+// 球内显示：  completedQty / totalQty（件数）+ percent%（百分比圆环）
+// 点击球：  openNodeDetail(record, nodeType, nodeName,
+//            { done: completedQty, total: totalQty, percent }, unitPrice, processList)
+```
+
+---
+
+### 四、弹窗（NodeDetailModal）数据构成
+
+点击任意进度球弹出 `NodeDetailModal`，数据分两部分来源：
+
+| 区域 | 内容 | 来源 |
+|------|------|------|
+| 弹窗头部统计（完成/总数/百分比） | 与球上显示**完全一致** | 父组件传入（来自 boardStats） |
+| 扫码记录明细列表 | 该订单全部扫码记录 | 独立 API：`productionScanApi.listByOrderId` |
+| 工序跟踪/工资结算状态 | 工序-员工-金额 | 独立 API：`getProductionProcessTracking(orderId)` |
+| 菲号列表 | 裁剪菲号及数量 | 独立 API：`/production/cutting/list` |
+| 节点操作记录 | 审核/备注记录 | 独立 API：`productionOrderApi.getNodeOperations` |
+
+**结论**：弹窗头部统计与进度球是**同一数字，永远一致**；明细来自独立 API fresh 拉取，有延迟但更实时。
+
+---
+
+### 五、扫码记录字段与父子节点关系
+
+`t_scan_record` 表核心字段：
+
+| 字段 | 含义 | 示例 |
+|------|------|------|
+| `progress_stage` | **父节点名**（大工序） | "尾部"、"车缝" |
+| `process_name` | **子工序名**（细工序） | "剪线"、"锁边" |
+| `scan_result` | 扫码结果 | "success" / "fail" |
+| `quantity` | 该次扫码件数 | 50 |
+| `scan_time` | 扫码时间戳 | "2026-02-19T08:19:00" |
+
+**关键规则**：boardStats 同时匹配 `progressStage`（父）和 `processName`（子），因此：
+- 员工扫子工序（如"剪线"），该数量会**聚合到父节点"尾部"球显示**
+- 修改节点配置时，`stageNameMatches` 的模糊匹配范围决定哪些扫码记录归入该球，需同步核查
+
+---
+
+### 六、`productionProgress`（%）vs boardStats 数量——两个不同概念
+
+| 字段 | 来源 | 更新时机 | 含义 |
+|------|------|----------|------|
+| `productionProgress`（%） | `ProductWarehousingOrchestrator` 写入 | **仅在入库时**更新 | 已正式入库完成比例 |
+| `boardStats[nodeName]` | 扫码记录实时聚合 | 每次刷新订单列表时重新统计 | 该工序已扫码件数 |
+
+❌ **禁止混淆**：进度球显示的件数不等于入库数量，不等于 `productionProgress`，它是扫码记录的统计结果。
+
+---
+
+### 七、手机端（小程序 work 页）字段对比
+
+| 字段 | PC 进度球 | 手机端 | 说明 |
+|------|-----------|--------|------|
+| 总体进度 % | `productionProgress`（卡片视图） | `productionProgress` | 同源 ✅ |
+| 进度球件数 | `boardStats[nodeName]` | ❌ 不显示 | 手机不显示工序球 |
+| 进度球时间 | `boardTimes[nodeName]` | ❌ 不显示 | — |
+| 完成件数 | `completedQuantity`（卡片） | `completedQuantity` | 同源 ✅ |
+| 总件数 | `cuttingQuantity\|\|orderQuantity` | `sizeTotal\|\|orderQuantity` | 同源（不同兜底字段）✅ |
+| 剩余天数颜色 | 比例算法（≤20%红/≤50%黄） | 比例算法（已同步） | **已统一** ✅（2026-03修复） |
+
+---
+
+### 八、常见陷阱
+
+1. **修改进度球节点名**：需同步检查 `stageNameMatches` 匹配规则，否则扫码记录无法匹配到节点
+2. **开发调试时进度球不更新**：检查是否在 `fetchOrders()` 后清空了 `boardStatsByOrder` 缓存
+3. **弹窗统计与球不一致**：不可能发生（同源），若出现说明 `openNodeDetail` 的入参被中间层修改了
+4. **`ModernProgressBoard` 组件修改**：此组件为死代码，修改不影响任何页面，建议后续删除或实际接入
+5. **扫码后进度球不变**：需用户手动刷新（点"刷新"按钮），触发 `fetchOrders` → 清空缓存 → 重新拉取 boardStats
+
+---
+

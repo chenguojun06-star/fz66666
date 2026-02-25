@@ -21,6 +21,25 @@
  * @date 2026-02-10
  */
 
+/**
+ * 从质检确认 remark 中解析次品件数
+ * remark 格式：unqualified|[category]|[remark]|defectQty=N
+ * @param {string} remark
+ * @param {number} fallbackQty - 若未找到则返回此值
+ * @returns {number}
+ */
+function _parseDefectQtyFromRemark(remark, fallbackQty) {
+  if (!remark) return fallbackQty || 0;
+  const parts = (remark || '').split('|');
+  for (const part of parts) {
+    if (part.startsWith('defectQty=')) {
+      const n = parseInt(part.substring('defectQty='.length), 10);
+      if (n > 0) return n;
+    }
+  }
+  return fallbackQty || 0;
+}
+
 class StageDetector {
   /**
    * 构造函数
@@ -282,6 +301,73 @@ class StageDetector {
       let qualityStage = '';
       if (nextProcess.scanType === 'quality') {
         qualityStage = await this._inferQualityStage(orderNo, scanHistory);
+        // 质检三步均已完成 → 跳过，寻找下一个未完成工序
+        if (qualityStage === 'done') {
+          const skipNames = new Set([...scannedProcessNames, nextProcess.processName]);
+          const afterQuality = countableProcesses.filter(p => !skipNames.has(p.processName));
+          if (afterQuality.length > 0) {
+            const nextNext = afterQuality[0];
+            const newDoneCount = countableProcesses.length - afterQuality.length;
+            return {
+              processName: nextNext.processName,
+              progressStage: nextNext.progressStage || nextNext.processName,
+              scanType: nextNext.scanType,
+              hint: countableProcesses.length > 1
+                ? `${nextNext.processName} (已完成${newDoneCount}/${countableProcesses.length}道工序)`
+                : nextNext.processName,
+              isDuplicate: false,
+              quantity: accurateQuantity,
+              unitPrice: Number(nextNext.price || 0),
+              qualityStage: '',
+              scannedProcessNames: [...skipNames],
+              allBundleProcesses: bundleProcesses,
+            };
+          }
+          // 质检是最后一道可计数工序 → 检查是否有入库环节
+          if (_warehouseProcess) {
+            const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
+            if (!isWarehoused) {
+              // 检测质检结果是否为次品 → 次品返修入库模式
+              const confirmRec = scanHistory.find(r =>
+                r.processCode === 'quality_confirm' && r.scanResult === 'success'
+              );
+              const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
+              const defectQty = isUnqualified
+                ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
+                : 0;
+              return {
+                processName: _warehouseProcess.processName,
+                progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+                scanType: 'warehouse',
+                hint: (isUnqualified && defectQty > 0)
+                  ? `次品入库 ${defectQty}件`
+                  : _warehouseProcess.processName,
+                isDuplicate: false,
+                quantity: (isUnqualified && defectQty > 0) ? defectQty : accurateQuantity,
+                unitPrice: Number(_warehouseProcess.price || 0),
+                qualityStage: '',
+                isDefectiveReentry: isUnqualified && defectQty > 0,
+                defectQty: defectQty,
+                defectRemark: isUnqualified ? (confirmRec.remark || '') : '',
+                scannedProcessNames: [...scannedProcessNames],
+                allBundleProcesses: bundleProcesses,
+              };
+            }
+          }
+          // 无入库工序或已入库，全部完成
+          return {
+            processName: nextProcess.processName,
+            progressStage: nextProcess.progressStage || nextProcess.processName,
+            scanType: nextProcess.scanType,
+            hint: '进度节点已完成',
+            isDuplicate: false,
+            quantity: accurateQuantity,
+            isCompleted: true,
+            qualityStage: 'done',
+            scannedProcessNames: [...scannedProcessNames],
+            allBundleProcesses: bundleProcesses,
+          };
+        }
       }
 
       return {
@@ -297,13 +383,45 @@ class StageDetector {
         unitPrice: Number(nextProcess.price || 0),
         // 质检子阶段（仅 quality 类型工序有值）
         qualityStage,
-        // 🆕 携带已扫工序信息，供工序选择器过滤
+        // 携带已扫工序信息，供工序选择器过滤
         scannedProcessNames: [...scannedProcessNames],
-        allBundleProcesses: countableProcesses,
+        allBundleProcesses: bundleProcesses,
       };
     }
 
-    // === 步骤5：所有工序已完成 ===
+    // === 步骤5：所有可计数工序已完成 → 检查是否有入库环节 ===
+    if (_warehouseProcess) {
+      const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
+      if (!isWarehoused) {
+        // 检测质检次品返修入库模式
+        const confirmRec = scanHistory.find(r =>
+          r.processCode === 'quality_confirm' && r.scanResult === 'success'
+        );
+        const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
+        const defectQty = isUnqualified
+          ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
+          : 0;
+        return {
+          processName: _warehouseProcess.processName,
+          progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+          scanType: 'warehouse',
+          hint: (isUnqualified && defectQty > 0)
+            ? `次品入库 ${defectQty}件`
+            : _warehouseProcess.processName,
+          isDuplicate: false,
+          quantity: (isUnqualified && defectQty > 0) ? defectQty : accurateQuantity,
+          unitPrice: Number(_warehouseProcess.price || 0),
+          qualityStage: '',
+          isDefectiveReentry: isUnqualified && defectQty > 0,
+          defectQty: defectQty,
+          defectRemark: isUnqualified ? (confirmRec.remark || '') : '',
+          scannedProcessNames: [...scannedProcessNames],
+          allBundleProcesses: bundleProcesses,
+        };
+      }
+    }
+
+    // === 步骤6：所有工序（含入库）均已完成 ===
     const lastProcess = countableProcesses[countableProcesses.length - 1];
     return {
       processName: lastProcess.processName,
@@ -314,7 +432,7 @@ class StageDetector {
       quantity: accurateQuantity,
       isCompleted: true,
       scannedProcessNames: [...scannedProcessNames],
-      allBundleProcesses: countableProcesses,
+      allBundleProcesses: bundleProcesses,
     };
   }
 
@@ -396,6 +514,7 @@ class StageDetector {
 
       const hasReceive = hasScanCode('quality_receive');
       const hasInspect = hasScanCode('quality_inspect');
+      const hasConfirm = hasScanCode('quality_confirm');
 
       // 根据已完成阶段决定下一步
       if (!hasReceive) {
@@ -404,7 +523,10 @@ class StageDetector {
       if (!hasInspect) {
         return 'inspect';   // 第二步：验收
       }
-      return 'confirm';     // 第三步：确认入库
+      if (!hasConfirm) {
+        return 'confirm';   // 第三步：确认入库
+      }
+      return 'done';        // 三步全部完成
     } catch (e) {
       console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
       return 'receive';

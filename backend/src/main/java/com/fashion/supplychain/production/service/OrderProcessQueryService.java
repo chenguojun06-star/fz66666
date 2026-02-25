@@ -40,34 +40,6 @@ public class OrderProcessQueryService {
     }
 
     /**
-     * 根据完成数量修正生产进度百分比
-     */
-    public void fixProductionProgressByCompletedQuantity(List<ProductionOrder> records) {
-        if (records == null || records.isEmpty()) {
-            return;
-        }
-
-        for (ProductionOrder order : records) {
-            if (order.getOrderQuantity() == null || order.getOrderQuantity() <= 0) {
-                continue;
-            }
-
-            try {
-                Integer completedQty = order.getCompletedQuantity();
-                if (completedQty == null) {
-                    completedQty = 0;
-                }
-
-                int totalQty = order.getOrderQuantity();
-                int progress = (int) Math.round((double) completedQty / totalQty * 100);
-                order.setProductionProgress(Math.min(progress, 100));
-            } catch (Exception e) {
-                log.warn("修正生产进度失败: orderId={}", order.getId(), e);
-            }
-        }
-    }
-
-    /**
      * 计算当前工序
      */
     private String calculateCurrentProcess(ProductionOrder order) {

@@ -163,7 +163,7 @@
     <view wx:for="{{history.list}}" wx:key="id" class="list-item">
       <view class="item-head">
         <view class="item-title">{{item.orderNo || '-'}}</view>
-        <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
+        <text class="tag">{{item.displayProcessName || item.processName || item.progressStage || item.scanType || '-'}}</text>
       </view>
       <view class="item-fields">
         <text class="item-field">颜色：{{item.color || '-'}}</text>

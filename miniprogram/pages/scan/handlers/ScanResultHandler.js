@@ -86,6 +86,9 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.orderDetail': orderDetail,
     'scanResultConfirm.stageResult': stageResult,
     'scanResultConfirm.parsedData': parsedData,
+    // 次品返修入库标记
+    'scanResultConfirm.isDefectiveReentry': stageResult && stageResult.isDefectiveReentry ? true : false,
+    'scanResultConfirm.defectQty': stageResult && stageResult.defectQty ? stageResult.defectQty : 0,
   });
 }
 
@@ -158,12 +161,15 @@ async function onConfirmScanResult(ctx) {
       qualityStage: confirm.scanData && confirm.scanData.qualityStage
         ? confirm.scanData.qualityStage
         : '',
+      // 次品返修入库：告知后端跳过包装检查，仅校验次品数量上限
+      ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
     };
 
     const result = await api.production.executeScan(scanData);
 
     if (result && result.success !== false) {
-      toast.success(`✅ ${confirm.processName} 领取成功`);
+      // 使用后端返回的消息（领取成功/验收成功/确认成功/已领取等）
+      toast.success(`✅ ${confirm.processName} ${result.message || '领取成功'}`);
 
       closeScanResultConfirm(ctx);
 

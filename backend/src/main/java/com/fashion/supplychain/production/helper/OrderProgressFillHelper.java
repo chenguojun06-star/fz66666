@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,47 +29,6 @@ public class OrderProgressFillHelper {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
-
-    @Autowired
-    private ProductionOrderScanRecordDomainService scanRecordDomainService;
-
-    public void fixProductionProgressByCompletedQuantity(List<ProductionOrder> records) {
-        if (records == null || records.isEmpty()) {
-            return;
-        }
-
-        for (ProductionOrder o : records) {
-            if (o == null || !StringUtils.hasText(o.getId())) {
-                continue;
-            }
-
-            String status = o.getStatus() == null ? "" : o.getStatus().trim();
-            if ("completed".equalsIgnoreCase(status)) {
-                continue;
-            }
-
-            int orderQty = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
-            if (orderQty <= 0) {
-                continue;
-            }
-
-            int doneQty = o.getCompletedQuantity() == null ? 0 : o.getCompletedQuantity();
-            if (doneQty <= 0) {
-                continue;
-            }
-
-            int expected = scanRecordDomainService.clampPercent((int) Math.round(doneQty * 100.0 / orderQty));
-            int current = o.getProductionProgress() == null ? 0 : o.getProductionProgress();
-            if (expected == current) {
-                continue;
-            }
-            if (expected < current) {
-                continue;
-            }
-
-            o.setProductionProgress(expected);
-        }
-    }
 
     public void fillCurrentProcessName(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) {

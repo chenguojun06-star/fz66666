@@ -177,16 +177,24 @@ public class QualityScanExecutor {
         // 构建质检确认 ScanRecord（只记录结果，不创建 ProductWarehousing）
         ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
                                           qty, "quality_confirm", "质检确认", colorResolver, sizeResolver);
-        // 将质检结果存入 remark 供后续查询使用
-        sr.setRemark(qualityResult);
-
-        // 不合格时附加缺陷信息
+        // 将质检结果存入 remark；不合格时格式：unqualified|[category]|[remark]|defectQty=N
         String defectCategory = TextUtils.safeText(params.get("defectCategory"));
         String defectRemark = TextUtils.safeText(params.get("defectRemark"));
-        if (isUnqualified && hasText(defectCategory)) {
-            sr.setRemark(qualityResult + "|" + defectCategory
-                         + (hasText(defectRemark) ? "|" + defectRemark : ""));
+        if (isUnqualified) {
+            // 读取小程序传入的次品件数，未填则默认等于全批
+            Integer defectQtyParam = NumberUtils.toInt(params.get("defectQuantity"));
+            int defectQty = (defectQtyParam != null && defectQtyParam > 0) ? defectQtyParam : qty;
+            String remarkBase = hasText(defectCategory)
+                    ? "unqualified|" + defectCategory
+                      + (hasText(defectRemark) ? "|" + defectRemark : "")
+                      + "|defectQty=" + defectQty
+                    : "unqualified|defectQty=" + defectQty;
+            sr.setRemark(remarkBase);
+        } else {
+            sr.setRemark(qualityResult);
         }
+
+        // 不合格时的图片等附加信息（单独处理，不影响 remark 格式）
 
         scanRecordService.saveScanRecord(sr);
 

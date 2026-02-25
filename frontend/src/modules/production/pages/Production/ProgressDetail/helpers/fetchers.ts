@@ -20,7 +20,7 @@ export const fetchScanHistory = async (args: {
     return [];
   }
   try {
-    const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
+    const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 1000 });
     const result = response as any;
     if (result.code === 200) {
       const records = Array.isArray(result.data?.records) ? result.data.records : [];

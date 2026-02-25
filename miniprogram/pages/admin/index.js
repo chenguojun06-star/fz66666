@@ -8,6 +8,17 @@ const {
 const { onDataRefresh } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
 
+/**
+ * 归一化质检子步骤名称：质检领取/质检验收/质检确认 → 质检
+ * @param {string} processName
+ * @returns {string}
+ */
+function _normalizeQualityName(processName) {
+  if (!processName) return processName;
+  if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
+  return processName;
+}
+
 Page({
   data: {
     loadingStats: false,
@@ -211,7 +222,13 @@ Page({
 
   // 辅助函数：合并历史记录列表
   _mergeHistoryList(history, newRecords, reset) {
-    const filteredRecords = newRecords.filter(item => this._isValidHistoryRecord(item));
+    const filteredRecords = newRecords
+      .filter(item => this._isValidHistoryRecord(item))
+      .map(item => ({
+        ...item,
+        // 质检子步骤（领取/验收/确认）统一显示为"质检"
+        displayProcessName: _normalizeQualityName(item.processName || item.progressStage),
+      }));
     const prev = Array.isArray(history.list) ? history.list : [];
     return reset ? filteredRecords : prev.concat(filteredRecords);
   },

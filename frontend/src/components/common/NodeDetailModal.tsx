@@ -311,10 +311,15 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const loadScanRecords = useCallback(async () => {
     if (!orderId) return;
     try {
-      const res = await productionScanApi.listByOrderId(orderId, {});
-      if (res.code === 200 && Array.isArray(res.data)) {
-        setScanRecords(res.data as ScanRecord[]);
-      }
+      // 必须指定 pageSize，否则后端默认10条导致弹窗数据不全
+      const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 1000 });
+      const result = res as any;
+      const records = Array.isArray(result?.data?.records)
+        ? result.data.records
+        : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      setScanRecords(records as ScanRecord[]);
     } catch (err) {
       console.error('加载扫码记录失败', err);
     }
@@ -389,6 +394,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
     return scanRecords.filter((r) =>
+      // 与 useBoardStats 保持一致：只统计成功扫码且件数>0，保证弹窗"合计"与进度球数字一致
+      String((r as any)?.scanResult || '').trim() === 'success' &&
+      (Number((r as any)?.quantity) || 0) > 0 &&
       matchRecordToStage(r.progressStage, r.processName, String(nodeTypeKey || '').trim(), normalizeText(nodeName))
     );
   }, [scanRecords, nodeName, nodeTypeKey, normalizeText]);

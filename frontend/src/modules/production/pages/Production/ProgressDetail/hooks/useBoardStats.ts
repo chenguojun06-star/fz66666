@@ -33,7 +33,7 @@ export const ensureBoardStatsForOrder = async ({
   if (boardStatsLoadingRef.current[oid]) return;
   boardStatsLoadingRef.current[oid] = true;
   try {
-    const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 500 });
+    const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 1000 });
     const result = res as any;
     const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records) ? result.data.records : [];
     const valid = records

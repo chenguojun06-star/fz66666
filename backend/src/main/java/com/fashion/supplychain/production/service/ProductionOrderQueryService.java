@@ -123,7 +123,6 @@ public class ProductionOrderQueryService {
             }
         });
         orderQualityFillService.fillQualityStats(resultPage.getRecords());
-        progressFillHelper.fixProductionProgressByCompletedQuantity(resultPage.getRecords());
         priceFillHelper.fillFactoryUnitPrice(resultPage.getRecords());
         priceFillHelper.fillQuotationUnitPrice(resultPage.getRecords());
         priceFillHelper.fillProgressNodeUnitPrices(resultPage.getRecords());
@@ -179,7 +178,6 @@ public class ProductionOrderQueryService {
         orderStockFillService.fillStockSummary(productionOrders);
         flowStageFillHelper.fillFlowStageFields(productionOrders);
         orderQualityFillService.fillQualityStats(productionOrders);
-        progressFillHelper.fixProductionProgressByCompletedQuantity(productionOrders);
         priceFillHelper.fillFactoryUnitPrice(productionOrders);
         priceFillHelper.fillQuotationUnitPrice(productionOrders);
         priceFillHelper.fillProgressNodeUnitPrices(productionOrders);

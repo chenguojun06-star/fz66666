@@ -6,6 +6,15 @@
 const api = require('../../../utils/api');
 
 /**
+ * 归一化质检子步骤名称：质检领取/质检验收/质检确认 → 质检
+ */
+function _normalizeQualityName(processName) {
+  if (!processName) return processName;
+  if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
+  return processName;
+}
+
+/**
  * 获取30天前日期 YYYY-MM-DD
  */
 function getDateBefore(days) {
@@ -124,7 +133,7 @@ Page({
       const formatted = newRecords.map((item) => ({
         ...item,
         displayTime: formatTime(item.scanTime),
-        displayProcess: item.processName || item.progressStage || item.scanType || '-',
+        displayProcess: _normalizeQualityName(item.processName) || item.progressStage || item.scanType || '-',
         displayWorker: item.workerName || item.operatorName || '-',
         displayOrderNo: item.orderNo || '-',
         displayBundleNo:

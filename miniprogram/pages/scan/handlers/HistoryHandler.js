@@ -56,6 +56,17 @@ function calcDeliveryInfo(dateStr) {
 // ==================== 分组辅助方法 ====================
 
 /**
+ * 归一化质检子步骤名称：质检领取/质检验收/质检确认 → 质检
+ * @param {string} processName
+ * @returns {string}
+ */
+function _normalizeQualityName(processName) {
+  if (!processName) return processName;
+  if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
+  return processName;
+}
+
+/**
  * 创建分组键
  * @private
  * @param {string} orderNo - 订单号
@@ -79,7 +90,7 @@ function _createNewGroup(groupKey, record) {
     orderNo: record.orderNo || '未知订单',
     orderId: record.orderId || '',
     styleNo: record.styleNo || '-',
-    stage: record.progressStage || record.processName || '未知工序',
+    stage: _normalizeQualityName(record.processName) || '未知工序',
     totalQuantity: 0,
     qualifiedCount: 0,
     defectiveCount: 0,
@@ -193,7 +204,7 @@ function groupScanRecords(records) {
   const groupedMap = {};
 
   records.forEach(record => {
-    const groupKey = _createGroupKey(record.orderNo, record.progressStage);
+    const groupKey = _createGroupKey(record.orderNo, _normalizeQualityName(record.processName));
 
     if (!groupedMap[groupKey]) {
       groupedMap[groupKey] = _createNewGroup(groupKey, record);
@@ -368,6 +379,11 @@ async function loadMyHistory(page, refresh = false) {
     const records = res.records || res || [];
     const total = res.total || 0;
     const hasMore = pageNum * pageSize < total;
+
+    // 刷新时若今日API返回空，保留本地缓存（避免"重新进入后记录消失"）
+    if (refresh && records.length === 0 && my.groupedHistory && my.groupedHistory.length > 0) {
+      return;
+    }
 
     let groupedHistory = groupScanRecords(records);
 

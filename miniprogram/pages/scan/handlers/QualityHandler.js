@@ -135,6 +135,9 @@ function _handleUnqualifiedInfo(page, qualityModal, payload) {
   payload.defectCategory = categoryValueMap[categoryIndex] || 'other';
   const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
   payload.defectRemark = selectedMethod;
+  // 次品件数：填写了就传，否则默认等于总件数（整菲号全是次品）
+  const defectQty = parseInt(qualityModal.unqualifiedQuantity, 10);
+  payload.defectQuantity = defectQty > 0 ? defectQty : (payload.quantity || 0);
   if (qualityModal.images && qualityModal.images.length > 0) {
     payload.unqualifiedImageUrls = JSON.stringify(qualityModal.images);
   }
