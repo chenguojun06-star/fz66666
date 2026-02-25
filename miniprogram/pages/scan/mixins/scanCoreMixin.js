@@ -14,9 +14,6 @@ const { errorHandler } = require('../../../utils/errorHandler');
 /* global Behavior */
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-// 修复: 解构导入 eventBus 实例（而非模块对象）
-const { eventBus } = require('../../../utils/eventBus');
-
 // 修复: 从 config.js 导入 DEBUG_MODE，避免模块级 getApp() 导致启动崩溃
 const { DEBUG_MODE } = require('../../../config');
 
@@ -333,6 +330,8 @@ const scanCoreMixin = Behavior({
     _handleScanResult(result, codeStr, scanType) {
       // 混合模式：识别工序后不自动提交，等待用户确认
       if (result && result.needConfirmProcess) {
+        // 确认弹窗期间锁住同一码 30s，防止用户重复扫同一 QR 开多个弹窗
+        markRecent(codeStr, 30000);
         this.showScanResultConfirm(result.data);
         this.setData({ loading: false });
         return;
@@ -340,6 +339,8 @@ const scanCoreMixin = Behavior({
 
       // 处理需要确认明细的情况 (如订单扫码)
       if (result && result.needConfirm) {
+        // 同上，确认弹窗期间防重复
+        markRecent(codeStr, 30000);
         this.showConfirmModal(result.data);
         this.setData({ loading: false });
         return;
@@ -425,13 +426,15 @@ const scanCoreMixin = Behavior({
       // 启动撤销倒计时
       this.startUndoTimer(formattedResult);
 
-      // 刷新统计
-      this.loadMyPanel(true);
-
-      // 触发全局事件
-      if (eventBus && typeof eventBus.emit === 'function') {
-        eventBus.emit('SCAN_SUCCESS', result);
-      }
+      // 延迟 800ms 再刷新面板：
+      // 1. 给后端事务足够时间落库，确保历史 API 能返回刚提交的扫码记录
+      // 2. 避免立即调用 + eventBus 二次触发并发竞争 my.loadingHistory 锁
+      //    （两次并发时第二次会被 loadingHistory 守卫直接退出，导致列表不更新）
+      setTimeout(() => {
+        if (this && this.data) {
+          this.loadMyPanel(true);
+        }
+      }, 800);
     },
 
     /**
