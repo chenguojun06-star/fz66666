@@ -66,6 +66,9 @@ public class TenantInterceptor implements InnerInterceptor {
         EXCLUDED_TABLES.add("t_tenant_permission_ceiling");
         EXCLUDED_TABLES.add("t_user_permission_override");
 
+        // === 第三方集成回调日志（无 tenant_id 列，全局系统级日志）===
+        EXCLUDED_TABLES.add("t_integration_callback_log");
+
         // === 混合表（租户自有数据 + 系统共享数据）===
         SHARED_TENANT_TABLES.add("t_role");              // 系统模板角色(tenant_id=NULL) + 租户自有角色
         SHARED_TENANT_TABLES.add("t_template_library");  // 系统工序模板(NULL) + 租户自定义模板
@@ -78,6 +81,10 @@ public class TenantInterceptor implements InnerInterceptor {
         // === 应用商店平台表（超管需要跨租户查看所有购买订单和订阅记录）===
         SUPERADMIN_MANAGED_TABLES.add("t_app_order");        // 租户购买订单（超管激活用）
         SUPERADMIN_MANAGED_TABLES.add("t_tenant_subscription"); // 租户订阅记录（超管管理用）
+
+        // === 第三方集成追踪表（超管需要查看所有租户的支付 / 物流记录）===
+        SUPERADMIN_MANAGED_TABLES.add("t_payment_record");   // 支付流水（普通租户按 tenant_id 隔离）
+        SUPERADMIN_MANAGED_TABLES.add("t_logistics_record"); // 物流运单（普通租户按 tenant_id 隔离）
     }
 
     @Override

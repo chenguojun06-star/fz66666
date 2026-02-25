@@ -329,10 +329,17 @@ public class AppStoreOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> adminActivateOrder(Long orderId, String remark) {
-        // 1. 查询订单
-        AppOrder order = appOrderService.getById(orderId);
+        // 1. 查询订单（使用 JdbcTemplate 原生 SQL，彻底绕开 MyBatis-Plus 租户拦截器，
+        //    与 adminOrderList / UPDATE 操作保持一致——超管操作不依赖运行时 UserContext）
+        if (orderId == null) {
+            throw new RuntimeException("订单不存在（orderId 为空）");
+        }
+        List<AppOrder> orderResults = jdbcTemplate.query(
+            "SELECT * FROM t_app_order WHERE id = ? AND delete_flag = 0",
+            new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class), orderId);
+        AppOrder order = orderResults.isEmpty() ? null : orderResults.get(0);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new RuntimeException("订单不存在（id=" + orderId + "）");
         }
         if ("PAID".equals(order.getStatus()) || "ACTIVATED".equals(order.getStatus())) {
             throw new RuntimeException("订单已激活，请勿重复操作");
