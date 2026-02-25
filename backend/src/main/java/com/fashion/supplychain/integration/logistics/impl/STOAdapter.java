@@ -68,21 +68,6 @@ public class STOAdapter implements LogisticsService {
     }
 
     @Override
-    public String getCompanyName() {
-        return "申通快递";
-    }
-
-    @Override
-    public String getCompanyCode() {
-        return "STO";
-    }
-
-    @Override
-    public LogisticsType getLogisticsType() {
-        return LogisticsType.STO;
-    }
-
-    @Override
     public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
         log.info("[申通] 创建运单 | orderId={}", request.getOrderId());
 

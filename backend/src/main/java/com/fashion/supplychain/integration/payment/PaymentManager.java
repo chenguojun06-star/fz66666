@@ -1,5 +1,7 @@
 package com.fashion.supplychain.integration.payment;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,9 @@ public class PaymentManager {
     /** Spring 自动注入所有 PaymentGateway 实现 */
     private final List<PaymentGateway> gateways;
 
+    /** 集成跟踪记录服务（自动记录每次调用） */
+    private final IntegrationRecordService recordService;
+
     /** 按类型缓存（lazy init） */
     private Map<PaymentGateway.PaymentType, PaymentGateway> gatewayMap;
 
@@ -63,10 +68,19 @@ public class PaymentManager {
         PaymentGateway gateway = getGateway(request.getPaymentType());
         log.info("[支付] 发起支付 | channel={} orderId={} amount={}分",
                 gateway.getChannelName(), request.getOrderId(), request.getAmount());
+        Long tenantId = UserContext.tenantId();
         try {
-            return gateway.createPayment(request);
+            PaymentResponse resp = gateway.createPayment(request);
+            // 自动记录支付流水
+            recordService.savePaymentRecord(tenantId, request.getOrderId(),
+                    gateway.getChannelName(), request.getAmount(),
+                    resp.getThirdPartyOrderId(), resp.getPayUrl(), resp.getQrCode());
+            return resp;
         } catch (PaymentGateway.PaymentException e) {
             log.error("[支付] 发起支付失败 | channel={} orderId={}", gateway.getChannelName(), request.getOrderId(), e);
+            // 记录失败流水
+            recordService.savePaymentFailure(tenantId, request.getOrderId(),
+                    gateway.getChannelName(), request.getAmount(), e.getMessage());
             throw new PaymentException("支付失败: " + e.getMessage(), e);
         }
     }
@@ -94,7 +108,10 @@ public class PaymentManager {
         log.info("[支付] 申请退款 | channel={} orderId={} amount={}分",
                 gateway.getChannelName(), orderId, refundAmount);
         try {
-            return gateway.refund(orderId, refundAmount, reason);
+            PaymentResponse resp = gateway.refund(orderId, refundAmount, reason);
+            // 退款成功：更新支付流水状态
+            recordService.updatePaymentStatus(orderId, "REFUNDED", refundAmount);
+            return resp;
         } catch (PaymentGateway.PaymentException e) {
             throw new PaymentException("申请退款失败: " + e.getMessage(), e);
         }

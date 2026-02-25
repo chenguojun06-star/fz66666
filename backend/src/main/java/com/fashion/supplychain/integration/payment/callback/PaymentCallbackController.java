@@ -4,13 +4,12 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentManager;
 import com.fashion.supplychain.integration.payment.PaymentResponse;
+import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
+import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -31,13 +30,11 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/webhook/payment")
+@RequiredArgsConstructor
 public class PaymentCallbackController {
 
     private final PaymentManager paymentManager;
-
-    public PaymentCallbackController(PaymentManager paymentManager) {
-        this.paymentManager = paymentManager;
-    }
+    private final IntegrationRecordService recordService;
 
     // =====================================================
     // 支付宝回调（POST）
@@ -50,10 +47,13 @@ public class PaymentCallbackController {
      * 失败可返回其他内容，支付宝会重试推送（最多8次，间隔递增）
      */
     @PostMapping("/alipay")
-    public String alipayCallback(@RequestParam Map<String, String> params,
-                                  HttpServletRequest request) {
+    public String alipayCallback(@RequestParam Map<String, String> params) {
         log.info("[支付宝回调] 收到通知 | tradeNo={} status={}",
                 params.get("trade_no"), params.get("trade_status"));
+
+        // 先记录原始回调日志（无论后续处理是否成功）
+        IntegrationCallbackLog cbLog = recordService.saveCallbackLog(
+                "PAYMENT", "ALIPAY", buildAlipayCallbackData(params), null);
 
         try {
             // Step 1: 验证签名（防伪造）
@@ -63,6 +63,7 @@ public class PaymentCallbackController {
 
             if (!valid) {
                 log.warn("[支付宝回调] 签名验证失败，忽略此通知");
+                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
                 return "fail";
             }
 
@@ -79,11 +80,13 @@ public class PaymentCallbackController {
                 handlePaymentClosed(orderId, PaymentGateway.PaymentType.ALIPAY);
             }
 
+            recordService.updateCallbackResult(cbLog.getId(), true, true, orderId, null);
             // 必须返回 "success"，否则支付宝认为通知失败，会重试
             return "success";
 
         } catch (Exception e) {
             log.error("[支付宝回调] 处理异常", e);
+            recordService.updateCallbackResult(cbLog.getId(), false, false, null, e.getMessage());
             return "fail";
         }
     }
@@ -109,6 +112,10 @@ public class PaymentCallbackController {
 
         log.info("[微信支付回调] 收到通知 | timestamp={}", timestamp);
 
+        // 先记录原始回调日志
+        IntegrationCallbackLog cbLog = recordService.saveCallbackLog(
+                "PAYMENT", "WECHAT_PAY", body, null);
+
         try {
             // Step 1: 验证签名
             // 将Header信息拼接后传入验证（AdapterImpl中使用SDK验证）
@@ -117,6 +124,7 @@ public class PaymentCallbackController {
 
             if (!valid) {
                 log.warn("[微信支付回调] 签名验证失败");
+                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
                 return Map.of("code", "FAIL", "message", "签名验证失败");
             }
 
@@ -128,10 +136,12 @@ public class PaymentCallbackController {
             // String tradeState = result.getTradeState();
 
             log.info("[微信支付回调] 处理成功（需实现解密逻辑）");
+            recordService.updateCallbackResult(cbLog.getId(), true, true, null, null);
             return Map.of("code", "SUCCESS", "message", "成功");
 
         } catch (Exception e) {
             log.error("[微信支付回调] 处理异常", e);
+            recordService.updateCallbackResult(cbLog.getId(), false, false, null, e.getMessage());
             return Map.of("code", "FAIL", "message", e.getMessage());
         }
     }
@@ -159,6 +169,9 @@ public class PaymentCallbackController {
                                        Map<String, String> rawData) {
         log.info("[支付成功] orderId={} channel={} thirdPartyNo={}",
                 orderId, paymentType.getDisplayName(), thirdPartyNo);
+
+        // 更新支付流水状态为成功
+        recordService.updatePaymentStatus(thirdPartyNo, "SUCCESS", null);
 
         // TODO: 注入业务服务后实现
         // @Autowired private ProductionOrderService orderService;

@@ -1,5 +1,7 @@
 package com.fashion.supplychain.integration.logistics;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,9 @@ public class LogisticsManager {
     /** Spring 自动注入所有 LogisticsService 实现 */
     private final List<LogisticsService> services;
 
+    /** 集成跟踪记录服务（自动记录每次调用） */
+    private final IntegrationRecordService recordService;
+
     /** 按类型缓存 */
     private Map<LogisticsService.LogisticsType, LogisticsService> serviceMap;
 
@@ -66,12 +71,27 @@ public class LogisticsManager {
     public ShippingResponse createShipment(ShippingRequest request) {
         LogisticsService service = getService(request.getLogisticsType());
         log.info("[物流] 下单寄件 | company={} orderId={}", service.getCompanyName(), request.getOrderId());
+        Long tenantId = UserContext.tenantId();
         try {
             ShippingResponse resp = service.createShipment(request);
             log.info("[物流] 下单成功 | company={} trackingNo={}", service.getCompanyName(), resp.getTrackingNumber());
+            // 自动记录物流运单
+            ShippingRequest.ContactInfo sender = request.getSender();
+            ShippingRequest.ContactInfo receiver = request.getRecipient();
+            recordService.saveLogisticsRecord(tenantId, request.getOrderId(),
+                    service.getCompanyCode(), service.getCompanyName(), resp.getTrackingNumber(),
+                    sender != null ? sender.getName() : null,
+                    sender != null ? sender.getMobile() : null,
+                    sender != null ? sender.getFullAddress() : null,
+                    receiver != null ? receiver.getName() : null,
+                    receiver != null ? receiver.getMobile() : null,
+                    receiver != null ? receiver.getFullAddress() : null);
             return resp;
         } catch (LogisticsService.LogisticsException e) {
             log.error("[物流] 下单失败 | company={} orderId={}", service.getCompanyName(), request.getOrderId(), e);
+            // 记录下单失败
+            recordService.saveLogisticsFailure(tenantId, request.getOrderId(),
+                    service.getCompanyCode(), service.getCompanyName(), e.getMessage());
             throw new LogisticsException("物流下单失败: " + e.getMessage(), e);
         }
     }
@@ -110,7 +130,11 @@ public class LogisticsManager {
     public Long estimateShippingFee(ShippingRequest request,
                                      LogisticsService.LogisticsType type) {
         request.setLogisticsType(type);
-        return getService(type).estimateShippingFee(request);
+        try {
+            return getService(type).estimateShippingFee(request);
+        } catch (LogisticsService.LogisticsException e) {
+            throw new LogisticsException("估算运费失败: " + e.getMessage(), e);
+        }
     }
 
     /**

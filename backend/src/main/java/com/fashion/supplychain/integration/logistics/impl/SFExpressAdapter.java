@@ -68,21 +68,6 @@ public class SFExpressAdapter implements LogisticsService {
     }
 
     @Override
-    public String getCompanyName() {
-        return "顺丰速运";
-    }
-
-    @Override
-    public String getCompanyCode() {
-        return "SF";
-    }
-
-    @Override
-    public LogisticsType getLogisticsType() {
-        return LogisticsType.SF;
-    }
-
-    @Override
     public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
         log.info("[顺丰] 创建运单 | orderId={}", request.getOrderId());
 
