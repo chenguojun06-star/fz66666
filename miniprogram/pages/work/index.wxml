@@ -73,7 +73,7 @@
           <view class="item-body">
             <!-- 左侧款式图片 -->
             <view class="item-cover-box">
-              <image wx:if="{{item.styleCoverUrl}}" class="item-cover" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+              <image wx:if="{{item.styleCoverUrl}}" class="item-cover" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load data-index="{{index}}" binderror="onCoverImageError" />
               <view wx:else class="item-cover-empty">暂无\n图片</view>
             </view>
             <!-- 右侧信息区 -->

@@ -75,7 +75,7 @@ export const StyleCoverThumb: React.FC<{
       {loading ? (
         <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
-        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setUrl(null)} />
       ) : (
         <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}

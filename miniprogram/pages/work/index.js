@@ -497,4 +497,11 @@ Page({
       }, 3000);
     }, 500);
   },
+
+  /** 封面图加载失败（COS 404）→ 清空 URL，显示"暂无\n图片"占位 */
+  onCoverImageError(e) {
+    const idx = e.currentTarget.dataset.index;
+    if (idx === undefined) return;
+    this.setData({ [`orders.list[${idx}].styleCoverUrl`]: '' });
+  },
 });

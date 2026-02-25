@@ -46,7 +46,7 @@
   >
     <block wx:if="{{list.length > 0}}">
       <view class="list-item" wx:for="{{list}}" wx:key="id">
-        <image wx:if="{{item.imageUrl}}" class="item-img" src="{{item.imageUrl}}" mode="aspectFill" />
+        <image wx:if="{{item.imageUrl}}" class="item-img" src="{{item.imageUrl}}" mode="aspectFill" data-index="{{index}}" binderror="onImageError" />
         <view wx:else class="item-img-placeholder">暂无图片</view>
         <view class="item-content">
           <view class="item-op-row">

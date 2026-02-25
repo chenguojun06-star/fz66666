@@ -46,6 +46,8 @@
           class="item-img"
           src="{{item.imageUrl}}"
           mode="aspectFill"
+          data-index="{{index}}"
+          binderror="onImageError"
         />
         <view wx:else class="item-img-placeholder">
           <text>暂无图片</text>
