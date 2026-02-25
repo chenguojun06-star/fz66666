@@ -241,18 +241,35 @@ public class ProductionScanExecutor {
             scanRecordService.saveScanRecord(sr);
 
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
-            // tracking 表按具体工序名（子工序）初始化，必须用 processCode（子工序名如"剪线"）匹配
-            // progressStage 是父节点聚合名（如"尾部"），不存储在 tracking.process_code 中
+            // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化
+            // 兼容策略：先用 processCode（子工序名，如"剪线"）匹配，找不到再用 progressStage（父节点名）回退
             if (bundle != null && hasText(bundle.getId())) {
                 try {
-                    processTrackingOrchestrator.updateScanRecord(
+                    boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
                         bundle.getId(),
-                        processCode,    // ✅ 用子工序名（如"剪线"）匹配，而非父节点名（如"尾部"）
+                        processCode,    // 第1次尝试：子工序名（如"剪线"）
                         operatorId,
                         operatorName,
                         sr.getId()
                     );
-                    log.info("工序跟踪记录更新成功: bundleId={}, processCode(子工序)={}, progressStage(父)={}", bundle.getId(), processCode, progressStage);
+                    if (!trackingUpdated && hasText(progressStage) && !processCode.equals(progressStage)) {
+                        // 第2次尝试：父节点名（如"尾部"）—— tracking 表按 progressStage 初始化时用此路径
+                        trackingUpdated = processTrackingOrchestrator.updateScanRecord(
+                            bundle.getId(),
+                            progressStage,
+                            operatorId,
+                            operatorName,
+                            sr.getId()
+                        );
+                        if (trackingUpdated) {
+                            log.info("工序跟踪记录更新成功（回退到父节点名）: bundleId={}, progressStage={}", bundle.getId(), progressStage);
+                        }
+                    }
+                    if (trackingUpdated) {
+                        log.info("工序跟踪记录更新成功: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
+                    } else {
+                        log.warn("工序跟踪记录未找到（不阻断扫码）: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
+                    }
                 } catch (BusinessException be) {
                     // ✅ com.fashion.supplychain.common.BusinessException：直接重抛，GlobalExceptionHandler 返回 400+消息
                     log.warn("工序跟踪拒绝领取，回滚扫码: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
