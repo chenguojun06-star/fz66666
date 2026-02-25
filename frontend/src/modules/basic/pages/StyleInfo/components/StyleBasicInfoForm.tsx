@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, InputNumber, Select, Row, Col, FormInstance } from 'antd';
+import { Form, Input, InputNumber, Row, Col, FormInstance } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CoverImageUpload from './CoverImageUpload';

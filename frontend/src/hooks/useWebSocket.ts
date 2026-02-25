@@ -180,7 +180,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       }
       setConnected(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId, enabled]);
 
   return { connected, subscribe };

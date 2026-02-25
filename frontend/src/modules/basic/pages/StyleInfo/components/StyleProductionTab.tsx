@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Input, Space, message, Modal, Form, Select, Tag, Badge } from 'antd';
+import { Button, Input, Space, message, Modal, Form, Select, Tag } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 

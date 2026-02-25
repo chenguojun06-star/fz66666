@@ -3,7 +3,7 @@ import { ProductionOrder } from '@/types/production';
 import { productionOrderApi } from '@/services/production/productionApi';
 
 interface UseQuickEditOptions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   message: any;
   fetchOrders: () => Promise<void>;
 }

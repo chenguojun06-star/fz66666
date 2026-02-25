@@ -566,7 +566,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [actionLoading],
   );
 
@@ -644,7 +644,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           ]
         : []),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [isSupervisorOrAbove],
   );
 

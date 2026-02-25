@@ -433,7 +433,7 @@ export const useProgressColumns = ({
         );
       },
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   ], [
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,

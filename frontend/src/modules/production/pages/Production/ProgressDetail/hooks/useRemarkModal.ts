@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { productionOrderApi } from '@/services/production/productionApi';
 
 interface UseRemarkModalOptions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   message: any;
   fetchOrders: () => Promise<void>;
 }

@@ -1,2 +1,1 @@
-// Zustand stores barrel - add store exports here as needed
-export {};
+export { useProductionBoardStore } from './productionBoardStore';

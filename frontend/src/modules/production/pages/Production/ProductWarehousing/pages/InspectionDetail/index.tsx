@@ -108,7 +108,7 @@ const InspectionDetail: React.FC = () => {
     // 使用 orderDetail 作为 option.data，触发菲号/款式等关联数据加载
     void formHook.handleOrderChange(orderId, { data: orderDetail });
     autoInitRef.current = true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [orderId, orderDetail]);
 
   /* ==================== 数据获取 ==================== */

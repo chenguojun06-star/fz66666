@@ -198,6 +198,13 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 工序跟踪（工资结算）数据
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
+
+  const addLoadWarning = useCallback((warning: string) => {
+    const text = String(warning || '').trim();
+    if (!text) return;
+    setLoadWarnings((prev) => (prev.includes(text) ? prev : [...prev, text]));
+  }, []);
 
   // 判断是否超过80%，超过则禁止修改（除非管理员解锁）
   const isHighProgress = (nodeStats?.percent || 0) >= 80;
@@ -252,8 +259,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       }
     } catch (err) {
       console.error('加载工厂列表失败', err);
+      addLoadWarning('工厂列表加载失败');
     }
-  }, []);
+  }, [addLoadWarning]);
 
   // 加载节点操作数据
   const loadNodeOperations = useCallback(async () => {
@@ -269,10 +277,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       }
     } catch (err) {
       console.error('加载节点操作数据失败', err);
+      addLoadWarning('节点设置数据加载失败');
     } finally {
       setLoading(false);
     }
-  }, [orderId, orderNo]);
+  }, [orderId, orderNo, addLoadWarning]);
 
   useEffect(() => {
     let cancelled = false;
@@ -322,8 +331,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       setScanRecords(records as ScanRecord[]);
     } catch (err) {
       console.error('加载扫码记录失败', err);
+      addLoadWarning('扫码记录加载失败');
     }
-  }, [orderId]);
+  }, [orderId, addLoadWarning]);
 
   // 加载菲号列表
   const loadBundles = useCallback(async () => {
@@ -341,8 +351,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       }
     } catch (err) {
       console.error('加载菲号列表失败', err);
+      addLoadWarning('菲号列表加载失败');
     }
-  }, [orderId]);
+  }, [orderId, orderNo, addLoadWarning]);
 
   // 加载工序跟踪数据（工资结算依据）
   const loadProcessTrackingData = useCallback(async () => {
@@ -362,15 +373,17 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       setProcessTrackingRecords(records);
     } catch (error) {
       console.error('NodeDetailModal: 加载工序跟踪数据失败:', error);
+      addLoadWarning('工序跟踪数据加载失败');
       setProcessTrackingRecords([]);
     } finally {
       setTrackingLoading(false);
     }
-  }, [orderId, orderNo]);
+  }, [orderId, orderNo, addLoadWarning]);
 
   // 弹窗打开时加载数据
   useEffect(() => {
     if (visible && orderId) {
+      setLoadWarnings([]);
       loadFactories();
       loadNodeOperations();
       // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
@@ -388,6 +401,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     if (!visible) {
       setActiveTab('settings');
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
+      setLoadWarnings([]);
     }
   }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
 
@@ -1017,6 +1031,15 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       initialHeight={580}
     >
       <Spin spinning={loading}>
+        {loadWarnings.length > 0 && (
+          <Alert
+            style={{ marginBottom: 8 }}
+            type="warning"
+            showIcon
+            message="部分数据加载失败"
+            description={loadWarnings.join('；')}
+          />
+        )}
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

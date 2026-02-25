@@ -1,4 +1,3 @@
-import React from 'react';
 import { productionScanApi } from '@/services/production/productionApi';
 import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';
@@ -7,31 +6,33 @@ import { getRecordStageName, stageNameMatches } from '../utils';
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;
   nodes: ProgressNode[];
-  boardStatsByOrderRef: React.MutableRefObject<Record<string, Record<string, number>>>;
-  boardStatsLoadingRef: React.MutableRefObject<Record<string, boolean>>;
-  setBoardStatsByOrder: React.Dispatch<React.SetStateAction<Record<string, Record<string, number>>>>;
-  setBoardTimesByOrder?: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>;
+  boardStatsByOrder: Record<string, Record<string, number>>;
+  boardStatsLoadingByOrder: Record<string, boolean>;
+  mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number>) => void;
+  mergeBoardTimesForOrder?: (orderId: string, times: Record<string, string>) => void;
+  setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
 }
 
 export const ensureBoardStatsForOrder = async ({
   order,
   nodes,
-  boardStatsByOrderRef,
-  boardStatsLoadingRef,
-  setBoardStatsByOrder,
-  setBoardTimesByOrder,
+  boardStatsByOrder,
+  boardStatsLoadingByOrder,
+  mergeBoardStatsForOrder,
+  mergeBoardTimesForOrder,
+  setBoardLoadingForOrder,
 }: EnsureBoardStatsArgs) => {
   const oid = String(order?.id || '').trim();
   if (!oid) return;
-  const existing = boardStatsByOrderRef.current[oid];
+  const existing = boardStatsByOrder[oid];
   if (existing && nodes.every((n) => {
     const name = String((n as any)?.name || '').trim();
     return !name || Object.prototype.hasOwnProperty.call(existing, name);
   })) {
     return;
   }
-  if (boardStatsLoadingRef.current[oid]) return;
-  boardStatsLoadingRef.current[oid] = true;
+  if (boardStatsLoadingByOrder[oid]) return;
+  setBoardLoadingForOrder(oid, true);
   try {
     const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 1000 });
     const result = res as any;
@@ -44,13 +45,14 @@ export const ensureBoardStatsForOrder = async ({
       stageNameMatches(nodeName, getRecordStageName(r)) ||
       stageNameMatches(nodeName, String((r as any)?.processName || '').trim());
     const stats: Record<string, number> = {};
+    const hasScanByNode: Record<string, boolean> = {};
     for (const n of nodes || []) {
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
-      const done = valid
-        .filter((r) => recordMatchesNode(nodeName, r))
-        .reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
+      const matchingRecords = valid.filter((r) => recordMatchesNode(nodeName, r));
+      const done = matchingRecords.reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
       stats[nodeName] = done;
+      hasScanByNode[nodeName] = matchingRecords.length > 0;
     }
     const cuttingVal = Number((order as any)?.cuttingQuantity) || 0;
     // 统一基准数量：优先使用裁剪数量（实际生产数量），回退到订单数量
@@ -66,7 +68,7 @@ export const ensureBoardStatsForOrder = async ({
     if (procurementRate > 0) {
       const doneQty = Math.floor(baseQty * procurementRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('采购')) {
+        if (key.includes('采购') && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -75,7 +77,7 @@ export const ensureBoardStatsForOrder = async ({
     if (sewingRate > 0) {
       const doneQty = Math.floor(baseQty * sewingRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('缝') || key.includes('车缝') || key.includes('缝制')) {
+        if ((key.includes('缝') || key.includes('车缝') || key.includes('缝制')) && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -84,7 +86,7 @@ export const ensureBoardStatsForOrder = async ({
     if (ironingRate > 0) {
       const doneQty = Math.floor(baseQty * ironingRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) {
+        if ((key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -93,7 +95,7 @@ export const ensureBoardStatsForOrder = async ({
     if (qualityRate > 0) {
       const doneQty = Math.floor(baseQty * qualityRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) {
+        if ((key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -102,7 +104,7 @@ export const ensureBoardStatsForOrder = async ({
     if (packagingRate > 0) {
       const doneQty = Math.floor(baseQty * packagingRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) {
+        if ((key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -112,7 +114,7 @@ export const ensureBoardStatsForOrder = async ({
       const tailRate = Math.min(...tailRates);
       const doneQty = Math.floor(baseQty * tailRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('尾部')) {
+        if (key.includes('尾部') && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
@@ -121,19 +123,16 @@ export const ensureBoardStatsForOrder = async ({
     if (warehousingRate > 0) {
       const doneQty = Math.floor(baseQty * warehousingRate / 100);
       for (const key of Object.keys(stats)) {
-        if (key.includes('入库')) {
+        if (key.includes('入库') && !hasScanByNode[key]) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
         }
       }
     }
 
-    setBoardStatsByOrder((prev) => ({
-      ...prev,
-      [oid]: stats,
-    }));
+    mergeBoardStatsForOrder(oid, stats);
 
     // 计算每个工序节点的最后完成时间（用于进度球下方显示）
-    if (setBoardTimesByOrder) {
+    if (mergeBoardTimesForOrder) {
       const timeStats: Record<string, string> = {};
       for (const n of nodes || []) {
         const nodeName = String((n as any)?.name || '').trim();
@@ -167,12 +166,9 @@ export const ensureBoardStatsForOrder = async ({
           }
         }
       }
-      setBoardTimesByOrder((prev) => ({
-        ...prev,
-        [oid]: timeStats,
-      }));
+      mergeBoardTimesForOrder(oid, timeStats);
     }
   } finally {
-    boardStatsLoadingRef.current[oid] = false;
+    setBoardLoadingForOrder(oid, false);
   }
 };

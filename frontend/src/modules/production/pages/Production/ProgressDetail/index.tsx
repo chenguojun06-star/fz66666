@@ -53,6 +53,7 @@ import { useRemarkModal } from './hooks/useRemarkModal';
 import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
+import { useProductionBoardStore } from '@/stores';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -102,9 +103,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
   const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
   const [, setNodeWorkflowDirty] = useState(false);
-  const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
-  const [boardTimesByOrder, setBoardTimesByOrder] = useState<Record<string, Record<string, string>>>({});
-  const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
+  const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
+  const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
+  const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
+  const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
+  const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
+  const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
+  const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
 
   // ── 扫码弹窗 ──────────────────────────────────────────────────
   const [scanOpen, setScanOpen] = useState(false);
@@ -171,8 +176,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setOrders(records);
         setTotal(result.data.total || 0);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
-        setBoardStatsByOrder({});
-        boardStatsLoadingRef.current = {};
+        clearAllBoardCache();
 
         const styleNos = Array.from(
           new Set(
@@ -407,11 +411,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  const boardStatsByOrderRef = useRef<Record<string, Record<string, number>>>({});
-  useEffect(() => {
-    boardStatsByOrderRef.current = boardStatsByOrder;
-  }, [boardStatsByOrder]);
-
   useEffect(() => {
     if (!orders.length) return;
     const queue = orders.slice(0, Math.min(20, orders.length));
@@ -423,10 +422,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         await ensureBoardStatsForOrder({
           order: o,
           nodes: ns,
-          boardStatsByOrderRef,
-          boardStatsLoadingRef,
-          setBoardStatsByOrder,
-          setBoardTimesByOrder,
+          boardStatsByOrder,
+          boardStatsLoadingByOrder,
+          mergeBoardStatsForOrder,
+          mergeBoardTimesForOrder,
+          setBoardLoadingForOrder,
         });
       }
     };
@@ -434,7 +434,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return () => {
       cancelled = true;
     };
-  }, [orders, progressNodesByStyleNo]);
+  }, [
+    orders,
+    progressNodesByStyleNo,
+    boardStatsByOrder,
+    boardStatsLoadingByOrder,
+    mergeBoardStatsForOrder,
+    mergeBoardTimesForOrder,
+    setBoardLoadingForOrder,
+  ]);
 
   const saveNodes = (next: ProgressNode[]) => {
     const stripped = stripWarehousingNode(next);

@@ -11,6 +11,7 @@ import {
 } from '../../ProgressDetail/utils';
 import type { ProgressNode } from '../../ProgressDetail/types';
 import { formatCompletionTime } from '../utils';
+import { useProductionBoardStore } from '@/stores';
 
 /**
  * 进度追踪 Hook
@@ -20,13 +21,14 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   // 进度球数据
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
   const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
-  const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
-  const [boardTimesByOrder, setBoardTimesByOrder] = useState<Record<string, Record<string, string>>>({});
-  const boardStatsByOrderRef = useRef<Record<string, Record<string, number>>>({});
-  const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
+  const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
+  const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
+  const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
+  const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
+  const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
+  const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
 
   // 同步 ref
-  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
   useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
 
   // 加载工序节点模板
@@ -79,16 +81,25 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
         await ensureBoardStatsForOrder({
           order: o,
           nodes: ns,
-          boardStatsByOrderRef,
-          boardStatsLoadingRef,
-          setBoardStatsByOrder,
-          setBoardTimesByOrder,
+          boardStatsByOrder,
+          boardStatsLoadingByOrder,
+          mergeBoardStatsForOrder,
+          mergeBoardTimesForOrder,
+          setBoardLoadingForOrder,
         });
       }
     };
     void run();
     return () => { cancelled = true; };
-  }, [productionList, progressNodesByStyleNo]);
+  }, [
+    productionList,
+    progressNodesByStyleNo,
+    boardStatsByOrder,
+    boardStatsLoadingByOrder,
+    mergeBoardStatsForOrder,
+    mergeBoardTimesForOrder,
+    setBoardLoadingForOrder,
+  ]);
 
   /**
    * 父进度完成时间 = 它所有子工序全部完成时的最晚时间
