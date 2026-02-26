@@ -712,10 +712,16 @@ public class ProductionScanExecutor {
         sr.setOperatorName(operatorName);
         
         // 优先使用客户端传入的扫码时间（离线/延迟上传场景），若无效则使用服务器时间
+        // 有效范围：[now-7天, now+5分钟]，防止1970年等极旧时间写入数据库
         LocalDateTime now = LocalDateTime.now();
-        if (clientScanTime != null && !clientScanTime.isAfter(now.plusMinutes(5))) {
+        if (clientScanTime != null
+                && clientScanTime.isAfter(now.minusDays(7))
+                && !clientScanTime.isAfter(now.plusMinutes(5))) {
             sr.setScanTime(clientScanTime);
         } else {
+            if (clientScanTime != null) {
+                log.warn("客户端scanTime超出合法范围，已使用服务器时间: clientTime={}", clientScanTime);
+            }
             sr.setScanTime(now);
         }
         

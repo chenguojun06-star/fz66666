@@ -1851,10 +1851,10 @@ Flyway版本序号：V20260226b（接 V20260226__add_notify_config.sql 之后）
 | 🔴 P0 | ✅ 已完成 | 备份目录从 git 追踪中移除 | `.gitignore` 追加 `.backup-*` |
 | 🟠 P1 | ✅ 已完成 | **`leak-detection-threshold` 调回 30000ms**（已完成） | `backend/src/main/resources/application.yml` |
 | 🟠 P1 | ✅ 已完成 | **Vite HMR host 恢复**：已设为 `192.168.2.248`，内网设备热更新正常 | `frontend/vite.config.ts` |
-| 🟡 P2 | ❌ 待处理 | 小程序离线扫码客户端时间校验补强：增加 `clientTime.isAfter(now.minusDays(7))` 防止1970年时间混入 | `ProductionScanExecutor.java` |
-| 🟡 P2 | ❌ 待处理 | 质检「确认」→「验收」覆盖检查：确认日志输出字符串也已更新 | `QualityScanExecutor.java` 日志语句 |
-| 🟢 P3 | ❌ 待处理 | `ProductionDataConsistencyJob` 执行结果是否写入审计日志（当前仅 log.warn） | `ProductionDataConsistencyJob.java` |
-| 🟢 P3 | ❌ 待处理 | `test-scan-api-2.js` 根目录测试脚本评估是否删除或移入 `scripts/` | 根目录 `test-scan-api-2.js` |
+| 🟡 P2 | ✅ 已完成 | 离线扫码时间加7天下界：`[now-7d, now+5min]`，超出范围 log.warn 并回退服务器时间 | `ProductionScanExecutor.java` |
+| 🟡 P2 | ✅ 已完成 | 质检日志字符串全部已是「验收」（实测确认，无"确认"残留） | `QualityScanExecutor.java` |
+| 🟢 P3 | ✅ 已完成 | 定时任务改为 success/failed 分开计数，有失败时输出 log.warn，便于监控告警 | `ProductionDataConsistencyJob.java` |
+| 🟢 P3 | ✅ 已完成 | `test-scan-api-2.js` 已从根目录移入 `scripts/` | `scripts/test-scan-api-2.js` |
 
 ---
 

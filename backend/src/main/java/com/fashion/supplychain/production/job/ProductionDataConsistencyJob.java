@@ -41,18 +41,26 @@ public class ProductionDataConsistencyJob {
                 return;
             }
 
-            int count = 0;
+            int success = 0;
+            int failed = 0;
             for (ProductionOrder order : activeOrders) {
                 try {
                     productionOrderService.recomputeProgressAsync(order.getId());
-                    count++;
+                    success++;
                 } catch (Exception e) {
+                    failed++;
                     log.error("订单进度重算失败: id={}, orderNo={}", order.getId(), order.getOrderNo(), e);
                 }
             }
 
             long duration = System.currentTimeMillis() - start;
-            log.info("生产进度一致性检查完成，共处理 {} 个订单，耗时 {} ms", count, duration);
+            if (failed > 0) {
+                log.warn("生产进度一致性检查完成（有失败项）: 成功={}, 失败={}, 共{}个订单, 耗时{}ms",
+                        success, failed, activeOrders.size(), duration);
+            } else {
+                log.info("生产进度一致性检查完成: 成功={}, 共{}个订单, 耗时{}ms",
+                        success, activeOrders.size(), duration);
+            }
 
         } catch (Exception e) {
             log.error("生产进度一致性检查任务异常", e);
