@@ -1848,8 +1848,8 @@ Flyway版本序号：V10（之前最新为 V9__add_stock_quantity_to_product_sku
 | 🔴 P0 | ✅ 已完成 | Flyway V10 迁移脚本补全 | `db/migration/V10__add_user_avatar_and_fix_login_log.sql` |
 | 🔴 P0 | ✅ 已完成 | git commit + push | commit `8ec7d288` 已推送 main |
 | 🔴 P0 | ✅ 已完成 | 备份目录从 git 追踪中移除 | `.gitignore` 追加 `.backup-*` |
-| 🟠 P1 | ❌ 待处理 | **`leak-detection-threshold` 调回 30000ms**（当前 5000ms 会产生大量误报） | `backend/src/main/resources/application.yml` |
-| 🟠 P1 | ❌ 待处理 | **Vite HMR host 评估**：内网其他设备需热更新时恢复 `hmr.host:'192.168.2.248'` | `frontend/vite.config.ts` |
+| 🟠 P1 | ✅ 已完成 | **`leak-detection-threshold` 调回 30000ms**（已完成） | `backend/src/main/resources/application.yml` |
+| 🟠 P1 | ✅ 已完成 | **Vite HMR host 恢复**：已设为 `192.168.2.248`，内网设备热更新正常 | `frontend/vite.config.ts` |
 | 🟡 P2 | ❌ 待处理 | 小程序离线扫码客户端时间校验补强：增加 `clientTime.isAfter(now.minusDays(7))` 防止1970年时间混入 | `ProductionScanExecutor.java` |
 | 🟡 P2 | ❌ 待处理 | 质检「确认」→「验收」覆盖检查：确认日志输出字符串也已更新 | `QualityScanExecutor.java` 日志语句 |
 | 🟢 P3 | ❌ 待处理 | `ProductionDataConsistencyJob` 执行结果是否写入审计日志（当前仅 log.warn） | `ProductionDataConsistencyJob.java` |

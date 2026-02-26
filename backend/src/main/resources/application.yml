@@ -30,7 +30,7 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
       pool-name: FashionHikariPool
-      leak-detection-threshold: 5000 # 优化：5秒未归还连接视为潜在泄漏（原60秒太长）
+      leak-detection-threshold: 30000 # 30秒未归还连接视为泄漏（5秒太激进，订单导出/Excel导入等慢操作会产生大量误报）
       # 全局事务隔离级别：READ_COMMITTED（减少锁竞争，避免并发死锁）
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
