@@ -4,7 +4,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,9 +28,13 @@ import java.util.Map;
 /**
  * Redis配置类
  * 配置Redis连接、序列化、缓存管理器
+ * 实现 CachingConfigurer 以提供容错 errorHandler：
+ *   Redis 不可用时 @Cacheable 降级为直接查 DB（cache miss），不抛异常。
+ *   TokenAuthFilter 已有独立熔断器，此处仅覆盖 Spring Cache 注解路径。
  */
+@Slf4j
 @Configuration
-public class RedisConfig {
+public class RedisConfig implements CachingConfigurer {
 
     /**
      * 配置RedisTemplate
@@ -114,6 +122,39 @@ public class RedisConfig {
                 }
             }
             return sb.toString();
+        };
+    }
+
+    /**
+     * Redis 不可用时的容错处理器
+     * 所有 @Cacheable / @CachePut / @CacheEvict 操作出错时：
+     *   - 只打 WARN 日志，不向上抛异常
+     *   - handleCacheGetError → 视为 cache miss，直接调用真实方法
+     * 这样即使云端无 Redis，业务接口仍正常响应，只是没有缓存加速。
+     */
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
+                log.warn("[Cache] Redis 读取失败，降级直查DB  cache={} key={} err={}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCachePutError(RuntimeException e, Cache cache, Object key, Object value) {
+                log.warn("[Cache] Redis 写入失败，跳过缓存  cache={} key={} err={}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCacheEvictError(RuntimeException e, Cache cache, Object key) {
+                log.warn("[Cache] Redis 删除失败，忽略  cache={} key={} err={}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCacheClearError(RuntimeException e, Cache cache) {
+                log.warn("[Cache] Redis 清空失败，忽略  cache={} err={}",
+                        cache.getName(), e.getMessage());
+            }
         };
     }
 }

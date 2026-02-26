@@ -288,10 +288,12 @@ public class WeChatMiniProgramAuthOrchestrator {
         String token = generateShortToken();
         String value = tenantId + ":" + (tenantName == null ? "" : tenantName);
         if (stringRedisTemplate != null) {
-            stringRedisTemplate.opsForValue().set(
-                    INVITE_TOKEN_PREFIX + token, value, Duration.ofDays(7));
-        } else {
-            log.warn("[InviteQr] Redis 不可用，邀请 token 无法持久化 token={}", token);
+            try {
+                stringRedisTemplate.opsForValue().set(
+                        INVITE_TOKEN_PREFIX + token, value, Duration.ofDays(7));
+            } catch (Exception e) {
+                log.warn("[InviteQr] Redis 写入失败，邀请 token 无法持久化 token={} err={}", token, e.getMessage());
+            }
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -325,7 +327,11 @@ public class WeChatMiniProgramAuthOrchestrator {
         }
         String value = null;
         if (stringRedisTemplate != null) {
-            value = stringRedisTemplate.opsForValue().get(INVITE_TOKEN_PREFIX + token);
+            try {
+                value = stringRedisTemplate.opsForValue().get(INVITE_TOKEN_PREFIX + token);
+            } catch (Exception e) {
+                log.warn("[InviteQr] Redis 读取失败，token 无法解析 token={} err={}", token, e.getMessage());
+            }
         }
         if (!StringUtils.hasText(value)) {
             return null;
@@ -352,14 +358,22 @@ public class WeChatMiniProgramAuthOrchestrator {
      */
     private String getCachedAccessToken() {
         if (stringRedisTemplate != null) {
-            String cached = stringRedisTemplate.opsForValue().get(WX_ACCESS_TOKEN_KEY);
-            if (StringUtils.hasText(cached)) {
-                return cached;
+            try {
+                String cached = stringRedisTemplate.opsForValue().get(WX_ACCESS_TOKEN_KEY);
+                if (StringUtils.hasText(cached)) {
+                    return cached;
+                }
+            } catch (Exception e) {
+                log.warn("[WxAccessToken] Redis 读取失败，直接从微信API获取 err={}", e.getMessage());
             }
         }
         String fresh = weChatMiniProgramClient.fetchAccessToken();
         if (fresh != null && stringRedisTemplate != null) {
-            stringRedisTemplate.opsForValue().set(WX_ACCESS_TOKEN_KEY, fresh, Duration.ofMinutes(90));
+            try {
+                stringRedisTemplate.opsForValue().set(WX_ACCESS_TOKEN_KEY, fresh, Duration.ofMinutes(90));
+            } catch (Exception e) {
+                log.warn("[WxAccessToken] Redis 写入失败，access_token 不会被缓存 err={}", e.getMessage());
+            }
         }
         return fresh;
     }
