@@ -49,4 +49,9 @@ public interface ProductWarehousingService extends IService<ProductWarehousing> 
          * 按订单ID软删除所有质检入库记录（设置deleteFlag=1）
          */
         boolean softDeleteByOrderId(String orderId);
+
+        /**
+         * SQL聚合：质检入库页面顶部统计（totalCount/totalOrders/totalQuantity/today/qualified等）
+         */
+        Map<String, Object> getWarehousingStats();
 }

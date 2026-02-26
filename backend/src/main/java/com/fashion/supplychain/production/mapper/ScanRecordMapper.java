@@ -179,4 +179,35 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         @Param("startTime") java.time.LocalDateTime startTime,
                         @Param("endTime") java.time.LocalDateTime endTime,
                         @Param("includeSettled") boolean includeSettled);
+
+        /**
+         * 按菲号聚合扫码类型，统计待质检/待入库的菲号数和数量
+         * 仅统计 scan_result='success' 的有效扫码记录
+         * 返回: pendingQcBundles, pendingQcQuantity, pendingWarehouseBundles, pendingWarehouseQuantity,
+         *       pendingPackagingBundles, pendingPackagingQuantity
+         */
+        @Select({
+                        "SELECT",
+                        "  COALESCE(SUM(CASE WHEN has_production = 1 AND has_quality = 0 THEN 1 ELSE 0 END), 0) AS pendingQcBundles,",
+                        "  COALESCE(SUM(CASE WHEN has_production = 1 AND has_quality = 0 THEN max_qty ELSE 0 END), 0) AS pendingQcQuantity,",
+                        "  COALESCE(SUM(CASE WHEN has_quality = 1 AND has_warehouse = 0 THEN 1 ELSE 0 END), 0) AS pendingWarehouseBundles,",
+                        "  COALESCE(SUM(CASE WHEN has_quality = 1 AND has_warehouse = 0 THEN max_qty ELSE 0 END), 0) AS pendingWarehouseQuantity,",
+                        "  COALESCE(SUM(CASE WHEN has_quality = 1 AND has_packaging = 0 AND has_warehouse = 0 THEN 1 ELSE 0 END), 0) AS pendingPackagingBundles,",
+                        "  COALESCE(SUM(CASE WHEN has_quality = 1 AND has_packaging = 0 AND has_warehouse = 0 THEN max_qty ELSE 0 END), 0) AS pendingPackagingQuantity",
+                        "FROM (",
+                        "  SELECT",
+                        "    cutting_bundle_id,",
+                        "    MAX(CASE WHEN scan_type = 'production' THEN 1 ELSE 0 END) AS has_production,",
+                        "    MAX(CASE WHEN scan_type = 'quality' THEN 1 ELSE 0 END) AS has_quality,",
+                        "    MAX(CASE WHEN scan_type = 'warehouse' THEN 1 ELSE 0 END) AS has_warehouse,",
+                        "    MAX(CASE WHEN process_code LIKE '%packaging%' THEN 1 ELSE 0 END) AS has_packaging,",
+                        "    MAX(quantity) AS max_qty",
+                        "  FROM t_scan_record",
+                        "  WHERE cutting_bundle_id IS NOT NULL",
+                        "    AND cutting_bundle_id != ''",
+                        "    AND scan_result = 'success'",
+                        "  GROUP BY cutting_bundle_id",
+                        ") t"
+        })
+        Map<String, Object> selectBundlePendingStats();
 }

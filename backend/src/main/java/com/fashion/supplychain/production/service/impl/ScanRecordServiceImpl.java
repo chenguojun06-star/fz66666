@@ -221,4 +221,9 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 }
                 return this.updateBatchById(records);
         }
+
+        @Override
+        public Map<String, Object> getBundlePendingStats() {
+                return baseMapper.selectBundlePendingStats();
+        }
 }

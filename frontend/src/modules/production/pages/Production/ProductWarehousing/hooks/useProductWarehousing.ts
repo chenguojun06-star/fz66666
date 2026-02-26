@@ -125,9 +125,11 @@ export const useProductWarehousing = () => {
       const res = await api.get<{ code: number; data: WarehousingStats }>('/production/warehousing/stats');
       if (res.code === 200 && res.data) {
         setWarehousingStats(res.data);
+      } else {
+        console.warn('[质检入库] stats 返回异常:', res);
       }
-    } catch {
-      // 静默失败
+    } catch (err) {
+      console.warn('[质检入库] stats 请求失败:', err);
     }
   }, []);
 

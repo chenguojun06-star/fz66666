@@ -71,4 +71,9 @@ public interface ScanRecordService extends IService<ScanRecord> {
      * 批量更新扫码记录（用于Orchestrator）
      */
     boolean batchUpdateRecords(List<ScanRecord> records);
+
+    /**
+     * SQL聚合：按菲号统计待质检/待入库/待包装的菲号数和数量
+     */
+    Map<String, Object> getBundlePendingStats();
 }

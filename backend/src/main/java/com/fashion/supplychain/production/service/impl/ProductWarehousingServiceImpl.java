@@ -534,5 +534,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 .eq(ProductWarehousing::getDeleteFlag, 0));
     }
 
-}
+    @Override
+    public Map<String, Object> getWarehousingStats() {
+        return baseMapper.selectWarehousingStats();
+    }
 
+}

@@ -70,4 +70,30 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "WHERE YEAR(warehousing_end_time) = #{year} AND delete_flag = 0 " +
             "GROUP BY MONTH(warehousing_end_time)")
     List<Map<String, Object>> selectYearInboundByMonth(@Param("year") int year);
+
+    /**
+     * 质检入库页面顶部统计：用SQL聚合替代全量加载到内存
+     * 返回: totalCount, totalOrders, totalQuantity, qualifiedCount, qualifiedQuantity,
+     *       unqualifiedCount, unqualifiedQuantity, todayCount, todayOrders, todayQuantity
+     */
+    @Select({
+            "SELECT",
+            "  COUNT(*) AS totalCount,",
+            "  COUNT(DISTINCT CASE WHEN order_no IS NOT NULL AND order_no != '' THEN order_no END) AS totalOrders,",
+            "  COALESCE(SUM(warehousing_quantity), 0) AS totalQuantity,",
+            "  SUM(CASE WHEN LOWER(COALESCE(quality_status,'')) != 'unqualified' THEN 1 ELSE 0 END) AS qualifiedCount,",
+            "  COALESCE(SUM(CASE WHEN LOWER(COALESCE(quality_status,'')) != 'unqualified'",
+            "    THEN COALESCE(qualified_quantity, warehousing_quantity, 0) ELSE 0 END), 0) AS qualifiedQuantity,",
+            "  SUM(CASE WHEN LOWER(COALESCE(quality_status,'')) = 'unqualified' THEN 1 ELSE 0 END) AS unqualifiedCount,",
+            "  COALESCE(SUM(CASE WHEN LOWER(COALESCE(quality_status,'')) = 'unqualified'",
+            "    THEN COALESCE(unqualified_quantity, 0) ELSE 0 END), 0) AS unqualifiedQuantity,",
+            "  SUM(CASE WHEN create_time >= CURDATE() AND create_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS todayCount,",
+            "  COUNT(DISTINCT CASE WHEN create_time >= CURDATE() AND create_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY)",
+            "    AND order_no IS NOT NULL AND order_no != '' THEN order_no END) AS todayOrders,",
+            "  COALESCE(SUM(CASE WHEN create_time >= CURDATE() AND create_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY)",
+            "    THEN warehousing_quantity ELSE 0 END), 0) AS todayQuantity",
+            "FROM t_product_warehousing",
+            "WHERE (delete_flag = 0 OR delete_flag IS NULL)"
+    })
+    Map<String, Object> selectWarehousingStats();
 }

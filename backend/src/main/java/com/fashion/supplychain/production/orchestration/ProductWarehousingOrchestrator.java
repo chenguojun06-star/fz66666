@@ -157,126 +157,73 @@ public class ProductWarehousingOrchestrator {
     }
 
     /**
-     * 获取质检入库统计数据
+     * 获取质检入库统计数据（SQL聚合版，替代全量加载到内存）
      * - 全部：已质检入库的记录数和数量
-     * - 待质检：裁剪完成(bundled)但尚未有质检入库记录的订单数和裁剪数量
+     * - 待质检：有production扫码但无quality扫码的菲号
+     * - 待入库：有quality扫码但无warehouse扫码的菲号
      * - 今日完成：今天创建的质检入库记录的订单数和数量
      * - 合格/不合格：按quality_status分组
      */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
-        // 1. 已质检入库的记录（排除已删除）
-        LambdaQueryWrapper<ProductWarehousing> baseWrapper = new LambdaQueryWrapper<ProductWarehousing>()
-                .and(w -> w.eq(ProductWarehousing::getDeleteFlag, 0).or().isNull(ProductWarehousing::getDeleteFlag));
-
-        List<ProductWarehousing> allRecords = productWarehousingService.list(baseWrapper);
-
-        long totalCount = allRecords.size();
-        long totalQuantity = allRecords.stream()
-                .mapToLong(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0)
-                .sum();
-        long totalOrders = allRecords.stream()
-                .map(r -> StringUtils.hasText(r.getOrderNo()) ? r.getOrderNo().trim() : "")
-                .filter(StringUtils::hasText)
-                .distinct()
-                .count();
-
-        // 合格/不合格统计
-        long qualifiedCount = allRecords.stream()
-                .filter(r -> !"unqualified".equalsIgnoreCase(
-                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
-                .count();
-        long qualifiedQuantity = allRecords.stream()
-                .filter(r -> !"unqualified".equalsIgnoreCase(
-                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
-                .mapToLong(r -> r.getQualifiedQuantity() != null ? r.getQualifiedQuantity() : (r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0))
-                .sum();
-        long unqualifiedCount = totalCount - qualifiedCount;
-        long unqualifiedQuantity = allRecords.stream()
-                .filter(r -> "unqualified".equalsIgnoreCase(
-                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
-                .mapToLong(r -> r.getUnqualifiedQuantity() != null ? r.getUnqualifiedQuantity() : 0)
-                .sum();
-
-        // 2. 今日完成：今天创建的质检入库记录
-        java.time.LocalDate today = java.time.LocalDate.now();
-        LocalDateTime todayStart = today.atStartOfDay();
-        LocalDateTime todayEnd = today.plusDays(1).atStartOfDay();
-
-        long todayCount = allRecords.stream()
-                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
-                .count();
-        long todayQuantity = allRecords.stream()
-                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
-                .mapToLong(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0)
-                .sum();
-        long todayOrders = allRecords.stream()
-                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
-                .map(r -> StringUtils.hasText(r.getOrderNo()) ? r.getOrderNo().trim() : "")
-                .filter(StringUtils::hasText)
-                .distinct()
-                .count();
-
-        // 3. 待质检/待入库：基于菲号维度的扫码流转统计
-        //    业务规则：裁剪→车缝(子工序全完成)→质检→包装→入库
-        //    待质检 = 有production扫码 但没有quality扫码的菲号
-        //    待入库 = 有quality扫码 但没有warehouse扫码的菲号
-        List<ScanRecord> allBundleScans;
-        allBundleScans = scanRecordService.list(
-                    new LambdaQueryWrapper<ScanRecord>()
-                            .isNotNull(ScanRecord::getCuttingBundleId)
-                            .ne(ScanRecord::getCuttingBundleId, "")
-            );
-
-        // 按菲号分组，收集每个菲号经历的 scan_type 集合 + 数量
-        java.util.Map<String, java.util.Set<String>> bundleScanTypes = new java.util.HashMap<>();
-        java.util.Map<String, Integer> bundleQuantities = new java.util.HashMap<>();
-
-        for (ScanRecord scan : allBundleScans) {
-            String bundleId = scan.getCuttingBundleId().trim();
-            String scanType = scan.getScanType();
-            if (!StringUtils.hasText(scanType)) continue;
-            bundleScanTypes.computeIfAbsent(bundleId, k -> new java.util.HashSet<>()).add(scanType);
-            if (scan.getQuantity() != null && scan.getQuantity() > 0) {
-                bundleQuantities.merge(bundleId, scan.getQuantity(), Math::max);
-            }
-        }
-
-        long pendingQcBundles = 0;
-        long pendingQcQuantity = 0;
-        long pendingWarehouseBundles = 0;
-        long pendingWarehouseQuantity = 0;
-
-        for (java.util.Map.Entry<String, java.util.Set<String>> entry : bundleScanTypes.entrySet()) {
-            java.util.Set<String> types = entry.getValue();
-            int qty = bundleQuantities.getOrDefault(entry.getKey(), 0);
-
-            // 待质检：完成车缝(production) 但还没有质检(quality)扫码
-            if (types.contains("production") && !types.contains("quality")) {
-                pendingQcBundles++;
-                pendingQcQuantity += qty;
-            }
-            // 待入库：已质检(quality) 但还没有入库(warehouse)扫码
-            if (types.contains("quality") && !types.contains("warehouse")) {
-                pendingWarehouseBundles++;
-                pendingWarehouseQuantity += qty;
-            }
-        }
-
         Map<String, Object> stats = new java.util.LinkedHashMap<>();
-        stats.put("totalCount", totalCount);
-        stats.put("totalOrders", totalOrders);
-        stats.put("totalQuantity", totalQuantity);
-        stats.put("qualifiedCount", qualifiedCount);
-        stats.put("qualifiedQuantity", qualifiedQuantity);
-        stats.put("unqualifiedCount", unqualifiedCount);
-        stats.put("unqualifiedQuantity", unqualifiedQuantity);
-        stats.put("todayCount", todayCount);
-        stats.put("todayOrders", todayOrders);
-        stats.put("todayQuantity", todayQuantity);
-        stats.put("pendingQcBundles", pendingQcBundles);
-        stats.put("pendingQcQuantity", pendingQcQuantity);
-        stats.put("pendingWarehouseBundles", pendingWarehouseBundles);
-        stats.put("pendingWarehouseQuantity", pendingWarehouseQuantity);
+
+        try {
+            // 1. 质检入库记录统计（SQL聚合，无需加载全量数据到内存）
+            Map<String, Object> warehousingStats = productWarehousingService.getWarehousingStats();
+            if (warehousingStats != null) {
+                stats.putAll(warehousingStats);
+            } else {
+                // 表为空时兜底
+                stats.put("totalCount", 0L);
+                stats.put("totalOrders", 0L);
+                stats.put("totalQuantity", 0L);
+                stats.put("qualifiedCount", 0L);
+                stats.put("qualifiedQuantity", 0L);
+                stats.put("unqualifiedCount", 0L);
+                stats.put("unqualifiedQuantity", 0L);
+                stats.put("todayCount", 0L);
+                stats.put("todayOrders", 0L);
+                stats.put("todayQuantity", 0L);
+            }
+
+            // 2. 待质检/待入库/待包装统计（SQL聚合，按菲号维度）
+            Map<String, Object> pendingStats = scanRecordService.getBundlePendingStats();
+            if (pendingStats != null) {
+                stats.put("pendingQcBundles", pendingStats.getOrDefault("pendingQcBundles", 0L));
+                stats.put("pendingQcQuantity", pendingStats.getOrDefault("pendingQcQuantity", 0L));
+                stats.put("pendingWarehouseBundles", pendingStats.getOrDefault("pendingWarehouseBundles", 0L));
+                stats.put("pendingWarehouseQuantity", pendingStats.getOrDefault("pendingWarehouseQuantity", 0L));
+                stats.put("pendingPackagingBundles", pendingStats.getOrDefault("pendingPackagingBundles", 0L));
+                stats.put("pendingPackagingQuantity", pendingStats.getOrDefault("pendingPackagingQuantity", 0L));
+            } else {
+                stats.put("pendingQcBundles", 0L);
+                stats.put("pendingQcQuantity", 0L);
+                stats.put("pendingWarehouseBundles", 0L);
+                stats.put("pendingWarehouseQuantity", 0L);
+                stats.put("pendingPackagingBundles", 0L);
+                stats.put("pendingPackagingQuantity", 0L);
+            }
+        } catch (Exception e) {
+            log.error("质检入库统计查询失败: {}", e.getMessage(), e);
+            // 出错时返回全零，避免前端报错
+            stats.put("totalCount", 0L);
+            stats.put("totalOrders", 0L);
+            stats.put("totalQuantity", 0L);
+            stats.put("qualifiedCount", 0L);
+            stats.put("qualifiedQuantity", 0L);
+            stats.put("unqualifiedCount", 0L);
+            stats.put("unqualifiedQuantity", 0L);
+            stats.put("todayCount", 0L);
+            stats.put("todayOrders", 0L);
+            stats.put("todayQuantity", 0L);
+            stats.put("pendingQcBundles", 0L);
+            stats.put("pendingQcQuantity", 0L);
+            stats.put("pendingWarehouseBundles", 0L);
+            stats.put("pendingWarehouseQuantity", 0L);
+            stats.put("pendingPackagingBundles", 0L);
+            stats.put("pendingPackagingQuantity", 0L);
+        }
+
         return stats;
     }
 
