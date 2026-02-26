@@ -184,6 +184,14 @@ const scanCoreMixin = Behavior({
       } catch (e) {
         // 统计数据加载失败：记录错误并提示用户
         console.error('[loadMyPanel] 加载统计数据失败:', e.message || e);
+        this.setData({
+          'my.stats': {
+            scanCount: 0,
+            orderCount: 0,
+            totalQuantity: 0,
+            totalAmount: 0,
+          },
+        });
         if (DEBUG_MODE) {
           wx.showToast({ title: '统计加载失败', icon: 'none' });
         }

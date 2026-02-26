@@ -18,7 +18,7 @@
           "policyThreshold": 60,
           "envVariables": {
             "PORT": "8088",
-            "SPRING_DATASOURCE_URL": "jdbc:mysql://{{MYSQL_HOST}}:3306/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
+            "SPRING_DATASOURCE_URL": "jdbc:mysql://{{MYSQL_HOST}}:3306/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=10000&tcpKeepAlive=true",
             "SPRING_DATASOURCE_USERNAME": "{{MYSQL_USER}}",
             "SPRING_DATASOURCE_PASSWORD": "{{MYSQL_PASSWORD}}",
             "SPRING_REDIS_HOST": "{{REDIS_HOST}}",
