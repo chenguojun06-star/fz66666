@@ -114,7 +114,12 @@ public class ScanRecordController {
     @GetMapping("/personal-stats")
     public Result<?> personalStats(@RequestParam(required = false) String scanType,
             @RequestParam(required = false) String period) {
-        return Result.success(scanRecordOrchestrator.getPersonalStats(scanType, period));
+        try {
+            return Result.success(scanRecordOrchestrator.getPersonalStats(scanType, period));
+        } catch (Exception e) {
+            logger.warn("获取个人统计失败（可能DB列缺失）: {}", e.getMessage());
+            return Result.success(java.util.Collections.emptyMap());
+        }
     }
 
     @PostMapping("/cleanup")
@@ -127,7 +132,12 @@ public class ScanRecordController {
      */
     @GetMapping("/my-quality-tasks")
     public Result<?> getMyQualityTasks() {
-        return Result.success(scanRecordOrchestrator.getMyQualityTasks());
+        try {
+            return Result.success(scanRecordOrchestrator.getMyQualityTasks());
+        } catch (Exception e) {
+            logger.warn("获取质检任务失败（可能DB列缺失）: {}", e.getMessage());
+            return Result.success(java.util.Collections.emptyList());
+        }
     }
 
     /**
