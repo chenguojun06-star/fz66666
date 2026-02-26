@@ -7,7 +7,7 @@
  * 3. FALLBACK_BASE_URL（开发备用）
  *
  * 合法域名：已在微信公众平台「开发→开发管理→服务器域名」配置
- *   backend-226678-6-1405390085.sh.run.tcloudbase.com
+ *   backend-226678-6-1405390085.sh.run.tcloudbase.com  // cspell:ignore tcloudbase
  *
  * 本地开发：
  * - 在「微信开发者工具→详情→本地设置」中勾选「不校验合法域名」
@@ -23,8 +23,10 @@ const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备
 const DEBUG_MODE = false;
 
 /**
- * 判断当前是否为本地开发环境
+ * 判断 URL 是否为占位符（未配置真实域名）
  * 开发者工具中 envVersion = 'develop'，且 DEFAULT_BASE_URL 还是占位符时，自动用 FALLBACK
+ * @param {string} url - 待检测的 URL 字符串
+ * @returns {boolean} 是否为占位符地址
  */
 function isPlaceholderUrl(url) {
   return !url || url.includes('YOUR_CLOUD_BACKEND_DOMAIN') || url === 'https://YOUR_CLOUD_BACKEND_DOMAIN';
@@ -89,7 +91,9 @@ function getBaseUrl() {
             if (typeof wx !== 'undefined' && wx.getAccountInfoSync) {
               envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
             }
-          } catch (e) {}
+          } catch (e) {
+            // getAccountInfoSync 在旧版基础库可能不存在，静默降级为 release
+          }
 
           // 只有在正式版(release)中，才强制将内网IP替换为云地址
           if (isAnyLanIp && envVersion === 'release') {
