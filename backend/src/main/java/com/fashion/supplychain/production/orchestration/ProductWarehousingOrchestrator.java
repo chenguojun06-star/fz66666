@@ -221,16 +221,11 @@ public class ProductWarehousingOrchestrator {
         //    待质检 = 有production扫码 但没有quality扫码的菲号
         //    待入库 = 有quality扫码 但没有warehouse扫码的菲号
         List<ScanRecord> allBundleScans;
-        try {
-            allBundleScans = scanRecordService.list(
+        allBundleScans = scanRecordService.list(
                     new LambdaQueryWrapper<ScanRecord>()
                             .isNotNull(ScanRecord::getCuttingBundleId)
                             .ne(ScanRecord::getCuttingBundleId, "")
             );
-        } catch (Exception e) {
-            log.warn("getStatusStats: 查询扫码记录失败（可能DB列缺失），待质检/待入库统计降级为0: {}", e.getMessage());
-            allBundleScans = java.util.Collections.emptyList();
-        }
 
         // 按菲号分组，收集每个菲号经历的 scan_type 集合 + 数量
         java.util.Map<String, java.util.Set<String>> bundleScanTypes = new java.util.HashMap<>();
@@ -296,16 +291,11 @@ public class ProductWarehousingOrchestrator {
         }
 
         List<ScanRecord> allBundleScans;
-        try {
-            allBundleScans = scanRecordService.list(
+        allBundleScans = scanRecordService.list(
                     new LambdaQueryWrapper<ScanRecord>()
                             .isNotNull(ScanRecord::getCuttingBundleId)
                             .ne(ScanRecord::getCuttingBundleId, "")
             );
-        } catch (Exception e) {
-            log.warn("listPendingBundles: 查询扫码记录失败（可能DB列缺失），返回空列表: {}", e.getMessage());
-            return Collections.emptyList();
-        }
 
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
         Map<String, Integer> bundleQuantities = new HashMap<>();
@@ -439,20 +429,12 @@ public class ProductWarehousingOrchestrator {
 
         // 查询该订单所有关联菲号的扫码记录
         List<ScanRecord> scans;
-        try {
-            scans = scanRecordService.list(
+        scans = scanRecordService.list(
                     new LambdaQueryWrapper<ScanRecord>()
                             .eq(ScanRecord::getOrderId, orderId.trim())
                             .isNotNull(ScanRecord::getCuttingBundleId)
                             .ne(ScanRecord::getCuttingBundleId, "")
             );
-        } catch (Exception e) {
-            log.warn("getBundleReadiness: 查询扫码记录失败（可能DB列缺失），返回空就绪列表: orderId={}, error={}", orderId, e.getMessage());
-            Map<String, Object> empty = new HashMap<>();
-            empty.put("qcReadyQrs", Collections.emptyList());
-            empty.put("warehouseReadyQrs", Collections.emptyList());
-            return empty;
-        }
 
         // 按 cuttingBundleId 分组，收集每个菲号经历的 scanType 集合
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
@@ -845,7 +827,7 @@ public class ProductWarehousingOrchestrator {
         try {
             productionOrderService.recomputeProgressFromRecords(oid);
         } catch (Exception ex) {
-            log.warn("create: recomputeProgress失败（可能DB列缺失）: orderId={}, error={}", oid, ex.getMessage());
+            log.warn("create: recomputeProgress失败: orderId={}, error={}", oid, ex.getMessage());
         }
 
         // 已禁用系统自动完成
@@ -891,7 +873,7 @@ public class ProductWarehousingOrchestrator {
             try {
                 productionOrderService.recomputeProgressFromRecords(orderId);
             } catch (Exception ex) {
-                log.warn("update: recomputeProgress失败（可能DB列缺失）: orderId={}, error={}", orderId, ex.getMessage());
+                log.warn("update: recomputeProgress失败: orderId={}, error={}", orderId, ex.getMessage());
             }
 
             // 已禁用系统自动完成

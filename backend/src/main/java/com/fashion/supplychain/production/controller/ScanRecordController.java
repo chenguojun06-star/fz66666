@@ -10,9 +10,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
-import java.util.Collections;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 扫码记录Controller
@@ -21,8 +18,6 @@ import org.slf4j.LoggerFactory;
 @RequestMapping("/api/production/scan")
 @PreAuthorize("isAuthenticated()")
 public class ScanRecordController {
-
-    private static final Logger log = LoggerFactory.getLogger(ScanRecordController.class);
 
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
@@ -61,22 +56,6 @@ public class ScanRecordController {
      */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
-        try {
-            return doList(params);
-        } catch (Exception e) {
-            log.warn("scan/list查询失败（可能DB列缺失），返回空页: {}", e.getMessage());
-            // 返回空分页结果，避免前端500
-            Map<String, Object> emptyPage = new java.util.LinkedHashMap<>();
-            emptyPage.put("records", Collections.emptyList());
-            emptyPage.put("total", 0);
-            emptyPage.put("size", 10);
-            emptyPage.put("current", 1);
-            emptyPage.put("pages", 0);
-            return Result.success(emptyPage);
-        }
-    }
-
-    private Result<?> doList(Map<String, Object> params) {
         // 智能路由：根据参数自动选择查询方法
         if (params.containsKey("orderId")) {
             String orderId = params.get("orderId").toString();
@@ -114,12 +93,7 @@ public class ScanRecordController {
     @GetMapping("/personal-stats")
     public Result<?> personalStats(@RequestParam(required = false) String scanType,
             @RequestParam(required = false) String period) {
-        try {
-            return Result.success(scanRecordOrchestrator.getPersonalStats(scanType, period));
-        } catch (Exception e) {
-            logger.warn("获取个人统计失败（可能DB列缺失）: {}", e.getMessage());
-            return Result.success(java.util.Collections.emptyMap());
-        }
+        return Result.success(scanRecordOrchestrator.getPersonalStats(scanType, period));
     }
 
     @PostMapping("/cleanup")
@@ -132,12 +106,7 @@ public class ScanRecordController {
      */
     @GetMapping("/my-quality-tasks")
     public Result<?> getMyQualityTasks() {
-        try {
-            return Result.success(scanRecordOrchestrator.getMyQualityTasks());
-        } catch (Exception e) {
-            logger.warn("获取质检任务失败（可能DB列缺失）: {}", e.getMessage());
-            return Result.success(java.util.Collections.emptyList());
-        }
+        return Result.success(scanRecordOrchestrator.getMyQualityTasks());
     }
 
     /**
