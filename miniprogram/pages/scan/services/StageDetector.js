@@ -354,31 +354,23 @@ class StageDetector {
           }
           // 质检是最后一道可计数工序 → 检查是否有入库环节
           if (_warehouseProcess) {
-            const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
+            const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
+            const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
             if (!isWarehoused) {
-              // 检测质检结果是否为次品 → 次品返修入库模式
-              // 🔧 修复：确认完成用 confirmTime 判断，不再查 processCode='quality_confirm'
-              const confirmRec = scanHistory.find(r =>
-                r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
-              );
-              const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
-              const defectQty = isUnqualified
-                ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
-                : 0;
               return {
                 processName: _warehouseProcess.processName,
                 progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
                 scanType: 'warehouse',
-                hint: (isUnqualified && defectQty > 0)
-                  ? `次品入库 ${defectQty}件`
+                hint: (qualityMeta.isUnqualified && qualityMeta.defectQty > 0)
+                  ? `次品入库 ${qualityMeta.defectQty}件`
                   : _warehouseProcess.processName,
                 isDuplicate: false,
-                quantity: (isUnqualified && defectQty > 0) ? defectQty : accurateQuantity,
+                quantity: qualityMeta.expectedQty,
                 unitPrice: Number(_warehouseProcess.price || 0),
                 qualityStage: '',
-                isDefectiveReentry: isUnqualified && defectQty > 0,
-                defectQty: defectQty,
-                defectRemark: isUnqualified ? (confirmRec.remark || '') : '',
+                isDefectiveReentry: qualityMeta.isUnqualified && qualityMeta.defectQty > 0,
+                defectQty: qualityMeta.defectQty,
+                defectRemark: qualityMeta.defectRemark,
                 scannedProcessNames: [...scannedProcessNames],
                 allBundleProcesses: bundleProcesses,
               };
@@ -421,30 +413,23 @@ class StageDetector {
 
     // === 步骤5：所有可计数工序已完成 → 检查是否有入库环节 ===
     if (_warehouseProcess) {
-      const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
+      const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
+      const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
       if (!isWarehoused) {
-        // 🔧 修复：确认完成用 confirmTime 判断，不再查 processCode='quality_confirm'
-        const confirmRec = scanHistory.find(r =>
-          r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
-        );
-        const isUnqualified = confirmRec && (confirmRec.remark || '').startsWith('unqualified');
-        const defectQty = isUnqualified
-          ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
-          : 0;
         return {
           processName: _warehouseProcess.processName,
           progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
           scanType: 'warehouse',
-          hint: (isUnqualified && defectQty > 0)
-            ? `次品入库 ${defectQty}件`
+          hint: (qualityMeta.isUnqualified && qualityMeta.defectQty > 0)
+            ? `次品入库 ${qualityMeta.defectQty}件`
             : _warehouseProcess.processName,
           isDuplicate: false,
-          quantity: (isUnqualified && defectQty > 0) ? defectQty : accurateQuantity,
+          quantity: qualityMeta.expectedQty,
           unitPrice: Number(_warehouseProcess.price || 0),
           qualityStage: '',
-          isDefectiveReentry: isUnqualified && defectQty > 0,
-          defectQty: defectQty,
-          defectRemark: isUnqualified ? (confirmRec.remark || '') : '',
+          isDefectiveReentry: qualityMeta.isUnqualified && qualityMeta.defectQty > 0,
+          defectQty: qualityMeta.defectQty,
+          defectRemark: qualityMeta.defectRemark,
           scannedProcessNames: [...scannedProcessNames],
           allBundleProcesses: bundleProcesses,
         };
@@ -473,7 +458,7 @@ class StageDetector {
    * @param {string} bundleNo - 菲号
    * @returns {Promise<boolean>} 是否已入库
    */
-  async _checkBundleWarehoused(orderNo, bundleNo) {
+  async _checkBundleWarehoused(orderNo, bundleNo, expectedQuantity) {
     try {
       // 先获取菲号ID
       const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
@@ -481,15 +466,62 @@ class StageDetector {
         return false;
       }
 
-      // 查询入库记录
-      const res = await this.api.production.listWarehousing({
-        cuttingBundleId: bundleInfo.id,
-        page: 1,
-        pageSize: 1,
-      });
+      const fallbackQty = Number(bundleInfo.quantity || 0) || 0;
+      const targetQty = Number(expectedQuantity || 0) > 0
+        ? Number(expectedQuantity || 0)
+        : fallbackQty;
 
-      const records = res && res.records ? res.records : [];
-      return records.length > 0;
+      const pageSize = 200;
+      const maxPages = 50;
+      let page = 1;
+      let hasAnyRecord = false;
+      let warehousedQty = 0;
+
+      while (page <= maxPages) {
+        const res = await this.api.production.listWarehousing({
+          cuttingBundleId: bundleInfo.id,
+          page,
+          pageSize,
+        });
+
+        const records = res && res.records ? res.records : [];
+        if (!records.length) {
+          break;
+        }
+
+        hasAnyRecord = true;
+        const pageQty = records.reduce((sum, item) => {
+          const qualified = Number(item && item.qualifiedQuantity);
+          if (!Number.isNaN(qualified) && qualified > 0) {
+            return sum + qualified;
+          }
+          const total = Number(item && item.warehousingQuantity);
+          if (!Number.isNaN(total) && total > 0) {
+            return sum + total;
+          }
+          return sum;
+        }, 0);
+        warehousedQty += pageQty;
+
+        if (targetQty > 0 && warehousedQty >= targetQty) {
+          return true;
+        }
+
+        if (records.length < pageSize) {
+          break;
+        }
+        page += 1;
+      }
+
+      if (!hasAnyRecord) {
+        return false;
+      }
+
+      // 无目标数量时退化为“有记录即已入库”，避免阻塞异常数据
+      if (!(targetQty > 0)) {
+        return warehousedQty > 0;
+      }
+      return warehousedQty >= targetQty;
     } catch (e) {
       console.warn('[StageDetector] 检查入库状态失败:', e);
       return false;
@@ -538,17 +570,14 @@ class StageDetector {
         return scanType === 'quality';
       });
 
-      // 查找 quality_receive 记录（领取阶段）
-      const receiveRecord = qualityRecords.find(r =>
-        r.processCode === 'quality_receive'
-      );
+      // 质量状态判定采用“任一 confirmTime 即 done”，避免记录排序差异导致误判
+      const receiveRecords = qualityRecords.filter(r => r.processCode === 'quality_receive');
 
-      if (!receiveRecord) {
+      if (!receiveRecords.length) {
         return 'receive';   // 无领取记录 → 需要先领取
       }
 
-      // 检查 confirmTime 是否已设置（后端 handleConfirm 会写入此字段）
-      if (receiveRecord.confirmTime) {
+      if (receiveRecords.some(r => !!r.confirmTime)) {
         return 'done';      // 已完成质检验收
       }
 
@@ -557,6 +586,26 @@ class StageDetector {
       console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
       return 'receive';
     }
+  }
+
+  _extractQualityMeta(scanHistory, fallbackQty) {
+    const confirmRec = (scanHistory || []).find(r =>
+      r && r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
+    );
+    const isUnqualified = !!(confirmRec && String(confirmRec.remark || '').startsWith('unqualified'));
+    const defectQty = isUnqualified
+      ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
+      : 0;
+    const expectedQty = (isUnqualified && defectQty > 0)
+      ? defectQty
+      : (Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0);
+
+    return {
+      isUnqualified,
+      defectQty,
+      defectRemark: isUnqualified ? String(confirmRec.remark || '') : '',
+      expectedQty,
+    };
   }
 
   /**

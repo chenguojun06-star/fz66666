@@ -106,6 +106,7 @@ miniprogram/_theme_upgrade.py
 
 # jscpd/ESLint/Lighthouse 生成的本地报告
 frontend/reports/
+reports/
 
 # 数据库备份大文件（不提交）
 backend/sql/backup_*.sql

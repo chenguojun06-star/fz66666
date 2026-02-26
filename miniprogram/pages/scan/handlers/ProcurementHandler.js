@@ -27,6 +27,54 @@ function _normalizeToArray(res) {
   return [];
 }
 
+function _normalizeStatus(rawStatus) {
+  return String(rawStatus || '').trim().toLowerCase();
+}
+
+function _isSameReceiver(item, receiverId, receiverName) {
+  const existingReceiverId = String(item.receiverId || '').trim();
+  const existingReceiverName = String(item.receiverName || '').trim();
+  if (receiverId && existingReceiverId) {
+    return receiverId === existingReceiverId;
+  }
+  if (receiverName && existingReceiverName) {
+    return receiverName === existingReceiverName;
+  }
+  return false;
+}
+
+function _shouldCallReceive(item, receiverId, receiverName) {
+  if (!item) return false;
+  const status = _normalizeStatus(item.status);
+  if (!status) return true;
+  if (status === 'completed' || status === 'cancelled') {
+    return false;
+  }
+  if (status === 'pending') {
+    return true;
+  }
+  if (status === 'received' || status === 'partial') {
+    return !_isSameReceiver(item, receiverId, receiverName);
+  }
+  return false;
+}
+
+function _isActionableForUser(item, receiverId, receiverName) {
+  if (!item) return false;
+  const status = _normalizeStatus(item.status);
+  if (!status || status === 'pending') return true;
+  if (status === 'completed' || status === 'cancelled') return false;
+  if (status === 'received' || status === 'partial') {
+    return _isSameReceiver(item, receiverId, receiverName);
+  }
+  return false;
+}
+
+function _filterActionablePurchases(items, receiverId, receiverName) {
+  const list = Array.isArray(items) ? items : [];
+  return list.filter(item => _isActionableForUser(item, receiverId, receiverName));
+}
+
 /**
  * 检查是否有待处理的采购任务（从铃铛点击过来）
  * @param {Object} ctx - Page 上下文
@@ -62,18 +110,22 @@ async function handleProcurementTaskFromBell(ctx, task) {
     const purchaseId = task.id || task.purchaseId || '';
 
     const materialPurchases = await _fetchProcurementData(orderNo, purchaseId, task);
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+    const actionablePurchases = _filterActionablePurchases(materialPurchases, receiverId, receiverName);
 
-    if (!materialPurchases || materialPurchases.length === 0) {
+    if (!actionablePurchases || actionablePurchases.length === 0) {
       const baseMsg = orderNo ? `未找到订单【${orderNo}】的采购单` : '未找到采购单';
-      toast.error(baseMsg + '\n\n可能的原因：\n1. 采购任务已完成\n2. 采购任务已被删除\n3. 数据同步延迟\n\n请返回刷新任务列表后重试');
+      toast.error(baseMsg + '\n\n可能的原因：\n1. 采购任务已完成\n2. 采购任务已被他人领取\n3. 采购任务已被删除\n\n请返回刷新任务列表后重试');
       return;
     }
 
     ctx.showConfirmModal({
       isProcurement: true,
-      materialPurchases: materialPurchases,
-      orderNo: task.orderNo || materialPurchases[0].orderNo || 'unknown',
-      styleNo: styleNo || materialPurchases[0].styleNo || '',
+      materialPurchases: actionablePurchases,
+      orderNo: task.orderNo || actionablePurchases[0].orderNo || 'unknown',
+      styleNo: styleNo || actionablePurchases[0].styleNo || '',
       progressStage: '采购',
       fromMyTasks: true,
     });
@@ -195,14 +247,19 @@ async function onHandleProcurement(ctx, e) {
       }
     }
 
-    if (!materialPurchases || materialPurchases.length === 0) {
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+    const actionablePurchases = _filterActionablePurchases(materialPurchases, receiverId, receiverName);
+
+    if (!actionablePurchases || actionablePurchases.length === 0) {
       toast.error('未找到采购单');
       return;
     }
 
     ctx.showConfirmModal({
       isProcurement: true,
-      materialPurchases: materialPurchases,
+      materialPurchases: actionablePurchases,
       orderNo: targetOrderNo,
       styleNo: styleNo,
       progressStage: '采购',
@@ -279,6 +336,7 @@ async function receiveProcurementTask(ctx, userInfo) {
   }
 
   const updates = materialPurchases
+    .filter(item => _shouldCallReceive(item, receiverId, receiverName))
     .map(item => ({
       purchaseId: item.id || item.purchaseId,
       receiverId,
@@ -287,7 +345,11 @@ async function receiveProcurementTask(ctx, userInfo) {
     .filter(item => !!item.purchaseId);
 
   if (updates.length === 0) {
-    throw new Error('采购任务ID缺失，请刷新后重试');
+    toast.success('当前采购任务均已领取或已完成');
+    ctx.setData({ 'scanConfirm.visible': false, 'scanConfirm.loading': false });
+    ctx.loadMyPanel(true);
+    loadMyProcurementTasks(ctx);
+    return;
   }
 
   await Promise.all(updates.map(update => api.production.receivePurchase(update)));
@@ -425,14 +487,21 @@ function _buildProcurementUpdates(materialPurchases) {
   const receives = [];
   const updates = [];
   const userInfo = getUserInfo();
-  const receiverName = userInfo.realName || userInfo.username;
+  const receiverName = (userInfo.realName || userInfo.username || '').trim();
+  const receiverId = String(userInfo.id || userInfo.userId || '').trim();
 
   for (const item of materialPurchases) {
-    receives.push({
-      purchaseId: item.id,
-      receiverId: userInfo.id,
-      receiverName: receiverName,
-    });
+    if (!_isActionableForUser(item, receiverId, receiverName)) {
+      continue;
+    }
+
+    if (_shouldCallReceive(item, receiverId, receiverName)) {
+      receives.push({
+        purchaseId: item.id,
+        receiverId,
+        receiverName,
+      });
+    }
 
     const inputQty = Number(item.inputQuantity);
     if (inputQty > 0) {
@@ -462,7 +531,9 @@ async function _executeProcurementSubmit(receives, updates) {
     try {
       await Promise.all(receives.map(r => api.production.receivePurchase(r)));
     } catch (err) {
-      throw new Error('领取任务失败：' + (err.errMsg || err.message || '网络或服务器错误'));
+      const rawMessage = _extractProcurementErrorText(err);
+      const friendlyMessage = _mapProcurementBusinessError(rawMessage);
+      throw new Error('领取任务失败：' + friendlyMessage);
     }
   }
 
@@ -470,12 +541,71 @@ async function _executeProcurementSubmit(receives, updates) {
     try {
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
     } catch (err) {
+      const rawMessage = _extractProcurementErrorText(err);
+      const friendlyMessage = _mapProcurementBusinessError(rawMessage);
       if (receives.length > 0) {
-        throw new Error('任务已领取，但更新数量失败：' + (err.errMsg || err.message || '请重试'));
+        throw new Error('任务已领取，但更新数量失败：' + friendlyMessage);
       }
-      throw new Error('提交数据失败：' + (err.message || '未知错误'));
+      throw new Error('提交数据失败：' + friendlyMessage);
     }
   }
+}
+
+function _extractProcurementErrorText(err) {
+  if (!err) return '';
+  const candidates = [
+    err.message,
+    err.errMsg,
+    err.data && err.data.message,
+    err.data && err.data.msg,
+    err.resp && err.resp.message,
+    err.resp && err.resp.msg,
+    err.raw && err.raw.errMsg,
+  ];
+  for (const item of candidates) {
+    if (item !== null && item !== undefined && String(item).trim()) {
+      return String(item).trim();
+    }
+  }
+  return '';
+}
+
+function _mapProcurementBusinessError(message) {
+  const text = String(message || '').trim();
+  if (!text) return '网络或服务器错误，请稍后重试';
+
+  if (text.includes('已被') && text.includes('领取')) {
+    return '该任务已被他人领取，请刷新列表后继续处理';
+  }
+  if (text.includes('已领取') && text.includes('其他')) {
+    return '该任务已被他人领取，请刷新列表后继续处理';
+  }
+  if (
+    text.includes('已完成') ||
+    text.includes('completed') ||
+    text.includes('已结束') ||
+    text.includes('cancelled') ||
+    text.includes('已取消')
+  ) {
+    return '该任务已完成或已取消，请刷新列表';
+  }
+  if (text.includes('不存在')) {
+    return '该任务不存在，可能已被删除，请刷新列表';
+  }
+  if (text.includes('参数') || text.includes('不能为空')) {
+    return '提交参数不完整，请刷新后重试';
+  }
+  if (text.includes('权限') || text.includes('无权')) {
+    return '没有操作权限，请联系管理员';
+  }
+  if (text.includes('超时')) {
+    return '请求超时，请重试';
+  }
+  if (text.includes('network') || text.includes('request:fail') || text.includes('网络')) {
+    return '网络连接失败，请检查网络后重试';
+  }
+
+  return text;
 }
 
 /**
@@ -518,11 +648,9 @@ function validateProcurementData() {
  * @private
  */
 function _formatProcurementError(e) {
-  if (!e.message) return '提交失败';
-  if (e.message.includes('网络')) return '网络连接失败，请检查网络后重试';
-  if (e.message.includes('超时')) return '请求超时，请重试';
-  if (e.message.includes('权限')) return '没有操作权限，请联系管理员';
-  return e.message;
+  const message = _extractProcurementErrorText(e);
+  if (!message) return '提交失败';
+  return _mapProcurementBusinessError(message);
 }
 
 module.exports = {

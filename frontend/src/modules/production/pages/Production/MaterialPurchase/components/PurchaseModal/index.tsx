@@ -42,6 +42,7 @@ interface PurchaseModalProps {
   onReturnReset: (record: MaterialPurchaseType) => void;
   onReceiveAll: () => void;
   onBatchReturn: () => void;
+  isSamplePurchase: boolean;
   onGeneratePurchaseSheet: (autoPrint: boolean) => void;
   onDownloadPurchaseSheet: () => void;
   onSaveCreate: () => void;
@@ -77,6 +78,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onReturnReset,
   onReceiveAll,
   onBatchReturn,
+  isSamplePurchase,
   onGeneratePurchaseSheet,
   onDownloadPurchaseSheet,
   onSaveCreate,
@@ -88,14 +90,16 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const getFooter = () => {
     if (dialogMode === 'view') {
       return [
-        <Button
-          key="receiveAll"
-          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
-          loading={submitLoading}
-          onClick={onReceiveAll}
-        >
-          采购领取
-        </Button>,
+        !isSamplePurchase ? (
+          <Button
+            key="receiveAll"
+            disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+            loading={submitLoading}
+            onClick={onReceiveAll}
+          >
+            采购领取
+          </Button>
+        ) : null,
         <Button
           key="returnAll"
           disabled={!detailPurchases.some((p) => {
@@ -197,6 +201,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onReturnReset={onReturnReset}
           onReceiveAll={onReceiveAll}
           onBatchReturn={onBatchReturn}
+          isSamplePurchase={isSamplePurchase}
           isOrderFrozenForRecord={isOrderFrozenForRecord}
         />
       ) : (

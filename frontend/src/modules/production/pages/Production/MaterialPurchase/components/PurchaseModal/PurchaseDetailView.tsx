@@ -44,6 +44,7 @@ interface PurchaseDetailViewProps {
   onReturnReset: (record: MaterialPurchaseType) => void;
   onReceiveAll: () => void;
   onBatchReturn: () => void;
+  isSamplePurchase: boolean;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
 }
 
@@ -65,6 +66,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   onReturnReset,
   onReceiveAll,
   onBatchReturn,
+  isSamplePurchase,
   isOrderFrozenForRecord,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
@@ -90,14 +92,16 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         loading={detailLoading}
         extra={
           <Space>
-            <Button
-              size="small"
-              type="primary"
-              disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
-              onClick={onReceiveAll}
-            >
-              一键领取全部
-            </Button>
+            {!isSamplePurchase ? (
+              <Button
+                size="small"
+                type="primary"
+                disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+                onClick={onReceiveAll}
+              >
+                一键领取全部
+              </Button>
+            ) : null}
             <Button
               size="small"
               disabled={detailFrozen || !detailPurchases.some((p) => {

@@ -14,6 +14,37 @@ const { toast } = require('../../../utils/uiHelper');
 
 const { eventBus } = require('../../../utils/eventBus');
 
+function _normalizeCuttingStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function _isSameCuttingReceiver(task, receiverId, receiverName) {
+  const existingReceiverId = String(task.receiverId || '').trim();
+  const existingReceiverName = String(task.receiverName || '').trim();
+  if (receiverId && existingReceiverId) {
+    return receiverId === existingReceiverId;
+  }
+  if (receiverName && existingReceiverName) {
+    return receiverName === existingReceiverName;
+  }
+  return false;
+}
+
+function _pickActionableCuttingTask(records, receiverId, receiverName) {
+  const taskList = Array.isArray(records) ? records : [];
+  const actionable = taskList.filter(task => {
+    const status = _normalizeCuttingStatus(task.status);
+    if (!status || status === 'pending') return true;
+    if (status === 'received') {
+      return _isSameCuttingReceiver(task, receiverId, receiverName);
+    }
+    return false;
+  });
+
+  const sameReceiverTask = actionable.find(task => _normalizeCuttingStatus(task.status) === 'received');
+  return sameReceiverTask || actionable[0] || null;
+}
+
 /**
  * 检查是否有待处理的裁剪任务（从铃铛点击过来）
  * @param {Object} ctx - Page 上下文
@@ -213,11 +244,18 @@ async function receiveCuttingTask(ctx, detail, userInfo) {
     throw new Error('未找到裁剪任务，请确认订单已创建裁剪任务');
   }
 
-  const task = taskData.records[0];
+  const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+  const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+  const task = _pickActionableCuttingTask(taskData.records, receiverId, receiverName);
+
+  if (!task) {
+    throw new Error('当前裁剪任务已完成或已被他人领取，请刷新后重试');
+  }
+
   await api.production.receiveCuttingTaskById(
     task.id,
-    userInfo.id,
-    userInfo.realName || userInfo.username,
+    receiverId,
+    receiverName,
   );
 
   toast.success('裁剪任务领取成功，可在"我的裁剪任务"中开始裁剪');

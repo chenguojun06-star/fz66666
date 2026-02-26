@@ -16,6 +16,51 @@ const OPERATION_LABELS = {
 
 const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
 
+function _isPatternInScanConfirm(page) {
+  const detail = page.data && page.data.scanConfirm && page.data.scanConfirm.detail;
+  return !!(detail && detail.isPattern);
+}
+
+function _getPatternState(page) {
+  if (_isPatternInScanConfirm(page)) {
+    const detail = page.data.scanConfirm.detail || {};
+    return {
+      loading: !!page.data.scanConfirm.loading,
+      patternId: detail.patternId,
+      styleNo: detail.styleNo,
+      color: detail.color,
+      quantity: detail.quantity,
+      warehouseCode: detail.warehouseCode,
+      status: detail.status,
+      operationType: detail.operationType,
+      operationLabel: detail.operationLabel,
+      operationOptions: detail.operationOptions || [],
+      designer: detail.designer,
+      patternDeveloper: detail.patternDeveloper,
+      deliveryTime: detail.deliveryTime,
+      patternDetail: detail.patternDetail,
+      remark: detail.remark,
+    };
+  }
+  return page.data.patternConfirm || {};
+}
+
+function _setPatternField(page, field, value) {
+  if (_isPatternInScanConfirm(page)) {
+    page.setData({ [`scanConfirm.detail.${field}`]: value });
+    return;
+  }
+  page.setData({ [`patternConfirm.${field}`]: value });
+}
+
+function _setPatternLoading(page, loading) {
+  if (_isPatternInScanConfirm(page)) {
+    page.setData({ 'scanConfirm.loading': loading });
+    return;
+  }
+  page.setData({ 'patternConfirm.loading': loading });
+}
+
 function getExecutableOperations(patternConfirm) {
   const options = Array.isArray(patternConfirm.operationOptions)
     ? patternConfirm.operationOptions
@@ -48,25 +93,41 @@ function showPatternConfirmModal(page, data) {
   const operationLabel = defaultOption
     ? defaultOption.label
     : (OPERATION_LABELS[operationType] || data.operationLabel || '操作');
+  const requiresWarehouseInput = operationOptions.some(item => WAREHOUSE_OPERATIONS.has(item && item.value));
   const confirmedQty = normalizePositiveInt(data.quantity, 1);
   page.setData({
-    patternConfirm: {
+    scanConfirm: {
       visible: true,
       loading: false,
-      patternId: data.patternId,
-      styleNo: data.styleNo,
-      color: data.color,
-      quantity: confirmedQty,
-      warehouseCode: '',
-      status: data.status,
-      operationType,
-      operationLabel,
-      operationOptions,
-      designer: data.designer || patternDetail.designer || '-',
-      patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
-      deliveryTime: patternDetail.deliveryTime || '-',
-      patternDetail: patternDetail,
-      remark: '',
+      remain: 30,
+      detail: {
+        isPattern: true,
+        patternId: data.patternId,
+        styleNo: data.styleNo,
+        color: data.color,
+        quantity: confirmedQty,
+        warehouseCode: '',
+        status: data.status,
+        operationType,
+        operationLabel,
+        operationOptions,
+        requiresWarehouseInput,
+        designer: data.designer || patternDetail.designer || '-',
+        patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
+        deliveryTime: patternDetail.deliveryTime || '-',
+        patternDetail,
+        remark: '',
+      },
+      skuList: [],
+      summary: {},
+      cuttingTasks: [],
+      materialPurchases: [],
+      bomFallback: false,
+      fromMyTasks: false,
+    },
+    patternConfirm: {
+      ...page.data.patternConfirm,
+      visible: false,
     },
   });
 }
@@ -78,11 +139,11 @@ function showPatternConfirmModal(page, data) {
  * @returns {void}
  */
 function onPatternQuantityInput(page, e) {
-  page.setData({ 'patternConfirm.quantity': e.detail.value });
+  _setPatternField(page, 'quantity', e.detail.value);
 }
 
 function onPatternWarehouseInput(page, e) {
-  page.setData({ 'patternConfirm.warehouseCode': e.detail.value });
+  _setPatternField(page, 'warehouseCode', e.detail.value);
 }
 
 /**
@@ -91,6 +152,10 @@ function onPatternWarehouseInput(page, e) {
  * @returns {void}
  */
 function closePatternConfirm(page) {
+  if (_isPatternInScanConfirm(page)) {
+    page.setData({ 'scanConfirm.visible': false });
+    return;
+  }
   page.setData({ 'patternConfirm.visible': false });
 }
 
@@ -102,14 +167,13 @@ function closePatternConfirm(page) {
  */
 function onPatternOperationChange(page, e) {
   const operationType = e.currentTarget.dataset.type;
-  const options = Array.isArray(page.data.patternConfirm.operationOptions)
-    ? page.data.patternConfirm.operationOptions
+  const state = _getPatternState(page);
+  const options = Array.isArray(state.operationOptions)
+    ? state.operationOptions
     : [];
   const selected = options.find(item => item.value === operationType);
-  page.setData({
-    'patternConfirm.operationType': operationType,
-    'patternConfirm.operationLabel': (selected && selected.label) || OPERATION_LABELS[operationType] || '操作',
-  });
+  _setPatternField(page, 'operationType', operationType);
+  _setPatternField(page, 'operationLabel', (selected && selected.label) || OPERATION_LABELS[operationType] || '操作');
 }
 
 /**
@@ -119,7 +183,7 @@ function onPatternOperationChange(page, e) {
  * @returns {void}
  */
 function onPatternRemarkInput(page, e) {
-  page.setData({ 'patternConfirm.remark': e.detail.value });
+  _setPatternField(page, 'remark', e.detail.value);
 }
 
 /**
@@ -128,7 +192,7 @@ function onPatternRemarkInput(page, e) {
  * @returns {Promise<void>} 异步提交样板扫码
  */
 async function submitPatternScan(page) {
-  const { patternConfirm } = page.data;
+  const patternConfirm = _getPatternState(page);
   if (patternConfirm.loading) return;
   if (!patternConfirm.operationType) {
     toast.error('请选择操作工序');
@@ -144,7 +208,7 @@ async function submitPatternScan(page) {
     return;
   }
 
-  page.setData({ 'patternConfirm.loading': true });
+  _setPatternLoading(page, true);
 
   try {
     const result = await page.scanHandler.submitPatternScan({
@@ -183,7 +247,7 @@ async function submitPatternScan(page) {
     console.error('[扫码页] 样板扫码提交失败:', e);
     toast.error(e.errMsg || e.message || '提交失败');
   } finally {
-    page.setData({ 'patternConfirm.loading': false });
+    _setPatternLoading(page, false);
   }
 }
 
@@ -193,7 +257,7 @@ async function submitPatternScan(page) {
  * @returns {Promise<void>} 异步批量提交
  */
 async function submitPatternScanAll(page) {
-  const { patternConfirm } = page.data;
+  const patternConfirm = _getPatternState(page);
   if (patternConfirm.loading) return;
 
   const confirmedQty = normalizePositiveInt(patternConfirm.quantity, 0);
@@ -213,7 +277,7 @@ async function submitPatternScanAll(page) {
     return;
   }
 
-  page.setData({ 'patternConfirm.loading': true });
+  _setPatternLoading(page, true);
 
   try {
     for (const operation of operations) {
@@ -254,7 +318,7 @@ async function submitPatternScanAll(page) {
     console.error('[扫码页] 样板一键提交失败:', e);
     toast.error(e.errMsg || e.message || '一键提交失败');
   } finally {
-    page.setData({ 'patternConfirm.loading': false });
+    _setPatternLoading(page, false);
   }
 }
 

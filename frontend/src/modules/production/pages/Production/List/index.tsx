@@ -44,6 +44,7 @@ import {
   useProductionStats,
 } from './hooks';
 import { safeString, getStatusConfig, mainStages, formatCompletionTime } from './utils';
+import { useProductionBoardStore } from '@/stores';
 
 const { Option } = Select;
 
@@ -79,6 +80,7 @@ const ProductionList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
+  const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
@@ -95,6 +97,7 @@ const ProductionList: React.FC = () => {
       if (isApiSuccess(response)) {
         setProductionList(response.data.records || []);
         setTotal(response.data.total || 0);
+        clearAllBoardCache();
       } else {
         message.error(
           typeof response === 'object' && response !== null && 'message' in response
@@ -1071,6 +1074,9 @@ const ProductionList: React.FC = () => {
           processStatus={processStatus}
           activeTab={processDetailActiveTab}
           onTabChange={setProcessDetailActiveTab}
+          onDataChanged={() => {
+            void fetchProductionList();
+          }}
           delegationContent={processDetailRecord && (
             <div style={{ padding: '8px 0' }}>
               <Alert

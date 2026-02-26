@@ -26,6 +26,7 @@ interface ProcessDetailModalProps {
   activeTab: string;
   onTabChange: (key: string) => void;
   delegationContent?: React.ReactNode; // 工序委派Tab内容（从父组件传入）
+  onDataChanged?: () => void;
 }
 
 const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
@@ -38,6 +39,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   activeTab,
   onTabChange,
   delegationContent,
+  onDataChanged,
 }) => {
   const navigate = useNavigate();
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
@@ -134,6 +136,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     } finally {
       setTrackingLoading(false);
     }
+  };
+
+  const handleUndoSuccess = async () => {
+    await loadProcessTrackingData();
+    onDataChanged?.();
   };
 
   // 计算裁剪数量的尺码明细
@@ -882,7 +889,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   loading={trackingLoading}
                   processType={processType}
                   orderStatus={record?.status}
-                  onUndoSuccess={loadProcessTrackingData}
+                  onUndoSuccess={handleUndoSuccess}
                 />
               </div>
             ),

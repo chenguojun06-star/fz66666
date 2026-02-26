@@ -20,14 +20,19 @@ echo ""
 
 # ==================== 登录 ====================
 echo "🔐 登录系统..."
-LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/system/user/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "password": "admin123"
-  }')
+TOKEN=""
+LOGIN_RESPONSE=""
+for PASSWORD in "${TEST_ADMIN_PASSWORD:-}" "123456" "admin123" "Abc123456"; do
+  [ -z "$PASSWORD" ] && continue
+  LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/system/user/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"admin\",\"password\":\"${PASSWORD}\"}")
 
-TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  if [ -n "$TOKEN" ]; then
+    break
+  fi
+done
 
 if [ -z "$TOKEN" ]; then
   echo "❌ 登录失败"

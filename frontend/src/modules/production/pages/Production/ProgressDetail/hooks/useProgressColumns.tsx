@@ -404,19 +404,19 @@ export const useProgressColumns = ({
           <RowActions
             actions={[
               {
-                key: 'scan',
-                label: '扫码',
-                primary: true,
-                disabled: frozen,
-                title: frozen ? '扫码（订单已关单）' : '扫码',
-                onClick: () => openScan(record),
-              },
-              {
                 key: 'print',
                 label: '打印',
+                primary: true,
                 title: frozen ? '打印（订单已关单）' : '打印',
                 disabled: frozen,
                 onClick: () => setPrintingRecord(record),
+              },
+              {
+                key: 'scan',
+                label: '扫码',
+                disabled: frozen,
+                title: frozen ? '扫码（订单已关单）' : '扫码',
+                onClick: () => openScan(record),
               },
               {
                 key: 'edit',
@@ -433,7 +433,7 @@ export const useProgressColumns = ({
         );
       },
     },
-   
+
   ], [
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,

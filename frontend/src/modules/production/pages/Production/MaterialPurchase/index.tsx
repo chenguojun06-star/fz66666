@@ -1156,12 +1156,24 @@ const MaterialPurchase: React.FC = () => {
     return sorted;
   }, [purchaseList, sortField, sortOrder]);
 
+  const isSamplePurchaseView = useMemo(() => {
+    const sourceType = String(currentPurchase?.sourceType || '').trim().toLowerCase();
+    if (sourceType === 'sample') return true;
+    const orderNo = String(currentPurchase?.orderNo || '').trim();
+    return !orderNo || orderNo === '-';
+  }, [currentPurchase?.sourceType, currentPurchase?.orderNo]);
+
   // 样衣采购单（无订单号）不检查冻结状态
   const orderNo = String(currentPurchase?.orderNo || '').trim();
   const detailFrozen = (orderNo && orderNo !== '-') ? isOrderFrozenForRecord(detailOrder || currentPurchase) : false;
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
 
   const handleReceiveAll = async () => {
+    if (isSamplePurchaseView) {
+      message.info('样衣采购不走订单汇总领取，请使用行内“领取”处理');
+      return;
+    }
+
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     if (!orderNo || orderNo === '-') {
       message.error('缺少订单号');
@@ -1383,6 +1395,7 @@ const MaterialPurchase: React.FC = () => {
           onReturnReset={openReturnReset}
           onReceiveAll={handleReceiveAll}
           onBatchReturn={handleBatchReturn}
+          isSamplePurchase={isSamplePurchaseView}
           onGeneratePurchaseSheet={openPurchaseSheet}
           onDownloadPurchaseSheet={downloadPurchaseSheet}
           onSaveCreate={handleSubmit}

@@ -6,12 +6,35 @@ import { getRecordStageName, stageNameMatches } from '../utils';
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;
   nodes: ProgressNode[];
-  boardStatsByOrder: Record<string, Record<string, number>>;
+  boardStatsByOrder: Record<string, Record<string, number> | null>;
   boardStatsLoadingByOrder: Record<string, boolean>;
-  mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number>) => void;
+  mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number> | null) => void;
   mergeBoardTimesForOrder?: (orderId: string, times: Record<string, string>) => void;
   setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
 }
+
+const loadAllOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
+  const pageSize = 500;
+  const maxPages = 50;
+  const all: ScanRecord[] = [];
+  let page = 1;
+
+  while (page <= maxPages) {
+    const res = await productionScanApi.listByOrderId(orderId, { page, pageSize });
+    const result = res as any;
+    const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records)
+      ? result.data.records
+      : [];
+
+    if (!records.length) break;
+    all.push(...records);
+
+    if (records.length < pageSize) break;
+    page += 1;
+  }
+
+  return all;
+};
 
 export const ensureBoardStatsForOrder = async ({
   order,
@@ -36,9 +59,7 @@ export const ensureBoardStatsForOrder = async ({
   if (boardStatsLoadingByOrder[oid]) return;
   setBoardLoadingForOrder(oid, true);
   try {
-    const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 1000 });
-    const result = res as any;
-    const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records) ? result.data.records : [];
+    const records: ScanRecord[] = await loadAllOrderScans(oid);
     const valid = records
       .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
       .filter((r) => (Number((r as any)?.quantity) || 0) > 0);
@@ -55,80 +76,6 @@ export const ensureBoardStatsForOrder = async ({
       const done = matchingRecords.reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
       stats[nodeName] = done;
       hasScanByNode[nodeName] = matchingRecords.length > 0;
-    }
-    const cuttingVal = Number((order as any)?.cuttingQuantity) || 0;
-    // 统一基准数量：优先使用裁剪数量（实际生产数量），回退到订单数量
-    const baseQty = cuttingVal || Number(order.orderQuantity) || 0;
-    if (cuttingVal > 0) {
-      for (const key of Object.keys(stats)) {
-        if (key.includes('裁剪')) {
-          stats[key] = Math.max(stats[key] || 0, cuttingVal);
-        }
-      }
-    }
-    const procurementRate = Number((order as any)?.procurementCompletionRate) || 0;
-    if (procurementRate > 0) {
-      const doneQty = Math.floor(baseQty * procurementRate / 100);
-      for (const key of Object.keys(stats)) {
-        if (key.includes('采购') && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const sewingRate = Number((order as any)?.sewingCompletionRate) || 0;
-    if (sewingRate > 0) {
-      const doneQty = Math.floor(baseQty * sewingRate / 100);
-      for (const key of Object.keys(stats)) {
-        if ((key.includes('缝') || key.includes('车缝') || key.includes('缝制')) && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const ironingRate = Number((order as any)?.ironingCompletionRate) || 0;
-    if (ironingRate > 0) {
-      const doneQty = Math.floor(baseQty * ironingRate / 100);
-      for (const key of Object.keys(stats)) {
-        if ((key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const qualityRate = Number((order as any)?.qualityCompletionRate) || 0;
-    if (qualityRate > 0) {
-      const doneQty = Math.floor(baseQty * qualityRate / 100);
-      for (const key of Object.keys(stats)) {
-        if ((key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const packagingRate = Number((order as any)?.packagingCompletionRate) || 0;
-    if (packagingRate > 0) {
-      const doneQty = Math.floor(baseQty * packagingRate / 100);
-      for (const key of Object.keys(stats)) {
-        if ((key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const tailRates = [ironingRate, qualityRate, packagingRate].filter((r) => r > 0);
-    if (tailRates.length) {
-      const tailRate = Math.min(...tailRates);
-      const doneQty = Math.floor(baseQty * tailRate / 100);
-      for (const key of Object.keys(stats)) {
-        if (key.includes('尾部') && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
-    }
-    const warehousingRate = Number((order as any)?.warehousingCompletionRate) || 0;
-    if (warehousingRate > 0) {
-      const doneQty = Math.floor(baseQty * warehousingRate / 100);
-      for (const key of Object.keys(stats)) {
-        if (key.includes('入库') && !hasScanByNode[key]) {
-          stats[key] = Math.max(stats[key] || 0, doneQty);
-        }
-      }
     }
 
     mergeBoardStatsForOrder(oid, stats);
@@ -150,23 +97,6 @@ export const ensureBoardStatsForOrder = async ({
           }
         }
         if (maxTime) timeStats[nodeName] = maxTime;
-      }
-      // 补充订单级别的时间字段作为回退
-      const timeFieldMap: Record<string, string> = {
-        '采购': 'procurementEndTime', '物料': 'procurementEndTime', '备料': 'procurementEndTime',
-        '裁剪': 'cuttingEndTime', '裁床': 'cuttingEndTime', '剪裁': 'cuttingEndTime', '开裁': 'cuttingEndTime',
-        '缝制': 'sewingEndTime', '车缝': 'sewingEndTime', '缝纫': 'sewingEndTime', '车工': 'sewingEndTime',
-        '质检': 'qualityEndTime', '检验': 'qualityEndTime', '品检': 'qualityEndTime', '验货': 'qualityEndTime',
-        '入库': 'warehousingEndTime', '仓库': 'warehousingEndTime',
-      };
-      for (const key of Object.keys(stats)) {
-        if (!timeStats[key]) {
-          const field = timeFieldMap[key];
-          if (field) {
-            const val = String((order as any)?.[field] || '');
-            if (val) timeStats[key] = val;
-          }
-        }
       }
       mergeBoardTimesForOrder(oid, timeStats);
     }

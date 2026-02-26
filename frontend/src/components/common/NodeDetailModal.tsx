@@ -320,15 +320,26 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const loadScanRecords = useCallback(async () => {
     if (!orderId) return;
     try {
-      // 必须指定 pageSize，否则后端默认10条导致弹窗数据不全
-      const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 1000 });
-      const result = res as any;
-      const records = Array.isArray(result?.data?.records)
-        ? result.data.records
-        : Array.isArray(result?.data)
-          ? result.data
-          : [];
-      setScanRecords(records as ScanRecord[]);
+      const pageSize = 500;
+      const maxPages = 50;
+      const all: ScanRecord[] = [];
+      let page = 1;
+
+      while (page <= maxPages) {
+        const res = await productionScanApi.listByOrderId(orderId, { page, pageSize });
+        const result = res as any;
+        const records = Array.isArray(result?.data?.records)
+          ? result.data.records
+          : Array.isArray(result?.data)
+            ? result.data
+            : [];
+        if (!records.length) break;
+        all.push(...(records as ScanRecord[]));
+        if (records.length < pageSize) break;
+        page += 1;
+      }
+
+      setScanRecords(all);
     } catch (err) {
       console.error('加载扫码记录失败', err);
       addLoadWarning('扫码记录加载失败');
@@ -379,6 +390,13 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       setTrackingLoading(false);
     }
   }, [orderId, orderNo, addLoadWarning]);
+
+  const handleUndoSuccess = useCallback(() => {
+    loadScanRecords();
+    loadBundles();
+    loadProcessTrackingData();
+    onSaved?.();
+  }, [loadScanRecords, loadBundles, loadProcessTrackingData, onSaved]);
 
   // 弹窗打开时加载数据
   useEffect(() => {
@@ -1075,6 +1093,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     loading={trackingLoading}
                     nodeType={nodeType}
                     nodeName={nodeName}
+                    onUndoSuccess={handleUndoSuccess}
                   />
                 ),
               },

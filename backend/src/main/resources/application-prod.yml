@@ -16,6 +16,10 @@ spring:
       keepalive-time: 120000
       # 连接验证查询
       connection-test-query: SELECT 1
+      # TCP 超时兜底：防止云网络 drop 死连接后 JDBC 读写无限等待
+      data-source-properties:
+        socketTimeout: 30000
+        connectTimeout: 10000
 
   # Redis 生产配置（可选，不可用时降级为单机模式）
   redis:

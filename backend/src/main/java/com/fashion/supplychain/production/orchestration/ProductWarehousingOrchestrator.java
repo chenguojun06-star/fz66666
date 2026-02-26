@@ -250,11 +250,21 @@ public class ProductWarehousingOrchestrator {
         Map<String, String> bundleOrderNos = new HashMap<>();
         Map<String, String> bundleStyleNos = new HashMap<>();
         Map<String, Set<String>> bundleProcessCodes = new HashMap<>();
+        Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
+        Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
+        Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
 
         for (ScanRecord scan : allBundleScans) {
             String bundleId = scan.getCuttingBundleId().trim();
             String scanType = scan.getScanType();
             if (!StringUtils.hasText(scanType)) continue;
+            String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
+            if (!"success".equals(scanResult)) continue;
+
+            String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
+            String processCodeLower = processCode.toLowerCase();
+            String processName = scan.getProcessName() == null ? "" : scan.getProcessName().trim();
+
             bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
             if (scan.getQuantity() != null && scan.getQuantity() > 0) {
                 bundleQuantities.merge(bundleId, scan.getQuantity(), Math::max);
@@ -268,16 +278,39 @@ public class ProductWarehousingOrchestrator {
             if (StringUtils.hasText(scan.getStyleNo())) {
                 bundleStyleNos.putIfAbsent(bundleId, scan.getStyleNo().trim());
             }
-            if (StringUtils.hasText(scan.getProcessCode())) {
-                bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>())
-                        .add(scan.getProcessCode());
+            if (StringUtils.hasText(processCode)) {
+                bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(processCode);
+            }
+
+            if ("quality".equals(scanType)
+                    && "quality_receive".equals(processCode)
+                    && scan.getConfirmTime() != null) {
+                bundleQualityConfirmed.put(bundleId, true);
+                String remark = scan.getRemark() == null ? "" : scan.getRemark().trim().toLowerCase();
+                if (remark.startsWith("unqualified")) {
+                    bundleDefectiveConfirmed.put(bundleId, true);
+                }
+            }
+
+            if ("warehouse".equals(scanType)
+                    && !"warehouse_rollback".equals(processCodeLower)) {
+                bundleWarehouseDone.put(bundleId, true);
             }
         }
 
         Set<String> packagingDoneBundleIds = new HashSet<>();
         for (Map.Entry<String, Set<String>> entry : bundleProcessCodes.entrySet()) {
             for (String pc : entry.getValue()) {
-                if (pc.toLowerCase().contains("packaging")) {
+                String processCode = pc == null ? "" : pc.trim().toLowerCase();
+                if (processCode.contains("packaging")
+                        || "包装".equals(pc)
+                        || "打包".equals(pc)
+                        || "入袋".equals(pc)
+                        || "后整".equals(pc)
+                        || "装箱".equals(pc)
+                        || "封箱".equals(pc)
+                        || "贴标".equals(pc)
+                        || "packing".equals(processCode)) {
                     packagingDoneBundleIds.add(entry.getKey());
                     break;
                 }
@@ -295,12 +328,17 @@ public class ProductWarehousingOrchestrator {
                     }
                     break;
                 case "pendingPackaging":
-                    if (types.contains("quality") && !packagingDoneBundleIds.contains(bundleId) && !types.contains("warehouse")) {
+                    if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
+                            && !packagingDoneBundleIds.contains(bundleId)
+                            && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))) {
                         targetBundleIds.add(bundleId);
                     }
                     break;
                 case "pendingWarehouse":
-                    if (types.contains("quality") && packagingDoneBundleIds.contains(bundleId) && !types.contains("warehouse")) {
+                    if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
+                            && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))
+                            && (packagingDoneBundleIds.contains(bundleId)
+                                || Boolean.TRUE.equals(bundleDefectiveConfirmed.get(bundleId)))) {
                         targetBundleIds.add(bundleId);
                     }
                     break;
@@ -345,6 +383,16 @@ public class ProductWarehousingOrchestrator {
             String orderId = bundleOrderIds.getOrDefault(bundleId, "");
             ProductionOrder order = orderMap.get(orderId);
 
+            if (order != null) {
+                String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+                if ("closed".equals(orderStatus)
+                        || "completed".equals(orderStatus)
+                        || "cancelled".equals(orderStatus)
+                        || "archived".equals(orderStatus)) {
+                    continue;
+                }
+            }
+
             item.put("bundleId", bundleId);
             item.put("bundleNo", bundle != null ? bundle.getBundleNo() : null);
             item.put("qrCode", bundle != null ? bundle.getQrCode() : "");
@@ -374,22 +422,83 @@ public class ProductWarehousingOrchestrator {
             throw new IllegalArgumentException("订单ID不能为空");
         }
 
+        String oid = orderId.trim();
+        ProductionOrder order = productionOrderService.getById(oid);
+        if (order != null) {
+            String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+            if ("closed".equals(orderStatus)
+                    || "completed".equals(orderStatus)
+                    || "cancelled".equals(orderStatus)
+                    || "archived".equals(orderStatus)) {
+                Map<String, Object> empty = new java.util.LinkedHashMap<>();
+                empty.put("qcReadyQrs", new ArrayList<>());
+                empty.put("warehouseReadyQrs", new ArrayList<>());
+                return empty;
+            }
+        }
+
         // 查询该订单所有关联菲号的扫码记录
         List<ScanRecord> scans;
         scans = scanRecordService.list(
                     new LambdaQueryWrapper<ScanRecord>()
-                            .eq(ScanRecord::getOrderId, orderId.trim())
+                            .eq(ScanRecord::getOrderId, oid)
                             .isNotNull(ScanRecord::getCuttingBundleId)
                             .ne(ScanRecord::getCuttingBundleId, "")
             );
 
-        // 按 cuttingBundleId 分组，收集每个菲号经历的 scanType 集合
+        // 按 cuttingBundleId 分组，收集每个菲号就绪状态（只看成功记录）
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
+        Map<String, Set<String>> bundleProcessCodes = new HashMap<>();
+        Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
+        Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
+        Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
         for (ScanRecord scan : scans) {
+            String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
+            if (!"success".equals(scanResult)) continue;
             String bundleId = scan.getCuttingBundleId().trim();
             String scanType = scan.getScanType();
             if (!StringUtils.hasText(scanType)) continue;
             bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
+
+            String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
+            String processCodeLower = processCode.toLowerCase();
+            if (StringUtils.hasText(processCode)) {
+                bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(processCode);
+            }
+
+            if ("quality".equals(scanType)
+                    && "quality_receive".equals(processCode)
+                    && scan.getConfirmTime() != null) {
+                bundleQualityConfirmed.put(bundleId, true);
+                String remark = scan.getRemark() == null ? "" : scan.getRemark().trim().toLowerCase();
+                if (remark.startsWith("unqualified")) {
+                    bundleDefectiveConfirmed.put(bundleId, true);
+                }
+            }
+
+            if ("warehouse".equals(scanType)
+                    && !"warehouse_rollback".equals(processCodeLower)) {
+                bundleWarehouseDone.put(bundleId, true);
+            }
+        }
+
+        Set<String> packagingDoneBundleIds = new HashSet<>();
+        for (Map.Entry<String, Set<String>> entry : bundleProcessCodes.entrySet()) {
+            for (String pc : entry.getValue()) {
+                String processCode = pc == null ? "" : pc.trim().toLowerCase();
+                if (processCode.contains("packaging")
+                        || "包装".equals(pc)
+                        || "打包".equals(pc)
+                        || "入袋".equals(pc)
+                        || "后整".equals(pc)
+                        || "装箱".equals(pc)
+                        || "封箱".equals(pc)
+                        || "贴标".equals(pc)
+                        || "packing".equals(processCode)) {
+                    packagingDoneBundleIds.add(entry.getKey());
+                    break;
+                }
+            }
         }
 
         // 分类：质检就绪 vs 入库就绪
@@ -398,13 +507,17 @@ public class ProductWarehousingOrchestrator {
 
         for (Map.Entry<String, Set<String>> entry : bundleScanTypes.entrySet()) {
             Set<String> types = entry.getValue();
+            String bundleId = entry.getKey();
             // 质检就绪：完成车缝(production) 但还没质检(quality)
             if (types.contains("production") && !types.contains("quality")) {
-                qcReadyBundleIds.add(entry.getKey());
+                qcReadyBundleIds.add(bundleId);
             }
-            // 入库就绪：已质检(quality) 但还没入库(warehouse)
-            if (types.contains("quality") && !types.contains("warehouse")) {
-                warehouseReadyBundleIds.add(entry.getKey());
+            // 入库就绪：已质检确认 + (已包装 或 次品返修) + 尚未成功入库
+            if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
+                    && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))
+                    && (packagingDoneBundleIds.contains(bundleId)
+                        || Boolean.TRUE.equals(bundleDefectiveConfirmed.get(bundleId)))) {
+                warehouseReadyBundleIds.add(bundleId);
             }
         }
 

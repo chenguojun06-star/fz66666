@@ -363,6 +363,7 @@ public class MaterialPurchaseOrchestratorHelper {
         String materialName = safe(seed.getMaterialName());
         String materialType = safe(seed.getMaterialType());
         String specifications = safe(seed.getSpecifications());
+        String sourceType = safe(seed.getSourceType());
 
         // 查找同天创建的、状态为pending的采购任务
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
@@ -370,6 +371,13 @@ public class MaterialPurchaseOrchestratorHelper {
                 .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
                 .ge(MaterialPurchase::getCreateTime, dayStart)
                 .lt(MaterialPurchase::getCreateTime, nextDayStart);
+
+        // 强制同来源链路合并：样衣(sample)与大货(order/batch/manual/stock)不互相混入
+        if (StringUtils.hasText(sourceType)) {
+            wrapper.eq(MaterialPurchase::getSourceType, sourceType);
+        } else {
+            wrapper.and(w -> w.isNull(MaterialPurchase::getSourceType).or().eq(MaterialPurchase::getSourceType, ""));
+        }
 
         // 按物料编码或（物料名称+规格+类型）匹配
         if (StringUtils.hasText(materialCode)) {

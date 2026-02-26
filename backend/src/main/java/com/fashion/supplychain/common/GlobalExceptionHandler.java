@@ -133,7 +133,8 @@ public class GlobalExceptionHandler {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.warn("SQL语法异常（可能DB列缺失，等待迁移自动修复）: {} {} - {}", method, uri, e.getMessage());
-                return ResponseEntity.ok(Result.success(null));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Result.fail(500, "数据库结构不一致，请联系管理员执行数据库迁移"));
         }
 
         /**

@@ -7,6 +7,14 @@
 BASE_URL="http://localhost:8088"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
+count_non_empty() {
+  local count=0
+  for value in "$@"; do
+    [ -n "$value" ] && count=$((count + 1))
+  done
+  echo "$count"
+}
+
 echo "========================================="
 echo "面辅料全流程测试脚本"
 echo "流程：仓库指令 → 采购 → 入库 → 对账"
@@ -30,14 +38,19 @@ declare -a FABRICS=(
 
 # ==================== 登录系统 ====================
 echo "1️⃣  登录系统..."
-LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/system/user/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "password": "admin123"
-  }')
+TOKEN=""
+LOGIN_RESPONSE=""
+for PASSWORD in "${TEST_ADMIN_PASSWORD:-}" "123456" "admin123" "Abc123456"; do
+  [ -z "$PASSWORD" ] && continue
+  LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/system/user/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"admin\",\"password\":\"${PASSWORD}\"}")
 
-TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  if [ -n "$TOKEN" ]; then
+    break
+  fi
+done
 
 if [ -z "$TOKEN" ]; then
   echo "❌ 登录失败"
@@ -248,10 +261,19 @@ echo ""
 echo "✅ 共完成 ${#INBOUND_NOS[@]} 笔入库"
 echo ""
 
-# ==================== 生成面料对账单 ====================
-echo "6️⃣  生成面料对账单..."
+# ==================== 校验/回填面料对账单 ====================
+echo "6️⃣  校验面料对账单（自动回填 + 落库核验）..."
 declare -a RECONCILIATION_IDS=()
 FABRIC_INDEX=0
+
+BACKFILL_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/finance/material-reconciliation/backfill" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${TOKEN}")
+if echo "$BACKFILL_RESPONSE" | grep -q '"code":200'; then
+  echo "   ✅ 已触发对账单回填"
+else
+  echo "   ⚠️  回填接口返回异常：$(echo "$BACKFILL_RESPONSE" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)"
+fi
 
 for material_code in "${MATERIAL_CODES[@]}"; do
   fabric_data="${FABRICS[$FABRIC_INDEX]}"
@@ -266,39 +288,19 @@ for material_code in "${MATERIAL_CODES[@]}"; do
     continue
   fi
 
-  echo "   对账: $name"
+  echo "   对账核验: $name"
 
-  TOTAL_AMOUNT=$(echo "$price * 100" | bc)
-  RECONCILIATION_NO="MR${TIMESTAMP}$(printf "%02d" $FABRIC_INDEX)"
+  ROW=$(docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -s -N -e "SELECT id,reconciliation_no,final_amount FROM t_material_reconciliation WHERE purchase_id='${purchase_id}' AND delete_flag=0 ORDER BY create_time DESC LIMIT 1;" 2>/dev/null)
+  RECONCILIATION_ID=$(echo "$ROW" | awk '{print $1}')
+  RECONCILIATION_NO=$(echo "$ROW" | awk '{print $2}')
+  FINAL_AMOUNT=$(echo "$ROW" | awk '{print $3}')
 
-  RECONCILIATION=$(curl -s -X POST "${BASE_URL}/api/finance/material-reconciliation" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -d "{
-      \"reconciliationNo\": \"${RECONCILIATION_NO}\",
-      \"purchaseId\": \"${purchase_id}\",
-      \"materialCode\": \"${material_code}\",
-      \"materialName\": \"${name}\",
-      \"materialType\": \"${type}\",
-      \"color\": \"${color}\",
-      \"supplierName\": \"${supplier}\",
-      \"purchaseQuantity\": 100,
-      \"receivedQuantity\": 100,
-      \"unitPrice\": ${price},
-      \"totalAmount\": ${TOTAL_AMOUNT},
-      \"inboundNo\": \"${inbound_no}\",
-      \"status\": \"pending\",
-      \"reconciliationDate\": \"$(date '+%Y-%m-%d')\",
-      \"remark\": \"系统自动生成对账单 - ${TIMESTAMP}\"
-    }")
-
-  RECONCILIATION_ID=$(echo "$RECONCILIATION" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-  if [ ! -z "$RECONCILIATION_ID" ] || echo "$RECONCILIATION" | grep -q '"code":200'; then
+  if [ -n "$RECONCILIATION_ID" ]; then
     RECONCILIATION_IDS+=("$RECONCILIATION_ID")
-    echo "   ✅ 对账单已生成 (编号: $RECONCILIATION_NO, 金额: ¥${TOTAL_AMOUNT})"
+    [ -z "$FINAL_AMOUNT" ] && FINAL_AMOUNT="0.00"
+    echo "   ✅ 对账单已落库 (编号: ${RECONCILIATION_NO}, 金额: ¥${FINAL_AMOUNT})"
   else
-    echo "   ⚠️  对账单生成失败"
+    echo "   ⚠️  对账单未找到（purchaseId=${purchase_id}）"
     RECONCILIATION_IDS+=("")
   fi
 
@@ -306,9 +308,14 @@ for material_code in "${MATERIAL_CODES[@]}"; do
   sleep 0.3
 done
 
+SUCCESS_RECON_COUNT=$(count_non_empty "${RECONCILIATION_IDS[@]}")
 echo ""
-echo "✅ 共生成 ${#RECONCILIATION_IDS[@]} 张对账单"
+echo "✅ 对账单落库 ${SUCCESS_RECON_COUNT}/${#RECONCILIATION_IDS[@]}"
 echo ""
+
+SUCCESS_INSTRUCTION_COUNT=$(count_non_empty "${INSTRUCTION_IDS[@]}")
+SUCCESS_PURCHASE_COUNT=$(count_non_empty "${PURCHASE_IDS[@]}")
+SUCCESS_INBOUND_COUNT=$(count_non_empty "${INBOUND_NOS[@]}")
 
 # ==================== 汇总统计 ====================
 echo "========================================="
@@ -316,10 +323,10 @@ echo "📊 全流程测试汇总"
 echo "========================================="
 echo ""
 echo "✅ 面料资料: ${#MATERIAL_CODES[@]} 种"
-echo "✅ 采购指令: ${#INSTRUCTION_IDS[@]} 条"
-echo "✅ 采购单: ${#PURCHASE_IDS[@]} 张"
-echo "✅ 入库记录: ${#INBOUND_NOS[@]} 笔"
-echo "✅ 对账单: ${#RECONCILIATION_IDS[@]} 张"
+echo "✅ 采购指令: ${SUCCESS_INSTRUCTION_COUNT}/${#INSTRUCTION_IDS[@]} 条"
+echo "✅ 采购单: ${SUCCESS_PURCHASE_COUNT}/${#PURCHASE_IDS[@]} 张"
+echo "✅ 入库记录: ${SUCCESS_INBOUND_COUNT}/${#INBOUND_NOS[@]} 笔"
+echo "✅ 对账单: ${SUCCESS_RECON_COUNT}/${#RECONCILIATION_IDS[@]} 张"
 echo ""
 
 # 计算总金额
