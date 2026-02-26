@@ -127,7 +127,7 @@ management:
     readinessstate:
       enabled: true
     redis:
-      enabled: true
+      enabled: ${REDIS_HEALTH_ENABLED:false}
     defaults:
       enabled: true
 

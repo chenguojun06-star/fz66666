@@ -12,4 +12,6 @@ ENV PORT=8088
 RUN mkdir -p /uploads/tenants
 COPY --from=build /app/target/*.jar ./app.jar
 EXPOSE 8088
-CMD ["java","-jar","/app/app.jar"]
+# 默认激活 prod 配置（cloudbaserc.json 或 docker run -e 可覆盖）
+ENV SPRING_PROFILES_ACTIVE=prod
+CMD ["java", "-jar", "/app/app.jar"]

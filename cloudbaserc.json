@@ -28,6 +28,7 @@
             "WECHAT_MP_SECRET": "{{WECHAT_SECRET}}",
             "WECHAT_MINI_PROGRAM_MOCK_ENABLED": "false",
             "FLYWAY_ENABLED": "true",
+            "SPRING_PROFILES_ACTIVE": "prod",
             "FASHION_DB_INITIALIZER_ENABLED": "false",
             "APP_CORS_ALLOWED_ORIGIN_PATTERNS": "https://*.tcloudbase.com,https://*.service.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com",
             "COS_SECRET_ID": "{{COS_SECRET_ID}}",
