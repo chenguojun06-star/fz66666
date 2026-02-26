@@ -872,18 +872,14 @@ mysql -h10.1.104.42 -P3306 -uroot -pcC1997112 fashion_supplychain < your-migrati
 - `V20260225__add_user_avatar_url.sql` — `t_user` 添加 `avatar_url` 列
 - `V20260226b__fix_login_log_error_message.sql` — `t_login_log.error_message` 改为 TEXT
 
-**待执行——性能索引**（`V20260226c__add_scan_record_performance_indexes.sql`，✅ 脚本已写好，⏳ 需手动在云端控制台执行）：
+**性能索引**（`V20260226c__add_scan_record_performance_indexes.sql`，✅ 已于 2026-02-26 手动在云端控制台执行完毕）：
 ```sql
--- 修复 personal-stats 慢查询导致连接池耗尽的关键索引
-DROP INDEX IF EXISTS idx_scan_record_operator_stats ON t_scan_record;
+-- 以下 3 条索引已在云端数据库执行，无需重复
 CREATE INDEX idx_scan_record_operator_stats ON t_scan_record (operator_id, scan_time, scan_result, quantity);
-
-DROP INDEX IF EXISTS idx_scan_record_order_bundle_type ON t_scan_record;
 CREATE INDEX idx_scan_record_order_bundle_type ON t_scan_record (order_id, cutting_bundle_id, scan_type, scan_result);
-
-DROP INDEX IF EXISTS idx_production_order_status_flag ON t_production_order;
 CREATE INDEX idx_production_order_status_flag ON t_production_order (status, delete_flag);
 ```
+⚠️ 注意：云端 MySQL 不支持 `DROP INDEX IF EXISTS` 语法（ERROR 1064），执行时直接跳过 DROP 语句，只执行 CREATE INDEX 即可。
 
 ### GitHub Actions 自动化
 项目已配置 `.github/workflows/ci.yml`：
