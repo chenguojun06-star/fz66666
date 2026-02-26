@@ -69,6 +69,7 @@ public class ScanRecordQueryHelper {
         if (!hasText(operatorId)) {
             throw new AccessDeniedException("未登录");
         }
+        log.debug("[getMyHistory] operatorId={}, startTime={}, endTime={}", operatorId, startTime, endTime);
 
         Map<String, Object> params = new HashMap<>();
         params.put("page", page);

@@ -710,7 +710,7 @@ public class ProductionScanExecutor {
         sr.setProcessName(processCode);           // 子工序名（如"上领"），用于显示和识别
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
-        
+
         // 优先使用客户端传入的扫码时间（离线/延迟上传场景），若无效则使用服务器时间
         // 有效范围：[now-7天, now+5分钟]，防止1970年等极旧时间写入数据库
         LocalDateTime now = LocalDateTime.now();
@@ -724,7 +724,7 @@ public class ProductionScanExecutor {
             }
             sr.setScanTime(now);
         }
-        
+
         sr.setScanType(scanType);
         sr.setScanResult("success");
         sr.setRemark(remark);

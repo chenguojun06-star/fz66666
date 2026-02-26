@@ -827,10 +827,63 @@ SKU = styleNo + color + size
 9. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 11. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
+12. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
+13. **git push = 云端自动重新部署**：微信云托管控制台已绑定 GitHub 仓库持续部署，push 到 main 分支后 3~5 分钟自动生效。**不需要** GitHub Actions Secrets，**不需要**手动上传 JAR。
 
 ---
 
 ## 🔄 CI/CD 与日志管理
+
+### ☁️ 云端自动部署（已配置，重要！）
+
+**部署方式：微信云托管控制台持续部署（已绑定 GitHub repo）**
+
+> ⚠️ **AI 必读**：云端部署早已在微信云托管控制台中配置了持续部署，**不需要 GitHub Actions Secrets**。只要推送到 main 分支，云端容器会自动重新构建部署，无需任何额外操作。
+
+```bash
+# 部署到云端：就这一条命令
+git add .
+git commit -m "fix: 你的修改描述"
+git push origin main
+# → 微信云托管自动拉取代码，重建容器，通常 3~5 分钟后生效
+```
+
+**云端环境信息**（微信云托管控制台截图确认）：
+- **云后端地址**：`backend-226678-6-1405390085.sh.run.tcloudbase.com`
+- **数据库**：`jdbc:mysql://10.1.104.42:3306/...`（VPC 内网，仅容器内可访问）
+- **`FLYWAY_ENABLED=false`** ← ⚠️ **Flyway 已关闭！**
+
+### ⚠️ FLYWAY_ENABLED=false — 云端数据库变更必须手动执行
+
+**关键约束**：云端 `FLYWAY_ENABLED=false`，所有 Flyway 迁移脚本（`V*.sql`）**不会自动运行**。
+
+**正确做法**：
+1. 在 `backend/src/main/resources/db/migration/` 写好 `V*.sql` 文件（本地版本控制用）
+2. **同时**在微信云托管控制台执行对应 SQL：
+   - 进入 [微信云托管控制台](https://cloud.weixin.qq.com) → 数据库面板 → 执行 SQL
+
+**或者**通过容器内执行（如有 SSH/终端权限）：
+```bash
+# 在云端容器内执行（内网地址）
+mysql -h10.1.104.42 -P3306 -uroot -pcC1997112 fashion_supplychain < your-migration.sql
+```
+
+**历史上已手动执行的 SQL**（不会再重复执行）：
+- `V20260225__add_user_avatar_url.sql` — `t_user` 添加 `avatar_url` 列
+- `V20260226b__fix_login_log_error_message.sql` — `t_login_log.error_message` 改为 TEXT
+
+**待执行——性能索引**（`V20260226c__add_scan_record_performance_indexes.sql`，✅ 脚本已写好，⏳ 需手动在云端控制台执行）：
+```sql
+-- 修复 personal-stats 慢查询导致连接池耗尽的关键索引
+DROP INDEX IF EXISTS idx_scan_record_operator_stats ON t_scan_record;
+CREATE INDEX idx_scan_record_operator_stats ON t_scan_record (operator_id, scan_time, scan_result, quantity);
+
+DROP INDEX IF EXISTS idx_scan_record_order_bundle_type ON t_scan_record;
+CREATE INDEX idx_scan_record_order_bundle_type ON t_scan_record (order_id, cutting_bundle_id, scan_type, scan_result);
+
+DROP INDEX IF EXISTS idx_production_order_status_flag ON t_production_order;
+CREATE INDEX idx_production_order_status_flag ON t_production_order (status, delete_flag);
+```
 
 ### GitHub Actions 自动化
 项目已配置 `.github/workflows/ci.yml`：
@@ -838,6 +891,7 @@ SKU = styleNo + color + size
 - ✅ **多环境支持**：MySQL 8.0 服务容器（端口 3308）
 - ✅ **覆盖率报告**：自动生成 Jacoco 覆盖率报告
 - ✅ **前端构建**：检查 TypeScript 编译和 ESLint 规则
+- ✅ **自动部署**：push 到 main → 微信云托管持续部署（控制台绑定，非 Actions Secrets）
 
 **测试选择器**：
 ```bash

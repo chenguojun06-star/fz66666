@@ -67,10 +67,15 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-    - name: 跳过 CI 自动部署（使用微信云托管控制台手动触发）
-      run: |
-        echo "ℹ️  部署由微信云托管控制台直接触发，CI 不再执行自动部署。"
-        echo "请登录 https://cloud.weixin.qq.com → 服务管理 → 部署发布"
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 部署到腾讯云 CloudBase
+      uses: TencentCloudBase/cloudbase-action@v2
+      with:
+        secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
+        secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        envId: ${{ secrets.CLOUDBASE_ENV_ID }}
 
   notify:
     name: 通知结果
