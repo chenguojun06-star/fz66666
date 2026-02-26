@@ -106,7 +106,7 @@ const resolveApiBaseUrl = (): string => {
 export const createApiClient = (): ApiClient => {
   const client = axios.create({
     baseURL: resolveApiBaseUrl(),
-    timeout: 10000,
+    timeout: 30000,
     headers: {
       'Content-Type': 'application/json'
     }
@@ -185,7 +185,32 @@ export const createApiClient = (): ApiClient => {
   // 响应拦截器
   client.interceptors.response.use(
     response => response.data,
-    error => {
+    async error => {
+      const config = error.config;
+
+      // 自动重试机制：仅针对幂等请求（GET）或网络超时
+      if (!config || !config.retry) {
+        config.retry = 2; // 默认重试2次
+      }
+
+      if (config.__retryCount < config.retry) {
+        config.__retryCount = (config.__retryCount || 0) + 1;
+
+        // 仅重试 GET 请求或网络错误（status=undefined 或 502/503/504）
+        const isNetworkError = !error.response || (error.response.status >= 502 && error.response.status <= 504);
+        const isGetRequest = config.method === 'get' || config.method === 'GET';
+
+        if (isNetworkError || isGetRequest) {
+          // 指数退避延迟：1s, 2s, 4s...
+          const backoff = new Promise((resolve) => {
+            setTimeout(() => resolve(true), (1000 * Math.pow(2, config.__retryCount - 1)));
+          });
+
+          await backoff;
+          return client(config);
+        }
+      }
+
       const enrichedError = error;
       let errorMessage = '请求失败';
 

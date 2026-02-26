@@ -6,10 +6,11 @@
 const api = require('../../../utils/api');
 
 /**
- * 归一化质检子步骤名称：质检领取/质检验收/质检确认 → 质检
+ * 归一化质检子步骤名称：质检领取/质检验收 → 质检
  */
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
+  // 兼容历史旧数据（确认）及现在的两步（领取/验收）
   if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
   return processName;
 }

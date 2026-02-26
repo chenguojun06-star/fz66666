@@ -29,9 +29,8 @@ import java.util.Map;
  * 质检扫码执行器
  * 职责：
  * 1. 质检领取（receive）
- * 2. 质检验收（inspect）
- * 3. 质检确认（confirm）- 入库
- * 4. 返修处理
+ * 2. 质检验收（confirm）- 记录合格/次品数量，不入库
+ * 3. 返修处理
  *
  * 提取自 ScanRecordOrchestrator（减少约300行代码）
  */
@@ -193,7 +192,7 @@ public class QualityScanExecutor {
 
         scanRecordService.updateById(existed);
 
-        // 更新工序跟踪记录：质检确认时将 tracking 表中对应子工序状态置为已扫码
+        // 更新工序跟踪记录：质检验收时将 tracking 表中对应子工序状态置为已扫码
         // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
         try {
             String processName = TextUtils.safeText(params.get("processName"));
@@ -518,7 +517,7 @@ public class QualityScanExecutor {
         sr.setQuantity(qty);
         sr.setProcessCode(stageCode);
         sr.setProgressStage(stageName);
-        // processName 统一用工序模板中的名称"质检"，而非 stageName("质检领取"/"质检确认")
+        // processName 统一用工序模板中的名称"质检"，而非 stageName("质检领取"/"质检验收")
         // 这样小程序 _inferQualityStage 可以用 scanType=quality 匹配，processName 也一致
         sr.setProcessName("质检");
         sr.setOperatorId(operatorId);

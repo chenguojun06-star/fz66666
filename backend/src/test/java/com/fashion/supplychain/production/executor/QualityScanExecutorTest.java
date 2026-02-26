@@ -166,7 +166,7 @@ class QualityScanExecutorTest {
 
     @Test
     void testExecute_QualityConfirm_WithUnqualified() {
-        // Given: 质检确认，有次品
+        // Given: 质检验收，有次品
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "unqualified");
         baseParams.put("quantity", "50");
@@ -203,7 +203,7 @@ class QualityScanExecutorTest {
         // Then: handleConfirm 只录质检结果不入库（WarehouseScanExecutor 负责入库）
         // handleConfirm 调用 updateById 更新现有 quality_receive 记录，而非 saveScanRecord
         assertNotNull(result);
-        assertTrue((Boolean) result.get("success"), "质检确认应返回 success=true");
+        assertTrue((Boolean) result.get("success"), "质检验收应返回 success=true");
         verify(scanRecordService).updateById(argThat(record ->
                 record.getConfirmTime() != null &&
                 record.getRemark() != null && record.getRemark().startsWith("unqualified")
@@ -212,7 +212,7 @@ class QualityScanExecutorTest {
 
     @Test
     void testExecute_QualityConfirm_AllQualified() {
-        // Given: 质检确认，全部合格
+        // Given: 质检验收，全部合格
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "qualified");
         baseParams.put("quantity", "100");  // 添加必须参数
@@ -307,7 +307,7 @@ class QualityScanExecutorTest {
 
     @Test
     void testHandleConfirm_ExceedOrderQuantity() {
-        // Given: 质检确认，数量超过订单上限 → inventoryValidator 抛出异常
+        // Given: 质检验收，数量超过订单上限 → inventoryValidator 抛出异常
         baseParams.put("qualityStage", "confirm");
         doThrow(new IllegalArgumentException("入库数量超过订单数量限制"))
                 .when(inventoryValidator).validateNotExceedOrderQuantity(

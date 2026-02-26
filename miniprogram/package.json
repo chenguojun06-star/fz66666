@@ -1,7 +1,7 @@
 {
   "name": "fashion-supplychain-scan",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "检查": "eslint \"**/*.js\" --ignore-pattern miniprogram_npm/**",
     "修复": "eslint \"**/*.js\" --ignore-pattern miniprogram_npm/** --fix",

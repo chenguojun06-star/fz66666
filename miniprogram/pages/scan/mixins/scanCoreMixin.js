@@ -244,8 +244,14 @@ const scanCoreMixin = Behavior({
         return;
       }
 
-      // 扫码类型固定为自动识别
-      const currentScanType = 'auto';
+      // 扫码类型: 优先使用页面选中状态，默认为自动识别
+      const currentScanType = this.data.scanType || 'auto';
+
+      // 🚨 入库模式下，必须选择仓库
+      if (currentScanType === 'warehouse' && !this.data.warehouse) {
+        toast.error('请先选择目标仓库');
+        return;
+      }
 
       // 这里的逻辑主要用于点击"扫码"按钮触发摄像头
       // 如果是 PDA 设备，可能有物理按键触发，会产生键盘事件或直接输入

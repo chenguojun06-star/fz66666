@@ -105,7 +105,7 @@ public class WarehouseScanExecutor {
             validateBundleWarehousingQuantity(bundle, qty);
             // ★ 生产前置校验：该菲号必须有生产扫码记录（含包装工序）才能入库
             validateProductionPrerequisite(order.getId(), bundle.getId());
-            // ★ 质检前置校验：必须有质检确认记录（quality_receive + confirmTime 不为空）才能入库
+            // ★ 质检前置校验：必须有质检验收记录（quality_receive + confirmTime 不为空）才能入库
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
         }
 
@@ -425,7 +425,7 @@ public class WarehouseScanExecutor {
     }
 
     /**
-     * 次品返修入库：从质检确认记录的 remark 中读取次品件数
+     * 次品返修入库：从质检验收记录的 remark 中读取次品件数
      * remark 格式：unqualified|[category]|[remark]|defectQty=N
      *
      * 🔧 修复(2026-02-25)：quality_confirm processCode 从未被写入，

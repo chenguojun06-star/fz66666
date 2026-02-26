@@ -23,14 +23,14 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initialization-fail-timeout: 0
-      connection-timeout: 5000
-      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:30}
-      minimum-idle: ${HIKARI_MIN_IDLE:10}
-      idle-timeout: 600000
+      connection-timeout: 10000 # 优化：10秒连接超时（原5秒可能在网络抖动时过短）
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20} # 优化：云端数据库通常有连接数限制，30可能过多
+      minimum-idle: ${HIKARI_MIN_IDLE:5} # 优化：保持5个活跃连接，避免冷启动延迟
+      idle-timeout: 300000 # 优化：空闲5分钟释放（原10分钟）
       max-lifetime: 1800000
       connection-test-query: SELECT 1
       pool-name: FashionHikariPool
-      leak-detection-threshold: 60000
+      leak-detection-threshold: 5000 # 优化：5秒未归还连接视为潜在泄漏（原60秒太长）
       # 全局事务隔离级别：READ_COMMITTED（减少锁竞争，避免并发死锁）
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
@@ -40,13 +40,13 @@ spring:
     port: ${SPRING_REDIS_PORT:6379}
     password: ${SPRING_REDIS_PASSWORD:}
     database: ${SPRING_REDIS_DATABASE:0}
-    timeout: 3000ms
+    timeout: 5000ms # 优化：5秒超时（原3秒）
     lettuce:
       pool:
-        max-active: ${REDIS_POOL_MAX_ACTIVE:16}
-        max-idle: ${REDIS_POOL_MAX_IDLE:8}
-        min-idle: ${REDIS_POOL_MIN_IDLE:2}
-        max-wait: 3000ms
+        max-active: ${REDIS_POOL_MAX_ACTIVE:32} # 优化：增加最大连接数（原16）
+        max-idle: ${REDIS_POOL_MAX_IDLE:16} # 优化：增加空闲连接（原8）
+        min-idle: ${REDIS_POOL_MIN_IDLE:4}
+        max-wait: 5000ms # 优化：增加等待时间（原3000ms）
       shutdown-timeout: 200ms
 
   jackson:
@@ -79,15 +79,12 @@ mybatis-plus:
 
 logging:
   level:
-    com.fashion.supplychain: debug
+    com.fashion.supplychain: info
     org.springframework: info
     org.springframework.web: warn
     org.springframework.security: warn
     org.apache.ibatis: warn
     com.baomidou.mybatisplus: warn
-    # 查询类Controller日志降级（减少噪音）
-    com.fashion.supplychain.warehouse.controller: WARN
-    com.fashion.supplychain.dashboard: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"

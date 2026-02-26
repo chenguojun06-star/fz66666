@@ -9,12 +9,13 @@ const { onDataRefresh } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
 
 /**
- * 归一化质检子步骤名称：质检领取/质检验收/质检确认 → 质检
+ * 归一化质检子步骤名称：质检领取/质检验收 → 质检
  * @param {string} processName
  * @returns {string}
  */
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
+  // 兼容历史旧数据（确认）及现在的两步（领取/验收）
   if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
   return processName;
 }
@@ -226,7 +227,7 @@ Page({
       .filter(item => this._isValidHistoryRecord(item))
       .map(item => ({
         ...item,
-        // 质检子步骤（领取/验收/确认）统一显示为"质检"
+        // 质检子步骤（领取/验收）统一显示为"质检"
         displayProcessName: _normalizeQualityName(item.processName || item.progressStage),
       }));
     const prev = Array.isArray(history.list) ? history.list : [];

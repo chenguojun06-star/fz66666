@@ -245,10 +245,22 @@ public class ProductionScanExecutor {
             return updateResult;
         }
 
+        // 解析客户端扫码时间
+        LocalDateTime clientScanTime = null;
+        try {
+            String scanTimeStr = TextUtils.safeText(params.get("scanTime"));
+            if (hasText(scanTimeStr)) {
+                // 支持 ISO 格式
+                clientScanTime = LocalDateTime.parse(scanTimeStr, java.time.format.DateTimeFormatter.ISO_DATE_TIME);
+            }
+        } catch (Exception e) {
+            log.warn("解析客户端scanTime失败: {}", params.get("scanTime"));
+        }
+
         // 创建新扫码记录
         ScanRecord sr = buildProductionRecord(requestId, scanCode, bundle, order, scanType, progressStage,
                                              processCode, quantity, unitPrice, operatorId, operatorName,
-                                             color, size, TextUtils.safeText(params.get("remark")));
+                                             color, size, TextUtils.safeText(params.get("remark")), clientScanTime);
 
         try {
             validateScanRecordForSave(sr);
@@ -680,7 +692,7 @@ public class ProductionScanExecutor {
                                             ProductionOrder order, String scanType, String progressStage,
                                             String processCode, int quantity, BigDecimal unitPrice,
                                             String operatorId, String operatorName, String color, String size,
-                                            String remark) {
+                                            String remark, LocalDateTime clientScanTime) {
         ScanRecord sr = new ScanRecord();
         sr.setRequestId(requestId);
         sr.setScanCode(scanCode);
@@ -698,7 +710,15 @@ public class ProductionScanExecutor {
         sr.setProcessName(processCode);           // 子工序名（如"上领"），用于显示和识别
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
-        sr.setScanTime(LocalDateTime.now());
+        
+        // 优先使用客户端传入的扫码时间（离线/延迟上传场景），若无效则使用服务器时间
+        LocalDateTime now = LocalDateTime.now();
+        if (clientScanTime != null && !clientScanTime.isAfter(now.plusMinutes(5))) {
+            sr.setScanTime(clientScanTime);
+        } else {
+            sr.setScanTime(now);
+        }
+        
         sr.setScanType(scanType);
         sr.setScanResult("success");
         sr.setRemark(remark);

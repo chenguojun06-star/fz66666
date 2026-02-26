@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.fashion</groupId>
     <artifactId>supplychain</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>fashion-supplychain-backend</name>
     <description>服装供应链管理系统后端</description>
     <properties>
@@ -27,7 +27,6 @@
         <snakeyaml.version>2.2</snakeyaml.version>
         <h2.version>2.2.224</h2.version>
         <hutool.version>5.8.27</hutool.version>
-        <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <zxing.version>3.5.3</zxing.version>
         <poi.version>5.2.5</poi.version>
         <lombok.version>1.18.38</lombok.version>
@@ -35,6 +34,7 @@
         <maven.compiler.version>3.13.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
+        <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
     </properties>
     <dependencies>
         <!-- Spring Boot 核心依赖 -->

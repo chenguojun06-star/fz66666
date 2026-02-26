@@ -22,7 +22,7 @@
  */
 
 /**
- * 从质检验收 remark 中解析次品件数
+ * 从质检确认 remark 中解析次品件数
  * remark 格式：unqualified|[category]|[remark]|defectQty=N
  * @param {string} remark
  * @param {number} fallbackQty - 若未找到则返回此值
@@ -549,10 +549,10 @@ class StageDetector {
 
       // 检查 confirmTime 是否已设置（后端 handleConfirm 会写入此字段）
       if (receiveRecord.confirmTime) {
-        return 'done';      // 已完成质检验收
+        return 'done';      // 已完成质检确认
       }
 
-      return 'confirm';     // 已领取未验收 → 需要录入结果
+      return 'confirm';     // 已领取未确认 → 需要录入结果
     } catch (e) {
       console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
       return 'receive';

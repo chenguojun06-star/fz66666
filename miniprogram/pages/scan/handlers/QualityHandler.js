@@ -93,7 +93,7 @@ function onDeleteQualityImage(page, e) {
 }
 
 /**
- * 构建质检确认 (quality_confirm) payload
+ * 构建质检验收 (quality_confirm) payload
  * 调用 executeScan，只记录质检结果，不入库
  * @private
  */

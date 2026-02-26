@@ -26,13 +26,12 @@ export default defineConfig({
     }
   },
   server: {
-    // ⚠️⚠️⚠️ 【禁止修改】内网访问固定配置 ⚠️⚠️⚠️
-    // 内网 IP: 192.168.1.17
-    // 访问地址: http://192.168.1.17:5173/
-    // 修改此配置会导致动态模块导入失败和 API 代理异常
     // ================================================
-    host: '0.0.0.0',  // 【固定】监听所有网络接口
-    port: 5173,       // 【固定】开发端口
+    // 网络配置 (Cloud-Ready)
+    // 自动适配本地开发与云端容器环境
+    // ================================================
+    host: '0.0.0.0',  // 监听所有网络接口
+    port: 5173,       // 开发端口
     strictPort: false,
     headers: {
       // CSP: unsafe-eval 供 ECharts v6 / Three.js (new Function) 使用
@@ -40,9 +39,10 @@ export default defineConfig({
       'Content-Security-Policy':
         "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob:;",
     },
+    // HMR 配置：移除硬编码 IP，使用相对路径或自动推断
     hmr: {
       protocol: 'ws',
-      host: '192.168.1.17',  // 【固定】HMR 必须使用此内网 IP（已更新为当前机器IP）
+      // host: '0.0.0.0', // 让浏览器自动推断 Host，不要硬编码
       port: 5173,
       clientPort: 5173
     },
@@ -54,7 +54,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8088',  // 【固定】后端地址
+        target: 'http://localhost:8088',  // 后端地址 (Docker 容器间通信请使用服务名)
         changeOrigin: true,
         rewrite: (path) => path
       },

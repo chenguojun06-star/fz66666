@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（51个编排器）
 > **测试覆盖率**：核心编排器 100% | 代码优化（TemplateCenter 1912→900行）
-> **最后更新**：2026-02-25 | **AI指令版本**：v3.6
+> **最后更新**：2026-02-26 | **AI指令版本**：v3.7
 
 ---
 
@@ -1363,6 +1363,180 @@ const completionTime = boardTimesByOrder[orderId][nodeName] || '';
 5. **扫码后进度球不变**：需用户手动刷新（点"刷新"按钮），触发 `fetchOrders` → `clearAllBoardCache()` → 重新拉取 boardStats
 6. **兜底数字虚高**：历史版本存在比例兜底覆盖真实扫码数的 bug，已通过 `hasScanByNode` 守卫修复——有真实扫码记录的节点绝对不会被兜底覆盖
 7. **弹窗 API 失败无感知**：历史版本 5 个并发请求任一失败静默忽略，现已在弹窗顶部显示 Alert 警告，可快速定位加载失败的数据块
+
+---
+
+## 🔥 变更日志（问题追踪 & 影响分析）
+
+> 本节记录每一次实际修改的问题根因、变更内容、影响范围及后续注意事项。  
+> **格式**：问题描述 → 根本原因 → 修改内容 → 影响 → 后期行为 → 潜在风险
+
+---
+
+### 2026-02-26 变更批次（未推送，已编译重启）
+
+---
+
+#### 变更 #1：自定义裁剪单创建全链路 500（核心 Bug）
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `backend/.../production/orchestration/CuttingTaskOrchestrator.java` |
+| **表现** | 点击「新建裁剪任务」→「创建」按钮，触发 `POST /api/production/cutting-task/custom/create`，返回 500，页面无响应，用户反复点击导致 9 次重复请求 |
+| **根本原因** | `createCustom()` 方法构建 `ProductionOrder` 时，**从未调用 `order.setFactoryName()`**。而 `t_production_order.factory_name VARCHAR(100) NOT NULL`（无 DEFAULT 值），MySQL `STRICT_TRANS_TABLES` 模式下 INSERT NULL 直接抛出 `SQLIntegrityConstraintViolationException` → `GlobalExceptionHandler` 兜底返回 500。**同时**遗漏了 `createdById`、`createdByName` 两个字段未赋值 |
+| **修改内容** | 添加 `order.setFactoryName("")`（自定义裁剪单无绑定工厂，置为空串）；补充 `order.setCreatedById()` / `order.setCreatedByName()` 从 `UserContext` 读取当前操作人 |
+| **影响范围** | 仅 `createCustom` 路径（`/cutting-task/custom/create`），普通生产订单创建不受影响 |
+| **后期行为** | 自定义裁剪单创建成功后关联的 `ProductionOrder` 的 `factory_name` 字段值为空串 `""`，前端列表显示加工厂时会显示空白 |
+| **潜在风险** | ⚠️ 如果前端列表或报表依赖 `factory_name` 做筛选/分组，需要额外处理空串的情况。目前裁剪页面不显示工厂列，暂无影响 |
+| **重现路径** | 前端新建裁剪任务 → 选款号 → 输入颜色/尺码 → 点创建 → 必现 500（修复前） |
+
+```java
+// ✅ 修复后代码（CuttingTaskOrchestrator.java）
+order.setFactoryName("");  // NOT NULL 约束，自定义裁剪单无工厂
+order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
+order.setCreatedByName(ctx.getUsername());
+```
+
+---
+
+#### 变更 #2：前端 API 超时 + 自动重试机制
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `frontend/src/utils/api/core.ts` |
+| **触发场景** | 网络抖动 / 后端冷启动时，前端 10 秒超时直接报错，用户体验差 |
+| **修改内容** | ① 全局 axios 超时 `10000` → `30000`（30秒）；② 新增响应拦截器中的**自动重试**：GET 请求或网络错误（status undefined/502/503/504）自动重试最多 2 次，指数退避（1s → 2s） |
+| **影响范围** | 所有前端 HTTP 请求。GET 类请求现在最多等待 `30s × 3次 = 90秒` 才彻底失败 |
+| **后期行为** | 用户在网络抖动时看到请求"慢"但最终成功，而非立即报错 |
+| **潜在风险** | ⚠️ **POST 请求不重试**（因非幂等），但 GET 请求全部重试。若某个 GET 接口有副作用（记录日志、统计访问次数），会被重复调用最多 3 次。目前系统 GET 接口均为纯查询，无副作用，可接受 |
+| **已知问题** | `config.retry = 2` 是硬写在响应拦截器里的，针对每个请求独立计数，不存在全局重试次数限制 |
+
+```typescript
+// 重试逻辑仅触发条件：
+const isNetworkError = !error.response || (error.response.status >= 502 && error.response.status <= 504);
+const isGetRequest = config.method === 'get' || config.method === 'GET';
+if (isNetworkError || isGetRequest) { /* 指数退避重试 */ }
+```
+
+---
+
+#### 变更 #3：Vite HMR 硬编码 IP 被移除（⚠️ 高风险变更）
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `frontend/vite.config.ts` |
+| **修改内容** | 删除 `hmr.host: '192.168.1.17'`，改为让浏览器自动推断 Host；同时删除了「禁止修改」警告注释 |
+| **影响范围** | 本地开发 HMR（热更新）行为 |
+| **后期行为** | 在 `localhost:5173` 访问时 HMR 正常。**但是**通过内网 IP 访问（如 `192.168.2.248:5173`）时，HMR 可能无法推断正确的 WebSocket 连接地址，导致热更新失效或出现「Failed to fetch dynamically imported module」 |
+| **潜在风险** | 🔴 **如果内网其他设备需要通过 IP 访问并获得 HMR，此变更会导致动态模块加载失败。** 原架构文档（v3.6）明确写明 `hmr.host='192.168.2.248'` 是固定配置禁止修改，此次变更破坏了该约束。若团队需要内网设备热更新，需要将 `hmr.host` 恢复为本机实际内网 IP |
+| **修复方案** | 如遇「Failed to fetch dynamically imported module」错误，在 `vite.config.ts` 的 `hmr` 块中添加：`host: '${本机内网IP}'` |
+
+---
+
+#### 变更 #4：后端连接池参数大幅调整（application.yml）
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `backend/src/main/resources/application.yml` |
+| **修改内容（HikariCP）** | `connection-timeout: 5000→10000`；`maximum-pool-size: 30→20`；`minimum-idle: 10→5`；`idle-timeout: 600000→300000`；`leak-detection-threshold: 60000→5000` |
+| **修改内容（Redis）** | `timeout: 3000ms→5000ms`；`max-active: 16→32`；`max-idle: 8→16`；`max-wait: 3000ms→5000ms` |
+| **修改内容（日志）** | `com.fashion.supplychain: debug → info`；删除了针对 `warehouse` / `dashboard` 的单独降级配置 |
+| **影响范围** | 所有数据库和 Redis 操作的并发上限和超时行为 |
+| **后期行为** | ① DB 连接池缩小：高并发场景（>20 个并发请求同时操作 DB）下，第 21 个请求需等待连接归还；② 泄漏检测 5 秒极短：任何超过 5 秒的慢事务（如大数据导出、Excel 导入）都会被误报为连接泄漏，日志中出现大量 `WARN Connection leak detection triggered` |
+| **潜在风险** | 🔴 `leak-detection-threshold: 5000`（5秒）**非常激进**，当前系统中订单列表导出、财务对账等操作耗时可能超过 5 秒，会产生大量误报警告。建议调回 `30000`（30秒）或 `60000`。日志级别改为 info 后，Debug 环境排查 SQL 问题时需要手动添加 `com.fashion.supplychain: debug` |
+
+---
+
+#### 变更 #5：生产扫码支持客户端传时间（离线/延迟上传）
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `backend/.../production/executor/ProductionScanExecutor.java` |
+| **触发场景** | 工厂网络不稳定时，小程序可能离线缓存扫码数据，后续网络恢复后批量上传，导致 `scan_time` 全部是上传时间而非实际扫码时间 |
+| **修改内容** | `buildProductionRecord()` 新增 `clientScanTime` 参数。调用方解析请求体中的 `scanTime` 字段（ISO 格式），如果客户端时间**不超过服务器时间 5 分钟**，则优先使用客户端时间；否则使用服务器时间 |
+| **影响范围** | 所有生产工序扫码（车缝/包装等），**不影响**质检扫码和入库扫码 |
+| **后期行为** | 小程序扫码时如果传了 `scanTime` 字段，后台会用传入值记录。历史记录和报表中的扫码时间可能与服务器接收时间不同 |
+| **潜在风险** | ⚠️ 5 分钟窗口校验仅防止「未来时间」，不校验过去时间（允许传入很久以前的时间）。理论上恶意或 bug 导致传入极旧时间（如 1970 年）不会被拒绝，会直接记录。目前小程序侧未实现离线缓存逻辑，此功能处于「后端就绪、前端未启用」状态 |
+
+---
+
+#### 变更 #6：质检术语统一「确认」→「验收」
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `QualityScanExecutor.java`、`WarehouseScanExecutor.java`、`ScanRecordQueryHelper.java`、`miniprogram/pages/scan/services/StageDetector.js` |
+| **修改内容** | 将所有注释、方法文档、日志中的「质检确认」统一改为「质检验收」（仅注释/文档，代码逻辑未变） |
+| **影响范围** | 仅文档字符串，无运行时影响 |
+| **后期行为** | 开发人员阅读代码时，「质检确认」的说法不再出现，避免混淆。但日志输出的业务消息可能仍有少量「确认」字样未覆盖 |
+| **潜在风险** | ✅ 无风险，纯注释修改 |
+
+---
+
+#### 变更 #7：小程序入库扫码前校验仓库必选
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `miniprogram/pages/scan/mixins/scanCoreMixin.js` |
+| **触发场景** | 入库模式（`scanType='warehouse'`）下，用户未选择目标仓库直接点扫码，后端无法确认目标仓库报错 |
+| **修改内容** | 在执行扫码前增加校验：`if (currentScanType === 'warehouse' && !this.data.warehouse)` → `toast.error('请先选择目标仓库')` 并 return |
+| **同步修改** | 扫码类型从硬编码 `'auto'` 改为 `this.data.scanType || 'auto'`，支持页面选中状态 |
+| **影响范围** | 小程序扫码页所有引用 `scanCoreMixin` 的页面 |
+| **后期行为** | 入库扫码必须先选仓库才能触发摄像头，减少无效请求到后端 |
+| **潜在风险** | ⚠️ `this.data.scanType` 和 `this.data.warehouse` 的绑定必须正确，如果某个页面的 `data` 结构不包含这两个字段，会导致判断失效（永远走 auto）。需要确认所有使用入库扫码的页面都正确初始化这两个字段 |
+
+---
+
+#### 变更 #8：小程序正式版强制替换内网 IP（config.js）
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `miniprogram/config.js` |
+| **触发场景** | 测试人员在体验版/开发版中配置了内网 IP 作为 API 地址，但 storage 中旧数据残留，导致正式版也在用内网 IP → 所有接口不通 |
+| **原来逻辑** | 只要检测到 storage 中存储的是内网 IP，就无条件替换为云地址 |
+| **修改内容** | 新增 `envVersion` 检测：只有在 `release`（正式版）中，才强制将内网 IP 替换为云地址；`devtools`（开发工具）和 `trial`（体验版）保持原地址不替换 |
+| **影响范围** | 小程序 API 基础地址的动态解析逻辑 |
+| **后期行为** | 开发工具和体验版可以正常使用内网 IP 连接本地后端；正式版仍然强制使用云地址 |
+| **潜在风险** | ✅ 低风险。若 `wx.getAccountInfoSync()` 调用失败（老版基础库），`envVersion` 默认为 `'release'`，即仍然替换为云地址，与修改前行为一致 |
+
+---
+
+#### 变更 #9：DashboardOrchestrator 删除死代码
+
+| 项目 | 内容 |
+|------|------|
+| **文件** | `backend/.../dashboard/orchestration/DashboardOrchestrator.java` |
+| **修改内容** | 删除 `calculateTopStatsStartTime(String range)` 私有方法（22行），该方法未被任何调用者引用 |
+| **影响范围** | 仅减少代码体积，运行时无影响 |
+| **潜在风险** | ✅ 无风险。但此方法的逻辑（按 day/month/year/week 计算起始时间）是通用工具逻辑，若其他地方有类似需求需要重新实现 |
+
+---
+
+#### 变更 #10：数据库直接变更（需补 Flyway 迁移脚本）
+
+| 项目 | 内容 |
+|------|------|
+| **变更类型** | 手动 `ALTER TABLE`，**未通过 Flyway 管理** |
+| **变更1** | `ALTER TABLE t_user ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL` — 为用户表添加头像字段（之前后端代码引用此字段但数据库无此列，导致登录 500） |
+| **变更2** | `ALTER TABLE t_login_log MODIFY COLUMN error_message TEXT` — 将登录日志的 `error_message` 字段从 `VARCHAR` 扩展为 `TEXT`，避免长错误信息截断 |
+| **影响范围** | 生产/测试所有数据库环境（如未同步执行 ALTER，这两列在其他环境仍不存在） |
+| **后期行为** | 后端代码读写 `t_user.avatar_url` 和 `t_login_log.error_message` 正常 |
+| **潜在风险** | 🔴 **这两条 ALTER TABLE 没有写入 Flyway 迁移脚本**。若在新环境（CI/CD、生产服务器、新同事本地）全量重建数据库，这两列不存在，将导致登录 500 和日志截断重现。**必须在 `backend/src/main/resources/db/migration/` 下补充对应的 `V*.sql` 文件** |
+
+```sql
+-- 需要补充的 Flyway 迁移脚本（待创建）
+-- V{下一个版本号}__add_user_avatar_and_fix_login_log.sql
+ALTER TABLE t_user ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255) DEFAULT NULL COMMENT '头像URL';
+ALTER TABLE t_login_log MODIFY COLUMN error_message TEXT COMMENT '错误信息';
+```
+
+---
+
+### ⚠️ 本批次变更遗留待办
+
+1. **【必做】补充 Flyway 迁移脚本**：`t_user.avatar_url` + `t_login_log.error_message TEXT` 两条 ALTER TABLE 必须补写到 `db/migration/V*.sql`，否则新环境重建数据库会复现 500
+2. **【建议】调整 leak-detection-threshold**：当前 5000ms 太激进，建议改回 `30000ms`，避免大量慢查询被误报为连接泄漏
+3. **【评估】Vite HMR host 配置**：如果团队需要内网设备热更新，需要恢复 `hmr.host` 为本机内网 IP（`192.168.2.248`）
+4. **【提交】git commit + push**：本批次所有修改仍在本地工作区，未提交到代码仓库
 
 ---
 

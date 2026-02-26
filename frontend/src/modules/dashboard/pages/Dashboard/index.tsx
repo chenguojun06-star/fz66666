@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { App, AutoComplete, Button, Card, Checkbox, Modal, Space } from 'antd';
 import {
   AccountBookOutlined,
@@ -14,32 +14,14 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import { useSync } from '@/utils/syncManager';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
+import { useDashboardStats, RecentActivity } from './useDashboardStats';
 import './styles.css';
-
-interface DashboardStats {
-  sampleDevelopmentCount: number;     // 样衣开发
-  productionOrderCount: number;       // 生产订单
-  orderQuantityTotal: number;         // 订单数量
-  overdueOrderCount: number;          // 延期订单
-  todayWarehousingCount: number;      // 当天入库
-  totalWarehousingCount: number;      // 入库总数
-  defectiveQuantity: number;          // 次品数量
-  paymentApprovalCount: number;       // 审批付款
-}
-
-interface RecentActivity {
-  id: string;        // 实体ID，用于跳转
-  type: string;      // 类型: style/production/scan/material
-  content: string;   // 显示内容
-  time: string;      // 时间
-}
 
 interface QuickEntryConfig {
   id: string;
@@ -69,13 +51,22 @@ const STORAGE_KEY = 'dashboard_quick_entries';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  
+  // 使用自定义 Hook 获取数据
+  const { 
+    stats, 
+    recentActivities, 
+    hasError, 
+    errorMessage, 
+    retryCount, 
+    handleRetry 
+  } = useDashboardStats();
+
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [retryCount, setRetryCount] = useState(0);
+  
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -92,19 +83,6 @@ const Dashboard: React.FC = () => {
     }
     return ALL_QUICK_ENTRIES;
   });
-
-  const [_stats, setStats] = useState<DashboardStats>({
-    sampleDevelopmentCount: 0,
-    productionOrderCount: 0,
-    orderQuantityTotal: 0,
-    overdueOrderCount: 0,
-    todayWarehousingCount: 0,
-    totalWarehousingCount: 0,
-    defectiveQuantity: 0,
-    paymentApprovalCount: 0,
-  });
-
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   // 保存快捷入口配置
   const saveQuickEntriesConfig = (entries: QuickEntryConfig[]) => {
@@ -229,20 +207,6 @@ const Dashboard: React.FC = () => {
     setSearchOptions([]);
   };
 
-  const _resetDashboardData = () => {
-    setStats({
-      sampleDevelopmentCount: 0,
-      productionOrderCount: 0,
-      orderQuantityTotal: 0,
-      overdueOrderCount: 0,
-      todayWarehousingCount: 0,
-      totalWarehousingCount: 0,
-      defectiveQuantity: 0,
-      paymentApprovalCount: 0,
-    });
-    setRecentActivities([]);
-  };
-
   const getActivityIcon = (type: string) => {
     const iconMap: Record<string, React.ReactNode> = {
       production: <InboxOutlined />,
@@ -295,97 +259,13 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const fetchDashboard = useCallback(async () => {
-    try {
-      setHasError(false);
-      setErrorMessage('');
-
-      const response = await api.get<{ code: number; data: any; message?: string }>('/dashboard');
-      if (response.code === 200) {
-        const d = response.data || {};
-        setStats({
-          sampleDevelopmentCount: d.sampleDevelopmentCount ?? 0,
-          productionOrderCount: d.productionOrderCount ?? 0,
-          orderQuantityTotal: d.orderQuantityTotal ?? 0,
-          overdueOrderCount: d.overdueOrderCount ?? 0,
-          todayWarehousingCount: d.todayWarehousingCount ?? 0,
-          totalWarehousingCount: d.totalWarehousingCount ?? 0,
-          defectiveQuantity: d.defectiveQuantity ?? 0,
-          paymentApprovalCount: d.paymentApprovalCount ?? 0,
-        });
-        setRecentActivities(d.recentActivities ?? []);
-        setRetryCount(0); // 成功后重置重试计数
-      } else {
-        // API返回非200状态码
-        const errMsg = response.message || '获取仪表盘数据失败';
-        console.error('[Dashboard] API错误:', errMsg);
-        setHasError(true);
-        setErrorMessage(errMsg);
-        // 不要重置数据，保留上次的数据
-      }
-    } catch (error: any) {
-      // 网络错误或其他异常
-      console.error('[Dashboard] 获取数据失败:', error);
-      const errMsg = error?.message || '网络错误，无法加载数据';
-      setHasError(true);
-      setErrorMessage(errMsg);
-      // 不要重置数据，保留上次的数据
-    }
-  }, []);
-
-  // 手动重试
-  const handleRetry = useCallback(() => {
-    setRetryCount(prev => prev + 1);
-    fetchDashboard();
-  }, [fetchDashboard]);
-
   useEffect(() => {
-    fetchDashboard();
     // 给body添加class标识首页
     document.body.classList.add('dashboard-page');
     return () => {
       document.body.classList.remove('dashboard-page');
     };
-  }, [fetchDashboard]);
-
-  // 实时同步：60秒自动轮询更新统计数据
-  useSync(
-    'dashboard-stats',
-    async () => {
-      const response = await api.get<{ code: number; data: any }>('/dashboard');
-      if (response?.code === 200) {
-        return response.data || {};
-      }
-      // 返回 null 表示获取失败但不算错误
-      return null;
-    },
-    (newData, oldData) => {
-      if (oldData !== null && newData) {
-        // 数据有变化，静默更新
-        setStats({
-          sampleDevelopmentCount: newData.sampleDevelopmentCount ?? 0,
-          productionOrderCount: newData.productionOrderCount ?? 0,
-          orderQuantityTotal: newData.orderQuantityTotal ?? 0,
-          overdueOrderCount: newData.overdueOrderCount ?? 0,
-          todayWarehousingCount: newData.todayWarehousingCount ?? 0,
-          totalWarehousingCount: newData.totalWarehousingCount ?? 0,
-          defectiveQuantity: newData.defectiveQuantity ?? 0,
-          paymentApprovalCount: newData.paymentApprovalCount ?? 0,
-        });
-        setRecentActivities(newData.recentActivities ?? []);
-      }
-    },
-    {
-      interval: 60000, // 60秒轮询（统计数据不需要太频繁）
-      pauseOnHidden: true,
-      onError: (error: any) => {
-        // 只在非认证错误时显示提示
-        if (error?.status !== 401 && error?.status !== 403) {
-          console.error('[实时同步] 仪表盘数据同步失败:', error?.message || error);
-        }
-      }
-    }
-  );
+  }, []);
 
   return (
     <Layout>

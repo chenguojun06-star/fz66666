@@ -82,7 +82,17 @@ function getBaseUrl() {
           // 2. Storage 里存的是任意内网 IP（包括 FALLBACK_BASE_URL 本身）→ 替换为云地址
           // 注意：不能用 v !== FALLBACK_BASE_URL 排除，否则旧 FALLBACK 被跳过、导致 ERR_ADDRESS_UNREACHABLE
           const isAnyLanIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(:\d+)?(\/|$)/i.test(v);
-          if (isAnyLanIp) {
+
+          // 获取当前环境
+          let envVersion = 'release';
+          try {
+            if (typeof wx !== 'undefined' && wx.getAccountInfoSync) {
+              envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
+            }
+          } catch (e) {}
+
+          // 只有在正式版(release)中，才强制将内网IP替换为云地址
+          if (isAnyLanIp && envVersion === 'release') {
             // 云端部署时，内网地址不可达，强制替换为云地址
             const fresh = isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
             try { wx.setStorageSync('api_base_url', fresh); } catch (_) { /* ignore */ }

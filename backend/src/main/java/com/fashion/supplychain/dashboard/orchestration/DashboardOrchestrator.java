@@ -414,28 +414,6 @@ public class DashboardOrchestrator {
     }
 
     /**
-     * 根据时间范围计算起始时间（支持年度统计）
-     */
-    private LocalDateTime calculateTopStatsStartTime(String range) {
-        LocalDate today = LocalDate.now();
-
-        if ("day".equalsIgnoreCase(range)) {
-            // 今日：从今天凌晨开始
-            return LocalDateTime.of(today, LocalTime.MIN);
-        } else if ("month".equalsIgnoreCase(range)) {
-            // 本月：从本月1号开始
-            return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
-        } else if ("year".equalsIgnoreCase(range)) {
-            // 本年：从今年1月1日开始
-            return LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
-        } else {
-            // 默认本周：从本周一开始
-            LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
-            return LocalDateTime.of(monday, LocalTime.MIN);
-        }
-    }
-
-    /**
      * 获取订单与裁剪数量折线图数据（最近30天）
      */
     public OrderCuttingChartResponse getOrderCuttingChart() {

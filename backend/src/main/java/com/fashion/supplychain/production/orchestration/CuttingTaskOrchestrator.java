@@ -196,10 +196,16 @@ public class CuttingTaskOrchestrator {
         order.setProgressWorkflowJson(progressWorkflowJson);
         order.setCreateTime(now);
         order.setUpdateTime(now);
-        // 设置租户 ID
+        // factory_name NOT NULL — 自定义裁剪单无绑定工厂，置为空串避免 SQL STRICT 报错
+        order.setFactoryName("");
+        // 设置租户 ID 及创建人
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
         if (ctx != null && ctx.getTenantId() != null) {
             order.setTenantId(ctx.getTenantId());
+        }
+        if (ctx != null) {
+            order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
+            order.setCreatedByName(ctx.getUsername());
         }
 
         boolean orderOk = productionOrderService.save(order);

@@ -57,10 +57,5 @@
   "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "__usePrivacyCheck__": true,
-  "permission": {
-    "scope.camera": {
-      "desc": "用于扫描工序条码及上传质检现场照片"
-    }
-  }
+  "__usePrivacyCheck__": true
 }

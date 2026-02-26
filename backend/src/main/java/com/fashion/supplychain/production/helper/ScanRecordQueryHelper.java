@@ -193,7 +193,7 @@ public class ScanRecordQueryHelper {
                 }
             }
 
-            // 检查是否已有质检确认记录
+            // 检查是否已有质检验收记录
             // 🔧 修复(2026-02-25)：quality_confirm processCode 从未被写入，
             // 改为查询 quality_receive 记录的 confirmTime 是否不为空
             ScanRecord confirmed = findQualityConfirmedRecord(orderId, bundleId);
@@ -249,7 +249,7 @@ public class ScanRecordQueryHelper {
     }
 
     /**
-     * 查找已完成质检确认的记录（quality_receive + confirmTime 不为空）
+     * 查找已完成质检验收的记录（quality_receive + confirmTime 不为空）
      * 🔧 修复(2026-02-25)：handleConfirm 只更新 quality_receive 的 confirmTime，
      * 不创建 quality_confirm 记录，因此用 confirmTime IS NOT NULL 判断确认状态。
      */
