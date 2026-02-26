@@ -447,7 +447,8 @@ Page({
     try {
       const detail = this.data.scanConfirm.detail;
       const userInfo = getUserInfo();
-      if (!userInfo || !userInfo.id) throw new Error('请先登录');
+      const uid = userInfo?.id || userInfo?.userId;
+      if (!userInfo || !uid) throw new Error('请先登录');
 
       if (detail.progressStage === '裁剪') {
         await CuttingHandler.receiveCuttingTask(this, detail, userInfo);

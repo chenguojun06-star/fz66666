@@ -267,11 +267,28 @@ async function receiveProcurementTask(ctx, userInfo) {
     throw new Error('暂无面料采购单');
   }
 
-  const updates = materialPurchases.map(item => ({
-    purchaseId: item.id,
-    receiverId: userInfo.id,
-    receiverName: userInfo.realName || userInfo.username,
-  }));
+  const receiverId = String(
+    userInfo?.id || userInfo?.userId || ''
+  ).trim();
+  const receiverName = String(
+    userInfo?.realName || userInfo?.username || userInfo?.name || userInfo?.nickName || ''
+  ).trim();
+
+  if (!receiverId && !receiverName) {
+    throw new Error('领取人信息缺失，请重新登录后再试');
+  }
+
+  const updates = materialPurchases
+    .map(item => ({
+      purchaseId: item.id || item.purchaseId,
+      receiverId,
+      receiverName,
+    }))
+    .filter(item => !!item.purchaseId);
+
+  if (updates.length === 0) {
+    throw new Error('采购任务ID缺失，请刷新后重试');
+  }
 
   await Promise.all(updates.map(update => api.production.receivePurchase(update)));
   toast.success(`已领取 ${updates.length} 个面料采购任务`);
