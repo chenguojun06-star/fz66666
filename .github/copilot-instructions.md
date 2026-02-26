@@ -1379,8 +1379,8 @@ const completionTime = boardTimesByOrder[orderId][nodeName] || '';
 | # | 分类 | 核心问题 | 涉及文件（精确路径） | 操作类型 | 废代码清查 |
 |---|------|----------|---------------------|----------|----------|
 | 1 | 🔴 Bug修复 | 自定义裁剪单 POST 500 | `backend/.../orchestration/CuttingTaskOrchestrator.java` | 修改 | ✅ 无废弃 |
-| 2 | 🟡 数据库补全 | 登录 500（avatar_url 列缺失） | `backend/.../db/migration/V10__add_user_avatar_and_fix_login_log.sql` | **新增** | ✅ 补全遗漏 |
-| 3 | 🟡 数据库补全 | 登录日志截断（error_message VARCHAR太短） | 同上 V10 | **新增** | ✅ 补全遗漏 |
+| 2 | 🟡 数据库补全 | 登录 500（avatar_url 列缺失） | `backend/.../db/migration/V20260225__add_user_avatar_url.sql`（已有） | 确认已覆盖 | ✅ 无重复 |
+| 3 | 🟡 数据库补全 | 登录日志截断（error_message VARCHAR太短） | `backend/.../db/migration/V20260226b__fix_login_log_error_message.sql` | **新增** | ✅ 补全遗漏 |
 | 4 | 🟠 前端优化 | 网络抖动请求直接报错 | `frontend/src/utils/api/core.ts` | 修改 | ✅ 无废弃 |
 | 5 | 🟠 前端重构 | Dashboard 数据逻辑与视图耦合 | `frontend/src/modules/dashboard/pages/Dashboard/index.tsx` → `useDashboardStats.ts` | **代码迁移** | ✅ 原文件清理 |
 | 6 | ⚠️ 配置变更 | HMR host 硬编码内网 IP | `frontend/vite.config.ts` | 修改 | ⚠️ 风险：内网HMR失效 |
@@ -1460,23 +1460,24 @@ const completionTime = boardTimesByOrder[orderId][nodeName] || '';
   ❌ 未写入 Flyway 迁移脚本 → 新环境/CI/生产服务器重建数据库时两列不存在 → 复现 500
 
 修复操作：
-  ✅ 新增文件：
-    📄 backend/src/main/resources/db/migration/V10__add_user_avatar_and_fix_login_log.sql
+  ✅ avatar_url 字段：已由 V20260225__add_user_avatar_url.sql 覆盖，无需重复添加
+    📄 backend/src/main/resources/db/migration/V20260225__add_user_avatar_url.sql（已存在）
 
-V10 迁移脚本内容：
-  ALTER TABLE t_user
-      ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255) DEFAULT NULL COMMENT '用户头像URL（腾讯云COS）';
-  ALTER TABLE t_login_log
-      MODIFY COLUMN error_message TEXT COMMENT '登录失败原因（扩展为TEXT以容纳完整堆栈信息）';
+  ✅ error_message TEXT 扩展：新增独立脚本
+    📄 backend/src/main/resources/db/migration/V20260226b__fix_login_log_error_message.sql
 
-废弃代码清查：✅ 无废弃代码，属于补全遗漏
-Flyway版本序号：V10（之前最新为 V9__add_stock_quantity_to_product_sku.sql）
+⚠️ 错误历史（已修复）：
+  曾错误添加 V10__add_user_avatar_and_fix_login_log.sql，与已有 V10__add_sample_review_fields.sql
+  产生版本冲突（Flyway 同版本号两文件启动即报错），且 avatar_url 部分与 V20260225 重复。
+  已删除该文件，改为 V20260226b 仅包含 login_log 变更。
+
+废弃代码清查：✅ 错误的 V10 文件已删除
+Flyway版本序号：V20260226b（接 V20260226__add_notify_config.sql 之后）
 
 影响范围：
-  ✅ 新环境重建数据库后登录恢复正常
-  ✅ 登录日志写入完整错误信息无截断
-  ✅ 当前 Docker 容器已手动执行，无需重跑 V10（Flyway 会检测已应用状态）
-  ⚠️ 若 Flyway baseline 版本设置有问题，可能需要手动标记 V10 已应用
+  ✅ 新环境重建数据库后登录恢复正常（avatar_url 由 V20260225 添加）
+  ✅ 登录日志写入完整错误信息无截断（login_log 由 V20260226b 修改）
+  ✅ 当前 Docker 容器已手动执行，Flyway 执行 MODIFY COLUMN TEXT→TEXT 为幂等操作，安全
 ```
 
 ---
@@ -1845,7 +1846,7 @@ Flyway版本序号：V10（之前最新为 V9__add_stock_quantity_to_product_sku
 
 | 优先级 | 状态 | 事项 | 操作文件 |
 |--------|------|------|----------|
-| 🔴 P0 | ✅ 已完成 | Flyway V10 迁移脚本补全 | `db/migration/V10__add_user_avatar_and_fix_login_log.sql` |
+| 🔴 P0 | ✅ 已完成 | Flyway 迁移脚本修复（删除冲突V10，新增V20260226b） | `V20260225__add_user_avatar_url.sql` + `V20260226b__fix_login_log_error_message.sql` |
 | 🔴 P0 | ✅ 已完成 | git commit + push | commit `8ec7d288` 已推送 main |
 | 🔴 P0 | ✅ 已完成 | 备份目录从 git 追踪中移除 | `.gitignore` 追加 `.backup-*` |
 | 🟠 P1 | ✅ 已完成 | **`leak-detection-threshold` 调回 30000ms**（已完成） | `backend/src/main/resources/application.yml` |
