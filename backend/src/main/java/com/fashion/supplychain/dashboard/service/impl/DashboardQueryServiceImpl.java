@@ -161,7 +161,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         if (start == null || end == null) {
             return 0;
         }
-        return scanRecordService.lambdaQuery().between(ScanRecord::getScanTime, start, end).count();
+        try {
+            return scanRecordService.lambdaQuery().between(ScanRecord::getScanTime, start, end).count();
+        } catch (Exception e) {
+            log.warn("countScansBetween失败（可能DB列缺失）: {}", e.getMessage());
+            return 0;
+        }
     }
 
     @Override
@@ -259,13 +264,18 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             return java.util.Collections.emptyList();
         }
         int lim = Math.max(1, limit);
-        // 仅显示真实扫码操作，排除系统自动创建的记录；TenantInterceptor 追加 tenant_id 条件
-        return scanRecordService.lambdaQuery()
-                .ne(ScanRecord::getOperatorName, "system")
-                .isNotNull(ScanRecord::getOperatorId)
-                .orderByDesc(ScanRecord::getScanTime)
-                .page(new Page<>(1, lim))
-                .getRecords();
+        try {
+            // 仅显示真实扫码操作，排除系统自动创建的记录；TenantInterceptor 追加 tenant_id 条件
+            return scanRecordService.lambdaQuery()
+                    .ne(ScanRecord::getOperatorName, "system")
+                    .isNotNull(ScanRecord::getOperatorId)
+                    .orderByDesc(ScanRecord::getScanTime)
+                    .page(new Page<>(1, lim))
+                    .getRecords();
+        } catch (Exception e) {
+            log.warn("listRecentScans失败（可能DB列缺失）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
     }
 
     @Override
@@ -540,7 +550,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 判断标准：operator_name != 'system' 且 operator_id 不为空
         log.debug("查询扫菲次数: start={}, end={}", start, end);
 
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+        List<ScanRecord> scans;
+        try {
+            scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
                 .isNotNull(ScanRecord::getOperatorName)     // 必须有操作人名称
@@ -550,6 +562,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .isNotNull(ScanRecord::getScanTime)         // 必须有扫码时间
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
+        } catch (Exception e) {
+            log.warn("getDailyScanCounts查询扫码记录失败（可能DB列缺失）: {}", e.getMessage());
+            scans = java.util.Collections.emptyList();
+        }
 
         log.info("查询到{}条真实扫码记录", scans.size());
         if (!scans.isEmpty()) {
@@ -593,16 +609,22 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 判断标准：operator_name != 'system' 且 operator_id 不为空
         log.debug("查询扫菲数量: start={}, end={}", start, end);
 
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+        List<ScanRecord> scans;
+        try {
+            scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
-                .isNotNull(ScanRecord::getOperatorName)     // 必须有操作人名称
-                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
-                .isNotNull(ScanRecord::getOperatorId)       // 必须有真实操作人ID
-                .ne(ScanRecord::getOperatorId, "")          // 操作人ID不能为空字符串
-                .isNotNull(ScanRecord::getScanTime)         // 必须有扫码时间
+                .isNotNull(ScanRecord::getOperatorName)
+                .ne(ScanRecord::getOperatorName, "system")
+                .isNotNull(ScanRecord::getOperatorId)
+                .ne(ScanRecord::getOperatorId, "")
+                .isNotNull(ScanRecord::getScanTime)
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
+        } catch (Exception e) {
+            log.warn("getDailyScanQuantities查询失败（可能DB列缺失）: {}", e.getMessage());
+            scans = java.util.Collections.emptyList();
+        }
 
         log.debug("查询到{}条真实扫码记录", scans.size());
 
@@ -644,23 +666,33 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = LocalDateTime.of(today, LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(today, LocalTime.MAX);
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
-                .ge(ScanRecord::getScanTime, startOfDay)
-                .le(ScanRecord::getScanTime, endOfDay)
-                .select(ScanRecord::getQuantity)
-                .list();
-        return scans.stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
-                .sum();
+        try {
+            List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                    .ge(ScanRecord::getScanTime, startOfDay)
+                    .le(ScanRecord::getScanTime, endOfDay)
+                    .select(ScanRecord::getQuantity)
+                    .list();
+            return scans.stream()
+                    .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("sumTodayScanQuantity失败（可能DB列缺失）: {}", e.getMessage());
+            return 0;
+        }
     }
 
     @Override
     public long sumTotalScanQuantity() {
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
-                .select(ScanRecord::getQuantity)
-                .list();
-        return scans.stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
-                .sum();
+        try {
+            List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                    .select(ScanRecord::getQuantity)
+                    .list();
+            return scans.stream()
+                    .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("sumTotalScanQuantity失败（可能DB列缺失）: {}", e.getMessage());
+            return 0;
+        }
     }
 }

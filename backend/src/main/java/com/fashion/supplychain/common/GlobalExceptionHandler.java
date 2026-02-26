@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -121,6 +122,18 @@ public class GlobalExceptionHandler {
                 logger.warn("权限不足: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, e.getMessage()));
+        }
+
+        /**
+         * 处理SQL语法异常（通常是DB列缺失，等待Flyway迁移自动修复）。
+         * 返回200+空数据而非500，避免前端全面crash。
+         */
+        @ExceptionHandler(BadSqlGrammarException.class)
+        public ResponseEntity<Result<?>> handleBadSqlGrammar(BadSqlGrammarException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.warn("SQL语法异常（可能DB列缺失，等待迁移自动修复）: {} {} - {}", method, uri, e.getMessage());
+                return ResponseEntity.ok(Result.success(null));
         }
 
         /**
