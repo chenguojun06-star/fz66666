@@ -480,93 +480,102 @@ const ProfileInfoTab: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 员工招募 */}
-                    {tenantInfo?.tenantCode && (() => {
-                        const origin = window.location.origin;
-                        const registerUrl = `${origin}/register?tenantCode=${encodeURIComponent(tenantInfo.tenantCode!)}&tenantName=${encodeURIComponent(tenantInfo.tenantName || '')}`;
-                        return (
-                            <div style={{ marginTop: 32 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                                    <TeamOutlined style={{ color: 'var(--primary-color)' }} />
-                                    <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
-                                </div>
-                                <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                                        <QRCode value={registerUrl} size={160} />
+                    {/* 员工招募 + 智能开关（同一行左右布局） */}
+                    <div
+                        style={{
+                            marginTop: 32,
+                            display: 'grid',
+                            gridTemplateColumns: tenantInfo?.tenantCode ? 'minmax(260px, 1fr) minmax(360px, 1fr)' : '1fr',
+                            gap: 16,
+                            alignItems: 'start',
+                        }}
+                    >
+                        {tenantInfo?.tenantCode && (() => {
+                            const origin = window.location.origin;
+                            const registerUrl = `${origin}/register?tenantCode=${encodeURIComponent(tenantInfo.tenantCode!)}&tenantName=${encodeURIComponent(tenantInfo.tenantName || '')}`;
+                            return (
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                        <TeamOutlined style={{ color: 'var(--primary-color)' }} />
+                                        <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
-                                        <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
-                                        <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 18, fontWeight: 700 }}>
-                                            {tenantInfo.tenantCode}
-                                        </Typography.Text>
-                                    </div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                                        <Button size="small" icon={<LinkOutlined />}
-                                            onClick={() => { navigator.clipboard.writeText(registerUrl); message.success('注册链接已复制'); }}>
-                                            复制注册链接
-                                        </Button>
-                                        <Button size="small" icon={<QrcodeOutlined />}
-                                            onClick={() => { navigator.clipboard.writeText(tenantInfo.tenantCode!); message.success('工厂码已复制'); }}>
-                                            复制工厂码
-                                        </Button>
-                                    </div>
-                                    <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 10, display: 'block', wordBreak: 'break-all', textAlign: 'center' }}>
-                                        员工扫码二维码或输入工厂码即可申请加入，审批通过后可登录
-                                    </Typography.Text>
-                                </Card>
-                            </div>
-                        );
-                    })()}
-
-                    {/* 问题反馈 */}
-                    <div style={{ marginTop: 32 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                            <MessageOutlined style={{ color: 'var(--primary-color)' }} />
-                            <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
-                            </Typography.Text>
-                        </div>
-                        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                            <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-                                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                                    开关仅对当前浏览器生效，可自行体验开启效果。
-                                </Typography.Text>
-                                <Space>
-                                    <Button size="small" onClick={() => setAllSmartFlags(true)}>全部开启</Button>
-                                    <Button size="small" onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
-                                    <Button size="small" onClick={resetSmartFlags}>恢复默认</Button>
-                                </Space>
-                            </Space>
-
-                            {SMART_FEATURE_KEYS.map((featureKey) => {
-                                const meta = SMART_FEATURE_LABELS[featureKey];
-                                return (
-                                    <div
-                                        key={featureKey}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            gap: 12,
-                                            padding: '8px 0',
-                                            borderTop: '1px solid #f0f0f0',
-                                        }}
-                                    >
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
-                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                                {meta.desc}
+                                    <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+                                        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+                                            <QRCode value={registerUrl} size={120} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
+                                            <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
+                                            <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
+                                                {tenantInfo.tenantCode}
                                             </Typography.Text>
                                         </div>
-                                        <Switch
-                                            checked={Boolean(smartFlags[featureKey])}
-                                            onChange={(checked) => updateSmartFlag(featureKey, checked)}
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </Card>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                                            <Button size="small" icon={<LinkOutlined />}
+                                                onClick={() => { navigator.clipboard.writeText(registerUrl); message.success('注册链接已复制'); }}>
+                                                复制注册链接
+                                            </Button>
+                                            <Button size="small" icon={<QrcodeOutlined />}
+                                                onClick={() => { navigator.clipboard.writeText(tenantInfo.tenantCode!); message.success('工厂码已复制'); }}>
+                                                复制工厂码
+                                            </Button>
+                                        </div>
+                                        <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all', textAlign: 'center' }}>
+                                            员工扫码二维码或输入工厂码即可申请加入
+                                        </Typography.Text>
+                                    </Card>
+                                </div>
+                            );
+                        })()}
+
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                <MessageOutlined style={{ color: 'var(--primary-color)' }} />
+                                <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
+                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                    （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
+                                </Typography.Text>
+                            </div>
+                            <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+                                <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
+                                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                                        开关仅对当前浏览器生效，可自行体验开启效果。
+                                    </Typography.Text>
+                                    <Space>
+                                        <Button size="small" onClick={() => setAllSmartFlags(true)}>全部开启</Button>
+                                        <Button size="small" onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
+                                        <Button size="small" onClick={resetSmartFlags}>恢复默认</Button>
+                                    </Space>
+                                </Space>
+
+                                {SMART_FEATURE_KEYS.map((featureKey) => {
+                                    const meta = SMART_FEATURE_LABELS[featureKey];
+                                    return (
+                                        <div
+                                            key={featureKey}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: 12,
+                                                padding: '8px 0',
+                                                borderTop: '1px solid #f0f0f0',
+                                            }}
+                                        >
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
+                                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                    {meta.desc}
+                                                </Typography.Text>
+                                            </div>
+                                            <Switch
+                                                checked={Boolean(smartFlags[featureKey])}
+                                                onChange={(checked) => updateSmartFlag(featureKey, checked)}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </Card>
+                        </div>
                     </div>
 
                     {/* 问题反馈 */}
