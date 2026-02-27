@@ -3,6 +3,9 @@ import { Modal, Form, Input, InputNumber, DatePicker, message } from 'antd';
 import { SampleStock } from './types';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface LoanModalProps {
   visible: boolean;
@@ -14,6 +17,13 @@ interface LoanModalProps {
 const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code, actionText: '重试提交' });
+  };
 
   useEffect(() => {
     if (visible && stock) {
@@ -35,12 +45,15 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       const res = await api.post('/stock/sample/loan', payload);
       if (res.code === 200) {
         message.success('借出成功');
+        if (showSmartErrorNotice) setSmartError(null);
         onSuccess();
       } else {
+        reportSmartError('样衣借出失败', res.message || '请检查输入后重试', 'SAMPLE_LOAN_SUBMIT_FAILED');
         message.error(res.message || '借出失败');
       }
     } catch (error) {
       console.error(error);
+      reportSmartError('样衣借出失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'SAMPLE_LOAN_SUBMIT_EXCEPTION');
     } finally {
       setLoading(false);
     }
@@ -56,6 +69,17 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       onOk={handleOk}
       confirmLoading={loading}
     >
+      {showSmartErrorNotice && smartError ? (
+        <div style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void handleOk();
+            }}
+          />
+        </div>
+      ) : null}
+
       <Form form={form} layout="vertical">
         <Form.Item
           name="borrower"

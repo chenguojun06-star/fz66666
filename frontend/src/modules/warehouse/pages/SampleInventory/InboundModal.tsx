@@ -3,6 +3,9 @@ import { Modal, Form, Input, InputNumber, Select, message, Row, Col } from 'antd
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api from '@/utils/api';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface InboundModalProps {
   visible: boolean;
@@ -15,6 +18,13 @@ const { Option } = Select;
 const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code, actionText: '重试提交' });
+  };
 
   // Refs for focus management (better for scanner)
   const styleNoRef = useRef<InputRef>(null);
@@ -37,12 +47,15 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       const res = await api.post('/stock/sample/inbound', values);
       if (res.code === 200) {
         message.success('入库成功');
+        if (showSmartErrorNotice) setSmartError(null);
         onSuccess();
       } else {
+        reportSmartError('样衣入库失败', res.message || '请检查输入后重试', 'SAMPLE_INBOUND_SUBMIT_FAILED');
         message.error(res.message || '入库失败');
       }
     } catch (error) {
       console.error(error);
+      reportSmartError('样衣入库失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'SAMPLE_INBOUND_SUBMIT_EXCEPTION');
     } finally {
       setLoading(false);
     }
@@ -57,6 +70,17 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       confirmLoading={loading}
       width="60vw"
     >
+      {showSmartErrorNotice && smartError ? (
+        <div style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void handleOk();
+            }}
+          />
+        </div>
+      ) : null}
+
       <Form form={form} layout="vertical">
         {/* 第一行：款号、款式名称、样衣类型 */}
         <Row gutter={16}>

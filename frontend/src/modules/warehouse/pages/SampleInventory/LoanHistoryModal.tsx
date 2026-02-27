@@ -6,6 +6,9 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { SampleLoan, SampleStock } from './types';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface LoanHistoryModalProps {
   visible: boolean;
@@ -18,9 +21,16 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
   const { message: msgApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SampleLoan[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
   const [currentLoan, setCurrentLoan] = useState<SampleLoan | null>(null);
   const [returnRemark, setReturnRemark] = useState('');
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code, actionText: '刷新重试' });
+  };
 
   const loadData = async () => {
     if (!stock) return;
@@ -29,9 +39,11 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
       const res = await api.get('/stock/sample/loan/list', { params: { sampleStockId: stock.id } });
       if (res.code === 200) {
         setData(res.data || []);
+        if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (error) {
       console.error(error);
+      reportSmartError('借还记录加载失败', '网络异常或服务不可用，请稍后重试', 'SAMPLE_LOAN_HISTORY_LOAD_FAILED');
     } finally {
       setLoading(false);
     }
@@ -142,6 +154,17 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         width="40vw"
         initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.5) : 400}
       >
+        {showSmartErrorNotice && smartError ? (
+          <div style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void loadData();
+              }}
+            />
+          </div>
+        ) : null}
+
         <ResizableTable
           storageKey="loan-history-modal"
           columns={columns}
