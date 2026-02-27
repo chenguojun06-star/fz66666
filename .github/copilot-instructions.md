@@ -1,8 +1,8 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（51个编排器）
-> **测试覆盖率**：核心编排器 100% | 代码优化（TemplateCenter 1912→900行）
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（55个编排器 - 新增智能化）
+> **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖 | 代码优化（TemplateCenter 1912→900行）
 > **最后更新**：2026-02-26 | **AI指令版本**：v3.7
 
 ---
@@ -107,8 +107,9 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 **关键约束**（代码审查必查项）：
-- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（51个编排器）
-  - **分布**：production(17) + finance(10) + style(6) + template(2) + warehouse(2) + system(9) + wechat(1) + dashboard(1) + datacenter(1) + integration(2) = **51个**
+- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（55个编排器）
+  - **分布**：production(19) + finance(10) + style(6) + system(9) + integration(4) + warehouse(2) + template(2) + wechat(1) + dashboard(1) + datacenter(1) = **55个**
+  - **新增4个智能化编排器**（2026-02）：FeedbackLearningOrchestrator、SmartPrecheckOrchestrator、ProgressPredictOrchestrator、InoutDecisionOrchestrator
   - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`, `ReconciliationStatusOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
@@ -171,7 +172,7 @@ return Result.error("订单号重复");  // { code: 500, message: "订单号重�
 backend/src/main/java/com/fashion/supplychain/
 ├── production/            # 生产模块（核心）
 │   ├── controller/        # REST 端点
-│   ├── orchestration/     # 业务编排器（17个）
+│   ├── orchestration/     # 业务编排器（19个）
 │   ├── service/           # 领域服务（单一职责）
 │   ├── mapper/            # MyBatis 数据访问
 │   ├── entity/            # 实体类
@@ -187,7 +188,7 @@ backend/src/main/java/com/fashion/supplychain/
 ├── dashboard/             # 仪表板（1个编排器）
 ├── datacenter/            # 数据中心（1个编排器）
 ├── payroll/               # ⚠️ 空包（历史遗留，工资管理已全部迁移至 finance/ 模块，此包仅有1个空文件，禁止再往此包新增代码）
-├── integration/           # 第三方集成（2个编排器：OpenApi/TenantApp）
+├── integration/           # 第三方集成（4个编排器：OpenApi/TenantApp/FeedbackLearning/SmartPrecheck）
 ├── common/                # 公共组件（Result, UserContext, CosService）
 └── config/                # 配置类
 ```
