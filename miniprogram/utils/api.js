@@ -180,6 +180,15 @@ const production = {
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },
+  // 样衣审核（入库前）
+  reviewPattern(patternId, result, remark) {
+    const id = String(patternId || '').trim();
+    const action = encodeURIComponent('review');
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', {
+      result,
+      remark,
+    });
+  },
 };
 
 const stock = {

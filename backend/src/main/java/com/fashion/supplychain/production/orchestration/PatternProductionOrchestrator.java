@@ -171,10 +171,11 @@ public class PatternProductionOrchestrator {
             record.setUpdateTime(LocalDateTime.now());
 
             boolean allCompleted = progressNodes.values().stream().allMatch(v -> v >= 100);
-            if (allCompleted && !"COMPLETED".equals(record.getStatus())) {
-                record.setStatus("COMPLETED");
-                record.setCompleteTime(LocalDateTime.now());
-                syncStyleInfoOnComplete(record);
+            if (allCompleted && !"PRODUCTION_COMPLETED".equals(record.getStatus()) && !"COMPLETED".equals(record.getStatus())) {
+                record.setStatus("PRODUCTION_COMPLETED");
+                if (!StringUtils.hasText(record.getReviewStatus())) {
+                    record.setReviewStatus("PENDING");
+                }
             }
 
             patternProductionService.updateById(record);
@@ -384,13 +385,64 @@ public class PatternProductionOrchestrator {
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
-        if (!"COMPLETED".equals(pattern.getStatus())) {
+        String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
+        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
             throw new IllegalStateException("样板生产未完成，无法入库");
+        }
+        if (!isReviewApproved(pattern)) {
+            throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
         Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, null);
         result.put("message", "样衣入库成功");
         return result;
+    }
+
+    /**
+     * 样衣审核（入库前必经）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> reviewPattern(String patternId, String result, String remark) {
+        PatternProduction pattern = patternProductionService.getById(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("样板生产记录不存在");
+        }
+        String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
+        if (!"PRODUCTION_COMPLETED".equals(status)) {
+            throw new IllegalStateException("样板生产未完成，不能审核");
+        }
+
+        String normalizedResult = StringUtils.hasText(result) ? result.trim().toUpperCase() : "";
+        if (!"APPROVED".equals(normalizedResult) && !"REJECTED".equals(normalizedResult)) {
+            throw new IllegalArgumentException("审核结论无效，仅支持 APPROVED 或 REJECTED");
+        }
+        String normalizedRemark = StringUtils.hasText(remark) ? remark.trim() : "";
+        if (!StringUtils.hasText(normalizedRemark)) {
+            throw new IllegalArgumentException("请填写样衣审核备注");
+        }
+
+        String operatorName = UserContext.username();
+        String operatorId = UserContext.userId();
+        pattern.setReviewStatus(normalizedResult);
+        pattern.setReviewResult(normalizedResult);
+        pattern.setReviewRemark(normalizedRemark);
+        pattern.setReviewBy(operatorName);
+        pattern.setReviewById(operatorId);
+        pattern.setReviewTime(LocalDateTime.now());
+        pattern.setUpdateBy(operatorName);
+        pattern.setUpdateTime(LocalDateTime.now());
+        patternProductionService.updateById(pattern);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("patternId", pattern.getId());
+        response.put("reviewStatus", pattern.getReviewStatus());
+        response.put("reviewResult", pattern.getReviewResult());
+        response.put("reviewRemark", pattern.getReviewRemark());
+        response.put("reviewBy", pattern.getReviewBy());
+        response.put("reviewById", pattern.getReviewById());
+        response.put("reviewTime", pattern.getReviewTime());
+        response.put("message", "APPROVED".equals(normalizedResult) ? "样衣审核通过" : "样衣审核已驳回");
+        return response;
     }
 
     /**
@@ -489,6 +541,12 @@ public class PatternProductionOrchestrator {
         map.put("progressNodes", record.getProgressNodes());
         map.put("status", record.getStatus());
         map.put("createTime", record.getCreateTime());
+        map.put("reviewStatus", record.getReviewStatus());
+        map.put("reviewResult", record.getReviewResult());
+        map.put("reviewRemark", record.getReviewRemark());
+        map.put("reviewBy", record.getReviewBy());
+        map.put("reviewById", record.getReviewById());
+        map.put("reviewTime", record.getReviewTime());
 
         // 从款式信息获取封面图、码数、人员
         enrichWithStyleInfo(map, record.getStyleId());
@@ -725,7 +783,9 @@ public class PatternProductionOrchestrator {
 
         switch (normalizedOperation) {
             case "RECEIVE":
-                if (!"IN_PROGRESS".equals(pattern.getStatus()) && !"COMPLETED".equals(pattern.getStatus())) {
+                if (!"IN_PROGRESS".equals(pattern.getStatus())
+                        && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
+                        && !"COMPLETED".equals(pattern.getStatus())) {
                     pattern.setStatus("IN_PROGRESS");
                     pattern.setReceiver(operatorName);
                     pattern.setReceiveTime(LocalDateTime.now());
@@ -743,15 +803,20 @@ public class PatternProductionOrchestrator {
                 needUpdate = true;
                 break;
             case "COMPLETE":
-                pattern.setStatus("COMPLETED");
-                pattern.setCompleteTime(LocalDateTime.now());
+                pattern.setStatus("PRODUCTION_COMPLETED");
                 updateProgressNode(pattern, "尾部", 100);
+                if (!StringUtils.hasText(pattern.getReviewStatus())) {
+                    pattern.setReviewStatus("PENDING");
+                }
                 needUpdate = true;
                 break;
             case "WAREHOUSE_IN":
                 updateProgressNode(pattern, "入库", 100);
                 pattern.setStatus("COMPLETED");
                 pattern.setCompleteTime(LocalDateTime.now());
+                if (!StringUtils.hasText(pattern.getReviewStatus())) {
+                    pattern.setReviewStatus("PENDING");
+                }
                 needUpdate = true;
                 break;
             case "WAREHOUSE_OUT":
@@ -770,9 +835,9 @@ public class PatternProductionOrchestrator {
                 updateProgressNode(pattern, dynamicStage, 100);
 
                 if (isPatternAllProcessesCompleted(pattern.getId(), pattern.getStyleId())) {
-                    pattern.setStatus("COMPLETED");
-                    if (pattern.getCompleteTime() == null) {
-                        pattern.setCompleteTime(LocalDateTime.now());
+                    pattern.setStatus("PRODUCTION_COMPLETED");
+                    if (!StringUtils.hasText(pattern.getReviewStatus())) {
+                        pattern.setReviewStatus("PENDING");
                     }
                 }
                 needUpdate = true;
@@ -785,7 +850,9 @@ public class PatternProductionOrchestrator {
     }
 
     private void ensureInProgress(PatternProduction pattern, String operatorName) {
-        if (!"IN_PROGRESS".equals(pattern.getStatus()) && !"COMPLETED".equals(pattern.getStatus())) {
+        if (!"IN_PROGRESS".equals(pattern.getStatus())
+            && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
+            && !"COMPLETED".equals(pattern.getStatus())) {
             pattern.setStatus("IN_PROGRESS");
         }
         if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
@@ -856,7 +923,7 @@ public class PatternProductionOrchestrator {
                 .map(s -> s.trim().toLowerCase())
                 .collect(Collectors.toSet());
 
-        Set<String> legacyDone = new HashSet<>(Arrays.asList("complete", "warehouse_in"));
+        Set<String> legacyDone = new HashSet<>(Arrays.asList("complete"));
         if (!scanned.isEmpty() && scanned.stream().anyMatch(legacyDone::contains)) {
             return true;
         }
@@ -864,6 +931,15 @@ public class PatternProductionOrchestrator {
         for (StyleProcess process : processes) {
             String processName = StringUtils.hasText(process.getProcessName()) ? process.getProcessName().trim() : "";
             String progressStage = StringUtils.hasText(process.getProgressStage()) ? process.getProgressStage().trim() : "";
+
+            if ("入库".equals(progressStage)
+                    || "出库".equals(progressStage)
+                    || "归还".equals(progressStage)
+                    || "WAREHOUSE_IN".equalsIgnoreCase(processName)
+                    || "WAREHOUSE_OUT".equalsIgnoreCase(processName)
+                    || "WAREHOUSE_RETURN".equalsIgnoreCase(processName)) {
+                continue;
+            }
 
             List<String> candidates = new ArrayList<>();
             if (StringUtils.hasText(processName)) {
@@ -938,8 +1014,14 @@ public class PatternProductionOrchestrator {
         if ("WAREHOUSE_IN".equals(op)) {
             // 入库：必须已完成生产，且不能重复入库
             PatternProduction pattern = patternProductionService.getById(patternId);
-            if (pattern != null && !"COMPLETED".equals(pattern.getStatus())) {
-                throw new IllegalStateException("样衣尚未完成生产，不能入库");
+            if (pattern != null) {
+                String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
+                if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
+                    throw new IllegalStateException("样衣尚未完成生产，不能入库");
+                }
+            }
+            if (pattern != null && !isReviewApproved(pattern)) {
+                throw new IllegalStateException("样衣审核未通过，不能入库");
             }
             if (scanned.contains("WAREHOUSE_IN")) {
                 throw new IllegalStateException("该样衣已入库，不能重复入库");
@@ -979,6 +1061,19 @@ public class PatternProductionOrchestrator {
         } catch (Exception e) {
             log.error("更新进度节点失败: {}", nodeName, e);
         }
+    }
+
+    private boolean isReviewApproved(PatternProduction pattern) {
+        if (pattern == null) {
+            return false;
+        }
+        String reviewStatus = StringUtils.hasText(pattern.getReviewStatus())
+                ? pattern.getReviewStatus().trim().toUpperCase()
+                : "";
+        String reviewResult = StringUtils.hasText(pattern.getReviewResult())
+                ? pattern.getReviewResult().trim().toUpperCase()
+                : "";
+        return "APPROVED".equals(reviewStatus) || "APPROVED".equals(reviewResult);
     }
 
     private String resolveProgressKey(String nodeName) {

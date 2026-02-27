@@ -7,6 +7,7 @@ const {
 } = require('../../utils/permission');
 const { onDataRefresh } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
+const i18n = require('../../utils/i18n/index');
 
 /**
  * 归一化质检子步骤名称：质检领取/质检验收 → 质检
@@ -45,9 +46,19 @@ Page({
     submittingFeedback: false,
     myFeedbacks: [],
     showMyFeedbacks: false,
+    currentLanguage: 'zh-CN',
+    currentLanguageLabel: '中文',
+    languageNameMap: {
+      'zh-CN': '中文',
+      'en-US': 'English',
+      'vi-VN': 'Tiếng Việt',
+      'km-KH': 'ខ្មែរ',
+    },
   },
 
   onShow() {
+    this.applyLanguage(i18n.getLanguage());
+
     const app = getApp();
     if (app && typeof app.setTabSelected === 'function') {
       app.setTabSelected(this, 3);
@@ -70,6 +81,43 @@ Page({
 
     // 设置数据刷新监听
     this.setupDataRefreshListener();
+  },
+
+  applyLanguage(language) {
+    const languageNameMap = {
+      'zh-CN': i18n.t('language.names.zh-CN', language),
+      'en-US': i18n.t('language.names.en-US', language),
+      'vi-VN': i18n.t('language.names.vi-VN', language),
+      'km-KH': i18n.t('language.names.km-KH', language),
+    };
+    this.setData({
+      currentLanguage: language,
+      currentLanguageLabel: languageNameMap[language] || languageNameMap['zh-CN'] || '中文',
+      languageNameMap,
+    });
+  },
+
+  onLanguageSwitchTap() {
+    const { languageNameMap } = this.data;
+    const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
+    const itemList = langList.map((lang) => languageNameMap[lang] || lang);
+    wx.showActionSheet({
+      itemList,
+      alertText: i18n.t('admin.switchLanguage', this.data.currentLanguage),
+      success: ({ tapIndex }) => {
+        const nextLang = langList[tapIndex] || 'zh-CN';
+        const appliedLang = i18n.setLanguage(nextLang);
+        this.applyLanguage(appliedLang);
+
+        const tab = typeof this.getTabBar === 'function' ? this.getTabBar() : null;
+        if (tab && typeof tab.refreshLanguage === 'function') {
+          tab.refreshLanguage(appliedLang);
+        }
+
+        wx.showToast({ title: i18n.t('admin.languageSwitched', appliedLang), icon: 'success' });
+      },
+      fail: () => {},
+    });
   },
 
   setupDataRefreshListener() {

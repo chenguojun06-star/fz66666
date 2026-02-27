@@ -123,6 +123,11 @@ public class PatternProductionController {
                     String remark = request != null ? (String) request.get("remark") : null;
                     Map<String, Object> whResult = patternProductionOrchestrator.warehouseIn(id, remark);
                     return Result.success(whResult);
+                case "review":
+                    String result = request != null ? (String) request.get("result") : null;
+                    String reviewRemark = request != null ? (String) request.get("remark") : null;
+                    Map<String, Object> reviewResult = patternProductionOrchestrator.reviewPattern(id, result, reviewRemark);
+                    return Result.success(reviewResult);
                 case "maintenance":
                     if (request == null || !request.containsKey("reason")) {
                         return Result.fail("请输入维护原因");

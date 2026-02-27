@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Button, Input, message, Modal, Form, InputNumber, Tag } from 'antd';
+import { Card, Button, Input, message, Modal, Form, InputNumber, Tag, Select } from 'antd';
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -69,7 +69,12 @@ interface PatternProductionRecord {
   merchandiser?: string;
   maintainer?: string;
   maintainTime?: string;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  reviewStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+  reviewResult?: 'APPROVED' | 'REJECTED' | string;
+  reviewRemark?: string;
+  reviewBy?: string;
+  reviewTime?: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'PRODUCTION_COMPLETED' | 'COMPLETED';
 }
 
 // 进度节点中文名→英文key映射（与后竭resolveProgressKey保持一致）
@@ -137,6 +142,7 @@ const PatternProduction: React.FC = () => {
   // ===== 使用 useModal 管理弹窗状态 =====
   const progressModal = useModal<PatternProductionRecord>();
   const attachmentModal = useModal<PatternProductionRecord>();
+  const reviewModal = useModal<PatternProductionRecord>();
   const attachmentWrapperRef = React.useRef<HTMLDivElement>(null);
   const [operationLogs, setOperationLogs] = useState<Array<{
     id: string;
@@ -146,6 +152,7 @@ const PatternProduction: React.FC = () => {
     detail: string;
   }>>([]);
   const [form] = Form.useForm();
+  const [reviewForm] = Form.useForm();
 
   // 当 attachmentModal 打开时，程序化触发附件按钮点击
   useEffect(() => {
@@ -170,6 +177,15 @@ const PatternProduction: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [progressModal.visible, progressModal.data, form]);
+
+  useEffect(() => {
+    if (reviewModal.visible) {
+      reviewForm.setFieldsValue({
+        result: 'APPROVED',
+        remark: '',
+      });
+    }
+  }, [reviewModal.visible, reviewForm]);
 
   // 记录操作日志
   const addOperationLog = (action: string, detail: string) => {
@@ -215,9 +231,11 @@ const PatternProduction: React.FC = () => {
       const formattedData: PatternProductionRecord[] = records.map((item: any) => {
         const statusRaw = String(item.status || 'PENDING').toUpperCase();
         // 归一化状态值
-        let normalizedStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' = 'PENDING';
-        if (statusRaw === 'COMPLETED' || statusRaw === 'DONE' || Boolean(item.completeTime)) {
+        let normalizedStatus: 'PENDING' | 'IN_PROGRESS' | 'PRODUCTION_COMPLETED' | 'COMPLETED' = 'PENDING';
+        if (statusRaw === 'COMPLETED' || statusRaw === 'DONE') {
           normalizedStatus = 'COMPLETED';
+        } else if (statusRaw === 'PRODUCTION_COMPLETED') {
+          normalizedStatus = 'PRODUCTION_COMPLETED';
         } else if (statusRaw === 'IN_PROGRESS' || statusRaw === 'DOING') {
           normalizedStatus = 'IN_PROGRESS';
         }
@@ -276,6 +294,11 @@ const PatternProduction: React.FC = () => {
           processUnitPrices: item.processUnitPrices || {},
           processDetails: item.processDetails || {},
           procurementProgress,
+          reviewStatus: item.reviewStatus,
+          reviewResult: item.reviewResult,
+          reviewRemark: item.reviewRemark,
+          reviewBy: item.reviewBy,
+          reviewTime: formatDateTime(item.reviewTime) || '-',
           status: normalizedStatus,
         };
       });
@@ -313,6 +336,35 @@ const PatternProduction: React.FC = () => {
 
   const handleOpenDetail = (record: PatternProductionRecord) => {
     progressModal.open(record);
+  };
+
+  const handleOpenReview = (record: PatternProductionRecord) => {
+    reviewModal.open(record);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewModal.data) return;
+    try {
+      const values = await reviewForm.validateFields();
+      await api.post(
+        `/production/pattern/${reviewModal.data.id}/workflow-action`,
+        {
+          result: values.result,
+          remark: values.remark,
+        },
+        { params: { action: 'review' } }
+      );
+      message.success(values.result === 'APPROVED' ? '样衣审核通过' : '样衣审核驳回成功');
+      addOperationLog('样衣审核', `${reviewModal.data.styleNo} 审核${values.result === 'APPROVED' ? '通过' : '驳回'}：${values.remark}`);
+      reviewModal.close();
+      reviewForm.resetFields();
+      loadData();
+    } catch (error: any) {
+      if (error?.errorFields) {
+        return;
+      }
+      message.error(error?.message || '样衣审核失败');
+    }
   };
 
   // 打印模态框
@@ -435,10 +487,18 @@ const PatternProduction: React.FC = () => {
     const statusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
       PENDING: { text: '待领取', color: 'default', icon: <ClockCircleOutlined /> },
       IN_PROGRESS: { text: '进行中', color: 'processing', icon: <SyncOutlined spin /> },
+      PRODUCTION_COMPLETED: { text: '生产完成', color: 'warning', icon: <ClockCircleOutlined /> },
       COMPLETED: { text: '已完成', color: 'success', icon: <CheckCircleOutlined /> },
     };
     const config = statusMap[normalized] || statusMap.PENDING;
     return <Tag icon={config.icon} color={config.color}>{config.text}</Tag>;
+  };
+
+  const renderReviewStatus = (status?: string) => {
+    const normalized = String(status || 'PENDING').toUpperCase();
+    if (normalized === 'APPROVED') return <Tag color="success">已审核通过</Tag>;
+    if (normalized === 'REJECTED') return <Tag color="error">审核驳回</Tag>;
+    return <Tag color="warning">待审核</Tag>;
   };
 
   // 构建表格列
@@ -524,18 +584,26 @@ const PatternProduction: React.FC = () => {
         // 从后端获取的进度节点配置和单价汇总
         const processUnitPrices = record.processUnitPrices || {};
 
-        // 动态构建进度节点列表（从样板开发的工艺配置读取，与小程序扫码逻辑一致）
+        // 动态构建进度节点列表（从样板开发的工艺配置读取，按 processName 逐个显示）
+        // ⚠️ 注意：key 必须用 processName 而非 progressStage，否则同属一个 stage 的多个工序
+        //         会被合并成一个球（如 整烫/验检/包装 同属"尾部" → 只显示第一个）
         const rawConfig = (record.processConfig as ProcessConfigItem[]) || [];
-        const stageNodeMap = new Map<string, ProcessConfigItem>();
-        rawConfig.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).forEach(item => {
-          const stage = item.progressStage || item.processName;
-          if (stage && !stageNodeMap.has(stage)) stageNodeMap.set(stage, item);
-        });
-        const dynamicNodes = stageNodeMap.size > 0
-          ? Array.from(stageNodeMap.entries()).map(([stage, item]) => ({
-              id: stageToKey[stage] || stage,
-              name: item.processName || stage,
-            }))
+        const seenNames = new Set<string>();
+        const dynamicNodes = rawConfig.length > 0
+          ? rawConfig
+              .slice()
+              .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+              .filter(item => {
+                const name = (item.processName || item.progressStage || '').trim();
+                if (!name || seenNames.has(name)) return false;
+                seenNames.add(name);
+                return true;
+              })
+              .map(item => ({
+                // id 用所属 stage 的英文 key，同 stage 的子工序共享进度值
+                id: stageToKey[item.progressStage || item.processName] || item.progressStage || item.processName,
+                name: (item.processName || item.progressStage || '').trim(),
+              }))
           : ['采购', '裁剪', '车缝', '尾部', '入库'].map(s => ({ id: stageToKey[s] || s, name: s }));
         const nodesWithPrices = dynamicNodes.map(node => ({
           ...node,
@@ -632,18 +700,19 @@ const PatternProduction: React.FC = () => {
       width: 140,
     },
     {
+      title: '审核状态',
+      dataIndex: 'reviewStatus',
+      key: 'reviewStatus',
+      width: 120,
+      render: (_, record) => renderReviewStatus(record.reviewStatus),
+    },
+    {
       title: '操作',
       key: 'action',
       width: 150,
       fixed: 'right',
       render: (_, record) => {
-        // 计算完成进度（0-100）
-        const progressNodes = record.progressNodes || {};
-        const nodeValues = Object.values(progressNodes) as number[];
-        const totalProgress = nodeValues.length > 0
-          ? Math.round(nodeValues.reduce((sum: number, val: number) => sum + val, 0) / nodeValues.length)
-          : 0;
-        const isCompleted = totalProgress === 100 || record.status === 'COMPLETED';
+        const isCompleted = record.status === 'COMPLETED';
 
         const menuItems: MenuProps['items'] = [
           record.status === 'PENDING' && {
@@ -655,6 +724,11 @@ const PatternProduction: React.FC = () => {
             key: 'progress',
             label: '进度',
             onClick: () => handleOpenProgress(record),
+          },
+          record.status === 'PRODUCTION_COMPLETED' && {
+            key: 'review',
+            label: '样衣审核',
+            onClick: () => handleOpenReview(record),
           },
           {
             key: 'divider1',
@@ -729,6 +803,7 @@ const PatternProduction: React.FC = () => {
                     { label: '全部', value: '' },
                     { label: '待领取', value: 'PENDING' },
                     { label: '进行中', value: 'IN_PROGRESS' },
+                    { label: '生产完成', value: 'PRODUCTION_COMPLETED' },
                     { label: '已完成', value: 'COMPLETED' },
                   ]}
                 />
@@ -785,13 +860,7 @@ const PatternProduction: React.FC = () => {
                 type: 'liquid', // 液体波浪进度条
               }}
               actions={(record) => {
-                // 计算完成进度（0-100）
-                const progressNodes = record.progressNodes || {};
-                const nodeValues = Object.values(progressNodes) as number[];
-                const totalProgress = nodeValues.length > 0
-                  ? Math.round(nodeValues.reduce((sum: number, val: number) => sum + val, 0) / nodeValues.length)
-                  : 0;
-                const isCompleted = totalProgress === 100 || record.status === 'COMPLETED';
+                const isCompleted = record.status === 'COMPLETED';
 
                 return [
                   {
@@ -808,6 +877,11 @@ const PatternProduction: React.FC = () => {
                     key: 'progress',
                     label: '进度',
                     onClick: () => handleOpenProgress(record),
+                  },
+                  record.status === 'PRODUCTION_COMPLETED' && {
+                    key: 'review',
+                    label: '样衣审核',
+                    onClick: () => handleOpenReview(record),
                   },
                   {
                     key: 'divider1',
@@ -894,6 +968,49 @@ const PatternProduction: React.FC = () => {
                 </div>
               ));
             })()}
+          </Form>
+        </StandardModal>
+
+        <StandardModal
+          title="样衣审核"
+          open={reviewModal.visible}
+          onOk={handleSubmitReview}
+          onCancel={() => {
+            reviewModal.close();
+            reviewForm.resetFields();
+          }}
+          okText="提交审核"
+          cancelText="取消"
+          size="sm"
+          width={380}
+          minWidth={340}
+        >
+          {reviewModal.data && (
+            <div style={{ marginBottom: 10, fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-secondary)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span><strong>款号:</strong> {reviewModal.data.styleNo}</span>
+              <span><strong>颜色:</strong> {reviewModal.data.color}</span>
+            </div>
+          )}
+          <Form form={reviewForm} layout="vertical">
+            <Form.Item
+              label="审核结论"
+              name="result"
+              rules={[{ required: true, message: '请选择审核结论' }]}
+            >
+              <Select
+                options={[
+                  { label: '审核通过', value: 'APPROVED' },
+                  { label: '审核驳回', value: 'REJECTED' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
+              label="审核备注"
+              name="remark"
+              rules={[{ required: true, message: '请填写审核备注' }]}
+            >
+              <Input.TextArea rows={4} maxLength={300} showCount placeholder="请填写审核说明（必填）" />
+            </Form.Item>
           </Form>
         </StandardModal>
 

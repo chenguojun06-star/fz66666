@@ -32,6 +32,12 @@
       <text class="action-row-arrow">›</text>
     </view>
 
+    <!-- 语言切换 -->
+    <view class="action-row" bindtap="onLanguageSwitchTap">
+      <text class="action-row-label">🌐 {{currentLanguageLabel}}</text>
+      <text class="action-row-arrow">›</text>
+    </view>
+
     <!-- 修改密码表单（展开） -->
     <view wx:if="{{showChangePwd}}" class="change-pwd-panel">
       <view class="change-pwd-title">修改密码</view>

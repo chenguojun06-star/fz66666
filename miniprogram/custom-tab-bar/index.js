@@ -1,20 +1,39 @@
 const { safeNavigate } = require('../utils/uiHelper');
+const i18n = require('../utils/i18n/index');
+
+function buildTabList(language) {
+  return [
+    { pagePath: '/pages/home/index', text: i18n.t('tabbar.home', language) },
+    { pagePath: '/pages/work/index', text: i18n.t('tabbar.work', language) },
+    { pagePath: '/pages/scan/index', text: i18n.t('tabbar.scan', language) },
+    { pagePath: '/pages/admin/index', text: i18n.t('tabbar.admin', language) },
+  ];
+}
 
 Component({
   options: {
     styleIsolation: 'apply-shared', // 继承 page 级 CSS 变量（--color-primary 等）
   },
+  lifetimes: {
+    attached() {
+      this.refreshLanguage(i18n.getLanguage());
+    },
+  },
+  pageLifetimes: {
+    show() {
+      this.refreshLanguage(i18n.getLanguage());
+    },
+  },
   data: {
     selected: 0,
-    list: [
-      { pagePath: '/pages/home/index', text: '首页' },
-      { pagePath: '/pages/work/index', text: '生产' },
-      { pagePath: '/pages/scan/index', text: '扫码' },
-      { pagePath: '/pages/admin/index', text: '我的' },
-    ],
+    list: buildTabList(i18n.getLanguage()),
   },
 
   methods: {
+    refreshLanguage(language) {
+      this.setData({ list: buildTabList(language) });
+    },
+
     onTap(e) {
       const idx = Number(
         e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.index : -1

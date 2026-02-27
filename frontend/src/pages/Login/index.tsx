@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import api from '../../utils/api';
 import LoginLanguageSwitcher from '../../components/common/LoginLanguageSwitcher';
+import { t } from '../../i18n';
+import { useAppLanguage } from '../../i18n/useAppLanguage';
 import './styles.css';
 
 const { Title } = Typography;
@@ -18,6 +20,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const { login } = useAuth();
+  const { language } = useAppLanguage();
   const [submitting, setSubmitting] = useState(false);
   const { message } = App.useApp();
 
@@ -98,20 +101,20 @@ const Login: React.FC = () => {
   const handleLogin = async (values: { tenantId: number; companySearch: string; username: string; password: string }) => {
     if (submitting) return;
     if (!selectedTenant) {
-      message.error('请搜索并选择公司');
+      message.error(t('login.companySelectRequired', language));
       return;
     }
     setSubmitting(true);
     try {
       const success = await login(values.username, values.password, selectedTenant.id);
       if (success) {
-        message.success('登录成功');
+        message.success(t('login.loginSuccess', language));
         navigate('/dashboard');
       } else {
-        message.error('登录失败，请检查公司、用户名和密码');
+        message.error(t('login.loginFailed', language));
       }
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : '登录失败，请检查公司、用户名和密码';
+      const msg = error instanceof Error ? error.message : t('login.loginFailed', language);
       message.error(msg);
     } finally {
       setSubmitting(false);
@@ -140,7 +143,7 @@ const Login: React.FC = () => {
       <Card className="login-card" variant="borderless">
         <div className="login-header">
           <Title level={2} className="login-title">
-            {selectedTenant?.tenantName || '云裳智链'}
+            {selectedTenant?.tenantName || t('login.brand', language)}
           </Title>
         </div>
         <Form
@@ -155,25 +158,25 @@ const Login: React.FC = () => {
           <Form.Item
             name="companySearch"
             rules={[
-              { required: true, message: '请搜索并选择公司' },
+              { required: true, message: t('login.companySelectRequired', language) },
               {
                 validator: (_, value) => {
                   if (value && !selectedTenant) {
-                    return Promise.reject('请从搜索结果中选择公司');
+                    return Promise.reject(t('login.companySelectFromResult', language));
                   }
                   return Promise.resolve();
                 },
               },
             ]}
-            label="公司"
-            extra={selectedTenant ? <span style={{ color: '#52c41a', fontSize: 12 }}>✓ 已选择：{selectedTenant.tenantName}</span> : null}
+            label={t('login.company', language)}
+            extra={selectedTenant ? <span style={{ color: '#52c41a', fontSize: 12 }}>{t('login.companySelectedPrefix', language)}{selectedTenant.tenantName}</span> : null}
           >
             <AutoComplete
               options={searchOptions}
               onSearch={handleSearch}
               onSelect={handleSelect}
               onFocus={() => { /* 不自动展开，等用户输入后再搜索 */ }}
-              placeholder={tenantsLoading ? '加载中...' : '输入公司名称搜索'}
+              placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
               disabled={submitting || tenantsLoading}
               size="large"
             >
@@ -190,14 +193,14 @@ const Login: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-            label="用户名"
+            rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
+            label={t('login.username', language)}
             htmlFor="login_username"
           >
             <Input
               id="login_username"
               prefix={<UserOutlined className="site-form-item-icon" />}
-              placeholder="请输入用户名"
+              placeholder={t('login.usernamePlaceholder', language)}
               size="large"
               autoFocus
               allowClear
@@ -207,14 +210,14 @@ const Login: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-            label="密码"
+            rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
+            label={t('login.password', language)}
             htmlFor="login_password"
           >
             <Input.Password
               id="login_password"
               prefix={<LockOutlined className="site-form-item-icon" />}
-              placeholder="请输入密码"
+              placeholder={t('login.passwordPlaceholder', language)}
               size="large"
               disabled={submitting}
               autoComplete="current-password"
@@ -228,7 +231,7 @@ const Login: React.FC = () => {
               size="large"
               loading={submitting}
             >
-              登录
+              {t('login.submit', language)}
             </Button>
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>
@@ -238,11 +241,11 @@ const Login: React.FC = () => {
               style={{ width: '100%', padding: 0 }}
               disabled={submitting}
             >
-              还没有账号？立即注册
+              {t('login.noAccount', language)}{t('login.registerNow', language)}
             </Button>
           </Form.Item>
         </Form>
-        <div className="login-footer">© {year} 云裳智链</div>
+        <div className="login-footer">© {year} {t('login.brand', language)}</div>
       </Card>
     </div>
   );

@@ -9,6 +9,7 @@ const OPERATION_LABELS = {
   PLATE: '车板扫码',
   FOLLOW_UP: '跟单确认',
   COMPLETE: '完成确认',
+  REVIEW: '样衣审核',
   WAREHOUSE_IN: '样衣入库',
   WAREHOUSE_OUT: '样衣出库',
   WAREHOUSE_RETURN: '样衣归还',
@@ -198,12 +199,13 @@ async function submitPatternScan(page) {
     toast.error('请选择操作工序');
     return;
   }
+  const operationType = String(patternConfirm.operationType || '').toUpperCase();
   const confirmedQty = normalizePositiveInt(patternConfirm.quantity, 0);
-  if (confirmedQty <= 0) {
+  if (operationType !== 'REVIEW' && confirmedQty <= 0) {
     toast.error('请输入正确数量');
     return;
   }
-  if (WAREHOUSE_OPERATIONS.has(patternConfirm.operationType) && !String(patternConfirm.warehouseCode || '').trim()) {
+  if (WAREHOUSE_OPERATIONS.has(operationType) && !String(patternConfirm.warehouseCode || '').trim()) {
     toast.error('仓库操作请填写仓位编号');
     return;
   }
@@ -213,7 +215,7 @@ async function submitPatternScan(page) {
   try {
     const result = await page.scanHandler.submitPatternScan({
       patternId: patternConfirm.patternId,
-      operationType: patternConfirm.operationType,
+      operationType,
       operatorRole: 'PLATE_WORKER',
       quantity: confirmedQty,
       warehouseCode: patternConfirm.warehouseCode,
@@ -232,7 +234,7 @@ async function submitPatternScan(page) {
           styleNo: patternConfirm.styleNo,
           color: patternConfirm.color,
           quantity: confirmedQty,
-          operationType: patternConfirm.operationType,
+          operationType,
         },
       });
 
@@ -271,16 +273,17 @@ async function submitPatternScanAll(page) {
     toast.error('没有可提交的工序');
     return;
   }
-  const hasWarehouseOperation = operations.some(item => WAREHOUSE_OPERATIONS.has(item.value));
-  if (hasWarehouseOperation && !String(patternConfirm.warehouseCode || '').trim()) {
-    toast.error('包含仓库操作时请填写仓位编号');
+
+  const productionOperations = operations.filter(item => !WAREHOUSE_OPERATIONS.has(item.value) && item.value !== 'REVIEW');
+  if (!productionOperations.length) {
+    toast.error('一键提交仅支持生产工序，审核/入库请单独操作');
     return;
   }
 
   _setPatternLoading(page, true);
 
   try {
-    for (const operation of operations) {
+    for (const operation of productionOperations) {
       const result = await page.scanHandler.submitPatternScan({
         patternId: patternConfirm.patternId,
         operationType: operation.value,
@@ -295,7 +298,7 @@ async function submitPatternScanAll(page) {
       }
     }
 
-    toast.success(`已完成 ${operations.length} 道工序`);
+    toast.success(`已完成 ${productionOperations.length} 道工序`);
     closePatternConfirm(page);
 
     page.addToLocalHistory({

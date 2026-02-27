@@ -115,6 +115,36 @@ public class PatternProduction {
      */
     private LocalDateTime maintainTime;
 
+    /**
+     * 样衣审核状态：PENDING(待审核), APPROVED(已通过), REJECTED(已驳回)
+     */
+    private String reviewStatus;
+
+    /**
+     * 审核结论（通过/驳回）
+     */
+    private String reviewResult;
+
+    /**
+     * 审核备注
+     */
+    private String reviewRemark;
+
+    /**
+     * 审核人姓名
+     */
+    private String reviewBy;
+
+    /**
+     * 审核人ID
+     */
+    private String reviewById;
+
+    /**
+     * 审核时间
+     */
+    private LocalDateTime reviewTime;
+
     // ==================== 操作人字段（自动填充）====================
 
     private String receiverId;

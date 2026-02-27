@@ -122,6 +122,7 @@ function normalizeManualType(manualScanType) {
     plate: 'PLATE',
     followup: 'FOLLOW_UP',
     complete: 'COMPLETE',
+    review: 'REVIEW',
     warehouse: 'WAREHOUSE_IN',
     out: 'WAREHOUSE_OUT',
     return: 'WAREHOUSE_RETURN',
@@ -131,6 +132,9 @@ function normalizeManualType(manualScanType) {
 
 function buildPatternOperationOptions({ patternDetail, processConfig, scanRecords, manualScanType }) {
   const status = String(patternDetail?.status || '').toUpperCase();
+  const reviewStatus = String(patternDetail?.reviewStatus || '').toUpperCase();
+  const reviewResult = String(patternDetail?.reviewResult || '').toUpperCase();
+  const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
   const scannedSet = new Set(
     (scanRecords || [])
       .map(item => String(item?.operationType || '').trim())
@@ -157,7 +161,12 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
   }
 
   // ── 阶段二：生产完成，等待入库 ─────────────────────────────────────
-  if (status === 'COMPLETED' && !scannedSet.has('WAREHOUSE_IN')) {
+  if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved) {
+    options.push({ value: 'REVIEW', label: '样衣审核', icon: '🧾' });
+    return options;
+  }
+
+  if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && reviewApproved && !scannedSet.has('WAREHOUSE_IN')) {
     options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '📦' });
     return options; // 已完成只展示入库，不展示其他生产工序
   }
@@ -177,7 +186,7 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
     // 跳过已扫过的工序
     if (scannedSet.has(value)) return;
     // 跳过仓库类操作（由上面阶段一/二统一处理）
-    if (['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN'].includes(value)) return;
+    if (['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN', 'REVIEW'].includes(value)) return;
 
     const stage = String(item?.progressStage || '').trim();
     const processName = String(item?.processName || value).trim();
@@ -227,6 +236,7 @@ function determinePatternOperation(patternDetail, manualScanType) {
       'plate': 'PLATE',
       'followup': 'FOLLOW_UP',
       'complete': 'COMPLETE',
+      'review': 'REVIEW',
       'warehouse': 'WAREHOUSE_IN',
       'out': 'WAREHOUSE_OUT',
       'return': 'WAREHOUSE_RETURN',
@@ -241,6 +251,12 @@ function determinePatternOperation(patternDetail, manualScanType) {
       return 'RECEIVE';      // 待领取 → 领取
     case 'IN_PROGRESS':
       return 'PLATE';        // 制作中 → 车板
+    case 'PRODUCTION_COMPLETED':
+      if ((String(patternDetail?.reviewStatus || '').toUpperCase() === 'APPROVED')
+        || (String(patternDetail?.reviewResult || '').toUpperCase() === 'APPROVED')) {
+        return 'WAREHOUSE_IN';
+      }
+      return 'REVIEW';
     case 'COMPLETED':
       return 'WAREHOUSE_IN'; // 已完成 → 入库
     default:
@@ -256,6 +272,20 @@ function determinePatternOperation(patternDetail, manualScanType) {
  */
 async function submitPatternScan(handler, data) {
   try {
+    if (String(data.operationType || '').toUpperCase() === 'REVIEW') {
+      const reviewRemark = String(data.remark || '').trim();
+      const reviewResult = 'APPROVED';
+      const res = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
+      if (res) {
+        return {
+          success: true,
+          message: getPatternSuccessMessage('REVIEW'),
+          data: res,
+        };
+      }
+      return handler._errorResult('审核提交失败');
+    }
+
     const res = await handler.api.production.submitPatternScan({
       patternId: data.patternId,
       operationType: data.operationType,
@@ -290,6 +320,7 @@ function getPatternSuccessMessage(operationType) {
     'PLATE': '✅ 车板扫码成功',
     'FOLLOW_UP': '✅ 跟单扫码成功',
     'COMPLETE': '✅ 完成确认成功',
+    'REVIEW': '✅ 样衣审核通过',
     'WAREHOUSE_IN': '✅ 样衣入库成功',
     'WAREHOUSE_OUT': '✅ 样衣出库成功',
     'WAREHOUSE_RETURN': '✅ 样衣归还成功',

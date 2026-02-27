@@ -1,12 +1,15 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, Popover } from 'antd';
-import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
+import { BellOutlined, CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import api, { ApiResult } from '../../utils/api';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
+import { useAppLanguage } from '../../i18n/useAppLanguage';
+import { APP_LANGUAGE_OPTIONS, type AppLanguage } from '../../i18n/languagePreference';
+import { t } from '../../i18n';
 import SmartGuideBar from '@/smart/components/SmartGuideBar';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
@@ -35,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
+  const { language, setLanguage } = useAppLanguage();
   const { message } = App.useApp();
   const recentPagesStorageKey = 'layout.header.recentPages';
   const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
@@ -169,6 +173,73 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
   const isSuperAdmin = user?.isSuperAdmin === true;
 
+  const menuI18nMapByPath = useMemo<Record<string, string>>(() => ({
+    [paths.styleInfoList]: 'menu.items.styleInfo',
+    [paths.patternProduction]: 'menu.items.patternProduction',
+    [paths.dataCenter]: 'menu.items.dataCenter',
+    [paths.templateCenter]: 'menu.items.templateCenter',
+    [paths.orderManagementList]: 'menu.items.orderManagement',
+    [paths.productionList]: 'menu.items.productionList',
+    [paths.materialPurchase]: 'menu.items.materialPurchase',
+    [paths.cutting]: 'menu.items.cutting',
+    [paths.progressDetail]: 'menu.items.progressDetail',
+    [paths.warehousing]: 'menu.items.warehousing',
+    [paths.warehouseDashboard]: 'menu.items.warehouseDashboard',
+    [paths.materialInventory]: 'menu.items.materialInventory',
+    [paths.materialDatabase]: 'menu.items.materialDatabase',
+    [paths.finishedInventory]: 'menu.items.finishedInventory',
+    [paths.sampleInventory]: 'menu.items.sampleInventory',
+    [paths.materialReconciliation]: 'menu.items.materialReconciliation',
+    [paths.payrollOperatorSummary]: 'menu.items.payrollOperatorSummary',
+    [paths.financeCenter]: 'menu.items.financeCenter',
+    [paths.expenseReimbursement]: 'menu.items.expenseReimbursement',
+    [paths.wagePayment]: 'menu.items.wagePayment',
+    [paths.profile]: 'menu.items.profile',
+    [paths.user]: 'menu.items.user',
+    [paths.role]: 'menu.items.role',
+    [paths.factory]: 'menu.items.factory',
+    [paths.dict]: 'menu.items.dict',
+    [paths.systemLogs]: 'menu.items.systemLogs',
+    [paths.tutorial]: 'menu.items.tutorial',
+    [paths.dataImport]: 'menu.items.dataImport',
+  }), []);
+
+  const menuI18nMapBySectionKey = useMemo<Record<string, string>>(() => ({
+    dashboard: 'menu.sections.dashboard',
+    basic: 'menu.sections.basic',
+    production: 'menu.sections.production',
+    warehouse: 'menu.sections.warehouse',
+    finance: 'menu.sections.finance',
+    system: 'menu.sections.system',
+    appStore: 'menu.sections.appStore',
+    customer: 'menu.sections.customer',
+    tenant: 'menu.sections.tenant',
+    integrationCenter: 'menu.sections.integrationCenter',
+  }), []);
+
+  const localizedMenuConfig = useMemo(() => {
+    return menuConfig.map((section) => {
+      const localizedTitle = t(menuI18nMapBySectionKey[section.key] || '', language);
+      if (section.items?.length) {
+        return {
+          ...section,
+          title: localizedTitle === '' || localizedTitle.includes('menu.sections.') ? section.title : localizedTitle,
+          items: section.items.map((item) => {
+            const localizedLabel = t(menuI18nMapByPath[normalizePath(item.path)] || '', language);
+            return {
+              ...item,
+              label: localizedLabel === '' || localizedLabel.includes('menu.items.') ? item.label : localizedLabel,
+            };
+          }),
+        };
+      }
+      return {
+        ...section,
+        title: localizedTitle === '' || localizedTitle.includes('menu.sections.') ? section.title : localizedTitle,
+      };
+    });
+  }, [language, menuI18nMapByPath, menuI18nMapBySectionKey]);
+
   const hasPermissionForPath = (path: string) => {
     if (isAdmin) return true;
     const code = resolvePermissionCode(normalizePath(path));
@@ -178,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // 构建 Menu items
   const menuItems = useMemo(() => {
-    return menuConfig
+    return localizedMenuConfig
       .filter((section) => {
         // 超管专属菜单：非超管不可见
         if (section.superAdminOnly && !isSuperAdmin) return false;
@@ -211,7 +282,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           };
         }
       });
-  }, [menuConfig, user]);
+  }, [localizedMenuConfig, user]);
 
   // 获取当前选中的菜单项
   const selectedKeys = useMemo(() => {
@@ -281,12 +352,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
     const base = basePath || pathname;
-    if (base === '/style-info' && pathname !== base) return '款号详情';
-    if (base === '/order-management' && pathname !== base) return '下单详情';
-    if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return '裁剪任务';
-    if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return '质检入库详情';
+    if (base === '/style-info' && pathname !== base) return t('layout.styleInfoDetail', language);
+    if (base === '/order-management' && pathname !== base) return t('layout.orderDetail', language);
+    if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return t('layout.cuttingTask', language);
+    if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return t('layout.warehousingDetail', language);
 
-    for (const section of menuConfig) {
+    for (const section of localizedMenuConfig) {
       if (section.path && normalizePath(section.path) === base) return section.title;
       if (section.items?.length) {
         for (const item of section.items) {
@@ -365,18 +436,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 登出处理
   const handleLogout = () => {
     logout();
-    message.success('登出成功');
+    message.success(t('layout.logoutSuccess', language));
     navigate('/login');
   };
 
-  const userDisplayName = String(user?.name || user?.username || '').trim() || '用户';
+  const userDisplayName = String(user?.name || user?.username || '').trim() || t('layout.userDefault', language);
   const userInitial = userDisplayName.slice(0, 1).toUpperCase();
 
   const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
   const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
 
   // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
-  const brandName = String((user as any)?.tenantName || '').trim() || '云裳智链';
+  const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
 
   // 实时更新浏览器标题
   useEffect(() => {
@@ -390,7 +461,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-left">
             <h1 className="header-title header-brand" title={brandName}>{brandName}</h1>
             {recentPages.length ? (
-              <div className="header-recents" role="tablist" aria-label="最近打开的页面" ref={recentsContainerRef}>
+              <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
                 {recentPages.map((p) => {
                   const isCurrent = p.path === effectiveFullPath;
                   return (
@@ -416,7 +487,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         size="small"
                         className="recent-tab-close"
                         icon={<CloseOutlined />}
-                        aria-label={`关闭 ${p.title}`}
+                        aria-label={`${t('layout.close', language)} ${p.title}`}
                         onClick={() => closeRecent(p.path)}
                       />
                     </div>
@@ -429,12 +500,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* 紧急事件铃铛 */}
             <Popover
               placement="bottomRight"
-              title="紧急事件"
+              title={t('layout.urgentEvents', language)}
               content={
                 <div style={{ maxWidth: 360, maxHeight: 400, overflow: 'auto' }}>
                   {urgentEvents.length === 0 ? (
                     <div style={{ padding: '20px 0', textAlign: 'center', color: '#999' }}>
-                      暂无紧急事件
+                      {t('layout.noUrgentEvents', language)}
                     </div>
                   ) : (
                     <div>
@@ -461,7 +532,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         >
                           <div style={{ fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
                           <div style={{ fontSize: "var(--font-size-xs)", color: '#666' }}>
-                            订单号: {event.orderNo}
+                            {t('layout.orderNoPrefix', language)}: {event.orderNo}
                           </div>
                           <div style={{ fontSize: "var(--font-size-xs)", color: '#999', marginTop: 4 }}>
                             {event.time}
@@ -487,10 +558,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               placement="bottomRight"
               trigger={['click']}
               menu={{
+                selectable: true,
+                selectedKeys: [language],
+                items: APP_LANGUAGE_OPTIONS.map((item) => ({
+                  key: item.value,
+                  label: t(`language.names.${item.value}`, language),
+                })),
+                onClick: ({ key }) => setLanguage(key as AppLanguage),
+              }}
+            >
+              <Button type="text" icon={<GlobalOutlined />} style={{ marginRight: 8 }}>
+                {t(`language.names.${language}`, language)}
+              </Button>
+            </Dropdown>
+
+            <Dropdown
+              placement="bottomRight"
+              trigger={['click']}
+              menu={{
                 items: [
-                  { key: 'profile', label: '个人中心', icon: <SettingOutlined /> },
+                  { key: 'profile', label: t('layout.profile', language), icon: <SettingOutlined /> },
                   { type: 'divider' },
-                  { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
+                  { key: 'logout', label: t('layout.logout', language), icon: <LogoutOutlined /> },
                 ] as any,
                 onClick: ({ key }) => {
                   if (key === 'logout') handleLogout();
@@ -526,7 +615,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 type="text"
                 className="sidebar-collapse-btn"
                 icon={sidebarIsCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                aria-label={sidebarIsCollapsed ? '展开侧边栏' : '收起侧边栏'}
+                aria-label={sidebarIsCollapsed ? t('layout.expandSidebar', language) : t('layout.collapseSidebar', language)}
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
               />
             </div>

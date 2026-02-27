@@ -22,13 +22,13 @@
   <view class="login-content">
     <!-- 顶部工厂名称（居中大字） -->
     <view class="login-header">
-      <text class="login-title">{{selectedTenantName || '云裳智链'}}</text>
+      <text class="login-title">{{selectedTenantName || i18nTexts.brand}}</text>
     </view>
 
     <!-- 正在验证微信身份（openid check loading） -->
     <view wx:if="{{wechatChecking}}" class="wechat-checking">
       <view class="wechat-checking-icon">微信</view>
-      <text class="wechat-checking-text">正在验证微信身份...</text>
+      <text class="wechat-checking-text">{{i18nTexts.wechatChecking}}</text>
     </view>
 
     <!-- 登录表单（openid 未绑定时 / 开发环境） -->
@@ -41,12 +41,12 @@
     </view>
 
     <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> 公司</view>
+      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.company}}</view>
       <view class="login-input-wrap">
         <text class="login-input-icon">🔍</text>
         <input
           class="login-input"
-          placeholder="{{tenantsLoading ? '加载中...' : '输入公司名称搜索'}}"
+          placeholder="{{tenantsLoading ? i18nTexts.loading : i18nTexts.companySearchPlaceholder}}"
           value="{{tenantSearchText}}"
           bindinput="onTenantSearch"
           bindfocus="onTenantSearchFocus"
@@ -54,7 +54,7 @@
         />
         <text wx:if="{{selectedTenantName && !inviteTenantFixed}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
       </view>
-      <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">✓ 已选择：{{selectedTenantName}}</view>
+      <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">{{i18nTexts.companySelectedPrefix}}{{selectedTenantName}}</view>
       <!-- 搜索结果下拉 -->
       <view wx:if="{{showTenantResults && filteredTenants.length > 0}}" class="tenant-results">
         <view
@@ -68,18 +68,18 @@
         >{{item.tenantName}}</view>
       </view>
       <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
-        <view class="tenant-result-empty">未找到匹配的公司</view>
+        <view class="tenant-result-empty">{{i18nTexts.companyNotFound}}</view>
       </view>
     </view>
 
     <!-- 用户名 -->
     <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> 用户名</view>
+      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.username}}</view>
       <view class="login-input-wrap">
         <text class="login-input-icon">👤</text>
         <input
           class="login-input"
-          placeholder="请输入用户名"
+          placeholder="{{i18nTexts.usernamePlaceholder}}"
           value="{{username}}"
           bindinput="onUsernameInput"
           disabled="{{loading}}"
@@ -89,12 +89,12 @@
 
     <!-- 密码 -->
     <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> 密码</view>
+      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.password}}</view>
       <view class="login-input-wrap">
         <text class="login-input-icon">🔒</text>
         <input
           class="login-input"
-          placeholder="请输入密码"
+          placeholder="{{i18nTexts.passwordPlaceholder}}"
           password="{{!showPassword}}"
           value="{{password}}"
           bindinput="onPasswordInput"
@@ -107,25 +107,25 @@
     <!-- 登录按钮 -->
     <view class="login-btn-wrap">
       <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">
-        {{loading ? '登录中...' : '登 录'}}
+        {{loading ? i18nTexts.submitting : i18nTexts.submit}}
       </view>
     </view>
 
     <!-- 微信一键登录 -->
     <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
       <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin" hover-class="login-btn-wechat-hover" hover-stay-time="50">
-        {{loading ? '登录中...' : '微信一键登录'}}
+        {{loading ? i18nTexts.submitting : i18nTexts.wechatQuickLogin}}
       </view>
     </view>
 
     <!-- 开发模式：服务器地址 -->
     <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
-      <view class="login-label">服务器地址</view>
+      <view class="login-label">{{i18nTexts.serverUrl}}</view>
       <view class="login-input-wrap">
         <text class="login-input-icon">🌐</text>
         <input
           class="login-input"
-          placeholder="例如：http://192.168.1.10:8088"
+          placeholder="{{i18nTexts.serverUrlPlaceholder}}"
           value="{{apiBaseUrl}}"
           bindinput="onApiBaseUrlInput"
         />
@@ -134,11 +134,11 @@
 
     <!-- 注册入口 -->
     <view class="login-register-section">
-      <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">还没有账号？立即注册</view>
+      <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">{{i18nTexts.noAccount}}{{i18nTexts.registerNow}}</view>
     </view>
 
     <!-- 底部版权 -->
-    <view class="login-footer">© 2026 云裳智链</view>
+    <view class="login-footer">© 2026 {{i18nTexts.brand}}</view>
     </block><!-- /!wechatChecking -->
   </view>
 </view>

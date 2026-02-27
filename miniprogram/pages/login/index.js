@@ -187,20 +187,20 @@ async function executeLogin(params, options = {}) {
     // ✅ openid 未绑定 → 需要用户输入账号密码绑定（首次）
     if (resp && resp.code === 200 && resp.data && resp.data.needBind) {
       if (!silent) {
-        toast.info('请输入账号密码完成首次绑定，之后即可一键登录');
+        toast.info(i18n.t('login.inputAccountToBind'));
       }
       return { success: false, needBind: true };
     }
 
     // ❌ 真正的错误（账号密码错误、网络异常等）
-    toast.error((resp && resp.message) || '登录失败');
+    toast.error((resp && resp.message) || i18n.t('login.loginFailed'));
     return { success: false };
   } catch (e) {
     const app = getApp();
     if (app && typeof app.toastError === 'function') {
-      app.toastError(e, '网络异常');
+      app.toastError(e, i18n.t('login.networkError'));
     } else {
-      toast.error('网络异常');
+      toast.error(i18n.t('login.networkError'));
     }
     return { success: false };
   }
@@ -253,22 +253,57 @@ Page({
     // 邀请模式：管理员扫码邀请员工时显示
     inviteBanner: '',         // 如"由 XX 工厂邀请加入"
     inviteTenantFixed: false, // true 时锁定公司选择字段
+    i18nTexts: {},
+  },
+
+  buildLanguageNameMap(language) {
+    return {
+      'zh-CN': i18n.t('language.names.zh-CN', language),
+      'en-US': i18n.t('language.names.en-US', language),
+      'vi-VN': i18n.t('language.names.vi-VN', language),
+      'km-KH': i18n.t('language.names.km-KH', language),
+    };
+  },
+
+  buildI18nTexts(language) {
+    return {
+      brand: i18n.t('login.brand', language),
+      wechatChecking: i18n.t('login.wechatChecking', language),
+      company: i18n.t('login.company', language),
+      loading: i18n.t('common.loading', language),
+      companySearchPlaceholder: i18n.t('login.companySearchPlaceholder', language),
+      companyNotFound: i18n.t('login.companyNotFound', language),
+      companySelectedPrefix: i18n.t('login.companySelectedPrefix', language),
+      username: i18n.t('login.username', language),
+      usernamePlaceholder: i18n.t('login.usernamePlaceholder', language),
+      password: i18n.t('login.password', language),
+      passwordPlaceholder: i18n.t('login.passwordPlaceholder', language),
+      submit: i18n.t('login.submit', language),
+      submitting: i18n.t('login.submitting', language),
+      wechatQuickLogin: i18n.t('login.wechatQuickLogin', language),
+      serverUrl: i18n.t('login.serverUrl', language),
+      serverUrlPlaceholder: i18n.t('login.serverUrlPlaceholder', language),
+      noAccount: i18n.t('login.noAccount', language),
+      registerNow: i18n.t('login.registerNow', language),
+      inviteWithTenant: i18n.t('login.inviteWithTenant', language),
+      inviteNoTenant: i18n.t('login.inviteNoTenant', language),
+    };
+  },
+
+  applyLanguage(language) {
+    const languageNameMap = this.buildLanguageNameMap(language);
+    this.setData({
+      currentLanguage: language,
+      languageNameMap,
+      currentLanguageLabel: languageNameMap[language] || languageNameMap['zh-CN'] || '中文',
+      languageSwitchText: i18n.t('language.current', language),
+      i18nTexts: this.buildI18nTexts(language),
+    });
   },
 
   onLoad(options) {
     const currentLanguage = i18n.getLanguage();
-    const languageNameMap = {
-      'zh-CN': i18n.t('language.names.zh-CN', currentLanguage),
-      'en-US': i18n.t('language.names.en-US', currentLanguage),
-      'vi-VN': i18n.t('language.names.vi-VN', currentLanguage),
-      'km-KH': i18n.t('language.names.km-KH', currentLanguage),
-    };
-    this.setData({
-      currentLanguage,
-      languageNameMap,
-      currentLanguageLabel: languageNameMap[currentLanguage] || languageNameMap['zh-CN'] || '中文',
-      languageSwitchText: i18n.t('language.current', currentLanguage),
-    });
+    this.applyLanguage(currentLanguage);
 
     // 解析微信扫码 scene 参数（getwxacodeunlimit 扫码时会将 scene 放入 options.scene）
     if (options && options.scene) {
@@ -296,7 +331,9 @@ Page({
           selectedTenantId: tenantId,
           selectedTenantName: name,
           tenantSearchText: name,
-          inviteBanner: name ? `由「${name}」邀请加入，输入账号密码即可绑定微信` : '扫码邀请，输入账号密码即可绑定微信',
+          inviteBanner: name
+            ? (this.data.i18nTexts.inviteWithTenant || '').replace('{tenantName}', name)
+            : this.data.i18nTexts.inviteNoTenant,
           inviteTenantFixed: true,
         });
       }
@@ -306,6 +343,8 @@ Page({
   },
 
   async onShow() {
+    this.applyLanguage(i18n.getLanguage());
+
     const token = getToken();
     if (token) {
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
@@ -372,18 +411,7 @@ Page({
       success: ({ tapIndex }) => {
         const nextLang = langList[tapIndex] || 'zh-CN';
         const appliedLang = i18n.setLanguage(nextLang);
-        const refreshedMap = {
-          'zh-CN': i18n.t('language.names.zh-CN', appliedLang),
-          'en-US': i18n.t('language.names.en-US', appliedLang),
-          'vi-VN': i18n.t('language.names.vi-VN', appliedLang),
-          'km-KH': i18n.t('language.names.km-KH', appliedLang),
-        };
-        this.setData({
-          currentLanguage: appliedLang,
-          languageNameMap: refreshedMap,
-          currentLanguageLabel: refreshedMap[appliedLang] || refreshedMap['zh-CN'] || '中文',
-          languageSwitchText: i18n.t('language.current', appliedLang),
-        });
+        this.applyLanguage(appliedLang);
       },
       fail: () => {
         // ignore cancel
@@ -547,7 +575,7 @@ Page({
 
     const tenantId = this.getSelectedTenantId();
     if (!tenantId) {
-      toast.error('请先选择公司');
+      toast.error(i18n.t('login.selectCompanyFirst'));
       return;
     }
 
@@ -570,7 +598,7 @@ Page({
     this.setData({ loading: true });
     try {
       const code = await resolveLoginCode();
-      if (!code) { toast.error('获取登录code失败'); return; }
+      if (!code) { toast.error(i18n.t('login.getCodeFailed')); return; }
       await executeLogin({ code, username, password, tenantId });
     } finally {
       this.setData({ loading: false });
@@ -585,7 +613,7 @@ Page({
     // 检查是否已选择公司
     const tenantId = this.getSelectedTenantId();
     if (!tenantId) {
-      toast.error('请先选择公司');
+      toast.error(i18n.t('login.selectCompanyFirst'));
       return;
     }
 
@@ -603,7 +631,7 @@ Page({
     try {
       const code = await resolveLoginCode();
       if (!code) {
-        toast.error('获取登录code失败');
+        toast.error(i18n.t('login.getCodeFailed'));
         return;
       }
 
