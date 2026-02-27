@@ -83,6 +83,9 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         color={String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
         sizeItems={detailSizePairs.map((x) => ({ size: x.size, quantity: x.quantity }))}
         totalQuantity={getOrderQtyTotal(detailOrderLines)}
+        showOrderNo={!isSamplePurchase}
+        hideEmptyColor={isSamplePurchase}
+        hideSizeBlockWhenNoRealSize={isSamplePurchase}
         coverSize={160}
       />
 
@@ -92,16 +95,14 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         loading={detailLoading}
         extra={
           <Space>
-            {!isSamplePurchase ? (
-              <Button
-                size="small"
-                type="primary"
-                disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
-                onClick={onReceiveAll}
-              >
-                一键领取全部
-              </Button>
-            ) : null}
+            <Button
+              size="small"
+              type="primary"
+              disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+              onClick={onReceiveAll}
+            >
+              一键领取全部
+            </Button>
             <Button
               size="small"
               disabled={detailFrozen || !detailPurchases.some((p) => {

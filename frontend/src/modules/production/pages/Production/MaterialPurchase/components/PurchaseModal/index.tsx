@@ -90,16 +90,14 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const getFooter = () => {
     if (dialogMode === 'view') {
       return [
-        !isSamplePurchase ? (
-          <Button
-            key="receiveAll"
-            disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
-            loading={submitLoading}
-            onClick={onReceiveAll}
-          >
-            采购领取
-          </Button>
-        ) : null,
+        <Button
+          key="receiveAll"
+          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+          loading={submitLoading}
+          onClick={onReceiveAll}
+        >
+          采购领取
+        </Button>,
         <Button
           key="returnAll"
           disabled={!detailPurchases.some((p) => {

@@ -356,6 +356,18 @@ const MaterialPurchase: React.FC = () => {
     returnResetForm.setFieldsValue({ reason: '' });
   }, [returnResetForm, returnResetModal.visible]);
 
+  const unwrapPurchaseRecords = (purchaseRes: any): MaterialPurchaseType[] => {
+    if (purchaseRes?.code !== 200) return [];
+    return (
+      (Array.isArray(purchaseRes?.data?.records) && purchaseRes?.data?.records)
+      || (Array.isArray((purchaseRes?.data as any)?.list) && (purchaseRes?.data as any)?.list)
+      || (Array.isArray((purchaseRes?.data as any)?.items) && (purchaseRes?.data as any)?.items)
+      || (Array.isArray((purchaseRes?.data as any)?.rows) && (purchaseRes?.data as any)?.rows)
+      || (Array.isArray(purchaseRes?.data) && purchaseRes?.data)
+      || []
+    );
+  };
+
   const loadDetailByOrderNo = async (orderNo: string) => {
     const no = String(orderNo || '').trim();
     if (!no) return;
@@ -451,18 +463,24 @@ const MaterialPurchase: React.FC = () => {
     }
   };
 
-  // 按款号加载采购单详情（用于没有订单号的样衣采购）
-  const loadDetailByStyleNo = async (styleNo: string) => {
+  // 样衣采购详情：优先按采购单号（MP）加载，其次按款号+sourceType=sample
+  const loadDetailByStyleNo = async (styleNo: string, purchaseNo?: string) => {
     const no = String(styleNo || '').trim();
-    if (!no) return;
+    const pNo = String(purchaseNo || '').trim();
+    if (!no && !pNo) return;
     setDetailLoading(true);
     try {
       const purchaseRes = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>(
         '/production/purchase/list',
-        { params: { page: 1, pageSize: 200, styleNo: no, materialType: '', status: '' } }
+        {
+          params: pNo
+            ? { page: 1, pageSize: 200, purchaseNo: pNo, sourceType: 'sample', materialType: '', status: '' }
+            : { page: 1, pageSize: 200, styleNo: no, sourceType: 'sample', materialType: '', status: '' }
+        }
       );
 
-      const records = purchaseRes?.code === 200 ? (purchaseRes?.data?.records || []) : [];
+      const records = unwrapPurchaseRecords(purchaseRes)
+        .filter((r) => String((r as any)?.sourceType || '').trim().toLowerCase() === 'sample');
       const sorted = [...records].sort((a: MaterialPurchaseType, b: MaterialPurchaseType) => {
         const ka = getMaterialTypeSortKey(a?.materialType);
         const kb = getMaterialTypeSortKey(b?.materialType);
@@ -472,29 +490,38 @@ const MaterialPurchase: React.FC = () => {
       setDetailPurchases(sorted);
       setDetailOrder(null);
 
-      // 从采购单中提取颜色和尺码信息
+      // 从采购单中提取颜色和尺码信息（样衣优先使用下单颜色/下单数量）
       if (sorted.length > 0) {
         const colors = new Set<string>();
         const sizes = new Set<string>();
         let totalQty = 0;
+        let orderQty = 0;
+        let orderColor = '';
 
         sorted.forEach((p: any) => {
           const color = String(p?.color || '').trim();
+          const sourceColor = String(p?.orderColor || '').trim();
           const size = String(p?.size || '').trim();
           const qty = Number(p?.purchaseQuantity || 0);
+          const oq = Number(p?.orderQuantity || 0);
 
           if (color && color !== '-') colors.add(color);
           if (size && size !== '-') sizes.add(size);
           if (qty > 0) totalQty += qty;
+          if (!orderColor && sourceColor && sourceColor !== '-') orderColor = sourceColor;
+          if (oq > 0 && orderQty <= 0) orderQty = oq;
         });
 
-        const colorStr = Array.from(colors).join(',') || '-';
-        const sizeStr = Array.from(sizes).join(',') || '-';
+        const fallbackOrderQty = Number((currentPurchase as any)?.orderQuantity || 0);
+        const finalOrderQty = orderQty > 0 ? orderQty : (fallbackOrderQty > 0 ? fallbackOrderQty : totalQty);
+
+        const colorStr = orderColor || Array.from(colors).join(',');
+        const sizeStr = Array.from(sizes).join(',') || (finalOrderQty > 0 ? '总数' : '');
 
         setDetailOrderLines([{
-          color: colorStr,
+          color: colorStr || String((currentPurchase as any)?.orderColor || currentPurchase?.color || ''),
           size: sizeStr,
-          quantity: totalQty || 0
+          quantity: finalOrderQty || 0
         }]);
       } else {
         setDetailOrderLines([{ color: '-', size: '-', quantity: 0 }]);
@@ -544,8 +571,9 @@ const MaterialPurchase: React.FC = () => {
       loadDetailByOrderNo(no);
     } else if (currentPurchase) {
       const styleNo = String(currentPurchase?.styleNo || '').trim();
+      const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
       if (styleNo) {
-        loadDetailByStyleNo(styleNo);
+        loadDetailByStyleNo(styleNo, purchaseNo);
       } else {
         setDetailLoading(true);
         setDetailOrder(null);
@@ -1170,7 +1198,48 @@ const MaterialPurchase: React.FC = () => {
 
   const handleReceiveAll = async () => {
     if (isSamplePurchaseView) {
-      message.info('样衣采购不走订单汇总领取，请使用行内“领取”处理');
+      const targets = detailPurchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && String(p.id || '').trim());
+      if (!targets.length) {
+        message.info('没有可领取的采购任务');
+        return;
+      }
+
+      const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入领取人姓名') || '';
+      if (!String(receiverName).trim()) {
+        message.error('未填写领取人');
+        return;
+      }
+
+      const receiverId = String(user?.id || '').trim();
+      try {
+        setSubmitLoading(true);
+        const batchRes = await api.post<{
+          code: number;
+          message?: string;
+          data: { successCount: number; skipCount: number; failCount: number; failMessages: string[] };
+        }>('/production/purchase/batch-receive', {
+          purchaseIds: targets.map((item) => String(item.id)),
+          receiverId,
+          receiverName: String(receiverName).trim(),
+        });
+
+        if (batchRes.code === 200) {
+          const { successCount, skipCount } = batchRes.data || {};
+          message.success(`已领取 ${successCount || 0} 条采购任务${skipCount ? `，跳过 ${skipCount} 条` : ''}`);
+          fetchMaterialPurchaseList();
+          const styleNo = String(currentPurchase?.styleNo || '').trim();
+          const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
+          if (styleNo || purchaseNo) {
+            loadDetailByStyleNo(styleNo, purchaseNo);
+          }
+        } else {
+          message.error(batchRes.message || '领取失败');
+        }
+      } catch (e: any) {
+        message.error((e as Error)?.message || '领取失败');
+      } finally {
+        setSubmitLoading(false);
+      }
       return;
     }
 
