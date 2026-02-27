@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import api from '../../utils/api';
+import LoginLanguageSwitcher from '../../components/common/LoginLanguageSwitcher';
 import './styles.css';
 
 const { Title } = Typography;
@@ -119,6 +120,9 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-page">
+      <div className="login-lang-corner">
+        <LoginLanguageSwitcher />
+      </div>
       <div className="login-bg" aria-hidden="true" />
       <div className="login-constellation" aria-hidden="true">
         <div className="constellation-line" />

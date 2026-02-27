@@ -1,0 +1,17 @@
+{
+  "language": {
+    "current": "Ngôn ngữ hiện tại",
+    "names": {
+      "zh-CN": "Tiếng Trung",
+      "en-US": "Tiếng Anh",
+      "vi-VN": "Tiếng Việt",
+      "km-KH": "Tiếng Khmer"
+    }
+  },
+  "common": {
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "loading": "Đang tải..."
+  }
+}

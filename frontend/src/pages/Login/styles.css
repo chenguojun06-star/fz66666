@@ -9,6 +9,13 @@
   overflow: hidden;
 }
 
+.login-lang-corner {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 30;
+}
+
 .login-bg {
   /* 禁用星空装饰效果 */
   display: none;

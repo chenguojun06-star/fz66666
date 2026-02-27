@@ -1,0 +1,17 @@
+{
+  "language": {
+    "current": "当前语言",
+    "names": {
+      "zh-CN": "中文",
+      "en-US": "英文",
+      "vi-VN": "越南语",
+      "km-KH": "高棉语"
+    }
+  },
+  "common": {
+    "confirm": "确定",
+    "cancel": "取消",
+    "save": "保存",
+    "loading": "加载中..."
+  }
+}

@@ -16,9 +16,13 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
+import viVN from 'antd/locale/vi_VN';
 import App from './App';
 import { AuthProvider } from './utils/AuthContext';
 import { AppProvider } from './utils/AppContext';
+import { type AppLanguage } from './i18n/languagePreference';
+import { useAppLanguage } from './i18n/useAppLanguage';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 import './styles/design-system.css'; // 设计系统
@@ -171,6 +175,7 @@ const lightBlueThemeTokens = {
 
 // 主应用包装组件
 const AppWrapper: React.FC = () => {
+  const { language } = useAppLanguage();
   const [currentTheme, setCurrentTheme] = useState<string>(() => {
     try {
       return localStorage.getItem(themeStorageKey) || 'default';
@@ -343,9 +348,16 @@ const AppWrapper: React.FC = () => {
 
   const themeConfig = getThemeConfig();
 
+  const resolveAntdLocale = (lang: AppLanguage) => {
+    if (lang === 'en-US') return enUS;
+    if (lang === 'vi-VN') return viVN;
+    if (lang === 'km-KH') return enUS;
+    return zhCN;
+  };
+
   return (
     <ConfigProvider
-      locale={zhCN}
+      locale={resolveAntdLocale(language)}
       theme={themeConfig}
     >
       <AntApp>

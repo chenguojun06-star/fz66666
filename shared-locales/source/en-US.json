@@ -1,0 +1,17 @@
+{
+  "language": {
+    "current": "Current Language",
+    "names": {
+      "zh-CN": "Chinese",
+      "en-US": "English",
+      "vi-VN": "Vietnamese",
+      "km-KH": "Khmer"
+    }
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "loading": "Loading..."
+  }
+}
