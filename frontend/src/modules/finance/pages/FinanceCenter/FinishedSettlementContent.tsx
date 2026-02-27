@@ -406,6 +406,7 @@ const FinishedSettlementContent: React.FC = () => {
       loadData();
     } catch (error: any) {
       const errMsg = error instanceof Error ? error.message : '保存备注失败';
+      reportSmartError('结算备注保存失败', errMsg, 'FIN_SETTLEMENT_REMARK_SAVE_FAILED');
       message.error(errMsg);
     }
   };
@@ -429,6 +430,7 @@ const FinishedSettlementContent: React.FC = () => {
       setLogModalVisible(true);
     } catch (error: any) {
       const errMsg = error instanceof Error ? error.message : '获取日志失败';
+      reportSmartError('结算日志加载失败', errMsg, 'FIN_SETTLEMENT_LOG_LOAD_FAILED');
       message.error(errMsg);
     }
   };

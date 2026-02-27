@@ -161,10 +161,15 @@ const ExpenseReimbursementPage: React.FC = () => {
         setFormOpen(false);
         fetchList();
       } else {
+        reportSmartError('报销单提交失败', res.message || '请检查表单后重试', 'EXPENSE_FORM_SUBMIT_FAILED');
         message.error(res.message || '操作失败');
       }
-    } catch {
-      // validation error — ignore
+    } catch (err: any) {
+      if (err?.errorFields?.length) {
+        return;
+      }
+      reportSmartError('报销单提交失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_FORM_SUBMIT_EXCEPTION');
+      message.error(err?.message || '报销单提交失败');
     } finally {
       setSubmitting(false);
     }
@@ -178,9 +183,11 @@ const ExpenseReimbursementPage: React.FC = () => {
         message.success('删除成功');
         fetchList();
       } else {
+        reportSmartError('报销单删除失败', res.message || '请稍后重试', 'EXPENSE_DELETE_FAILED');
         message.error(res.message || '删除失败');
       }
     } catch (err: any) {
+      reportSmartError('报销单删除失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_DELETE_EXCEPTION');
       message.error(`删除报销单失败: ${err?.message || '未知错误'}`);
     }
   };
@@ -205,9 +212,11 @@ const ExpenseReimbursementPage: React.FC = () => {
         setApproveOpen(false);
         fetchList();
       } else {
+        reportSmartError('报销单审批失败', res.message || '请稍后重试', 'EXPENSE_APPROVE_FAILED');
         message.error(res.message || '操作失败');
       }
     } catch (err: any) {
+      reportSmartError('报销单审批失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_APPROVE_EXCEPTION');
       message.error(`审批失败: ${err?.message || '未知错误'}`);
     }
   };
@@ -230,12 +239,18 @@ const ExpenseReimbursementPage: React.FC = () => {
       okText: '确认已付款',
       cancelText: '取消',
       onOk: async () => {
-        const res = await expenseReimbursementApi.pay(record.id!);
-        if (res.code === 200) {
-          message.success('已确认付款');
-          fetchList();
-        } else {
-          message.error(res.message || '操作失败');
+        try {
+          const res = await expenseReimbursementApi.pay(record.id!);
+          if (res.code === 200) {
+            message.success('已确认付款');
+            fetchList();
+          } else {
+            reportSmartError('报销单付款确认失败', res.message || '请稍后重试', 'EXPENSE_PAY_CONFIRM_FAILED');
+            message.error(res.message || '操作失败');
+          }
+        } catch (err: any) {
+          reportSmartError('报销单付款确认失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_PAY_CONFIRM_EXCEPTION');
+          message.error(err?.message || '付款确认失败');
         }
       },
     });
