@@ -85,6 +85,14 @@ public class TenantInterceptor implements InnerInterceptor {
         // === 第三方集成追踪表（超管需要查看所有租户的支付 / 物流记录）===
         SUPERADMIN_MANAGED_TABLES.add("t_payment_record");   // 支付流水（普通租户按 tenant_id 隔离）
         SUPERADMIN_MANAGED_TABLES.add("t_logistics_record"); // 物流运单（普通租户按 tenant_id 隔离）
+
+        // === 用户反馈表（超管在「客户管理→问题反馈」Tab 查看所有租户的反馈）===
+        SUPERADMIN_MANAGED_TABLES.add("t_user_feedback");    // 用户提交的反馈（超管全量查看、回复）
+
+        // === 套餐与计费表（超管管理所有租户的套餐和账单）===
+        SUPERADMIN_MANAGED_TABLES.add("t_tenant_billing");   // 租户账单记录
+        SUPERADMIN_MANAGED_TABLES.add("t_billing_record");   // 账单明细
+        SUPERADMIN_MANAGED_TABLES.add("t_plan_definition");  // 套餐定义（共享配置）
     }
 
     @Override
