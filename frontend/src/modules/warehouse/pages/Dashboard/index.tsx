@@ -12,6 +12,9 @@ import DashboardTable from '@/components/common/DashboardTable';
 import DashboardLineChart from '@/components/common/DashboardLineChart';
 import api from '@/utils/api';
 import type { ColumnsType } from 'antd/es/table';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface WarehouseStats {
   totalValue: number;           // 库存总值
@@ -55,6 +58,18 @@ const WarehouseDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [materialType, setMaterialType] = useState<MaterialType>('fabric');
   const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
   const [stats, setStats] = useState<WarehouseStats>({
     totalValue: 0,
     materialCount: 0,
@@ -176,8 +191,10 @@ const WarehouseDashboard: React.FC = () => {
       if (recentOpsRes && recentOpsRes.data) {
         setRecentOps(recentOpsRes.data);
       }
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
       console.error('加载数据失败:', error);
+      reportSmartError('仓库看板数据加载失败', '网络异常或服务不可用，请稍后重试', 'WAREHOUSE_DASHBOARD_LOAD_FAILED');
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -195,6 +212,7 @@ const WarehouseDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('加载趋势数据失败:', error);
+      reportSmartError('仓库趋势数据加载失败', '网络异常或服务不可用，请稍后重试', 'WAREHOUSE_DASHBOARD_TREND_LOAD_FAILED');
       message.error('加载趋势数据失败');
     }
   };
@@ -211,6 +229,17 @@ const WarehouseDashboard: React.FC = () => {
 
   return (
     <Layout>
+        {showSmartErrorNotice && smartError ? (
+          <div style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void Promise.all([loadData(), loadTrendData()]);
+              }}
+            />
+          </div>
+        ) : null}
+
         {/* 顶部统计卡片 */}
         <DashboardStats
           columns={6}

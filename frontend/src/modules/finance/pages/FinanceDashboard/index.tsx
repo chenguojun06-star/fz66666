@@ -7,6 +7,9 @@ import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
 import { useRequest } from '@/hooks';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { RangePicker } = DatePicker;
 
@@ -48,6 +51,18 @@ const FinanceDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'amount' | 'count'>('amount');
   const [timeRange, setTimeRange] = useState<TimeRangeType>('year');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   const [statData, setStatData] = useState<StatCardData>({
     totalAmount: 0, totalAmountChange: 0, totalAmountDayChange: 0, dailyAmount: 0,
@@ -128,9 +143,11 @@ const FinanceDashboard: React.FC = () => {
         } else {
           setRankData(generateMockRankData());
         }
+        if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (error) {
       console.error('加载财务汇总数据失败:', error);
+      reportSmartError('财务看板数据加载失败', '网络异常或服务不可用，请稍后重试', 'FINANCE_DASHBOARD_LOAD_FAILED');
       // API失败时显示0值，不使用假数据
       setStatData({
         totalAmount: 0,
@@ -246,6 +263,17 @@ const FinanceDashboard: React.FC = () => {
 
   return (
     <Layout>
+      {showSmartErrorNotice && smartError ? (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void loadData();
+            }}
+          />
+        </Card>
+      ) : null}
+
       <Spin spinning={loading}>
         {/* 顶部统计卡片 */}
         <Row gutter={16} className={styles.statCards}>
