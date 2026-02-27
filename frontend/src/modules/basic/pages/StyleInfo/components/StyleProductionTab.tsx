@@ -269,7 +269,7 @@ const StyleProductionTab: React.FC<Props> = ({
       <Input.TextArea
         value={allRequirements}
         onChange={handleTextChange}
-        disabled={productionReqLocked}
+        disabled={productionReqLocked || (!productionStartTime && !productionCompletedTime)}
         placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
         rows={15}
         style={{

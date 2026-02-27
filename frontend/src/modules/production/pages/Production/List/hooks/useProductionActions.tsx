@@ -54,7 +54,7 @@ export function useProductionActions({
 
   /** 快速编辑保存 */
   const handleQuickEditSave = async (
-    values: { remarks: string; expectedShipDate: string | null },
+    values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: string },
     editData: ProductionOrder | null,
     closeModal: () => void,
   ) => {
@@ -63,6 +63,7 @@ export function useProductionActions({
       await productionOrderApi.quickEdit({
         id: editData?.id,
         ...values,
+        urgencyLevel: values.urgencyLevel || 'normal',
       });
       message.success('保存成功');
       closeModal();

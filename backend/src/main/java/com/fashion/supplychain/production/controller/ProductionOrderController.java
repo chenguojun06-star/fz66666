@@ -205,6 +205,12 @@ public class ProductionOrderController {
             workflowUpdated = true;
         }
 
+        // 更新紧急程度
+        if (payload.containsKey("urgencyLevel")) {
+            String urgencyLevel = (String) payload.get("urgencyLevel");
+            order.setUrgencyLevel(StringUtils.hasText(urgencyLevel) ? urgencyLevel : "normal");
+        }
+
         boolean success = productionOrderService.updateById(order);
 
         // 工序数据变更时，同步更新工序跟踪表中的单价（解决单价不同步问题）

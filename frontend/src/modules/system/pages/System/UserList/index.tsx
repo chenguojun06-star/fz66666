@@ -16,6 +16,9 @@ import { formatDateTime } from '@/utils/datetime';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import './styles.css';
 
 const { Option } = Select;
@@ -39,6 +42,13 @@ const UserList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -184,7 +194,9 @@ const UserList: React.FC = () => {
         if (result.code === 200) {
           setUserList(result.data?.records || []);
           setTotal(result.data?.total || 0);
+          if (showSmartErrorNotice) setSmartError(null);
         } else {
+          reportSmartError('用户列表加载失败', result.message || '服务返回异常，请稍后重试', 'SYSTEM_USER_LIST_FAILED');
           message.error(result.message || '获取用户列表失败');
         }
       } else {
@@ -203,11 +215,14 @@ const UserList: React.FC = () => {
         if (result.code === 200) {
           setUserList(result.data.records || []);
           setTotal(result.data.total || 0);
+          if (showSmartErrorNotice) setSmartError(null);
         } else {
+          reportSmartError('用户列表加载失败', result.message || '服务返回异常，请稍后重试', 'SYSTEM_USER_LIST_FAILED');
           message.error(result.message || '获取用户列表失败');
         }
       }
     } catch (error: any) {
+      reportSmartError('用户列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'SYSTEM_USER_LIST_EXCEPTION');
       message.error(error?.message || '获取用户列表失败');
     } finally {
       setLoading(false);
@@ -905,6 +920,11 @@ const UserList: React.FC = () => {
   return (
     <Layout>
         <Card className="page-card">
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={() => { void getUserList(); }} />
+            </Card>
+          ) : null}
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">人员管理</h2>

@@ -12,6 +12,9 @@ import api, { requestWithPathFallback } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import './styles.css';
 
 const RoleList: React.FC = () => {
@@ -29,6 +32,13 @@ const RoleList: React.FC = () => {
 
   const [roleList, setRoleList] = useState<RoleRecord[]>([]);
   const [total, setTotal] = useState(0);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
   const [brandOptions, setBrandOptions] = useState<{ label: string; value: string }[]>([]);
   const [deptOptions, setDeptOptions] = useState<{ label: string; value: string }[]>([]);
 
@@ -133,13 +143,16 @@ const RoleList: React.FC = () => {
         const data = (result.data as { records?: RoleRecord[]; total?: number }) || {};
         setRoleList(Array.isArray(data.records) ? data.records : []);
         setTotal(Number(data.total || 0));
+        if (showSmartErrorNotice) setSmartError(null);
         return;
       }
+      reportSmartError('角色列表加载失败', String(result.message || '服务返回异常，请稍后重试'), 'SYSTEM_ROLE_LIST_FAILED');
       message.error(String(result.message || '获取角色列表失败'));
     } catch (error) {
+      reportSmartError('角色列表加载失败', getErrorMessage(error, '网络异常或服务不可用，请稍后重试'), 'SYSTEM_ROLE_LIST_EXCEPTION');
       message.error(getErrorMessage(error, '获取角色列表失败'));
     }
-  }, [message, queryParams]);
+  }, [message, queryParams, showSmartErrorNotice]);
 
   useEffect(() => {
     fetchRoles();
@@ -542,6 +555,11 @@ const RoleList: React.FC = () => {
   return (
     <Layout>
         <Card className="page-card">
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={fetchRoles} />
+            </Card>
+          ) : null}
           <div className="page-header">
             <h2 className="page-title">角色管理</h2>
             <Button type="primary" onClick={() => openDialog()}>

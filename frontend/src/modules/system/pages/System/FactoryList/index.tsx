@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -14,6 +14,9 @@ import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation } from 'react-router-dom';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -36,6 +39,12 @@ const FactoryList: React.FC = () => {
   const [factoryList, setFactoryList] = useState<FactoryType[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
   const [submitLoading, setSubmitLoading] = useState(false);
   const [licenseFileList, setLicenseFileList] = useState<UploadFile[]>([]);
   const [logLoading, setLogLoading] = useState(false);
@@ -93,10 +102,13 @@ const FactoryList: React.FC = () => {
       if (response.code === 200) {
         setFactoryList(response.data.records || []);
         setTotal(response.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
+        reportSmartError('供应商列表加载失败', response.message || '服务返回异常，请稍后重试', 'SYSTEM_FACTORY_LIST_FAILED');
         message.error(response.message || '获取供应商列表失败');
       }
     } catch (error: any) {
+      reportSmartError('供应商列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'SYSTEM_FACTORY_LIST_EXCEPTION');
       message.error(error?.message || '获取供应商列表失败');
     } finally {
       setLoading(false);
@@ -386,6 +398,11 @@ const FactoryList: React.FC = () => {
   return (
     <Layout>
       <Card className="page-card">
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
+          </Card>
+        ) : null}
         <div className="page-header">
           <h2 className="page-title">供应商管理</h2>
         </div>

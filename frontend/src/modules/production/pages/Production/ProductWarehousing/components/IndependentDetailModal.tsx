@@ -53,6 +53,8 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
   // Derive styleId/styleNo for production sheet and size chart tabs
   const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
   const _styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
+  const plateTypeKey = String((orderDetail as any)?.plateType || (entryWarehousing as any)?.plateType || '').trim().toUpperCase();
+  const urgencyKey = String((orderDetail as any)?.urgencyLevel || (entryWarehousing as any)?.urgencyLevel || '').trim().toLowerCase();
 
   // Fetch style description (生产制单) from style info API
   const [styleDescription, setStyleDescription] = useState('');
@@ -133,7 +135,13 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                     })()}
                   </div>
                   <div className="order-flow-summary-sub">
-                    <span>订单号：{String(entryWarehousing?.orderNo || '').trim() || '-'}</span>
+                    <span>
+                      订单号：{String(entryWarehousing?.orderNo || '').trim() || '-'}
+                      {(plateTypeKey === 'FIRST') && <Tag color="blue" style={{ marginInlineStart: 6 }}>首</Tag>}
+                      {(plateTypeKey === 'REORDER' || plateTypeKey === 'REPLATE') && <Tag color="purple" style={{ marginInlineStart: 6 }}>翻</Tag>}
+                      {(urgencyKey === 'urgent') && <Tag color="red" style={{ marginInlineStart: 6 }}>急</Tag>}
+                      {(urgencyKey === 'normal') && <Tag style={{ marginInlineStart: 6 }}>普</Tag>}
+                    </span>
                     <span>仓库：{String(entryWarehousing?.warehouse || '').trim() || '-'}</span>
                     <span>质检时间：{String(entryWarehousing?.createTime || '').trim() ? formatDateTime(entryWarehousing?.createTime) : '-'}</span>
                     <span>完成时间：{String(entryWarehousing?.warehousingEndTime || '').trim() ? formatDateTime(entryWarehousing?.warehousingEndTime) : '-'}</span>

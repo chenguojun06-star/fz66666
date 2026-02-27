@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ProductionOrder } from '@/types/production';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { ensureBoardStatsForOrder } from '../../ProgressDetail/hooks/useBoardStats';
+import { usePredictFinishHint } from '../../ProgressDetail/hooks/usePredictFinishHint';
 import {
   defaultNodes,
   stripWarehousingNode,
@@ -27,6 +28,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
+  const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
   // 同步 ref
   useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
@@ -174,13 +176,45 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   /**
    * 渲染工序完成时间标签
    */
-  const renderCompletionTimeTag = (record: ProductionOrder, stageKeyword: string, rate: number): React.ReactNode => {
+  const renderCompletionTimeTag = (
+    record: ProductionOrder,
+    stageKeyword: string,
+    rate: number,
+    align: 'left' | 'center' = 'center'
+  ): React.ReactNode => {
     const t = getStageCompletionTime(record, stageKeyword);
     const formatted = formatCompletionTime(t);
-    if (!formatted) return <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 1, textAlign: 'center' }}>--</div>;
+    const orderId = String(record.id || '').trim();
+    const currentProgress = Math.max(0, Math.min(100, Math.round(Number(rate) || 0)));
+    const predictHint = getPredictHint(orderId, stageKeyword, currentProgress);
+
+    const triggerPredictOnHover = () => {
+      void triggerPredict({
+        orderId,
+        orderNo: String(record.orderNo || '').trim() || undefined,
+        stageName: String(stageKeyword || '').trim() || undefined,
+        currentProgress,
+      });
+    };
+
+    if (!formatted) {
+      return (
+        <div
+          style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 1, textAlign: align }}
+          onMouseEnter={triggerPredictOnHover}
+          title={predictHint ? `预计完成：${predictHint}` : '--'}
+        >
+          --
+        </div>
+      );
+    }
     const isComplete = rate >= 100;
     return (
-      <div style={{ fontSize: 10, color: isComplete ? '#10b981' : '#6b7280', fontWeight: isComplete ? 600 : 400, lineHeight: 1.2, marginBottom: 1, textAlign: 'center', whiteSpace: 'nowrap' }}>
+      <div
+        style={{ fontSize: 10, color: isComplete ? '#10b981' : '#6b7280', fontWeight: isComplete ? 600 : 400, lineHeight: 1.2, marginBottom: 1, textAlign: align, whiteSpace: 'nowrap' }}
+        onMouseEnter={triggerPredictOnHover}
+        title={predictHint ? `完成时间：${formatted}\n预计完成：${predictHint}` : `完成时间：${formatted}`}
+      >
         {formatted}
       </div>
     );

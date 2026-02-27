@@ -30,7 +30,7 @@
     </view>
     <view class="summary-item">
       <text class="summary-num">{{summary.recordCount || 0}}</text>
-      <text class="summary-label">记录数</text>
+      <text class="summary-label">记录数（样衣{{summary.patternRecordCount || 0}}）</text>
     </view>
     <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" hover-class="summary-item-hl-hover" hover-stay-time="100" bindtap="onTogglePayableFilter">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
@@ -56,10 +56,10 @@
   </view>
 
   <!-- 加载更多 -->
-  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="onLoadMore">
+  <view wx:if="{{!loading && hasMore && displayRecords.length > 0}}" class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="onLoadMore">
     <text>加载更多</text>
   </view>
-  <view wx:if="{{!loading && !hasMore && records.length > 0}}" class="load-more no-more-row">
+  <view wx:if="{{!loading && !hasMore && displayRecords.length > 0}}" class="load-more no-more-row">
     <text class="no-more-text">— 已加载全部 —</text>
   </view>
 </view>

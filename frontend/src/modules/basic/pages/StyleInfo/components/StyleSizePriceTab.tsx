@@ -102,6 +102,8 @@ const StyleSizePriceTab: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  // 未开始时禁止编辑（需先点击「开始码数单价」）
+  const notStarted = !sizePriceStartTime && !sizePriceCompletedTime;
   const [editingSizes, setEditingSizes] = useState(false);
   const [newSize, setNewSize] = useState('');
 
@@ -505,7 +507,8 @@ const StyleSizePriceTab: React.FC<Props> = ({
               {!editMode || readOnly ? (
                 <Button
                   onClick={() => setEditMode(true)}
-                  disabled={loading || saving || readOnly || data.length === 0}
+                  disabled={loading || saving || readOnly || notStarted || data.length === 0}
+                  title={notStarted ? '请先点击「开始码数单价」再操作' : undefined}
                 >
                   编辑
                 </Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, message, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
@@ -8,6 +8,9 @@ import api from '@/utils/api';
 import dayjs from 'dayjs';
 import PickingForm from './PickingForm';
 import PickingDetailModal from './PickingDetailModal';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const MaterialPickingList: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -18,6 +21,13 @@ const MaterialPickingList: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedPickingId, setSelectedPickingId] = useState<string | null>(null);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const fetchList = async (page = current, size = pageSize) => {
     setLoading(true);
@@ -28,8 +38,10 @@ const MaterialPickingList: React.FC = () => {
       if (res?.code === 200) {
         setDataSource(res.data.records);
         setTotal(res.data.total);
+        if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (err: any) {
+      reportSmartError('领料记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PICKING_LIST_LOAD_FAILED');
       message.error(`获取领料记录失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setLoading(false);
@@ -107,6 +119,11 @@ const MaterialPickingList: React.FC = () => {
   return (
     <Layout>
       <Card bordered={false}>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
+          </Card>
+        ) : null}
         <div style={{ marginBottom: 16 }}>
           <Button type="primary" onClick={() => setModalVisible(true)}>
             新建领料

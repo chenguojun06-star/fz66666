@@ -436,6 +436,35 @@ page {
   font-weight: 600;
 }
 
+.order-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28rpx;
+  height: 28rpx;
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  font-size: 18rpx;
+  line-height: 1;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+.order-tag-plate {
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.order-tag-urgent {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.order-tag-normal {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-gray);
+}
+
 .item-title-closed {
   color: var(--color-text-disabled);
 }

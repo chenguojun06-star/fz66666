@@ -16,6 +16,9 @@ import { useViewport } from '@/utils/useViewport';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
 import { useAuth } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { TextArea } = Input;
 
@@ -53,6 +56,13 @@ const MaterialPurchaseDetail: React.FC = () => {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmForm] = Form.useForm();
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   // 打印状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -99,7 +109,9 @@ const MaterialPurchaseDetail: React.FC = () => {
       } else {
         setPurchaseList(purchaseResult?.data?.records || purchaseResult?.records || []);
       }
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error: any) {
+      reportSmartError('物料采购明细加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PURCHASE_DETAIL_LOAD_FAILED');
       message.error(error?.message || '加载数据失败');
     } finally {
       setLoading(false);
@@ -170,6 +182,7 @@ const MaterialPurchaseDetail: React.FC = () => {
         // 表单验证错误
         return;
       }
+      reportSmartError('确认回料完成失败', error?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PURCHASE_CONFIRM_FAILED');
       message.error(error.message || '确认失败');
     } finally {
       setConfirmLoading(false);
@@ -286,6 +299,11 @@ const MaterialPurchaseDetail: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: isMobile ? 12 : 24 }}>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} />
+          </Card>
+        ) : null}
         {/* 头部 */}
         <div style={{
           display: 'flex',

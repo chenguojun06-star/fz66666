@@ -18,6 +18,9 @@ import EditTemplateModal from './components/EditTemplateModal';
 import type { EditTemplateModalRef } from './components/EditTemplateModal';
 import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
 import type { TemplateLibraryRecord } from './utils/templateUtils';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 type PageResp<T> = {
   records: T[];
@@ -44,6 +47,13 @@ const TemplateCenter: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TemplateLibrary[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -168,6 +178,7 @@ const TemplateCenter: React.FC = () => {
         },
       });
       if (res.code !== 200) {
+        reportSmartError('模板列表加载失败', res.message || '服务返回异常，请稍后重试', 'TEMPLATE_LIST_LOAD_FAILED');
         message.error(res.message || '获取模板列表失败');
         return;
       }
@@ -196,7 +207,9 @@ const TemplateCenter: React.FC = () => {
       pageSizeRef.current = ps;
       setPage(p);
       setPageSize(ps);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (e: any) {
+      reportSmartError('模板列表加载失败', getErrorMessage(e, '获取模板列表失败'), 'TEMPLATE_LIST_LOAD_EXCEPTION');
       message.error(getErrorMessage(e, '获取模板列表失败'));
     } finally {
       setLoading(false);
@@ -749,6 +762,11 @@ const TemplateCenter: React.FC = () => {
         className="page-card"
         title="单价维护"
       >
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} />
+          </Card>
+        ) : null}
         <Card size="small" className="filter-card mb-sm">
           <Form form={queryForm}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>

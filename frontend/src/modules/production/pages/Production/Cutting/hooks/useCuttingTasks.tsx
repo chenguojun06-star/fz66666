@@ -206,12 +206,13 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
   };
 
   // 快速编辑保存
-  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: string }) => {
     setQuickEditSaving(true);
     try {
       await api.put('/production/cutting-task/quick-edit', {
         id: quickEditRecord?.id,
-        ...values,
+        remarks: values.remarks,
+        expectedShipDate: values.expectedShipDate,
       });
       message.success('编辑成功');
       setQuickEditVisible(false);

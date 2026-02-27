@@ -26,6 +26,9 @@ import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 type OrderLine = {
   id: string;
   color: string;
@@ -125,6 +128,13 @@ const OrderManagement: React.FC = () => {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -171,6 +181,7 @@ const OrderManagement: React.FC = () => {
         },
       });
       if (response.code !== 200) {
+        reportSmartError('下单明细加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_DETAIL_LIST_FAILED');
         message.error(response.message || '获取下单明细失败');
         setDetailRows([]);
         setDetailTotal(0);
@@ -326,7 +337,9 @@ const OrderManagement: React.FC = () => {
 
       setDetailRows(rows);
       setDetailTotal(Number(response?.data?.total || 0) || 0);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (e: any) {
+      reportSmartError('下单明细加载失败', e?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_DETAIL_LIST_EXCEPTION');
       message.error(e?.message || '获取下单明细失败');
       setDetailRows([]);
       setDetailTotal(0);
@@ -848,10 +861,13 @@ const OrderManagement: React.FC = () => {
       if (response.code === 200) {
         setStyles(response.data.records || []);
         setTotal(response.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
+        reportSmartError('款号列表加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_STYLE_LIST_FAILED');
         message.error(response.message || '获取款号列表失败');
       }
     } catch (error: any) {
+      reportSmartError('款号列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_STYLE_LIST_EXCEPTION');
       message.error(error?.message || '获取款号列表失败');
     } finally {
       setLoading(false);
@@ -1052,6 +1068,7 @@ const OrderManagement: React.FC = () => {
     form.setFieldsValue({
       orderNo: '',
       factoryId: undefined,
+      plateType: undefined,
       merchandiser: style.orderType || undefined, // 从样衣开发带入跟单员
       company: style.customer || undefined, // 从样衣开发带入公司
       productCategory: normalizeCategoryQuery(style.category) || undefined, // 从样衣开发带入品类
@@ -1137,6 +1154,7 @@ const OrderManagement: React.FC = () => {
         styleId: String(selectedStyle.id ?? ''),
         styleNo: selectedStyle.styleNo,
         styleName: selectedStyle.styleName,
+        plateType: values.plateType || null,
         color: colorLabel,
         size: sizeLabel,
         factoryId: values.factoryId,
@@ -1283,6 +1301,11 @@ const OrderManagement: React.FC = () => {
     return (
       <Layout>
         <Card className="page-card">
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={() => { void fetchOrderDetailRows(routeStyleNo); }} />
+            </Card>
+          ) : null}
           <div className="page-header">
             <h2 className="page-title">下单明细（{routeStyleNo}）</h2>
             <Space>
@@ -1336,6 +1359,11 @@ const OrderManagement: React.FC = () => {
   return (
     <Layout>
       <Card className="page-card">
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={fetchStyles} />
+          </Card>
+        ) : null}
         <div className="page-header">
           <h2 className="page-title">下单管理</h2>
         </div>
@@ -1575,7 +1603,19 @@ const OrderManagement: React.FC = () => {
                       </Row>
 
                       <Row gutter={16}>
-                        <Col xs={24} sm={12}>
+                        <Col xs={24} sm={8}>
+                          <Form.Item name="plateType" label="单型">
+                            <Select
+                              placeholder="不填自动判断"
+                              allowClear
+                              options={[
+                                { label: '首单', value: 'FIRST' },
+                                { label: '翻单', value: 'REORDER' },
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
                           <Form.Item name="productCategory" label="品类">
                             <Select
                               placeholder="请选择品类（选填）"
@@ -1587,7 +1627,7 @@ const OrderManagement: React.FC = () => {
                             />
                           </Form.Item>
                         </Col>
-                        <Col xs={24} sm={12}>
+                        <Col xs={24} sm={8}>
                           <Form.Item name="patternMaker" label="纸样师">
                             <Select
                               placeholder="请选择纸样师（选填）"

@@ -63,6 +63,8 @@ const StyleSizeTab: React.FC<Props> = ({
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
 
   const [addSizeOpen, setAddSizeOpen] = useState(false);
+  // 未开始时禁止编辑（需先点击「开始尺寸表」）
+  const notStarted = !sizeStartTime && !sizeCompletedTime;
   const [newSizeName, setNewSizeName] = useState('');
   const [sizeTemplateKey, setSizeTemplateKey] = useState<string | undefined>(undefined);
   const [sizeTemplates, setSizeTemplates] = useState<TemplateLibrary[]>([]);
@@ -657,15 +659,15 @@ const StyleSizeTab: React.FC<Props> = ({
             onOpenChange={(open) => {
               if (open && !styleNoOptions.length) fetchStyleNoOptions('');
             }}
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
           />
 
-          <Button disabled={loading || saving || Boolean(readOnly) || templateLoading} onClick={() => fetchSizeTemplates(templateSourceStyleNo)}>
+          <Button disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading} onClick={() => fetchSizeTemplates(templateSourceStyleNo)}>
             筛选
           </Button>
 
           <Button
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
             onClick={() => {
               setTemplateSourceStyleNo('');
               fetchSizeTemplates('');
@@ -684,7 +686,7 @@ const StyleSizeTab: React.FC<Props> = ({
               value: String(t.id || ''),
               label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName,
             }))}
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
           />
           <Button
             onClick={() => {
@@ -694,18 +696,18 @@ const StyleSizeTab: React.FC<Props> = ({
               }
               applySizeTemplate(sizeTemplateKey);
             }}
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
           >
             导入模板
           </Button>
-          <Button type="default" onClick={handleAddPart} disabled={loading || saving}>
+          <Button type="default" onClick={handleAddPart} disabled={loading || saving || notStarted}>
             新增部位
           </Button>
-          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
+          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
             新增尺码
           </Button>
           {!editMode || readOnly ? (
-            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || notStarted}>
               编辑
             </Button>
           ) : (

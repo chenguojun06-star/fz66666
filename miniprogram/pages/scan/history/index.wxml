@@ -30,7 +30,7 @@
     </view>
     <view class="summary-item">
       <text class="summary-num">{{summary.recordCount || 0}}</text>
-      <text class="summary-label">记录数</text>
+      <text class="summary-label">记录数（样衣{{summary.patternRecordCount || 0}}）</text>
     </view>
     <view class="summary-item summary-hl summary-payable {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-payable-hover" hover-stay-time="50">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>

@@ -49,7 +49,9 @@ const StylePatternTab: React.FC<Props> = ({
   }, [checkPatternComplete, patternFiles]);
 
   const locked = useMemo(() => String(patternStatus || '').trim().toUpperCase() === 'COMPLETED', [patternStatus]);
-  const childReadOnly = useMemo(() => Boolean(readOnly) || locked, [readOnly, locked]);
+  // 未开始时禁止编辑（需先点击「开始纸样开发」）
+  const notStarted = !patternStartTime && !patternCompletedTime;
+  const childReadOnly = useMemo(() => Boolean(readOnly) || locked || notStarted, [readOnly, locked, notStarted]);
 
   const hasValidPatternFile = useMemo(() => {
     const list = Array.isArray(patternFiles) ? patternFiles : [];

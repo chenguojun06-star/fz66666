@@ -108,7 +108,7 @@ const InspectionDetail: React.FC = () => {
     // 使用 orderDetail 作为 option.data，触发菲号/款式等关联数据加载
     void formHook.handleOrderChange(orderId, { data: orderDetail });
     autoInitRef.current = true;
-   
+
   }, [orderId, orderDetail]);
 
   /* ==================== 数据获取 ==================== */
@@ -737,6 +737,8 @@ const InspectionDetail: React.FC = () => {
 
   const { order, style, bom, qualityTips } = briefing;
   const styleId = orderDetail?.styleId || (order as any)?.styleId;
+  const plateTypeKey = String((order as any)?.plateType || '').trim().toUpperCase();
+  const urgencyKey = String((order as any)?.urgencyLevel || '').trim().toLowerCase();
 
   return (
     <Layout>
@@ -744,6 +746,10 @@ const InspectionDetail: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/production/warehousing')}>返回</Button>
           <Title level={4} style={{ margin: 0 }}>质检入库 - {order.orderNo}</Title>
+          {(plateTypeKey === 'FIRST') && <Tag color="blue">首</Tag>}
+          {(plateTypeKey === 'REORDER' || plateTypeKey === 'REPLATE') && <Tag color="purple">翻</Tag>}
+          {(urgencyKey === 'urgent') && <Tag color="red">急</Tag>}
+          {(urgencyKey === 'normal') && <Tag>普</Tag>}
           <Tag color="blue">{order.styleNo}</Tag>
           <Tag color="green">{order.styleName}</Tag>
           {qcStats.count > 0 && <Tag color="cyan">已质检 {qcStats.count} 次</Tag>}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Button, Input, message, Modal, Form, InputNumber, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
@@ -17,6 +17,9 @@ import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
 import { formatDateTime } from '@/utils/datetime';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import './style.css';
 import type { Dayjs } from 'dayjs';
 
@@ -123,6 +126,13 @@ const PatternProduction: React.FC = () => {
   const [statusValue, setStatusValue] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [operationLogVisible, setOperationLogVisible] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   // ===== 使用 useModal 管理弹窗状态 =====
   const progressModal = useModal<PatternProductionRecord>();
@@ -271,7 +281,9 @@ const PatternProduction: React.FC = () => {
       });
 
       setDataSource(formattedData);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
+      reportSmartError('样板生产列表加载失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'PATTERN_PRODUCTION_LOAD_FAILED');
       console.error('加载样板生产数据失败:', error);
       message.error('加载数据失败');
       setDataSource([]); // 出错时显示空列表
@@ -288,6 +300,7 @@ const PatternProduction: React.FC = () => {
       addOperationLog('领取', `领取：${record.styleNo}`);
       loadData();
     } catch (error: any) {
+      reportSmartError('样板领取失败', error.message || '服务返回异常，请稍后重试', 'PATTERN_PRODUCTION_RECEIVE_FAILED');
       message.error(error.message || '领取失败');
     }
   };
@@ -690,6 +703,11 @@ const PatternProduction: React.FC = () => {
     <Layout>
       <div className="pattern-production-page">
         <Card className="page-card">
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} />
+            </Card>
+          ) : null}
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">样板生产</h2>

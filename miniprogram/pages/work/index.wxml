@@ -81,6 +81,8 @@
               <view class="item-head">
                 <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">
                   {{item.orderNo || '-'}}
+                  <text wx:if="{{item.plateTypeTagText}}" class="order-tag order-tag-plate">{{item.plateTypeTagText}}</text>
+                  <text wx:if="{{item.urgencyTagText}}" class="order-tag {{item.urgencyTagText === '急' ? 'order-tag-urgent' : 'order-tag-normal'}}">{{item.urgencyTagText}}</text>
                   <text wx:if="{{item.remainDaysClass === 'days-overdue'}}" class="overdue-indicator">⏰延期</text>
                 </view>
                 <view class="item-tags">

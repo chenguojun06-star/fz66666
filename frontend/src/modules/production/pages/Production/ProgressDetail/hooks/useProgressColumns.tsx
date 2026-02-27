@@ -10,6 +10,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
+import { usePredictFinishHint } from './usePredictFinishHint';
 import {
   stripWarehousingNode,
   formatTime,
@@ -101,6 +102,8 @@ export const useProgressColumns = ({
   setRemarkText,
   openScan,
 }: UseProgressColumnsParams) => {
+  const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
+
   const columns = useMemo<any[]>(() => [
     {
       title: '图片',
@@ -121,7 +124,20 @@ export const useProgressColumns = ({
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 160,
-      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
+      render: (v: any, record: ProductionOrder) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
+          {record.urgencyLevel === 'urgent' && (
+            <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+          )}
+          {String(record.plateType || '').toUpperCase() === 'FIRST' && (
+            <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+          )}
+          {String(record.plateType || '').toUpperCase() === 'REORDER' && (
+            <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: '款号',
@@ -330,6 +346,7 @@ export const useProgressColumns = ({
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
               const nodeType = NODE_TYPE_MAP[nodeName] || nodeName.toLowerCase();
+              const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
 
               return (
                 <div
@@ -357,11 +374,19 @@ export const useProgressColumns = ({
                       unitPrice: n.unitPrice,
                     }))
                   )}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                    void triggerPredict({
+                      orderId: String(record.id || '').trim(),
+                      orderNo: String(record.orderNo || '').trim() || undefined,
+                      stageName: nodeName,
+                      currentProgress: percent,
+                    });
+                  }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
                   title={completionTime
-                    ? `${nodeName} 完成时间：${completionTime}\n点击查看详情`
-                    : `点击查看 ${nodeName} 详情`}
+                    ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
+                    : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
                 >
                   {completionTime ? (
                     <div style={{
@@ -440,6 +465,7 @@ export const useProgressColumns = ({
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText, openScan,
+    getPredictHint, triggerPredict,
   ]);
 
   return { columns };

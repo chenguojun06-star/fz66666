@@ -2,7 +2,16 @@ const { getToken, clearToken } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
-const { resolveSmartGuideByRoute } = require('./utils/smartGuide');
+// smartGuide 为非核心模块，防御性加载（避免新文件缓存未更新时崩溃 app）
+let resolveSmartGuideByRoute = () => null;
+try {
+  const _smartGuide = require('./utils/smartGuide');
+  if (typeof _smartGuide.resolveSmartGuideByRoute === 'function') {
+    resolveSmartGuideByRoute = _smartGuide.resolveSmartGuideByRoute;
+  }
+} catch (e) {
+  console.warn('[smartGuide] 模块加载失败，使用空实现，不影响其他功能', e && e.message);
+}
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;

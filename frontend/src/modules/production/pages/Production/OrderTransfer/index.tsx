@@ -6,6 +6,9 @@ import ResizableTable from '@/components/common/ResizableTable';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import { errorHandler } from '@/utils/errorHandling';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import '../../../styles.css';
 
 const { TextArea } = Input;
@@ -37,6 +40,13 @@ const OrderTransferPage: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [sortField, setSortField] = useState<string>('createdTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const handleSort = (field: string, order: 'asc' | 'desc') => {
     setSortField(field);
@@ -52,10 +62,13 @@ const OrderTransferPage: React.FC = () => {
       const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setTransfers((result.data as any)?.records || []);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
+        reportSmartError('订单转移列表加载失败', (result.message as string) || '服务返回异常，请稍后重试', 'ORDER_TRANSFER_LIST_FAILED');
         errorHandler.handleError(new Error((result.message as string) || '获取转移列表失败'), '获取转移列表失败');
       }
     } catch (error) {
+      reportSmartError('订单转移列表加载失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_TRANSFER_LIST_EXCEPTION');
       errorHandler.handleError(error, '获取转移列表失败');
     } finally {
       setLoading(false);
@@ -78,9 +91,11 @@ const OrderTransferPage: React.FC = () => {
             message.success('已接受转移');
             fetchTransfers();
           } else {
+            reportSmartError('接受转移失败', (result.message as string) || '服务返回异常，请稍后重试', 'ORDER_TRANSFER_ACCEPT_FAILED');
             message.error((result.message as string) || '接受转移失败');
           }
         } catch (error) {
+          reportSmartError('接受转移失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_TRANSFER_ACCEPT_EXCEPTION');
           errorHandler.handleError(error, '接受转移失败');
         }
       }
@@ -130,9 +145,11 @@ const OrderTransferPage: React.FC = () => {
         setRejectReason('');
         fetchTransfers();
       } else {
+        reportSmartError('拒绝转移失败', (result.message as string) || '服务返回异常，请稍后重试', 'ORDER_TRANSFER_REJECT_FAILED');
         message.error((result.message as string) || '拒绝转移失败');
       }
     } catch (error) {
+      reportSmartError('拒绝转移失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_TRANSFER_REJECT_EXCEPTION');
       errorHandler.handleError(error, '拒绝转移失败');
     }
   };
@@ -261,6 +278,12 @@ const OrderTransferPage: React.FC = () => {
           <h2 className="page-title">订单转移管理</h2>
           <Button onClick={fetchTransfers}>刷新</Button>
         </div>
+
+        {showSmartErrorNotice && smartError ? (
+          <div style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={fetchTransfers} />
+          </div>
+        ) : null}
 
         <ResizableTable
           storageKey="order-transfer"

@@ -44,6 +44,27 @@ function formatTime(timeStr) {
 
 const now = new Date();
 
+/**
+ * 将样衣扫码记录格式化为与普通记录一致的 displayRecord 格式
+ */
+function _formatPatternRecord(item) {
+  return {
+    ...item,
+    _isPattern: true,
+    displayTime: formatTime(item.scanTime),
+    displayProcess: '样衣-' + (item.progressStage || item.operationType || '-'),
+    displayWorker: item.operatorName || '-',
+    displayOrderNo: item.styleNo || '-',
+    displayBundleNo: item.color || '-',
+    displayQuantity: 0,
+    displayUnitPrice: '-',
+    lineAmount: 0,
+    displayLineAmount: '-',
+    isPayable: false,
+    displayBedNo: '-',
+  };
+}
+
 Page({
   data: {
     year: now.getFullYear(),
@@ -51,6 +72,7 @@ Page({
     displayMonth: '',
     searchKeyword: '',
     records: [],
+    patternRecords: [],   // 样衣扫码记录（按月全量加载）
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -61,6 +83,7 @@ Page({
       totalQuantity: 0,
       orderCount: 0,
       recordCount: 0,
+      patternRecordCount: 0,
       totalWage: '0.00',
     },
   },
@@ -168,7 +191,17 @@ Page({
     return records;
   },
 
-  _applyPageResult(result, reset, nextPage) {
+  _mergeAndSort(regularRecords, patternRecords) {
+    return [...regularRecords, ...patternRecords].sort((a, b) => {
+      const ta = a.scanTime || '';
+      const tb = b.scanTime || '';
+      if (tb > ta) return 1;
+      if (tb < ta) return -1;
+      return 0;
+    });
+  },
+
+  _applyPageResult(result, reset, nextPage, freshPatternRecords) {
     const newRecords = (result?.records || []).filter(
       (item) => (item.scanResult || '').toLowerCase() !== 'failure',
     );
@@ -176,11 +209,19 @@ Page({
     const prevList = reset ? [] : this.data.records;
     const merged = prevList.concat(formatted);
     const total = result?.total || 0;
-    const summary = this._buildSummaryFromRecords(merged);
-    const displayRecords = this._getDisplayRecords(merged);
+
+    // 样衣记录：reset 时使用新拉取的，翻页时复用旧数据
+    const patternRecords = freshPatternRecords !== undefined
+      ? freshPatternRecords
+      : this.data.patternRecords;
+
+    const summary = this._buildSummaryFromRecords(merged, patternRecords);
+    const allForDisplay = this._mergeAndSort(merged, patternRecords);
+    const displayRecords = this._getDisplayRecords(allForDisplay);
 
     this.setData({
       records: merged,
+      patternRecords,
       displayRecords,
       page: nextPage,
       hasMore: merged.length < total,
@@ -189,7 +230,7 @@ Page({
     });
   },
 
-  _buildSummaryFromRecords(records) {
+  _buildSummaryFromRecords(records, patternRecords) {
     let totalQuantity = 0;
     let totalWage = 0;
     const orderSet = new Set();
@@ -207,10 +248,12 @@ Page({
       }
     });
 
+    const pr = patternRecords || [];
     return {
       totalQuantity,
       orderCount: orderSet.size,
-      recordCount: records.length,
+      recordCount: records.length + pr.length,
+      patternRecordCount: pr.length,
       payableRecordCount: records.filter((item) => item.isPayable).length,
       totalWage: totalWage.toFixed(2),
     };
@@ -218,9 +261,10 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
+    const allRecords = this._mergeAndSort(this.data.records, this.data.patternRecords);
     const displayRecords = showOnlyPayable
-      ? this.data.records.filter((item) => item.isPayable)
-      : this.data.records;
+      ? allRecords.filter((item) => item.isPayable)
+      : allRecords;
 
     this.setData({
       showOnlyPayable,
@@ -238,8 +282,29 @@ Page({
 
     try {
       const params = this._buildHistoryParams(nextPage);
-      const result = await api.production.myScanHistory(params);
-      this._applyPageResult(result, reset, nextPage);
+
+      if (reset) {
+        // reset 时：大货记录（分页）和样衣记录（全量）同步拉取
+        const range = getMonthRange(this.data.year, this.data.month);
+        const patternParams = {
+          startTime: range.start + ' 00:00:00',
+          endTime: range.end + ' 23:59:59',
+        };
+        const [regularSettled, patternSettled] = await Promise.allSettled([
+          api.production.myScanHistory(params),
+          api.production.myPatternScanHistory(patternParams),
+        ]);
+        const result = regularSettled.status === 'fulfilled' ? regularSettled.value : null;
+        const rawPattern = patternSettled.status === 'fulfilled' ? patternSettled.value : [];
+        const patternRecords = (Array.isArray(rawPattern) ? rawPattern : []).map((item) =>
+          _formatPatternRecord(item)
+        );
+        this._applyPageResult(result, true, 1, patternRecords);
+      } else {
+        // 翻页时只加载大货记录，样衣记录保持不变
+        const result = await api.production.myScanHistory(params);
+        this._applyPageResult(result, false, nextPage, undefined);
+      }
     } catch (e) {
       if (e && e.type === 'auth') return;
       wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });

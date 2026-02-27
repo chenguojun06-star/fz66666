@@ -8,7 +8,7 @@ export type SmartFeatureKey =
 const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.guide.enabled': false,
   'smart.dict.autocollect.enabled': false,
-  'smart.production.precheck.enabled': false,
+  'smart.production.precheck.enabled': true,
   'smart.finance.explain.enabled': false,
   'smart.system.guard.enabled': false,
 };

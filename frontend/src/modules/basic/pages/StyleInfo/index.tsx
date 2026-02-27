@@ -18,6 +18,9 @@ import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
 import StyleSizePriceTab from './components/StyleSizePriceTab';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 import './styles.css';
 
@@ -46,6 +49,13 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const [commonColors, setCommonColors] = useState<string[]>(['黑色', '白色', '灰色', '蓝色', '红色']);
   const [commonSizes, setCommonSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const [size1, setSize1] = useState('');
   const [size2, setSize2] = useState('');
@@ -233,7 +243,9 @@ const StyleInfoDetailPage: React.FC = () => {
       message.success('生产制单保存成功');
       // 刷新详情
       fetchDetail(String(currentStyle.id));
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (e: any) {
+      reportSmartError('生产制单保存失败', e?.response?.data?.message || e?.message || '服务返回异常，请稍后重试', 'STYLE_PRODUCTION_SAVE_FAILED');
       message.error(e?.response?.data?.message || e?.message || '保存失败');
     } finally {
       setProductionSaving(false);
@@ -268,7 +280,9 @@ const StyleInfoDetailPage: React.FC = () => {
       message.success('已回退到上一版本');
       // 刷新详情
       fetchDetail(String(currentStyle.id));
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (e: any) {
+      reportSmartError('生产制单回退失败', e?.response?.data?.message || e?.message || '服务返回异常，请稍后重试', 'STYLE_PRODUCTION_ROLLBACK_FAILED');
       message.error(e?.response?.data?.message || e?.message || '回退失败');
     } finally {
       setProductionRollbackSaving(false);
@@ -290,7 +304,9 @@ const StyleInfoDetailPage: React.FC = () => {
 
       setPushToOrderModalVisible(false);
       pushToOrderForm.resetFields();
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
+      reportSmartError('推送到下单失败', (error as any)?.message || '服务返回异常，请稍后重试', 'STYLE_PUSH_TO_ORDER_FAILED');
       console.error('推送失败:', error);
     } finally {
       setPushToOrderSaving(false);
@@ -305,6 +321,11 @@ const StyleInfoDetailPage: React.FC = () => {
   return (
     <Layout>
       <Card className="page-card">
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
+          </Card>
+        ) : null}
         {/* ===== 基础信息卡片 ===== */}
         <Card
           title="样衣详情"

@@ -43,12 +43,35 @@ function formatTime(timeStr) {
   return timeStr;
 }
 
+/**
+ * 将样板扫码记录格式化为与普通扫码记录一致的 displayRecord 格式
+ * @param {Object} item - PatternScanRecord（来自 /scan-records/my-history）
+ */
+function _formatPatternRecord(item) {
+  return {
+    ...item,
+    _isPattern: true,
+    displayTime: formatTime(item.scanTime),
+    displayProcess: '样衣-' + (item.progressStage || item.operationType || '-'),
+    displayWorker: item.operatorName || '-',
+    displayOrderNo: item.styleNo || '-',
+    displayBundleNo: item.color || '-',
+    displayQuantity: 0,
+    displayUnitPrice: '-',
+    lineAmount: 0,
+    displayLineAmount: '-',
+    isPayable: false,
+    displayBedNo: '-',
+  };
+}
+
 Page({
   data: {
     startDate: getDateBefore(30),
     endDate: getToday(),
     searchKeyword: '',
-    records: [],
+    records: [],          // 普通扫码记录（分页追加）
+    patternRecords: [],   // 样板扫码记录（首次全量加载，后续不再追加）
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -59,6 +82,7 @@ Page({
       totalQuantity: 0,
       recordCount: 0,
       payableRecordCount: 0,
+      patternRecordCount: 0,
       totalWage: '0.00',
     },
   },
@@ -99,6 +123,17 @@ Page({
     this.loadData(true);
   },
 
+  // 将所有记录合并并按扫码时间倒序排列
+  _mergeAndSort(regularRecords, patternRecords) {
+    return [...regularRecords, ...patternRecords].sort((a, b) => {
+      const ta = a.scanTime || '';
+      const tb = b.scanTime || '';
+      if (tb > ta) return 1;
+      if (tb < ta) return -1;
+      return 0;
+    });
+  },
+
   // ===== 数据加载 =====
   async loadData(reset) {
     if (this.data.loading) return;
@@ -126,11 +161,25 @@ Page({
         params.bundleNo = keyword;
       }
 
-      const result = await api.production.myScanHistory(params);
+      // 并发请求：大货记录（分页）+ 样衣记录（仅 reset 时全量加载）
+      const requests = [api.production.myScanHistory(params)];
+      if (reset) {
+        const patternParams = {};
+        if (this.data.startDate) patternParams.startTime = this.data.startDate + ' 00:00:00';
+        if (this.data.endDate) patternParams.endTime = this.data.endDate + ' 23:59:59';
+        requests.push(api.production.myPatternScanHistory(patternParams));
+      }
+
+      const settled = await Promise.allSettled(requests);
+      const result = settled[0].status === 'fulfilled' ? settled[0].value : null;
+      const patternRaw = reset
+        ? (settled[1] && settled[1].status === 'fulfilled' ? settled[1].value : [])
+        : this.data.patternRecords;
+
+      // 格式化大货记录
       const newRecords = (result?.records || []).filter(
         (item) => (item.scanResult || '').toLowerCase() !== 'failure'
       );
-
       const formatted = newRecords.map((item) => ({
         ...item,
         displayTime: formatTime(item.scanTime),
@@ -158,7 +207,12 @@ Page({
       const total = result?.total || 0;
       const hasMore = merged.length < total;
 
-      // 计算汇总
+      // 格式化样衣记录（reset 时重建，翻页时复用旧数据）
+      const patternRecords = reset
+        ? (Array.isArray(patternRaw) ? patternRaw : []).map((item) => _formatPatternRecord(item))
+        : this.data.patternRecords;
+
+      // 计算汇总（仅大货记录计入数量和工资）
       let totalQuantity = 0;
       let totalWage = 0;
       merged.forEach((r) => {
@@ -170,18 +224,21 @@ Page({
         }
       });
 
-      const displayRecords = this._getDisplayRecords(merged);
+      const allForDisplay = this._mergeAndSort(merged, patternRecords);
+      const displayRecords = this._getDisplayRecords(allForDisplay);
 
       this.setData({
         records: merged,
+        patternRecords,
         displayRecords,
         page: nextPage,
         hasMore,
         loading: false,
         summary: {
           totalQuantity,
-          recordCount: merged.length,
+          recordCount: merged.length + patternRecords.length,
           payableRecordCount: merged.filter((item) => item.isPayable).length,
+          patternRecordCount: patternRecords.length,
           totalWage: totalWage.toFixed(2),
         },
       });
@@ -201,9 +258,10 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
+    const allRecords = this._mergeAndSort(this.data.records, this.data.patternRecords);
     const displayRecords = showOnlyPayable
-      ? this.data.records.filter((item) => item.isPayable)
-      : this.data.records;
+      ? allRecords.filter((item) => item.isPayable)
+      : allRecords;
 
     this.setData({
       showOnlyPayable,

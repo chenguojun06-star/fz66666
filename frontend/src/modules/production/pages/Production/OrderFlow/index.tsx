@@ -14,6 +14,9 @@ import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import '../../../styles.css';
 
 type FlowStage = {
@@ -85,6 +88,13 @@ const OrderFlow: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OrderFlowResponse | null>(null);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   const fetchFlow = async () => {
     if (!query.orderId) return;
@@ -94,11 +104,14 @@ const OrderFlow: React.FC = () => {
       if (res.code === 200) {
         const flowData = res.data as OrderFlowResponse;
         setData(flowData || null);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
+        reportSmartError('订单全流程加载失败', res.message || '服务返回异常，请稍后重试', 'ORDER_FLOW_LOAD_FAILED');
         message.error(res.message || '获取订单全流程失败');
         setData(null);
       }
     } catch (e: any) {
+      reportSmartError('订单全流程加载失败', e?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_FLOW_LOAD_EXCEPTION');
       message.error(e?.message || '获取订单全流程失败');
       setData(null);
     } finally {
@@ -327,6 +340,11 @@ const OrderFlow: React.FC = () => {
   return (
     <Layout>
         <Card className="page-card">
+          {showSmartErrorNotice && smartError ? (
+            <div style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={fetchFlow} />
+            </div>
+          ) : null}
           <div className="page-header">
             <h2 className="page-title">订单全流程记录</h2>
             <Space wrap>

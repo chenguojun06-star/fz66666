@@ -16,6 +16,28 @@ function normalizeText(v) {
   return (v || '').toString().trim();
 }
 
+function mapUrgencyLabel(level) {
+  const text = normalizeText(level).toLowerCase();
+  if (text === 'urgent' || text === '急' || text === '加急') {
+    return '急';
+  }
+  if (text === 'normal' || text === '普通') {
+    return '普';
+  }
+  return '';
+}
+
+function mapPlateTypeLabel(plateType) {
+  const text = normalizeText(plateType).toUpperCase();
+  if (text === 'FIRST') {
+    return '首';
+  }
+  if (text === 'REORDER' || text === 'REPLATE') {
+    return '翻';
+  }
+  return '';
+}
+
 /**
  * 判断订单是否为已关闭状态
  * @param {string} status - 订单状态
@@ -159,6 +181,8 @@ function transformOrderData(r) {
   const source = validated || r || {};
   const sizeMeta = buildSizeMeta(source);
   const delivery = calcDeliveryInfo(source);
+  const urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
+  const plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
   // 构建款式图片完整 URL
   let styleCoverUrl = '';
   if (source.styleCover) {
@@ -178,6 +202,8 @@ function transformOrderData(r) {
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,
     remainDaysClass: delivery.remainDaysClass,
+    urgencyTagText,
+    plateTypeTagText,
   };
 }
 

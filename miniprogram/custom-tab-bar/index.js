@@ -29,13 +29,17 @@ Component({
       const pages = getCurrentPages();
       const current = pages && pages.length ? pages[pages.length - 1] : null;
       const currentRoute = current && current.route ? `/${current.route}` : '';
-      this.setData({ selected: idx });
+
+      // 已在当前页：只同步选中态，不导航
       if (currentRoute === item.pagePath) {
+        this.setData({ selected: idx });
         return;
       }
-      // 使用安全导航防止快速点击导致路由错误
+
+      // 不提前改 selected：让目标页 onShow 里的 setTabSelected 来更新，
+      // 避免导航被锁（连续快速点击）时 selected 停在错误 Tab 造成"乱跳"。
       safeNavigate({ url: item.pagePath }, 'switchTab').catch(() => {
-        // 导航失败忽略（通常是重复点击）
+        // 导航失败（通常是重复点击被锁）：不改 selected，保持现有状态
       });
     },
   },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input } from 'antd';
+import { Modal, Form, Input, Select } from 'antd';
 import { UnifiedDatePicker, dayjs } from './UnifiedDatePicker';
 
 interface QuickEditModalProps {
@@ -9,8 +9,9 @@ interface QuickEditModalProps {
     remarks?: string;
     remark?: string;
     expectedShipDate?: string | null;
+    urgencyLevel?: string;
   };
-  onSave: (values: { remarks: string; expectedShipDate: string | null }) => Promise<void>;
+  onSave: (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: string }) => Promise<void>;
   onCancel: () => void;
   title?: string;
 }
@@ -34,6 +35,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       form.setFieldsValue({
         remarks: initialValues.remarks || initialValues.remark || '',
         expectedShipDate: initialValues.expectedShipDate ? dayjs(initialValues.expectedShipDate) : null,
+        urgencyLevel: initialValues.urgencyLevel || 'normal',
       });
     }
   }, [visible, initialValues, form]);
@@ -44,6 +46,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       await onSave({
         remarks: values.remarks?.trim() || '',
         expectedShipDate: values.expectedShipDate ? dayjs(values.expectedShipDate).format('YYYY-MM-DD') : null,
+        urgencyLevel: values.urgencyLevel || 'normal',
       });
       form.resetFields();
     } catch (error) {
@@ -67,6 +70,18 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form.Item
+          label="紧急程度"
+          name="urgencyLevel"
+        >
+          <Select
+            options={[
+              { label: '普通', value: 'normal' },
+              { label: '🔴 急单', value: 'urgent' },
+            ]}
+            placeholder="请选择紧急程度"
+          />
+        </Form.Item>
         <Form.Item
           label="预计出货日期"
           name="expectedShipDate"

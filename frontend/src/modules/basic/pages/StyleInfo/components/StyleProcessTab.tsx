@@ -245,17 +245,10 @@ const StyleProcessTab: React.FC<Props> = ({
     if (readOnly) return;
     if (editMode) return;
 
-    // 首次编辑时调用开始API
-    if (!processStartTime && styleId) {
-      try {
-        const res = await api.post(`/style/info/${styleId}/process/start`);
-        if (res.code === 200) {
-          // 刷新数据以获取最新的开始时间
-          if (onRefresh) onRefresh();
-        }
-      } catch (error) {
-        console.error('记录工序开始时间失败:', error);
-      }
+    // 未开始时拦截，提示先点「开始」按钮
+    if (!processStartTime) {
+      message.warning('请先点击上方「开始工序单价」按钮再进行编辑');
+      return;
     }
 
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcess[];

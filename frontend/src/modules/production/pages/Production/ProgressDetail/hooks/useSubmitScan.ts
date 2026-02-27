@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
+import { intelligenceApi } from '@/services/production/productionApi';
 import type { ProgressNode } from '../types';
 import { getCurrentWorkflowNodeForOrder, isCuttingStageKey } from '../utils';
 
@@ -19,7 +20,7 @@ type UseSubmitScanParams = {
   nodes: ProgressNode[];
   defaultNodes: ProgressNode[];
   productionCuttingApi: { getByCode: (code: string) => Promise<unknown> };
-  message: { error: (msg: string) => void };
+  message: { error: (msg: string) => void; warning?: (msg: string) => void };
   generateRequestId: () => string;
 };
 
@@ -180,6 +181,31 @@ export const useSubmitScan = ({
         : generateRequestId();
       attemptKey = requestKey;
       attemptRequestId = requestId;
+
+      try {
+        const precheckResp = await intelligenceApi.precheckScan({
+          orderId: String(activeOrder.id || '').trim() || undefined,
+          orderNo: String(activeOrder.orderNo || '').trim() || undefined,
+          stageName: String(values.progressStage || '').trim() || undefined,
+          processName: String(values.processName || '').trim() || undefined,
+          quantity: resolvedQty,
+          operatorId: String(user.id || '').trim() || undefined,
+          operatorName: String(user.name || '').trim() || undefined,
+        });
+
+        const precheckResult = precheckResp as any;
+        if (Number(precheckResult?.code) === 200) {
+          const issues = Array.isArray(precheckResult?.data?.issues) ? precheckResult.data.issues : [];
+          if (issues.length > 0) {
+            const first = issues[0] || {};
+            const tip = String(first.title || first.reason || first.suggestion || '存在潜在风险，请确认后继续').trim();
+            message.warning?.(`智能预检提示：${tip}`);
+          }
+        }
+      } catch {
+        // 预检失败不阻断扫码主流程
+      }
+
       const payload = { ...(payloadBase as any), requestId };
 
       const detail = {

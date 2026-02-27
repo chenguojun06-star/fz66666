@@ -79,6 +79,8 @@ public class ProductionOrderQueryService {
                 .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
         String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
         String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
+        String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
+        String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -91,12 +93,15 @@ public class ProductionOrderQueryService {
                 .or()
                 .like("factory_name", keyword))
                 .eq(StringUtils.hasText(status), "status", status)
+                .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
+                .eq(StringUtils.hasText(plateType), "plate_type", plateType)
                 .eq("delete_flag", 0);
 
-        // 延期订单筛选：plannedEndDate < 当前时间
+        // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
         if ("true".equalsIgnoreCase(delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
-                   .lt("planned_end_date", java.time.LocalDateTime.now());
+                   .lt("planned_end_date", java.time.LocalDateTime.now())
+                   .notIn("status", java.util.List.of("completed", "cancelled"));
         }
 
         // 当天下单筛选：createTime 在今天 00:00:00 ~ 23:59:59
@@ -302,6 +307,8 @@ public class ProductionOrderQueryService {
         String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
         String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
+        String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
+        String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
 
         // 构建基础查询条件
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
@@ -315,13 +322,15 @@ public class ProductionOrderQueryService {
                 .like("order_no", keyword).or()
                 .like("style_no", keyword).or()
                 .like("factory_name", keyword))
-            .eq(StringUtils.hasText(status), "status", status);
+            .eq(StringUtils.hasText(status), "status", status)
+            .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
+            .eq(StringUtils.hasText(plateType), "plate_type", plateType);
 
         // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
 
-        // 查询所有订单（只查询需要的字段以提高性能）
-        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time");
+        // 查询所有订单（只查询需要的字段以提高性能，含 status 字段用于延期判断）
+        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time", "status");
         List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
 
         if (allOrders == null || allOrders.isEmpty()) {
@@ -343,10 +352,13 @@ public class ProductionOrderQueryService {
             .sum();
         stats.setTotalQuantity(totalQty);
 
-        // 计算延期订单（plannedEndDate < 当前时间）
+        // 计算延期订单（plannedEndDate < 当前时间，排除终态订单）
         LocalDateTime now = LocalDateTime.now();
         List<ProductionOrder> delayedOrders = allOrders.stream()
-            .filter(o -> o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(now))
+            .filter(o -> o.getPlannedEndDate() != null
+                && o.getPlannedEndDate().isBefore(now)
+                && !"completed".equals(o.getStatus())
+                && !"cancelled".equals(o.getStatus()))
             .collect(Collectors.toList());
 
         stats.setDelayedOrders(delayedOrders.size());

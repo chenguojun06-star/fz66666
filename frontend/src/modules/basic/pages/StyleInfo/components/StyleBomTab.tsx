@@ -96,7 +96,9 @@ const StyleBomTab: React.FC<Props> = ({
   const [checkingStock, setCheckingStock] = useState(false);
   const [productionQty, setProductionQty] = useState(1);
 
-  const locked = Boolean(readOnly);
+  // 未开始时禁止编辑（需先点击「开始BOM清单」）
+  const notStarted = !bomStartTime && !bomCompletedTime;
+  const locked = Boolean(readOnly) || notStarted;
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 

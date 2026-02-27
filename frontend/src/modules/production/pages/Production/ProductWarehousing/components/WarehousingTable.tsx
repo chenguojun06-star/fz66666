@@ -37,6 +37,20 @@ import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
 import { getQualityStatusConfig } from '../utils';
 
+const getUrgencyTag = (value: unknown): { text: string; color: string } | null => {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'urgent') return { text: '急', color: 'red' };
+  if (key === 'normal') return { text: '普', color: 'default' };
+  return null;
+};
+
+const getPlateTypeTag = (value: unknown): { text: string; color: string } | null => {
+  const key = String(value || '').trim().toUpperCase();
+  if (key === 'FIRST') return { text: '首', color: 'blue' };
+  if (key === 'REORDER' || key === 'REPLATE') return { text: '翻', color: 'purple' };
+  return null;
+};
+
 interface WarehousingTableProps {
   loading: boolean;
   dataSource: WarehousingType[];
@@ -95,11 +109,19 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 140,
-      render: (v: unknown) => {
+      width: 190,
+      render: (v: unknown, record: WarehousingType) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        return <span title={text} style={{ fontSize: 12 }}>{text}</span>;
+        const urgencyTag = getUrgencyTag((record as any).urgencyLevel);
+        const plateTag = getPlateTypeTag((record as any).plateType);
+        return (
+          <span title={text} style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span>{text}</span>
+            {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{plateTag.text}</Tag>}
+            {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{urgencyTag.text}</Tag>}
+          </span>
+        );
       },
     },
     {

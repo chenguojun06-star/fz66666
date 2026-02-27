@@ -41,6 +41,9 @@ import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import SmartReceiveModal from './components/SmartReceiveModal';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const MaterialPurchase: React.FC = () => {
   const [messageApi, contextHolder] = antdMessage.useMessage();
@@ -105,6 +108,13 @@ const MaterialPurchase: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   // 智能领取弹窗
   const [smartReceiveOpen, setSmartReceiveOpen] = useState(false);
@@ -599,10 +609,13 @@ const MaterialPurchase: React.FC = () => {
         const removed = records.length - filtered.length;
         setPurchaseList(filtered);
         setTotal(Math.max(Number(response.data.total || 0) - Math.max(removed, 0), 0));
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
+        reportSmartError('物料采购列表加载失败', response.message || '服务返回异常，请稍后重试', 'MATERIAL_PURCHASE_LIST_FAILED');
         message.error(response.message || '获取物料采购列表失败');
       }
     } catch (error) {
+      reportSmartError('物料采购列表加载失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PURCHASE_LIST_EXCEPTION');
       message.error('获取物料采购列表失败');
     } finally {
       setLoading(false);
@@ -618,8 +631,10 @@ const MaterialPurchase: React.FC = () => {
       const records = Array.isArray(data?.records) ? data.records : [];
       setMaterialDatabaseList(records as MaterialDatabase[]);
       setMaterialDatabaseTotal(Number(data?.total || 0) || 0);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
       const errMessage = (error as Error)?.message;
+      reportSmartError('面辅料数据库加载失败', errMessage || '网络异常或服务不可用，请稍后重试', 'MATERIAL_DATABASE_LIST_FAILED');
       message.error(errMessage || '获取面辅料数据库列表失败');
     } finally {
       setMaterialDatabaseLoading(false);
@@ -1315,6 +1330,11 @@ const MaterialPurchase: React.FC = () => {
                 label: '面料采购',
                 children: (
                   <div>
+                    {showSmartErrorNotice && smartError ? (
+                      <Card size="small" style={{ marginBottom: 12 }}>
+                        <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
+                      </Card>
+                    ) : null}
                     <div className="page-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <Select

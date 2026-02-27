@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
@@ -8,6 +8,9 @@ import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import type { ColumnsType } from 'antd/es/table';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
 
@@ -66,6 +69,7 @@ const DICT_TYPES = [
   { value: 'defect_type', label: '瑕疵类型', description: '常见瑕疵：色差、破损、污渍等' },
   { value: 'package_type', label: '包装方式', description: '包装类型：吊挂、平放、卷装等' },
   { value: 'order_status', label: '订单状态', description: '订单流程状态' },
+  { value: 'urgency_level', label: '紧急程度', description: '订单优先级：加急、普通' },
   { value: 'payment_method', label: '结算方式', description: '付款方式：月结、现结等' },
   { value: 'warehouse_location', label: '仓库', description: '仓库库位：A仓、B仓、成品仓、面辅料仓等，可在此维护仓库列表' },
   { value: 'plate_type', label: '板类', description: '样衣版次类型：首单、复板、公司版等' },
@@ -76,6 +80,12 @@ const DictManage: React.FC = () => {
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DictItem[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  };
 
   // ===== 使用 useModal 管理弹窗 =====
   const dictModal = useModal<DictItem>();
@@ -96,15 +106,18 @@ const DictManage: React.FC = () => {
           ? res.data
           : (res.data?.records || []);
         setDataSource(dedupeDictItems(list));
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
         // API 不存在时使用本地数据
         const localData = getLocalData(dictType);
         setDataSource(dedupeDictItems(localData));
+        reportSmartError('字典数据加载失败', '服务返回异常，已回退本地预置数据', 'SYSTEM_DICT_LIST_FAILED');
       }
     } catch (error) {
       // 使用本地硬编码数据作为后备
       const localData = getLocalData(dictType);
       setDataSource(dedupeDictItems(localData));
+      reportSmartError('字典数据加载失败', '网络异常，已回退本地预置数据', 'SYSTEM_DICT_LIST_EXCEPTION');
     } finally {
       setLoading(false);
     }
@@ -242,6 +255,10 @@ const DictManage: React.FC = () => {
         { dictType: 'order_status', dictCode: 'COMPLETED', dictLabel: '已完成', sortOrder: 4 },
         { dictType: 'order_status', dictCode: 'CANCELLED', dictLabel: '已取消', sortOrder: 5 },
       ],
+      urgency_level: [
+        { dictType: 'urgency_level', dictCode: 'urgent', dictLabel: '加急', sortOrder: 1 },
+        { dictType: 'urgency_level', dictCode: 'normal', dictLabel: '普通', sortOrder: 2 },
+      ],
       payment_method: [
         { dictType: 'payment_method', dictCode: 'MONTHLY', dictLabel: '月结', sortOrder: 1 },
         { dictType: 'payment_method', dictCode: 'IMMEDIATE', dictLabel: '现结', sortOrder: 2 },
@@ -250,6 +267,7 @@ const DictManage: React.FC = () => {
       ],
       plate_type: [
         { dictType: 'plate_type', dictCode: 'FIRST', dictLabel: '首单', sortOrder: 1 },
+        { dictType: 'plate_type', dictCode: 'REORDER', dictLabel: '翻单', sortOrder: 2 },
         { dictType: 'plate_type', dictCode: 'REPLATE', dictLabel: '复板', sortOrder: 2 },
         { dictType: 'plate_type', dictCode: 'COMPANY', dictLabel: '公司版', sortOrder: 3 },
         { dictType: 'plate_type', dictCode: 'REPLATE1', dictLabel: '复板1', sortOrder: 4 },
@@ -433,6 +451,11 @@ const DictManage: React.FC = () => {
           </Space>
         }
       >
+      {showSmartErrorNotice && smartError ? (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <SmartErrorNotice error={smartError} onFix={() => { void fetchData(selectedType); }} />
+        </Card>
+      ) : null}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>
           <Space size="large">

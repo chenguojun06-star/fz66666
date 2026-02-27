@@ -34,6 +34,8 @@ export function useProductionStats(queryParams: ProductionQueryParams) {
             keyword: params.keyword,
             factoryName: params.factoryName,
             status: params.status,
+            urgencyLevel: params.urgencyLevel,
+            plateType: params.plateType,
             orderNo: params.orderNo,
             styleNo: params.styleNo,
           }

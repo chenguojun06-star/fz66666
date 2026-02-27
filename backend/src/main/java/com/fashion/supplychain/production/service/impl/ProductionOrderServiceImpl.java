@@ -123,6 +123,16 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             productionOrder.setMaterialArrivalRate(0);
             productionOrder.setStatus("pending");
 
+            // 首单/翻单：优先使用前端传值；未传时按同款历史订单自动判定
+            String plateType = normalizePlateType(productionOrder.getPlateType());
+            if (!StringUtils.hasText(plateType)) {
+                long historyCount = this.count(new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getStyleNo, productionOrder.getStyleNo())
+                        .eq(ProductionOrder::getDeleteFlag, 0));
+                plateType = historyCount > 0 ? "REORDER" : "FIRST";
+            }
+            productionOrder.setPlateType(plateType);
+
             // ✅ 记录创建人信息 - 操作人追踪必要设定
             String currentUserId = UserContext.userId();
             String currentUserName = UserContext.username();
@@ -152,6 +162,20 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             }
         }
         return ok;
+    }
+
+    private String normalizePlateType(String raw) {
+        String value = StringUtils.hasText(raw) ? raw.trim().toUpperCase() : null;
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        if ("FIRST".equals(value) || "首单".equals(value)) {
+            return "FIRST";
+        }
+        if ("REORDER".equals(value) || "翻单".equals(value)) {
+            return "REORDER";
+        }
+        return null;
     }
 
     private String nextOrderNo() {

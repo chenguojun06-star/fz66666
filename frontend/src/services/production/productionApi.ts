@@ -38,6 +38,38 @@ export const productionWarehousingApi = {
   rollbackByBundle: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/rollback-by-bundle', payload),
 };
 
+export const intelligenceApi = {
+  precheckScan: (payload: {
+    orderId?: string;
+    orderNo?: string;
+    stageName?: string;
+    processName?: string;
+    quantity?: number;
+    operatorId?: string;
+    operatorName?: string;
+  }) => api.post<{ code: number; data: { riskLevel?: string; issues?: Array<{ title?: string; reason?: string; suggestion?: string }> } }>('/intelligence/precheck/scan', payload),
+  predictFinishTime: (payload: {
+    orderId?: string;
+    orderNo?: string;
+    styleNo?: string;
+    stageName?: string;
+    processName?: string;
+    currentProgress?: number;
+  }) => api.post<{ code: number; data: {
+    predictedFinishTime?: string;
+    confidence?: number;
+    reasons?: string[];
+    suggestions?: string[];
+    predictionId?: string;
+    /** 订单总件数（与进度球分母同源） */
+    totalQuantity?: number;
+    /** 已完成件数（与进度球已完成同源） */
+    doneQuantity?: number;
+    /** 剩余件数（预测计算基准） */
+    remainingQuantity?: number;
+  } }>('/intelligence/predict/finish-time', payload),
+};
+
 export const patternProductionApi = {
   // 获取样衣开发费用统计
   getDevelopmentStats: (rangeType: 'day' | 'week' | 'month' = 'day') =>
@@ -51,5 +83,6 @@ export default {
   productionCuttingApi,
   productionScanApi,
   productionWarehousingApi,
+  intelligenceApi,
   patternProductionApi,
 };

@@ -99,10 +99,18 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     fetchData();
   }, [styleId]);
 
+  // 未开始时不允许编辑
+  const notStarted = !secondaryStartTime && !secondaryCompletedTime;
+
   // 无二次工艺处理
   const handleSkipSecondary = async () => {
+    if (notStarted) {
+      message.warning('请先点击「开始二次工艺」按钮后再进行操作');
+      return;
+    }
     try {
-      await api.post(`/style/info/${styleId}/secondary/skip`);
+      // 使用统一 stage-action 端点（stage=secondary&action=skip）
+      await api.post(`/style/info/${styleId}/stage-action?stage=secondary&action=skip`);
       message.success('已标记为无二次工艺');
       if (onRefresh) onRefresh();
     } catch (error) {
@@ -322,11 +330,21 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           <div />
           <Space>
             {!secondaryCompletedTime && (
-              <Button onClick={handleSkipSecondary}>
+              <Button
+                onClick={handleSkipSecondary}
+                disabled={notStarted}
+                title={notStarted ? '请先点击「开始二次工艺」再操作' : undefined}
+              >
                 标记无二次工艺
               </Button>
             )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              disabled={notStarted}
+              title={notStarted ? '请先点击「开始二次工艺」再操作' : undefined}
+            >
               新建工艺
             </Button>
           </Space>

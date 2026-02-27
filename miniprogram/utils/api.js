@@ -78,6 +78,10 @@ const production = {
   myScanHistory(params) {
     return ok('/api/production/scan/list', 'GET', { currentUser: 'true', ...(params || {}) });
   },
+  /** 获取当前员工的样板扫码历史（领取/车板/入库等），供历史记录页合并展示 */
+  myPatternScanHistory(params) {
+    return ok('/api/production/pattern/scan-records/my-history', 'GET', params || {});
+  },
   personalScanStats(params) {
     return ok('/api/production/scan/personal-stats', 'GET', params || {});
   },
@@ -314,6 +318,12 @@ const wechat = {
   },
 };
 
+const intelligence = {
+  precheckScan(payload) {
+    return ok('/api/intelligence/precheck/scan', 'POST', payload || {});
+  },
+};
+
 const common = {
   /**
    * 上传图片文件
@@ -366,6 +376,7 @@ const api = {
   orderManagement,
   tenant,
   wechat,
+  intelligence,
   common,
 };
 
@@ -381,5 +392,6 @@ module.exports.warehouse = warehouse;
 module.exports.orderManagement = orderManagement;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
+module.exports.intelligence = intelligence;
 module.exports.common = common;
 

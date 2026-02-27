@@ -175,6 +175,18 @@ public class ProductionOrder {
     private String status;
 
     /**
+     * 紧急程度(urgent:急单, normal:普通，默认普通)
+     */
+    @TableField("urgency_level")
+    private String urgencyLevel;
+
+    /**
+     * 订单类型(FIRST:首单, REORDER:翻单，默认FIRST)
+     */
+    @TableField("plate_type")
+    private String plateType;
+
+    /**
      * 计划开始日期
      */
     private LocalDateTime plannedStartDate;

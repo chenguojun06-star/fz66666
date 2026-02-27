@@ -27,6 +27,10 @@ export interface ProductionOrder extends Record<string, unknown> {
   materialArrivalRate: number;
   productionProgress: number;
   status: 'pending' | 'production' | 'completed' | 'delayed';
+  /** 紧急程度: urgent=急单, normal=普通，默认普通 */
+  urgencyLevel?: 'urgent' | 'normal';
+  /** 订单类型: FIRST=首单, REORDER=翻单 */
+  plateType?: 'FIRST' | 'REORDER';
   plannedStartDate: string;
   plannedEndDate: string;
   actualStartDate?: string;
@@ -305,6 +309,10 @@ export interface ProductionQueryParams {
   styleNo?: string;
   factoryName?: string;
   status?: string;
+  /** 紧急程度筛选: urgent=急单, normal=普通 */
+  urgencyLevel?: string;
+  /** 订单类型筛选: FIRST=首单, REORDER=翻单 */
+  plateType?: string;
   keyword?: string;
   page: number;
   pageSize: number;

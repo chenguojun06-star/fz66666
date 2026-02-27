@@ -43,7 +43,7 @@ import {
   useProgressTracking,
   useProductionStats,
 } from './hooks';
-import { safeString, getStatusConfig, mainStages, formatCompletionTime } from './utils';
+import { safeString, getStatusConfig, mainStages } from './utils';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -162,7 +162,7 @@ const ProductionList: React.FC = () => {
   } = useProcessDetail({ message, fetchProductionList });
 
   const {
-    renderCompletionTimeTag, getStageCompletionTime,
+    renderCompletionTimeTag,
   } = useProgressTracking(productionList);
 
   // ===== Effects =====
@@ -256,16 +256,27 @@ const ProductionList: React.FC = () => {
         const styleNo = safeString((record as any)?.styleNo, '');
         const orderId = safeString((record as any)?.id, '');
         return (
-          <a
-            className="order-no-wrap"
-            style={{ cursor: 'pointer' }}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
-            }}
-          >
-            {orderNo || '-'}
-          </a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <a
+              className="order-no-wrap"
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
+              }}
+            >
+              {orderNo || '-'}
+            </a>
+            {(record as any).urgencyLevel === 'urgent' && (
+              <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+            )}
+            {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
+              <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+            )}
+            {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
+              <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+            )}
+          </div>
         );
       },
     },
@@ -620,21 +631,12 @@ const ProductionList: React.FC = () => {
           return 'var(--color-border)';
         };
 
-        const warehousingTime = getStageCompletionTime(record, '入库');
-        const formattedWarehousingTime = formatCompletionTime(warehousingTime);
-
         return (
           <div
             style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', padding: '4px 0' }}
             onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'warehousing'); }}
           >
-            {formattedWarehousingTime ? (
-              <div style={{ fontSize: 10, color: rate >= 100 ? '#10b981' : '#6b7280', fontWeight: rate >= 100 ? 600 : 400, lineHeight: 1.2, marginBottom: 2, textAlign: 'left', whiteSpace: 'nowrap' }}>
-                {formattedWarehousingTime}
-              </div>
-            ) : (
-              <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>--</div>
-            )}
+            {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ position: 'relative', width: '36px', height: '36px' }}>
                 <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
@@ -867,23 +869,49 @@ const ProductionList: React.FC = () => {
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
-                <StandardSearchBar
-                  searchValue={queryParams.keyword || ''}
-                  onSearchChange={(value) => setQueryParams({ ...queryParams, keyword: value, page: 1 })}
-                  searchPlaceholder="搜索订单号/款号/加工厂"
-                  dateValue={dateRange}
-                  onDateChange={setDateRange}
-                  statusValue={queryParams.status || ''}
-                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
-                  statusOptions={[
-                    { label: '全部', value: '' },
-                    { label: '待生产', value: 'pending' },
-                    { label: '生产中', value: 'production' },
-                    { label: '已完成', value: 'completed' },
-                    { label: '已逾期', value: 'delayed' },
-                    { label: '已取消', value: 'cancelled' },
-                  ]}
-                />
+                <>
+                  <StandardSearchBar
+                    searchValue={queryParams.keyword || ''}
+                    onSearchChange={(value) => setQueryParams({ ...queryParams, keyword: value, page: 1 })}
+                    searchPlaceholder="搜索订单号/款号/加工厂"
+                    dateValue={dateRange}
+                    onDateChange={setDateRange}
+                    statusValue={queryParams.status || ''}
+                    onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                    statusOptions={[
+                      { label: '全部', value: '' },
+                      { label: '待生产', value: 'pending' },
+                      { label: '生产中', value: 'production' },
+                      { label: '已完成', value: 'completed' },
+                      { label: '已逾期', value: 'delayed' },
+                      { label: '已取消', value: 'cancelled' },
+                    ]}
+                  />
+                  <Select
+                    value={queryParams.urgencyLevel || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, urgencyLevel: value || undefined, page: 1 })}
+                    placeholder="紧急程度"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={[
+                      { label: '全部紧急度', value: '' },
+                      { label: '🔴 急单', value: 'urgent' },
+                      { label: '普通', value: 'normal' },
+                    ]}
+                  />
+                  <Select
+                    value={queryParams.plateType || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, plateType: value || undefined, page: 1 })}
+                    placeholder="首/翻单"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={[
+                      { label: '全部单型', value: '' },
+                      { label: '首单', value: 'FIRST' },
+                      { label: '翻单', value: 'REORDER' },
+                    ]}
+                  />
+                </>
               )}
               right={(
                 <>
@@ -1062,6 +1090,7 @@ const ProductionList: React.FC = () => {
           initialValues={{
             remarks: (quickEditModal.data as any)?.remarks,
             expectedShipDate: (quickEditModal.data as any)?.expectedShipDate,
+            urgencyLevel: (quickEditModal.data as any)?.urgencyLevel || 'normal',
           }}
           onSave={(values) => hookQuickEditSave(values, quickEditModal.data, quickEditModal.close)}
           onCancel={() => { quickEditModal.close(); }}

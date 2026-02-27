@@ -1,10 +1,12 @@
 package com.fashion.supplychain.production.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.orchestration.PatternProductionOrchestrator;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import lombok.extern.slf4j.Slf4j;
@@ -14,8 +16,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 样板生产控制器
@@ -217,25 +222,73 @@ public class PatternProductionController {
         }
     }
 
-    /**
-     * 获取样板生产的扫码记录列表
-     */
-    @GetMapping("/{patternId}/scan-records")
-    public Result<List<com.fashion.supplychain.production.entity.PatternScanRecord>> getScanRecords(
-            @PathVariable String patternId) {
-        try {
-            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.production.entity.PatternScanRecord> wrapper =
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-            wrapper.eq(com.fashion.supplychain.production.entity.PatternScanRecord::getPatternProductionId, patternId)
-                    .eq(com.fashion.supplychain.production.entity.PatternScanRecord::getDeleteFlag, 0)
-                    .orderByDesc(com.fashion.supplychain.production.entity.PatternScanRecord::getScanTime);
 
-            List<com.fashion.supplychain.production.entity.PatternScanRecord> records = patternScanRecordService.list(wrapper);
-            return Result.success(records);
+    /**
+     * 获取当前员工的样板扫码历史（供小程序历史记录页展示）
+     * 返回格式与 /api/production/scan/list 保持一致，便于前端合并渲染
+     */
+    @GetMapping("/scan-records/my-history")
+    public Result<List<Map<String, Object>>> myPatternScanHistory(
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+        try {
+            String operatorId = UserContext.userId();
+
+            LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(PatternScanRecord::getOperatorId, operatorId)
+                    .eq(PatternScanRecord::getDeleteFlag, 0);
+
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            if (StringUtils.hasText(startTime)) {
+                wrapper.ge(PatternScanRecord::getScanTime, LocalDateTime.parse(startTime, fmt));
+            }
+            if (StringUtils.hasText(endTime)) {
+                wrapper.le(PatternScanRecord::getScanTime, LocalDateTime.parse(endTime, fmt));
+            }
+            wrapper.orderByDesc(PatternScanRecord::getScanTime);
+
+            List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
+
+            List<Map<String, Object>> result = records.stream().map(r -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", r.getId());
+                item.put("scanType", "pattern");
+                item.put("scanResult", "success");
+                item.put("operationType", r.getOperationType());
+                item.put("operatorName", r.getOperatorName());
+                item.put("styleNo", r.getStyleNo());
+                item.put("color", r.getColor());
+                item.put("warehouseCode", r.getWarehouseCode());
+                item.put("remark", r.getRemark());
+                item.put("scanTime", r.getScanTime() != null
+                        ? r.getScanTime().format(fmt) : null);
+                item.put("progressStage", _patternOperationLabel(r.getOperationType()));
+                item.put("processName", null);
+                item.put("quantity", 0);
+                item.put("unitPrice", null);
+                return item;
+            }).collect(Collectors.toList());
+
+            return Result.success(result);
         } catch (Exception e) {
-            log.error("获取样板扫码记录失败: patternId={}", patternId, e);
-            return Result.fail("获取扫码记录失败");
+            log.error("获取样板扫码历史失败", e);
+            return Result.fail("获取失败: " + e.getMessage());
+        }
+    }
+
+    private String _patternOperationLabel(String operationType) {
+        if (operationType == null) return "样衣操作";
+        switch (operationType) {
+            case "RECEIVE":          return "领取样板";
+            case "PLATE":            return "车板扫码";
+            case "FOLLOW_UP":        return "跟单确认";
+            case "COMPLETE":         return "完成确认";
+            case "WAREHOUSE_IN":     return "样衣入库";
+            case "WAREHOUSE_OUT":    return "样衣出库";
+            case "WAREHOUSE_RETURN": return "样衣归还";
+            default:                 return "样衣操作";
         }
     }
 
 }
+

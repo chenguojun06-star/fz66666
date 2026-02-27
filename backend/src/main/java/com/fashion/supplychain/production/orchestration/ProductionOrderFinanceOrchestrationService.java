@@ -12,6 +12,7 @@ import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
 import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
@@ -73,6 +74,10 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
+
+    /** 智能预测回填（可选注入，模块未启用时不影响关单流程） */
+    @Autowired(required = false)
+    private IntelligencePredictionLogMapper intelligencePredictionLogMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
@@ -166,6 +171,18 @@ public class ProductionOrderFinanceOrchestrationService {
             }
         }
 
+        // 【智能学习】订单完成时回填预测记录，自动闭合数据飞轮
+        if (intelligencePredictionLogMapper != null) {
+            try {
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                if (backfilled > 0) {
+                    log.info("[智能回填] 订单 {} 完成（completeProduction），回填 {} 条预测记录", oid, backfilled);
+                }
+            } catch (Exception ex) {
+                log.warn("[智能回填] 回填失败，不影响关单流程: orderId={}", oid, ex);
+            }
+        }
+
         return true;
     }
 
@@ -243,6 +260,18 @@ public class ProductionOrderFinanceOrchestrationService {
             // 不阻断关单流程，只记录错误
         }
 
+        // 【智能学习】关单时回填预测记录，自动闭合数据飞轮
+        if (intelligencePredictionLogMapper != null) {
+            try {
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                if (backfilled > 0) {
+                    log.info("[智能回填] 订单 {} 关单（closeOrder），回填 {} 条预测记录", oid, backfilled);
+                }
+            } catch (Exception ex) {
+                log.warn("[智能回填] 回填失败，不影响关单流程: orderId={}", oid, ex);
+            }
+        }
+
         ProductionOrder detail = productionOrderService.getDetailById(oid);
         if (detail == null) {
             throw new NoSuchElementException("订单不存在");
@@ -312,6 +341,18 @@ public class ProductionOrderFinanceOrchestrationService {
         } catch (Exception e) {
             log.error("自动关单创建对账单失败: orderId={}", oid, e);
             // 不阻断关单流程
+        }
+
+        // 【智能学习】自动关单时同步回填预测记录，自动闭合数据飞轮
+        if (intelligencePredictionLogMapper != null) {
+            try {
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                if (backfilled > 0) {
+                    log.info("[智能回填] 订单 {} 自动关单，回填 {} 条预测记录", oid, backfilled);
+                }
+            } catch (Exception ex) {
+                log.warn("[智能回填] 自动关单回填失败，不影响流程: orderId={}", oid, ex);
+            }
         }
 
         return true;
