@@ -444,13 +444,14 @@ const ProductionList: React.FC = () => {
       render: (rate: number, record: ProductionOrder) => {
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
-        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+        const frozen = isOrderFrozenByStatus(record);
+        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
-            style={{ cursor: 'pointer', padding: '4px', transition: 'background 0.2s' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'procurement'); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-container)'; }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'procurement'); }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
@@ -471,13 +472,14 @@ const ProductionList: React.FC = () => {
       render: (rate: number, record: ProductionOrder) => {
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
-        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+        const frozen = isOrderFrozenByStatus(record);
+        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
-            style={{ cursor: 'pointer', padding: '4px', transition: 'background 0.2s' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'cutting'); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'cutting'); }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
           >
             {renderCompletionTimeTag(record, '裁剪', rate || 0)}
@@ -519,13 +521,14 @@ const ProductionList: React.FC = () => {
 
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
-        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+        const frozen = isOrderFrozenByStatus(record);
+        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
-            style={{ cursor: 'pointer', padding: '4px', transition: 'background 0.2s' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'secondaryProcess'); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'secondaryProcess'); }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
           >
             {renderCompletionTimeTag(record, '二次工艺', rate || 0)}
@@ -546,13 +549,14 @@ const ProductionList: React.FC = () => {
       render: (rate: number, record: ProductionOrder) => {
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
-        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+        const frozen = isOrderFrozenByStatus(record);
+        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
-            style={{ cursor: 'pointer', padding: '4px', transition: 'background 0.2s' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'carSewing'); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'carSewing'); }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
           >
             {renderCompletionTimeTag(record, '车缝', rate || 0)}
@@ -573,13 +577,14 @@ const ProductionList: React.FC = () => {
       render: (rate: number, record: ProductionOrder) => {
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
-        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+        const frozen = isOrderFrozenByStatus(record);
+        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
-            style={{ cursor: 'pointer', padding: '4px', transition: 'background 0.2s' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'tailProcess'); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'tailProcess'); }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
           >
             {renderCompletionTimeTag(record, '尾部', rate || 0)}
@@ -624,8 +629,10 @@ const ProductionList: React.FC = () => {
         const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
         const rate = Math.min(100, Math.round((qualified / total) * 100));
+        const frozen = isOrderFrozenByStatus(record);
 
         const getColor = () => {
+          if (frozen) return 'var(--color-border)';
           if (rate === 100) return 'var(--color-success)';
           if (rate > 0) return 'var(--color-primary)';
           return 'var(--color-border)';
@@ -633,8 +640,8 @@ const ProductionList: React.FC = () => {
 
         return (
           <div
-            style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', padding: '4px 0' }}
-            onClick={(e) => { e.stopPropagation(); openProcessDetail(record, 'warehousing'); }}
+            style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: frozen ? 0.6 : 1 }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'warehousing'); }}
           >
             {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

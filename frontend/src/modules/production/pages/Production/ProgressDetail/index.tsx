@@ -517,7 +517,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const openScan = useOpenScan({
-    isOrderFrozenByStatus: (o: ProductionOrder) => (o.status as string) === 'cancelled' || o.status === 'completed',
+    isOrderFrozenByStatus: (o: ProductionOrder) => (o.status as string) === 'cancelled' || (o.status as string) === 'closed' || o.status === 'completed',
     message,
     fetchOrderDetail,
     setActiveOrder,

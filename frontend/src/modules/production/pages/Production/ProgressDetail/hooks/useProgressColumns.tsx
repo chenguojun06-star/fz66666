@@ -315,6 +315,7 @@ export const useProgressColumns = ({
       width: 900,
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
+        const frozen = isOrderFrozenByStatus(record);
         const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
         const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
@@ -357,11 +358,12 @@ export const useProgressColumns = ({
                     alignItems: 'center',
                     gap: 2,
                     flex: 1,
-                    cursor: 'pointer',
+                    cursor: frozen ? 'default' : 'pointer',
                     padding: 4,
                     transition: 'background 0.2s',
+                    opacity: frozen ? 0.6 : 1,
                   }}
-                  onClick={() => openNodeDetail(
+                  onClick={() => !frozen && openNodeDetail(
                     record,
                     nodeType,
                     nodeName,
@@ -375,6 +377,7 @@ export const useProgressColumns = ({
                     }))
                   )}
                   onMouseEnter={(e) => {
+                    if (frozen) return;
                     e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
                     void triggerPredict({
                       orderId: String(record.id || '').trim(),
@@ -408,8 +411,9 @@ export const useProgressColumns = ({
                     size={60}
                     nodeName={nodeName}
                     text={`${completedQty}/${totalQty}`}
-                    color1={percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
-                    color2={percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
+                    paused={frozen}
+                    color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
+                    color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
                   />
                 </div>
               );

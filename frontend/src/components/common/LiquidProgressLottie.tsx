@@ -9,6 +9,7 @@ interface LiquidProgressLottieProps {
   height?: number; // 新增：胶囊高度
   text?: string;   // 新增：自定义文本
   nodeName?: string; // 新增：工序名称
+  paused?: boolean; // 新增：暂停动画（关单/已完成/已取消时传 true）
 }
 
 const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
@@ -20,6 +21,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   height,
   text,
   nodeName,
+  paused = false,
 }) => {
   // 小圆球：使用固定的圆形尺寸，比原来小一点
   const ballSize = size * 0.8; // 缩小到原来的80%
@@ -78,7 +80,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
             left: '-50%',
             background: `linear-gradient(180deg, ${color2} 0%, ${color1} 50%, ${color2} 100%)`,
             borderRadius: '43%',
-            animation: progress >= 100
+            animation: (paused || progress >= 100)
               ? 'none'
               : `liquidWave ${5 + (100 - progress) / 25}s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite`,
             transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -95,9 +97,10 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
             left: '-50%',
             background: `linear-gradient(180deg, ${color1} 0%, ${color2} 50%, ${color1} 100%)`,
             borderRadius: '45%',
-            animation: progress >= 100
+            animation: (paused || progress >= 100)
               ? 'none'
               : `liquidWave2 ${6 + (100 - progress) / 20}s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite`,
+            transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
             opacity: 0.6,
             transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
