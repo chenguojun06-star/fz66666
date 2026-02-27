@@ -159,6 +159,40 @@
   font-weight: 700;
 }
 
+.login-card .register-mode-segmented {
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.login-card .register-mode-segmented .ant-segmented-item {
+  border-radius: 8px;
+}
+
+.login-card .register-mode-option-label {
+  font-weight: 700;
+  color: rgba(11, 45, 92, 0.78);
+}
+
+.login-card .register-mode-segmented .ant-segmented-item-selected .register-mode-option-label {
+  color: #0b2d5c;
+}
+
+.login-card .register-mode-segmented .ant-segmented-item:not(.ant-segmented-item-selected) .register-mode-option-label {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.login-card .register-mode-segmented .ant-segmented-thumb {
+  background: #f5f9ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.login-card .register-factory-hint {
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-weight: 500;
+}
+
 .login-card .ant-input-affix-wrapper,
 .login-card .ant-input,
 .login-card .ant-input-password {

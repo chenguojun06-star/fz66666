@@ -138,12 +138,16 @@ const Register: React.FC = () => {
 
         {/* 注册模式切换 */}
         {!urlTenantCode && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <div className="register-mode-switch-wrap" style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <Segmented
-              options={['工厂员工注册', '工厂入驻申请']}
+              className="register-mode-segmented"
+              options={[
+                { label: <span className="register-mode-option-label">工厂员工注册</span>, value: '工厂员工注册' },
+                { label: <span className="register-mode-option-label">工厂入驻申请</span>, value: '工厂入驻申请' },
+              ]}
               value={mode}
               onChange={(v) => { setMode(v as RegisterMode); form.resetFields(); }}
-              style={{ background: 'rgba(255,255,255,0.12)' }}
+              style={{ background: 'rgba(255,255,255,0.18)' }}
             />
           </div>
         )}
@@ -247,7 +251,7 @@ const Register: React.FC = () => {
                 filterOption={false}
                 style={{ width: '100%' }}
               />
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              <div className="register-factory-hint" style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 4 }}>
                 选择工厂后工厂编码自动填入
               </div>
             </Form.Item>
