@@ -55,6 +55,9 @@ import {
   type PaymentQueryRequest,
   type PayableItem,
 } from '@/services/finance/wagePaymentApi';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { RangePicker } = DatePicker;
 
@@ -87,6 +90,18 @@ const PaymentCenterPage: React.FC = () => {
   const { message: msg } = App.useApp();
 
   const [activeTab, setActiveTab] = useState<string>('pending');
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  }, [showSmartErrorNotice]);
 
   // ---- 待付款列表 ----
   const [payables, setPayables] = useState<PayableItem[]>([]);
@@ -143,12 +158,14 @@ const PaymentCenterPage: React.FC = () => {
     try {
       const res: any = await wagePaymentApi.listPendingPayables(payableBizType || undefined);
       setPayables(res?.data ?? res ?? []);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (err: any) {
+      reportSmartError('待付款数据加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYABLES_LOAD_FAILED');
       msg.error(`加载待付款数据失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setPayablesLoading(false);
     }
-  }, [payableBizType, msg]);
+  }, [payableBizType, msg, reportSmartError, showSmartErrorNotice]);
 
   /** 加载支付记录 */
   const fetchPayments = useCallback(async () => {
@@ -164,12 +181,14 @@ const PaymentCenterPage: React.FC = () => {
       if (values.dateRange?.[1]) query.endTime = values.dateRange[1].endOf('day').format('YYYY-MM-DDTHH:mm:ss');
       const res: any = await wagePaymentApi.listPayments(query);
       setPayments(res?.data ?? res ?? []);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (err: any) {
+      reportSmartError('支付记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYMENTS_LOAD_FAILED');
       msg.error(`加载支付记录失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setPaymentsLoading(false);
     }
-  }, [filterForm, msg]);
+  }, [filterForm, msg, reportSmartError, showSmartErrorNotice]);
 
   useEffect(() => {
     if (activeTab === 'pending') {
@@ -728,6 +747,21 @@ const PaymentCenterPage: React.FC = () => {
   // ============================================================
   return (
     <Layout>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                if (activeTab === 'pending') {
+                  void fetchPayables();
+                } else {
+                  void fetchPayments();
+                }
+              }}
+            />
+          </Card>
+        ) : null}
+
         {/* 页头 */}
         <Card className="page-card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

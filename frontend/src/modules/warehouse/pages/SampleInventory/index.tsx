@@ -21,14 +21,29 @@ import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
 import LoanHistoryModal from './LoanHistoryModal';
 import type { Dayjs } from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const SampleInventory: React.FC = () => {
   const pagination = useTablePagination(20);
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<SampleStock[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [searchText, setSearchText] = useState('');
   const [sampleType, setSampleType] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   const inboundModal = useModal<void>();
   const loanModal = useModal<SampleStock>();
@@ -48,8 +63,10 @@ const SampleInventory: React.FC = () => {
       if (res.code === 200) {
         setDataSource(res.data.records || []);
         pagination.setTotal(res.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (error) {
+      reportSmartError('样衣库存加载失败', '网络异常或服务不可用，请稍后重试', 'SAMPLE_STOCK_LOAD_FAILED');
       console.error(error);
     } finally {
       setLoading(false);
@@ -169,6 +186,17 @@ const SampleInventory: React.FC = () => {
 
   return (
     <Layout>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void loadData();
+              }}
+            />
+          </Card>
+        ) : null}
+
         <Card>
           <div style={{ marginBottom: 16 }}>
             <StandardToolbar
