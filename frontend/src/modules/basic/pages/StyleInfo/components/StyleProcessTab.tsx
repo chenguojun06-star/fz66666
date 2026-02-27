@@ -266,9 +266,15 @@ const StyleProcessTab: React.FC<Props> = ({
   };
 
   // 新增行
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (readOnly) return;
-    if (!editMode) enterEdit();
+    // 未开始时不允许添加行
+    if (!processStartTime) {
+      message.warning('请先点击上方「开始工序单价」按钮再进行编辑');
+      return;
+    }
+    if (!editMode) await enterEdit();
+    if (!editMode && !snapshotRef.current) return; // enterEdit 失败则不继续
     const maxSort = data.length ? Math.max(...data.map((d) => toNumberSafe(d.sortOrder))) : 0;
     const newId = -Date.now();
     const nextSort = maxSort + 1;
@@ -382,6 +388,10 @@ const StyleProcessTab: React.FC<Props> = ({
   // 删除行
   const handleDelete = (id: string | number) => {
     if (readOnly) return;
+    if (!processStartTime) {
+      message.warning('请先点击上方「开始工序单价」按钮再进行编辑');
+      return;
+    }
     if (!editMode) enterEdit();
     if (!isTempId(id)) setDeletedIds((prev) => [...prev, id]);
     setData((prev) => {
@@ -793,12 +803,12 @@ const StyleProcessTab: React.FC<Props> = ({
               }
               applyProcessTemplate(processTemplateKey);
             }}
-            disabled={Boolean(readOnly) || loading || saving || templateLoading}
+            disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}
           >
             导入模板
           </Button>
 
-          <Button onClick={handleAdd} disabled={Boolean(readOnly)} type="primary">
+          <Button onClick={handleAdd} disabled={Boolean(readOnly) || !processStartTime || loading || saving} type="primary">
             添加工序
           </Button>
 
@@ -846,7 +856,7 @@ const StyleProcessTab: React.FC<Props> = ({
           </Popover>
 
           {!editMode || readOnly ? (
-            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || !processStartTime}>
               编辑
             </Button>
           ) : (
