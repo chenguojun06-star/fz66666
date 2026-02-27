@@ -11,6 +11,9 @@ import './styles.css';
 
 const { Title } = Typography;
 
+declare const __BUILD_COMMIT__: string;
+declare const __BUILD_TIME__: string;
+
 interface TenantOption {
   id: number;
   tenantName: string;
@@ -25,6 +28,14 @@ const Login: React.FC = () => {
   const { message } = App.useApp();
 
   const year = useMemo(() => new Date().getFullYear(), []);
+  const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'unknown';
+  const buildTime = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
+  const buildTimeText = useMemo(() => {
+    if (!buildTime) return '-';
+    const d = new Date(buildTime);
+    if (Number.isNaN(d.getTime())) return buildTime;
+    return d.toLocaleString('zh-CN', { hour12: false });
+  }, [buildTime]);
 
   // 租户列表
   const [tenantsLoading, setTenantsLoading] = useState(true);
@@ -246,6 +257,9 @@ const Login: React.FC = () => {
           </Form.Item>
         </Form>
         <div className="login-footer">© {year} {t('login.brand', language)}</div>
+        <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
+          部署版本：{buildCommit} · 构建时间：{buildTimeText}
+        </div>
       </Card>
     </div>
   );
