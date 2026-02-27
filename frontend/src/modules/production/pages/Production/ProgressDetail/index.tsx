@@ -36,6 +36,7 @@ import {
 } from './utils';
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
+import SmartMiniDashboard from './components/SmartMiniDashboard';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -840,6 +841,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               },
             ]}
           />
+
+          {/* 智能迷你看板：风险分布 + 文字摘要 */}
+          <SmartMiniDashboard orders={orders} globalStats={globalStats} />
 
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
