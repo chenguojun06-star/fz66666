@@ -41,16 +41,26 @@ public class QrCodeSigner {
 
     private final String secretKey;
     private final boolean enabled;
+    private final boolean requireSignature;
 
     public QrCodeSigner(
-            @Value("${app.qrcode.hmac-secret:}") String secretKey) {
+            @Value("${app.qrcode.hmac-secret:}") String secretKey,
+            @Value("${app.qrcode.require-signature:false}") boolean requireSignature) {
         this.secretKey = secretKey;
         this.enabled = StringUtils.hasText(secretKey);
+        this.requireSignature = requireSignature;
         if (!this.enabled) {
             log.warn("[QrCodeSigner] QR HMAC 签名未启用（缺少 app.qrcode.hmac-secret 配置），"
                     + "二维码将以明文生成，存在伪造风险");
         } else {
             log.info("[QrCodeSigner] QR HMAC 签名已启用（密钥长度={}字符）", secretKey.length());
+        }
+        if (this.requireSignature) {
+            if (this.enabled) {
+                log.info("[QrCodeSigner] 已开启强校验模式（要求所有扫码二维码必须带有效签名）");
+            } else {
+                log.warn("[QrCodeSigner] 配置了 require-signature=true 但未配置 hmac-secret，强校验不会生效");
+            }
         }
     }
 
@@ -83,7 +93,14 @@ public class QrCodeSigner {
         int sigIndex = fullQrCode.lastIndexOf(SIG_PREFIX);
 
         if (sigIndex < 0) {
-            // 无签名 — 向后兼容模式
+            // 无签名
+            if (enabled && requireSignature) {
+                log.error("[QrCodeSigner] 收到无签名QR码（强校验模式已开启）: {}",
+                        truncateForLog(fullQrCode));
+                return VerifyResult.invalid("二维码缺少签名，已拒绝扫码");
+            }
+
+            // 向后兼容模式
             if (enabled) {
                 log.warn("[QrCodeSigner] 收到无签名QR码（过渡期允许）: {}",
                         truncateForLog(fullQrCode));
