@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { App } from 'antd';
 import api from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 
@@ -22,7 +21,6 @@ export interface RecentActivity {
 }
 
 export const useDashboardStats = () => {
-  const { message } = App.useApp();
   const [stats, setStats] = useState<DashboardStats>({
     sampleDevelopmentCount: 0,
     productionOrderCount: 0,

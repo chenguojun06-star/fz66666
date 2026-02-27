@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -20,7 +19,7 @@ import RowActions from '@/components/common/RowActions';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { getMaterialTypeCategory } from '@/utils/materialType';
-import { toCategoryCn } from '@/utils/styleCategory';
+import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { generateUniqueId } from '@/utils/idGenerator';
@@ -1055,7 +1054,7 @@ const OrderManagement: React.FC = () => {
       factoryId: undefined,
       merchandiser: style.orderType || undefined, // 从样衣开发带入跟单员
       company: style.customer || undefined, // 从样衣开发带入公司
-      productCategory: style.category || undefined, // 从样衣开发带入品类
+      productCategory: normalizeCategoryQuery(style.category) || undefined, // 从样衣开发带入品类
       patternMaker: style.sampleSupplier || undefined, // 从样衣开发带入纸样师
       orderQuantity: 1,
       plannedStartDate: plannedStartDate,
@@ -1578,11 +1577,13 @@ const OrderManagement: React.FC = () => {
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
                           <Form.Item name="productCategory" label="品类">
-                            <DictAutoComplete
-                              dictType="category"
-                              placeholder="请选择或输入品类（选填）"
+                            <Select
+                              placeholder="请选择品类（选填）"
                               allowClear
+                              showSearch
+                              optionFilterProp="label"
                               style={{ width: '100%' }}
+                              options={CATEGORY_CODE_OPTIONS}
                             />
                           </Form.Item>
                         </Col>

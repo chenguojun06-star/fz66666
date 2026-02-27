@@ -135,7 +135,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       render: (val: number) => val ? `¥${val.toFixed(2)}` : '-'
     },
     {
-      title: '样板数量',
+      title: '样衣数量',
       dataIndex: 'sampleQuantity',
       key: 'sampleQuantity',
       width: 90,

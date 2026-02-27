@@ -80,16 +80,13 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       title: '入库号',
       dataIndex: 'warehousingNo',
       key: 'warehousingNo',
-      width: 100,
-      ellipsis: true,
+      width: 150,
       render: (v: any, record: WarehousingType) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        // 只显示后8位，悬停看全文
-        const short = text.length > 10 ? '...' + text.slice(-8) : text;
         return (
           <Button type="link" size="small" style={{ padding: 0, fontSize: 12 }} onClick={() => goToDetail(record, 'inspect')} title={text}>
-            {short}
+            {text}
           </Button>
         );
       },
@@ -98,13 +95,11 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 110,
-      ellipsis: true,
+      width: 140,
       render: (v: unknown) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        const short = text.length > 10 ? '...' + text.slice(-8) : text;
-        return <span title={text} style={{ fontSize: 12 }}>{short}</span>;
+        return <span title={text} style={{ fontSize: 12 }}>{text}</span>;
       },
     },
     {

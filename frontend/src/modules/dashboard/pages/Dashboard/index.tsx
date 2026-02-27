@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
   
   // 使用自定义 Hook 获取数据
   const { 
-    stats, 
+    stats: _stats,
     recentActivities, 
     hasError, 
     errorMessage, 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Form, Input, InputNumber, Row, Col, FormInstance } from 'antd';
+import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
+import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 
 interface StyleBasicInfoFormProps {
   _form: FormInstance; // 未使用，外部Form已包含
@@ -111,12 +112,28 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                  <DictAutoComplete dictType="category" placeholder="请选择或输入品类" disabled={isFieldLocked(currentStyle?.category)} style={{ width: '100%' }} />
+                  <Select
+                    placeholder="请选择品类"
+                    disabled={isFieldLocked(currentStyle?.category)}
+                    style={{ width: '100%' }}
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={CATEGORY_CODE_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="season" label="季节">
-                  <DictAutoComplete dictType="season" placeholder="请选择季节" disabled={isFieldLocked(currentStyle?.season)} style={{ width: '100%' }} />
+                  <Select
+                    placeholder="请选择季节"
+                    disabled={isFieldLocked(currentStyle?.season)}
+                    style={{ width: '100%' }}
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={SEASON_CODE_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
             </Row>

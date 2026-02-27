@@ -88,7 +88,15 @@
     "catchtap",
     "multiplex",
     "behaviours",
-    "behaviors"
+    "behaviors",
+    "recents",
+    "Sider",
+    "Tiếng",
+    "Việt",
+    "ខ្មែរ",
+    "uroot",
+    "pchangeme",
+    "myqcloud"
   ],
   "ignorePaths": [
     "node_modules",

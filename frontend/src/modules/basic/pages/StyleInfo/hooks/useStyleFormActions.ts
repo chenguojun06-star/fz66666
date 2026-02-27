@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { formatDateTimeSecond } from '@/utils/datetime';
+import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
 
 interface UseStyleFormActionsProps {
   form: FormInstance;
@@ -78,14 +79,16 @@ export const useStyleFormActions = ({
 
       // 添加颜色码数配置数据
       normalizedValues.sizeColorConfig = JSON.stringify(sizeColorConfig);
+        normalizedValues.category = normalizeCategoryQuery(normalizedValues.category);
+        normalizedValues.season = normalizeSeasonQuery(normalizedValues.season);
 
-      // 提取第一个有效颜色作为样板生产的颜色字段
+      // 提取第一个有效颜色作为样衣生产的颜色字段
       const firstColor = sizeColorConfig.colors.find(c => c && c.trim());
       if (firstColor) {
         normalizedValues.color = firstColor.trim();
       }
 
-      // 计算样板数量总和
+      // 计算样衣数量总和
       const totalQuantity = sizeColorConfig.quantities.reduce((sum, qty) => sum + (qty || 0), 0);
       if (totalQuantity > 0) {
         normalizedValues.sampleQuantity = totalQuantity;
@@ -199,7 +202,7 @@ export const useStyleFormActions = ({
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
 
-    // 检查样衣生产（样板生产模块）是否已完成
+    // 检查样衣生产模块是否已完成
     const productionCompletedTime = (currentStyle as any)?.productionCompletedTime;
     if (!productionCompletedTime) {
       message.warning('请先完成样衣生产后再进行样衣完成操作');

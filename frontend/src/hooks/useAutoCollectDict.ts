@@ -31,7 +31,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
   const checkWordExists = async (word: string): Promise<boolean> => {
     if (!word || word.trim() === '') return true;
 
-    const trimmedWord = word.trim();
+    const trimmedWord = normalizeWord(word);
 
     // 先检查缓存
     if (existingWordsCache.current.has(trimmedWord)) {
@@ -44,12 +44,14 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
         params: {
           dictType,
           dictLabel: trimmedWord,
-          pageSize: 1
+          page: 1,
+          pageSize: 100
         }
       });
 
-      const exists = response.data?.records?.some(
-        (item: any) => item.dictLabel === trimmedWord
+      const records: any[] = response.data?.records || response.data || [];
+      const exists = records.some(
+        (item: any) => normalizeWord(item.dictLabel) === trimmedWord
       );
 
       if (exists) {
@@ -69,7 +71,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
   const collectWord = async (word: string) => {
     if (!enabled || !word || word.trim() === '') return;
 
-    const trimmedWord = word.trim();
+    const trimmedWord = normalizeWord(word);
 
     try {
       // 检查是否已存在
@@ -161,6 +163,10 @@ function generateDictCode(label: string, dictType: string): string {
   }
 
   return `${prefix}_${code}_${timestamp}`;
+}
+
+function normalizeWord(input?: string): string {
+  return (input || '').replace(/\s+/g, ' ').trim();
 }
 
 /**

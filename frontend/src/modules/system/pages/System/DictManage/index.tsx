@@ -21,6 +21,34 @@ interface DictItem {
   createTime?: string;
 }
 
+const normalizeText = (value?: string): string => (value || '').trim();
+
+const dedupeDictItems = (items: DictItem[]): DictItem[] => {
+  const byCode = new Map<string, DictItem>();
+  const byLabel = new Map<string, DictItem>();
+
+  const sorted = [...items].sort((a, b) => {
+    const aSort = Number(a.sortOrder || 0);
+    const bSort = Number(b.sortOrder || 0);
+    if (aSort !== bSort) return aSort - bSort;
+    const aId = Number(a.id || Number.MAX_SAFE_INTEGER);
+    const bId = Number(b.id || Number.MAX_SAFE_INTEGER);
+    return aId - bId;
+  });
+
+  sorted.forEach((item) => {
+    const typeKey = normalizeText(item.dictType).toLowerCase();
+    const codeKey = `${typeKey}|${normalizeText(item.dictCode).toUpperCase()}`;
+    const labelKey = `${typeKey}|${normalizeText(item.dictLabel)}`;
+    if (!byCode.has(codeKey) && !byLabel.has(labelKey)) {
+      byCode.set(codeKey, item);
+      byLabel.set(labelKey, item);
+    }
+  });
+
+  return Array.from(byCode.values());
+};
+
 // 字典类型定义（服装行业完整分类）
 const DICT_TYPES = [
   { value: 'category', label: '品类', description: '服装品类：女装、男装、童装、运动装等' },
@@ -67,16 +95,16 @@ const DictManage: React.FC = () => {
         const list = Array.isArray(res.data)
           ? res.data
           : (res.data?.records || []);
-        setDataSource(list);
+        setDataSource(dedupeDictItems(list));
       } else {
         // API 不存在时使用本地数据
         const localData = getLocalData(dictType);
-        setDataSource(localData);
+        setDataSource(dedupeDictItems(localData));
       }
     } catch (error) {
       // 使用本地硬编码数据作为后备
       const localData = getLocalData(dictType);
-      setDataSource(localData);
+      setDataSource(dedupeDictItems(localData));
     } finally {
       setLoading(false);
     }
@@ -340,16 +368,10 @@ const DictManage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<DictItem> = [
     {
-      title: '字典编码',
-      dataIndex: 'dictCode',
-      key: 'dictCode',
-      width: 150,
-    },
-    {
       title: '字典标签',
       dataIndex: 'dictLabel',
       key: 'dictLabel',
-      width: 150,
+      width: 220,
       render: (text: string) => <Tag color="blue">{text}</Tag>
     },
     {

@@ -18,7 +18,6 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import java.math.BigDecimal;
-import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
@@ -41,9 +40,6 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private StyleStageHelper styleStageHelper;
-
-    @Autowired
-    private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -139,9 +135,6 @@ public class StyleInfoOrchestrator {
                     log.error("自动创建样板生产记录失败: styleId={}, styleNo={}",
                             styleInfo.getId(), styleInfo.getStyleNo(), e);
                 }
-                // 移除自动同步到模板库，只有手动推送时才同步
-                // tryCreateTemplateFromStyle(styleInfo == null ? null :
-                // styleInfo.getStyleNo());
                 return true;
             }
             throw new IllegalStateException("操作失败");
@@ -169,22 +162,6 @@ public class StyleInfoOrchestrator {
                 } catch (Exception e) {
                     log.warn("同步样板生产信息失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
                 }
-
-                // 移除自动同步到模板库，只有手动推送时才同步
-                // try {
-                // String styleNo = styleInfo == null ? null : styleInfo.getStyleNo();
-                // if (!StringUtils.hasText(styleNo) && styleInfo != null && styleInfo.getId()
-                // != null) {
-                // StyleInfo current = styleInfoService.getById(styleInfo.getId());
-                // styleNo = current == null ? null : current.getStyleNo();
-                // }
-                // tryCreateTemplateFromStyle(styleNo);
-                // } catch (Exception e) {
-                // log.warn("Failed to sync templates after style update: styleId={},
-                // styleNo={}",
-                // styleInfo == null ? null : styleInfo.getId(),
-                // styleInfo == null ? null : styleInfo.getStyleNo(), e);
-                // }
                 return true;
             }
             throw new IllegalStateException("操作失败");
@@ -277,20 +254,6 @@ public class StyleInfoOrchestrator {
             throw new IllegalStateException("删除失败");
         }
         return true;
-    }
-
-    private void tryCreateTemplateFromStyle(String styleNo) {
-        try {
-            String styleNoTrimmed = styleNo == null ? null : styleNo.trim();
-            if (StringUtils.hasText(styleNoTrimmed)) {
-                Map<String, Object> body = new HashMap<>();
-                body.put("sourceStyleNo", styleNoTrimmed);
-                body.put("templateTypes", List.of());
-                templateLibraryOrchestrator.createFromStyle(body);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to create templates from style: styleNo={}", styleNo, e);
-        }
     }
 
     /**
@@ -517,7 +480,7 @@ public class StyleInfoOrchestrator {
                 .le(StyleInfo::getSampleCompletedTime, endTime)
                 .list();
 
-        int styleCount = completedStyles.size();
+        int totalSampleQuantity = 0;
 
         // 统计费用：遍历所有已完成的样衣，汇总其报价单费用
         double totalMaterialCost = 0.0;
@@ -525,6 +488,11 @@ public class StyleInfoOrchestrator {
         double totalOtherCost = 0.0;
 
         for (StyleInfo style : completedStyles) {
+            int sampleQty = style.getSampleQuantity() == null || style.getSampleQuantity() <= 0
+                    ? 1
+                    : style.getSampleQuantity();
+            totalSampleQuantity += sampleQty;
+
             // 用实时BOM成本（不依赖可能过期的报价单快照）
             List<StyleBom> bomItems = styleBomService.listByStyleId(style.getId());
             double materialCost = bomItems.stream().mapToDouble(bom -> {
@@ -535,27 +503,27 @@ public class StyleInfoOrchestrator {
                 double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
                 return usage * (1.0 + loss / 100.0) * up;
             }).sum();
-            totalMaterialCost += materialCost;
+            totalMaterialCost += materialCost * sampleQty;
 
             // 用实时工序成本
             List<StyleProcess> processes = styleProcessService.listByStyleId(style.getId());
             double processCost = processes.stream()
                     .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
                     .sum();
-            totalProcessCost += processCost;
+                totalProcessCost += processCost * sampleQty;
 
             // 二次工艺成本：从 t_secondary_process 实时计算
             List<SecondaryProcess> secondaryItems = secondaryProcessService.listByStyleId(style.getId());
             double secondaryCost = secondaryItems.stream()
                     .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
                     .sum();
-            totalOtherCost += secondaryCost;
+                totalOtherCost += secondaryCost * sampleQty;
         }
 
         double totalCost = totalMaterialCost + totalProcessCost + totalOtherCost;
 
         Map<String, Object> stats = new HashMap<>();
-        stats.put("patternCount", styleCount);
+        stats.put("patternCount", totalSampleQuantity);
         stats.put("materialCost", totalMaterialCost);
         stats.put("processCost", totalProcessCost);
         stats.put("secondaryProcessCost", totalOtherCost);  // other_cost 对应二次工艺

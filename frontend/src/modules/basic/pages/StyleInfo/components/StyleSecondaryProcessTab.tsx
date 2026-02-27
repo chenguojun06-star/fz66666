@@ -41,7 +41,7 @@ interface Props {
   secondaryAssignee?: string;
   secondaryStartTime?: string;
   secondaryCompletedTime?: string;
-  sampleQuantity?: number; // 样板数量，用于自动填充工艺数量
+  sampleQuantity?: number; // 样衣数量，用于自动填充工艺数量
   onRefresh?: () => void; // 刷新父组件的回调
   simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮
 }
@@ -63,18 +63,6 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   const [dataSource, setDataSource] = useState<SecondaryProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
-
-  // 工艺类型选项
-  const _processTypeOptions = [
-    { value: 'embroidery', label: '刺绣' },
-    { value: 'printing', label: '印花' },
-    { value: 'washing', label: '水洗' },
-    { value: 'dyeing', label: '染色' },
-    { value: 'ironing', label: '烫印' },
-    { value: 'pleating', label: '打褶' },
-    { value: 'beading', label: '钉珠' },
-    { value: 'other', label: '其他' },
-  ];
 
   // 状态选项
   const statusOptions = [
@@ -129,7 +117,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     form.setFieldsValue({
       processType: '二次工艺', // 默认工艺类型为"二次工艺"
       status: 'pending',
-      quantity: sampleQuantity || 0 // 自动填充样板数量
+      quantity: sampleQuantity || 0 // 自动填充样衣数量
     });
   };
 
@@ -415,7 +403,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 label="数量"
                 name="quantity"
                 rules={[{ required: true, message: '请输入数量' }]}
-                tooltip="新建时自动填充为样板数量，可手动修改"
+                tooltip="新建时自动填充为样衣数量，可手动修改"
               >
                 <InputNumber
                   placeholder="请输入数量"

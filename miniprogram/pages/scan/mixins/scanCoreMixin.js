@@ -382,7 +382,20 @@ const scanCoreMixin = Behavior({
         markRecent(codeStr, 2000);
         // ✅ 触发成功回调（语音+振动+UI更新）
         this.handleScanSuccess(result);
+        return;
       }
+
+      // 失败对象兜底：避免出现“扫码无反应”的静默场景
+      if (result && result.success === false) {
+        const message = result.message || result.errMsg || '扫码失败，请重试';
+        toast.error(message);
+        this.handleScanError({ message });
+        return;
+      }
+
+      // 非标准返回对象兜底
+      toast.error('扫码结果异常，请重试');
+      this.handleScanError({ message: '扫码结果异常，请重试' });
     },
 
     /**

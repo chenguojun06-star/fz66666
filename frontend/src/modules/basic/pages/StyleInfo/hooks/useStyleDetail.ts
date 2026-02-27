@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
+import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
 
 /**
  * 款式详情数据管理 Hook
@@ -50,10 +51,10 @@ export const useStyleDetail = (styleId?: string) => {
         setEditLocked(Boolean(res.data.id)); // 加载后默认锁定
         return res.data;
       }
-      message.error(res.message || '获取款号详情失败');
+      message.error(res.message || '获取样衣详情失败');
       return null;
     } catch (error) {
-      message.error('获取款号详情失败');
+      message.error('获取样衣详情失败');
       return null;
     } finally {
       setLoading(false);
@@ -92,6 +93,9 @@ export const useStyleDetail = (styleId?: string) => {
     const nextValues: Record<string, any> = { ...currentStyle };
     const rawCreateTime = nextValues.createTime;
     const rawDeliveryDate = nextValues.deliveryDate;
+
+    nextValues.category = normalizeCategoryQuery(nextValues.category);
+    nextValues.season = normalizeSeasonQuery(nextValues.season);
 
     // 转换日期字段为 dayjs 对象
     nextValues.createTime = rawCreateTime ? dayjs(rawCreateTime) : undefined;

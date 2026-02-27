@@ -8,7 +8,6 @@ import ResizableModal, {
   useResizableModalTableScrollY,
 } from './common/ResizableModal';
 import ResizableTable from './common/ResizableTable';
-import { useViewport } from '../utils/useViewport';
 import { useAuth } from '../utils/AuthContext';
 import { getFullAuthedFileUrl } from '../utils/fileUrl';
 
@@ -113,6 +112,10 @@ export const ProductionOrderHeader: React.FC<{
   coverSize?: number;
   className?: string;
   extraFields?: OrderHeaderField[];
+  showOrderNo?: boolean;
+  showColor?: boolean;
+  hideEmptyColor?: boolean;
+  hideSizeBlockWhenNoRealSize?: boolean;
 }> = ({
   order,
   orderLines,
@@ -128,6 +131,10 @@ export const ProductionOrderHeader: React.FC<{
   coverSize = 160,
   className,
   extraFields,
+  showOrderNo = true,
+  showColor = true,
+  hideEmptyColor = false,
+  hideSizeBlockWhenNoRealSize = false,
 }) => {
     const resolvedOrderNo = String(orderNo ?? (order as any)?.orderNo ?? (order as any)?.productionOrderNo ?? '').trim();
     const resolvedStyleNo = String(styleNo ?? (order as any)?.styleNo ?? '').trim();
@@ -158,12 +165,17 @@ export const ProductionOrderHeader: React.FC<{
     }, [totalQuantity, computedSizeItems, order]);
 
     const fields: OrderHeaderField[] = [
-      { label: '订单号', value: <span className="order-no-compact">{resolvedOrderNo || '-'}</span> },
+      ...(showOrderNo ? [{ label: '订单号', value: <span className="order-no-compact">{resolvedOrderNo || '-'}</span> }] : []),
       { label: '款号', value: resolvedStyleNo || '-' },
       { label: '款名', value: resolvedStyleName || '-' },
-      { label: '颜色', value: resolvedColor || '-' },
+      ...(showColor && (!hideEmptyColor || !!resolvedColor) ? [{ label: '颜色', value: resolvedColor || '-' }] : []),
       ...(extraFields || []),
     ];
+
+    const hasRealSizeItems = computedSizeItems.some((item) => {
+      const sizeText = String(item?.size || '').trim();
+      return !!sizeText && sizeText !== '-';
+    });
 
     return (
       <Row gutter={16} className={`purchase-detail-top${className ? ` ${className}` : ''}`}>
@@ -191,9 +203,10 @@ export const ProductionOrderHeader: React.FC<{
               ))}
             </Row>
 
-            <div className="purchase-detail-size-block">
-              <div className="purchase-detail-size-table-wrap">
-                {(() => {
+            {(!hideSizeBlockWhenNoRealSize || hasRealSizeItems) ? (
+              <div className="purchase-detail-size-block">
+                <div className="purchase-detail-size-table-wrap">
+                  {(() => {
                   const sizeArray = computedSizeItems.length
                     ? computedSizeItems.map((x) => String(x.size || '').trim()).filter(Boolean)
                     : ['-'];
@@ -215,8 +228,8 @@ export const ProductionOrderHeader: React.FC<{
                     : 0;
 
                   const totalText = `总下单数：${toNumberSafe(computedTotal)}`;
-                  return (
-                    <ResizableTable
+                    return (
+                      <ResizableTable
                       storageKey="style-assets"
                       dataSource={[
                         { key: 'size', type: '码数', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: s }), {}), total: totalText } as any,
@@ -263,11 +276,12 @@ export const ProductionOrderHeader: React.FC<{
                       showHeader={false}
                       bordered
                       rowKey="key"
-                    />
-                  );
-                })()}
+                      />
+                    );
+                  })()}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </Col>
       </Row>
@@ -295,7 +309,6 @@ export const StyleAttachmentsButton: React.FC<{
   /** 模态框关闭时的回调 */
   onModalClose?: () => void;
 }> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', bizTypes, onlyActive, onModalClose }) => {
-  const { modalWidth: _modalWidth } = useViewport();
   const { user } = useAuth();
   // 检查是否为管理员（拥有system:manage权限）
   const isAdmin = user?.permissions?.includes('system:manage') ?? false;
