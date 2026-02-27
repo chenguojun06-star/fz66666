@@ -448,21 +448,6 @@ const StyleInfoDetailPage: React.FC = () => {
                 )
               },
               {
-                key: '7',
-                label: '工序单价',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleProcessTab
-                    styleId={currentStyle?.id}
-                    readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
-                    processAssignee={(currentStyle as any)?.processAssignee}
-                    processStartTime={(currentStyle as any)?.processStartTime}
-                    processCompletedTime={(currentStyle as any)?.processCompletedTime}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
                 key: '8',
                 label: '生产制单',
                 disabled: !currentStyle?.id,
@@ -506,6 +491,21 @@ const StyleInfoDetailPage: React.FC = () => {
                     secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
                     secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
                     sampleQuantity={(currentStyle as any)?.sampleQuantity}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                  />
+                )
+              },
+              {
+                key: '7',
+                label: '工序单价',
+                disabled: !currentStyle?.id,
+                children: (
+                  <StyleProcessTab
+                    styleId={currentStyle?.id}
+                    readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
+                    processAssignee={(currentStyle as any)?.processAssignee}
+                    processStartTime={(currentStyle as any)?.processStartTime}
+                    processCompletedTime={(currentStyle as any)?.processCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
