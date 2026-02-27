@@ -54,6 +54,9 @@ import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
 import { useProductionBoardStore } from '@/stores';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -85,6 +88,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [globalStats, setGlobalStats] = useState({
     totalOrders: 0, totalQuantity: 0,
     delayedOrders: 0, delayedQuantity: 0,
@@ -110,6 +114,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // ── 扫码弹窗 ──────────────────────────────────────────────────
   const [scanOpen, setScanOpen] = useState(false);
@@ -175,6 +190,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         const records = result.data.records || [];
         setOrders(records);
         setTotal(result.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
         clearAllBoardCache();
 
@@ -217,10 +233,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           })();
         }
       } else if (!silent) {
-        message.error(result.message || '获取生产订单失败');
+        const errMessage = result.message || '获取生产订单失败';
+        reportSmartError('生产进度加载失败', errMessage, 'PROGRESS_LIST_LOAD_FAILED');
+        message.error(errMessage);
       }
     } catch (err: any) {
       if (!silent) {
+        reportSmartError('生产进度加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'PROGRESS_LIST_LOAD_EXCEPTION');
         message.error(`获取生产订单失败: ${err?.message || '请检查网络连接'}`);
       }
     } finally {
@@ -708,6 +727,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           </Card>
 
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" className="mb-sm">
+              <SmartErrorNotice
+                error={smartError}
+                onFix={() => {
+                  void fetchOrders();
+                }}
+              />
+            </Card>
+          ) : null}
+
           {viewMode === 'list' ? (
             <ResizableTable
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
@@ -851,6 +881,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               )}
             />
           </Card>
+
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" className="mb-sm">
+              <SmartErrorNotice
+                error={smartError}
+                onFix={() => {
+                  void fetchOrders();
+                }}
+              />
+            </Card>
+          ) : null}
 
           {viewMode === 'list' ? (
             <ResizableTable

@@ -22,6 +22,9 @@ import {
   type ExpenseReimbursement,
 } from '@/services/finance/expenseReimbursementApi';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { TextArea } = Input;
 
@@ -67,6 +70,18 @@ const ExpenseReimbursementPage: React.FC = () => {
 
   // ── 统计 ──
   const [stats, setStats] = useState({ pending: 0, totalAmount: 0, paidAmount: 0 });
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // ── 加载数据 ──
   const fetchList = useCallback(async () => {
@@ -84,6 +99,7 @@ const ExpenseReimbursementPage: React.FC = () => {
       if (res.code === 200 && res.data) {
         setList(res.data.records || []);
         setTotal(res.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
 
         // 简易统计
         const records: ExpenseReimbursement[] = res.data.records || [];
@@ -92,8 +108,13 @@ const ExpenseReimbursementPage: React.FC = () => {
         const paidAmt = records.filter(r => r.status === 'paid')
           .reduce((s, r) => s + (r.amount || 0), 0);
         setStats({ pending: pendingCount, totalAmount: totalAmt, paidAmount: paidAmt });
+      } else {
+        const errMessage = res.message || '加载报销列表失败';
+        reportSmartError('费用报销列表加载失败', errMessage, 'EXPENSE_LIST_LOAD_FAILED');
+        message.error(errMessage);
       }
     } catch (err: any) {
+      reportSmartError('费用报销列表加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_LIST_LOAD_EXCEPTION');
       message.error(`加载报销列表失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setLoading(false);
@@ -318,6 +339,17 @@ const ExpenseReimbursementPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: '0 0 24px' }}>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 16 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void fetchList();
+              }}
+            />
+          </Card>
+        ) : null}
+
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={8}>
