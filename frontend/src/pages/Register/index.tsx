@@ -8,6 +8,9 @@ import '../Login/styles.css';
 
 const { Title } = Typography;
 
+declare const __BUILD_COMMIT__: string;
+declare const __BUILD_TIME__: string;
+
 type RegisterMode = '工厂员工注册' | '工厂入驻申请';
 
 const Register: React.FC = () => {
@@ -29,6 +32,14 @@ const Register: React.FC = () => {
   const [tenantSearchText, setTenantSearchText] = useState('');
 
   const year = useMemo(() => new Date().getFullYear(), []);
+  const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'unknown';
+  const buildTime = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
+  const buildTimeText = useMemo(() => {
+    if (!buildTime) return '-';
+    const d = new Date(buildTime);
+    if (Number.isNaN(d.getTime())) return buildTime;
+    return d.toLocaleString('zh-CN', { hour12: false });
+  }, [buildTime]);
 
   // URL 带 tenantCode 时自动填入
   useEffect(() => {
@@ -402,6 +413,9 @@ const Register: React.FC = () => {
           </Form.Item>
         </Form>
         <div className="login-footer">© {year} 云裳智链</div>
+        <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
+          部署版本：{buildCommit} · 构建时间：{buildTimeText}
+        </div>
       </Card>
     </div>
   );
