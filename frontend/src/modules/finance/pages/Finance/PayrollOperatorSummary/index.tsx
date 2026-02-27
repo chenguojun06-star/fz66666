@@ -11,6 +11,9 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import api, { unwrapApiData } from '@/utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -74,8 +77,20 @@ const PayrollOperatorSummary: React.FC = () => {
 
     const [rows, setRows] = useState<PayrollOperatorProcessSummaryRow[]>([]);
     const [loading, setLoading] = useState(false);
+    const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
     const hasAutoFetched = useRef(false);
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+    const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+    const reportSmartError = (title: string, reason?: string, code?: string) => {
+        if (!showSmartErrorNotice) return;
+        setSmartError({
+            title,
+            reason,
+            code,
+            actionText: '刷新重试',
+        });
+    };
 
     const [sortField, setSortField] = useState<string>('totalAmount'); // 当前排序字段
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // 排序方向
@@ -273,7 +288,9 @@ const PayrollOperatorSummary: React.FC = () => {
             const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>('/finance/payroll-settlement/operator-summary', payload);
             const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
             setRows(Array.isArray(data) ? data : []);
+            if (showSmartErrorNotice) setSmartError(null);
         } catch (e: any) {
+            reportSmartError('工资结算数据加载失败', String(e?.message || '获取人员工序统计失败'), 'PAYROLL_OPERATOR_SUMMARY_LOAD_FAILED');
             message.error(String(e?.message || '获取人员工序统计失败'));
             setRows([]);
         } finally {
@@ -609,6 +626,17 @@ const PayrollOperatorSummary: React.FC = () => {
     return (
         <Layout>
             <Card className="page-card">
+                {showSmartErrorNotice && smartError ? (
+                    <Card size="small" className="mb-sm">
+                        <SmartErrorNotice
+                            error={smartError}
+                            onFix={() => {
+                                void doFetchData();
+                            }}
+                        />
+                    </Card>
+                ) : null}
+
                 <div className="page-header">
                     <h2 className="page-title">工资结算</h2>
                 </div>

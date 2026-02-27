@@ -13,6 +13,9 @@ import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { getAuthedFileUrl } from '@/utils/fileUrl';
 import type { Dayjs } from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 
 // SKU明细接口
@@ -66,6 +69,18 @@ const _FinishedInventory: React.FC = () => {
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  }, [showSmartErrorNotice]);
 
   // 加载真实数据
   const loadData = useCallback(async () => {
@@ -77,17 +92,19 @@ const _FinishedInventory: React.FC = () => {
       );
       if (res.code === 200 && res.data?.records) {
         setRawDataSource(res.data.records);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
         setRawDataSource([]);
       }
     } catch (error) {
       console.error('加载成品库存失败:', error);
+      reportSmartError('成品库存加载失败', '网络异常或服务不可用，请稍后重试', 'FINISHED_INVENTORY_LOAD_FAILED');
       message.error('加载成品库存数据失败');
       setRawDataSource([]);
     } finally {
       setLoading(false);
     }
-  }, [searchText]);
+  }, [searchText, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => {
     loadData();
@@ -527,6 +544,17 @@ const _FinishedInventory: React.FC = () => {
 
   return (
     <Layout>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void loadData();
+              }}
+            />
+          </Card>
+        ) : null}
+
         <StatsGrid
           items={[
             { key: 'total', title: '成品总数', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0) + (r.defectQty ?? 0), 0), suffix: '件' },
