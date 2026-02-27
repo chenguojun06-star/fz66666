@@ -282,6 +282,7 @@ const PaymentCenterPage: React.FC = () => {
         fetchPayments();
       }
     } catch (err: any) {
+      reportSmartError('支付发起失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAY_SUBMIT_FAILED');
       if (err?.message) msg.error(err.message);
     } finally {
       setPaySubmitting(false);
@@ -309,6 +310,7 @@ const PaymentCenterPage: React.FC = () => {
       const res: any = await wagePaymentApi.listAccounts(ownerType, ownerId);
       setAccounts(res?.data ?? res ?? []);
     } catch (err: any) {
+      reportSmartError('收款账户加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_LOAD_FAILED');
       msg.error(`加载收款账户失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setAccountsLoading(false);
@@ -338,8 +340,10 @@ const PaymentCenterPage: React.FC = () => {
       setEditingAccount(null);
       accountForm.resetFields();
       setQrFileList([]);
+      if (showSmartErrorNotice) setSmartError(null);
       loadAccounts(accountOwnerType, accountOwnerId);
     } catch (err: any) {
+      reportSmartError('收款账户保存失败', err?.message || '请检查输入后重试', 'WAGE_ACCOUNT_SAVE_FAILED');
       if (err?.message) msg.error(err.message);
     } finally {
       setAccountSaving(false);
@@ -352,6 +356,7 @@ const PaymentCenterPage: React.FC = () => {
       msg.success('已删除');
       loadAccounts(accountOwnerType, accountOwnerId);
     } catch (err: any) {
+      reportSmartError('收款账户删除失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_DELETE_FAILED');
       msg.error(`删除账户失败: ${err?.message || '未知错误'}`);
     }
   };
@@ -387,6 +392,7 @@ const PaymentCenterPage: React.FC = () => {
         msg.success('上传成功');
       }
     } catch (err: any) {
+      reportSmartError('账户二维码上传失败', err?.message || '请检查文件格式后重试', 'WAGE_ACCOUNT_QR_UPLOAD_FAILED');
       msg.error(`上传二维码失败: ${err?.message || '请检查文件格式'}`);
     }
   };
@@ -412,6 +418,7 @@ const PaymentCenterPage: React.FC = () => {
         setProofFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
       }
     } catch (err: any) {
+      reportSmartError('支付凭证上传失败', err?.message || '请检查文件格式后重试', 'WAGE_PROOF_UPLOAD_FAILED');
       msg.error(`上传凭证失败: ${err?.message || '请检查文件格式'}`);
     }
   };
@@ -425,7 +432,9 @@ const PaymentCenterPage: React.FC = () => {
       setProofModalOpen(false);
       fetchPayments();
       fetchPayables();
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (err: any) {
+      reportSmartError('线下支付确认失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PROOF_CONFIRM_FAILED');
       msg.error(err?.message || '操作失败');
     } finally {
       setProofSubmitting(false);
