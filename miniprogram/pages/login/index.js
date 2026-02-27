@@ -1,6 +1,7 @@
 const { getToken, setToken, setUserInfo } = require('../../utils/storage');
 const { getBaseUrl, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
+const i18n = require('../../utils/i18n/index');
 const { validateByRule } = require('../../utils/validationRules');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 
@@ -223,6 +224,15 @@ function validateAndSetBaseUrl(apiBaseUrl) {
 
 Page({
   data: {
+    currentLanguage: 'zh-CN',
+    currentLanguageLabel: '中文',
+    languageSwitchText: '语言',
+    languageNameMap: {
+      'zh-CN': '中文',
+      'en-US': 'English',
+      'vi-VN': 'Tiếng Việt',
+      'km-KH': 'ខ្មែរ',
+    },
     username: '',
     password: '',
     apiBaseUrl: '',
@@ -246,6 +256,20 @@ Page({
   },
 
   onLoad(options) {
+    const currentLanguage = i18n.getLanguage();
+    const languageNameMap = {
+      'zh-CN': i18n.t('language.names.zh-CN', currentLanguage),
+      'en-US': i18n.t('language.names.en-US', currentLanguage),
+      'vi-VN': i18n.t('language.names.vi-VN', currentLanguage),
+      'km-KH': i18n.t('language.names.km-KH', currentLanguage),
+    };
+    this.setData({
+      currentLanguage,
+      languageNameMap,
+      currentLanguageLabel: languageNameMap[currentLanguage] || languageNameMap['zh-CN'] || '中文',
+      languageSwitchText: i18n.t('language.current', currentLanguage),
+    });
+
     // 解析微信扫码 scene 参数（getwxacodeunlimit 扫码时会将 scene 放入 options.scene）
     if (options && options.scene) {
       try {
@@ -332,6 +356,40 @@ Page({
 
     // 加载租户列表（正弸登录流程 / openid 未绑定首次绑定）
     this.loadTenants();
+  },
+
+  /**
+   * 登录页右上角语言切换。
+   */
+  onLanguageSwitchTap() {
+    const { currentLanguage, languageNameMap } = this.data;
+    const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
+    const itemList = langList.map((lang) => languageNameMap[lang] || lang);
+    const currentIndex = Math.max(0, langList.indexOf(currentLanguage));
+
+    wx.showActionSheet({
+      itemList,
+      alertText: this.data.languageSwitchText || '语言',
+      success: ({ tapIndex }) => {
+        const nextLang = langList[tapIndex] || 'zh-CN';
+        const appliedLang = i18n.setLanguage(nextLang);
+        const refreshedMap = {
+          'zh-CN': i18n.t('language.names.zh-CN', appliedLang),
+          'en-US': i18n.t('language.names.en-US', appliedLang),
+          'vi-VN': i18n.t('language.names.vi-VN', appliedLang),
+          'km-KH': i18n.t('language.names.km-KH', appliedLang),
+        };
+        this.setData({
+          currentLanguage: appliedLang,
+          languageNameMap: refreshedMap,
+          currentLanguageLabel: refreshedMap[appliedLang] || refreshedMap['zh-CN'] || '中文',
+          languageSwitchText: i18n.t('language.current', appliedLang),
+        });
+      },
+      fail: () => {
+        // ignore cancel
+      },
+    });
   },
 
   /**

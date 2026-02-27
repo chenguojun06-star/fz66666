@@ -20,6 +20,31 @@ page {
   background: #0b2d5c;
 }
 
+.login-lang-corner {
+  position: fixed;
+  top: calc(20rpx + env(safe-area-inset-top));
+  right: 24rpx;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 56rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.login-lang-icon {
+  font-size: 24rpx;
+}
+
+.login-lang-text {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
 /* ===== 天蝎座星座呼吸灯 ===== */
 .login-constellation {
   position: fixed;
