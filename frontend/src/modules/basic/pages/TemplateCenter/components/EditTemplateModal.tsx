@@ -12,6 +12,7 @@ import {
 import { DeleteOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import api from '@/utils/api';
 import type { TemplateLibrary } from '@/types/style';
 import {
@@ -617,12 +618,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                         dataIndex: 'processName',
                         width: 80,
                         render: (text: string, _: ProcessStepRow, idx: number) => (
-                          <Input
+                          <DictAutoComplete
+                            dictType="process_name"
+                            autoCollect
                             size="small"
                             value={text || ''}
-                            onChange={(e) => {
+                            onChange={(value) => {
                               const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                              newData.steps[idx] = { ...newData.steps[idx], processName: value as string };
                               setEditTableData(newData);
                             }}
                             style={{ border: 'none', fontSize: 'var(--font-size-xs)' }}
@@ -655,12 +658,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                         dataIndex: 'machineType',
                         width: 70,
                         render: (text: string, _: ProcessStepRow, idx: number) => (
-                          <Input
+                          <DictAutoComplete
+                            dictType="machine_type"
+                            autoCollect
                             size="small"
                             value={text || ''}
-                            onChange={(e) => {
+                            onChange={(value) => {
                               const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], machineType: e.target.value };
+                              newData.steps[idx] = { ...newData.steps[idx], machineType: value as string };
                               setEditTableData(newData);
                             }}
                             style={{ border: 'none', fontSize: 'var(--font-size-xs)' }}
@@ -827,12 +832,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                         dataIndex: 'processName',
                         width: 150,
                         render: (text: string, _: ProcessPriceRow, idx: number) => (
-                          <Input
+                          <DictAutoComplete
+                            dictType="process_name"
+                            autoCollect
                             size="small"
                             value={text || ''}
-                            onChange={(e) => {
+                            onChange={(value) => {
                               const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                              newData.steps[idx] = { ...newData.steps[idx], processName: value as string };
                               setEditTableData(newData);
                             }}
                             style={{ border: 'none' }}

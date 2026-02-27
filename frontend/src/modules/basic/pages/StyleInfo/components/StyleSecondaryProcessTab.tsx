@@ -392,7 +392,11 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 rules={[{ required: true, message: '请输入工艺名称' }]}
                 tooltip="具体的工艺描述"
               >
-                <Input placeholder="请输入工艺名称，如：胸前刺绣、背部印花" />
+                <DictAutoComplete
+                  dictType="process_name"
+                  autoCollect
+                  placeholder="请输入或选择工艺名称，如：胸前刺绣、背部印花"
+                />
               </Form.Item>
             </Col>
           </Row>

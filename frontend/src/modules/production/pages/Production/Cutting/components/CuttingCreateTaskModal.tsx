@@ -1,5 +1,6 @@
 import React from 'react';
 import { AutoComplete, Button, Card, Input, InputNumber, Space, Spin, Typography } from 'antd';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { ProcessUnitPrice } from '../hooks/useCuttingCreateTask';
@@ -101,13 +102,15 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ modalWidth, createTask }) => 
                   title: '工序名称',
                   dataIndex: 'processName',
                   render: (v: string, _: ProcessUnitPrice, i: number) => (
-                    <Input
+                    <DictAutoComplete
+                      dictType="process_name"
+                      autoCollect
                       size="small"
                       value={v}
                       style={{ border: 'none' }}
-                      onChange={(e) => {
+                      onChange={(value) => {
                         const next = createTask.createProcessPrices.slice();
-                        next[i] = { ...next[i], processName: e.target.value };
+                        next[i] = { ...next[i], processName: value as string };
                         createTask.setCreateProcessPrices(next);
                       }}
                     />

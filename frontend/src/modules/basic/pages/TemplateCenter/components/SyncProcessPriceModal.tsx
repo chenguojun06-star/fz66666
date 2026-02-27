@@ -16,6 +16,7 @@ import { DeleteOutlined, SyncOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import api, { toNumberSafe } from '@/utils/api';
 
 const { Text } = Typography;
@@ -441,7 +442,13 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       {
         title: '工序名称', dataIndex: 'processName', width: 150, ellipsis: true,
         render: (v: string, r: StyleProcessRow) => em
-          ? <Input size="small" value={v} onChange={(e) => updateField(r.id, 'processName', e.target.value)} />
+          ? <DictAutoComplete
+              dictType="process_name"
+              autoCollect
+              size="small"
+              value={v}
+              onChange={(value) => updateField(r.id, 'processName', value as string)}
+            />
           : (v || '-'),
       },
       {
@@ -455,8 +462,14 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       {
         title: '机器类型', dataIndex: 'machineType', width: 110, ellipsis: true,
         render: (v: string, r: StyleProcessRow) => em
-          ? <Input size="small" value={v} placeholder="平车/锁眼/钉扣"
-              onChange={(e) => updateField(r.id, 'machineType', e.target.value)} />
+          ? <DictAutoComplete
+              dictType="machine_type"
+              autoCollect
+              size="small"
+              value={v}
+              placeholder="请选择或输入机器类型"
+              onChange={(value) => updateField(r.id, 'machineType', value as string)}
+            />
           : (v || '-'),
       },
       {

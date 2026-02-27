@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -635,12 +636,14 @@ const PayrollOperatorSummary: React.FC = () => {
                             value={operatorName}
                             onChange={(e) => setOperatorName(e.target.value)}
                         />
-                        <Input
+                        <DictAutoComplete
+                            dictType="process_name"
+                            autoCollect={false}
                             placeholder="工序"
                             style={{ width: 160 }}
                             allowClear
                             value={processName}
-                            onChange={(e) => setProcessName(e.target.value)}
+                            onChange={(value) => setProcessName(String(value || ''))}
                         />
                         <Select
                             placeholder="生产节点"
