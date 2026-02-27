@@ -358,26 +358,56 @@ const DictManage: React.FC = () => {
       if (error.errorFields) {
         message.error('请检查表单输入');
       } else {
-        message.warning('当前使用本地数据模式，保存功能需要后端API支持');
+        // 展示后端返回的真实错误（如"字典编码已存在"）
+        const errMsg: string = error?.message || error?.data?.message || '';
+        if (errMsg) {
+          message.error(errMsg);
+        } else {
+          message.error('保存失败，请检查输入是否有重复');
+        }
       }
     }
   };
 
-  // 批量导入预设数据
+  // 批量导入预设数据（跳过已存在项，展示真实结果）
   const handleImportPreset = async () => {
+    const typeLabel = DICT_TYPES.find(t => t.value === selectedType)?.label || selectedType;
+    const localData = getLocalData(selectedType);
+    if (localData.length === 0) {
+      message.warning(`暂无「${typeLabel}」的预设数据`);
+      return;
+    }
     modal.confirm({
       title: '导入预设数据',
-      content: `确定要导入${DICT_TYPES.find(t => t.value === selectedType)?.label}的预设数据吗？`,
+      content: `将把系统内置的「${typeLabel}」预设选项（共 ${localData.length} 条）写入数据库，已存在的条目会自动跳过。确定继续？`,
       onOk: async () => {
-        try {
-          const localData = getLocalData(selectedType);
-          for (const item of localData) {
+        let successCount = 0;
+        let skipCount = 0;
+        let failCount = 0;
+        for (const item of localData) {
+          try {
             await api.post('/system/dict', item);
+            successCount++;
+          } catch (err: any) {
+            // 后端返回 400/已存在 = 重复条目，正常跳过；其他错误计入失败
+            const msg: string = err?.message || '';
+            const isConflict = err?.response?.status === 400 || msg.includes('已存在') || msg.includes('重复');
+            if (isConflict) {
+              skipCount++;
+            } else {
+              failCount++;
+            }
           }
-          message.success('导入成功');
-          fetchData();
-        } catch (error) {
-          message.warning('当前使用本地数据模式，导入功能需要后端API支持');
+        }
+        fetchData();
+        if (successCount > 0 && skipCount === 0 && failCount === 0) {
+          message.success(`导入成功，共新增 ${successCount} 条`);
+        } else if (successCount === 0 && failCount === 0) {
+          message.info(`所有 ${skipCount} 条预设数据已存在，无需重复导入`);
+        } else {
+          message.success(
+            `导入完成：新增 ${successCount} 条，跳过已存在 ${skipCount} 条${failCount > 0 ? `，失败 ${failCount} 条` : ''}`
+          );
         }
       }
     });
