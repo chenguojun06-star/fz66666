@@ -22,6 +22,9 @@ import { useViewport } from '@/utils/useViewport';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
 import type { Dayjs } from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
 
@@ -49,6 +52,18 @@ const MaterialReconciliation: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false); // 表单提交加载状态
   const [approvalSubmitting, setApprovalSubmitting] = useState(false); // 状态更新加载状态
   const [exporting, setExporting] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   const escapeCsvCell = (value: unknown) => {
     const text = String(value ?? '');
@@ -321,8 +336,10 @@ const MaterialReconciliation: React.FC = () => {
       const data = unwrapApiData<unknown>(res, '获取物料对账列表失败');
       setReconciliationList((data as any).records || []);
       setTotal((data as any).total || 0);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
       const err = error as any;
+      reportSmartError('物料对账加载失败', String(err?.message || '请检查网络连接后重试'), 'FIN_MR_LIST_LOAD_FAILED');
       if (err instanceof Error && err.message) {
         message.error(err.message);
       } else {
@@ -671,6 +688,12 @@ const MaterialReconciliation: React.FC = () => {
           <div className="page-header">
             <h2 className="page-title">物料对账</h2>
           </div>
+
+          {showSmartErrorNotice && smartError ? (
+            <div style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={fetchReconciliationList} />
+            </div>
+          ) : null}
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">

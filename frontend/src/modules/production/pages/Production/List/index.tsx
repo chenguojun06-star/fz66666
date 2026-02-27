@@ -45,6 +45,9 @@ import {
 } from './hooks';
 import { safeString, getStatusConfig, mainStages, formatCompletionTime } from './utils';
 import { useProductionBoardStore } from '@/stores';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
 
@@ -80,7 +83,19 @@ const ProductionList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
@@ -98,14 +113,19 @@ const ProductionList: React.FC = () => {
         setProductionList(response.data.records || []);
         setTotal(response.data.total || 0);
         clearAllBoardCache();
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
-        message.error(
+        const errMessage =
           typeof response === 'object' && response !== null && 'message' in response
             ? String((response as any).message) || '获取生产订单列表失败'
-            : '获取生产订单列表失败'
+            : '获取生产订单列表失败';
+        reportSmartError('生产订单加载失败', errMessage, 'PROD_LIST_LOAD_FAILED');
+        message.error(
+          errMessage
         );
       }
     } catch (error) {
+      reportSmartError('生产订单加载失败', '网络异常或服务不可用，请稍后重试', 'PROD_LIST_LOAD_EXCEPTION');
       message.error('获取生产订单列表失败');
     } finally {
       setLoading(false);
@@ -801,6 +821,12 @@ const ProductionList: React.FC = () => {
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
           </div>
+
+          {showSmartErrorNotice && smartError ? (
+            <div style={{ marginBottom: 12 }}>
+              <SmartErrorNotice error={smartError} onFix={fetchProductionList} />
+            </div>
+          ) : null}
 
           <PageStatCards
             activeKey={activeStatFilter}
