@@ -11,6 +11,9 @@ import StandardModal from '@/components/common/StandardModal';
 import dayjs from 'dayjs';
 import styles from './FinishedSettlementContent.module.css';
 import type { Dayjs } from 'dayjs';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -64,10 +67,22 @@ const FinishedSettlementContent: React.FC = () => {
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: 20,
   });
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // 订单状态映射（支持大写和小写）
   const statusMap: Record<string, { text: string; color: string }> = {
@@ -321,8 +336,10 @@ const FinishedSettlementContent: React.FC = () => {
       const response = await api.get('/finance/finished-settlement/list', { params });
       setData(response.data?.records || []);
       setTotal(response.data?.total || 0);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error: any) {
       const errMsg = error instanceof Error ? error.message : '加载数据失败';
+      reportSmartError('成品结算列表加载失败', errMsg, 'FIN_SETTLEMENT_LIST_LOAD_FAILED');
       message.error(errMsg);
     } finally {
       setLoading(false);
@@ -460,6 +477,17 @@ const FinishedSettlementContent: React.FC = () => {
   return (
     <>
       <Card>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void loadData();
+              }}
+            />
+          </Card>
+        ) : null}
+
         <StandardToolbar
           left={(
             <StandardSearchBar

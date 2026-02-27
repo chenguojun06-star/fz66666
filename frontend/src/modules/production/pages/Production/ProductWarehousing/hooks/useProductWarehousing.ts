@@ -11,6 +11,8 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import {
   CuttingBundleRow,
 } from '../types';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 
 // 质检入库统计数据类型
@@ -72,10 +74,22 @@ export const useProductWarehousing = () => {
   const [loading, setLoading] = useState(false);
   const [warehousingList, setWarehousingList] = useState<WarehousingType[]>([]);
   const [total, setTotal] = useState(0);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [queryParams, setQueryParams] = useState<WarehousingQueryParams>({
     page: 1,
     pageSize: 10,
   });
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  }, [showSmartErrorNotice]);
 
   // 状态筛选
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -177,10 +191,14 @@ export const useProductWarehousing = () => {
       if (response.code === 200) {
         setWarehousingList(response.data.records || []);
         setTotal(response.data.total || 0);
+        if (showSmartErrorNotice) setSmartError(null);
       } else {
-        message.error((response as any).message || '获取质检入库列表失败');
+        const errMessage = (response as any).message || '获取质检入库列表失败';
+        reportSmartError('质检入库列表加载失败', errMessage, 'WAREHOUSING_LIST_LOAD_FAILED');
+        message.error(errMessage);
       }
     } catch (error) {
+      reportSmartError('质检入库列表加载失败', '网络异常或服务不可用，请稍后重试', 'WAREHOUSING_LIST_LOAD_EXCEPTION');
       message.error('获取质检入库列表失败');
     } finally {
       setLoading(false);
@@ -394,6 +412,8 @@ export const useProductWarehousing = () => {
     loading,
     warehousingList,
     total,
+    smartError,
+    showSmartErrorNotice,
     queryParams,
     setQueryParams,
     visible,

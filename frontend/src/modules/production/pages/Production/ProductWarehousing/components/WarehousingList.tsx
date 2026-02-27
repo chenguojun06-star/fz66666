@@ -14,6 +14,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 
 interface WarehousingListProps {
   hook: ReturnType<typeof useProductWarehousing>;
@@ -25,6 +26,8 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     loading,
     warehousingList,
     total,
+    smartError,
+    showSmartErrorNotice,
     queryParams,
     setQueryParams,
     fetchWarehousingList,
@@ -105,6 +108,17 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           <div className="page-header">
             <h2 className="page-title">质检入库</h2>
           </div>
+
+          {showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice
+                error={smartError}
+                onFix={() => {
+                  void fetchWarehousingList();
+                }}
+              />
+            </Card>
+          ) : null}
 
           {/* 统计卡片（可点击筛选） */}
           <PageStatCards
