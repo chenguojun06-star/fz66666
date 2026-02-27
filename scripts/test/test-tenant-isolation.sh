@@ -9,6 +9,19 @@ PASS=0
 FAIL=0
 WARN=0
 DEFAULT_BCRYPT_123456='\$2a\$10\$BeR/kUO3P0naLa.z9ncTseA/a8AYW1BhX0K1z9PojhG3u7yfvSW4m'
+ADMIN_TOKEN=""
+TEMP_TENANT_1_ID=""
+TEMP_TENANT_2_ID=""
+TEMP_TENANT_1_USER=""
+TEMP_TENANT_2_USER=""
+TEMP_TENANT_1_CODE=""
+TEMP_TENANT_2_CODE=""
+T1_LABEL=""
+T2_LABEL=""
+T1_TENANT_ID=""
+T2_TENANT_ID=""
+T1_OWNER_USERNAME=""
+T2_OWNER_USERNAME=""
 
 echo "============================================"
 echo " 租户数据隔离 E2E 验证测试"
@@ -64,6 +77,71 @@ check_result() {
     fi
 }
 
+login_admin() {
+    for pwd in "${ADMIN_PASSWORD:-}" "123456" "Abc123456"; do
+        [ -z "$pwd" ] && continue
+        local token
+        token=$(curl -s -X POST "$BASE_URL/api/system/user/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"admin\",\"password\":\"$pwd\"}" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('token',''))" 2>/dev/null)
+        if [ -n "$token" ]; then
+            echo "$token"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
+create_temp_tenant() {
+    local idx="$1"
+    local token="$2"
+    local suffix
+    suffix="$(date +%s)_$RANDOM"
+    local tenant_code="ISO_T${idx}_${suffix}"
+    local owner_user="iso_owner_${idx}_${suffix}"
+    local owner_pwd="Test123456"
+
+    local resp
+    resp=$(curl -s -X POST "$BASE_URL/api/system/tenant/create" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $token" \
+        -d "{\"tenantName\":\"隔离测试租户${idx}\",\"tenantCode\":\"${tenant_code}\",\"contactName\":\"隔离测试\",\"contactPhone\":\"13800001111\",\"ownerUsername\":\"${owner_user}\",\"ownerPassword\":\"${owner_pwd}\",\"ownerName\":\"隔离测试管理员\",\"maxUsers\":10}" 2>/dev/null)
+
+    local code
+    code=$(echo "$resp" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" 2>/dev/null)
+    if [ "$code" != "200" ]; then
+        echo ""
+        return 1
+    fi
+
+    local tenant_id
+    tenant_id=$(echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); t=d.get('tenant',{}); print(t.get('id',''))" 2>/dev/null)
+    if [ -z "$tenant_id" ]; then
+        echo ""
+        return 1
+    fi
+
+    echo "${tenant_id}|${tenant_code}|${owner_user}|${owner_pwd}"
+    return 0
+}
+
+parse_me() {
+    local token="$1"
+    curl -s -X GET "$BASE_URL/api/system/user/me" \
+        -H "Authorization: Bearer $token" \
+        -H "Content-Type: application/json" 2>/dev/null
+}
+
+fallback_disable_tenant() {
+    local tenant_id="$1"
+    docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e \
+        "UPDATE t_tenant SET status='inactive' WHERE id='${tenant_id}'; UPDATE t_user SET status='inactive' WHERE tenant_id='${tenant_id}';" \
+        >/dev/null 2>&1
+    return $?
+}
+
 # ================================================================
 echo "【1】登录所有用户"
 echo "--------------------------------------------"
@@ -105,23 +183,101 @@ else
     fi
 fi
 
-# 租户1的普通员工
-T1_WORKER=$(login "wang_zg")
-if [ -n "$T1_WORKER" ]; then
-    echo "  ✅ wang_zg (HUANAN worker) 登录成功"
-    PASS=$((PASS+1))
-else
-    echo "  ❌ wang_zg 登录尝试失败，重置密码..."
-    docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain \
-        -e "UPDATE t_user SET password='\$2a\$10\$BeR/kUO3P0naLa.z9ncTseA/a8AYW1BhX0K1z9PojhG3u7yfvSW4m' WHERE username='wang_zg';" 2>/dev/null
+# 固定种子账号不足时，自动创建临时租户主账号兜底
+if [ -z "$T1_TOKEN" ] || [ -z "$T2_TOKEN" ]; then
+    echo "  → 固定账号不足，尝试动态创建临时租户用于隔离验证"
+    ADMIN_TOKEN=$(login_admin)
+    if [ -z "$ADMIN_TOKEN" ]; then
+        echo "  ⚠️ admin 登录失败，无法创建临时租户"
+        WARN=$((WARN+1))
+    else
+        if [ -z "$T1_TOKEN" ]; then
+            CREATED_1=$(create_temp_tenant "1" "$ADMIN_TOKEN")
+            if [ -n "$CREATED_1" ]; then
+                TEMP_TENANT_1_ID=$(echo "$CREATED_1" | cut -d'|' -f1)
+                TEMP_TENANT_1_CODE=$(echo "$CREATED_1" | cut -d'|' -f2)
+                TEMP_TENANT_1_USER=$(echo "$CREATED_1" | cut -d'|' -f3)
+                TEMP_TENANT_1_PWD=$(echo "$CREATED_1" | cut -d'|' -f4)
+                T1_TOKEN=$(curl -s -X POST "$BASE_URL/api/system/user/login" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"username\":\"$TEMP_TENANT_1_USER\",\"password\":\"$TEMP_TENANT_1_PWD\"}" \
+                    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('token',''))" 2>/dev/null)
+                if [ -n "$T1_TOKEN" ]; then
+                    echo "  ✅ 已启用临时租户1: $TEMP_TENANT_1_CODE ($TEMP_TENANT_1_USER)"
+                    PASS=$((PASS+1))
+                else
+                    echo "  ⚠️ 临时租户1创建成功但登录失败"
+                    WARN=$((WARN+1))
+                fi
+            else
+                echo "  ⚠️ 临时租户1创建失败"
+                WARN=$((WARN+1))
+            fi
+        fi
+
+        if [ -z "$T2_TOKEN" ]; then
+            CREATED_2=$(create_temp_tenant "2" "$ADMIN_TOKEN")
+            if [ -n "$CREATED_2" ]; then
+                TEMP_TENANT_2_ID=$(echo "$CREATED_2" | cut -d'|' -f1)
+                TEMP_TENANT_2_CODE=$(echo "$CREATED_2" | cut -d'|' -f2)
+                TEMP_TENANT_2_USER=$(echo "$CREATED_2" | cut -d'|' -f3)
+                TEMP_TENANT_2_PWD=$(echo "$CREATED_2" | cut -d'|' -f4)
+                T2_TOKEN=$(curl -s -X POST "$BASE_URL/api/system/user/login" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"username\":\"$TEMP_TENANT_2_USER\",\"password\":\"$TEMP_TENANT_2_PWD\"}" \
+                    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('token',''))" 2>/dev/null)
+                if [ -n "$T2_TOKEN" ]; then
+                    echo "  ✅ 已启用临时租户2: $TEMP_TENANT_2_CODE ($TEMP_TENANT_2_USER)"
+                    PASS=$((PASS+1))
+                else
+                    echo "  ⚠️ 临时租户2创建成功但登录失败"
+                    WARN=$((WARN+1))
+                fi
+            else
+                echo "  ⚠️ 临时租户2创建失败"
+                WARN=$((WARN+1))
+            fi
+        fi
+    fi
+fi
+
+if [ -n "$T1_TOKEN" ]; then
+    T1_ME=$(parse_me "$T1_TOKEN")
+    T1_TENANT_ID=$(echo "$T1_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('tenantId',''))" 2>/dev/null)
+    T1_OWNER_USERNAME=$(echo "$T1_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('username',''))" 2>/dev/null)
+    T1_CODE=$(echo "$T1_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('tenantCode',''))" 2>/dev/null)
+    T1_LABEL="${T1_CODE:-T1}(${T1_OWNER_USERNAME:-unknown})"
+fi
+
+if [ -n "$T2_TOKEN" ]; then
+    T2_ME=$(parse_me "$T2_TOKEN")
+    T2_TENANT_ID=$(echo "$T2_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('tenantId',''))" 2>/dev/null)
+    T2_OWNER_USERNAME=$(echo "$T2_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('username',''))" 2>/dev/null)
+    T2_CODE=$(echo "$T2_ME" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('tenantCode',''))" 2>/dev/null)
+    T2_LABEL="${T2_CODE:-T2}(${T2_OWNER_USERNAME:-unknown})"
+fi
+
+# 租户1的普通员工（仅在固定种子租户模式下验证）
+if [ -z "$TEMP_TENANT_1_ID" ]; then
     T1_WORKER=$(login "wang_zg")
     if [ -n "$T1_WORKER" ]; then
-        echo "  ✅ wang_zg 登录成功（密码已重置）"
+        echo "  ✅ wang_zg (HUANAN worker) 登录成功"
         PASS=$((PASS+1))
     else
-        echo "  ⚠️ wang_zg 登录失败（测试账号前置不足，降级为告警）"
-        WARN=$((WARN+1))
+        echo "  ❌ wang_zg 登录尝试失败，重置密码..."
+        docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain \
+            -e "UPDATE t_user SET password='\$2a\$10\$BeR/kUO3P0naLa.z9ncTseA/a8AYW1BhX0K1z9PojhG3u7yfvSW4m' WHERE username='wang_zg';" 2>/dev/null
+        T1_WORKER=$(login "wang_zg")
+        if [ -n "$T1_WORKER" ]; then
+            echo "  ✅ wang_zg 登录成功（密码已重置）"
+            PASS=$((PASS+1))
+        else
+            echo "  ⚠️ wang_zg 登录失败（测试账号前置不足，降级为告警）"
+            WARN=$((WARN+1))
+        fi
     fi
+else
+    echo "  ℹ️ 使用临时租户模式，跳过固定员工账号验证"
 fi
 
 echo ""
@@ -154,8 +310,8 @@ try:
 except: print('error')
 " 2>/dev/null)
 
-    echo "  租户1(HUANAN)看到 $T1_USER_COUNT 个用户"
-    echo "  租户2(DONGFANG)看到 $T2_USER_COUNT 个用户"
+    echo "  租户1($T1_LABEL)看到 $T1_USER_COUNT 个用户"
+    echo "  租户2($T2_LABEL)看到 $T2_USER_COUNT 个用户"
 
     # 检查租户1是否能看到租户2的用户
     T1_SEES_T2=$(echo "$T1_USERS" | python3 -c "
@@ -163,7 +319,7 @@ import sys,json
 try:
     d=json.load(sys.stdin)
     records = d.get('data',{}).get('records',[])
-    t2_users = [r for r in records if r.get('username') in ['lilb','chen_zg','liu_gong']]
+    t2_users = [r for r in records if str(r.get('tenantId','')) == '${T2_TENANT_ID}']
     print(len(t2_users))
 except: print('error')
 " 2>/dev/null)
@@ -173,7 +329,7 @@ import sys,json
 try:
     d=json.load(sys.stdin)
     records = d.get('data',{}).get('records',[])
-    t1_users = [r for r in records if r.get('username') in ['zhangcz','wang_zg','zhao_gong']]
+    t1_users = [r for r in records if str(r.get('tenantId','')) == '${T1_TENANT_ID}']
     print(len(t1_users))
 except: print('error')
 " 2>/dev/null)
@@ -265,8 +421,8 @@ if [ -n "$T1_TOKEN" ] && [ -n "$T2_TOKEN" ]; then
 import sys,json
 d=json.load(sys.stdin)
 records = d.get('data',{}).get('records',[]) if isinstance(d.get('data',{}), dict) else d.get('data',[])
-# 检查是否有租户2的角色 (tenant_id=2)
-cross = [r for r in records if r.get('tenantId') == 2]
+# 检查是否有租户2的角色
+cross = [r for r in records if str(r.get('tenantId','')) == '${T2_TENANT_ID}']
 print(len(cross))
 " 2>/dev/null)
         check_result "租户1角色列表不含租户2的角色" "0" "$CROSS_ROLES"
@@ -370,6 +526,57 @@ if [ -n "$T1_TOKEN" ]; then
         fi
     else
         echo "  ⚠️ 生产订单API返回 code=$PROD_CODE"
+        WARN=$((WARN+1))
+    fi
+fi
+
+echo ""
+
+# ================================================================
+echo "【7】清理临时租户"
+echo "--------------------------------------------"
+
+if [ -n "$ADMIN_TOKEN" ]; then
+    if [ -n "$TEMP_TENANT_1_ID" ]; then
+        DEL1=$(curl -s -X DELETE "$BASE_URL/api/system/tenant/$TEMP_TENANT_1_ID" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" 2>/dev/null)
+        DEL1_CODE=$(echo "$DEL1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" 2>/dev/null)
+        if [ "$DEL1_CODE" = "200" ]; then
+            echo "  ✅ 已清理临时租户1: $TEMP_TENANT_1_CODE"
+            PASS=$((PASS+1))
+        else
+            if fallback_disable_tenant "$TEMP_TENANT_1_ID"; then
+                echo "  ✅ 临时租户1删除失败，已降级为失活清理: $TEMP_TENANT_1_CODE"
+                PASS=$((PASS+1))
+            else
+                echo "  ⚠️ 清理临时租户1失败: $TEMP_TENANT_1_CODE"
+                WARN=$((WARN+1))
+            fi
+        fi
+    fi
+
+    if [ -n "$TEMP_TENANT_2_ID" ]; then
+        DEL2=$(curl -s -X DELETE "$BASE_URL/api/system/tenant/$TEMP_TENANT_2_ID" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" 2>/dev/null)
+        DEL2_CODE=$(echo "$DEL2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" 2>/dev/null)
+        if [ "$DEL2_CODE" = "200" ]; then
+            echo "  ✅ 已清理临时租户2: $TEMP_TENANT_2_CODE"
+            PASS=$((PASS+1))
+        else
+            if fallback_disable_tenant "$TEMP_TENANT_2_ID"; then
+                echo "  ✅ 临时租户2删除失败，已降级为失活清理: $TEMP_TENANT_2_CODE"
+                PASS=$((PASS+1))
+            else
+                echo "  ⚠️ 清理临时租户2失败: $TEMP_TENANT_2_CODE"
+                WARN=$((WARN+1))
+            fi
+        fi
+    fi
+else
+    if [ -n "$TEMP_TENANT_1_ID" ] || [ -n "$TEMP_TENANT_2_ID" ]; then
+        echo "  ⚠️ 未获取到 admin token，无法自动清理临时租户"
         WARN=$((WARN+1))
     fi
 fi
