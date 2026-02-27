@@ -53,7 +53,7 @@ const Register: React.FC = () => {
   const handleTenantSearch = useCallback((keyword: string) => {
     const kw = keyword.trim().toLowerCase();
     if (!kw) {
-      setFilteredOptions(tenantOptions.map(o => ({ value: o.value, label: o.label })));
+      setFilteredOptions([]);
       return;
     }
     setFilteredOptions(
@@ -241,7 +241,7 @@ const Register: React.FC = () => {
             >
               <AutoComplete
                 id="register-factory-search"
-                options={filteredOptions.length ? filteredOptions : tenantOptions.map(o => ({ value: o.value, label: o.label }))}
+                options={filteredOptions}
                 onSearch={handleTenantSearch}
                 onSelect={handleTenantSelect}
                 onChange={(value) => {
