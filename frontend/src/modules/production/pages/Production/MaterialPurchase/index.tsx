@@ -463,7 +463,7 @@ const MaterialPurchase: React.FC = () => {
     }
   };
 
-  // 样衣采购详情：优先按采购单号（MP）加载，其次按款号+sourceType=sample
+  // 样衣采购详情：优先按款号聚合加载（恢复单款聚合），仅在无款号时按采购单号兜底
   const loadDetailByStyleNo = async (styleNo: string, purchaseNo?: string) => {
     const no = String(styleNo || '').trim();
     const pNo = String(purchaseNo || '').trim();
@@ -473,9 +473,9 @@ const MaterialPurchase: React.FC = () => {
       const purchaseRes = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>(
         '/production/purchase/list',
         {
-          params: pNo
-            ? { page: 1, pageSize: 200, purchaseNo: pNo, sourceType: 'sample', materialType: '', status: '' }
-            : { page: 1, pageSize: 200, styleNo: no, sourceType: 'sample', materialType: '', status: '' }
+          params: no
+            ? { page: 1, pageSize: 200, styleNo: no, sourceType: 'sample', materialType: '', status: '' }
+            : { page: 1, pageSize: 200, purchaseNo: pNo, sourceType: 'sample', materialType: '', status: '' }
         }
       );
 
