@@ -26,6 +26,7 @@ const Register: React.FC = () => {
   // 工厂列表（用于员工注册时搜索）
   const [tenantOptions, setTenantOptions] = useState<{ value: string; label: string; tenantCode: string }[]>([]);
   const [filteredOptions, setFilteredOptions] = useState<{ value: string; label: string }[]>([]);
+  const [tenantSearchText, setTenantSearchText] = useState('');
 
   const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -51,6 +52,7 @@ const Register: React.FC = () => {
 
   // 搜索工厂名
   const handleTenantSearch = useCallback((keyword: string) => {
+    setTenantSearchText(keyword || '');
     const kw = keyword.trim().toLowerCase();
     if (!kw) {
       setFilteredOptions([]);
@@ -65,6 +67,7 @@ const Register: React.FC = () => {
 
   // 选中工厂名后自动回填租户码
   const handleTenantSelect = useCallback((tenantName: string) => {
+    setTenantSearchText(tenantName);
     const found = tenantOptions.find(o => o.value === tenantName);
     if (found) {
       form.setFieldsValue({ tenantCode: found.tenantCode });
@@ -244,9 +247,12 @@ const Register: React.FC = () => {
                 options={filteredOptions}
                 onSearch={handleTenantSearch}
                 onSelect={handleTenantSelect}
+                open={Boolean(tenantSearchText.trim()) && filteredOptions.length > 0}
                 onChange={(value) => {
+                  setTenantSearchText(value || '');
                   if (!value) {
                     form.setFieldsValue({ tenantCode: undefined });
+                    setFilteredOptions([]);
                   }
                 }}
                 placeholder="输入工厂名称搜索"
