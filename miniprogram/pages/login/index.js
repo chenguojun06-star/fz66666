@@ -362,10 +362,9 @@ Page({
    * 登录页右上角语言切换。
    */
   onLanguageSwitchTap() {
-    const { currentLanguage, languageNameMap } = this.data;
+    const { languageNameMap } = this.data;
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
     const itemList = langList.map((lang) => languageNameMap[lang] || lang);
-    const currentIndex = Math.max(0, langList.indexOf(currentLanguage));
 
     wx.showActionSheet({
       itemList,
