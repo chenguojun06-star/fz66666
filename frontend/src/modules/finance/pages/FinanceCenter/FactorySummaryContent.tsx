@@ -11,6 +11,9 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 
 /** 工厂汇总行数据 */
@@ -40,6 +43,18 @@ const FactorySummaryContent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FactorySummaryRow[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  }, [showSmartErrorNotice]);
 
   // 获取工厂汇总数据
   const fetchData = useCallback(async () => {
@@ -56,8 +71,11 @@ const FactorySummaryContent: React.FC = () => {
       );
       const list = res?.data ?? res ?? [];
       setData(Array.isArray(list) ? list : []);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (e: any) {
-      message.error(String((e as Error)?.message || '获取工厂汇总失败'));
+      const errMessage = String((e as Error)?.message || '获取工厂汇总失败');
+      reportSmartError('工厂汇总加载失败', errMessage, 'FIN_FACTORY_SUMMARY_LOAD_FAILED');
+      message.error(errMessage);
       setData([]);
     } finally {
       setLoading(false);
@@ -286,6 +304,17 @@ const FactorySummaryContent: React.FC = () => {
 
   return (
     <div>
+      {showSmartErrorNotice && smartError ? (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void fetchData();
+            }}
+          />
+        </Card>
+      ) : null}
+
       {/* 汇总卡片 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
         <Card size="small" style={{ flex: 1, textAlign: 'center' }}>

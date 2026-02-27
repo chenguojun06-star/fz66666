@@ -39,6 +39,9 @@ import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import QRCode from 'qrcode';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
 
@@ -89,7 +92,19 @@ interface MaterialInventory {
 const _MaterialInventory: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<MaterialInventory[]>([]);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const { user } = useAuth(); // 获取当前用户信息
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
@@ -172,8 +187,10 @@ const _MaterialInventory: React.FC = () => {
           lowStockCount: list.filter((i: any) => (i.quantity || 0) < (i.safetyStock || 100)).length,
           materialTypes: list.length
         });
+        if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (e) {
+      reportSmartError('面辅料库存加载失败', '网络异常或服务不可用，请稍后重试', 'WAREHOUSE_MATERIAL_STOCK_LOAD_FAILED');
       message.error('加载库存失败');
     } finally {
       setLoading(false);
@@ -941,6 +958,17 @@ const _MaterialInventory: React.FC = () => {
 
   return (
     <Layout>
+        {showSmartErrorNotice && smartError ? (
+          <Card size="small" style={{ marginBottom: 12 }}>
+            <SmartErrorNotice
+              error={smartError}
+              onFix={() => {
+                void fetchData();
+              }}
+            />
+          </Card>
+        ) : null}
+
         <Card size="small" className="material-summary-bar">
           <div className="material-summary-content">
             <div className="material-summary-item">
