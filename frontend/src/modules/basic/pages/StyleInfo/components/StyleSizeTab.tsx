@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Select, Modal } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
-import { useViewport } from '@/utils/useViewport';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -73,7 +73,6 @@ const StyleSizeTab: React.FC<Props> = ({
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const { modalWidth } = useViewport();
   const { message } = App.useApp();
 
   const fetchStyleNoOptions = async (keyword?: string) => {
@@ -536,6 +535,8 @@ const StyleSizeTab: React.FC<Props> = ({
               size="small"
               type="text"
               danger
+              icon={<DeleteOutlined />}
+              title={`删除尺码 ${sn}`}
               onClick={() => {
                 Modal.confirm({
                   title: `确定删除尺码“${sn}”？`,
@@ -756,9 +757,10 @@ const StyleSizeTab: React.FC<Props> = ({
         okText="确定"
         cancelText="取消"
         confirmLoading={saving}
-        width={modalWidth}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-        minHeight={240}
+        width="30vw"
+        minWidth={360}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.4 : 320}
+        minHeight={220}
         autoFontSize={false}
         scaleWithViewport
       >
