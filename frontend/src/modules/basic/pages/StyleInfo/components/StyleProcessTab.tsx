@@ -5,6 +5,7 @@ import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 
 import StyleStageControlBar from './StyleStageControlBar';
 
@@ -554,7 +555,13 @@ const StyleProcessTab: React.FC<Props> = ({
         ellipsis: true,
         render: (text: string, record: StyleProcess) =>
           editableMode ? (
-            <Input value={record.processName} onChange={(e) => updateField(record.id!, 'processName', e.target.value)} />
+            <DictAutoComplete
+              dictType="process_name"
+              autoCollect
+              value={record.processName}
+              placeholder="请选择或输入工序名称"
+              onChange={(v) => updateField(record.id!, 'processName', v)}
+            />
           ) : (
             text
           ),
@@ -590,10 +597,12 @@ const StyleProcessTab: React.FC<Props> = ({
         ellipsis: true,
         render: (text: string, record: StyleProcess) =>
           editableMode ? (
-            <Input
+            <DictAutoComplete
+              dictType="machine_type"
+              autoCollect
               value={record.machineType}
-              placeholder="平车/锁眼/钉扣"
-              onChange={(e) => updateField(record.id!, 'machineType', e.target.value)}
+              placeholder="请选择或输入机器类型"
+              onChange={(v) => updateField(record.id!, 'machineType', v)}
             />
           ) : (
             text
