@@ -563,6 +563,8 @@ const StyleProcessTab: React.FC<Props> = ({
               autoCollect
               value={record.processName}
               placeholder="请选择或输入工序名称"
+              popupMatchSelectWidth={false}
+              dropdownStyle={{ minWidth: 260 }}
               onChange={(v) => updateField(record.id!, 'processName', v)}
             />
           ) : (
@@ -605,6 +607,8 @@ const StyleProcessTab: React.FC<Props> = ({
               autoCollect
               value={record.machineType}
               placeholder="请选择或输入机器类型"
+              popupMatchSelectWidth={false}
+              dropdownStyle={{ minWidth: 260 }}
               onChange={(v) => updateField(record.id!, 'machineType', v)}
             />
           ) : (
