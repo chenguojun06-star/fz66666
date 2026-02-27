@@ -306,17 +306,13 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           stageName="二次工艺"
           styleId={styleId}
           apiPath="secondary"
+          styleNo={styleNo}
           status={secondaryCompletedTime ? 'COMPLETED' : secondaryStartTime ? 'IN_PROGRESS' : 'NOT_STARTED'}
           assignee={secondaryAssignee}
           startTime={secondaryStartTime}
           completedTime={secondaryCompletedTime}
           readOnly={readOnly}
           onRefresh={onRefresh || (() => {})}
-          extraInfo={
-            <span style={{ color: 'var(--text-secondary)' }}>
-              款号：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{styleNo || '-'}</span>
-            </span>
-          }
         />
       )}
 

@@ -11,6 +11,8 @@ interface Props {
   styleId: string | number;
   /** API 前缀路径（如：pattern, bom, size, process, production, secondary） */
   apiPath: string;
+  /** 款号（可选，不传则自动根据 styleId 获取） */
+  styleNo?: string;
   /** 状态（COMPLETED=已完成, IN_PROGRESS=进行中, NOT_STARTED=未开始） */
   status?: string;
   /** 领取人/负责人 */
@@ -44,6 +46,7 @@ const StyleStageControlBar: React.FC<Props> = ({
   stageName,
   styleId,
   apiPath,
+  styleNo,
   status: rawStatus,
   assignee,
   startTime,
@@ -57,6 +60,48 @@ const StyleStageControlBar: React.FC<Props> = ({
   const { message, modal } = App.useApp();
   const { user } = useAuth();
   const [saving, setSaving] = React.useState(false);
+  const [resolvedStyleNo, setResolvedStyleNo] = React.useState('');
+
+  const styleIdKey = useMemo(() => String(styleId ?? '').trim(), [styleId]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const explicitStyleNo = String(styleNo || '').trim();
+    if (explicitStyleNo) {
+      setResolvedStyleNo(explicitStyleNo);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!styleIdKey) {
+      setResolvedStyleNo('');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadStyleNo = async () => {
+      try {
+        const res = await api.get<{ code: number; data: { styleNo?: string } }>(`/style/info/${encodeURIComponent(styleIdKey)}`);
+        if (cancelled) return;
+        const result = res as Record<string, unknown>;
+        if (result.code === 200) {
+          setResolvedStyleNo(String((result.data as any)?.styleNo || '').trim());
+        } else {
+          setResolvedStyleNo('');
+        }
+      } catch {
+        if (!cancelled) setResolvedStyleNo('');
+      }
+    };
+
+    loadStyleNo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [styleIdKey, styleNo]);
 
   // 状态标准化
   const status = useMemo(() => String(rawStatus || '').trim().toUpperCase(), [rawStatus]);
@@ -185,6 +230,9 @@ const StyleStageControlBar: React.FC<Props> = ({
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
           完成时间：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{completedTimeText}</span>
+        </span>
+        <span style={{ color: 'var(--text-secondary)' }}>
+          款号：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{resolvedStyleNo || '-'}</span>
         </span>
         {/* 额外信息 */}
         {extraInfo}

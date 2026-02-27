@@ -189,12 +189,12 @@ const StyleProductionTab: React.FC<Props> = ({
         stageName="生产制单"
         styleId={styleId}
         apiPath="production"
+        styleNo={styleNo}
         status={productionCompletedTime ? 'COMPLETED' : productionStartTime ? 'IN_PROGRESS' : 'NOT_STARTED'}
         assignee={productionAssignee}
         startTime={productionStartTime}
         completedTime={productionCompletedTime}
         onRefresh={onRefresh}
-        extraInfo={<span>款号：<span style={{ fontWeight: 500 }}>{styleNo || '-'}</span></span>}
       />
 
       {/* ===== 样衣审核区域 ===== */}

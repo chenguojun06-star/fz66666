@@ -4,6 +4,7 @@ import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
@@ -438,10 +439,14 @@ const StyleBomTab: React.FC<Props> = ({
       materialName: String(m.materialName || '').trim(),
       unit: String(m.unit || '').trim(),
       supplier: String(m.supplierName || '').trim(),
-      specification: String(m.specifications || '').trim(),
+      specification: String(m.specifications ?? m.specification ?? '').trim(),
       unitPrice: Number(m.unitPrice) || 0,
       materialType: mapDbTypeToBomType(m.materialType),
     };
+    const materialColor = String(m.color ?? m.materialColor ?? '').trim();
+    if (materialColor) {
+      patch.color = materialColor;
+    }
     const current = (form.getFieldValue(rowId) || {}) as any;
     const merged = { ...current, ...patch };
     merged.totalPrice = calcTotalPrice(merged);
@@ -1046,7 +1051,7 @@ const StyleBomTab: React.FC<Props> = ({
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <Form.Item name={rowName(record.id, 'color')} style={{ margin: 0 }}>
-              <Input />
+              <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" />
             </Form.Item>
           );
         }
@@ -1063,7 +1068,7 @@ const StyleBomTab: React.FC<Props> = ({
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <Form.Item name={rowName(record.id, 'specification')} style={{ margin: 0 }}>
-              <Input />
+              <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" />
             </Form.Item>
           );
         }
@@ -1156,7 +1161,7 @@ const StyleBomTab: React.FC<Props> = ({
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <Form.Item name={rowName(record.id, 'unit')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
-              <Input />
+              <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" />
             </Form.Item>
           );
         }
@@ -1553,6 +1558,7 @@ const StyleBomTab: React.FC<Props> = ({
                       { title: '物料名称', dataIndex: 'materialName', width: 160, ellipsis: true },
                       { title: '类型', dataIndex: 'materialType', width: 90,
                         render: (v: unknown) => getMaterialTypeLabel(v) },
+                      { title: '颜色', dataIndex: 'color', width: 90, ellipsis: true },
                       { title: '规格', dataIndex: 'specifications', width: 120, ellipsis: true },
                       { title: '单位', dataIndex: 'unit', width: 70 },
                       { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
@@ -1612,6 +1618,7 @@ const StyleBomTab: React.FC<Props> = ({
                   layout="vertical"
                   onFinish={async (values) => {
                     try {
+                      const localColor = String(values.color || '').trim();
                       const payload: any = {
                         materialCode: String(values.materialCode || '').trim(),
                         materialName: String(values.materialName || '').trim(),
@@ -1630,7 +1637,7 @@ const StyleBomTab: React.FC<Props> = ({
                         return;
                       }
                       message.success('已创建面辅料');
-                      fillRowFromMaterial(materialTargetRowId, payload);
+                      fillRowFromMaterial(materialTargetRowId, { ...payload, color: localColor });
                       setMaterialModalOpen(false);
                     } catch (e: any) {
                       message.error(e?.message || '创建失败');
@@ -1645,7 +1652,7 @@ const StyleBomTab: React.FC<Props> = ({
                       <Input />
                     </Form.Item>
                     <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
-                      <Input />
+                      <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" />
                     </Form.Item>
                     <Form.Item name="supplierId" hidden>
                       <Input />
@@ -1679,8 +1686,11 @@ const StyleBomTab: React.FC<Props> = ({
                         ]}
                       />
                     </Form.Item>
+                    <Form.Item name="color" label="颜色">
+                      <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" />
+                    </Form.Item>
                     <Form.Item name="specifications" label="规格">
-                      <Input />
+                      <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" />
                     </Form.Item>
                     <Form.Item name="unitPrice" label="单价" initialValue={0}>
                       <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
