@@ -244,6 +244,11 @@ const Register: React.FC = () => {
                 options={filteredOptions.length ? filteredOptions : tenantOptions.map(o => ({ value: o.value, label: o.label }))}
                 onSearch={handleTenantSearch}
                 onSelect={handleTenantSelect}
+                onChange={(value) => {
+                  if (!value) {
+                    form.setFieldsValue({ tenantCode: undefined });
+                  }
+                }}
                 placeholder="输入工厂名称搜索"
                 size="large"
                 disabled={submitting}
@@ -252,20 +257,20 @@ const Register: React.FC = () => {
                 style={{ width: '100%' }}
               />
               <div className="register-factory-hint" style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 4 }}>
-                选择工厂后工厂编码自动填入
+                选择工厂后系统自动绑定工厂编码，无需再次填写
               </div>
             </Form.Item>
           )}
-          {/* 工厂编码（始终渲染，入驻模式或URL扫码时隐藏） */}
+          {/* 工厂编码（内部字段：扫码链接自动带入或由“所属工厂”自动回填） */}
           <Form.Item
             name="tenantCode"
-            rules={!isApplyMode ? [{ required: true, message: '请输入或选择工厂编码' }] : []}
+            rules={!isApplyMode ? [{ required: true, message: '请选择所属工厂' }] : []}
             label="工厂编码"
-            hidden={isApplyMode || !!urlTenantCode}
+            hidden
           >
             <Input
               prefix={<ShopOutlined className="site-form-item-icon" />}
-              placeholder="选择工厂后自动填入，或手动输入编码"
+              placeholder="系统自动回填"
               size="large"
               allowClear
               disabled={submitting}
