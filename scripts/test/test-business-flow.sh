@@ -35,9 +35,16 @@ fi
 log_pass "后端服务正常"
 
 # admin 登录
-ADMIN_TOKEN=$(curl -s -X POST "$API/api/system/user/login" \
-    -H "Content-Type: application/json" -d '{"username":"admin","password":"Abc123456"}' \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('token',''))" 2>/dev/null)
+ADMIN_TOKEN=""
+for ADMIN_PWD in "${ADMIN_PASSWORD:-}" "123456" "Abc123456"; do
+    [ -z "$ADMIN_PWD" ] && continue
+    ADMIN_TOKEN=$(curl -s -X POST "$API/api/system/user/login" \
+        -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"$ADMIN_PWD\"}" \
+        | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('token',''))" 2>/dev/null)
+    if [ -n "$ADMIN_TOKEN" ]; then
+        break
+    fi
+done
 
 if [ -z "$ADMIN_TOKEN" ]; then
     echo "admin 登录失败"
@@ -81,9 +88,17 @@ while IFS=$'\t' read -r tid tcode username roleid; do
         continue
     fi
 
-    LOGIN_RESP=$(curl -s -X POST "$API/api/system/user/login" \
-        -H "Content-Type: application/json" \
-        -d "{\"username\":\"$username\",\"password\":\"Abc123456\"}")
+    LOGIN_RESP=""
+    for USER_PWD in "${DEFAULT_TEST_USER_PASSWORD:-}" "Abc123456" "123456" "Test123456"; do
+        [ -z "$USER_PWD" ] && continue
+        LOGIN_RESP=$(curl -s -X POST "$API/api/system/user/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$username\",\"password\":\"$USER_PWD\"}")
+        CODE=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" 2>/dev/null)
+        if [ "$CODE" = "200" ]; then
+            break
+        fi
+    done
 
     TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('token',''))" 2>/dev/null)
     CODE=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code',''))" 2>/dev/null)

@@ -102,7 +102,6 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
               : `liquidWave2 ${6 + (100 - progress) / 20}s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite`,
             transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
             opacity: 0.6,
-            transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         />
       </div>

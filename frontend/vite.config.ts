@@ -14,8 +14,9 @@ const resolveGitCommit = () => {
   }
 }
 
-const buildCommit = process.env.VITE_BUILD_COMMIT || resolveGitCommit()
-const buildTime = process.env.VITE_BUILD_TIME || new Date().toISOString()
+const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env || {}
+const buildCommit = env.VITE_BUILD_COMMIT || resolveGitCommit()
+const buildTime = env.VITE_BUILD_TIME || new Date().toISOString()
 
 export default defineConfig({
   define: {

@@ -18,10 +18,17 @@ echo ""
 # 辅助函数
 login() {
     local user=$1
-    local token=$(curl -s -X POST "$BASE_URL/api/system/user/login" \
-        -H "Content-Type: application/json" \
-        -d "{\"username\":\"$user\",\"password\":\"Abc123456\"}" \
-        | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('token',''))" 2>/dev/null)
+    local token=""
+    for pwd in "${DEFAULT_TEST_USER_PASSWORD:-}" "Abc123456" "123456" "Test123456"; do
+        [ -z "$pwd" ] && continue
+        token=$(curl -s -X POST "$BASE_URL/api/system/user/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$user\",\"password\":\"$pwd\"}" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('token',''))" 2>/dev/null)
+        if [ -n "$token" ]; then
+            break
+        fi
+    done
     echo "$token"
 }
 

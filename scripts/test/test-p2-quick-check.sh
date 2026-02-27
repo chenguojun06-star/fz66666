@@ -18,26 +18,33 @@ SKIPPED=0
 # 辅助函数
 run_test() {
     local script="$1"
+    local script_path="$script"
     local desc="$2"
 
     echo "[$(date +%H:%M:%S)] 测试: $desc"
-    echo "  脚本: $script"
+    if [ ! -f "$script_path" ] && [ -f "scripts/test/$script" ]; then
+        script_path="scripts/test/$script"
+    fi
 
-    if [ ! -f "$script" ]; then
+    echo "  脚本: $script_path"
+
+    if [ ! -f "$script_path" ]; then
         echo "  ❌ 文件不存在"
         ((SKIPPED++))
         return
     fi
 
     # 运行测试（无超时限制，MacOS没有timeout命令）
-    if bash "$script" > "/tmp/${script}.log" 2>&1; then
+    local log_name
+    log_name=$(echo "$script" | tr '/' '_')
+    if bash "$script_path" > "/tmp/${log_name}.log" 2>&1; then
         echo "  ✅ 通过"
         ((PASSED++))
     else
         EXIT_CODE=$?
         echo "  ❌ 失败 (退出码: $EXIT_CODE)"
         echo "     最后5行日志:"
-        tail -5 "/tmp/${script}.log" 2>/dev/null | sed 's/^/     /'
+        tail -5 "/tmp/${log_name}.log" 2>/dev/null | sed 's/^/     /'
         ((FAILED++))
     fi
     echo ""
