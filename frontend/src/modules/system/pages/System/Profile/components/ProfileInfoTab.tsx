@@ -3,12 +3,18 @@
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Tag, Typography, Upload } from 'antd';
+import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Switch, Tag, Typography, Upload } from 'antd';
 import { LockOutlined, LinkOutlined, MessageOutlined, QrcodeOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
+import {
+    getSmartFeatureFlags,
+    setSmartFeatureFlag,
+    resetSmartFeatureFlags,
+    type SmartFeatureKey,
+} from '@/smart/core/featureFlags';
 import feedbackService from '@/services/feedbackService';
 import type { UserFeedback } from '@/services/feedbackService';
 
@@ -36,6 +42,37 @@ const FEEDBACK_STATUS_MAP: Record<string, { label: string; color: string }> = {
     CLOSED: { label: '已关闭', color: 'default' },
 };
 
+const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: string }> = {
+    'smart.guide.enabled': {
+        title: '全局引导条',
+        desc: '在页面顶部显示下一步建议与待处理提醒。',
+    },
+    'smart.dict.autocollect.enabled': {
+        title: '词典自动收录',
+        desc: '启用智能词条自动收录能力（按页面接入情况生效）。',
+    },
+    'smart.production.precheck.enabled': {
+        title: '生产预检提示',
+        desc: '扫码/生产相关操作前显示风险提示与建议。',
+    },
+    'smart.finance.explain.enabled': {
+        title: '财务解释提示',
+        desc: '在财务页面展示差异解释与风险提示。',
+    },
+    'smart.system.guard.enabled': {
+        title: '系统防呆提示',
+        desc: '在系统设置中显示配置防呆建议。',
+    },
+};
+
+const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
+    'smart.guide.enabled',
+    'smart.dict.autocollect.enabled',
+    'smart.production.precheck.enabled',
+    'smart.finance.explain.enabled',
+    'smart.system.guard.enabled',
+];
+
 const ProfileInfoTab: React.FC = () => {
     const { user, updateUser } = useAuth();
     const { message } = App.useApp();
@@ -55,6 +92,7 @@ const ProfileInfoTab: React.FC = () => {
     const [submittingFeedback, setSubmittingFeedback] = useState(false);
     const [myFeedbacks, setMyFeedbacks] = useState<UserFeedback[]>([]);
     const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+    const [smartFlags, setSmartFlags] = useState(() => getSmartFeatureFlags());
 
     // 主题
     const getUserThemeKey = () => {
@@ -300,6 +338,29 @@ const ProfileInfoTab: React.FC = () => {
         }
     };
 
+    const updateSmartFlag = (key: SmartFeatureKey, enabled: boolean) => {
+        const next = setSmartFeatureFlag(key, enabled);
+        setSmartFlags(next);
+        message.success(`${SMART_FEATURE_LABELS[key].title}已${enabled ? '开启' : '关闭'}`);
+    };
+
+    const setAllSmartFlags = (enabled: boolean) => {
+        let nextFlags = { ...getSmartFeatureFlags() };
+        SMART_FEATURE_KEYS.forEach((featureKey) => {
+            nextFlags = setSmartFeatureFlag(featureKey, enabled);
+        });
+        setSmartFlags(nextFlags);
+        message.success(`智能开关已${enabled ? '全部开启' : '全部关闭'}`);
+    };
+
+    const resetSmartFlags = () => {
+        const next = resetSmartFeatureFlags();
+        setSmartFlags(next);
+        message.success('已恢复智能开关默认值');
+    };
+
+    const enabledCount = SMART_FEATURE_KEYS.filter((key) => smartFlags[key]).length;
+
     return (
         <>
             {/* 顶部操作栏 */}
@@ -456,6 +517,57 @@ const ProfileInfoTab: React.FC = () => {
                             </div>
                         );
                     })()}
+
+                    {/* 问题反馈 */}
+                    <div style={{ marginTop: 32 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                            <MessageOutlined style={{ color: 'var(--primary-color)' }} />
+                            <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
+                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
+                            </Typography.Text>
+                        </div>
+                        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+                            <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
+                                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                                    开关仅对当前浏览器生效，可自行体验开启效果。
+                                </Typography.Text>
+                                <Space>
+                                    <Button size="small" onClick={() => setAllSmartFlags(true)}>全部开启</Button>
+                                    <Button size="small" onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
+                                    <Button size="small" onClick={resetSmartFlags}>恢复默认</Button>
+                                </Space>
+                            </Space>
+
+                            {SMART_FEATURE_KEYS.map((featureKey) => {
+                                const meta = SMART_FEATURE_LABELS[featureKey];
+                                return (
+                                    <div
+                                        key={featureKey}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 12,
+                                            padding: '8px 0',
+                                            borderTop: '1px solid #f0f0f0',
+                                        }}
+                                    >
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                {meta.desc}
+                                            </Typography.Text>
+                                        </div>
+                                        <Switch
+                                            checked={Boolean(smartFlags[featureKey])}
+                                            onChange={(checked) => updateSmartFlag(featureKey, checked)}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </Card>
+                    </div>
 
                     {/* 问题反馈 */}
                     <div style={{ marginTop: 32 }}>
