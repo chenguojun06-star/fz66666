@@ -7,6 +7,9 @@ import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import api, { ApiResult } from '../../utils/api';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
+import SmartGuideBar from '@/smart/components/SmartGuideBar';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import './styles.css';
 
 interface LayoutProps {
@@ -369,6 +372,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const userDisplayName = String(user?.name || user?.username || '').trim() || '用户';
   const userInitial = userDisplayName.slice(0, 1).toUpperCase();
 
+  const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
+  const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
+
   // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
   const brandName = String((user as any)?.tenantName || '').trim() || '云裳智链';
 
@@ -539,6 +545,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <main className="layout-content">
           <div className="content-wrapper">
+            {showGlobalSmartGuide && globalGuide ? (
+              <div style={{ marginBottom: 12 }}>
+                <SmartGuideBar
+                  stage={globalGuide.stage}
+                  nextStep={globalGuide.nextStep}
+                  hints={globalGuide.hints}
+                  pendingCount={globalGuide.hints.filter((item) => item.level !== 'low').length}
+                />
+              </div>
+            ) : null}
             {children}
           </div>
         </main>

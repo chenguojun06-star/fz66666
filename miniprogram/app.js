@@ -2,6 +2,7 @@ const { getToken, clearToken } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
+const { resolveSmartGuideByRoute } = require('./utils/smartGuide');
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
@@ -10,6 +11,7 @@ App({
   globalData: {
     token: '',
     eventBus, // 全局事件总线（使用utils/eventBus.js中的实现）
+    smartGuideResolver: resolveSmartGuideByRoute,
     /** 隐私授权 resolve 函数，由当前页的 privacy-dialog 组件消费 */
     privacyResolve: null,
   },
