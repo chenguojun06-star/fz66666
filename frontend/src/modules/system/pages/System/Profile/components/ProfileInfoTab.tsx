@@ -500,28 +500,39 @@ const ProfileInfoTab: React.FC = () => {
                                         <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
                                     </div>
                                     <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                        <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                                            <QRCode value={registerUrl} size={120} />
+                                        <div
+                                            style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr 1fr',
+                                                gap: 12,
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            <div style={{ textAlign: 'center' }}>
+                                                <QRCode value={registerUrl} size={160} />
+                                            </div>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-start' }}>
+                                                    <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
+                                                    <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
+                                                        {tenantInfo.tenantCode}
+                                                    </Typography.Text>
+                                                </div>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                                    <Button size="small" icon={<LinkOutlined />}
+                                                        onClick={() => { navigator.clipboard.writeText(registerUrl); message.success('注册链接已复制'); }}>
+                                                        复制注册链接
+                                                    </Button>
+                                                    <Button size="small" icon={<QrcodeOutlined />}
+                                                        onClick={() => { navigator.clipboard.writeText(tenantInfo.tenantCode!); message.success('工厂码已复制'); }}>
+                                                        复制工厂码
+                                                    </Button>
+                                                </div>
+                                                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
+                                                    员工扫码二维码或输入工厂码即可申请加入
+                                                </Typography.Text>
+                                            </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
-                                            <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
-                                            <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
-                                                {tenantInfo.tenantCode}
-                                            </Typography.Text>
-                                        </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                                            <Button size="small" icon={<LinkOutlined />}
-                                                onClick={() => { navigator.clipboard.writeText(registerUrl); message.success('注册链接已复制'); }}>
-                                                复制注册链接
-                                            </Button>
-                                            <Button size="small" icon={<QrcodeOutlined />}
-                                                onClick={() => { navigator.clipboard.writeText(tenantInfo.tenantCode!); message.success('工厂码已复制'); }}>
-                                                复制工厂码
-                                            </Button>
-                                        </div>
-                                        <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all', textAlign: 'center' }}>
-                                            员工扫码二维码或输入工厂码即可申请加入
-                                        </Typography.Text>
                                     </Card>
                                 </div>
                             );
