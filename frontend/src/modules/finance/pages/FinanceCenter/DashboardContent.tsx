@@ -6,6 +6,9 @@ import { StatsGrid } from '@/components/common/StatsGrid';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -83,6 +86,18 @@ const DashboardContent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRangeType>('month');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // 筛选条件
   const [selectedFactory, setSelectedFactory] = useState<string | undefined>(undefined); // 工厂筛选（单选）
@@ -355,9 +370,11 @@ const DashboardContent: React.FC = () => {
           value: Math.round(value),
         }));
       setRankData(rank);
+      if (showSmartErrorNotice) setSmartError(null);
 
     } catch (error) {
       console.error('加载数据失败:', error);
+      reportSmartError('财务中心看板加载失败', '网络异常或服务不可用，请稍后重试', 'FIN_CENTER_DASHBOARD_LOAD_FAILED');
       setStatData({
         totalAmount: 0, totalAmountChange: 0, prevTotalAmount: 0,
         warehousedCount: 0, warehousedChange: 0, warehousedTrend: [0,0,0,0,0,0,0], prevWarehousedCount: 0,
@@ -472,6 +489,17 @@ const DashboardContent: React.FC = () => {
 
   return (
     <Spin spinning={loading}>
+      {showSmartErrorNotice && smartError ? (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void loadData();
+            }}
+          />
+        </Card>
+      ) : null}
+
       {/* 顶部筛选区域：时间范围 + 工厂选择 */}
       <div className={styles.periodSelector}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>

@@ -21,6 +21,9 @@ import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
 
@@ -50,11 +53,23 @@ const MaterialDatabasePage: React.FC = () => {
   // ===== 保留的状态 =====
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [form] = Form.useForm();
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
+  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const reportSmartError = (title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({
+      title,
+      reason,
+      code,
+      actionText: '刷新重试',
+    });
+  };
 
   // ===== 获取列表函数 =====
   const fetchList = async () => {
@@ -79,8 +94,11 @@ const MaterialDatabasePage: React.FC = () => {
       const records = Array.isArray(data?.records) ? data.records : [];
       setDataList(records as MaterialDatabase[]);
       setTotal(Number(data?.total || 0) || 0);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
-      message.error((error as Error)?.message || '获取面辅料数据库列表失败');
+      const errMessage = (error as Error)?.message || '获取面辅料数据库列表失败';
+      reportSmartError('面辅料数据库加载失败', errMessage, 'MATERIAL_DATABASE_LOAD_FAILED');
+      message.error(errMessage);
     } finally {
       setLoading(false);
     }
@@ -464,6 +482,16 @@ const MaterialDatabasePage: React.FC = () => {
   return (
     <Layout>
       {contextHolder}
+      {showSmartErrorNotice && smartError ? (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <SmartErrorNotice
+            error={smartError}
+            onFix={() => {
+              void fetchList();
+            }}
+          />
+        </Card>
+      ) : null}
         <Card>
           {/* 页面标题 */}
           <div style={{ marginBottom: 16 }}>
