@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.UserFeedback;
+import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserFeedbackService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +29,9 @@ public class UserFeedbackController {
     @Autowired
     private UserFeedbackService userFeedbackService;
 
+    @Autowired
+    private TenantService tenantService;
+
     /**
      * 提交反馈（所有登录用户可用，PC端和小程序统一入口）
      */
@@ -44,6 +49,13 @@ public class UserFeedbackController {
             feedback.setUserId(ctx.getUserId() != null ? Long.parseLong(ctx.getUserId()) : null);
             feedback.setUserName(ctx.getUsername());
             feedback.setTenantId(ctx.getTenantId());
+            // 冗余存储租户名称，方便管理端查询
+            if (ctx.getTenantId() != null) {
+                Tenant tenant = tenantService.getById(ctx.getTenantId());
+                if (tenant != null) {
+                    feedback.setTenantName(tenant.getTenantName());
+                }
+            }
         }
 
         // 设置默认值
