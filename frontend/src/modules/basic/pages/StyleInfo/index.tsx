@@ -507,6 +507,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     processStartTime={(currentStyle as any)?.processStartTime}
                     processCompletedTime={(currentStyle as any)?.processCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    onDataLoaded={_setProcessData}
                   />
                 )
               },

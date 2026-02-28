@@ -18,6 +18,7 @@ interface Props {
   processStartTime?: string;
   processCompletedTime?: string;
   onRefresh?: () => void; // 刷新父组件的回调
+  onDataLoaded?: (data: any[]) => void; // 数据加载完成后通知父组件
 }
 
 // 多码单价数据接口
@@ -54,6 +55,7 @@ const StyleProcessTab: React.FC<Props> = ({
   processStartTime,
   processCompletedTime,
   onRefresh,
+  onDataLoaded,
 }) => {
   const { message } = App.useApp();
   const [data, setData] = useState<StyleProcessWithSizePrice[]>([]);
@@ -224,6 +226,7 @@ const StyleProcessTab: React.FC<Props> = ({
         setDeletedIds([]);
         setEditMode(false);
         snapshotRef.current = null;
+        onDataLoaded?.(sortedData);
       }
     } catch (error) {
       message.error('获取工序表失败');
