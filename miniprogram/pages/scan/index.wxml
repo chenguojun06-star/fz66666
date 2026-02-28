@@ -402,10 +402,35 @@
         <!-- 样衣操作区（复用 scanConfirm 通用弹窗） -->
         <view wx:if="{{scanConfirm.detail.isPattern}}" class="purchase-modal-list">
           <view class="purchase-modal-item">
+            <view class="pmi-row">
+              <text class="pmi-label">选择工序</text>
+              <view class="inline-selector" style="margin-top: 8rpx;">
+                <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+                  <view
+                    wx:for="{{scanConfirm.detail.operationOptions}}"
+                    wx:key="value"
+                    class="inline-selector-item {{scanConfirm.detail.operationType == item.value ? 'active' : ''}}"
+                    data-type="{{item.value}}"
+                    bindtap="onPatternOperationChange">
+                    <view class="inline-selector-left">
+                      <view class="inline-selector-radio {{scanConfirm.detail.operationType == item.value ? 'checked' : ''}}">
+                        <view wx:if="{{scanConfirm.detail.operationType == item.value}}" class="inline-selector-radio-dot"></view>
+                      </view>
+                      <text class="inline-selector-label">{{item.icon || '🧵'}} {{item.label || item.value}}</text>
+                    </view>
+                  </view>
+                </scroll-view>
+              </view>
+            </view>
+
+            <view wx:if="{{scanConfirm.detail.requiresReviewBeforeInbound}}" class="qc-receive-tip" style="margin-top: 8rpx; background: #fff7e6; border-color: #ffd591;">
+              <text class="qc-tip-text" style="color: #d46b08;">⚠️ 当前未完成样衣审核，本次会先提交审核再执行入库</text>
+            </view>
+
             <view class="pmi-row pmi-row-inline">
               <view class="pmi-col">
-                <text class="pmi-label">执行方式</text>
-                <text class="pmi-value demand">一键领取全工序</text>
+                <text class="pmi-label">当前操作</text>
+                <text class="pmi-value demand">{{scanConfirm.detail.operationLabel || '-'}}</text>
               </view>
               <view class="pmi-col">
                 <text class="pmi-label">数量</text>
@@ -669,7 +694,7 @@
         </view>
         <!-- 其他模式 -->
         <view wx:if="{{scanConfirm.detail.isPattern}}" class="mbtn {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" style="background: #10b981;" bindtap="submitPatternScanAll">
-          {{scanConfirm.loading ? '提交中...' : '一键领取全工序'}}
+          {{scanConfirm.loading ? '提交中...' : (scanConfirm.detail.operationLabel ? ('提交：' + scanConfirm.detail.operationLabel) : '确认提交')}}
         </view>
         <view wx:if="{{!scanConfirm.detail.isPattern && !scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪'}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onConfirmScan">
           {{scanConfirm.loading ? '...' : (scanConfirm.detail.isQualityReceive ? '领取' : '确认')}}

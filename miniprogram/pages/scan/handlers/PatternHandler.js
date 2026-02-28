@@ -94,7 +94,11 @@ function showPatternConfirmModal(page, data) {
   const operationLabel = defaultOption
     ? defaultOption.label
     : (OPERATION_LABELS[operationType] || data.operationLabel || '操作');
-  const requiresWarehouseInput = operationOptions.some(item => WAREHOUSE_OPERATIONS.has(item && item.value));
+  const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
+  const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
+  const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
+  const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
+  const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
   const confirmedQty = normalizePositiveInt(data.quantity, 1);
   page.setData({
     scanConfirm: {
@@ -113,6 +117,8 @@ function showPatternConfirmModal(page, data) {
         operationLabel,
         operationOptions,
         requiresWarehouseInput,
+        requiresReviewBeforeInbound,
+        reviewApproved,
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
@@ -173,8 +179,14 @@ function onPatternOperationChange(page, e) {
     ? state.operationOptions
     : [];
   const selected = options.find(item => item.value === operationType);
+  const patternDetail = state.patternDetail || {};
+  const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
+  const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
+  const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
   _setPatternField(page, 'operationType', operationType);
   _setPatternField(page, 'operationLabel', (selected && selected.label) || OPERATION_LABELS[operationType] || '操作');
+  _setPatternField(page, 'requiresWarehouseInput', WAREHOUSE_OPERATIONS.has(operationType));
+  _setPatternField(page, 'requiresReviewBeforeInbound', operationType === 'WAREHOUSE_IN' && !reviewApproved);
 }
 
 /**
@@ -201,8 +213,15 @@ async function submitPatternScan(page) {
   }
   const operationType = String(patternConfirm.operationType || '').toUpperCase();
   const confirmedQty = normalizePositiveInt(patternConfirm.quantity, 0);
+  const reviewRemark = String(patternConfirm.remark || '').trim();
   if (operationType !== 'REVIEW' && confirmedQty <= 0) {
     toast.error('请输入正确数量');
+    return;
+  }
+  if ((operationType === 'REVIEW'
+      || (operationType === 'WAREHOUSE_IN' && patternConfirm.requiresReviewBeforeInbound))
+      && !reviewRemark) {
+    toast.error('请填写样衣审核备注');
     return;
   }
   if (WAREHOUSE_OPERATIONS.has(operationType) && !String(patternConfirm.warehouseCode || '').trim()) {
@@ -274,31 +293,42 @@ async function submitPatternScanAll(page) {
     return;
   }
 
-  const productionOperations = operations.filter(item => !WAREHOUSE_OPERATIONS.has(item.value) && item.value !== 'REVIEW');
-  if (!productionOperations.length) {
-    toast.error('一键提交仅支持生产工序，审核/入库请单独操作');
+  const selectedOperation = operations.find(item => item.value === patternConfirm.operationType) || null;
+  if (!selectedOperation) {
+    toast.error('请选择要提交的工序');
+    return;
+  }
+
+  const reviewRemark = String(patternConfirm.remark || '').trim();
+  if ((selectedOperation.value === 'REVIEW'
+      || (selectedOperation.value === 'WAREHOUSE_IN' && patternConfirm.requiresReviewBeforeInbound))
+      && !reviewRemark) {
+    toast.error('请填写样衣审核备注');
+    return;
+  }
+
+  if (WAREHOUSE_OPERATIONS.has(selectedOperation.value) && !String(patternConfirm.warehouseCode || '').trim()) {
+    toast.error('仓库操作请填写仓位编号');
     return;
   }
 
   _setPatternLoading(page, true);
 
   try {
-    for (const operation of productionOperations) {
-      const result = await page.scanHandler.submitPatternScan({
-        patternId: patternConfirm.patternId,
-        operationType: operation.value,
-        operatorRole: 'PLATE_WORKER',
-        quantity: confirmedQty,
-        warehouseCode: patternConfirm.warehouseCode,
-        remark: patternConfirm.remark,
-      });
+    const result = await page.scanHandler.submitPatternScan({
+      patternId: patternConfirm.patternId,
+      operationType: selectedOperation.value,
+      operatorRole: 'PLATE_WORKER',
+      quantity: confirmedQty,
+      warehouseCode: patternConfirm.warehouseCode,
+      remark: patternConfirm.remark,
+    });
 
-      if (!result.success) {
-        throw new Error(result.message || `${operation.label || operation.value} 提交失败`);
-      }
+    if (!result.success) {
+      throw new Error(result.message || `${selectedOperation.label || selectedOperation.value} 提交失败`);
     }
 
-    toast.success(`已完成 ${productionOperations.length} 道工序`);
+    toast.success(result.message || '提交成功');
     closePatternConfirm(page);
 
     page.addToLocalHistory({
@@ -309,7 +339,7 @@ async function submitPatternScanAll(page) {
         styleNo: patternConfirm.styleNo,
         color: patternConfirm.color,
         quantity: confirmedQty,
-        operationType: 'ALL',
+        operationType: selectedOperation.value,
       },
     });
 

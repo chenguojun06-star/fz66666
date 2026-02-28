@@ -408,7 +408,7 @@ public class PatternProductionOrchestrator {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
         String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
-        if (!"PRODUCTION_COMPLETED".equals(status)) {
+        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
             throw new IllegalStateException("样板生产未完成，不能审核");
         }
 

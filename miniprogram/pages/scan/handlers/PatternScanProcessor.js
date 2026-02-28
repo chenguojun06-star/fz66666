@@ -163,6 +163,7 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
   // ── 阶段二：生产完成，等待入库 ─────────────────────────────────────
   if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved) {
     options.push({ value: 'REVIEW', label: '样衣审核', icon: '🧾' });
+    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库（将先审核）', icon: '📦' });
     return options;
   }
 
@@ -272,7 +273,9 @@ function determinePatternOperation(patternDetail, manualScanType) {
  */
 async function submitPatternScan(handler, data) {
   try {
-    if (String(data.operationType || '').toUpperCase() === 'REVIEW') {
+    const operationType = String(data.operationType || '').toUpperCase();
+
+    if (operationType === 'REVIEW') {
       const reviewRemark = String(data.remark || '').trim();
       const reviewResult = 'APPROVED';
       const res = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
@@ -286,9 +289,25 @@ async function submitPatternScan(handler, data) {
       return handler._errorResult('审核提交失败');
     }
 
+    if (operationType === 'WAREHOUSE_IN') {
+      const latestDetail = await getPatternDetail(handler, data.patternId);
+      const latestReviewStatus = String(latestDetail?.reviewStatus || '').toUpperCase();
+      const latestReviewResult = String(latestDetail?.reviewResult || '').toUpperCase();
+      const reviewApproved = latestReviewStatus === 'APPROVED' || latestReviewResult === 'APPROVED';
+
+      if (!reviewApproved) {
+        const reviewRemark = String(data.remark || '').trim();
+        const reviewResult = 'APPROVED';
+        const reviewRes = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
+        if (!reviewRes) {
+          return handler._errorResult('入库前自动审核失败');
+        }
+      }
+    }
+
     const res = await handler.api.production.submitPatternScan({
       patternId: data.patternId,
-      operationType: data.operationType,
+      operationType,
       operatorRole: data.operatorRole || 'PLATE_WORKER',
       quantity: data.quantity,
       warehouseCode: data.warehouseCode,
@@ -298,7 +317,7 @@ async function submitPatternScan(handler, data) {
     if (res) {
       return {
         success: true,
-        message: getPatternSuccessMessage(data.operationType),
+        message: getPatternSuccessMessage(operationType),
         data: res,
       };
     }
