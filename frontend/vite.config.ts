@@ -31,29 +31,15 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 2000,
     // esbuild: 内置、速度是 terser 的 10x、内存占用极低
     // terser 在云端内存受限环境（1-2GB）压缩 ECharts 等大 chunk 时 OOM 被杀，
     // 导致 dist/assets/ 只生成了一部分，引用这些文件的 index.html 上线后 404
     minify: 'esbuild',
-    rollupOptions: {
-      output: {
-        // ⚠️ 只对真正独立的大包单独拆 chunk（echarts / exceljs），
-        // 其余 node_modules 全部交给 Rollup 自动合并。
-        //
-        // 不要手动把 react / antd / rc-* / zustand 等拆散：
-        // rc-select、rc-virtual-list 等 antd 内部依赖都调用 React hooks，
-        // 一旦与 react/react-dom 落入不同 chunk，就会出现双 React 实例 →
-        // useLayoutEffect undefined → 白屏。让 Rollup 放在一起彻底避免此风险。
-        manualChunks: (id) => {
-          // ECharts + zrender 单独拆（压缩后约 375KB，仅图表页用到）
-          if (id.includes('echarts') || id.includes('zrender')) return 'vendor-echarts';
-          // exceljs 单独拆（大，仅数据导入页用到）
-          if (id.includes('exceljs')) return 'vendor-exceljs';
-          // 其余全部不指定，由 Rollup 自动合并为一个 vendor 包
-        },
-      },
-    },
+    // ⚠️ 不使用 manualChunks，让 Rollup 完全自动拆包。
+    // 手动指定 manualChunks 会把 rc-*/scheduler 等 React 内部依赖
+    // 与 react/react-dom 拆入不同 chunk，造成双 React 实例 →
+    // useLayoutEffect undefined → 白屏崩溃。
   },
   server: {
     // ================================================
