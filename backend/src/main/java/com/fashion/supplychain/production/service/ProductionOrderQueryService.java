@@ -202,7 +202,7 @@ public class ProductionOrderQueryService {
      *
      * 这样无论款式状态如何、cover 字段是否为空，小程序和 PC 看到的图片永远一致。
      */
-    private void fillStyleCover(List<ProductionOrder> records) {
+    public void fillStyleCover(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) {
             return;
         }

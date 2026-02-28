@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -48,6 +49,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductionOrderQueryService productionOrderQueryService;
 
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
@@ -366,15 +370,21 @@ public class ProductWarehousingOrchestrator {
         Set<String> orderIds = new HashSet<>(bundleOrderIds.values());
         Map<String, ProductionOrder> orderMap = new HashMap<>();
         if (!orderIds.isEmpty()) {
+            List<ProductionOrder> orderList = new ArrayList<>();
             for (String oid : orderIds) {
                 try {
                     ProductionOrder order = productionOrderService.getById(oid);
                     if (order != null) {
                         orderMap.put(oid.trim(), order);
+                        orderList.add(order);
                     }
                 } catch (Exception e) {
                     log.warn("查询订单失败: {}", oid, e);
                 }
+            }
+            // 批量填充款式封面图（styleCover 为运行时计算字段，不存储于 DB）
+            if (!orderList.isEmpty()) {
+                productionOrderQueryService.fillStyleCover(orderList);
             }
         }
 
