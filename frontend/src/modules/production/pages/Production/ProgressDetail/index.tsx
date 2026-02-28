@@ -36,6 +36,7 @@ import {
 } from './utils';
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
+import SmartOrderHoverCard from './components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -795,10 +796,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   onClick: () => handleQuickEdit(record),
                 },
               ].filter(Boolean)}
-            />
-          )}
-        </>
-      ) : (
+              hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">生产进度</h2>
@@ -954,9 +952,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   onClick: () => handleQuickEdit(record),
                 },
               ].filter(Boolean)}
-            />
-          )}
-        </Card>
+              hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
       )}
 
       <ScanConfirmModal

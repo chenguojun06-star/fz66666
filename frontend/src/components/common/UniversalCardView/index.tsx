@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Button, Space } from 'antd';
+import { Card, Row, Col, Button, Space, Popover } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import './style.css';
@@ -46,6 +46,7 @@ export interface UniversalCardViewProps {
   coverPlaceholder?: string; // 封面占位文字
   onCardClick?: (record: any) => void; // 卡片点击事件
   pagination?: any; // 分页配置（由外部渲染）
+  hoverRender?: (record: any) => React.ReactNode; // 悬停弹出内容
 }
 
 const UniversalCardView: React.FC<UniversalCardViewProps> = ({
@@ -63,6 +64,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   actions,
   coverPlaceholder = '暂无图片',
   onCardClick,
+  hoverRender,
 }) => {
   // 计算响应式列配置
   const getColSpan = () => {
@@ -126,9 +128,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
           return true;
         }) || [];
 
-        return (
-          <Col {...getColSpan()} key={record.id || index}>
-            <Card
+        const cardNode = (
+          <Card
               hoverable
               className="universal-card"
               loading={loading}
@@ -239,6 +240,19 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 )}
               </div>
             </Card>
+          );
+          return (
+          <Col {...getColSpan()} key={record.id || index}>
+            {hoverRender ? (
+              <Popover
+                content={hoverRender(record)}
+                trigger="hover"
+                placement="rightTop"
+                overlayStyle={{ maxWidth: 280 }}
+              >
+                {cardNode}
+              </Popover>
+            ) : cardNode}
           </Col>
         );
       })}
