@@ -261,7 +261,7 @@ public class InternalMaintenanceController {
      * ⚠️ 注意：仅重新初始化裁剪工序的扫码时间/操作人；其他工序的扫码记录（来自小程序扫码）将被保留。
      */
     @PostMapping("/reinit-process-tracking")
-    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> reinitProcessTracking(@RequestBody(required = false) Map<String, Object> payload) {
         String orderId = payload != null ? (String) payload.get("orderId") : null;
         String orderNo = payload != null ? (String) payload.get("orderNo") : null;
