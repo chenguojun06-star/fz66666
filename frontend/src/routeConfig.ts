@@ -130,6 +130,7 @@ export type MenuItem = {
   label: string;
   path: string;
   icon?: ReactNode;
+  superAdminOnly?: boolean;
 };
 
 export type MenuSection = {
@@ -209,6 +210,7 @@ export const menuConfig: MenuSection[] = [
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
+      { label: '系统问题看板', path: paths.systemIssues, icon: React.createElement(BugOutlined), superAdminOnly: true },
     ],
   },
   {
@@ -222,13 +224,6 @@ export const menuConfig: MenuSection[] = [
     key: 'customer',
     icon: React.createElement(CrownOutlined),
     path: paths.customerManagement,
-    superAdminOnly: true,
-  },
-  {
-    title: '系统问题',
-    key: 'systemIssues',
-    icon: React.createElement(BugOutlined),
-    path: paths.systemIssues,
     superAdminOnly: true,
   },
   {

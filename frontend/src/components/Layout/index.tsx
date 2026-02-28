@@ -261,7 +261,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       .map((section) => {
         if (section.items) {
           const children = section.items
-            .filter((item) => hasPermissionForPath(item.path))
+            .filter((item) => {
+              if ((item as any).superAdminOnly && !isSuperAdmin) return false;
+              return hasPermissionForPath(item.path);
+            })
             .map((item) => ({
               key: item.path,
               icon: item.icon,
@@ -282,7 +285,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           };
         }
       });
-  }, [localizedMenuConfig, user]);
+  }, [localizedMenuConfig, user, isSuperAdmin]);
 
   // 获取当前选中的菜单项
   const selectedKeys = useMemo(() => {
