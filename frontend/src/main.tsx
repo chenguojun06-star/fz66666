@@ -51,6 +51,10 @@
   });
 })();
 
+// 前端 JS 异常自动上报（拦截 window.onerror / unhandledrejection）
+import { initFrontendErrorReporter } from './utils/frontendErrorReporter';
+initFrontendErrorReporter();
+
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme, App as AntApp } from 'antd';

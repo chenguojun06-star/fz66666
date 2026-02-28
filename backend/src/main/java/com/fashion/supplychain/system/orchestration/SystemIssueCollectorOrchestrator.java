@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.fashion.supplychain.system.dto.SystemIssueItemDTO;
 import com.fashion.supplychain.system.dto.SystemIssueSummaryDTO;
+import com.fashion.supplychain.system.store.FrontendErrorStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,18 +27,27 @@ public class SystemIssueCollectorOrchestrator {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private FrontendErrorStore frontendErrorStore;
+
     /**
      * 收集系统当前存在的所有问题
      */
     public SystemIssueSummaryDTO collect() {
         List<SystemIssueItemDTO> issues = new ArrayList<>();
 
+        // ── 永久 INFO 统计条目（始终展示，让看板始终有内容）──
+        safeCheck(issues, this::addScanStatistics7d);
+        safeCheck(issues, this::addActiveOrderStats);
+
+        // ── 异常检查项（有问题才加条目）──
         safeCheck(issues, this::checkScanFailures24h);
         safeCheck(issues, this::checkSuccessScanMissingBundle);
         safeCheck(issues, this::checkStagnantOrders);
         safeCheck(issues, this::checkMissingProcessCode);
         safeCheck(issues, this::checkDuplicateScanBlocked);
         safeCheck(issues, this::checkDatabaseConnection);
+        safeCheck(issues, this::checkFrontendErrors);
 
         long errorCount = issues.stream().filter(i -> "ERROR".equals(i.getLevel())).count();
         long warnCount  = issues.stream().filter(i -> "WARN".equals(i.getLevel())).count();
@@ -45,6 +55,63 @@ public class SystemIssueCollectorOrchestrator {
 
         log.info("[SystemIssueCollector] 检查完成: ERROR={}, WARN={}, INFO={}", errorCount, warnCount, infoCount);
         return new SystemIssueSummaryDTO((int) errorCount, (int) warnCount, (int) infoCount, issues, LocalDateTime.now());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 永久统计项 A：近7天扫码整体情况（始终展示）
+    // ─────────────────────────────────────────────────────────────────
+    private void addScanStatistics7d(List<SystemIssueItemDTO> issues) {
+        String sql = "SELECT " +
+                     "  COUNT(*) as total, " +
+                     "  SUM(CASE WHEN scan_result='success' THEN 1 ELSE 0 END) as success_cnt, " +
+                     "  SUM(CASE WHEN scan_result='fail'    THEN 1 ELSE 0 END) as fail_cnt, " +
+                     "  MAX(scan_time) as last_scan " +
+                     "FROM t_scan_record " +
+                     "WHERE scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+        Map<String, Object> row = jdbcTemplate.queryForMap(sql);
+        int total   = toInt(row.get("total"));
+        int success = toInt(row.get("success_cnt"));
+        int fail    = toInt(row.get("fail_cnt"));
+        LocalDateTime lastScan = toTime(row.get("last_scan"));
+        int failRate = total > 0 ? Math.round(fail * 100.0f / total) : 0;
+        String level = failRate >= 20 ? "WARN" : "INFO";
+        issues.add(SystemIssueItemDTO.of(level, "SCAN",
+                "近7天扫码统计：共 " + total + " 次，成功 " + success + " 次，失败 " + fail + " 次",
+                "扫码成功率 " + (100 - failRate) + "%。" +
+                (total == 0 ? "本周暂无扫码记录，请确认小程序端是否正常工作。" :
+                 fail == 0  ? "本周扫码全部成功，工厂端工作正常。" :
+                              "失败率 " + failRate + "%，可点击【扫码记录】筛选失败条目查看原因。"),
+                total, lastScan,
+                total == 0 ? "检查工厂小程序是否已联网；生产中的订单是否在使用扫码功能" :
+                             "点击【生产进度】→【扫码记录】可查看详细扫码明细"));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 永久统计项 B：当前活跃订单概况（始终展示）
+    // ─────────────────────────────────────────────────────────────────
+    private void addActiveOrderStats(List<SystemIssueItemDTO> issues) {
+        String sql = "SELECT " +
+                     "  COUNT(*) as total, " +
+                     "  SUM(CASE WHEN status IN ('IN_PROGRESS','in_progress') THEN 1 ELSE 0 END) as in_progress, " +
+                     "  SUM(CASE WHEN status IN ('PENDING','pending','CREATED','created') THEN 1 ELSE 0 END) as pending, " +
+                     "  SUM(CASE WHEN DATEDIFF(delivery_date, CURDATE()) BETWEEN 0 AND 7 " +
+                     "           AND status NOT IN ('completed','cancelled','COMPLETED','CANCELLED') THEN 1 ELSE 0 END) as soon_due " +
+                     "FROM t_production_order " +
+                     "WHERE delete_flag = 0 " +
+                     "  AND status NOT IN ('completed','cancelled','COMPLETED','CANCELLED')";
+        Map<String, Object> row = jdbcTemplate.queryForMap(sql);
+        int total      = toInt(row.get("total"));
+        int inProgress = toInt(row.get("in_progress"));
+        int pending    = toInt(row.get("pending"));
+        int soonDue    = toInt(row.get("soon_due"));
+        String level = soonDue >= 10 ? "WARN" : "INFO";
+        issues.add(SystemIssueItemDTO.of(level, "ORDER",
+                "当前活跃订单：共 " + total + " 单（生产中 " + inProgress + "，待开工 " + pending + "）",
+                "7天内到期订单 " + soonDue + " 单。" +
+                (soonDue == 0 ? "目前无临近到期订单，生产节奏良好。" :
+                                "请关注这 " + soonDue + " 单，确认进度是否达标避免延期。"),
+                total, null,
+                "前往【生产进度】页面查看各订单进度详情，蓝色进度球代表扫码已完成"));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -162,6 +229,24 @@ public class SystemIssueCollectorOrchestrator {
                     1, LocalDateTime.now(),
                     "立即检查数据库容器状态，运行 docker ps | grep mysql"));
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 检查项 7：前端 JS 异常（内存队列）
+    // ─────────────────────────────────────────────────────────────────
+    private void checkFrontendErrors(List<SystemIssueItemDTO> issues) {
+        int total = frontendErrorStore.size();
+        if (total == 0) return;
+        // 只看近 1 小时内的异常
+        long recent1h = frontendErrorStore.countSince(LocalDateTime.now().minusHours(1));
+        if (recent1h == 0) return;
+        String level = recent1h >= 5 ? "ERROR" : "WARN";
+        issues.add(SystemIssueItemDTO.of(level, "SYSTEM",
+                "近 1 小时前端 JS 异常 " + recent1h + " 次",
+                "浏览器客户端发生了 JavaScript 运行时异常（包括页面崩溃、Promise 未捕获异常等）。" +
+                "还有 " + (total - recent1h) + " 条更早的历史异常在内存中（共 " + total + " 条）。",
+                (int) recent1h, LocalDateTime.now(),
+                "前往 系统问题看板 → 前端异常 Tab 查看详细堆栈"));
     }
 
     // ─────── 工具方法 ───────

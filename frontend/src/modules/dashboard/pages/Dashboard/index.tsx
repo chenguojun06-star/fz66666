@@ -52,22 +52,22 @@ const STORAGE_KEY = 'dashboard_quick_entries';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
-  
+
   // 使用自定义 Hook 获取数据
-  const { 
+  const {
     stats: _stats,
-    recentActivities, 
-    hasError, 
-    errorMessage, 
-    retryCount, 
-    handleRetry 
+    recentActivities,
+    hasError,
+    errorMessage,
+    retryCount,
+    handleRetry
   } = useDashboardStats();
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  
+
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
     const saved = localStorage.getItem(STORAGE_KEY);

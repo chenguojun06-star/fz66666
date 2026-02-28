@@ -71,3 +71,21 @@ export const systemIssueApi = {
   /** 实时收集当前系统问题（只有 ROLE_SUPER_ADMIN 可调用） */
   collect: () => api.get<SystemIssueSummary>('/system/issues/collect'),
 };
+
+// ────────────────────────────────────────────────────────────
+// 前端异常上报
+// ────────────────────────────────────────────────────────────
+
+export interface FrontendErrorRecord {
+  type: string;          // error / unhandledrejection / react
+  message: string;
+  stack?: string;
+  url: string;           // 发生异常的页面 URL
+  occurredAt: string;    // ISO 时间字符串
+}
+
+export const frontendErrorApi = {
+  /** 最近 N 条前端异常（仅 ROLE_SUPER_ADMIN） */
+  recent: (limit = 50) => api.get<FrontendErrorRecord[]>(`/system/frontend-errors/recent?limit=${limit}`),
+};
+

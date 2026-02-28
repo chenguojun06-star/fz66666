@@ -817,14 +817,16 @@ const TemplateCenter: React.FC = () => {
                   />
                 </Form.Item>
               </Space>
-              <Button type="primary" onClick={() => fetchList({ page: 1 })}>
-                刷新
-              </Button>
-              <Button
-                onClick={() => setSyncPriceOpen(true)}
-              >
-                按款号更新工序单价
-              </Button>
+              <Space>
+                <Button type="primary" onClick={() => fetchList({ page: 1 })}>
+                  刷新
+                </Button>
+                <Button
+                  onClick={() => setSyncPriceOpen(true)}
+                >
+                  按款号更新工序单价
+                </Button>
+              </Space>
             </div>
           </Form>
         </Card>

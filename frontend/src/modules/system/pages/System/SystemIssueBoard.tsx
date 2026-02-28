@@ -1,8 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Table, Tag, Typography } from 'antd';
-import { BugOutlined, CheckCircleOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
+import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Table, Tabs, Tag, Typography } from 'antd';
+import { BugOutlined, CheckCircleOutlined, CodeOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { systemIssueApi, type SystemIssueItem, type SystemIssueSummary } from '../../../../services/systemStatusService';
+import {
+  systemIssueApi, type SystemIssueItem, type SystemIssueSummary,
+  frontendErrorApi, type FrontendErrorRecord,
+} from '../../../../services/systemStatusService';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -89,17 +92,21 @@ export default function SystemIssueBoard() {
   const [summary, setSummary] = useState<SystemIssueSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 前端异常 Tab 状态
+  const [feLoading, setFeLoading] = useState(false);
+  const [feErrors, setFeErrors] = useState<FrontendErrorRecord[]>([]);
+  const [feError, setFeError] = useState<string | null>(null);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const raw = await systemIssueApi.collect();
-      // axios 拦截器可能只解包一层（HTTP body = {code,data,message}），也可能两层（直接给 data 内容）
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const anyRaw = raw as any;
       const resolved: SystemIssueSummary =
-        typeof anyRaw?.errorCount === 'number' ? anyRaw :   // 已解包
-        typeof anyRaw?.data?.errorCount === 'number' ? anyRaw.data : // 未解包
+        typeof anyRaw?.errorCount === 'number' ? anyRaw :
+        typeof anyRaw?.data?.errorCount === 'number' ? anyRaw.data :
         ({} as SystemIssueSummary);
       setSummary({
         errorCount: resolved?.errorCount ?? 0,
@@ -116,36 +123,67 @@ export default function SystemIssueBoard() {
     }
   }, []);
 
-  // 首次进入自动加载
-  React.useEffect(() => { refresh(); }, [refresh]);
+  const refreshFe = useCallback(async () => {
+    setFeLoading(true);
+    setFeError(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await frontendErrorApi.recent(100) as any;
+      const list: FrontendErrorRecord[] = Array.isArray(raw) ? raw
+        : Array.isArray(raw?.data) ? raw.data : [];
+      setFeErrors([...list].reverse()); // 最新的排最前
+    } catch (e: unknown) {
+      setFeError(e instanceof Error ? e.message : '获取失败');
+    } finally {
+      setFeLoading(false);
+    }
+  }, []);
+
+  // 首次进入自动加载两个 Tab 的数据
+  React.useEffect(() => { refresh(); refreshFe(); }, [refresh, refreshFe]);
 
   const errCount  = summary?.errorCount ?? 0;
   const warnCount = summary?.warnCount ?? 0;
   const infoCount = summary?.infoCount ?? 0;
 
-  return (
-    <div style={{ padding: '24px', maxWidth: 1100 }}>
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
-        <Title level={4} style={{ margin: 0 }}>
-          <BugOutlined style={{ marginRight: 8, color: errCount > 0 ? '#ff4d4f' : '#1677ff' }} />
-          系统问题看板
-        </Title>
-        <Space>
-          {summary && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              检查时间：{dayjs(summary.checkedAt).format('MM-DD HH:mm:ss')}
-            </Text>
+  // 前端异常列
+  const feColumns: ColumnsType<FrontendErrorRecord> = [
+    {
+      title: '类型',
+      dataIndex: 'type',
+      width: 120,
+      render: (t: string) => {
+        const map: Record<string, string> = { error: '运行时错误', unhandledrejection: 'Promise异常', react: 'React崩溃' };
+        const color: Record<string, string> = { error: 'error', unhandledrejection: 'warning', react: 'error' };
+        return <Tag color={color[t] ?? 'default'}>{map[t] ?? t}</Tag>;
+      },
+    },
+    {
+      title: '错误信息',
+      key: 'msg',
+      render: (_: unknown, r: FrontendErrorRecord) => (
+        <Space direction="vertical" size={2} style={{ maxWidth: 500 }}>
+          <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
+          <Text type="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>{r.url}</Text>
+          {r.stack && (
+            <pre style={{ fontSize: 10, color: '#888', margin: 0, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {r.stack.slice(0, 400)}
+            </pre>
           )}
-          <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
-            立即检查
-          </Button>
         </Space>
-      </Space>
+      ),
+    },
+    {
+      title: '发生时间',
+      dataIndex: 'occurredAt',
+      width: 130,
+      render: (t: string) => <Text style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD HH:mm:ss')}</Text>,
+    },
+  ];
 
-      {error && (
-        <Alert message="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />
-      )}
-
+  const issueTab = (
+    <>
+      {error && <Alert message="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={8}>
           <Card size="small" style={{ borderColor: errCount > 0 ? '#ff4d4f' : '#d9d9d9' }}>
@@ -181,14 +219,10 @@ export default function SystemIssueBoard() {
           </Card>
         </Col>
       </Row>
-
       <Card size="small" title="问题明细">
         <Spin spinning={loading}>
           {summary && (summary.issues ?? []).length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={<Text type="secondary">🎉 当前无已知问题，系统运行正常</Text>}
-            />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 当前无已知问题，系统运行正常</Text>} />
           ) : (
             <Table
               dataSource={summary?.issues ?? []}
@@ -204,6 +238,76 @@ export default function SystemIssueBoard() {
           )}
         </Spin>
       </Card>
+    </>
+  );
+
+  const feTab = (
+    <>
+      {feError && <Alert message="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
+      <Card size="small" title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
+        <Spin spinning={feLoading}>
+          {feErrors.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 暂无前端异常记录</Text>} />
+          ) : (
+            <Table
+              dataSource={feErrors}
+              columns={feColumns}
+              rowKey={(r, i) => `${r.occurredAt}-${i}`}
+              pagination={{ pageSize: 20, showSizeChanger: false }}
+              size="small"
+            />
+          )}
+        </Spin>
+      </Card>
+    </>
+  );
+
+  return (
+    <div style={{ padding: '24px', maxWidth: 1100 }}>
+      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
+        <Title level={4} style={{ margin: 0 }}>
+          <BugOutlined style={{ marginRight: 8, color: errCount > 0 ? '#ff4d4f' : '#1677ff' }} />
+          系统问题看板
+        </Title>
+        <Space>
+          {summary && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              检查时间：{dayjs(summary.checkedAt).format('MM-DD HH:mm:ss')}
+            </Text>
+          )}
+          <Button icon={<ReloadOutlined />} onClick={() => { refresh(); refreshFe(); }} loading={loading || feLoading}>
+            立即检查
+          </Button>
+        </Space>
+      </Space>
+
+      <Tabs
+        defaultActiveKey="issues"
+        items={[
+          {
+            key: 'issues',
+            label: (
+              <span>
+                <BugOutlined />
+                系统问题
+                {errCount > 0 && <Badge count={errCount} style={{ marginLeft: 6, backgroundColor: '#ff4d4f' }} />}
+              </span>
+            ),
+            children: issueTab,
+          },
+          {
+            key: 'fe-errors',
+            label: (
+              <span>
+                <CodeOutlined />
+                前端异常
+                {feErrors.length > 0 && <Badge count={feErrors.length} overflowCount={99} style={{ marginLeft: 6, backgroundColor: '#faad14' }} />}
+              </span>
+            ),
+            children: feTab,
+          },
+        ]}
+      />
 
       <style>{`
         .issue-row-error td { background: #fff2f0 !important; }
