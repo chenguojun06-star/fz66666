@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin, Alert } from 'antd';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -45,6 +45,8 @@ const getStatusConfig = (status?: string) => {
 
 const MaterialPurchaseDetail: React.FC = () => {
   const { styleNo } = useParams<{ styleNo: string }>();
+  const [searchParams] = useSearchParams();
+  const orderNo = searchParams.get('orderNo') || '';
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const { user } = useAuth();
@@ -100,8 +102,12 @@ const MaterialPurchaseDetail: React.FC = () => {
         setOrder(null);
       }
 
+      // 若从特定订单跳入（带 orderNo 参数），则精确过滤该订单的采购记录；否则展示款号全部
+      const purchaseQueryParams: Record<string, any> = orderNo
+        ? { orderNo, page: 1, pageSize: 1000 }
+        : { styleNo, page: 1, pageSize: 1000 };
       const purchaseRes = await api.get('/production/purchase/list', {
-        params: { styleNo, page: 1, pageSize: 1000 }
+        params: purchaseQueryParams
       });
       const purchaseResult = purchaseRes as any;
       if (purchaseResult?.code === 200) {

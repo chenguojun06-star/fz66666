@@ -134,13 +134,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 120,
-      render: (v: any, _record: MaterialPurchaseType) => {
+      render: (v: any, record: MaterialPurchaseType) => {
         const styleNo = String(v || '').trim();
+        const orderNo = String((record as any).orderNo || '').trim();
         return (
           <a
             onClick={() => {
               if (styleNo) {
-                navigate(`/production/material/${styleNo}`);
+                const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
+                navigate(`/production/material/${styleNo}${qs}`);
               }
             }}
             style={{ cursor: 'pointer', color: 'var(--primary-color)' }}

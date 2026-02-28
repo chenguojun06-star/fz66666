@@ -295,19 +295,29 @@ public class MaterialPurchaseOrchestratorHelper {
 
         String seedId = seed.getId().trim();
         String styleId = StringUtils.hasText(seed.getStyleId()) ? seed.getStyleId().trim() : null;
-        LocalDateTime createTime = seed.getCreateTime();
-        if (!StringUtils.hasText(styleId) || createTime == null) return List.of(seed);
+        if (!StringUtils.hasText(styleId)) return List.of(seed);
 
-        LocalDate day = createTime.toLocalDate();
-        LocalDateTime start = day.atStartOfDay();
-        LocalDateTime nextStart = day.plusDays(1).atStartOfDay();
+        // 优先从 orderNo 提取日期（格式 PO20260228001），彻底避免时区污染的 createTime 问题
+        // 历史数据 createTime 使用 UTC 存储，导致同一自然日的不同订单跨天匹配；
+        // orderNo 中的日期是创建时按北京时间写入的，可靠性更高
+        String seedOrderNo = StringUtils.hasText(seed.getOrderNo()) ? seed.getOrderNo().trim() : "";
+        LocalDate day = extractDateFromOrderNo(seedOrderNo);
+        if (day == null) {
+            // 回退到 createTime（时区修复后的新订单该值可靠）
+            LocalDateTime createTime = seed.getCreateTime();
+            if (createTime == null) return List.of(seed);
+            day = createTime.toLocalDate();
+        }
+
+        // 构造 orderNo 日期前缀，例如 "PO20260228"
+        // likeRight 仅匹配该自然日内的订单，不受 createTime 存储时区影响
+        String orderNoPrefix = "PO" + String.format("%d%02d%02d",
+                day.getYear(), day.getMonthValue(), day.getDayOfMonth());
 
         List<ProductionOrder> list = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getStyleId, styleId)
-                .ge(ProductionOrder::getCreateTime, start)
-                .lt(ProductionOrder::getCreateTime, nextStart)
-                .orderByAsc(ProductionOrder::getCreateTime)
+                .likeRight(ProductionOrder::getOrderNo, orderNoPrefix)
                 .orderByAsc(ProductionOrder::getOrderNo));
 
         if (list == null || list.isEmpty()) return List.of(seed);
@@ -321,6 +331,28 @@ public class MaterialPurchaseOrchestratorHelper {
         }
         if (!dedup.containsKey(seedId)) dedup.put(seedId, seed);
         return new ArrayList<>(dedup.values());
+    }
+
+    /**
+     * 从订单号中提取日期。
+     * 订单号格式：PO + YYYYMMDD + 序号（如 PO20260228001）
+     * 返回 null 表示解析失败，调用方应回退到 createTime
+     */
+    private LocalDate extractDateFromOrderNo(String orderNo) {
+        if (!StringUtils.hasText(orderNo)) return null;
+        try {
+            // 去掉开头的字母前缀，取后面的 8 位日期数字
+            String digits = orderNo.replaceAll("^[A-Za-z]+", "");
+            if (digits.length() >= 8) {
+                int year  = Integer.parseInt(digits.substring(0, 4));
+                int month = Integer.parseInt(digits.substring(4, 6));
+                int dom   = Integer.parseInt(digits.substring(6, 8));
+                return LocalDate.of(year, month, dom);
+            }
+        } catch (Exception e) {
+            log.debug("无法从 orderNo 解析日期: {}", orderNo);
+        }
+        return null;
     }
 
     /* ========== BOM 单价填充 ========== */
