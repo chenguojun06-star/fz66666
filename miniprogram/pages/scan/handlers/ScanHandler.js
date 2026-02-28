@@ -32,6 +32,16 @@ const ScanDataProcessor = require('./helpers/ScanDataProcessor');
 const ScanStageProcessor = require('./helpers/ScanStageProcessor');
 const ScanSubmitter = require('./helpers/ScanSubmitter');
 
+const formatLocalDateTime = (date) => {
+  const pad = (n) => (n < 10 ? "0" + n : n);
+  return date.getFullYear() + "-" +
+    pad(date.getMonth() + 1) + "-" +
+    pad(date.getDate()) + " " +
+    pad(date.getHours()) + ":" +
+    pad(date.getMinutes()) + ":" +
+    pad(date.getSeconds());
+};
+
 /**
  * 扫码业务编排器
  * 编排整个扫码业务流程（解析 → 验证 → 检测工序 → 提交）
@@ -433,7 +443,7 @@ class ScanHandler {
       ...workerInfo,
 
       // 扫码时间
-      scanTime: new Date().toISOString(),
+      scanTime: formatLocalDateTime(new Date()),
 
       warehouse: warehouse || '',
 
@@ -582,8 +592,8 @@ class ScanHandler {
   async getScanStatistics() {
     try {
       const today = new Date();
-      const startTime = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const endTime = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      const startTime = formatLocalDateTime(new Date(today.setHours(0, 0, 0, 0)));
+      const endTime = formatLocalDateTime(new Date(today.setHours(23, 59, 59, 999)));
 
       const res = await this.api.production.myScanHistory({
         page: 1,
