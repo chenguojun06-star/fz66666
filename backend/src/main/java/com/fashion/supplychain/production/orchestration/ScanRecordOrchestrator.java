@@ -698,21 +698,29 @@ public class ScanRecordOrchestrator {
     }
 
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {
-        return scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
+        IPage<ScanRecord> result = scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
+        enrichBedNo(result.getRecords());
+        return result;
     }
 
     public IPage<ScanRecord> getByStyleNo(String styleNo, int page, int pageSize) {
-        return scanRecordQueryHelper.getByStyleNo(styleNo, page, pageSize);
+        IPage<ScanRecord> result = scanRecordQueryHelper.getByStyleNo(styleNo, page, pageSize);
+        enrichBedNo(result.getRecords());
+        return result;
     }
 
     public IPage<ScanRecord> getHistory(int page, int pageSize) {
-        return scanRecordQueryHelper.getHistory(page, pageSize);
+        IPage<ScanRecord> result = scanRecordQueryHelper.getHistory(page, pageSize);
+        enrichBedNo(result.getRecords());
+        return result;
     }
 
     public IPage<ScanRecord> getMyHistory(int page, int pageSize, String scanType, String startTime, String endTime,
             String orderNo, String bundleNo, String workerName, String operatorName) {
-        return scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime,
+        IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime,
                 orderNo, bundleNo, workerName, operatorName);
+        enrichBedNo(result.getRecords());
+        return result;
     }
 
     public List<ScanRecord> getMyQualityTasks() {
