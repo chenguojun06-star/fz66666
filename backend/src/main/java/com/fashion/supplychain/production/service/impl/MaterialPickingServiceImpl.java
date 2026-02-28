@@ -17,10 +17,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 @Service
 public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMapper, MaterialPicking> implements MaterialPickingService {
-    
+
     @Autowired
     private MaterialPickingItemMapper materialPickingItemMapper;
-    
+
     @Autowired
     private MaterialStockService materialStockService;
 
@@ -30,7 +30,7 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         if (picking == null || items == null || items.isEmpty()) {
             throw new IllegalArgumentException("领料信息不能为空");
         }
-        
+
         // 1. 保存主表
         String pickingNo = "MPK" + System.currentTimeMillis();
         picking.setPickingNo(pickingNo);
@@ -39,21 +39,21 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("completed"); // 直接完成
         picking.setDeleteFlag(0);
-        
+
         // 获取当前用户
         if (picking.getPickerId() == null) {
             picking.setPickerId(UserContext.userId());
             picking.setPickerName(UserContext.username());
         }
-        
+
         this.save(picking);
-        
+
         // 2. 保存明细并扣减库存
         for (MaterialPickingItem item : items) {
             item.setPickingId(picking.getId());
             item.setCreateTime(LocalDateTime.now());
             materialPickingItemMapper.insert(item);
-            
+
             // 扣减库存
             if (item.getMaterialStockId() != null) {
                 materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
@@ -62,10 +62,10 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
                 materialStockService.decreaseStock(item.getMaterialId(), item.getColor(), item.getSize(), item.getQuantity());
             }
         }
-        
+
         return picking.getId();
     }
-    
+
     @Override
     public List<MaterialPickingItem> getItemsByPickingId(String pickingId) {
         return materialPickingItemMapper.selectList(new LambdaQueryWrapper<MaterialPickingItem>()

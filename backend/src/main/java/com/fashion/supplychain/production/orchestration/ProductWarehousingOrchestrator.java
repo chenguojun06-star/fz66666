@@ -167,13 +167,12 @@ public class ProductWarehousingOrchestrator {
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
         Map<String, Object> stats = new java.util.LinkedHashMap<>();
 
+        // 1. 质检入库记录统计（SQL聚合，无需加载全量数据到内存）
         try {
-            // 1. 质检入库记录统计（SQL聚合，无需加载全量数据到内存）
             Map<String, Object> warehousingStats = productWarehousingService.getWarehousingStats();
             if (warehousingStats != null) {
                 stats.putAll(warehousingStats);
             } else {
-                // 表为空时兜底
                 stats.put("totalCount", 0L);
                 stats.put("totalOrders", 0L);
                 stats.put("totalQuantity", 0L);
@@ -185,8 +184,22 @@ public class ProductWarehousingOrchestrator {
                 stats.put("todayOrders", 0L);
                 stats.put("todayQuantity", 0L);
             }
+        } catch (Exception e) {
+            log.error("质检入库记录统计查询失败: {}", e.getMessage(), e);
+            stats.put("totalCount", 0L);
+            stats.put("totalOrders", 0L);
+            stats.put("totalQuantity", 0L);
+            stats.put("qualifiedCount", 0L);
+            stats.put("qualifiedQuantity", 0L);
+            stats.put("unqualifiedCount", 0L);
+            stats.put("unqualifiedQuantity", 0L);
+            stats.put("todayCount", 0L);
+            stats.put("todayOrders", 0L);
+            stats.put("todayQuantity", 0L);
+        }
 
-            // 2. 待质检/待入库/待包装统计（SQL聚合，按菲号维度）
+        // 2. 待质检/待入库/待包装统计（SQL聚合，按菲号维度）
+        try {
             Map<String, Object> pendingStats = scanRecordService.getBundlePendingStats();
             if (pendingStats != null) {
                 stats.put("pendingQcBundles", pendingStats.getOrDefault("pendingQcBundles", 0L));
@@ -204,18 +217,7 @@ public class ProductWarehousingOrchestrator {
                 stats.put("pendingPackagingQuantity", 0L);
             }
         } catch (Exception e) {
-            log.error("质检入库统计查询失败: {}", e.getMessage(), e);
-            // 出错时返回全零，避免前端报错
-            stats.put("totalCount", 0L);
-            stats.put("totalOrders", 0L);
-            stats.put("totalQuantity", 0L);
-            stats.put("qualifiedCount", 0L);
-            stats.put("qualifiedQuantity", 0L);
-            stats.put("unqualifiedCount", 0L);
-            stats.put("unqualifiedQuantity", 0L);
-            stats.put("todayCount", 0L);
-            stats.put("todayOrders", 0L);
-            stats.put("todayQuantity", 0L);
+            log.error("待处理菲号统计查询失败: {}", e.getMessage(), e);
             stats.put("pendingQcBundles", 0L);
             stats.put("pendingQcQuantity", 0L);
             stats.put("pendingWarehouseBundles", 0L);

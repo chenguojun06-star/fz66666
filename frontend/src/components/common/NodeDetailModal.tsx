@@ -1093,6 +1093,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     loading={trackingLoading}
                     nodeType={nodeType}
                     nodeName={nodeName}
+                    processList={processList}
                     onUndoSuccess={handleUndoSuccess}
                   />
                 ),

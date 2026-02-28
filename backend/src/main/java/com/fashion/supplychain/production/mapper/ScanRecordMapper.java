@@ -197,6 +197,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "FROM (",
                         "  SELECT",
                         "    cutting_bundle_id,",
+                        "    tenant_id,",
                         "    MAX(CASE WHEN scan_type = 'production' THEN 1 ELSE 0 END) AS has_production,",
                         "    MAX(CASE WHEN scan_type = 'quality' THEN 1 ELSE 0 END) AS has_quality,",
                         "    MAX(CASE WHEN scan_type = 'quality' AND process_code = 'quality_receive' AND confirm_time IS NOT NULL THEN 1 ELSE 0 END) AS has_quality_confirmed,",
@@ -212,7 +213,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  WHERE cutting_bundle_id IS NOT NULL",
                         "    AND cutting_bundle_id != ''",
                         "    AND scan_result = 'success'",
-                        "  GROUP BY cutting_bundle_id",
+                        "  GROUP BY cutting_bundle_id, tenant_id",
                         ") t"
         })
         Map<String, Object> selectBundlePendingStats();

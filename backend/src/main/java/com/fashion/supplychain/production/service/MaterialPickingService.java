@@ -12,7 +12,7 @@ public interface MaterialPickingService extends IService<MaterialPicking> {
      * @return 领料单ID
      */
     String createPicking(MaterialPicking picking, List<MaterialPickingItem> items);
-    
+
     /**
      * 获取领料单明细
      */

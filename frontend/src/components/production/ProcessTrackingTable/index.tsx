@@ -27,6 +27,15 @@ interface ProcessTrackingRecord {
   isSettled?: boolean;
 }
 
+/** 工序单价项（从模板/节点传入，用于动态过滤） */
+interface ProcessListItem {
+  id?: string;
+  processCode?: string;
+  code?: string;
+  name?: string;
+  processName?: string;
+}
+
 interface ProcessTrackingTableProps {
   records: ProcessTrackingRecord[];
   loading?: boolean;
@@ -40,6 +49,12 @@ interface ProcessTrackingTableProps {
   orderStatus?: string;
   /** 撤回成功后的回调 */
   onUndoSuccess?: () => void;
+  /**
+   * 该节点下的所有子工序列表（含 processCode/name），用于动态过滤。
+   * 当模板修改了工序名称时，通过 processCode 精确匹配而非硬编码关键词，
+   * 保证弹窗数据与模板始终一致（动态匹配）。
+   */
+  processList?: ProcessListItem[];
 }
 
 /** 判断工序跟踪记录是否可在 PC 端撤回 */
@@ -93,9 +108,31 @@ const TYPE_TO_CODE_PREFIX: Record<string, string[]> = {
 };
 
 /** 判断一条记录是否匹配过滤条件 */
-const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeName?: string): boolean => {
+const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeName?: string, processList?: ProcessListItem[]): boolean => {
   const code = (record.processCode || '').toLowerCase();
   const name = record.processName || '';
+
+  // 策略0（最高优先级）：通过 processList 的 processCode 做精确动态匹配
+  // 当模板修改了工序名称时，processCode 不变，因此这个策略始终有效
+  if (processList && processList.length > 0) {
+    const plCodes = processList
+      .map(p => String(p.processCode || p.code || '').trim().toLowerCase())
+      .filter(Boolean);
+    const plNames = processList
+      .map(p => String(p.name || p.processName || '').trim().toLowerCase())
+      .filter(Boolean);
+    // processCode 精确或包含匹配
+    if (plCodes.length > 0 && plCodes.some(c => code && (code === c || code.startsWith(c) || c.includes(code)))) {
+      return true;
+    }
+    // processName 与 processList 名称匹配（支持改名场景的双向包含）
+    if (plNames.length > 0) {
+      const recNameLow = name.toLowerCase();
+      if (plNames.some(n => n && (recNameLow.includes(n) || n.includes(recNameLow)))) {
+        return true;
+      }
+    }
+  }
 
   // 策略1：processCode 前缀匹配（如 filterType='sewing' → processCode 以 'sewing' 开头）
   const prefixes = TYPE_TO_CODE_PREFIX[filterType];
@@ -125,7 +162,7 @@ const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeNa
   return false;
 };
 
-const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType, orderStatus, onUndoSuccess }) => {
+const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType, orderStatus, processList, onUndoSuccess }) => {
   const { message, modal } = App.useApp();
   const safeRecords = Array.isArray(records) ? records : [];
 
@@ -149,11 +186,11 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
   }, [message, modal, onUndoSuccess]);
   const filterType = nodeType || processType;
 
-  // 按 nodeType/processType/nodeName 过滤记录
+  // 按 nodeType/processType/nodeName/processList 过滤记录（动态匹配，支持模板改名）
   const filteredRecords = useMemo(() => {
     if (!filterType) return safeRecords;
-    return safeRecords.filter(r => matchesFilter(r, filterType, nodeName));
-  }, [safeRecords, filterType, nodeName]);
+    return safeRecords.filter(r => matchesFilter(r, filterType, nodeName, processList));
+  }, [safeRecords, filterType, nodeName, processList]);
 
   // 平铺数据：按菲号+工序排序
   const flatData = useMemo(() => {
