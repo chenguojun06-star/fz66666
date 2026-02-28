@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Badge, Tag, Tooltip } from 'antd';
+import { Badge, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import RowActions from '@/components/common/RowActions';
+import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isOrderFrozenByStatus } from '@/utils/api';
@@ -128,18 +129,26 @@ export const useProgressColumns = ({
       key: 'orderNo',
       width: 160,
       render: (v: any, record: ProductionOrder) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
-          {record.urgencyLevel === 'urgent' && (
-            <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
-          )}
-          {String(record.plateType || '').toUpperCase() === 'FIRST' && (
-            <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
-          )}
-          {String(record.plateType || '').toUpperCase() === 'REORDER' && (
-            <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
-          )}
-        </div>
+        <Popover
+          content={<SmartOrderHoverCard order={record} />}
+          trigger="hover"
+          placement="rightTop"
+          mouseEnterDelay={0.3}
+          overlayStyle={{ maxWidth: 280 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', cursor: 'default' }}>
+            <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
+            {record.urgencyLevel === 'urgent' && (
+              <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+            )}
+            {String(record.plateType || '').toUpperCase() === 'FIRST' && (
+              <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+            )}
+            {String(record.plateType || '').toUpperCase() === 'REORDER' && (
+              <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+            )}
+          </div>
+        </Popover>
       ),
     },
     {
