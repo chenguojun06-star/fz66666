@@ -38,27 +38,19 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // 手动拆分大依赖，防止单 chunk 超过 1MB
-        // ⚠️ React 生态（react / react-dom / scheduler / react-router…）必须在同一个 chunk，
-        //    否则两份 React 实例共存会导致 useLayoutEffect/useContext 等 hook 失效崩溃
+        // ⚠️ 只对真正独立的大包单独拆 chunk（echarts / exceljs），
+        // 其余 node_modules 全部交给 Rollup 自动合并。
+        //
+        // 不要手动把 react / antd / rc-* / zustand 等拆散：
+        // rc-select、rc-virtual-list 等 antd 内部依赖都调用 React hooks，
+        // 一旦与 react/react-dom 落入不同 chunk，就会出现双 React 实例 →
+        // useLayoutEffect undefined → 白屏。让 Rollup 放在一起彻底避免此风险。
         manualChunks: (id) => {
-          // ECharts 单独拆（压缩后约 375KB）
+          // ECharts + zrender 单独拆（压缩后约 375KB，仅图表页用到）
           if (id.includes('echarts') || id.includes('zrender')) return 'vendor-echarts';
-          // exceljs 单独拆（大且只在导入页用到）
+          // exceljs 单独拆（大，仅数据导入页用到）
           if (id.includes('exceljs')) return 'vendor-exceljs';
-          // React 全家桶：react / react-dom / scheduler / react-router / react-is 等
-          // 必须全部在同一 chunk，不可拆散
-          if (
-            id.includes('node_modules/react') ||
-            id.includes('node_modules/react-dom') ||
-            id.includes('node_modules/react-router') ||
-            id.includes('node_modules/react-is') ||
-            id.includes('node_modules/scheduler')
-          ) return 'vendor-react';
-          // antd + 图标单独拆
-          if (id.includes('node_modules/antd') || id.includes('node_modules/@ant-design')) return 'vendor-antd';
-          // 其余 node_modules 合并
-          if (id.includes('node_modules')) return 'vendor-misc';
+          // 其余全部不指定，由 Rollup 自动合并为一个 vendor 包
         },
       },
     },
