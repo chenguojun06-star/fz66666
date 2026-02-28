@@ -41,6 +41,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import {
   wagePaymentApi,
@@ -1031,7 +1032,7 @@ const PaymentCenterPage: React.FC = () => {
                       ) : (
                         <div style={{ textAlign: 'center' }}>
                           {selectedAccount.qrCodeUrl ? (
-                            <Image src={selectedAccount.qrCodeUrl} width={200} alt="收款二维码" />
+                            <Image src={getFullAuthedFileUrl(selectedAccount.qrCodeUrl)} width={200} alt="收款二维码" />
                           ) : (
                             <span style={{ color: '#ff4d4f' }}>该账户未上传收款二维码</span>
                           )}
@@ -1250,7 +1251,7 @@ const PaymentCenterPage: React.FC = () => {
               {detailRecord.paymentProof && (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 500, marginBottom: 8 }}>支付凭证</div>
-                  <Image src={detailRecord.paymentProof} width={200} alt="支付凭证" />
+                  <Image src={getFullAuthedFileUrl(detailRecord.paymentProof)} width={200} alt="支付凭证" />
                 </div>
               )}
             </div>

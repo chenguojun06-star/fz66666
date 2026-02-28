@@ -7,6 +7,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -625,7 +626,7 @@ const TemplateCenter: React.FC = () => {
       render: (url: string) =>
         url ? (
           <Image
-            src={url}
+            src={getFullAuthedFileUrl(url)}
             width={48}
             height={48}
             style={{ objectFit: 'cover', borderRadius: 4 }}
