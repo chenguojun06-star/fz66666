@@ -5,6 +5,7 @@ import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } fr
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
+import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -35,7 +36,6 @@ import {
 } from './utils';
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
-import OrderProgressCard from './components/OrderProgressCard';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -756,17 +756,46 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               scroll={{ x: 3000 }}
             />
           ) : (
-            <div style={{ overflow: 'visible', paddingRight: 270 }}>
-              {orders.map(order => (
-                <OrderProgressCard
-                  key={String(order.id || order.orderNo)}
-                  order={order}
-                  onViewDetail={(o) => setActiveOrder(o)}
-                  onScan={openScan}
-                  onQuickEdit={handleQuickEdit}
-                />
-              ))}
-            </div>
+            <UniversalCardView
+              dataSource={orders}
+              loading={loading}
+              columns={6}
+              coverField="styleCover"
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[]}
+              fieldGroups={[
+                [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => {
+                  const progress = Number(record.productionProgress) || 0;
+                  return Math.min(100, Math.max(0, progress));
+                },
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                show: true,
+                type: 'liquid',
+              }}
+              actions={(record: ProductionOrder) => [
+                {
+                  key: 'print',
+                  label: '打印',
+                  iconOnly: true,
+                  onClick: () => setPrintingRecord(record),
+                },
+                {
+                  key: 'divider1',
+                  type: 'divider' as const,
+                },
+                {
+                  key: 'edit',
+                  label: '编辑',
+                  onClick: () => handleQuickEdit(record),
+                },
+              ].filter(Boolean)}
+            />
           )}
         </>
       ) : (
@@ -882,18 +911,50 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               scroll={{ x: 3000 }}
             />
           ) : (
-            <div style={{ overflow: 'visible', paddingRight: 270 }}>
-              {orders.map(order => (
-                <OrderProgressCard
-                  key={String(order.id || order.orderNo)}
-                  order={order}
-                  onViewDetail={(o) => setActiveOrder(o)}
-                  onScan={openScan}
-                  onRollback={undefined}
-                  onQuickEdit={handleQuickEdit}
-                />
-              ))}
-            </div>
+            <UniversalCardView
+              dataSource={orders}
+              loading={loading}
+              columns={6}
+              coverField="styleCover"
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[]}
+              fieldGroups={[
+                [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => {
+                  const progress = Number(record.productionProgress) || 0;
+                  return Math.min(100, Math.max(0, progress));
+                },
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                show: true,
+                type: 'liquid',
+              }}
+              actions={(record: ProductionOrder) => [
+                {
+                  key: 'print',
+                  label: '打印',
+                  onClick: () => setPrintingRecord(record),
+                },
+                {
+                  key: 'close',
+                  label: '关单',
+                  onClick: () => handleCloseOrder(record),
+                },
+                {
+                  key: 'divider1',
+                  type: 'divider' as const,
+                },
+                {
+                  key: 'edit',
+                  label: '编辑',
+                  onClick: () => handleQuickEdit(record),
+                },
+              ].filter(Boolean)}
+            />
           )}
         </Card>
       )}

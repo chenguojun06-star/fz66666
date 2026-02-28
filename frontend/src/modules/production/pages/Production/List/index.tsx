@@ -25,7 +25,6 @@ import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
-import OrderProgressCard from '../ProgressDetail/components/OrderProgressCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -1004,16 +1003,90 @@ const ProductionList: React.FC = () => {
               }}
             />
           ) : (
-            <div style={{ overflow: 'visible', paddingRight: 270 }}>
-              {sortedProductionList.map(order => (
-                <OrderProgressCard
-                  key={String(order.id || order.orderNo)}
-                  order={order}
-                  onViewDetail={(o) => navigate(withQuery('/production/order-flow', { orderId: String(o.id || ''), orderNo: o.orderNo, styleNo: o.styleNo }))}
-                  onQuickEdit={(o) => quickEditModal.open(o)}
-                />
-              ))}
-            </div>
+            <UniversalCardView
+              dataSource={sortedProductionList}
+              columns={isMobile ? 2 : 6}
+              coverField="styleCover"
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[]}
+              fieldGroups={[
+                [
+                  {
+                    label: '码数',
+                    key: 'orderDetails',
+                    render: (val: unknown, record: Record<string, unknown>) => {
+                      try {
+                        const details = record?.orderDetails;
+                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+                        const lines = parsed?.orderLines || parsed?.lines || parsed;
+                        if (Array.isArray(lines) && lines.length > 0) {
+                          return (
+                            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+                              {lines.map((l: any, idx: number) => (
+                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px' }}>{l.size || '-'}</span>
+                              ))}
+                            </div>
+                          );
+                        }
+                      } catch { /* ignore */ }
+                      return String(record?.size || '').trim() || '-';
+                    }
+                  }
+                ],
+                [
+                  {
+                    label: '数量',
+                    key: 'orderDetails',
+                    render: (val: unknown, record: Record<string, unknown>) => {
+                      try {
+                        const details = record?.orderDetails;
+                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+                        const lines = parsed?.orderLines || parsed?.lines || parsed;
+                        if (Array.isArray(lines) && lines.length > 0) {
+                          const total = lines.reduce((s: number, l: any) => s + (Number(l.quantity) || 0), 0);
+                          return (
+                            <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              {lines.map((l: any, idx: number) => (
+                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px', color: 'var(--color-info)', fontWeight: 600 }}>{l.quantity || 0}</span>
+                              ))}
+                              <span style={{ marginLeft: '4px', color: '#8c8c8c', fontSize: '10px', flexShrink: 0 }}>共{total}</span>
+                            </div>
+                          );
+                        }
+                      } catch { /* ignore */ }
+                      const qty = Number(record?.orderQuantity) || 0;
+                      return qty > 0 ? `${qty}件` : '-';
+                    }
+                  }
+                ],
+                [
+                  { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
+                  { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
+                  {
+                    label: '剩',
+                    key: 'remainingDays',
+                    render: (val: unknown, record: Record<string, unknown>) => {
+                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string);
+                      return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
+                    }
+                  }
+                ]
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => Math.min(100, Math.max(0, Number(record.productionProgress) || 0)),
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                show: true,
+                type: 'liquid',
+              }}
+              actions={(record: ProductionOrder) => [
+                { key: 'print', label: '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                { key: 'close', label: '关单', onClick: () => { handleCloseOrder(record); } },
+                { key: 'divider1', type: 'divider' as const, label: '' },
+                { key: 'edit', label: '编辑', onClick: () => { quickEditModal.open(record); } },
+              ].filter(Boolean)}
+            />
           )}
         </Card>
 
