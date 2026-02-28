@@ -3,7 +3,8 @@ export type SmartFeatureKey =
   | 'smart.dict.autocollect.enabled'
   | 'smart.production.precheck.enabled'
   | 'smart.finance.explain.enabled'
-  | 'smart.system.guard.enabled';
+  | 'smart.system.guard.enabled'
+  | 'smart.worker-profile.enabled';
 
 const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.guide.enabled': false,
@@ -11,6 +12,7 @@ const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.production.precheck.enabled': true,
   'smart.finance.explain.enabled': false,
   'smart.system.guard.enabled': false,
+  'smart.worker-profile.enabled': true,
 };
 
 const storageKey = 'smart-feature-flags';

@@ -5,10 +5,12 @@ import com.fashion.supplychain.intelligence.dto.FeedbackRequest;
 import com.fashion.supplychain.intelligence.dto.InoutRecommendRequest;
 import com.fashion.supplychain.intelligence.dto.PredictFinishRequest;
 import com.fashion.supplychain.intelligence.dto.PrecheckScanRequest;
+import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;
 import com.fashion.supplychain.intelligence.orchestration.FeedbackLearningOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.InoutDecisionOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProgressPredictOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.SmartPrecheckOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +35,9 @@ public class IntelligenceController {
     @Autowired
     private FeedbackLearningOrchestrator feedbackLearningOrchestrator;
 
+    @Autowired
+    private WorkerProfileOrchestrator workerProfileOrchestrator;
+
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
         return Result.success(smartPrecheckOrchestrator.precheckScan(request));
@@ -51,5 +56,10 @@ public class IntelligenceController {
     @PostMapping("/feedback")
     public Result<?> submitFeedback(@RequestBody(required = false) FeedbackRequest request) {
         return Result.success(feedbackLearningOrchestrator.acceptFeedback(request));
+    }
+
+    @PostMapping("/worker-profile")
+    public Result<?> getWorkerProfile(@RequestBody(required = false) WorkerProfileRequest request) {
+        return Result.success(workerProfileOrchestrator.getProfile(request));
     }
 }

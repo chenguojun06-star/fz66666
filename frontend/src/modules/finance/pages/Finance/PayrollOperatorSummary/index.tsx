@@ -12,6 +12,7 @@ import api, { unwrapApiData } from '@/utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import WorkerPerformanceBadge from '@/smart/components/WorkerPerformanceBadge';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 
@@ -450,7 +451,17 @@ const PayrollOperatorSummary: React.FC = () => {
 
     // 工资汇总表格列定义
     const summaryColumns: any[] = [
-        { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true },
+        {
+            title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true,
+            render: (name: string) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{name || '-'}</span>
+                    {isSmartFeatureEnabled('smart.worker-profile.enabled') && name
+                        ? <WorkerPerformanceBadge operatorName={name} />
+                        : null}
+                </div>
+            ),
+        },
         createSortableNumberColumn('总数量', 'totalQuantity', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
         createSortableNumberColumn('总金额(元)', 'totalAmount', sortField, sortOrder, handleSort, 140, toMoneyText),
         createSortableNumberColumn('扫码次数', 'recordCount', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
@@ -492,7 +503,17 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
         { title: '颜色', dataIndex: 'color', key: 'color', width: 100, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
         { title: '尺码', dataIndex: 'size', key: 'size', width: 80, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
-        { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true },
+        {
+            title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true,
+            render: (name: string) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{name || '-'}</span>
+                    {isSmartFeatureEnabled('smart.worker-profile.enabled') && name
+                        ? <WorkerPerformanceBadge operatorName={name} />
+                        : null}
+                </div>
+            ),
+        },
         {
             title: '结算类型',
             dataIndex: 'delegateTargetType',

@@ -63,6 +63,10 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
         title: '系统防呆提示',
         desc: '在系统设置中显示配置防呆建议。',
     },
+    'smart.worker-profile.enabled': {
+        title: '工人效率画像',
+        desc: '工资汇总人员列显示效率徽标，悬停展示该工人近期各工序日均件数与工厂均值对比。',
+    },
 };
 
 const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -71,6 +75,7 @@ const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
     'smart.production.precheck.enabled',
     'smart.finance.explain.enabled',
     'smart.system.guard.enabled',
+    'smart.worker-profile.enabled',
 ];
 
 const ProfileInfoTab: React.FC = () => {
