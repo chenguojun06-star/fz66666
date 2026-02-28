@@ -1634,6 +1634,8 @@ const CustomerManagement: React.FC = () => {
   const activeTab = searchParams.get('tab') || 'tenants';
   // 待处理应用订单数量（不依赖WebSocket，主动轮询）
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  // 待处理反馈数量（PENDING + PROCESSING，Tab 红点）
+  const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPendingOrderCount = useCallback(async () => {
@@ -1646,20 +1648,37 @@ const CustomerManagement: React.FC = () => {
     }
   }, []);
 
+  const fetchPendingFeedbackCount = useCallback(async () => {
+    try {
+      const res: any = await feedbackService.stats();
+      const d = res?.data || res;
+      setPendingFeedbackCount((d?.pending ?? 0) + (d?.processing ?? 0));
+    } catch {
+      // 静默失败
+    }
+  }, []);
+
   useEffect(() => {
     fetchPendingOrderCount();
+    fetchPendingFeedbackCount();
     // 每60秒轮询一次，不依赖WebSocket是否在线
-    pollTimerRef.current = setInterval(fetchPendingOrderCount, 60000);
+    pollTimerRef.current = setInterval(() => {
+      fetchPendingOrderCount();
+      fetchPendingFeedbackCount();
+    }, 60000);
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [fetchPendingOrderCount]);
+  }, [fetchPendingOrderCount, fetchPendingFeedbackCount]);
 
-  // 切换到"应用订单"Tab时清除红点并刷新
+  // 切换 Tab 时清除对应红点
   const handleTabChange = useCallback((key: string) => {
     setSearchParams({ tab: key });
     if (key === 'app-orders') {
       setPendingOrderCount(0);
+    }
+    if (key === 'feedback') {
+      setPendingFeedbackCount(0);
     }
   }, [setSearchParams]);
 
@@ -1698,7 +1717,14 @@ const CustomerManagement: React.FC = () => {
           },
           {
             key: 'feedback',
-            label: <span><MessageOutlined /> 问题反馈</span>,
+            label: (
+              <span>
+                <MessageOutlined /> 问题反馈
+                {pendingFeedbackCount > 0 && (
+                  <Badge count={pendingFeedbackCount} style={{ marginLeft: 6 }} size="small" />
+                )}
+              </span>
+            ),
             children: <FeedbackTab />,
           },
           {

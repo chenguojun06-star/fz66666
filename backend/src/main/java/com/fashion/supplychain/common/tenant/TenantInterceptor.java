@@ -106,7 +106,10 @@ public class TenantInterceptor implements InnerInterceptor {
         Long tenantId = ctx.getTenantId();
         String originalSql = boundSql.getSql();
 
-        if (tenantId == null) {
+        // 超管判断：tenantId=null 是历史标准；同时兼容 superAdmin=true 但 tenantId 非 null 的账号
+        boolean isSuperAdmin = tenantId == null || Boolean.TRUE.equals(ctx.getSuperAdmin());
+
+        if (isSuperAdmin) {
             // 超级管理员分支
             if (shouldSkipSql(originalSql)) {
                 return; // 系统共享表（EXCLUDED_TABLES）：放行
