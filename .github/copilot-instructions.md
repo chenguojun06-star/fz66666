@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（55个编排器 - 新增智能化）
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（56个编排器 - 新增智能化）
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖 | 代码优化（TemplateCenter 1912→900行）
-> **最后更新**：2026-02-26 | **AI指令版本**：v3.7
+> **最后更新**：2026-02-28 | **AI指令版本**：v3.8
 
 ---
 
@@ -108,7 +108,7 @@ Controller → Orchestrator → Service → Mapper
 
 **关键约束**（代码审查必查项）：
 - ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（55个编排器）
-  - **分布**：production(19) + finance(10) + style(6) + system(9) + integration(4) + warehouse(2) + template(2) + wechat(1) + dashboard(1) + datacenter(1) = **55个**
+  - **分布**：production(20) + finance(10) + style(6) + system(9) + integration(4) + warehouse(2) + template(2) + wechat(1) + dashboard(1) + datacenter(1) = **56个**
   - **新增4个智能化编排器**（2026-02）：FeedbackLearningOrchestrator、SmartPrecheckOrchestrator、ProgressPredictOrchestrator、InoutDecisionOrchestrator
   - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`, `ReconciliationStatusOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
@@ -194,6 +194,11 @@ backend/src/main/java/com/fashion/supplychain/
 ```
 
 > **新增功能说明（2026-02-至今）**：
+> - **三大智能功能（2026-02-28）**：
+>   - ① **工厂产能雷达**：`FactoryCapacityOrchestrator.java` + `FactoryCapacityPanel.tsx`。显示在生产进度页过滤栏下方，按工厂展示订单数/件数/高风险/逃期，颜色编码提示风险等级
+>   - ② **停滞订单预警**：`useStagnantDetection.ts`。非完成订单有历史扫码且≥3天无新扫码，状态列显示橙色 ⏸ 停滞 Tag
+>   - ③ **悀停卡速度缺口**：`SmartOrderHoverCard.tsx` 新增 `calcGap()`。鼠标悬停订单行时，落后进度则显示「需X天·剩Y天·差 Z天」
+>   - **DB影响**：无需迁移，全部使用 `t_production_order` 现有列
 > - **腾讯云 COS 文件存储**：`common/CosService.java` — 统一处理文件上传/下载，替代本地文件系统。调用 `cosService.uploadFile(file)` 返回访问 URL
 > - **Excel 批量导入**：`ExcelImportOrchestrator` + `ExcelImportController` — 支持生产订单、工序等数据的 Excel 批量导入，前端对应 `modules/basic/pages/DataImport/`
 > - **问题反馈**：`UserFeedbackController` / `UserFeedbackService` — 用户在系统内提交问题反馈，存储到 `t_user_feedback` 表
@@ -830,6 +835,50 @@ SKU = styleNo + color + size
 11. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
 12. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
 13. **git push = 云端自动重新部署**：微信云托管控制台已绑定 GitHub 仓库持续部署，push 到 main 分支后 3~5 分钟自动生效。**不需要** GitHub Actions Secrets，**不需要**手动上传 JAR。
+14. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
+
+---
+
+## 🚀 推送前强制三步验证（每次必做）
+
+> ⚠️ **AI 开发必读**：每次 push 前必须完成以下三步，缺一不可。历史上最常见的 CI 失败原因是「本地改了但忘记 git add」，即本地编译通过但 CI 报错。
+
+### 第一步：本地编译验证
+```bash
+# 后端（有 Java 改动时）
+cd backend
+JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+  /opt/homebrew/bin/mvn clean compile -q
+# 输出 BUILD SUCCESS 才能继续
+
+# 前端（有 TypeScript 改动时）
+cd frontend
+npx tsc --noEmit
+# 0 errors 才能继续
+```
+
+### 第二步：git status 全量检查
+```bash
+# ❌ 禁止：git add .
+git status                # 查看所有未追踪/已修改的文件
+git diff --stat HEAD      # 确认工作区与上次提交的差异
+
+# ✅ 正确：精确 add 每个文件
+git add backend/src/main/java/com/fashion/.../TargetClass.java
+git add frontend/src/modules/.../TargetComponent.tsx
+
+# 最后再确认一次暂存区
+git diff --cached --stat
+```
+
+### 第三步：提交前类型检查（新增 Java 类时）
+**必须核对的高频类型陷阱**：
+| 方法 | 实际返回类型 | 常见错误 |
+|------|-------------|----------|
+| `UserContext.tenantId()` | `Long` | ❌ 用 `String` 接收 |
+| `UserContext.userId()` | `String` | ❌ 用 `Long` 接收 |
+| `o.getOrderQuantity()` | `Integer` | ❌ 用 `int` 基本类型接收（空指针） |
+| `o.getProductionProgress()` | `Integer` | ❌ 直接参与运算未判空 |
 
 ---
 
@@ -842,10 +891,19 @@ SKU = styleNo + color + size
 > ⚠️ **AI 必读**：云端部署早已在微信云托管控制台中配置了持续部署，**不需要 GitHub Actions Secrets**。只要推送到 main 分支，云端容器会自动重新构建部署，无需任何额外操作。
 
 ```bash
-# 部署到云端：就这一条命令
-git add .
+# 部署到云端：正确流程（绝对禁止直接 git add .）
+
+# ① 先验证本地编译
+cd backend && JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home /opt/homebrew/bin/mvn clean compile -q
+
+# ② 确认所有改动都已暂存（关键！）
+git status
+git diff --stat HEAD
+
+# ③ 精确 add，不用 git add .
+git add backend/src/... frontend/src/...
 git commit -m "fix: 你的修改描述"
-git push origin main
+git push upstream main
 # → 微信云托管自动拉取代码，重建容器，通常 3~5 分钟后生效
 ```
 
