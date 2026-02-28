@@ -298,6 +298,26 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             }
         }
 
+        // 兜底：如果 t_material_inbound 没有记录（库存由非采购入库路径写入），
+        // 直接用 t_material_stock 本身构造一条批次，保证出库弹窗不为空
+        if (batchDetails.isEmpty() && currentStock != null
+                && currentStock.getQuantity() != null && currentStock.getQuantity() > 0) {
+            MaterialBatchDetailDto dto = new MaterialBatchDetailDto();
+            dto.setBatchNo(currentStock.getId());
+            dto.setWarehouseLocation(StringUtils.hasText(currentStock.getLocation())
+                    ? currentStock.getLocation() : "默认仓");
+            dto.setColor(currentStock.getColor());
+            dto.setSize(currentStock.getSize());
+            dto.setInboundDate(currentStock.getLastInboundDate() != null
+                    ? currentStock.getLastInboundDate() : currentStock.getUpdateTime());
+            int locked = currentStock.getLockedQuantity() != null ? currentStock.getLockedQuantity() : 0;
+            dto.setAvailableQty(Math.max(0, currentStock.getQuantity() - locked));
+            dto.setLockedQty(locked);
+            dto.setOutboundQty(0);
+            dto.setExpiryDate(null);
+            return java.util.Collections.singletonList(dto);
+        }
+
         return batchDetails;
     }
 
