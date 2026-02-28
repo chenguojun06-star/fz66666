@@ -711,6 +711,19 @@ public class SKUServiceImpl implements SKUService {
                     try {
                         double unitPrice = Double.parseDouble(unitPriceObj.toString());
                         priceInfo.put("unitPrice", unitPrice);
+                        // ★ StageDetector 读取 p.price（不是 p.unitPrice），需要添加别名
+                        priceInfo.put("price", unitPrice);
+                        // ★ 添加工序排序（StageDetector 按 sortOrder 排序，缺失时全0会导致显示顺序随机）
+                        Object sortOrderObj = node.get("sortOrder");
+                        if (sortOrderObj != null) {
+                            try { priceInfo.put("sortOrder", Integer.parseInt(sortOrderObj.toString())); }
+                            catch (NumberFormatException ignored) {}
+                        }
+                        // ★ 添加 scanType（StageDetector._inferScanType 优先使用后端配置的值）
+                        Object scanTypeObj = node.get("scanType");
+                        if (scanTypeObj != null && StringUtils.hasText(scanTypeObj.toString())) {
+                            priceInfo.put("scanType", scanTypeObj.toString());
+                        }
 
                         // 即使名称为空或"??"，只要有ID和单价就添加
                         if (StringUtils.hasText(processId) || StringUtils.hasText(processName)) {

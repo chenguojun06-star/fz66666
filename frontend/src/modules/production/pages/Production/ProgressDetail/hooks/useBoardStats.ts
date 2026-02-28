@@ -155,9 +155,10 @@ export const ensureBoardStatsForOrder = async ({
         if (!nodeName) continue;
         const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
+        // ★ Bug5修复：scanTime 可能为 null（旧数据），兜底读 createTime
         let maxTime = '';
         for (const r of matchingRecords) {
-          const t = String((r as any)?.scanTime || '');
+          const t = String((r as any)?.scanTime || (r as any)?.createTime || '');
           if (t && (!maxTime || t > maxTime)) maxTime = t;
         }
         // 采购节点时间：无扫码时用 actualArrivalDate
@@ -183,7 +184,7 @@ export const ensureBoardStatsForOrder = async ({
           if (!pGroups[pStage]) pGroups[pStage] = [];
           if (!pGroups[pStage].includes(pName)) pGroups[pStage].push(pName);
         }
-        const t = String((r as any)?.scanTime || '').trim();
+        const t = String((r as any)?.scanTime || (r as any)?.createTime || '').trim();
         if (t && (!pTimes[pName] || t > pTimes[pName])) pTimes[pName] = t;
       }
       mergeProcessDataForOrder(oid, pStats, pGroups, pTimes);
