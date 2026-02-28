@@ -361,17 +361,22 @@ public class ProductionOrderScanRecordDomainService {
             scanTime = LocalDateTime.now();
         }
 
-        // 优先从当前登录上下文获取操作人，回退到订单创建人
+        // 【下单】扫码记录代表"谁创建了订单"，必须优先使用订单已存储的创建人
+        // 不能优先用 ctx.getUsername()：超管账号 username 可能是 "system"，而 name 为空，
+        // 会导致 JWT uname="system" → operator_name="system"，覆盖真实创建人姓名
         String operatorId = null;
         String operatorName = null;
-        UserContext ctx = UserContext.get();
-        if (ctx != null && StringUtils.hasText(ctx.getUserId())) {
-            operatorId = ctx.getUserId();
-            operatorName = StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername().trim() : null;
-        }
-        if (operatorName == null && StringUtils.hasText(order.getCreatedByName())) {
-            operatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
+        if (StringUtils.hasText(order.getCreatedByName())) {
             operatorName = order.getCreatedByName().trim();
+            operatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
+        }
+        // 仅当订单无创建人时，才从 ctx 中获取（极端兜底）
+        if (operatorName == null) {
+            UserContext ctx = UserContext.get();
+            if (ctx != null && StringUtils.hasText(ctx.getUserId())) {
+                operatorId = ctx.getUserId();
+                operatorName = StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername().trim() : null;
+            }
         }
         operatorName = resolveOperatorName(operatorName, operatorId, order.getCreatedByName());
 
