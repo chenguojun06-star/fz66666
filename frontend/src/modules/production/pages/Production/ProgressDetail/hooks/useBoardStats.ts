@@ -72,15 +72,29 @@ export const ensureBoardStatsForOrder = async ({
       .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
       .filter((r) => (Number((r as any)?.quantity) || 0) > 0);
     // 匹配扫码记录到节点：同时检查 progressStage（父节点）和 processName（子工序名）
-    const recordMatchesNode = (nodeName: string, r: Record<string, unknown>) =>
-      stageNameMatches(nodeName, getRecordStageName(r)) ||
-      stageNameMatches(nodeName, String((r as any)?.processName || '').trim());
+    const recordMatchesNode = (node: ProgressNode, r: Record<string, unknown>) => {
+      const nName = String((node as any)?.name || '').trim();
+      const rStageName = getRecordStageName(r);
+      const rProcessName = String((r as any)?.processName || '').trim();
+      // 原有：通过 progressStage 别名匹配（大烫→整烫等）
+      if (stageNameMatches(nName, rStageName)) return true;
+      if (stageNameMatches(nName, rProcessName)) return true;
+      // 新增：processName 与节点名原始精确相等（处理 stageNameMatches canonicalKey 不认识的自定义词汇）
+      if (rProcessName && rProcessName === nName) return true;
+      // 新增：通过父分类（node.progressStage）兜底——父分类相同时再次尝试子工序名匹配
+      // 解决模板改工序名后旧数据失配的问题（progressStage父分类不变但子工序名变了）
+      const nodeParent = String((node as any)?.progressStage || '').trim();
+      if (nodeParent && stageNameMatches(nodeParent, rStageName)) {
+        if (stageNameMatches(nName, rProcessName) || rProcessName === nName) return true;
+      }
+      return false;
+    };
     const stats: Record<string, number> = {};
     const hasScanByNode: Record<string, boolean> = {};
     for (const n of nodes || []) {
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
-      const matchingRecords = valid.filter((r) => recordMatchesNode(nodeName, r));
+      const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
       const done = matchingRecords.reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
       stats[nodeName] = done;
       hasScanByNode[nodeName] = matchingRecords.length > 0;
@@ -123,7 +137,7 @@ export const ensureBoardStatsForOrder = async ({
       for (const n of nodes || []) {
         const nodeName = String((n as any)?.name || '').trim();
         if (!nodeName) continue;
-        const matchingRecords = valid.filter((r) => recordMatchesNode(nodeName, r));
+        const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
         let maxTime = '';
         for (const r of matchingRecords) {

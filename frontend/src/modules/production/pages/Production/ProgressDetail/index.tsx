@@ -196,12 +196,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         if (showSmartErrorNotice) setSmartError(null);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
         clearAllBoardCache();
+        // 同时清空工序节点缓存，确保模板改词汇后刷新能重新加载最新节点配置
+        setProgressNodesByStyleNo({});
+        progressNodesByStyleNoRef.current = {};
         const styleNos = Array.from(
           new Set(
             records
               .map((r) => String(r.styleNo || '').trim())
               .filter((sn) => sn)
-              .filter((sn) => !progressNodesByStyleNoRef.current[sn])
           )
         );
         if (styleNos.length) {
@@ -217,7 +219,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     const id = String(n?.id || name || '').trim() || name;
                     const p = Number(n?.unitPrice);
                     const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-                    return { id, name, unitPrice };
+                    // ★ 保留 progressStage（父分类字段），用于进度球弹窗过滤和boardStats匹配
+                    const progressStage = String(n?.progressStage || '').trim() || undefined;
+                    return { id, name, unitPrice, progressStage };
                   })
                   .filter((n: ProgressNode) => n.name);
                 return { styleNo: sn, nodes: stripWarehousingNode(normalized) };

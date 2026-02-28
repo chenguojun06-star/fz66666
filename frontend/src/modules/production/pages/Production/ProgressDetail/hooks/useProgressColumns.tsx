@@ -21,7 +21,7 @@ import {
   defaultNodes,
 } from '../utils';
 
-// 节点名称 → 节点类型映射
+// 节点名称 → 节点类型映射（兜底）；优先用模板中的 progressStage 父分类字段
 const NODE_TYPE_MAP: Record<string, string> = {
   '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
   '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
@@ -377,7 +377,10 @@ export const useProgressColumns = ({
                 : 0;
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
-              const nodeType = NODE_TYPE_MAP[nodeName] || nodeName.toLowerCase();
+              // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
+              const nodeType = (node.progressStage && node.progressStage.trim())
+                || NODE_TYPE_MAP[nodeName]
+                || nodeName.toLowerCase();
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
 
               return (
