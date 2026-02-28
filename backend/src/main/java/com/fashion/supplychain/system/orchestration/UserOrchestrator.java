@@ -453,6 +453,24 @@ public class UserOrchestrator {
             if (loginLog.getUsername() != null && !loginLog.getUsername().isBlank()) {
                 loginLogService.save(loginLog);
             }
+            // 登录成功时同步更新 t_user 的最后登录时间和IP
+            if ("SUCCESS".equalsIgnoreCase(status) && StringUtils.hasText(username)) {
+                try {
+                    User found = userService.getOne(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                            .eq(User::getUsername, safeTrim(username))
+                            .last("LIMIT 1"), false);
+                    if (found != null) {
+                        User update = new User();
+                        update.setId(found.getId());
+                        update.setLastLoginTime(loginLog.getLoginTime());
+                        update.setLastLoginIp(safeTrim(ip));
+                        userService.updateById(update);
+                    }
+                } catch (Exception ex) {
+                    log.warn("[登录] 更新最后登录时间/IP失败: username={}", username, ex);
+                }
+            }
         } catch (Exception e) {
             log.warn("Failed to record login attempt: username={}, ip={}, status={}", username, ip, status, e);
         }
