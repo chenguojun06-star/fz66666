@@ -4,7 +4,6 @@
  * 数据：从当前页 orders 实时计算，零 API 请求
  */
 import React, { useMemo } from 'react';
-import { Tooltip } from 'antd';
 import {
   FireOutlined,
   CheckCircleOutlined,
@@ -15,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import { ProductionOrder } from '@/types/production';
 import { calcSmartPrediction } from '../utils/smartPredict';
+import MiniCard from '@/components/common/MiniCard';
 
 interface GlobalStats {
   totalOrders: number;
@@ -29,51 +29,6 @@ interface Props {
   orders: ProductionOrder[];
   globalStats: GlobalStats;
 }
-
-/* ── 迷你数字卡 ── */
-interface MiniCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-  sub?: string;
-  color: string;
-  bg: string;
-  tooltip?: string;
-}
-
-const MiniCard: React.FC<MiniCardProps> = ({ icon, label, value, sub, color, bg, tooltip }) => (
-  <Tooltip title={tooltip}>
-    <div style={{
-      flex: '1 1 0',
-      minWidth: 100,
-      background: bg,
-      borderRadius: 10,
-      padding: '10px 14px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      cursor: tooltip ? 'help' : 'default',
-      transition: 'transform 0.15s',
-    }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
-    >
-      <div style={{
-        width: 36, height: 36, borderRadius: 9,
-        background: color + '22',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color, fontSize: 16, flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
-        <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>{label}</div>
-        {sub && <div style={{ fontSize: 10, color: color + 'aa', marginTop: 1 }}>{sub}</div>}
-      </div>
-    </div>
-  </Tooltip>
-);
 
 /* ── 智能文字摘要行 ── */
 interface SummaryItem {
