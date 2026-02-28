@@ -62,7 +62,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     return days >= 3 ? { node, days } : null;
   }, [boardTimes, isCompleted, now]);
 
-  /* 交期标签 */
+  const prog = Number(order.productionProgress) || 0;
+
+  /* 交期标签 + 风险标签 */
   const deadline = useMemo(() => {
     if (isCompleted) return { text: '已完成', color: '#52c41a' };
     if (daysLeft === null) return null;
@@ -72,8 +74,54 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     return { text: `还剩 ${daysLeft} 天`, color: '#52c41a' };
   }, [isCompleted, daysLeft]);
 
+  const risk = useMemo(() => {
+    if (isCompleted) return null;
+    if (daysLeft === null) return null;
+    if (daysLeft < 0) return { text: '已逾期', color: '#ff4d4f', bg: '#fff2f0' };
+    if (daysLeft <= 3 && prog < 80) return { text: '⚠ 高风险', color: '#ff4d4f', bg: '#fff2f0' };
+    if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: '#fa8c16', bg: '#fffbe6' };
+    if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: '#fa8c16', bg: '#fffbe6' };
+    return null;
+  }, [isCompleted, daysLeft, prog]);
+
+  /**
+   * 最多显示4条：有进展的最后2条（已完成/进行中）+ 未开始的前2条（预测）
+   * 动态根据扫码速度预测未开始工序的开始日期
+   */
+  const visibleStages = useMemo(() => {
+    const withProgress = stages.filter(s => s.pct > 0 || s.qty > 0);
+    const notStarted   = stages.filter(s => s.pct === 0 && s.qty === 0);
+    // 有进展：取最后最多2条（最靠近当前）
+    const doneSlice = withProgress.slice(-2);
+    // 未开始：取最前最多2条
+    const nextSlice = notStarted.slice(0, 2);
+    return [...doneSlice, ...nextSlice];
+  }, [stages]);
+
+  // 速度：优先用 completedQuantity，其次 productionProgress 推算，最后看 boardStats 之和
+  // 不依赖 activeStage，一旦有历史完成量就能算
+  const speed = useMemo(() => {
+    const orderStart = order.createTime ? dayjs(order.createTime) : null;
+    const elap = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
+    const completedQty = Number(order.completedQuantity) || 0;
+    const fromProg = prog > 0 && total > 0 ? Math.round(prog / 100 * total) : 0;
+    const fromBoard = boardStats
+      ? Object.values(boardStats as Record<string, number>).reduce((s, v) => s + (v ?? 0), 0)
+      : 0;
+    const done = Math.max(completedQty, fromProg, fromBoard);
+    return done > 0 && elap > 0 ? done / elap : 0;
+  }, [order, prog, total, boardStats, now]);
+
+  // 距下一道工序可开始的天数
+  // - 有进行中工序 → 等当前工序完成（剩余件数/速度）
+  // - 已完成工序都完成但无进行中 → 预测从今天开始
+  const activeRemainDays = useMemo(() => {
+    if (!activeStage) return 0; // 无进行中，下一道立即可排
+    if (speed <= 0 || total <= 0) return 3; // 速度未知，保守估3天
+    return Math.ceil(Math.max(0, total - activeStage.qty) / speed);
+  }, [activeStage, speed, total]);
+
   const hasAnyData = stages.some(s => s.qty > 0 || s.pct > 0);
-  const prog = Number(order.productionProgress) || 0;
 
   /* ─────── RENDER ─────── */
   return (
@@ -97,65 +145,107 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         )}
       </div>
 
-      {/* 工序逐行 */}
+      {/* 风险条 */}
+      {risk && (
+        <div style={{
+          padding: '4px 10px', background: risk.bg, borderRadius: 6,
+          marginBottom: 8, fontSize: 11, color: risk.color, fontWeight: 700,
+        }}>
+          {risk.text}
+          {speed > 0 && total > 0 && daysLeft !== null && daysLeft >= 0 && (
+            <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
+              当前 {speed.toFixed(1)} 件/天，还需约 {Math.ceil((total - Math.round(prog / 100 * total)) / speed)} 天
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 工序逐行（最多4条） */}
       {hasAnyData ? (
         <div>
-          {stages.map(s => {
+          {visibleStages.map((s, idx) => {
             const done       = s.pct >= 100;
             const active     = s.label === activeStage?.label;
             const notStarted = s.qty === 0 && s.pct === 0;
+
+            // 未开始工序的预计开始日：按顺序叠加
+            // notStartedIdx = 在未开始序列中是第几个（0或1）
+            const notStartedIdx = notStarted
+              ? visibleStages.slice(0, idx).filter(x => x.pct === 0 && x.qty === 0).length
+              : -1;
+            const predictStart = notStarted && speed > 0
+              ? now.add(activeRemainDays + notStartedIdx * Math.ceil(total / Math.max(speed, 0.1)), 'day')
+              : null;
+
+            // 是否是预测区（有分隔线）
+            const isFirstPrediction = notStarted && idx > 0 && visibleStages[idx - 1].pct > 0;
+
             return (
-              <div key={s.label} style={{ marginBottom: 7 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {/* 状态图标 */}
-                  <span style={{
-                    width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0,
-                    color: done ? '#52c41a' : active ? '#1677ff' : '#d9d9d9',
-                  }}>
-                    {done ? '✓' : active ? '▶' : '○'}
-                  </span>
-                  {/* 工序名 */}
-                  <span style={{
-                    width: 26, flexShrink: 0,
-                    fontWeight: active || done ? 600 : 400,
-                    color: done ? '#52c41a' : active ? '#1677ff' : notStarted ? '#bbb' : '#555',
-                  }}>
-                    {s.label}
-                  </span>
-                  {/* 进度条 */}
+              <React.Fragment key={s.label}>
+                {isFirstPrediction && (
                   <div style={{
-                    flex: 1, height: 5, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden',
+                    borderTop: '1px dashed #e8e8e8', margin: '4px 0 6px',
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}>
-                    {s.pct > 0 && (
-                      <div style={{
-                        width: `${Math.min(100, s.pct)}%`, height: '100%', borderRadius: 3,
-                        background: done ? '#52c41a' : active ? '#1677ff' : '#d9d9d9',
-                      }} />
-                    )}
-                  </div>
-                  {/* 件数 */}
-                  <span style={{
-                    width: 56, textAlign: 'right', flexShrink: 0, fontSize: 11,
-                    fontWeight: active ? 600 : 400,
-                    color: done ? '#52c41a' : active ? '#333' : '#bbb',
-                  }}>
-                    {done && total > 0
-                      ? `${total}件 ✓`
-                      : active && s.qty > 0
-                        ? `${s.qty}/${total}件`
-                        : notStarted
-                          ? '未开始'
-                          : s.qty > 0 ? `${s.qty}件` : `${s.pct}%`
-                    }
-                  </span>
-                </div>
-                {/* 当前工序最近扫码时间 */}
-                {active && s.lastTime && (
-                  <div style={{ paddingLeft: 46, fontSize: 10, color: '#aaa', marginTop: 1 }}>
-                    最近扫码&nbsp;{s.lastTime}
+                    <span style={{ fontSize: 10, color: '#bbb', whiteSpace: 'nowrap', paddingTop: 2 }}>
+                      预测
+                    </span>
                   </div>
                 )}
-              </div>
+                <div style={{ marginBottom: 7 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* 状态图标 */}
+                    <span style={{
+                      width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0,
+                      color: done ? '#52c41a' : active ? '#1677ff' : '#d9d9d9',
+                    }}>
+                      {done ? '✓' : active ? '▶' : '○'}
+                    </span>
+                    {/* 工序名 */}
+                    <span style={{
+                      width: 26, flexShrink: 0,
+                      fontWeight: active || done ? 600 : 400,
+                      color: done ? '#52c41a' : active ? '#1677ff' : notStarted ? '#bbb' : '#555',
+                    }}>
+                      {s.label}
+                    </span>
+                    {/* 进度条（未开始显示虚线占位） */}
+                    <div style={{
+                      flex: 1, height: 5, background: '#f5f5f5', borderRadius: 3, overflow: 'hidden',
+                    }}>
+                      {s.pct > 0 && (
+                        <div style={{
+                          width: `${Math.min(100, s.pct)}%`, height: '100%', borderRadius: 3,
+                          background: done ? '#52c41a' : active ? '#1677ff' : '#d9d9d9',
+                        }} />
+                      )}
+                    </div>
+                    {/* 件数 or 预测日期 */}
+                    <span style={{
+                      width: 60, textAlign: 'right', flexShrink: 0, fontSize: 11,
+                      fontWeight: active ? 600 : 400,
+                      color: done ? '#52c41a' : active ? '#333' : '#bbb',
+                    }}>
+                      {done && total > 0
+                        ? `${total}件 ✓`
+                        : active && s.qty > 0
+                          ? `${s.qty}/${total}件`
+                          : notStarted && predictStart
+                            ? `约 ${predictStart.format('MM-DD')}`
+                            : notStarted
+                              ? '待安排'
+                              : s.qty > 0 ? `${s.qty}件` : `${s.pct}%`
+                      }
+                    </span>
+                  </div>
+                  {/* 当前工序最近扫码时间 */}
+                  {active && s.lastTime && (
+                    <div style={{ paddingLeft: 46, fontSize: 10, color: '#aaa', marginTop: 1 }}>
+                      最近扫码&nbsp;{s.lastTime}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
             );
           })}
         </div>
@@ -204,4 +294,3 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
 };
 
 export default SmartOrderHoverCard;
-
