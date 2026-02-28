@@ -31,8 +31,14 @@ function fieldRate(o: ProductionOrder, key: string): number {
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
   const boardStatsByOrder = useProductionBoardStore(s => s.boardStatsByOrder);
-  const boardStats = boardStatsByOrder[String(order.id)] ?? null;
-  const boardTimes = boardTimesByOrder[String(order.id)] ?? {};
+  const processStatsByOrder  = useProductionBoardStore(s => s.processStatsByOrder);
+  const processGroupsByOrder = useProductionBoardStore(s => s.processGroupsByOrder);
+  const processTimesByOrder  = useProductionBoardStore(s => s.processTimesByOrder);
+  const boardStats    = boardStatsByOrder[String(order.id)]  ?? null;
+  const boardTimes    = boardTimesByOrder[String(order.id)]  ?? {};
+  const processStats  = processStatsByOrder[String(order.id)]  ?? null;
+  const processGroups = processGroupsByOrder[String(order.id)] ?? {};
+  const processTimes  = processTimesByOrder[String(order.id)]  ?? {};
 
   const total       = Number(order.orderQuantity) || 0;
   const isCompleted = order.status === 'completed';
@@ -41,19 +47,59 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
   const prog        = Number(order.productionProgress) || 0;
 
-  /* 所有工序的实际数据：动态合并 boardStats 工序 + STAGES_DEF 字段兜底工序 */
+  /**
+   * 工序条目列表：
+   *  - 有子工序扫码数据 (processStats 有 qty>0 的内容)：
+   *      直接按 processName 展示，并附上父工序名 (stageName)
+   *  - 无子工序数据：回退到 boardStats 父工序级别（带 STAGES_DEF 字段兜底）
+   */
   const stages = useMemo(() => {
-    // boardStats 里有扫码记录的工序名
+    // 是否有真实扫码的子工序数据
+    const hasProcess = processStats != null &&
+      Object.values(processStats as Record<string, number>).some(v => v > 0);
+
+    if (hasProcess) {
+      // 真正动态：按实际 processName 展示，不依赖硬编码节点列表
+      const pStats  = processStats  as Record<string, number>;
+      const pGroups = processGroups as Record<string, string[]>;
+      const pTimes  = processTimes  as Record<string, string>;
+      // 每个 processName 找到对应的父工序 (stageName)
+      const pToStage = (pName: string): string =>
+        Object.entries(pGroups).find(([, pNames]) => pNames.includes(pName))?.[0] ?? '';
+
+      const items = Object.entries(pStats)
+        .filter(([, qty]) => qty > 0)
+        .map(([pName, qty]) => ({
+          label:     pName,
+          stageName: pToStage(pName),
+          qty,
+          pct:      total > 0 ? Math.min(100, Math.round(qty / total * 100)) : 0,
+          lastTime: pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD HH:mm') : null,
+        }));
+
+      // 按父工序 STAGE_ORDER 排序，父工序相同时子工序按名字排
+      items.sort((a, b) => {
+        const ai = STAGE_ORDER.indexOf(a.stageName);
+        const bi = STAGE_ORDER.indexOf(b.stageName);
+        if (ai !== bi) {
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        }
+        return a.label.localeCompare(b.label);
+      });
+      return items;
+    }
+
+    // 备用：boardStats 父工序级别
     const boardKeys = boardStats
       ? Object.keys(boardStats as Record<string, number>).filter(
           k => ((boardStats as Record<string, number>)[k] ?? 0) > 0
         )
       : [];
-    // 合并 boardStats 工序 + STAGES_DEF 工序，去重
     const allLabels = Array.from(
       new Set([...boardKeys, ...STAGES_DEF.map(s => s.label)])
     );
-    // 按 STAGE_ORDER 排序，未知工序排最后
     allLabels.sort((a, b) => {
       const ai = STAGE_ORDER.indexOf(a);
       const bi = STAGE_ORDER.indexOf(b);
@@ -62,7 +108,6 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       if (bi === -1) return -1;
       return ai - bi;
     });
-
     return allLabels.map(label => {
       const fromBoard = boardStats
         ? ((boardStats as Record<string, number>)[label] ?? 0)
@@ -79,9 +124,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         : fromField;
       const lastTime = boardTimes[label]
         ? dayjs(boardTimes[label]).format('MM-DD HH:mm') : null;
-      return { label, qty, pct, lastTime };
+      return { label, stageName: '' as string, qty, pct, lastTime };
     });
-  }, [order, boardStats, boardTimes, total]);
+  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes]);
 
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
@@ -219,35 +264,53 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {/* ① 进行中工序（全部显示） */}
       {inProgressList.length > 0 && (
         <div style={{ marginBottom: 4 }}>
-          {inProgressList.map(s => {
+          {inProgressList.map((s, idx) => {
             const remainDays = speed > 0
               ? Math.ceil(Math.max(0, total - s.qty) / speed)
               : null;
             const estFinish = remainDays !== null
               ? now.add(remainDays, 'day').format('MM-DD')
               : null;
+            // 子工序模式：展示父工序分组标题
+            const showGroupHeader = s.stageName &&
+              (idx === 0 || inProgressList[idx - 1].stageName !== s.stageName);
+            const isSubProcess = !!s.stageName;
             return (
-              <div key={s.label} style={{ marginBottom: 7 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: '#1677ff' }}>▶</span>
-                  <span style={{ width: 26, flexShrink: 0, fontWeight: 600, color: '#1677ff' }}>{s.label}</span>
-                  <div style={{ flex: 1, height: 5, background: '#f0f5ff', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${Math.min(100, s.pct)}%`, height: '100%',
-                      borderRadius: 3, background: '#1677ff',
-                    }} />
-                  </div>
-                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: '#333', fontWeight: 600 }}>
-                    {s.qty}/{total}件
-                    {estFinish ? ` · ${estFinish}` : ''}
-                  </span>
-                </div>
-                {s.lastTime && (
-                  <div style={{ paddingLeft: 46, fontSize: 10, color: '#aaa', marginTop: 1 }}>
-                    最近&nbsp;{s.lastTime}
+              <React.Fragment key={s.label}>
+                {showGroupHeader && (
+                  <div style={{
+                    fontSize: 10, color: '#888', fontWeight: 600,
+                    marginTop: idx > 0 ? 6 : 0, marginBottom: 2,
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span style={{ color: '#1677ff' }}>◆</span>
+                    <span>{s.stageName}</span>
+                    <div style={{ flex: 1, height: 1, background: '#e8f4ff', marginLeft: 2 }} />
                   </div>
                 )}
-              </div>
+                <div style={{ paddingLeft: isSubProcess ? 10 : 0, marginBottom: 6 }}>
+                  {/* 第一行：图标 + 工序名 + 进度条(60px) + 百分比 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 12, flexShrink: 0, fontSize: 10, textAlign: 'center', color: '#1677ff' }}>▶</span>
+                    <span style={{ minWidth: 40, maxWidth: 56, flexShrink: 0, fontWeight: 600, color: '#1677ff', fontSize: 11 }}>{s.label}</span>
+                    <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${Math.min(100, s.pct)}%`, height: '100%',
+                        borderRadius: 2, background: '#1677ff',
+                      }} />
+                    </div>
+                    <span style={{ flexShrink: 0, fontSize: 11, color: '#1677ff', fontWeight: 700, minWidth: 34, textAlign: 'right' }}>
+                      {s.pct}%
+                    </span>
+                  </div>
+                  {/* 第二行：件数 + 最近扫码时间 + 预计完成日 */}
+                  <div style={{ paddingLeft: 17, fontSize: 10, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
+                    {s.lastTime && <span>最近 {s.lastTime}</span>}
+                    {estFinish && <span style={{ color: '#1677ff' }}>预计 {estFinish}</span>}
+                  </div>
+                </div>
+              </React.Fragment>
             );
           })}
         </div>

@@ -28,6 +28,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
+  const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
   // 同步 ref
@@ -88,6 +89,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
+          mergeProcessDataForOrder,
         });
       }
     };
@@ -101,6 +103,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,
     setBoardLoadingForOrder,
+    mergeProcessDataForOrder,
   ]);
 
   /**

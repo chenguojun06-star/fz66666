@@ -108,6 +108,7 @@ const ProductionList: React.FC = () => {
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
+  const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -222,13 +223,14 @@ const ProductionList: React.FC = () => {
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
+          mergeProcessDataForOrder,
         });
       }
     };
     void run();
     return () => { cancelled = true; };
   }, [productionList, boardStatsByOrder, boardStatsLoadingByOrder,
-      mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder]);
+      mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
 
   // URL 参数解析
   useEffect(() => {

@@ -116,6 +116,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
+  const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -458,6 +459,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
+          mergeProcessDataForOrder,
         });
       }
     };
@@ -473,6 +475,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,
     setBoardLoadingForOrder,
+    mergeProcessDataForOrder,
   ]);
 
   const saveNodes = (next: ProgressNode[]) => {
@@ -754,7 +757,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Card>
           ) : null}
 
-
           {viewMode === 'list' ? (
             <ResizableTable
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
@@ -917,7 +919,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               />
             </Card>
           ) : null}
-
 
           {viewMode === 'list' ? (
             <ResizableTable

@@ -11,6 +11,13 @@ interface EnsureBoardStatsArgs {
   mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number> | null) => void;
   mergeBoardTimesForOrder?: (orderId: string, times: Record<string, string>) => void;
   setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
+  /** 可选：按 processName 聚合子工序粒度数据 */
+  mergeProcessDataForOrder?: (
+    orderId: string,
+    stats: Record<string, number>,
+    groups: Record<string, string[]>,
+    times: Record<string, string>,
+  ) => void;
 }
 
 const loadAllOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
@@ -44,6 +51,7 @@ export const ensureBoardStatsForOrder = async ({
   mergeBoardStatsForOrder,
   mergeBoardTimesForOrder,
   setBoardLoadingForOrder,
+  mergeProcessDataForOrder,
 }: EnsureBoardStatsArgs) => {
   const oid = String(order?.id || '').trim();
   if (!oid) return;
@@ -129,6 +137,26 @@ export const ensureBoardStatsForOrder = async ({
         if (maxTime) timeStats[nodeName] = maxTime;
       }
       mergeBoardTimesForOrder(oid, timeStats);
+    }
+
+    // 额外聚合：按 processName 建子工序维度（悬停卡展示真实扫码工序，不依赖节点配置）
+    if (mergeProcessDataForOrder) {
+      const pStats: Record<string, number> = {};
+      const pGroups: Record<string, string[]> = {};  // progressStage → processName[]
+      const pTimes: Record<string, string> = {};
+      for (const r of valid) {
+        const pName = String((r as any)?.processName || '').trim();
+        if (!pName) continue;
+        const pStage = String((r as any)?.progressStage || getRecordStageName(r)).trim();
+        pStats[pName] = (pStats[pName] || 0) + (Number((r as any)?.quantity) || 0);
+        if (pStage) {
+          if (!pGroups[pStage]) pGroups[pStage] = [];
+          if (!pGroups[pStage].includes(pName)) pGroups[pStage].push(pName);
+        }
+        const t = String((r as any)?.scanTime || '').trim();
+        if (t && (!pTimes[pName] || t > pTimes[pName])) pTimes[pName] = t;
+      }
+      mergeProcessDataForOrder(oid, pStats, pGroups, pTimes);
     }
   } catch {
     // API 失败时写入 null 标记，防止无限重试（例如云端 DB 缺列导致 500）
