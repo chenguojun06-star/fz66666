@@ -344,9 +344,6 @@ const Dashboard: React.FC = () => {
           )}
         />
 
-        {/* 智能运营日报 */}
-        <SmartDailyBrief />
-
         {/* 顶部4个统计看板 */}
         <TopStats />
 
@@ -432,6 +429,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* 智能运营日报 — 置底，作为补充信息 */}
+      <SmartDailyBrief />
 
       {/* 快捷入口设置弹窗 */}
       <Modal

@@ -56,11 +56,17 @@ public class DailyBriefOrchestrator {
         brief.put("yesterdayWarehousingCount", ydCount);
         brief.put("yesterdayWarehousingQuantity", ydQty);
 
-        // ② 今日扫码
+        // ② 今日扫码 + 近7天扫码
         LocalDateTime tdStart = today.atStartOfDay();
         LocalDateTime tdEnd   = today.atTime(LocalTime.MAX);
         long todayScan = dashboardQueryService.countScansBetween(tdStart, tdEnd);
         brief.put("todayScanCount", todayScan);
+        LocalDateTime week7Start = today.minusDays(7).atStartOfDay();
+        long weekScan = dashboardQueryService.countScansBetween(week7Start, tdEnd);
+        brief.put("weekScanCount", weekScan);
+        // 近7天入库
+        long weekWh = dashboardQueryService.countWarehousingBetween(week7Start, tdEnd);
+        brief.put("weekWarehousingCount", weekWh);
 
         // ③ 逾期订单数
         long overdueCount = dashboardQueryService.countOverdueOrders();

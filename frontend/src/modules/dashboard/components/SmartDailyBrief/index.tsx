@@ -23,6 +23,8 @@ interface DailyBriefData {
   yesterdayWarehousingCount: number;
   yesterdayWarehousingQuantity: number;
   todayScanCount: number;
+  weekScanCount?: number;
+  weekWarehousingCount?: number;
   overdueOrderCount: number;
   highRiskOrderCount: number;
   topPriorityOrder?: TopPriorityOrder;
@@ -84,15 +86,32 @@ const SmartDailyBrief: React.FC = () => {
       <div className="sdb-stats">
         <div className="sdb-stat-item">
           <div className="sdb-stat-label">昨日入库</div>
-          <div className="sdb-stat-value">{data.yesterdayWarehousingCount}<span className="sdb-stat-unit">单</span></div>
-          <div className="sdb-stat-sub">{data.yesterdayWarehousingQuantity} 件</div>
+          <div className="sdb-stat-value">
+            {data.yesterdayWarehousingCount > 0
+              ? <>{data.yesterdayWarehousingCount}<span className="sdb-stat-unit">单</span></>
+              : <span style={{ fontSize: 16, color: '#bbb' }}>暂无</span>}
+          </div>
+          <div className="sdb-stat-sub">
+            {data.yesterdayWarehousingCount > 0
+              ? `${data.yesterdayWarehousingQuantity} 件`
+              : `近7天 ${data.weekWarehousingCount ?? 0} 单`}
+          </div>
         </div>
         <div className="sdb-stat-divider" />
         <div className="sdb-stat-item">
           <div className="sdb-stat-label">
             <ScanOutlined style={{ marginRight: 4 }} />今日扫码
           </div>
-          <div className="sdb-stat-value">{data.todayScanCount}<span className="sdb-stat-unit">次</span></div>
+          <div className="sdb-stat-value">
+            {data.todayScanCount > 0
+              ? <>{data.todayScanCount}<span className="sdb-stat-unit">次</span></>
+              : <span style={{ fontSize: 16, color: '#bbb' }}>暂无</span>}
+          </div>
+          <div className="sdb-stat-sub">
+            {data.todayScanCount === 0 && (data.weekScanCount ?? 0) > 0
+              ? `近7天 ${data.weekScanCount} 次`
+              : ' '}
+          </div>
         </div>
         <div className="sdb-stat-divider" />
         <div className="sdb-stat-item">
@@ -100,6 +119,7 @@ const SmartDailyBrief: React.FC = () => {
           <div className={`sdb-stat-value ${data.overdueOrderCount > 0 ? 'sdb-danger' : 'sdb-ok'}`}>
             {data.overdueOrderCount}<span className="sdb-stat-unit">张</span>
           </div>
+          <div className="sdb-stat-sub">{data.overdueOrderCount === 0 ? '无逾期 ✓' : '尽快跟进'}</div>
         </div>
         <div className="sdb-stat-divider" />
         <div className="sdb-stat-item">
