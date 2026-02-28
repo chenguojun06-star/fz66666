@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Badge, Tooltip, Tabs } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Badge, Tooltip, Tabs, Popover } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -25,6 +25,7 @@ import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -80,7 +81,13 @@ const ProductionList: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewModeState] = useState<'list' | 'card'>(
+    () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'list'
+  );
+  const setViewMode = (mode: 'list' | 'card') => {
+    localStorage.setItem('production_view_mode', mode);
+    setViewModeState(mode);
+  };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
@@ -257,6 +264,13 @@ const ProductionList: React.FC = () => {
         const orderId = safeString((record as any)?.id, '');
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <Popover
+              content={<SmartOrderHoverCard order={record} />}
+              trigger="hover"
+              placement="rightTop"
+              mouseEnterDelay={0.3}
+              overlayStyle={{ maxWidth: 280 }}
+            >
             <a
               className="order-no-wrap"
               style={{ cursor: 'pointer' }}
@@ -267,6 +281,7 @@ const ProductionList: React.FC = () => {
             >
               {orderNo || '-'}
             </a>
+            </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
               <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
             )}
@@ -1086,6 +1101,14 @@ const ProductionList: React.FC = () => {
                 { key: 'divider1', type: 'divider' as const, label: '' },
                 { key: 'edit', label: '编辑', onClick: () => { quickEditModal.open(record); } },
               ].filter(Boolean)}
+              hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
+              titleTags={(record) => (
+                <>
+                  {(record as any).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
+                </>
+              )}
             />
           )}
         </Card>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, Modal, Space } from 'antd';
+import { App, Button, Card, Form, Input, Modal, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -801,6 +801,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
+              titleTags={(record) => (
+                <>
+                  {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
+                </>
+              )}
             />
           )}
         </>
@@ -961,6 +968,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
+              titleTags={(record) => (
+                <>
+                  {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
+                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
+                </>
+              )}
             />
           )}
         </Card>

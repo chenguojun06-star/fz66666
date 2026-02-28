@@ -11,7 +11,13 @@ export const useProgressFilters = () => {
 
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(
+    () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'card'
+  );
+  const setViewModePersist = (mode: 'list' | 'card') => {
+    localStorage.setItem('production_view_mode', mode);
+    setViewMode(mode);
+  };
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -64,7 +70,7 @@ export const useProgressFilters = () => {
     dateRange,
     setDateRange,
     viewMode,
-    setViewMode,
+    setViewMode: setViewModePersist,
     activeStatFilter,
     orderSortField,
     orderSortOrder,
