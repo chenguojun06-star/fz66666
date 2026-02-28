@@ -1,4 +1,5 @@
 const api = require('../../../../utils/api');
+const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
 
 Page({
   data: {
@@ -122,9 +123,14 @@ Page({
       const data = await api.stock.listSamples(params);
 
       const records = (data && data.records) || [];
+      // 对每条记录的 imageUrl 加 token（私有文件需要认证）
+      const authedRecords = records.map(item => ({
+        ...item,
+        imageUrl: item.imageUrl ? getAuthedImageUrl(item.imageUrl) : '',
+      }));
 
       // ✅ 直接使用服务端返回的数据，不再客户端过滤
-      const list = reset ? records : [...this.data.list, ...records];
+      const list = reset ? authedRecords : [...this.data.list, ...authedRecords];
 
       // 计算汇总数据（从服务端返回的完整数据计算）
       const totalQuantity = list.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
