@@ -11,7 +11,7 @@ export const useProgressFilters = () => {
 
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
