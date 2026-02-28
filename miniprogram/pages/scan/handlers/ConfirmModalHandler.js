@@ -10,30 +10,9 @@
 
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 const SKUProcessor = require('../processors/SKUProcessor');
-
-function normalizeScanType(processName, scanType) {
-  const raw = String(scanType || '').trim().toLowerCase();
-  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
-    return raw;
-  }
-
-  const stage = String(processName || '').trim();
-  if (stage === '质检' || stage === '质检领取' || stage === '质检验收' || stage === '质检确认') {
-    return 'quality';
-  }
-  if (stage === '入库') {
-    return 'warehouse';
-  }
-  if (stage === '裁剪') {
-    return 'cutting';
-  }
-  if (stage === '采购') {
-    return 'procurement';
-  }
-  return 'production';
-}
 
 /**
  * 显示确认弹窗

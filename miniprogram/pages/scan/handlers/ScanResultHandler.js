@@ -10,6 +10,7 @@
 
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 /**
  * 将值转为正整数，非正整数时返回 fallback
@@ -21,34 +22,6 @@ function normalizePositiveInt(value, fallback = 1) {
   const num = parseInt(value, 10);
   if (!Number.isFinite(num) || num <= 0) return fallback;
   return num;
-}
-
-/**
- * 归一化扫码类型，防止模板配置中出现非标准类型导致后续识别/统计异常
- * @param {string} processName - 工序名称
- * @param {string} scanType - 原始扫码类型
- * @returns {string} 标准扫码类型
- */
-function normalizeScanType(processName, scanType) {
-  const raw = String(scanType || '').trim().toLowerCase();
-  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
-    return raw;
-  }
-
-  const stage = String(processName || '').trim();
-  if (stage === '质检' || stage === '质检领取' || stage === '质检验收' || stage === '质检确认') {
-    return 'quality';
-  }
-  if (stage === '入库') {
-    return 'warehouse';
-  }
-  if (stage === '裁剪') {
-    return 'cutting';
-  }
-  if (stage === '采购') {
-    return 'procurement';
-  }
-  return 'production';
 }
 
 /**

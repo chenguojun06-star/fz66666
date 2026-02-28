@@ -91,4 +91,35 @@ class ScanModeResolver {
   }
 }
 
+/**
+ * 将工序名/scanType 归一化为标准扫码类型
+ * 确保非标准配置的工序不会绕过 production/quality 等过滤条件
+ *
+ * @param {string} processName - 工序名（如"质检"、"大烫"）
+ * @param {string} scanType    - 原始 scanType 值（可能是非标准字符串）
+ * @returns {string} 标准扫码类型：production | quality | warehouse | cutting | procurement
+ */
+function normalizeScanType(processName, scanType) {
+  const raw = String(scanType || '').trim().toLowerCase();
+  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
+    return raw;
+  }
+
+  const stage = String(processName || '').trim();
+  if (stage === '质检' || stage === '质检领取' || stage === '质检验收' || stage === '质检确认') {
+    return 'quality';
+  }
+  if (stage === '入库') {
+    return 'warehouse';
+  }
+  if (stage === '裁剪') {
+    return 'cutting';
+  }
+  if (stage === '采购') {
+    return 'procurement';
+  }
+  return 'production';
+}
+
 module.exports = ScanModeResolver;
+module.exports.normalizeScanType = normalizeScanType;
