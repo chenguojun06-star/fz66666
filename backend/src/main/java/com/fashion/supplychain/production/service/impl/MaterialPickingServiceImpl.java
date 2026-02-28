@@ -71,4 +71,32 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         return materialPickingItemMapper.selectList(new LambdaQueryWrapper<MaterialPickingItem>()
                 .eq(MaterialPickingItem::getPickingId, pickingId));
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String savePendingPicking(MaterialPicking picking, List<MaterialPickingItem> items) {
+        if (picking == null) throw new IllegalArgumentException("领料信息不能为空");
+        if (picking.getPickingNo() == null) {
+            picking.setPickingNo("MPK" + System.currentTimeMillis());
+        }
+        picking.setCreateTime(LocalDateTime.now());
+        picking.setUpdateTime(LocalDateTime.now());
+        if (picking.getPickTime() == null) picking.setPickTime(LocalDateTime.now());
+        if (picking.getDeleteFlag() == null) picking.setDeleteFlag(0);
+        if (picking.getPickerId() == null) {
+            picking.setPickerId(UserContext.userId());
+            picking.setPickerName(UserContext.username());
+        }
+        // 不覆盖 status，由调用方决定（"pending" 表示待仓库确认）
+        this.save(picking);
+        if (items != null) {
+            for (MaterialPickingItem item : items) {
+                item.setPickingId(picking.getId());
+                if (item.getCreateTime() == null) item.setCreateTime(LocalDateTime.now());
+                materialPickingItemMapper.insert(item);
+                // ⚠️ 不扣减库存，等仓库确认出库后再扣
+            }
+        }
+        return picking.getId();
+    }
 }

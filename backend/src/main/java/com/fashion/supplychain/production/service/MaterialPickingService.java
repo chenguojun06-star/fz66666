@@ -17,4 +17,12 @@ public interface MaterialPickingService extends IService<MaterialPicking> {
      * 获取领料单明细
      */
     List<MaterialPickingItem> getItemsByPickingId(String pickingId);
+
+    /**
+     * 创建待出库领料单（不扣库存，等待仓库确认）
+     * @param picking 领料单主表（status 由调用方设定，不覆盖）
+     * @param items 领料明细
+     * @return 领料单ID
+     */
+    String savePendingPicking(MaterialPicking picking, List<MaterialPickingItem> items);
 }

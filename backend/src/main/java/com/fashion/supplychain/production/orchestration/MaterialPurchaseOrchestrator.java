@@ -1086,7 +1086,7 @@ public class MaterialPurchaseOrchestrator {
                                        List<MaterialStock> stockList) {
         Integer pickQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : 0;
 
-        // 1. 创建主表（MaterialPicking）
+        // 1. 创建主表（MaterialPicking）—— status="pending"，等待仓库确认后再扣库存
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
         picking.setOrderId(purchase.getOrderId());
@@ -1096,15 +1096,16 @@ public class MaterialPurchaseOrchestrator {
         picking.setPickerId(receiverId);
         picking.setPickerName(receiverName);
         picking.setPickTime(LocalDateTime.now());
-        picking.setStatus("completed");
-        picking.setRemark("智能一键领取自动创建");
+        picking.setStatus("pending");  // 仓库待确认出库
+        // 存储 purchaseId，仓库确认出库时用于回写采购单状态
+        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + (purchase.getId() != null ? purchase.getId() : ""));
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
         picking.setDeleteFlag(0);
 
         List<MaterialPickingItem> items = new ArrayList<>();
 
-        // 2. 扣减库存并准备明细
+        // 2. 仅准备明细（不扣库存，仓库确认出库时再扣）
         int remainingQty = pickQty;
         for (MaterialStock stock : stockList) {
             if (remainingQty <= 0) break;
@@ -1117,7 +1118,6 @@ public class MaterialPurchaseOrchestrator {
 
             int pickFromThis = Math.min(remainingQty, stockAvailable);
 
-            // 2.1 准备明细项
             MaterialPickingItem item = new MaterialPickingItem();
             item.setMaterialStockId(stock.getId());
             item.setMaterialId(stock.getMaterialId());
@@ -1130,26 +1130,20 @@ public class MaterialPurchaseOrchestrator {
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
 
-            // 2.2 扣减库存
-            stock.setQuantity(stock.getQuantity() - pickFromThis);
-            stock.setUpdateTime(LocalDateTime.now());
-            materialStockService.updateById(stock);
-
             remainingQty -= pickFromThis;
         }
 
-        // 3. 创建出库单（统一保存主表和明细）
-        String pickingId = materialPickingService.createPicking(picking, items);
+        // 3. 保存待出库单（不扣库存）
+        String pickingId = materialPickingService.savePendingPicking(picking, items);
 
-        // 4. 更新采购任务状态为已完成
-        purchase.setStatus(MaterialConstants.STATUS_COMPLETED);
-        purchase.setReceivedTime(LocalDateTime.now());
+        // 4. 更新采购任务状态为「仓库待出库」（尚未完成，等仓库出库后变 completed）
+        purchase.setStatus("warehouse_pending");
         purchase.setReceiverId(receiverId);
         purchase.setReceiverName(receiverName);
         purchase.setUpdateTime(LocalDateTime.now());
         materialPurchaseService.updateById(purchase);
 
-        log.info("✅ 出库单创建成功: pickingId={}, materialCode={}, qty={}",
+        log.info("✅ 待出库单创建成功（等仓库确认）: pickingId={}, materialCode={}, qty={}",
             pickingId, purchase.getMaterialCode(), pickQty);
     }
 
@@ -1306,7 +1300,7 @@ public class MaterialPurchaseOrchestrator {
             throw new IllegalArgumentException("仓库库存不足，可用库存: " + availableStock + "，需领取: " + pickQty);
         }
 
-        // 创建出库单
+        // 创建待出库单（status="pending"，仓库确认后才扣库存）
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
         picking.setOrderId(purchase.getOrderId());
@@ -1316,8 +1310,9 @@ public class MaterialPurchaseOrchestrator {
         picking.setPickerId(receiverId);
         picking.setPickerName(receiverName);
         picking.setPickTime(LocalDateTime.now());
-        picking.setStatus("completed");
-        picking.setRemark("仓库领取");
+        picking.setStatus("pending");  // 待仓库确认出库
+        // 存储 purchaseId，仓库确认出库时用于回写采购单状态
+        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + purchaseId);
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
         picking.setDeleteFlag(0);
@@ -1345,25 +1340,14 @@ public class MaterialPurchaseOrchestrator {
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
 
-            stock.setQuantity(stock.getQuantity() - pickFromThis);
-            stock.setUpdateTime(LocalDateTime.now());
-            materialStockService.updateById(stock);
-
+            // 不扣库存，仓库确认出库时再扣（避免采购侧点击即扣减，仓库尚未实际发货）
             remainingQty -= pickFromThis;
         }
 
-        String pickingId = materialPickingService.createPicking(picking, items);
+        String pickingId = materialPickingService.savePendingPicking(picking, items);
 
-        // 更新采购任务状态
-        if (pickQty >= requiredQty) {
-            // 全部从仓库领取
-            purchase.setStatus(MaterialConstants.STATUS_COMPLETED);
-            purchase.setReceivedTime(LocalDateTime.now());
-        } else {
-            // 部分领取，剩余走采购
-            purchase.setStatus(MaterialConstants.STATUS_PARTIAL);
-            purchase.setArrivedQuantity(pickQty);
-        }
+        // 更新采购任务状态为「仓库待出库」
+        purchase.setStatus("warehouse_pending");
         purchase.setReceiverId(receiverId);
         purchase.setReceiverName(receiverName);
         purchase.setUpdateTime(LocalDateTime.now());
@@ -1378,6 +1362,65 @@ public class MaterialPurchaseOrchestrator {
         result.put("materialName", purchase.getMaterialName());
         log.info("✅ 仓库单项领取成功: pickingId={}, materialCode={}, qty={}", pickingId, materialCode, pickQty);
         return result;
+    }
+
+    /**
+     * 仓库确认出库（两步流第二步）
+     * 实际扣减库存 + picking 状态改为 completed + 关联采购单改为 completed
+     * @param pickingId 待出库单ID（status=pending 的 MaterialPicking）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmPickingOutbound(String pickingId) {
+        if (!StringUtils.hasText(pickingId)) {
+            throw new IllegalArgumentException("出库单ID不能为空");
+        }
+        MaterialPicking picking = materialPickingService.getById(pickingId);
+        if (picking == null || (picking.getDeleteFlag() != null && picking.getDeleteFlag() != 0)) {
+            throw new java.util.NoSuchElementException("出库单不存在");
+        }
+        if (!"pending".equalsIgnoreCase(picking.getStatus())) {
+            throw new IllegalStateException("该出库单状态不是待出库，当前状态: " + picking.getStatus());
+        }
+
+        // 1. 扣减库存
+        List<com.fashion.supplychain.production.entity.MaterialPickingItem> items =
+                materialPickingService.getItemsByPickingId(pickingId);
+        for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
+            if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+                materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
+            }
+        }
+
+        // 2. 更新出库单状态为 completed
+        picking.setStatus("completed");
+        picking.setUpdateTime(LocalDateTime.now());
+        materialPickingService.updateById(picking);
+
+        // 3. 更新关联采购单状态为 completed
+        // remark 格式: "WAREHOUSE_PICK|purchaseId=xxx"
+        String remark = picking.getRemark();
+        if (StringUtils.hasText(remark) && remark.contains("purchaseId=")) {
+            String associatedPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
+            if (StringUtils.hasText(associatedPurchaseId)) {
+                MaterialPurchase purchase = materialPurchaseService.getById(associatedPurchaseId);
+                if (purchase != null) {
+                    purchase.setStatus(MaterialConstants.STATUS_COMPLETED);
+                    purchase.setReceivedTime(LocalDateTime.now());
+                    purchase.setUpdateTime(LocalDateTime.now());
+                    materialPurchaseService.updateById(purchase);
+                    // 同步订单面料到货率
+                    try {
+                        if (StringUtils.hasText(purchase.getOrderId())) {
+                            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
+                        }
+                    } catch (Exception e) {
+                        log.warn("confirmPickingOutbound: 同步订单面料到货率失败, purchaseId={}", associatedPurchaseId, e);
+                    }
+                }
+            }
+        }
+
+        log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
     }
 
     /**

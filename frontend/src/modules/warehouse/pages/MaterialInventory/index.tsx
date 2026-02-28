@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -13,12 +13,17 @@ import {
   Col,
   Form,
   InputNumber,
+  Popconfirm,
+  Badge,
+  Tooltip,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import {
   WarningOutlined,
   ScanOutlined,
   ExportOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -229,6 +234,75 @@ const _MaterialInventory: React.FC = () => {
     const timer = setInterval(fetchAlerts, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // ===== 待出库领料单 =====
+  interface PendingPicking {
+    id: string;
+    pickingNo: string;
+    orderNo: string;
+    styleNo: string;
+    pickerName: string;
+    createTime: string;
+    status: string;
+    remark?: string;
+    items?: Array<{
+      id: string;
+      materialCode: string;
+      materialName: string;
+      color?: string;
+      size?: string;
+      quantity: number;
+      unit?: string;
+    }>;
+  }
+
+  const [pendingPickings, setPendingPickings] = useState<PendingPicking[]>([]);
+  const [pendingPickingsLoading, setPendingPickingsLoading] = useState(false);
+  const [confirmingPickingId, setConfirmingPickingId] = useState<string | null>(null);
+
+  const fetchPendingPickings = useCallback(async () => {
+    setPendingPickingsLoading(true);
+    try {
+      const res = await api.get('/production/picking/list', {
+        params: { status: 'pending', pageSize: 100 },
+      });
+      const records = res?.data?.records || res?.records || [];
+      // 逐项加载明细
+      const withItems = await Promise.all(
+        (records as PendingPicking[]).map(async (p) => {
+          try {
+            const itemRes = await api.get(`/production/picking/${p.id}/items`);
+            return { ...p, items: itemRes?.data || itemRes || [] };
+          } catch {
+            return { ...p, items: [] };
+          }
+        })
+      );
+      setPendingPickings(withItems);
+    } catch {
+      // silent
+    } finally {
+      setPendingPickingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPendingPickings();
+  }, [fetchPendingPickings]);
+
+  const handleConfirmOutbound = async (pickingId: string) => {
+    setConfirmingPickingId(pickingId);
+    try {
+      await api.post(`/production/picking/${pickingId}/confirm-outbound`);
+      message.success('出库确认成功！库存已扣减。');
+      void fetchPendingPickings();
+      void fetchData(); // 刷新库存列表
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || '确认出库失败');
+    } finally {
+      setConfirmingPickingId(null);
+    }
+  };
 
   const alertOptions = useMemo(() => {
     return alertList.map((item) => {
@@ -1061,6 +1135,107 @@ const _MaterialInventory: React.FC = () => {
             scroll={{ x: 1600 }}
             pagination={pagination.pagination}
           />
+        </Card>
+
+        {/* ===== 待出库领料单 ===== */}
+        <Card
+          style={{ marginTop: 16 }}
+          title={
+            <Space>
+              <ClockCircleOutlined style={{ color: 'var(--color-warning, #faad14)' }} />
+              <span>待出库领料</span>
+              <Badge count={pendingPickings.length} style={{ backgroundColor: '#faad14' }} />
+              <Tooltip title="采购侧点击「仓库领取」后，需由仓库在此处确认出库才会实际扣减库存">
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', cursor: 'help' }}>
+                  ❓ 什么是待出库
+                </span>
+              </Tooltip>
+            </Space>
+          }
+          extra={
+            <Button size="small" onClick={() => void fetchPendingPickings()} loading={pendingPickingsLoading}>
+              刷新
+            </Button>
+          }
+        >
+          {pendingPickings.length === 0 && !pendingPickingsLoading ? (
+            <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: '24px 0' }}>
+              暂无待出库单
+            </div>
+          ) : (
+            <Table
+              loading={pendingPickingsLoading}
+              rowKey="id"
+              dataSource={pendingPickings}
+              pagination={false}
+              expandable={{
+                expandedRowRender: (record) => (
+                  <Table
+                    rowKey="id"
+                    dataSource={record.items || []}
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: '物料编号', dataIndex: 'materialCode', width: 140 },
+                      { title: '物料名称', dataIndex: 'materialName', width: 160 },
+                      { title: '颜色', dataIndex: 'color', width: 80 },
+                      { title: '规格', dataIndex: 'size', width: 80 },
+                      {
+                        title: '出库数量',
+                        dataIndex: 'quantity',
+                        width: 100,
+                        render: (qty, row) => `${qty} ${row.unit || '件'}`,
+                      },
+                    ]}
+                  />
+                ),
+                rowExpandable: (record) => !!(record.items && record.items.length > 0),
+              }}
+              columns={[
+                { title: '领料单号', dataIndex: 'pickingNo', width: 180 },
+                { title: '订单号', dataIndex: 'orderNo', width: 160 },
+                { title: '款号', dataIndex: 'styleNo', width: 130 },
+                { title: '申请人', dataIndex: 'pickerName', width: 100 },
+                {
+                  title: '申请时间',
+                  dataIndex: 'createTime',
+                  width: 160,
+                  render: (t) => t ? String(t).replace('T', ' ').substring(0, 16) : '-',
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'status',
+                  width: 90,
+                  render: (s) => s === 'pending'
+                    ? <Tag color="orange" icon={<ClockCircleOutlined />}>待出库</Tag>
+                    : <Tag color="green" icon={<CheckCircleOutlined />}>已出库</Tag>,
+                },
+                {
+                  title: '操作',
+                  key: 'actions',
+                  width: 120,
+                  render: (_, record) => (
+                    <Popconfirm
+                      title="确认出库"
+                      description={`确认后将实际扣减库存，不可撤销。`}
+                      onConfirm={() => void handleConfirmOutbound(record.id)}
+                      okText="确认出库"
+                      cancelText="取消"
+                    >
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<CheckCircleOutlined />}
+                        loading={confirmingPickingId === record.id}
+                      >
+                        确认出库
+                      </Button>
+                    </Popconfirm>
+                  ),
+                },
+              ]}
+            />
+          )}
         </Card>
 
       <StandardModal
