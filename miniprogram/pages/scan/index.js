@@ -585,6 +585,43 @@ Page({
     return UndoHandler.handleUndo(this);
   },
 
+  /**
+   * 历史记录列表中的撤回按钮（catchtap="onUndoHistoryRecord"）
+   * 适用于1小时内、未参与工资结算、下一工序未扫码的记录
+   * @param {Object} e - 事件对象，e.currentTarget.dataset.recordId
+   */
+  async onUndoHistoryRecord(e) {
+    const recordId = e.currentTarget.dataset.recordId;
+    if (!recordId) {
+      require('./../../utils/uiHelper').toast.error('缺少记录ID');
+      return;
+    }
+    wx.showModal({
+      title: '确认撤回',
+      content: '确认撤回该扫码记录吗？撤回后无法恢复。',
+      confirmText: '撤回',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '正在撤回...', mask: true });
+        try {
+          await require('./../../utils/api').production.undoScan({ recordId });
+          require('./../../utils/uiHelper').toast.success('已撤回');
+          // 刷新面板
+          this.loadMyPanel(true);
+          const { eventBus } = require('./../../utils/eventBus');
+          if (eventBus && typeof eventBus.emit === 'function') {
+            eventBus.emit('DATA_REFRESH');
+          }
+        } catch (err) {
+          require('./../../utils/uiHelper').toast.error('撤回失败: ' + (err.errMsg || err.message || '未知错误'));
+        } finally {
+          wx.hideLoading();
+        }
+      },
+    });
+  },
+
   // ==================== 历史记录 - 本地（委托 HistoryHandler）====================
 
   /**

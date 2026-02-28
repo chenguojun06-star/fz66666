@@ -2108,6 +2108,15 @@ page {
 .rescan-btn-hover {
   background: #ffe7ba !important;
 }
+.undo-btn {
+  color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+  background: #fff2f0 !important;
+  margin-left: auto;
+}
+.undo-btn-hover {
+  background: #ffc5c5 !important;
+}
 
 /* ===== 退回重扫确认弹窗 ===== */
 .rescan-modal {

@@ -239,6 +239,7 @@
             <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{record.isQualityReceive}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{(record.scanResult === 'success' || record.scanResult === 'qualified') && record.canRescan}}" class="hdi-action rescan-btn" hover-class="hdi-action-hover" hover-stay-time="100" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
+            <view wx:if="{{record.scanResult === 'success' && record.canUndo}}" class="hdi-action undo-btn" hover-class="undo-btn-hover" hover-stay-time="100" catchtap="onUndoHistoryRecord" data-record-id="{{record.id}}">撤回</view>
           </view>
         </view>
       </view>
