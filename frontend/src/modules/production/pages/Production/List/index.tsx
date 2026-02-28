@@ -85,6 +85,15 @@ const ProductionList: React.FC = () => {
     setSortField(field);
     setSortOrder(order);
   };
+  // ===== 用户列表（跟单员筛选用）=====
+  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
+  useEffect(() => {
+    api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>(
+      '/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } }
+    ).then(r => {
+      if (r?.code === 200) setUsers(r.data.records || []);
+    }).catch(() => {});
+  }, []);
 
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
@@ -984,6 +993,19 @@ const ProductionList: React.FC = () => {
                       { label: '全部单型', value: '' },
                       { label: '首单', value: 'FIRST' },
                       { label: '翻单', value: 'REORDER' },
+                    ]}
+                  />
+                  <Select
+                    value={queryParams.merchandiser || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, merchandiser: value || undefined, page: 1 })}
+                    placeholder="跟单员"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 100 }}
+                    options={[
+                      { label: '全部跟单员', value: '' },
+                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
                     ]}
                   />
                 </>

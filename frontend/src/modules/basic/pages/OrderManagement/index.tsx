@@ -1656,22 +1656,34 @@ const OrderManagement: React.FC = () => {
                       </Row>
 
                       <Row gutter={16}>
-                        <Col xs={24} sm={12}>
+                        <Col xs={24} sm={8}>
                           <Form.Item name="merchandiser" label="跟单员">
                             <Select
                               placeholder="请选择跟单员（选填）"
                               allowClear
                               showSearch
                               optionFilterProp="label"
-                              options={users.map(u => ({ value: u.name, label: u.name }))}
+                              options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                             />
                           </Form.Item>
                         </Col>
-                        <Col xs={24} sm={12}>
+                        <Col xs={24} sm={8}>
                           <Form.Item name="company" label="公司">
                             <SupplierSelect
                               placeholder="请选择或输入公司名称（选填）"
                               allowClear
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <Form.Item name="urgencyLevel" label="急单" initialValue="normal">
+                            <Select
+                              placeholder="普通"
+                              allowClear
+                              options={[
+                                { label: '🔴 急单', value: 'urgent' },
+                                { label: '普通', value: 'normal' },
+                              ]}
                             />
                           </Form.Item>
                         </Col>
@@ -1709,7 +1721,7 @@ const OrderManagement: React.FC = () => {
                               allowClear
                               showSearch
                               optionFilterProp="label"
-                              options={users.map(u => ({ value: u.name, label: u.name }))}
+                              options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                             />
                           </Form.Item>
                         </Col>

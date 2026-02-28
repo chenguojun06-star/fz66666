@@ -81,6 +81,7 @@ public class ProductionOrderQueryService {
         String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
         String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
+        String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -95,6 +96,7 @@ public class ProductionOrderQueryService {
                 .eq(StringUtils.hasText(status), "status", status)
                 .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
                 .eq(StringUtils.hasText(plateType), "plate_type", plateType)
+                .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
                 .eq("delete_flag", 0);
 
         // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
@@ -309,6 +311,7 @@ public class ProductionOrderQueryService {
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
         String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
+        String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
 
         // 构建基础查询条件
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
@@ -324,7 +327,8 @@ public class ProductionOrderQueryService {
                 .like("factory_name", keyword))
             .eq(StringUtils.hasText(status), "status", status)
             .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
-            .eq(StringUtils.hasText(plateType), "plate_type", plateType);
+            .eq(StringUtils.hasText(plateType), "plate_type", plateType)
+            .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser);
 
         // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");

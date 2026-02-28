@@ -313,6 +313,8 @@ export interface ProductionQueryParams {
   urgencyLevel?: string;
   /** 订单类型筛选: FIRST=首单, REORDER=翻单 */
   plateType?: string;
+  /** 跟单员筛选（模糊匹配） */
+  merchandiser?: string;
   keyword?: string;
   page: number;
   pageSize: number;

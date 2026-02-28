@@ -9,6 +9,10 @@
 .standard-toolbar-left {
   flex: 1;
   min-width: 260px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .standard-toolbar-right {

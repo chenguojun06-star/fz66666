@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, Modal, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -118,6 +118,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  // ── 用户列表（跟单员筛选）────────────────────────────────────────
+  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
+  useEffect(() => {
+    api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>(
+      '/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } }
+    ).then(r => {
+      if (r?.code === 200) setUsers(r.data.records || []);
+    }).catch(() => {});
+  }, []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -719,25 +729,52 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
-                <StandardSearchBar
-                  searchValue={String(queryParams.keyword || '')}
-                  onSearchChange={(value) =>
-                    setQueryParams((prev) => ({
-                      ...prev,
-                      page: 1,
-                      keyword: value,
-                      orderNo: undefined,
-                      styleNo: undefined,
-                      factoryName: undefined,
-                    }))
-                  }
-                  searchPlaceholder="搜索订单号/款号/工厂"
-                  dateValue={dateRange}
-                  onDateChange={(value) => setDateRange(value)}
-                  statusValue={String(queryParams.status || '')}
-                  onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
-                  statusOptions={statusOptions}
-                />
+                <>
+                  <StandardSearchBar
+                    searchValue={String(queryParams.keyword || '')}
+                    onSearchChange={(value) =>
+                      setQueryParams((prev) => ({
+                        ...prev,
+                        page: 1,
+                        keyword: value,
+                        orderNo: undefined,
+                        styleNo: undefined,
+                        factoryName: undefined,
+                      }))
+                    }
+                    searchPlaceholder="搜索订单号/款号/工厂"
+                    dateValue={dateRange}
+                    onDateChange={(value) => setDateRange(value)}
+                    statusValue={String(queryParams.status || '')}
+                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                    statusOptions={statusOptions}
+                  />
+                  <Select
+                    value={queryParams.urgencyLevel || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, urgencyLevel: value || undefined, page: 1 }))}
+                    placeholder="紧急程度"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={[
+                      { label: '全部紧急度', value: '' },
+                      { label: '🔴 急单', value: 'urgent' },
+                      { label: '普通', value: 'normal' },
+                    ]}
+                  />
+                  <Select
+                    value={queryParams.merchandiser || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
+                    placeholder="跟单员"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 100 }}
+                    options={[
+                      { label: '全部跟单员', value: '' },
+                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
+                    ]}
+                  />
+                </>
               )}
               right={(
                 <Button
@@ -877,25 +914,52 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
-                <StandardSearchBar
-                  searchValue={String(queryParams.keyword || '')}
-                  onSearchChange={(value) =>
-                    setQueryParams((prev) => ({
-                      ...prev,
-                      page: 1,
-                      keyword: value,
-                      orderNo: undefined,
-                      styleNo: undefined,
-                      factoryName: undefined,
-                    }))
-                  }
-                  searchPlaceholder="搜索订单号/款号/工厂"
-                  dateValue={dateRange}
-                  onDateChange={(value) => setDateRange(value)}
-                  statusValue={String(queryParams.status || '')}
-                  onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
-                  statusOptions={statusOptions}
-                />
+                <>
+                  <StandardSearchBar
+                    searchValue={String(queryParams.keyword || '')}
+                    onSearchChange={(value) =>
+                      setQueryParams((prev) => ({
+                        ...prev,
+                        page: 1,
+                        keyword: value,
+                        orderNo: undefined,
+                        styleNo: undefined,
+                        factoryName: undefined,
+                      }))
+                    }
+                    searchPlaceholder="搜索订单号/款号/工厂"
+                    dateValue={dateRange}
+                    onDateChange={(value) => setDateRange(value)}
+                    statusValue={String(queryParams.status || '')}
+                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                    statusOptions={statusOptions}
+                  />
+                  <Select
+                    value={queryParams.urgencyLevel || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, urgencyLevel: value || undefined, page: 1 }))}
+                    placeholder="紧急程度"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={[
+                      { label: '全部紧急度', value: '' },
+                      { label: '🔴 急单', value: 'urgent' },
+                      { label: '普通', value: 'normal' },
+                    ]}
+                  />
+                  <Select
+                    value={queryParams.merchandiser || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
+                    placeholder="跟单员"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 100 }}
+                    options={[
+                      { label: '全部跟单员', value: '' },
+                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
+                    ]}
+                  />
+                </>
               )}
               right={(
                 <Space>
