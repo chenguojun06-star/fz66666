@@ -190,6 +190,8 @@ function _addRecordToGroup(group, record) {
     scanResult: record.scanResult,
     scanCode: record.scanCode || '',
     operatorName: record.operatorName || record.operator_name || '',
+    operatorId: record.operatorId || record.operator_id || '',
+    displayOperator: record.operatorName || record.operator_name || record.operatorId || record.operator_id || '',
     canRescan: canRescan && !payrollSettled,
     canUndo: canRescan && !payrollSettled,
     payrollSettled: payrollSettled,

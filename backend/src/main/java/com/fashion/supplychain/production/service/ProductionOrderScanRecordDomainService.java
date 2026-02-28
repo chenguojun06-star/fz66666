@@ -25,12 +25,48 @@ public class ProductionOrderScanRecordDomainService {
     public static final String REQUEST_PREFIX_PROCUREMENT = "ORDER_PROCUREMENT:";
 
     private static final String PACKAGING_PROCESS_NAME = "包装";
+    private static final String UNKNOWN_OPERATOR = "未知操作人";
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return StringUtils.hasText(trimmed) ? trimmed : null;
+    }
+
+    private String resolveOperatorName(String operatorName, String operatorId, String existingOperatorName) {
+        String direct = trimToNull(operatorName);
+        if (direct != null) {
+            return direct;
+        }
+
+        UserContext ctx = UserContext.get();
+        if (ctx != null) {
+            String ctxName = trimToNull(ctx.getUsername());
+            if (ctxName != null) {
+                return ctxName;
+            }
+        }
+
+        String existing = trimToNull(existingOperatorName);
+        if (existing != null) {
+            return existing;
+        }
+
+        String idFallback = trimToNull(operatorId);
+        if (idFallback != null) {
+            return idFallback;
+        }
+
+        return UNKNOWN_OPERATOR;
+    }
 
     public int clampPercent(int progress) {
         if (progress < 0) {
@@ -125,7 +161,7 @@ public class ProductionOrderScanRecordDomainService {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
-        String operatorNameTrimmed = operatorName == null ? null : operatorName.trim();
+        String operatorNameTrimmed = trimToNull(operatorName);
 
         String remark = act;
         if (StringUtils.hasText(message)) {
@@ -147,7 +183,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setProcessName(act);
         String opId = operatorId == null ? null : operatorId.trim();
         sr.setOperatorId(StringUtils.hasText(opId) ? opId : null);
-        sr.setOperatorName(StringUtils.hasText(operatorNameTrimmed) ? operatorNameTrimmed : "system");
+        sr.setOperatorName(resolveOperatorName(operatorNameTrimmed, opId, null));
         sr.setScanTime(t);
         sr.setScanType("orchestration");
         sr.setScanResult("failure");
@@ -284,8 +320,9 @@ public class ProductionOrderScanRecordDomainService {
             sr.setQuantity(Math.max(0, quantity));
             sr.setProgressStage(processName);
             sr.setProcessName(processName);
-            sr.setOperatorId(operatorId);
-            sr.setOperatorName(StringUtils.hasText(operatorName) ? operatorName : "system");
+            String opId = trimToNull(operatorId);
+            sr.setOperatorId(opId);
+            sr.setOperatorName(resolveOperatorName(operatorName, opId, null));
             sr.setScanType("production");
             sr.setScanResult("success");
             sr.setRemark(processName);
@@ -299,8 +336,9 @@ public class ProductionOrderScanRecordDomainService {
         ScanRecord patch = new ScanRecord();
         patch.setId(existing.getId());
         patch.setQuantity(Math.max(0, quantity));
-        patch.setOperatorId(operatorId);
-        patch.setOperatorName(StringUtils.hasText(operatorName) ? operatorName : existing.getOperatorName());
+        String opId = trimToNull(operatorId);
+        patch.setOperatorId(opId);
+        patch.setOperatorName(resolveOperatorName(operatorName, opId, existing.getOperatorName()));
         if (scanTime != null) {
             patch.setScanTime(scanTime);
         }
@@ -335,10 +373,7 @@ public class ProductionOrderScanRecordDomainService {
             operatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
             operatorName = order.getCreatedByName().trim();
         }
-        if (operatorName == null) {
-            log.warn("订单创建扫码记录无法获取操作人，使用系统默认值：orderId={}, orderNo={}", oid, order.getOrderNo());
-            operatorName = "system";
-        }
+        operatorName = resolveOperatorName(operatorName, operatorId, order.getCreatedByName());
 
         upsertStageScanRecord(
                 REQUEST_PREFIX_ORDER_CREATED + oid,
@@ -368,7 +403,7 @@ public class ProductionOrderScanRecordDomainService {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
-        String operatorNameTrimmed = operatorName == null ? null : operatorName.trim();
+        String operatorNameTrimmed = trimToNull(operatorName);
 
         ScanRecord sr = new ScanRecord();
         sr.setRequestId("ORDER_ADVANCE:" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
@@ -382,7 +417,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setProgressStage(pn);
         sr.setProcessName(pn);
         sr.setOperatorId(operatorId);
-        sr.setOperatorName(StringUtils.hasText(operatorNameTrimmed) ? operatorNameTrimmed : "system");
+        sr.setOperatorName(resolveOperatorName(operatorNameTrimmed, operatorId, null));
         sr.setScanType("production");
         sr.setScanResult("success");
         sr.setRemark("推进：手动调整进度到" + pn + "（" + clampPercent(toProgress) + "%）");
@@ -407,7 +442,7 @@ public class ProductionOrderScanRecordDomainService {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
-        String operatorNameTrimmed = operatorName == null ? null : operatorName.trim();
+        String operatorNameTrimmed = trimToNull(operatorName);
 
         String r = StringUtils.hasText(remark) ? remark.trim() : "";
         String finalRemark = StringUtils.hasText(r) ? (act + "：" + r) : act;
@@ -430,7 +465,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setProcessName(act);
         String opId = operatorId == null ? null : operatorId.trim();
         sr.setOperatorId(StringUtils.hasText(opId) ? opId : null);
-        sr.setOperatorName(StringUtils.hasText(operatorNameTrimmed) ? operatorNameTrimmed : "system");
+        sr.setOperatorName(resolveOperatorName(operatorNameTrimmed, opId, null));
         sr.setScanType("production");
         sr.setScanResult("success");
         sr.setRemark(finalRemark);
@@ -458,7 +493,7 @@ public class ProductionOrderScanRecordDomainService {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
-        String operatorNameTrimmed = operatorName == null ? null : operatorName.trim();
+        String operatorNameTrimmed = trimToNull(operatorName);
 
         ScanRecord sr = new ScanRecord();
         sr.setRequestId("ORDER_ROLLBACK:" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
@@ -472,7 +507,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setProgressStage(pn);
         sr.setProcessName(pn);
         sr.setOperatorId(operatorId);
-        sr.setOperatorName(StringUtils.hasText(operatorNameTrimmed) ? operatorNameTrimmed : "system");
+        sr.setOperatorName(resolveOperatorName(operatorNameTrimmed, operatorId, null));
         sr.setScanType("production");
         sr.setScanResult("success");
         sr.setRemark("退回：" + (remark == null ? "" : remark.trim()));

@@ -235,7 +235,7 @@
           </view>
           <view class="hdi-row">
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
-            <text wx:if="{{record.operatorName}}" class="hdi-operator">{{record.operatorName}}</text>
+            <text wx:if="{{record.displayOperator}}" class="hdi-operator">{{record.displayOperator}}</text>
             <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{record.isQualityReceive}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{(record.scanResult === 'success' || record.scanResult === 'qualified') && record.canRescan}}" class="hdi-action rescan-btn" hover-class="hdi-action-hover" hover-stay-time="100" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
