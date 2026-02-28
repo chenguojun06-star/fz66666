@@ -35,7 +35,7 @@ const SmartDailyBrief: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get('/api/dashboard/daily-brief')
+    api.get('/dashboard/daily-brief')
       .then((res: DailyBriefData) => {
         setData(res);
       })
