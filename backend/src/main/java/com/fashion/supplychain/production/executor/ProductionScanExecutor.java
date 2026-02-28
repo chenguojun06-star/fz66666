@@ -250,8 +250,15 @@ public class ProductionScanExecutor {
         try {
             String scanTimeStr = TextUtils.safeText(params.get("scanTime"));
             if (hasText(scanTimeStr)) {
-                // 支持 ISO 格式
-                clientScanTime = LocalDateTime.parse(scanTimeStr, java.time.format.DateTimeFormatter.ISO_DATE_TIME);
+                try {
+                    // 支持带 Z 的 UTC ISO 格式，转换为系统默认时区
+                    clientScanTime = java.time.Instant.parse(scanTimeStr)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDateTime();
+                } catch (Exception ex) {
+                    // 兜底：普通的无时区 ISO 格式
+                    clientScanTime = LocalDateTime.parse(scanTimeStr, java.time.format.DateTimeFormatter.ISO_DATE_TIME);
+                }
             }
         } catch (Exception e) {
             log.warn("解析客户端scanTime失败: {}", params.get("scanTime"));
