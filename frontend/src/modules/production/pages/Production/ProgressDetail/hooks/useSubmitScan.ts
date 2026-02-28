@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
 import { intelligenceApi } from '@/services/production/productionApi';
+import { confirmPrecheckRisk } from '../components/SmartPrecheckModal';
 import type { ProgressNode } from '../types';
 import { getCurrentWorkflowNodeForOrder, isCuttingStageKey } from '../utils';
 
@@ -195,11 +196,12 @@ export const useSubmitScan = ({
 
         const precheckResult = precheckResp as any;
         if (Number(precheckResult?.code) === 200) {
-          const issues = Array.isArray(precheckResult?.data?.issues) ? precheckResult.data.issues : [];
-          if (issues.length > 0) {
-            const first = issues[0] || {};
-            const tip = String(first.title || first.reason || first.suggestion || '存在潜在风险，请确认后继续').trim();
-            message.warning?.(`智能预检提示：${tip}`);
+          const precheckData = precheckResult?.data || {};
+          // 分级风险弹窗：LOW 静默通过，MEDIUM 可确认，HIGH 阻断需强制
+          const proceed = await confirmPrecheckRisk(precheckData);
+          if (!proceed) {
+            // 用户选择「返回修改」，由 finally 块重置 submitting 状态
+            return;
           }
         }
       } catch {
