@@ -210,7 +210,16 @@ async function onConfirmScanResult(ctx) {
       toast.error('提交失败');
     }
   } catch (e) {
-    toast.error(e.errMsg || e.message || '提交失败');
+    const raw = e && (e.errMsg || e.message || '');
+    let msg = raw;
+    if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
+      msg = '网络连接中断，请稍后重试（服务器可能正在更新）';
+    } else if (raw.includes('timeout')) {
+      msg = '网络超时，请检查网络后重试';
+    } else if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
+      msg = '无法连接服务器，请检查网络设置';
+    }
+    toast.error(msg || '提交失败，请重试');
   } finally {
     ctx.setData({ 'scanResultConfirm.loading': false });
   }

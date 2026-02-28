@@ -11,6 +11,37 @@
  * @date 2026-02-15
  */
 
+/**
+ * 将网络底层错误码转换为用户友好的中文提示
+ * @param {Error|Object} e - 错误对象
+ * @returns {string} 用户友好的错误消息
+ */
+function _friendlyNetworkError(e) {
+  const raw = e && (e.errMsg || e.message || '');
+  if (!raw) return '提交失败，请重试';
+  // 网络连接重置（云端重启/网络中断）
+  if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
+    return '网络连接中断，请稍后重试（服务器可能正在更新）';
+  }
+  // 请求超时
+  if (raw.includes('timeout')) {
+    return '网络超时，请检查网络后重试';
+  }
+  // 连接失败（WiFi断开、飞行模式）
+  if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
+    return '无法连接服务器，请检查网络设置';
+  }
+  // DNS解析失败
+  if (raw.includes('ERR_NAME_NOT_RESOLVED') || raw.includes('errcode:-105')) {
+    return '网络异常，请检查网络连接';
+  }
+  // 业务错误（后端返回的 message）
+  if (e && e.type === 'biz' && e.errMsg) {
+    return e.errMsg;
+  }
+  return e && e.errMsg || e && e.message || '提交失败，请重试';
+}
+
 class ScanSubmitter {
   constructor(api) {
     this.api = api;
@@ -61,18 +92,9 @@ class ScanSubmitter {
       }
     } catch (e) {
       console.error('[ScanSubmitter] 提交扫码失败:', e);
-
-      // 判断是否为网络错误
-      if (e.errMsg && e.errMsg.includes('timeout')) {
-        return {
-          success: false,
-          message: '网络超时，请检查网络后重试',
-        };
-      }
-
       return {
         success: false,
-        message: e.errMsg || e.message || '提交失败',
+        message: _friendlyNetworkError(e),
       };
     }
   }

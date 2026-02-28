@@ -618,47 +618,45 @@ class StageDetector {
    * @returns {Promise<Array>} 扫码记录数组
    */
   async _getScanHistory(orderNo, bundleNo) {
-    try {
-      // ✅ 使用 listScans（不带 currentUser）查询所有用户的扫码记录
-      const historyRes = await this.api.production.listScans({
-        page: 1,
-        pageSize: 100,
-        orderNo: orderNo,
-        bundleNo: bundleNo,
-      });
+    // ⚠️ 注意：此处不能静默 catch 并返回 []！
+    // 若网络异常返回空数组，会导致 scannedProcessNames={} → 所有工序都被认为未完成
+    // → 始终识别第一个工序而非实际下一工序 →「大烫一直识别、扫码无效」循环问题
+    // 正确做法：网络异常直接抛出，让上层显示「网络异常，请检查网络后重试」
+    const historyRes = await this.api.production.listScans({
+      page: 1,
+      pageSize: 100,
+      orderNo: orderNo,
+      bundleNo: bundleNo,
+    });
 
-      const allRecords = historyRes && historyRes.records ? historyRes.records : [];
+    const allRecords = historyRes && historyRes.records ? historyRes.records : [];
 
-      // ✅ 修复：过滤掉系统自动生成的记录
-      // 统计手动扫码的【生产工序】记录（车缝、大烫、质检等）
-      const manualRecords = allRecords.filter(record => {
-        const requestId = (record.requestId || '').trim();
-        const scanType = (record.scanType || '').toLowerCase();
+    // ✅ 修复：过滤掉系统自动生成的记录
+    // 统计手动扫码的【生产工序】记录（车缝、大烫、质检等）
+    const manualRecords = allRecords.filter(record => {
+      const requestId = (record.requestId || '').trim();
+      const scanType = (record.scanType || '').toLowerCase();
 
-        // 排除系统自动生成的记录（根据 requestId 前缀判断）
-        const isSystemGenerated =
-          requestId.startsWith('ORDER_CREATED:') ||
-          requestId.startsWith('CUTTING_BUNDLED:') ||
-          requestId.startsWith('ORDER_PROCUREMENT:') ||
-          requestId.startsWith('WAREHOUSING:') ||
-          requestId.startsWith('SYSTEM:');
+      // 排除系统自动生成的记录（根据 requestId 前缀判断）
+      const isSystemGenerated =
+        requestId.startsWith('ORDER_CREATED:') ||
+        requestId.startsWith('CUTTING_BUNDLED:') ||
+        requestId.startsWith('ORDER_PROCUREMENT:') ||
+        requestId.startsWith('WAREHOUSING:') ||
+        requestId.startsWith('SYSTEM:');
 
-        // 统计 production 和 quality 类型的扫码记录
-        const isValidScan = scanType === 'production' || scanType === 'quality';
+      // 统计 production 和 quality 类型的扫码记录
+      const isValidScan = scanType === 'production' || scanType === 'quality';
 
-        // ✅ 修复：只统计扫码成功的记录，失败记录不应阻断工序流转
-        // 原因：若某次扫码 scanResult='fail'，该工序实际未完成，
-        //       不能将其计入 scannedProcessNames，否则下次扫同一菲号会跳到错误的下一工序
-        const isSuccess = record.scanResult === 'success';
+      // ✅ 修复：只统计扫码成功的记录，失败记录不应阻断工序流转
+      // 原因：若某次扫码 scanResult='fail'，该工序实际未完成，
+      //       不能将其计入 scannedProcessNames，否则下次扫同一菲号会跳到错误的下一工序
+      const isSuccess = record.scanResult === 'success';
 
-        return !isSystemGenerated && isValidScan && isSuccess;
-      });
+      return !isSystemGenerated && isValidScan && isSuccess;
+    });
 
-      return manualRecords;
-    } catch (e) {
-      console.error('[StageDetector] 查询扫码历史失败:', e);
-      return [];
-    }
+    return manualRecords;
   }
 
 }

@@ -313,7 +313,21 @@ class ScanHandler {
     }
 
     console.error('[ScanHandler] 扫码处理异常:', e);
-    const errorMsg = e.errMsg || e.message || '扫码失败，请重试';
+
+    // 将底层网络错误码转换为用户友好的中文提示
+    const raw = e && (e.errMsg || e.message || '');
+    let errorMsg;
+    if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
+      errorMsg = '网络连接中断，请稍后重试（服务器可能正在更新）';
+    } else if (raw.includes('timeout')) {
+      errorMsg = '网络超时，请检查网络后重试';
+    } else if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
+      errorMsg = '无法连接服务器，请检查网络设置';
+    } else if (raw.includes('ERR_NAME_NOT_RESOLVED') || raw.includes('errcode:-105')) {
+      errorMsg = '网络异常，请检查网络连接';
+    } else {
+      errorMsg = raw || '扫码失败，请重试';
+    }
 
     if (this.options.onError) {
       this.options.onError(errorMsg);
