@@ -1087,16 +1087,26 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               !isPatternProduction && {
                 key: 'processTracking',
                 label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
-                children: (
-                  <ProcessTrackingTable
-                    records={processTrackingRecords}
-                    loading={trackingLoading}
-                    nodeType={nodeType}
-                    nodeName={nodeName}
-                    processList={processList}
-                    onUndoSuccess={handleUndoSuccess}
-                  />
-                ),
+                children: (() => {
+                  // processList 是全量节点列表（用于委派下拉）。
+                  // ProcessTrackingTable 过滤只能用当前点击节点自身，
+                  // 否则 Strategy-0 会命中所有节点名导致全量展示。
+                  const nodeLabel = String(nodeName || '').trim().toLowerCase();
+                  const trackingFilterList = processList.filter((p) => {
+                    const pName = String((p as any)?.name || (p as any)?.processName || '').trim().toLowerCase();
+                    return pName && (pName === nodeLabel || pName.includes(nodeLabel) || nodeLabel.includes(pName));
+                  });
+                  return (
+                    <ProcessTrackingTable
+                      records={processTrackingRecords}
+                      loading={trackingLoading}
+                      nodeType={nodeType}
+                      nodeName={nodeName}
+                      processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}
+                      onUndoSuccess={handleUndoSuccess}
+                    />
+                  );
+                })(),
               },
 
             ].filter(Boolean);
