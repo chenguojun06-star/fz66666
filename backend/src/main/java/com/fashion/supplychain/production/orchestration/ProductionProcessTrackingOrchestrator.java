@@ -406,17 +406,47 @@ public class ProductionProcessTrackingOrchestrator {
                 return records;
             }
 
+            // 构建当前模板名称列表，用于同义词映射和单价查找
             Map<String, BigDecimal> priceMap = new HashMap<>();
+            List<String> templateCurrentNames = new ArrayList<>();
             for (Map<String, Object> tn : templateNodes) {
                 String name = getStringValue(tn, "name", "").trim();
                 BigDecimal price = getBigDecimalValue(tn, "unitPrice", BigDecimal.ZERO);
                 if (!name.isEmpty()) {
                     priceMap.put(name, price);
+                    templateCurrentNames.add(name);
                 }
             }
 
             if (priceMap.isEmpty()) {
                 return records;
+            }
+
+            // 用模板最新名称覆盖跟踪记录中的旧工序名（仅内存覆盖，不写DB）
+            // 场景：裁剪时工序叫"大烫"，后来模板改名，DB里还是"大烫"，
+            //       通过同义词映射找到对应的当前名称并覆盖显示。
+            for (ProductionProcessTracking tracking : records) {
+                String oldName = tracking.getProcessName() == null ? "" : tracking.getProcessName().trim();
+                if (oldName.isEmpty()) continue;
+
+                // 直接命中：跳过（名字未改）
+                if (priceMap.containsKey(oldName)) continue;
+
+                // 同义词匹配：找到当前模板中等价的名称
+                String currentName = null;
+                for (String tplName : templateCurrentNames) {
+                    if (templateLibraryService.progressStageNameMatches(tplName, oldName)) {
+                        currentName = tplName;
+                        break;
+                    }
+                }
+                if (currentName != null) {
+                    tracking.setProcessName(currentName);
+                    // processCode 在本系统中存储的也是工序名（非稳定码），一并更新
+                    if (oldName.equals(tracking.getProcessCode())) {
+                        tracking.setProcessCode(currentName);
+                    }
+                }
             }
 
             // 用模板最新价格覆盖记录中的旧价格（仅在内存中覆盖，不写DB）

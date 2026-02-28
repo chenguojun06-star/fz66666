@@ -95,7 +95,23 @@ export const ensureBoardStatsForOrder = async ({
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
       const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
-      const done = matchingRecords.reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
+      // maxByBundle: 父节点下有多个子工序时，同一 bundle 会产生多条扫码记录（每个子工序一条）。
+      // 直接 SUM 会把子工序数量叠加，导致进度球数量虚高（尾部4子工序×10件=40，SUM=160）。
+      // 改用 maxByBundle：每个 bundle 只取最大量（= bundle 实际件数），确保父节点显示物理件数。
+      const maxByBundle = new Map<string, number>();
+      let nonBundleSum = 0;
+      for (const r of matchingRecords) {
+        const bundleId = String((r as any)?.cuttingBundleId || '').trim();
+        const qty = Number((r as any)?.quantity) || 0;
+        if (bundleId) {
+          const prev = maxByBundle.get(bundleId) ?? 0;
+          if (qty > prev) maxByBundle.set(bundleId, qty);
+        } else {
+          nonBundleSum += qty;
+        }
+      }
+      let done = nonBundleSum;
+      maxByBundle.forEach((q) => { done += q; });
       stats[nodeName] = done;
       hasScanByNode[nodeName] = matchingRecords.length > 0;
     }
