@@ -21,6 +21,9 @@ const STAGES_DEF = [
   { key: 'warehousingCompletionRate', label: '入库' },
 ] as const;
 
+/** 固定展示顺序（工厂有自定义工序时也按此排） */
+const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '质检', '入库'];
+
 function fieldRate(o: ProductionOrder, key: string): number {
   return Math.min(100, Math.max(0, Number((o as any)[key]) || 0));
 }
@@ -38,20 +41,47 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
   const prog        = Number(order.productionProgress) || 0;
 
-  /* 所有工序的实际数据 */
-  const stages = useMemo(() => STAGES_DEF.map(s => {
-    const fromBoard = boardStats ? ((boardStats as Record<string, number>)[s.label] ?? 0) : 0;
-    const fromField = fieldRate(order, s.key);
-    const qty = fromBoard > 0 ? fromBoard
-              : fromField > 0 && total > 0 ? Math.round(fromField / 100 * total)
-              : 0;
-    const pct = fromBoard > 0 && total > 0
-              ? Math.min(100, Math.round(fromBoard / total * 100))
-              : fromField;
-    const lastTime = boardTimes[s.label]
-      ? dayjs(boardTimes[s.label]).format('MM-DD HH:mm') : null;
-    return { label: s.label, qty, pct, lastTime };
-  }), [order, boardStats, boardTimes, total]);
+  /* 所有工序的实际数据：动态合并 boardStats 工序 + STAGES_DEF 字段兜底工序 */
+  const stages = useMemo(() => {
+    // boardStats 里有扫码记录的工序名
+    const boardKeys = boardStats
+      ? Object.keys(boardStats as Record<string, number>).filter(
+          k => ((boardStats as Record<string, number>)[k] ?? 0) > 0
+        )
+      : [];
+    // 合并 boardStats 工序 + STAGES_DEF 工序，去重
+    const allLabels = Array.from(
+      new Set([...boardKeys, ...STAGES_DEF.map(s => s.label)])
+    );
+    // 按 STAGE_ORDER 排序，未知工序排最后
+    allLabels.sort((a, b) => {
+      const ai = STAGE_ORDER.indexOf(a);
+      const bi = STAGE_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+    return allLabels.map(label => {
+      const fromBoard = boardStats
+        ? ((boardStats as Record<string, number>)[label] ?? 0)
+        : 0;
+      const fieldDef = STAGES_DEF.find(s => s.label === label);
+      const fromField = fieldDef ? fieldRate(order, fieldDef.key) : 0;
+      const qty = fromBoard > 0
+        ? fromBoard
+        : fromField > 0 && total > 0
+          ? Math.round(fromField / 100 * total)
+          : 0;
+      const pct = fromBoard > 0 && total > 0
+        ? Math.min(100, Math.round(fromBoard / total * 100))
+        : fromField;
+      const lastTime = boardTimes[label]
+        ? dayjs(boardTimes[label]).format('MM-DD HH:mm') : null;
+      return { label, qty, pct, lastTime };
+    });
+  }, [order, boardStats, boardTimes, total]);
 
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
@@ -86,17 +116,24 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     return null;
   }, [isCompleted, daysLeft, prog]);
 
-  /* 速度：整体完成量 / 开工天数，不依赖特定工序 */
+  /* 速度：取单工序最大件数 / 开工天数
+   * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高 */
   const speed = useMemo(() => {
     const orderStart = order.createTime ? dayjs(order.createTime) : null;
     const elap = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
     const completedQty = Number(order.completedQuantity) || 0;
-    const fromProg = prog > 0 && total > 0 ? Math.round(prog / 100 * total) : 0;
-    const fromBoard = boardStats
-      ? Object.values(boardStats as Record<string, number>).reduce((s, v) => s + (v ?? 0), 0)
+    // 优先用真实入库完成数
+    if (completedQty > 0) return completedQty / elap;
+    // 用单工序最大件数（不跨工序累加，防止同一批件重复计）
+    const maxStageQty = boardStats
+      ? Math.max(
+          0,
+          ...Object.values(boardStats as Record<string, number>).map(v => Number(v) || 0)
+        )
       : 0;
-    const done = Math.max(completedQty, fromProg, fromBoard);
-    return done > 0 && elap > 0 ? done / elap : 0;
+    const fromProg = prog > 0 && total > 0 ? Math.round(prog / 100 * total) : 0;
+    const done = Math.max(maxStageQty, fromProg);
+    return done > 0 ? done / elap : 0;
   }, [order, prog, total, boardStats, now]);
 
   /**
