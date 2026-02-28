@@ -31,16 +31,28 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    chunkSizeWarningLimit: 500,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    chunkSizeWarningLimit: 800,
+    // esbuild: 内置、速度是 terser 的 10x、内存占用极低
+    // terser 在云端内存受限环境（1-2GB）压缩 ECharts 等大 chunk 时 OOM 被杀，
+    // 导致 dist/assets/ 只生成了一部分，引用这些文件的 index.html 上线后 404
+    minify: 'esbuild',
     rollupOptions: {
-    }
+      output: {
+        // 手动拆分大依赖，防止单 chunk 超过 1MB 引发 OOM
+        manualChunks: (id) => {
+          // ECharts 单独拆（压缩后约 375KB）
+          if (id.includes('echarts') || id.includes('zrender')) return 'vendor-echarts';
+          // exceljs 单独拆（大且只在导入页用到）
+          if (id.includes('exceljs')) return 'vendor-exceljs';
+          // antd 组件库拆出
+          if (id.includes('node_modules/antd') || id.includes('node_modules/@ant-design/icons')) return 'vendor-antd';
+          // React 核心
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor-react';
+          // 其余 node_modules 合并为一个 vendor chunk
+          if (id.includes('node_modules')) return 'vendor-misc';
+        },
+      },
+    },
   },
   server: {
     // ================================================
