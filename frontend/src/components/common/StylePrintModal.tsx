@@ -816,6 +816,16 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           {/* 生产制单（生产要求） */}
           {options.productionSheet && (() => {
             const description = data.productionSheet?.description || '';
+            const sampleReviewStatus = String((data.productionSheet as any)?.sampleReviewStatus || '').trim().toUpperCase();
+            const sampleReviewComment = String((data.productionSheet as any)?.sampleReviewComment || '').trim();
+            const sampleReviewer = String((data.productionSheet as any)?.sampleReviewer || '').trim();
+            const sampleReviewTime = (data.productionSheet as any)?.sampleReviewTime;
+            const reviewLabel =
+              sampleReviewStatus === 'PASS' ? '通过'
+                : sampleReviewStatus === 'REWORK' ? '需修改'
+                  : sampleReviewStatus === 'REJECT' ? '不通过'
+                    : sampleReviewStatus === 'PENDING' ? '待审核'
+                      : '';
             // 将 description 拆分成多行
             const lines = description
               .split(/\r?\n/)
@@ -827,6 +837,19 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             return (
               <div className="print-section">
                 <div className="print-section-title">📋 生产要求</div>
+                {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
+                  <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
+                    <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>
+                    <div style={{ fontSize: 12, lineHeight: '20px' }}>
+                      <span>审核状态：{reviewLabel || '-'}</span>
+                      <span style={{ marginLeft: 16 }}>审核人：{sampleReviewer || '-'}</span>
+                      <span style={{ marginLeft: 16 }}>审核时间：{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</span>
+                    </div>
+                    {sampleReviewComment && (
+                      <div style={{ marginTop: 4, fontSize: 12, whiteSpace: 'pre-wrap' }}>审核评语：{sampleReviewComment}</div>
+                    )}
+                  </div>
+                )}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr style={{ background: 'var(--color-bg-container)' }}>

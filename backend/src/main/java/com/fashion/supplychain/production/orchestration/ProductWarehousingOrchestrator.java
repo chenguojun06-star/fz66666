@@ -590,6 +590,10 @@ public class ProductWarehousingOrchestrator {
                     styleData.put("styleNo", styleInfo.getStyleNo());
                     styleData.put("styleName", styleInfo.getStyleName());
                     styleData.put("description", styleInfo.getDescription());
+                    styleData.put("sampleReviewStatus", styleInfo.getSampleReviewStatus());
+                    styleData.put("sampleReviewComment", styleInfo.getSampleReviewComment());
+                    styleData.put("sampleReviewer", styleInfo.getSampleReviewer());
+                    styleData.put("sampleReviewTime", styleInfo.getSampleReviewTime());
                     briefing.put("style", styleData);
                 }
             } catch (Exception e) {

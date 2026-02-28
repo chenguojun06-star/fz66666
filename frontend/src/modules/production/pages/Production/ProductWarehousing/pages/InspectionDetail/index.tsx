@@ -37,6 +37,10 @@ interface QualityBriefingData {
   style: {
     cover: string; sizeColorConfig: string; category: string;
     styleNo: string; styleName: string; description: string;
+    sampleReviewStatus?: string;
+    sampleReviewComment?: string;
+    sampleReviewer?: string;
+    sampleReviewTime?: string;
   };
   bom: Array<{
     id: string; materialCode: string; materialName: string;
@@ -888,12 +892,41 @@ const InspectionDetail: React.FC = () => {
                               </div>
                             );
                           }
+                          const reviewStatus = String(style?.sampleReviewStatus || '').trim().toUpperCase();
+                          const reviewComment = String(style?.sampleReviewComment || '').trim();
+                          const reviewBy = String(style?.sampleReviewer || '').trim();
+                          const reviewTime = String(style?.sampleReviewTime || '').trim();
+                          const reviewLabel =
+                            reviewStatus === 'PASS' ? '通过'
+                              : reviewStatus === 'REWORK' ? '需修改'
+                                : reviewStatus === 'REJECT' ? '不通过'
+                                  : reviewStatus === 'PENDING' ? '待审核'
+                                    : '';
                           const rawLines = desc.split(/\r?\n/).map(s => s.replace(/^\d+[.、\s]+/, '').trim()).filter(Boolean);
                           const fixedRows = Array.from({ length: Math.max(15, rawLines.length) }, (_, i) => ({
                             key: i, seq: i + 1, content: rawLines[i] || '',
                           }));
                           return (
                             <>
+                              {(reviewLabel || reviewComment || reviewBy || reviewTime) && (
+                                <div style={{
+                                  marginBottom: 12,
+                                  padding: '10px 12px',
+                                  border: '1px solid var(--neutral-border, #e8e8e8)',
+                                  borderRadius: 6,
+                                  background: 'var(--neutral-bg, #fafafa)',
+                                  fontSize: 12,
+                                  lineHeight: '20px',
+                                }}>
+                                  <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>
+                                  <div>
+                                    <span>审核状态：{reviewLabel || '-'}</span>
+                                    <span style={{ marginLeft: 16 }}>审核人：{reviewBy || '-'}</span>
+                                    <span style={{ marginLeft: 16 }}>审核时间：{reviewTime ? formatDateTime(reviewTime) : '-'}</span>
+                                  </div>
+                                  {reviewComment && <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>审核评语：{reviewComment}</div>}
+                                </div>
+                              )}
                               <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
                               <ResizableTable
                                 storageKey="inspection-requirements"

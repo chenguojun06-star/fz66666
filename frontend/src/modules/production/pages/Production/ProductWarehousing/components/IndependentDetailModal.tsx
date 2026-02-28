@@ -58,12 +58,27 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
   // Fetch style description (生产制单) from style info API
   const [styleDescription, setStyleDescription] = useState('');
+  const [styleSampleReviewStatus, setStyleSampleReviewStatus] = useState('');
+  const [styleSampleReviewComment, setStyleSampleReviewComment] = useState('');
+  const [styleSampleReviewer, setStyleSampleReviewer] = useState('');
+  const [styleSampleReviewTime, setStyleSampleReviewTime] = useState('');
   useEffect(() => {
-    if (!styleId || !open) { setStyleDescription(''); return; }
+    if (!styleId || !open) {
+      setStyleDescription('');
+      setStyleSampleReviewStatus('');
+      setStyleSampleReviewComment('');
+      setStyleSampleReviewer('');
+      setStyleSampleReviewTime('');
+      return;
+    }
     let cancelled = false;
     api.get<{ code: number; data: any }>(`/api/style/info/${styleId}`).then(res => {
       if (!cancelled && res?.data) {
         setStyleDescription(String(res.data.description || '').trim());
+        setStyleSampleReviewStatus(String(res.data.sampleReviewStatus || '').trim().toUpperCase());
+        setStyleSampleReviewComment(String(res.data.sampleReviewComment || '').trim());
+        setStyleSampleReviewer(String(res.data.sampleReviewer || '').trim());
+        setStyleSampleReviewTime(String(res.data.sampleReviewTime || '').trim());
       }
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -287,12 +302,37 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                         </div>
                       );
                     }
+                    const reviewLabel =
+                      styleSampleReviewStatus === 'PASS' ? '通过'
+                        : styleSampleReviewStatus === 'REWORK' ? '需修改'
+                          : styleSampleReviewStatus === 'REJECT' ? '不通过'
+                            : styleSampleReviewStatus === 'PENDING' ? '待审核'
+                              : '';
                     const rawLines = styleDescription.split(/\r?\n/).map(s => s.replace(/^\d+[.、\s]+/, '').trim()).filter(Boolean);
                     const fixedRows = Array.from({ length: Math.max(15, rawLines.length) }, (_, i) => ({
                       key: i, seq: i + 1, content: rawLines[i] || '',
                     }));
                     return (
                       <>
+                        {(reviewLabel || styleSampleReviewComment || styleSampleReviewer || styleSampleReviewTime) && (
+                          <div style={{
+                            marginBottom: 12,
+                            padding: '10px 12px',
+                            border: '1px solid var(--neutral-border, #e8e8e8)',
+                            borderRadius: 6,
+                            background: 'var(--neutral-bg, #fafafa)',
+                            fontSize: 12,
+                            lineHeight: '20px',
+                          }}>
+                            <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>
+                            <div>
+                              <span>审核状态：{reviewLabel || '-'}</span>
+                              <span style={{ marginLeft: 16 }}>审核人：{styleSampleReviewer || '-'}</span>
+                              <span style={{ marginLeft: 16 }}>审核时间：{styleSampleReviewTime ? formatDateTime(styleSampleReviewTime) : '-'}</span>
+                            </div>
+                            {styleSampleReviewComment && <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>审核评语：{styleSampleReviewComment}</div>}
+                          </div>
+                        )}
                         <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
                         <ResizableTable
                           storageKey="independent-detail-requirements"
