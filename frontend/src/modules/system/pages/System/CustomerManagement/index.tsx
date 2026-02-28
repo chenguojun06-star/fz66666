@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio, Statistic } from 'antd';
-import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -16,6 +16,7 @@ import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import systemStatusService from '@/services/systemStatusService';
 import type { SystemStatusOverview } from '@/services/systemStatusService';
 import AppOrderTab from './AppOrderTab';
+import SystemIssueBoard from '../SystemIssueBoard';
 import { appStoreService } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -1731,6 +1732,11 @@ const CustomerManagement: React.FC = () => {
             key: 'system-status',
             label: <span><DashboardOutlined /> 系统运维</span>,
             children: <SystemStatusTab />,
+          },
+          {
+            key: 'system-issues',
+            label: <span><BugOutlined /> 系统看板</span>,
+            children: <SystemIssueBoard />,
           },
         ]}
       />
