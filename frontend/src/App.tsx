@@ -27,7 +27,7 @@ import {
   SampleInventory,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport } from './modules/system';
+import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
 import {
   ProductionList,
@@ -239,6 +239,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.profile} element={<Suspense fallback={<Spin />}><Profile /></Suspense>} />
           <Route path={paths.tenantManagement} element={<Suspense fallback={<Spin />}><TenantManagement /></Suspense>} />
           <Route path={paths.customerManagement} element={<Suspense fallback={<Spin />}><CustomerManagement /></Suspense>} />
+          <Route path={paths.systemIssues} element={<Suspense fallback={<Spin />}><SystemIssueBoard /></Suspense>} />
           <Route path={paths.appStore} element={<Suspense fallback={<Spin />}><AppStore /></Suspense>} />
           <Route path={paths.dataImport} element={<Suspense fallback={<Spin />}><DataImport /></Suspense>} />
           <Route path={paths.integrationCenter} element={<Suspense fallback={<Spin />}><IntegrationCenter /></Suspense>} />

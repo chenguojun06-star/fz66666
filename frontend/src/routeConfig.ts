@@ -19,6 +19,7 @@ import {
   UserSwitchOutlined,
   ShoppingCartOutlined,
   ScissorOutlined,
+  BugOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -77,6 +78,7 @@ export const paths = {
   customerManagement: '/system/customer',
   appStore: '/system/app-store',
   dataImport: '/system/data-import',
+  systemIssues: '/system/issues',
   integrationCenter: '/integration/center',
 } as const;
 
@@ -121,6 +123,7 @@ export const permissionCodes = {
   appStore: 'MENU_APP_STORE_VIEW',
   dataImport: 'MENU_DATA_IMPORT',
   integrationCenter: 'MENU_INTEGRATION',
+  systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
 } as const;
 
 export type MenuItem = {
@@ -222,6 +225,13 @@ export const menuConfig: MenuSection[] = [
     superAdminOnly: true,
   },
   {
+    title: '系统问题',
+    key: 'systemIssues',
+    icon: React.createElement(BugOutlined),
+    path: paths.systemIssues,
+    superAdminOnly: true,
+  },
+  {
     title: 'API对接管理',
     key: 'tenant',
     icon: React.createElement(ApiOutlined),
@@ -274,6 +284,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.appStore]: permissionCodes.appStore,
   [paths.dataImport]: permissionCodes.dataImport,
   [paths.integrationCenter]: permissionCodes.integrationCenter,
+  [paths.systemIssues]: permissionCodes.systemIssues,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */

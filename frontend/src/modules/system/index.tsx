@@ -13,3 +13,4 @@ export const TenantManagement = React.lazy(() => import('./pages/System/TenantMa
 export const CustomerManagement = React.lazy(() => import('./pages/System/CustomerManagement'));
 export const AppStore = React.lazy(() => import('./pages/AppStore'));
 export const DataImport = React.lazy(() => import('./pages/DataImport'));
+export const SystemIssueBoard = React.lazy(() => import('./pages/System/SystemIssueBoard'));

@@ -46,3 +46,28 @@ const systemStatusService = {
 };
 
 export default systemStatusService;
+
+// ─── 系统问题收集（超管专用）───────────────────────────────────────
+export interface SystemIssueItem {
+  level: 'ERROR' | 'WARN' | 'INFO';
+  category: string;
+  title: string;
+  description: string;
+  count: number;
+  lastSeen: string | null;
+  actionHint: string;
+}
+
+export interface SystemIssueSummary {
+  errorCount: number;
+  warnCount: number;
+  infoCount: number;
+  totalCount: number;
+  checkedAt: string;
+  issues: SystemIssueItem[];
+}
+
+export const systemIssueApi = {
+  /** 实时收集当前系统问题（只有 ROLE_SUPER_ADMIN 可调用） */
+  collect: () => api.get<SystemIssueSummary>('/system/issues/collect'),
+};
