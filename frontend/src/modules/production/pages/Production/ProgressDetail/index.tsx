@@ -57,7 +57,6 @@ import { useProgressColumns } from './hooks/useProgressColumns';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import RiskDashboardPanel from '@/smart/components/RiskDashboardPanel';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import {
@@ -755,12 +754,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Card>
           ) : null}
 
-          <RiskDashboardPanel
-            orders={orders}
-            boardTimesByOrder={boardTimesByOrder}
-            stagnantOrderIds={stagnantOrderIds}
-            onLocate={(orderNo) => setQueryParams((prev) => ({ ...prev, page: 1, keyword: orderNo }))}
-          />
 
           {viewMode === 'list' ? (
             <ResizableTable
@@ -925,12 +918,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Card>
           ) : null}
 
-          <RiskDashboardPanel
-            orders={orders}
-            boardTimesByOrder={boardTimesByOrder}
-            stagnantOrderIds={stagnantOrderIds}
-            onLocate={(orderNo) => setQueryParams((prev) => ({ ...prev, page: 1, keyword: orderNo }))}
-          />
 
           {viewMode === 'list' ? (
             <ResizableTable
