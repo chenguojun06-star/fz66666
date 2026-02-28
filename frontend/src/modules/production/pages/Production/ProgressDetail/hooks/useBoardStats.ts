@@ -78,6 +78,32 @@ export const ensureBoardStatsForOrder = async ({
       hasScanByNode[nodeName] = matchingRecords.length > 0;
     }
 
+    // === 采购节点兜底 ===
+    // 采购在实际生产中通常不走小程序扫码，需从订单字段或裁剪记录推断
+    const PROCUREMENT_NODE_NAMES = new Set(['采购', '物料', '备料']);
+    const CUT_NODE_NAMES = ['裁剪', '裁片'];
+    const totalQty = Number((order as any)?.cuttingQuantity || (order as any)?.orderQuantity) || 0;
+    for (const n of nodes || []) {
+      const nodeName = String((n as any)?.name || '').trim();
+      if (!PROCUREMENT_NODE_NAMES.has(nodeName) || hasScanByNode[nodeName]) continue;
+      // 优先：订单字段 procurementCompletionRate（0-100 整数）
+      const pcr = Number((order as any)?.procurementCompletionRate) || 0;
+      if (pcr > 0 && totalQty > 0) {
+        stats[nodeName] = Math.min(totalQty, Math.round((pcr / 100) * totalQty));
+        continue;
+      }
+      // 其次：从裁剪数量推断（能裁剪 → 采购必然完成）
+      for (const cn of CUT_NODE_NAMES) {
+        const cutDone = stats[cn] ?? 0;
+        if (cutDone > 0) { stats[nodeName] = cutDone; break; }
+      }
+      // 最后：若 cuttingQuantity > 0 也视为采购完成
+      if (!stats[nodeName] && totalQty > 0) {
+        const cq = Number((order as any)?.cuttingQuantity) || 0;
+        if (cq > 0) stats[nodeName] = cq;
+      }
+    }
+
     mergeBoardStatsForOrder(oid, stats);
 
     // 计算每个工序节点的最后完成时间（用于进度球下方显示）
@@ -95,6 +121,11 @@ export const ensureBoardStatsForOrder = async ({
           if (t && (!maxTime || t > maxTime)) {
             maxTime = t;
           }
+        }
+        // 采购节点时间兜底：无扫码记录时用订单 procurementEndTime 字段
+        if (!maxTime && PROCUREMENT_NODE_NAMES.has(nodeName)) {
+          const pEnd = String((order as any)?.procurementEndTime || '').trim();
+          if (pEnd) maxTime = pEnd;
         }
         if (maxTime) timeStats[nodeName] = maxTime;
       }
