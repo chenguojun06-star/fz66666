@@ -310,6 +310,17 @@ export const useProgressColumns = ({
       },
     },
     {
+      title: '关单时间',
+      key: 'actualEndDate',
+      width: 130,
+      render: (_: any, record: ProductionOrder) =>
+        record.actualEndDate ? (
+          <span style={{ color: '#52c41a', fontSize: 12 }}>
+            {formatTime(record.actualEndDate)}
+          </span>
+        ) : <span style={{ color: '#ccc' }}>-</span>,
+    },
+    {
       title: '生产进度',
       key: 'progressNodes',
       width: 900,
