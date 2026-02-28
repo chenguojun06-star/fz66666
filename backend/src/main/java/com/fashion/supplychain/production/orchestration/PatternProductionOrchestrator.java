@@ -432,6 +432,7 @@ public class PatternProductionOrchestrator {
         pattern.setUpdateBy(operatorName);
         pattern.setUpdateTime(LocalDateTime.now());
         patternProductionService.updateById(pattern);
+        syncStyleInfoReviewFields(pattern, normalizedResult, normalizedRemark, operatorName);
 
         Map<String, Object> response = new HashMap<>();
         response.put("patternId", pattern.getId());
@@ -443,6 +444,36 @@ public class PatternProductionOrchestrator {
         response.put("reviewTime", pattern.getReviewTime());
         response.put("message", "APPROVED".equals(normalizedResult) ? "样衣审核通过" : "样衣审核已驳回");
         return response;
+    }
+
+    private void syncStyleInfoReviewFields(PatternProduction pattern, String reviewResult, String reviewRemark, String operatorName) {
+        try {
+            Long styleId = parseStyleId(pattern.getStyleId());
+            if (styleId == null) {
+                return;
+            }
+            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            if (styleInfo == null) {
+                return;
+            }
+
+            String mappedStatus;
+            if ("APPROVED".equalsIgnoreCase(reviewResult)) {
+                mappedStatus = "PASS";
+            } else if ("REJECTED".equalsIgnoreCase(reviewResult)) {
+                mappedStatus = "REJECT";
+            } else {
+                mappedStatus = reviewResult;
+            }
+
+            styleInfo.setSampleReviewStatus(mappedStatus);
+            styleInfo.setSampleReviewComment(reviewRemark);
+            styleInfo.setSampleReviewer(operatorName);
+            styleInfo.setSampleReviewTime(LocalDateTime.now());
+            styleInfoService.updateById(styleInfo);
+        } catch (Exception e) {
+            log.error("同步样衣审核结果到StyleInfo失败: patternId={}", pattern.getId(), e);
+        }
     }
 
     /**
