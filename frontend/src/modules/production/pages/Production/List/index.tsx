@@ -26,6 +26,8 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
+import { ensureBoardStatsForOrder } from '../ProgressDetail/hooks/useBoardStats';
+import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -51,6 +53,15 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 
 const { Option } = Select;
+
+// 悬停卡预加载用的默认工序节点（与 SmartOrderHoverCard STAGES_DEF 对应）
+const DEFAULT_HOVER_NODES: ProgressNode[] = [
+  { id: '采购', name: '采购' },
+  { id: '裁剪', name: '裁剪' },
+  { id: '车缝', name: '车缝' },
+  { id: '质检', name: '质检' },
+  { id: '入库', name: '入库' },
+];
 
 const ProductionList: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -92,6 +103,11 @@ const ProductionList: React.FC = () => {
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
+  const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
+  const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
+  const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
+  const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
+  const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -178,6 +194,30 @@ const ProductionList: React.FC = () => {
     setSelectedRows([]);
     fetchProductionList();
   }, [queryParams]);
+
+  // 预加载悬停卡 boardStats（与生产进度页保持一致：前20条）
+  useEffect(() => {
+    if (!productionList.length) return;
+    const queue = productionList.slice(0, Math.min(20, productionList.length));
+    let cancelled = false;
+    const run = async () => {
+      for (const o of queue) {
+        if (cancelled) return;
+        await ensureBoardStatsForOrder({
+          order: o,
+          nodes: DEFAULT_HOVER_NODES,
+          boardStatsByOrder,
+          boardStatsLoadingByOrder,
+          mergeBoardStatsForOrder,
+          mergeBoardTimesForOrder,
+          setBoardLoadingForOrder,
+        });
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [productionList, boardStatsByOrder, boardStatsLoadingByOrder,
+      mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder]);
 
   // URL 参数解析
   useEffect(() => {
