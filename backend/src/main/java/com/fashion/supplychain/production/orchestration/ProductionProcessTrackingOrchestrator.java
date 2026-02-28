@@ -614,7 +614,25 @@ public class ProductionProcessTrackingOrchestrator {
         List<Map<String, Object>> nodes = new ArrayList<>();
 
         if (workflowJson == null || workflowJson.trim().isEmpty()) {
-            log.warn("订单 {} 没有工艺流程配置 (progressWorkflowJson 为空)", order.getOrderNo());
+            log.warn("订单 {} 没有工艺流程配置 (progressWorkflowJson 为空)，尝试从模板库兜底", order.getOrderNo());
+            // ★ 兜底：progressWorkflowJson 为空时，从模板库读取工序节点（历史订单场景）
+            if (StringUtils.hasText(order.getStyleNo())) {
+                try {
+                    List<Map<String, Object>> templateNodes =
+                            templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
+                    if (templateNodes != null && !templateNodes.isEmpty()) {
+                        for (Map<String, Object> node : templateNodes) {
+                            String stage = getStringValue(node, "progressStage", "");
+                            if ("采购".equals(stage) || "procurement".equals(stage)) continue;
+                            nodes.add(node);
+                        }
+                        log.info("订单 {} 从模板库兜底获取 {} 个工序节点（styleNo={}）",
+                                order.getOrderNo(), nodes.size(), order.getStyleNo());
+                    }
+                } catch (Exception e) {
+                    log.warn("订单 {} 从模板库获取工序节点失败: {}", order.getOrderNo(), e.getMessage());
+                }
+            }
             return nodes;
         }
 
