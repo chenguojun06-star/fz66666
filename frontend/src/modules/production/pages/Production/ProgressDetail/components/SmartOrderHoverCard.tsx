@@ -45,20 +45,6 @@ function calcRisk(o: ProductionOrder) {
   return { label: '正常推进', color: '#1677ff', bg: '#f0f5ff' };
 }
 
-// 预测完成：有速度才显示，完成了不显示
-function calcPredict(o: ProductionOrder) {
-  if (o.status === 'completed') return null;
-  const total = Number(o.orderQuantity) || 0;
-  const done  = Number(o.completedQuantity) || 0;
-  if (!total || !done) return null;
-  const start = o.createTime ? dayjs(o.createTime) : null;
-  if (!start) return null;
-  const elap  = Math.max(1, dayjs().diff(start, 'day'));
-  const speed = done / elap;
-  const days  = Math.ceil((total - done) / speed);
-  return { date: dayjs().add(days, 'day').format('MM-DD'), speed: `${speed.toFixed(1)}件/天` };
-}
-
 /** 速度缺口：需要多少天 vs 剩余多少天，差值 > 0 表示落后 */
 function calcGap(o: ProductionOrder) {
   if (o.status === 'completed' || !o.plannedEndDate) return null;
@@ -72,8 +58,71 @@ function calcGap(o: ProductionOrder) {
   const needDays = Math.ceil((total - done) / speed);
   const endDays  = Math.max(0, dayjs(o.plannedEndDate).diff(dayjs(), 'day'));
   const gap      = needDays - endDays;
-  if (gap <= 0) return null; // 进度正常，不显示
+  if (gap <= 0) return null;
   return { needDays, endDays, gap };
+}
+
+/**
+ * 工序时间线预测
+ * 算法：整体速度 = 已完成件数 / 已用天数
+ * 当前工序已做比例 → 推算开工时间
+ * 剩余比例 / 速度 → 预计完工时间
+ * 下道工序开始 = 当前工序完工
+ * 总计完成 = 今天 + 全部剩余件数 / 速度
+ */
+function calcTimeline(o: ProductionOrder, boardTimes: Record<string, string>) {
+  if (o.status === 'completed') return null;
+  const total = Number(o.orderQuantity) || 0;
+  const done  = Number(o.completedQuantity) || 0;
+  const now   = dayjs();
+  const orderStart = o.createTime ? dayjs(o.createTime) : null;
+  if (!total || !orderStart) return null;
+
+  const elap  = Math.max(1, now.diff(orderStart, 'day'));
+  const speed = done > 0 ? done / elap : 0; // 件/天
+
+  // 找当前进行中工序（取第一个 1-99% 的）
+  const activeList = STAGES_DEF
+    .map(s => ({ ...s, rate: getRate(o, s.key) }))
+    .filter(s => s.rate > 0 && s.rate < 100);
+
+  const curr = activeList[0] ?? null;
+  if (!curr) return speed > 0 ? {
+    curr: null, next: null,
+    overallEnd: now.add(Math.ceil((total - done) / speed), 'day'),
+    speed,
+  } : null;
+
+  // 当前工序开工时间：
+  //   已完成 rate% → 消耗天数 ≈ (rate/100 * total) / speed
+  //   开工 = 今天 - 消耗天数
+  //   若 boardTimes 有该工序数据，取 max(推算值, 最早合理值) 让结果更准
+  let stageStart: dayjs.Dayjs | null = null;
+  let stageEnd: dayjs.Dayjs | null = null;
+  if (speed > 0) {
+    const doneInStage = (curr.rate / 100) * total;
+    const daysWorked  = doneInStage / speed;
+    stageStart = now.subtract(Math.round(daysWorked), 'day');
+    // 用 boardTimes 校正：若最近有扫码记录，且推算起始晚于扫码时间，以扫码时间为准
+    const bt = boardTimes[curr.label];
+    if (bt && dayjs(bt).isBefore(stageStart)) {
+      stageStart = dayjs(bt);
+    }
+    const remaining = ((100 - curr.rate) / 100) * total;
+    stageEnd = now.add(Math.ceil(remaining / speed), 'day');
+  }
+
+  // 找下道工序（当前之后第一个 0%）
+  const currIdx = STAGES_DEF.findIndex(s => s.label === curr.label);
+  const nextDef = STAGES_DEF.slice(currIdx + 1).find(s => getRate(o, s.key) === 0);
+  const nextStage = nextDef ? { label: nextDef.label, start: stageEnd } : null;
+
+  // 总体预计完成
+  const overallEnd = speed > 0
+    ? now.add(Math.ceil((total - done) / speed), 'day')
+    : null;
+
+  return { curr, stageStart, stageEnd, nextStage, overallEnd, speed };
 }
 
 function stageColor(v: number) {
@@ -81,41 +130,53 @@ function stageColor(v: number) {
   return '#fa8c16';
 }
 
+function fmtDate(d: dayjs.Dayjs | null) {
+  if (!d) return '—';
+  return d.format('MM-DD');
+}
+
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
-  const risk       = useMemo(() => calcRisk(order), [order]);
-  const predict    = useMemo(() => calcPredict(order), [order]);
-  const gap        = useMemo(() => calcGap(order), [order]);
+  const risk        = useMemo(() => calcRisk(order), [order]);
+  const gap         = useMemo(() => calcGap(order), [order]);
   const isCompleted = order.status === 'completed';
 
-  // 找卡住节点：取该订单最新扫码时间的节点，判断是否≥3天无进展
+  // boardTimes：取当前订单的各节点最后扫码时间
   const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
+  const boardTimes = boardTimesByOrder[String(order.id)] ?? {};
+
+  // 找卡住节点：≥3天无进展
   const stuckNode = useMemo(() => {
     if (order.status === 'completed') return null;
-    const times = boardTimesByOrder[String(order.id)] ?? {};
-    const entries = Object.entries(times);
+    const entries = Object.entries(boardTimes);
     if (!entries.length) return null;
     const [nodeName, lastTime] = entries.reduce((a, b) =>
       dayjs(a[1]).isAfter(dayjs(b[1])) ? a : b
     );
     const days = dayjs().diff(dayjs(lastTime), 'day');
     return days >= 3 ? { node: nodeName, days } : null;
-  }, [boardTimesByOrder, order.id, order.status]);
+  }, [boardTimes, order.status]);
 
-  // 只显示进行中的工序（1~99%）——完成了的隐藏，没开始的也隐藏
+  // 工序时间线预测
+  const timeline = useMemo(
+    () => calcTimeline(order, boardTimes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [order, boardTimes],
+  );
+
+  // 进行中工序列表（用于进度条）
   const activeStages = useMemo(() =>
     STAGES_DEF.map(s => ({ ...s, val: getRate(order, s.key) }))
               .filter(s => s.val > 0 && s.val < 100),
   [order]);
 
-  // 统计已完成工序数（供提示用）
   const doneCount = useMemo(() =>
     STAGES_DEF.filter(s => getRate(order, s.key) >= 100).length,
   [order]);
 
   return (
-    <div style={{ width: 240, fontSize: 12, lineHeight: 1.6 }}>
+    <div style={{ width: 255, fontSize: 12, lineHeight: 1.6 }}>
 
-      {/* 工厂名：有就显示 */}
+      {/* 工厂名 */}
       {order.factoryName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
           <span style={{ color: '#bbb', fontSize: 11 }}>工厂</span>
@@ -123,28 +184,30 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
-      {/* 状态条：风险级别 + 动态预测（只有进行中才显示预测） */}
+      {/* 状态条：风险级别 + 总体预计完成日期 */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '6px 10px', background: risk.bg, borderRadius: 6, marginBottom: 8,
       }}>
         <span style={{ color: risk.color, fontWeight: 700 }}>{risk.label}</span>
-        {predict && (
+        {timeline?.overallEnd && !isCompleted && (
           <span style={{ color: '#888', fontSize: 11 }}>
-            预计 <b style={{ color: '#333' }}>{predict.date}</b>
-            &nbsp;·&nbsp;{predict.speed}
+            总完成 <b style={{ color: '#333' }}>{fmtDate(timeline.overallEnd)}</b>
+            {timeline.speed > 0 && (
+              <span style={{ color: '#bbb' }}>&nbsp;·&nbsp;{timeline.speed.toFixed(1)}件/天</span>
+            )}
           </span>
         )}
       </div>
 
-      {/* 速度缺口：需X天·剩Y天·差Z天（落后才显示） */}
+      {/* 速度缺口：落后才显示 */}
       {gap && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '4px 10px', background: '#fff7e6', borderRadius: 5, marginBottom: 8,
           fontSize: 11, color: '#d46b08',
         }}>
-          <span role="img" aria-label="gap">⏱</span>
+          <span>⏱</span>
           <span>需 <b>{gap.needDays}</b> 天</span>
           <span style={{ color: '#ccc' }}>·</span>
           <span>剩 <b>{gap.endDays}</b> 天</span>
@@ -153,7 +216,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
-      {/* 卡住节点：最新扫码已≥3天无进展 */}
+      {/* 卡住节点 */}
       {stuckNode && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 5,
@@ -165,43 +228,77 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
-      {/* 进行中工序：完成了不显示，0%不显示，只显示 1~99% */}
+      {/* 工序时间线：进行中工序 + 下道预测 */}
       {activeStages.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <div style={{ color: '#bbb', fontSize: 10, marginBottom: 4, letterSpacing: 0.8 }}>
-            进行中
+          <div style={{ color: '#bbb', fontSize: 10, marginBottom: 5, letterSpacing: 0.8 }}>
+            工序进展
             {doneCount > 0 && (
-              <span style={{ color: '#52c41a', marginLeft: 6 }}>✓ 已完成 {doneCount} 道</span>
+              <span style={{ color: '#52c41a', marginLeft: 6 }}>✓ {doneCount} 道已完成</span>
             )}
           </div>
-          {activeStages.map(s => (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-              <span style={{ width: 28, color: '#555', flexShrink: 0, fontSize: 11 }}>{s.label}</span>
-              <div style={{ flex: 1, height: 5, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${s.val}%`, height: '100%',
-                  background: stageColor(s.val), borderRadius: 3, transition: 'width 0.5s',
-                }} />
+
+          {/* 当前进行中工序：进度条 + 开工→完工时间 */}
+          {activeStages.map(s => {
+            const isCurr = timeline?.curr?.label === s.label;
+            return (
+              <div key={s.key} style={{ marginBottom: 7 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 28, color: '#555', flexShrink: 0, fontSize: 11 }}>{s.label}</span>
+                  <div style={{ flex: 1, height: 5, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${s.val}%`, height: '100%',
+                      background: stageColor(s.val), borderRadius: 3, transition: 'width 0.5s',
+                    }} />
+                  </div>
+                  <span style={{ width: 30, textAlign: 'right', fontSize: 11, color: '#333', fontWeight: 600 }}>
+                    {s.val}%
+                  </span>
+                </div>
+                {/* 开工时间 → 预计完工时间 */}
+                {isCurr && (timeline?.stageStart || timeline?.stageEnd) && (
+                  <div style={{ paddingLeft: 34, fontSize: 11, color: '#888', marginTop: 1 }}>
+                    {timeline.stageStart && (
+                      <span>开工 <b style={{ color: '#555' }}>{fmtDate(timeline.stageStart)}</b></span>
+                    )}
+                    {timeline.stageStart && timeline.stageEnd && (
+                      <span style={{ color: '#ddd', margin: '0 4px' }}>→</span>
+                    )}
+                    {timeline.stageEnd && (
+                      <span>预计完工 <b style={{ color: '#1677ff' }}>{fmtDate(timeline.stageEnd)}</b></span>
+                    )}
+                  </div>
+                )}
               </div>
-              <span style={{ width: 30, textAlign: 'right', fontSize: 11, color: '#333', fontWeight: 600 }}>
-                {s.val}%
+            );
+          })}
+
+          {/* 下道工序预计开始 */}
+          {timeline?.nextStage && timeline.nextStage.start && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '3px 0 0 0', borderTop: '1px dashed #f0f0f0', marginTop: 4, paddingTop: 5,
+            }}>
+              <span style={{ width: 28, color: '#bbb', flexShrink: 0, fontSize: 11 }}>
+                {timeline.nextStage.label}
+              </span>
+              <span style={{ fontSize: 11, color: '#888' }}>
+                预计开始 <b style={{ color: '#555' }}>{fmtDate(timeline.nextStage.start)}</b>
               </span>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {/* 所有工序都 100% 但订单状态还未标完成 */}
       {activeStages.length === 0 && doneCount === STAGES_DEF.length && !isCompleted && (
         <div style={{ color: '#52c41a', fontSize: 11, marginBottom: 8 }}>✓ 各工序全部完成</div>
       )}
 
-      {/* 尚未有任何工序开工 */}
       {activeStages.length === 0 && doneCount === 0 && !isCompleted && (
         <div style={{ color: '#bbb', fontSize: 11, marginBottom: 8 }}>待开工</div>
       )}
 
-      {/* 跟单 + 备注：有内容才渲染，没有就不显示任何东西 */}
+      {/* 跟单 + 备注 */}
       {(order.merchandiser || order.operationRemark) && (
         <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
           {order.merchandiser && (
