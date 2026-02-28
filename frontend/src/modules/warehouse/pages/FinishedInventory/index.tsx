@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Table, Button, Space, Tag, Image, Row, Col, InputNumber, App } from 'antd';
+import { Card, Table, Button, Space, Tag, Row, Col, InputNumber, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -11,7 +11,7 @@ import RowActions from '@/components/common/RowActions';
 import { StatsGrid } from '@/components/common/StatsGrid';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
-import { getAuthedFileUrl } from '@/utils/fileUrl';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -277,25 +277,14 @@ const _FinishedInventory: React.FC = () => {
       width: 72,
       fixed: 'left',
       align: 'center',
-      render: (_, record) => {
-        const imgSrc = record.styleImage ? getAuthedFileUrl(record.styleImage) : undefined;
-        return (
-          <div style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {imgSrc ? (
-              <Image
-                src={imgSrc}
-                alt={record.styleName || '成品'}
-                width={48}
-                height={48}
-                style={{ objectFit: 'cover' }}
-                preview={false}
-              />
-            ) : (
-              <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
-            )}
-          </div>
-        );
-      },
+      render: (_, record) => (
+        <StyleCoverThumb
+          src={record.styleImage || null}
+          styleNo={record.styleNo}
+          size={48}
+          borderRadius={4}
+        />
+      ),
     },
     {
       title: '成品信息',

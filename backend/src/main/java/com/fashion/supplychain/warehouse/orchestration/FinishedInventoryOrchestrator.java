@@ -8,6 +8,8 @@ import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class FinishedInventoryOrchestrator {
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
     private final StyleInfoService styleInfoService;
+    private final StyleAttachmentService styleAttachmentService;
 
     /**
      * 分页查询成品库存
@@ -65,6 +68,33 @@ public class FinishedInventoryOrchestrator {
             List<StyleInfo> styleInfoList = styleInfoService.listByIds(styleIds);
             styleInfoMap = styleInfoList.stream()
                     .collect(Collectors.toMap(StyleInfo::getId, s -> s, (a, b) -> a));
+        }
+
+        // 第二级兜底：对 cover 为空的款式，从 t_style_attachment 取第一张图
+        Map<Long, String> attachCoverByStyleId = new HashMap<>();
+        if (!styleInfoMap.isEmpty()) {
+            List<Long> noCoverIds = styleInfoMap.values().stream()
+                    .filter(s -> !StringUtils.hasText(s.getCover()))
+                    .map(StyleInfo::getId)
+                    .collect(Collectors.toList());
+            if (!noCoverIds.isEmpty()) {
+                List<StyleAttachment> attachments = styleAttachmentService.list(
+                        new LambdaQueryWrapper<StyleAttachment>()
+                                .in(StyleAttachment::getStyleId, noCoverIds.stream()
+                                        .map(String::valueOf).collect(Collectors.toList()))
+                                .like(StyleAttachment::getFileType, "image")
+                                .eq(StyleAttachment::getStatus, "active")
+                                .orderByAsc(StyleAttachment::getCreateTime));
+                if (attachments != null) {
+                    for (StyleAttachment a : attachments) {
+                        if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
+                        try {
+                            Long sid = Long.valueOf(a.getStyleId());
+                            attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
         }
 
         // 批量查询入库记录（按 styleId 分组，取最新一条）
@@ -136,7 +166,9 @@ public class FinishedInventoryOrchestrator {
                 StyleInfo styleInfo = styleInfoMap.get(sku.getStyleId());
                 if (styleInfo != null) {
                     dto.setStyleName(styleInfo.getStyleName());
-                    dto.setStyleImage(styleInfo.getCover());
+                    String cover = styleInfo.getCover();
+                    dto.setStyleImage(StringUtils.hasText(cover) ? cover
+                            : attachCoverByStyleId.get(sku.getStyleId()));
                     // 如果款式表有订单号也取出来
                     if (StringUtils.hasText(styleInfo.getOrderNo())) {
                         dto.setOrderNo(styleInfo.getOrderNo());
