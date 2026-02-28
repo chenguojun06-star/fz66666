@@ -195,6 +195,17 @@ const ProductionList: React.FC = () => {
     fetchProductionList();
   }, [queryParams]);
 
+  // 每次重新切回该页面（浏览器 Tab 或 SPA 菜单）时静默刷新
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProductionList();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
   // 预加载悬停卡 boardStats（与生产进度页保持一致：前20条）
   useEffect(() => {
     if (!productionList.length) return;

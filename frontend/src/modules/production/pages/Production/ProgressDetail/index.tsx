@@ -378,6 +378,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     initialLoadDone.current = true;
   }, []);
 
+  // 每次重新切回该页面（浏览器 Tab 或 SPA 菜单）时静默刷新
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders({ silent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [fetchOrders]);
+
   // 当查询参数改变时获取数据
   useEffect(() => {
     // 跳过初始加载
