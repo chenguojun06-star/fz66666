@@ -12,6 +12,45 @@
   console.info = wrap(console.info.bind(console));
 })();
 
+// ── 动态分包 404 自动恢复 ──────────────────────────────────────────────
+// 场景：新部署后浏览器缓存了旧主 bundle，旧 bundle 里的 dynamic import 路径
+//       指向旧 hash chunk（已被新部署替换），导致 ERR_ABORTED 404。
+// 修复：检测到 chunk load 失败时，在同一 URL 追加 ?reload=1 强刷一次。
+//       通过 sessionStorage 防止无限循环（同一会话只自动刷新一次）。
+(function handleChunkLoadError() {
+  const RELOAD_KEY = '__chunk_reload__';
+  const CHUNK_ERR_PATTERNS = [
+    'dynamically imported module',
+    'Failed to fetch',
+    'Importing a module script failed',
+    'error loading dynamically imported module',
+  ];
+  const isChunkError = (msg: string) => CHUNK_ERR_PATTERNS.some(p => msg.includes(p));
+
+  // Script error（同步 404）
+  window.addEventListener('error', (event) => {
+    const src = (event.target as HTMLScriptElement | null)?.src ?? '';
+    const msg = event.message ?? '';
+    if (src.includes('/assets/') || isChunkError(msg)) {
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, '1');
+        window.location.reload();
+      }
+    }
+  }, true);
+
+  // Promise rejection（异步动态 import 404）
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = String(event.reason?.message ?? event.reason ?? '');
+    if (isChunkError(msg)) {
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, '1');
+        window.location.reload();
+      }
+    }
+  });
+})();
+
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme, App as AntApp } from 'antd';
