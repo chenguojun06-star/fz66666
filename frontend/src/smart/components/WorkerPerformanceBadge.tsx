@@ -25,6 +25,18 @@ interface Props {
   operatorName: string;
 }
 
+function normalizeProfile(raw: any, fallbackName: string): WorkerProfile | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const stages = Array.isArray(raw.stages) ? raw.stages : [];
+  return {
+    operatorName: String(raw.operatorName || fallbackName || ''),
+    stages,
+    totalQty: Number(raw.totalQty) || 0,
+    lastScanTime: raw.lastScanTime ? String(raw.lastScanTime) : null,
+    dateDays: Number(raw.dateDays) || 30,
+  };
+}
+
 // ── 全局缓存（模块级，跨组件实例共享，避免重复请求） ────────────────────
 const profileCache = new Map<string, WorkerProfile | null>();
 const pendingMap  = new Map<string, Promise<WorkerProfile | null>>();
@@ -39,9 +51,10 @@ async function fetchProfile(name: string): Promise<WorkerProfile | null> {
   const p = api
     .post<WorkerProfile>('/intelligence/worker-profile', { operatorName: name })
     .then((data: WorkerProfile) => {
-      profileCache.set(name, data);
+      const safe = normalizeProfile(data, name);
+      profileCache.set(name, safe);
       pendingMap.delete(name);
-      return data;
+      return safe;
     })
     .catch(() => {
       profileCache.set(name, null);
@@ -111,16 +124,17 @@ function StageRow({ sp }: { sp: StageProfile }) {
 // ── Popover 内容 ─────────────────────────────────────────────────────────
 
 function ProfileContent({ profile }: { profile: WorkerProfile }) {
+  const stages = Array.isArray(profile.stages) ? profile.stages : [];
   const lastDate = profile.lastScanTime
     ? profile.lastScanTime.slice(5, 10).replace('-', '月') + '日'
     : '—';
 
-  const topLevel = profile.stages.length > 0
-    ? profile.stages.reduce((best, s) => {
+  const topLevel = stages.length > 0
+    ? stages.reduce((best, s) => {
         const order = ['excellent', 'good', 'normal', 'below'] as const;
         return order.indexOf(s.level as typeof order[number]) <
                order.indexOf(best.level as typeof order[number]) ? s : best;
-      }, profile.stages[0]).level
+      }, stages[0]).level
     : 'normal';
 
   return (
@@ -130,11 +144,11 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
         <LevelDot level={topLevel} />
       </div>
 
-      {profile.stages.length === 0 ? (
+      {stages.length === 0 ? (
         <div style={{ color: '#999', fontSize: 13 }}>近期暂无扫码记录</div>
       ) : (
         <div>
-          {profile.stages.slice(0, 5).map(sp => (
+          {stages.slice(0, 5).map(sp => (
             <StageRow key={sp.stageName} sp={sp} />
           ))}
         </div>
@@ -177,9 +191,13 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
   return (
     <Popover
       content={
-        profile === 'loading' || profile === null ? (
+        profile === 'loading' ? (
           <div style={{ padding: '8px 12px' }}>
             <Spin size="small" />
+          </div>
+        ) : profile === null ? (
+          <div style={{ padding: '8px 12px', color: '#999', fontSize: 12 }}>
+            暂无绩效画像
           </div>
         ) : (
           <ProfileContent profile={profile} />
