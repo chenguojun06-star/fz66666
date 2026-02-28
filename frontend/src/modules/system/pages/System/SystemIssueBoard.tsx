@@ -94,9 +94,26 @@ export default function SystemIssueBoard() {
     setError(null);
     try {
       const raw = await systemIssueApi.collect();
-      // 防御：axios 拦截器在某些边界情况下可能返回未解包的 Result 包装体
-      const data: SystemIssueSummary = (raw as unknown as { data?: SystemIssueSummary }).data ?? raw;
-      setSummary({ ...data, issues: data.issues ?? [] });
+      // axios 拦截器可能只解包一层（HTTP body = {code,data,message}），也可能两层（直接给 data 内容）
+      // 统一兼容两种情况
+      let resolved: SystemIssueSummary;
+      if (raw && typeof raw === 'object' && 'errorCount' in raw) {
+        // 已经是内层 SystemIssueSummary
+        resolved = raw as SystemIssueSummary;
+      } else if (raw && typeof raw === 'object' && 'data' in (raw as object)) {
+        // 还是 Result 包装体，取 .data
+        resolved = (raw as Record<string, unknown>).data as SystemIssueSummary;
+      } else {
+        resolved = {} as SystemIssueSummary;
+      }
+      setSummary({
+        errorCount: resolved?.errorCount ?? 0,
+        warnCount:  resolved?.warnCount  ?? 0,
+        infoCount:  resolved?.infoCount  ?? 0,
+        totalCount: resolved?.totalCount ?? 0,
+        checkedAt:  resolved?.checkedAt  ?? new Date().toISOString(),
+        issues:     Array.isArray(resolved?.issues) ? resolved.issues : [],
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '接口请求失败');
     } finally {
