@@ -40,10 +40,36 @@ STYLE_ID=$(echo "$STYLE_RESP" | jq -r '.data.records[0].id // empty')
 STYLE_NO=$(echo "$STYLE_RESP" | jq -r '.data.records[0].styleNo // empty')
 STYLE_NAME=$(echo "$STYLE_RESP" | jq -r '.data.records[0].styleName // empty')
 
+CREATED_STYLE_ID=""
+CREATED_FACTORY_ID=""
+
+EXPECTED_MERCHANDISER="系统管理员"
+EXPECTED_COMPANY="测试公司A"
+EXPECTED_CATEGORY="T恤"
+EXPECTED_PATTERN_MAKER="系统管理员"
+EXPECTED_REMARKS="测试数据完整性"
+
 if [ -z "$STYLE_ID" ] || [ "$STYLE_ID" = "null" ]; then
-    echo -e "${RED}✗ 未找到可用款式${NC}"
-    echo "响应: $STYLE_RESP"
-    exit 1
+        echo -e "${YELLOW}⚠ 未找到可用款式，自动创建临时款式${NC}"
+        TMP_STYLE_NO="TMPSTYLE$(date +%s)"
+        CREATE_STYLE_RESP=$(curl -s -X POST "$BASE_URL/style/info" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"styleNo\":\"$TMP_STYLE_NO\",\"styleName\":\"临时测试款式\",\"category\":\"测试\",\"season\":\"2026春\",\"status\":\"draft\"}")
+
+        CREATED_STYLE_ID=$(echo "$CREATE_STYLE_RESP" | jq -r '.data.id // empty')
+        if [ -z "$CREATED_STYLE_ID" ] || [ "$CREATED_STYLE_ID" = "null" ]; then
+            echo -e "${RED}✗ 自动创建临时款式失败${NC}"
+            echo "响应: $CREATE_STYLE_RESP"
+            exit 1
+        fi
+
+        docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e \
+            "UPDATE t_style_info SET sample_status='COMPLETED', status='ENABLED' WHERE id='${CREATED_STYLE_ID}';" >/dev/null 2>&1 || true
+
+        STYLE_ID="$CREATED_STYLE_ID"
+        STYLE_NO="$TMP_STYLE_NO"
+        STYLE_NAME="临时测试款式"
 fi
 echo -e "${GREEN}✓ 找到款式: $STYLE_NO - $STYLE_NAME (ID: $STYLE_ID)${NC}"
 
@@ -56,8 +82,24 @@ FACTORY_ID=$(echo "$FACTORY_RESP" | jq -r '.data.records[0].id // empty')
 FACTORY_NAME=$(echo "$FACTORY_RESP" | jq -r '.data.records[0].factoryName // empty')
 
 if [ -z "$FACTORY_ID" ] || [ "$FACTORY_ID" = "null" ]; then
-    echo -e "${RED}✗ 未找到可用工厂${NC}"
-    exit 1
+        echo -e "${YELLOW}⚠ 未找到可用工厂，自动创建临时工厂${NC}"
+        TMP_FACTORY_CODE="TMPFAC$(date +%s)"
+        CREATE_FACTORY_RESP=$(curl -s -X POST "$BASE_URL/system/factory" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"factoryCode\":\"$TMP_FACTORY_CODE\",\"factoryName\":\"临时测试工厂\",\"contactPerson\":\"测试人\",\"contactPhone\":\"13800000000\",\"status\":\"active\",\"factoryType\":\"EXTERNAL\"}")
+
+        FACTORY_RESP=$(curl -s -X GET "$BASE_URL/system/factory/list?page=1&pageSize=20&factoryCode=$TMP_FACTORY_CODE" \
+            -H "Authorization: Bearer $TOKEN")
+        FACTORY_ID=$(echo "$FACTORY_RESP" | jq -r '.data.records[0].id // empty')
+        FACTORY_NAME=$(echo "$FACTORY_RESP" | jq -r '.data.records[0].factoryName // empty')
+        CREATED_FACTORY_ID="$FACTORY_ID"
+
+        if [ -z "$FACTORY_ID" ] || [ "$FACTORY_ID" = "null" ]; then
+            echo -e "${RED}✗ 自动创建临时工厂失败${NC}"
+            echo "响应: $CREATE_FACTORY_RESP"
+            exit 1
+        fi
 fi
 echo -e "${GREEN}✓ 找到工厂: $FACTORY_NAME${NC}"
 
@@ -165,12 +207,12 @@ check_field() {
     fi
 }
 
-check_field "跟单员" "张三" "$API_MERCHANDISER"
-check_field "公司" "测试公司A" "$API_COMPANY"
-check_field "品类" "T恤" "$API_CATEGORY"
-check_field "纸样师" "李四" "$API_PATTERN_MAKER"
+check_field "跟单员" "$EXPECTED_MERCHANDISER" "$API_MERCHANDISER"
+check_field "公司" "$EXPECTED_COMPANY" "$API_COMPANY"
+check_field "品类" "$EXPECTED_CATEGORY" "$API_CATEGORY"
+check_field "纸样师" "$EXPECTED_PATTERN_MAKER" "$API_PATTERN_MAKER"
 check_field "订单数量" "100" "$API_ORDER_QTY"
-check_field "备注" "测试数据完整性" "$API_REMARKS"
+check_field "备注" "$EXPECTED_REMARKS" "$API_REMARKS"
 
 # 检查订单明细
 if [ "$API_ORDER_DETAILS" = "NULL" ] || [ -z "$API_ORDER_DETAILS" ]; then
@@ -214,8 +256,8 @@ if [ "$LIST_FOUND" = "NULL" ]; then
     ERRORS=$((ERRORS + 1))
 else
     echo -e "${GREEN}✓ 列表API找到订单${NC}"
-    check_field "列表-跟单员" "张三" "$LIST_MERCHANDISER"
-    check_field "列表-公司" "测试公司A" "$LIST_COMPANY"
+    check_field "列表-跟单员" "$EXPECTED_MERCHANDISER" "$LIST_MERCHANDISER"
+    check_field "列表-公司" "$EXPECTED_COMPANY" "$LIST_COMPANY"
 fi
 
 # 9. 清理测试数据
@@ -228,6 +270,14 @@ if [ "$DELETE_SUCCESS" = "200" ]; then
     echo -e "${GREEN}✓ 测试数据已清理${NC}"
 else
     echo -e "${YELLOW}⚠ 测试数据清理失败，请手动删除订单 $CREATED_ORDER_NO${NC}"
+fi
+
+if [ -n "$CREATED_STYLE_ID" ] && [ "$CREATED_STYLE_ID" != "null" ]; then
+    curl -s -X DELETE "$BASE_URL/style/info/$CREATED_STYLE_ID" -H "Authorization: Bearer $TOKEN" >/dev/null 2>&1 || true
+fi
+
+if [ -n "$CREATED_FACTORY_ID" ] && [ "$CREATED_FACTORY_ID" != "null" ]; then
+    curl -s -X DELETE "$BASE_URL/system/factory/$CREATED_FACTORY_ID" -H "Authorization: Bearer $TOKEN" >/dev/null 2>&1 || true
 fi
 
 # 10. 总结
