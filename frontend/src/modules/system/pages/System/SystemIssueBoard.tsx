@@ -100,9 +100,9 @@ export default function SystemIssueBoard() {
       if (raw && typeof raw === 'object' && 'errorCount' in raw) {
         // 已经是内层 SystemIssueSummary
         resolved = raw as SystemIssueSummary;
-      } else if (raw && typeof raw === 'object' && 'data' in (raw as object)) {
+      } else if (raw && typeof raw === 'object' && 'data' in (raw as Record<string, unknown>)) {
         // 还是 Result 包装体，取 .data
-        resolved = (raw as Record<string, unknown>).data as SystemIssueSummary;
+        resolved = (raw as unknown as Record<string, unknown>).data as SystemIssueSummary;
       } else {
         resolved = {} as SystemIssueSummary;
       }
