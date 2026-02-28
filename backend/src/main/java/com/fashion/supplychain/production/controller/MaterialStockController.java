@@ -60,6 +60,23 @@ public class MaterialStockController {
     }
 
     /**
+     * 手动出库（仓库页面直接扣减库存）
+     */
+    @PostMapping("/manual-outbound")
+    public Result<Void> manualOutbound(@RequestBody java.util.Map<String, Object> body) {
+        String stockId = body.get("stockId") != null ? String.valueOf(body.get("stockId")) : null;
+        int quantity = body.get("quantity") != null ? Integer.parseInt(String.valueOf(body.get("quantity"))) : 0;
+        if (!org.springframework.util.StringUtils.hasText(stockId)) {
+            return Result.fail("stockId 不能为空");
+        }
+        if (quantity <= 0) {
+            return Result.fail("出库数量必须大于0");
+        }
+        materialStockService.decreaseStockById(stockId, quantity);
+        return Result.success(null);
+    }
+
+    /**
      * 更新安全库存
      */
     @PostMapping("/update-safety-stock")

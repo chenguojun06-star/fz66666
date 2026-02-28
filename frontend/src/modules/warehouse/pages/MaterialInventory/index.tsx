@@ -609,10 +609,32 @@ const _MaterialInventory: React.FC = () => {
       return;
     }
 
-    message.success(`成功出库 ${selectedBatches.length} 个批次，共 ${selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0)} ${outboundModal.data?.unit || '件'}`);
-    outboundModal.close();
-    setBatchDetails([]);
-    outboundForm.resetFields();
+    const totalQty = selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
+    const stockId = outboundModal.data?.id;
+    if (!stockId) {
+      message.error('库存记录ID缺失，无法出库');
+      return;
+    }
+
+    try {
+      const res = await api.post('/production/material/stock/manual-outbound', {
+        stockId,
+        quantity: totalQty,
+        reason: outboundForm.getFieldValue('reason') || '手动出库',
+        operatorName: user?.name || user?.username || '系统',
+      });
+      if (res?.code === 200 || res?.data?.code === 200) {
+        message.success(`成功出库 ${totalQty} ${outboundModal.data?.unit || '件'}`);
+        outboundModal.close();
+        setBatchDetails([]);
+        outboundForm.resetFields();
+        fetchData();
+      } else {
+        message.error(res?.message || res?.data?.message || '出库失败');
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || error.message || '出库操作失败，请重试');
+    }
   };
   // 打印出库单
   const handlePrintOutbound = (record: MaterialInventory) => {
