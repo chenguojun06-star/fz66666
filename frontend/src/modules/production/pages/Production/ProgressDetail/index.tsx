@@ -408,6 +408,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     queryParams.pageSize,
     queryParams.keyword,
     queryParams.status,
+    (queryParams as any).delayedOnly,
+    (queryParams as any).todayOnly,
     // 使用稳定的值，null 转换为固定字符串
     dateRange?.[0]?.valueOf() ?? 'null-start',
     dateRange?.[1]?.valueOf() ?? 'null-end'
