@@ -37,7 +37,7 @@ async function fetchProfile(name: string): Promise<WorkerProfile | null> {
     return pendingMap.get(name)!;
   }
   const p = api
-    .post<WorkerProfile>('/api/intelligence/worker-profile', { operatorName: name })
+    .post<WorkerProfile>('/intelligence/worker-profile', { operatorName: name })
     .then((data: WorkerProfile) => {
       profileCache.set(name, data);
       pendingMap.delete(name);
