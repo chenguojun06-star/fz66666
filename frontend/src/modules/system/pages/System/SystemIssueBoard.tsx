@@ -95,17 +95,12 @@ export default function SystemIssueBoard() {
     try {
       const raw = await systemIssueApi.collect();
       // axios 拦截器可能只解包一层（HTTP body = {code,data,message}），也可能两层（直接给 data 内容）
-      // 统一兼容两种情况
-      let resolved: SystemIssueSummary;
-      if (raw && typeof raw === 'object' && 'errorCount' in raw) {
-        // 已经是内层 SystemIssueSummary
-        resolved = raw as SystemIssueSummary;
-      } else if (raw && typeof raw === 'object' && 'data' in (raw as Record<string, unknown>)) {
-        // 还是 Result 包装体，取 .data
-        resolved = (raw as unknown as Record<string, unknown>).data as SystemIssueSummary;
-      } else {
-        resolved = {} as SystemIssueSummary;
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyRaw = raw as any;
+      const resolved: SystemIssueSummary =
+        typeof anyRaw?.errorCount === 'number' ? anyRaw :   // 已解包
+        typeof anyRaw?.data?.errorCount === 'number' ? anyRaw.data : // 未解包
+        ({} as SystemIssueSummary);
       setSummary({
         errorCount: resolved?.errorCount ?? 0,
         warnCount:  resolved?.warnCount  ?? 0,
