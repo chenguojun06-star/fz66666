@@ -38,17 +38,26 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // 手动拆分大依赖，防止单 chunk 超过 1MB 引发 OOM
+        // 手动拆分大依赖，防止单 chunk 超过 1MB
+        // ⚠️ React 生态（react / react-dom / scheduler / react-router…）必须在同一个 chunk，
+        //    否则两份 React 实例共存会导致 useLayoutEffect/useContext 等 hook 失效崩溃
         manualChunks: (id) => {
           // ECharts 单独拆（压缩后约 375KB）
           if (id.includes('echarts') || id.includes('zrender')) return 'vendor-echarts';
           // exceljs 单独拆（大且只在导入页用到）
           if (id.includes('exceljs')) return 'vendor-exceljs';
-          // antd 组件库拆出
-          if (id.includes('node_modules/antd') || id.includes('node_modules/@ant-design/icons')) return 'vendor-antd';
-          // React 核心
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor-react';
-          // 其余 node_modules 合并为一个 vendor chunk
+          // React 全家桶：react / react-dom / scheduler / react-router / react-is 等
+          // 必须全部在同一 chunk，不可拆散
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/react-is') ||
+            id.includes('node_modules/scheduler')
+          ) return 'vendor-react';
+          // antd + 图标单独拆
+          if (id.includes('node_modules/antd') || id.includes('node_modules/@ant-design')) return 'vendor-antd';
+          // 其余 node_modules 合并
           if (id.includes('node_modules')) return 'vendor-misc';
         },
       },
