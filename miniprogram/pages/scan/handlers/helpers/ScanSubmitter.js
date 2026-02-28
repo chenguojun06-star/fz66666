@@ -76,7 +76,9 @@ class ScanSubmitter {
 
       const res = await this.api.production.executeScan(scanData);
 
-      if (res && res.success !== false) {
+      // 严谨校验：如果后端报错但是 HTTP 200 (Result 中仅抛出了 code: 500)，res 里面压根没有 success
+      // 因此必须明确 res.success === true 或者 res.code === 200!
+      if (res && (res.success === true || res.code === 200 || res.scanRecord)) {
         return {
           success: true,
           data: {
