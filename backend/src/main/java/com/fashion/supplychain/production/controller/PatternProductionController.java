@@ -103,6 +103,42 @@ public class PatternProductionController {
     }
 
     /**
+     * 获取指定样衣的扫码记录（供小程序工序判定使用）
+     */
+    @GetMapping("/{id}/scan-records")
+    public Result<List<Map<String, Object>>> getScanRecords(@PathVariable String id) {
+        PatternProduction pattern = patternProductionService.getById(id);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            return Result.fail("样板生产记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样衣");
+
+        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternScanRecord::getPatternProductionId, id)
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .orderByAsc(PatternScanRecord::getScanTime)
+                .orderByAsc(PatternScanRecord::getCreateTime);
+
+        List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        List<Map<String, Object>> result = records.stream().map(r -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", r.getId());
+            item.put("patternProductionId", r.getPatternProductionId());
+            item.put("operationType", r.getOperationType());
+            item.put("operatorId", r.getOperatorId());
+            item.put("operatorName", r.getOperatorName());
+            item.put("operatorRole", r.getOperatorRole());
+            item.put("warehouseCode", r.getWarehouseCode());
+            item.put("remark", r.getRemark());
+            item.put("scanTime", r.getScanTime() != null ? r.getScanTime().format(fmt) : null);
+            return item;
+        }).collect(Collectors.toList());
+
+        return Result.success(result);
+    }
+
+    /**
      * 统一的样板工作流操作端点（替代5个分散端点）
      */
     @PostMapping("/{id}/workflow-action")
