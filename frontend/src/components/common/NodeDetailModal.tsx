@@ -608,7 +608,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           const scanType = (() => {
             if (nodeKey === 'cutting') return 'cutting';
             if (nodeKey === 'procurement') return 'procurement';
-            if (nodeKey === 'warehousing') return 'warehousing';
+            if (nodeKey === 'warehousing') return 'warehouse'; // 修正：后端/DB/小程序均用 warehouse
             return 'production';
           })();
 
