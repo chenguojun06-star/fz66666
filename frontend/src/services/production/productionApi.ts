@@ -82,6 +82,15 @@ export const intelligenceApi = {
   } }>('/intelligence/predict/finish-time', payload),
 };
 
+export const materialPurchaseApi = {
+  /** 按订单查询采购记录，返回 arrivedQuantity / actualArrivalDate 等字段 */
+  listByOrderId: (orderId: string) =>
+    api.get<{ code: number; data: { records: unknown[]; total: number } }>(
+      '/production/purchase/list',
+      { params: { orderId: String(orderId || '').trim(), pageSize: 200, page: 1 } },
+    ),
+};
+
 export const patternProductionApi = {
   // 获取样衣开发费用统计
   getDevelopmentStats: (rangeType: 'day' | 'week' | 'month' = 'day') =>
@@ -97,4 +106,5 @@ export default {
   productionWarehousingApi,
   intelligenceApi,
   patternProductionApi,
+  materialPurchaseApi,
 };
