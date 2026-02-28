@@ -1,13 +1,19 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
+import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
 
@@ -26,12 +32,122 @@ public class ScanRecordController {
     @Autowired
     private SKUService skuService;
 
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
     /**
      * 执行扫码操作
      */
     @PostMapping("/execute")
     public Result<?> execute(@RequestBody Map<String, Object> params) {
         return Result.success(scanRecordOrchestrator.execute(params));
+    }
+
+    /**
+     * 🔍 扫码诊断接口（不保存，只排查问题）
+     * 用法：与 /execute 发同样的请求体，返回每步的诊断结果
+     */
+    @PostMapping("/diagnose")
+    public Result<?> diagnose(@RequestBody Map<String, Object> params) {
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("step0_params", params);
+
+        String scanCode = params.get("scanCode") != null ? params.get("scanCode").toString().trim() : "";
+        String orderNo  = params.get("orderNo")  != null ? params.get("orderNo").toString().trim()  : "";
+        String bundleNoRaw = params.get("bundleNo") != null ? params.get("bundleNo").toString().trim() : "";
+        String scanType = params.get("scanType") != null ? params.get("scanType").toString().trim() : "production";
+        String operatorId = params.get("operatorId") != null ? params.get("operatorId").toString().trim() : "";
+        String processName = params.get("processName") != null ? params.get("processName").toString().trim() : "";
+
+        report.put("step1_scanCode",  StringUtils.hasText(scanCode)  ? scanCode  : "【空】");
+        report.put("step1_orderNo",   StringUtils.hasText(orderNo)   ? orderNo   : "【空】");
+        report.put("step1_bundleNo",  StringUtils.hasText(bundleNoRaw) ? bundleNoRaw : "【空】");
+        report.put("step1_scanType",  scanType);
+        report.put("step1_operatorId", StringUtils.hasText(operatorId) ? operatorId : "【空-将导致参数错误】");
+        report.put("step1_processName", StringUtils.hasText(processName) ? processName : "【空-生产扫码必须有工序名】");
+
+        // Step2: getByQrCode
+        try {
+            CuttingBundle b1 = StringUtils.hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
+            if (b1 != null && StringUtils.hasText(b1.getId())) {
+                report.put("step2_getByQrCode", "✅ 找到菲号 id=" + b1.getId() + " bundleNo=" + b1.getBundleNo() + " orderNo=" + b1.getProductionOrderNo());
+            } else {
+                report.put("step2_getByQrCode", "❌ 未找到（scanCode中文字段编码不一致，这是已知根因）");
+            }
+        } catch (Exception e) {
+            report.put("step2_getByQrCode", "❌ 异常: " + e.getMessage());
+        }
+
+        // Step3: getByBundleNo 第三回退
+        try {
+            int bundleNoInt = 0;
+            try { bundleNoInt = Integer.parseInt(bundleNoRaw); } catch (Exception ignored) {}
+            if (StringUtils.hasText(orderNo) && bundleNoInt > 0) {
+                CuttingBundle b2 = cuttingBundleService.getByBundleNo(orderNo, bundleNoInt);
+                if (b2 != null && StringUtils.hasText(b2.getId())) {
+                    report.put("step3_getByBundleNo", "✅ 找到菲号 id=" + b2.getId() + " bundleNo=" + b2.getBundleNo() + " color=" + b2.getColor() + " size=" + b2.getSize());
+                } else {
+                    report.put("step3_getByBundleNo", "❌ 未找到（orderNo=" + orderNo + " bundleNo=" + bundleNoInt + "）— 检查t_cutting_bundle表是否有此数据");
+                }
+            } else {
+                report.put("step3_getByBundleNo", "⚠️ 跳过（orderNo或bundleNo为空/0）orderNo='" + orderNo + "' bundleNoRaw='" + bundleNoRaw + "'");
+            }
+        } catch (Exception e) {
+            report.put("step3_getByBundleNo", "❌ 异常: " + e.getMessage());
+        }
+
+        // Step4: 订单解析
+        try {
+            ProductionOrder order = null;
+            if (StringUtils.hasText(orderNo)) {
+                order = productionOrderService.getByOrderNo(orderNo);
+            }
+            if (order != null) {
+                report.put("step4_order", "✅ 找到订单 id=" + order.getId() + " status=" + order.getStatus() + " styleNo=" + order.getStyleNo());
+                if ("completed".equalsIgnoreCase(order.getStatus())) {
+                    report.put("step4_order_warn", "🚫 订单状态=completed，扫码会被拦截！");
+                }
+            } else {
+                report.put("step4_order", "❌ 未找到订单（orderNo='" + orderNo + "'）");
+            }
+        } catch (Exception e) {
+            report.put("step4_order", "❌ 异常: " + e.getMessage());
+        }
+
+        // Step5: 最近扫码记录（有没有历史）
+        try {
+            int bundleNoInt2 = 0;
+            try { bundleNoInt2 = Integer.parseInt(bundleNoRaw); } catch (Exception ignored) {}
+            if (StringUtils.hasText(orderNo) && bundleNoInt2 > 0) {
+                java.util.Map<String, Object> listParams = new java.util.HashMap<>();
+                listParams.put("orderNo", orderNo);
+                listParams.put("bundleNo", bundleNoRaw);
+                listParams.put("page", 1);
+                listParams.put("pageSize", 10);
+                try {
+                    com.baomidou.mybatisplus.core.metadata.IPage<ScanRecord> page =
+                        scanRecordOrchestrator.list(listParams);
+                    report.put("step5_history_total", page.getTotal());
+                    report.put("step5_history_note", page.getTotal() == 0
+                        ? "❌ 无历史扫码记录 — _getScanHistory拿不到数据，每次都当第一次，会一直推整烫"
+                        : "✅ 有" + page.getTotal() + "条历史记录");
+                    if (!page.getRecords().isEmpty()) {
+                        ScanRecord r = page.getRecords().get(0);
+                        report.put("step5_latest", "processName=" + r.getProcessName() + " progressStage=" + r.getProgressStage() + " bundleNo=" + r.getCuttingBundleNo() + " result=" + r.getScanResult());
+                    }
+                } catch (Exception e2) {
+                    report.put("step5_history", "❌ 查询异常: " + e2.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            report.put("step5_history", "❌ 异常: " + e.getMessage());
+        }
+
+        report.put("conclusion", "如果step2/step3都是❌，说明菲号查不到，历史记录会是0，整烫会无限循环。如果订单已completed，扫码会被拦截。");
+        return Result.success(report);
     }
 
     @PostMapping("/unit-price")
