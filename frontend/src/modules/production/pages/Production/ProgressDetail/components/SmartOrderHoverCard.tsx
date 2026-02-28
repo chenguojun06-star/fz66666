@@ -165,10 +165,10 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
    * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高 */
   const speed = useMemo(() => {
     const orderStart = order.createTime ? dayjs(order.createTime) : null;
-    const elap = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
+    const elapsed = orderStart ? Math.max(1, now.diff(orderStart, 'day')) : 1;
     const completedQty = Number(order.completedQuantity) || 0;
     // 优先用真实入库完成数
-    if (completedQty > 0) return completedQty / elap;
+    if (completedQty > 0) return completedQty / elapsed;
     // 用单工序最大件数（不跨工序累加，防止同一批件重复计）
     const maxStageQty = boardStats
       ? Math.max(
@@ -178,7 +178,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       : 0;
     const fromProg = prog > 0 && total > 0 ? Math.round(prog / 100 * total) : 0;
     const done = Math.max(maxStageQty, fromProg);
-    return done > 0 ? done / elap : 0;
+    return done > 0 ? done / elapsed : 0;
   }, [order, prog, total, boardStats, now]);
 
   /**
@@ -306,8 +306,8 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                   {/* 第二行：件数 + 最近扫码时间 + 预计完成日 */}
                   <div style={{ paddingLeft: 17, fontSize: 10, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
-                    {s.lastTime && <span>最近 {s.lastTime}</span>}
-                    {estFinish && <span style={{ color: '#1677ff' }}>预计 {estFinish}</span>}
+                    {s.lastTime && <span>最近 {s.lastTime}</span>}
+                    {estFinish && <span style={{ color: '#1677ff' }}>预计 {estFinish}</span>}
                   </div>
                 </div>
               </React.Fragment>
