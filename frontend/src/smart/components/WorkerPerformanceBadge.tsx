@@ -78,8 +78,15 @@ function LevelDot({ level }: { level?: string }) {
       />
     );
   }
-  // normal 或无数据：不显示徽标（低调）
-  return null;
+  // normal / 未加载：灰色小点（始终可见，确保用户能 hover）
+  return (
+    <span
+      style={{
+        display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+        background: '#d9d9d9', cursor: 'pointer', flexShrink: 0,
+      }}
+    />
+  );
 }
 
 // ── 工序行 ──────────────────────────────────────────────────────────────
@@ -156,9 +163,9 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
     }
   };
 
-  // 决定是否渲染徽标（无数据时不渲染占位）
+  // 决定当前徽标颜色（数据未加载时显示灰点，加载完成后变色）
   const topLevel = (() => {
-    if (!profile || profile === 'loading') return undefined;
+    if (!profile || profile === 'loading') return undefined; // → 灰点
     if (!profile.stages || profile.stages.length === 0) return undefined;
     const order = ['excellent', 'good', 'normal', 'below'] as const;
     return profile.stages.reduce((best, s) => {
@@ -166,9 +173,6 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
              order.indexOf(best.level as typeof order[number]) ? s : best;
     }, profile.stages[0]).level;
   })();
-
-  // 若数据加载完毕且为 normal，不渲染（低调）
-  if (profile && profile !== 'loading' && topLevel === 'normal') return null;
 
   return (
     <Popover
