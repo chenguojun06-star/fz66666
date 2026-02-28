@@ -250,15 +250,11 @@ const PatternProduction: React.FC = () => {
         };
 
         const completedFlag = normalizedStatus === 'COMPLETED';
+        // COMPLETED 时把全部节点都置为 100%，避免 calculateProgress 均值被 0 拉低（卡片视图与列表视图数据不一致）
         const progressNodes = completedFlag
-          ? {
-            ...baseProgressNodes,
-            procurement: 100,
-            cutting: 100,
-            sewing: 100,
-            tail: 100,
-            warehousing: 100,
-          }
+          ? Object.fromEntries(
+              [...new Set([...Object.keys(baseProgressNodes), 'procurement', 'cutting', 'sewing', 'tail', 'warehousing'])].map(k => [k, 100])
+            )
           : baseProgressNodes;
 
         const baseProcurementProgress = item.procurementProgress || {
