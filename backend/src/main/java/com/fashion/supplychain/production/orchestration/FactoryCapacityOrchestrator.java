@@ -46,7 +46,7 @@ public class FactoryCapacityOrchestrator {
      * @return 按工厂分组的产能列表，按订单数降序排列
      */
     public List<FactoryCapacityItem> getFactoryCapacity() {
-        String tenantId = UserContext.tenantId();
+        Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
 
         // 查询进行中（非 completed）且未删除的订单
