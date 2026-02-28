@@ -74,6 +74,24 @@ public class WarehouseScanExecutor {
         }
 
         CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
+        // ★ 回退：通过 orderNo + bundleNo（整数序号）查找，对中文编码完全免疫
+        // 根因：QR码含中文时 getByQrCode 可能因编码不一致匹配失败，导致 cutting_bundle_no=NULL
+        if (bundle == null || !hasText(bundle.getId())) {
+            String fallbackOrderNo = TextUtils.safeText(params.get("orderNo"));
+            Integer bundleNoInt = NumberUtils.toInt(params.get("bundleNo"));
+            if (hasText(fallbackOrderNo) && bundleNoInt != null && bundleNoInt > 0) {
+                try {
+                    CuttingBundle foundByNo = cuttingBundleService.getByBundleNo(fallbackOrderNo, bundleNoInt);
+                    if (foundByNo != null && hasText(foundByNo.getId())) {
+                        bundle = foundByNo;
+                        log.info("入库回退（orderNo+bundleNo）找到菲号: orderNo={}, bundleNo={}, bundleId={}",
+                                fallbackOrderNo, bundleNoInt, bundle.getId());
+                    }
+                } catch (Exception e) {
+                    log.warn("入库通过orderNo+bundleNo查找菲号失败: orderNo={}, bundleNo={}", fallbackOrderNo, bundleNoInt, e);
+                }
+            }
+        }
         if (bundle == null || !hasText(bundle.getId())) {
             throw new IllegalStateException("未匹配到菲号");
         }

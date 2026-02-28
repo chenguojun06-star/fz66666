@@ -114,6 +114,29 @@ public class ProductionScanExecutor {
             }
         }
 
+        // ★ 第三回退：通过 orderNo + bundleNo（整数序号）查找
+        // 解决 QR码中文字段编码不一致导致 getByQrCode / color+size 均失败的问题
+        // bundleNo 和 orderNo 均为 ASCII/整数，完全不依赖中文字段编码
+        if ((bundle == null || !hasText(bundle.getId())) && hasText(orderNo)) {
+            String bundleNoStr = TextUtils.safeText(params.get("bundleNo"));
+            if (hasText(bundleNoStr)) {
+                int bundleNoInt = ParamUtils.toIntSafe(bundleNoStr);
+                if (bundleNoInt > 0) {
+                    try {
+                        CuttingBundle foundByNo = cuttingBundleService.getByBundleNo(orderNo, bundleNoInt);
+                        if (foundByNo != null && hasText(foundByNo.getId())) {
+                            bundle = foundByNo;
+                            log.info("第三回退（orderNo+bundleNo）找到菲号: orderNo={}, bundleNo={}, bundleId={}",
+                                    orderNo, bundleNoInt, bundle.getId());
+                        }
+                    } catch (Exception e) {
+                        log.warn("通过orderNo+bundleNo查找菲号失败: orderNo={}, bundleNo={}", orderNo, bundleNoStr, e);
+                    }
+                }
+            }
+        }
+
+
         // 无菲号时：允许 ORDER 模式扫码（SKU 批量提交路径，不要求 CuttingBundle）
         if (bundle == null || !hasText(bundle.getId())) {
             bundle = null; // 显式置空，后续流程统一判断
