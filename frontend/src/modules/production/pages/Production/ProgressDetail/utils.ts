@@ -83,7 +83,7 @@ export const isSewingStageKey = (k: string) => {
 export const isIroningStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('整烫') || n.includes('熨烫');
+  return n.includes('整烫') || n.includes('熨烫') || n.includes('大烫');
 };
 
 /**
@@ -128,13 +128,14 @@ export const canonicalStageKey = (k: string) => {
     缝制: '车缝',
     缝纫: '车缝',
     车工: '车缝',
+    大烫: '整烫',
+    熨烫: '整烫',
     后整: '包装',
     打包: '包装',
     装箱: '包装',
     检验: '质检',
     品检: '质检',
     验货: '质检',
-    熨烫: '整烫',
     发货: '出货',
     发运: '出货',
     裁床: '裁剪',
