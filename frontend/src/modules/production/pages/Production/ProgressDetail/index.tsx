@@ -897,6 +897,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           </Card>
 
+          {/* 工厂产能雷达（独立页面） */}
+          <FactoryCapacityPanel refreshKey={capacityRefreshKey} />
+
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">
               <SmartErrorNotice
