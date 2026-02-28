@@ -56,6 +56,7 @@ class StageDetector {
     this.CACHE_TTL = 5 * 60 * 1000;
 
     // scanType 推断规则（根据 progressStage 或 processName 推断扫码类型）
+    // ⚠️ 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType
     // 工序名称到 scanType 的映射规则
     this.scanTypeRules = {
       采购: 'procurement',
@@ -63,6 +64,8 @@ class StageDetector {
       质检: 'quality',
       入库: 'warehouse',
     };
+    // 合法的 scanType 集合（用于校验后端返回值）
+    this.VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting', 'procurement']);
     // 默认 scanType（不在上述规则中的工序）
     this.defaultScanType = 'production';
   }
@@ -93,7 +96,8 @@ class StageDetector {
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(p => ({
         ...p,
-        scanType: this._inferScanType(p.processName, p.progressStage),
+        // 优先使用后端已计算的 scanType，无则就地推断山底）
+        scanType: this._inferScanType(p.processName, p.progressStage, p.scanType),
       }));
 
     this.processConfigCache.set(orderNo, { config: sorted, timestamp: Date.now() });
@@ -102,10 +106,17 @@ class StageDetector {
 
   /**
    * 根据工序名称/进度阶段推断 scanType
+   * @param {string} processName - 工序名
+   * @param {string} [progressStage] - 父进度阶段
+   * @param {string} [backendScanType] - 后端已返回的 scanType（如有则直接使用）
    * @private
    */
-  _inferScanType(processName, progressStage) {
-    // 优先按 processName 匹配
+  _inferScanType(processName, progressStage, backendScanType) {
+    // 后端已计算并返回合法的 scanType，直接使用，不再就地推断
+    if (backendScanType && this.VALID_SCAN_TYPES.has(backendScanType)) {
+      return backendScanType;
+    }
+    // 兼容展岗：后端未返回 scanType 时、就地推断
     if (this.scanTypeRules[processName]) {
       return this.scanTypeRules[processName];
     }

@@ -91,6 +91,31 @@ public class SKUServiceImpl implements SKUService {
                pn.contains("procurement") || pn.contains("order") || pn.contains("warehousing");
     }
 
+    /**
+     * 根据工序名/进度阶段名推断 scanType（后端唯一权威来源）
+     *
+     * <p>使用 ProcessSynonymMapping 将任意工序名归一化为标准名称，再映射为 scanType。
+     * 端侧（小程序/PC端）直接使用此字段，不再自行推断，彻底消除三端不一致问题。</p>
+     *
+     * @param processName  工序名（如"做领"、"裁剪"、"大烫"）
+     * @param progressStage 父进度节点名（如"车缝"、"尾部"）
+     * @return scanType：warehouse | cutting | quality | procurement | production
+     */
+    private String inferScanTypeFromNames(String processName, String progressStage) {
+        // 优先 processName，其次 progressStage
+        for (String raw : new String[]{processName, progressStage}) {
+            if (!StringUtils.hasText(raw)) continue;
+            String norm = com.fashion.supplychain.common.ProcessSynonymMapping.normalize(raw.trim());
+            switch (norm) {
+                case "入库": return "warehouse";
+                case "裁剪": return "cutting";
+                case "质检": return "quality";
+                case "采购": return "procurement";
+            }
+        }
+        return "production";
+    }
+
     @Override
     public String detectScanMode(String scanCode, String color, String size) {
         if (!StringUtils.hasText(scanCode)) {
@@ -728,6 +753,15 @@ public class SKUServiceImpl implements SKUService {
                 } catch (Exception e) {
                     log.warn("[SKUService] 合并progressStage映射失败: {}", e.getMessage());
                 }
+            }
+
+            // ★ 后端统一计算 scanType，端侧不再各自推断
+            // 这是解决三端同义词不一致问题的根本方案：
+            // 所有推断逻辑收拢到此处，使用 ProcessSynonymMapping 作为唯一权威
+            for (Map<String, Object> r : result) {
+                String pn = r.get("processName") != null ? r.get("processName").toString() : "";
+                String ps = r.get("progressStage") != null ? r.get("progressStage").toString() : "";
+                r.put("scanType", inferScanTypeFromNames(pn, ps));
             }
 
             return result;
