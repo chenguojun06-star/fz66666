@@ -21,6 +21,7 @@ import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
 import { useDashboardStats, RecentActivity } from './useDashboardStats';
+import SmartDailyBrief from '../../components/SmartDailyBrief';
 import './styles.css';
 
 interface QuickEntryConfig {
@@ -342,6 +343,9 @@ const Dashboard: React.FC = () => {
             </Space>
           )}
         />
+
+        {/* 智能运营日报 */}
+        <SmartDailyBrief />
 
         {/* 顶部4个统计看板 */}
         <TopStats />
