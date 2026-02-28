@@ -349,7 +349,11 @@ public class ProductionOrderFlowOrchestrationService {
                     order.getStyleNo(), e);
         }
 
-        Map<String, List<ScanRecord>> byProcess = new HashMap<>();
+        // ---------- 分组：严格用 progressStage 作 key（保留原始语义）----------
+        // 不做任何"降级到子工序名"操作，因为 progressStageNameMatches 的 contains
+        // 语义会导致不同工序内容被错误地归并在一起。
+        // 过滤父分类行（不在 processOrder 中的 key）在下面的输出循环里处理。
+        Map<String, List<ScanRecord>> byProcess = new LinkedHashMap<>();
         if (records != null) {
             for (ScanRecord r : records) {
                 if (r == null) {
@@ -369,36 +373,17 @@ public class ProductionOrderFlowOrchestrationService {
                 if (!StringUtils.hasText(pn)) {
                     continue;
                 }
-                // 当 progressStage 是父分类（如"尾部"/"二次工艺"），而 processName 能直接匹配
-                // 模板节点时，用 processName 作为分组 key，避免父分类名称乱入环节汇总。
-                if (!processOrder.isEmpty()) {
-                    boolean stageMatchable = false;
-                    for (String tpl : processOrder) {
-                        if (templateLibraryService.progressStageNameMatches(tpl, pn)) {
-                            stageMatchable = true;
-                            break;
-                        }
-                    }
-                    if (!stageMatchable) {
-                        String specificName = r.getProcessName() == null ? "" : r.getProcessName().trim();
-                        if (StringUtils.hasText(specificName) && !specificName.equals(pn)) {
-                            for (String tpl : processOrder) {
-                                if (templateLibraryService.progressStageNameMatches(tpl, specificName)) {
-                                    pn = specificName; // 降级用子工序名分组
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
                 byProcess.computeIfAbsent(pn, k -> new ArrayList<>()).add(r);
             }
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
+        // processes = 模板节点顺序；若无模板则保留扫码记录中出现的所有 key
         List<String> processes = processOrder.isEmpty() ? new ArrayList<>(byProcess.keySet())
                 : new ArrayList<>(processOrder);
         if (!processOrder.isEmpty()) {
+            // 追加扫码记录中有、但模板里可以匹配到的别名 key（用于后续 list 收集）
+            // 不追加完全不在模板里的父分类 key（如"尾部"/"二次工艺"），避免乱入行
             for (String pn : byProcess.keySet()) {
                 if (!StringUtils.hasText(pn)) {
                     continue;
@@ -410,8 +395,11 @@ public class ProductionOrderFlowOrchestrationService {
                         break;
                     }
                 }
-                if (!matched && !processes.contains(pn)) {
-                    processes.add(pn);
+                // 仅当能匹配到模板节点时才可能需要追加（实际上模板节点已在 processes 里，
+                // 不匹配的父分类直接跳过，不追加）
+                if (!matched) {
+                    // 父分类（不在模板里）—— 直接丢弃，不追加到 processes
+                    // 其扫码数据已在 byProcess 里，会在下面 list 收集时被同义词匹配捞到
                 }
             }
         }
