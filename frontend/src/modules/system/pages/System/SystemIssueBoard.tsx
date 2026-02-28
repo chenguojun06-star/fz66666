@@ -93,8 +93,10 @@ export default function SystemIssueBoard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await systemIssueApi.collect();
-      setSummary(data);
+      const raw = await systemIssueApi.collect();
+      // 防御：axios 拦截器在某些边界情况下可能返回未解包的 Result 包装体
+      const data: SystemIssueSummary = (raw as unknown as { data?: SystemIssueSummary }).data ?? raw;
+      setSummary({ ...data, issues: data.issues ?? [] });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '接口请求失败');
     } finally {
@@ -170,7 +172,7 @@ export default function SystemIssueBoard() {
 
       <Card size="small" title="问题明细">
         <Spin spinning={loading}>
-          {summary && summary.issues.length === 0 ? (
+          {summary && (summary.issues ?? []).length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={<Text type="secondary">🎉 当前无已知问题，系统运行正常</Text>}
