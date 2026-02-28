@@ -96,6 +96,11 @@ public class ProductionScanExecutor {
         // 优先通过 scanCode（二维码内容）查找菲号
         if (hasText(scanCode)) {
             bundle = cuttingBundleService.getByQrCode(scanCode);
+            if (bundle != null && hasText(bundle.getId())) {
+                log.info("[BundleLookup] getByQrCode命中: scanCode={}, bundleId={}", scanCode, bundle.getId());
+            } else {
+                log.info("[BundleLookup] getByQrCode未命中: scanCode长度={}", scanCode.length());
+            }
         }
 
         // 如果 scanCode 未匹配到菲号，尝试通过 orderNo + color + size 查找
@@ -287,7 +292,11 @@ public class ProductionScanExecutor {
 
         try {
             validateScanRecordForSave(sr);
+            log.info("[ScanSave] 即将写入扫码记录: orderId={}, bundleId={}, scanType={}, progressStage={}, qty={}, operator={}",
+                    sr.getOrderId(), sr.getCuttingBundleId(), sr.getScanType(), sr.getProgressStage(),
+                    sr.getQuantity(), sr.getOperatorId());
             scanRecordService.saveScanRecord(sr);
+            log.info("[ScanSave] 扫码记录写入成功: recordId={}", sr.getId());
 
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
             // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化

@@ -120,7 +120,13 @@ public class ScanRecordOrchestrator {
             if (sigResult.isInvalid()) {
                 throw new IllegalArgumentException(sigResult.getMessage());
             }
-            // 签名有效或无签名（旧QR码向后兼容），继续处理
+            // ★ 关键修复：剥离 |SIG-... 后缀，避免 getByQrCode() 因带签名字符串而找不到DB记录
+            if (sigResult.getContent() != null && !sigResult.getContent().equals(scanCode)) {
+                log.info("[ScanExec] scanCode已剥离SIG签名: 原长度={}, 剥离后长度={}",
+                        scanCode.length(), sigResult.getContent().length());
+                scanCode = sigResult.getContent();
+                safeParams.put("scanCode", scanCode);
+            }
         }
 
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
@@ -142,6 +148,14 @@ public class ScanRecordOrchestrator {
                 || (!hasText(scanCode) && !hasText(orderNo) && !hasText(orderId))) {
             throw new IllegalArgumentException("参数错误");
         }
+
+        // 关键参数日志（方便云端排查）
+        log.info("[ScanExec] 收到扫码请求: scanCode={}, orderNo={}, bundleNo={}, scanType={}, quantity={}, operator={}",
+                scanCode, orderNo,
+                safeParams.get("bundleNo"),
+                safeParams.get("scanType"),
+                safeParams.get("quantity"),
+                operatorId);
 
         String requestId = TextUtils.safeText(safeParams.get("requestId"));
         if (!hasText(requestId)) {
