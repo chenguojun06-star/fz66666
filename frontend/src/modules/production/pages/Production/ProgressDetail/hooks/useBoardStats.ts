@@ -83,15 +83,17 @@ export const ensureBoardStatsForOrder = async ({
     const hasProcureNode = (nodes || []).some((n) => PROCUREMENT_NODE_NAMES.has(String((n as any)?.name || '').trim()));
     let procureArrived = 0;
     let procureArrivalTime = '';
-    if (hasProcureNode) {
+    const orderNo = String((order as any)?.orderNo || '').trim();
+    if (hasProcureNode && orderNo) {
       try {
-        const purchaseRes = await materialPurchaseApi.listByOrderId(oid);
+        const purchaseRes = await materialPurchaseApi.listByOrderNo(orderNo);
         const purchaseRecords: unknown[] = (purchaseRes as any)?.code === 200
           ? ((purchaseRes as any)?.data?.records ?? [])
           : [];
         for (const pr of purchaseRecords) {
           procureArrived += Number((pr as any)?.arrivedQuantity) || 0;
-          const at = String((pr as any)?.actualArrivalDate || '').trim();
+          // actualArrivalDate 全部到货时写入；部分到货时用 receivedTime（领取时间）兑雅
+          const at = String((pr as any)?.actualArrivalDate || (pr as any)?.receivedTime || '').trim();
           if (at && (!procureArrivalTime || at > procureArrivalTime)) procureArrivalTime = at;
         }
       } catch { /* 采购接口失败，保持扫码数据不变 */ }

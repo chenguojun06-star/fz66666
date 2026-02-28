@@ -83,11 +83,14 @@ export const intelligenceApi = {
 };
 
 export const materialPurchaseApi = {
-  /** 按订单查询采购记录，返回 arrivedQuantity / actualArrivalDate 等字段 */
-  listByOrderId: (orderId: string) =>
+  /**
+   * 按订单查询采购记录，返回 arrivedQuantity / actualArrivalDate 等字段。
+   * 使用 orderNo 精确匹配（后端 sourceType=order + orderNo 过滤），排除样衣独立采购单。
+   */
+  listByOrderNo: (orderNo: string) =>
     api.get<{ code: number; data: { records: unknown[]; total: number } }>(
       '/production/purchase/list',
-      { params: { orderId: String(orderId || '').trim(), pageSize: 200, page: 1 } },
+      { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
     ),
 };
 
@@ -108,3 +111,4 @@ export default {
   patternProductionApi,
   materialPurchaseApi,
 };
+
