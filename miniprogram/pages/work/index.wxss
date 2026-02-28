@@ -556,6 +556,11 @@ page {
   font-weight: 700;
 }
 
+.days-done {
+  color: #52c41a;
+  font-weight: 600;
+}
+
 .item-actions {
   display: flex;
   justify-content: flex-end;

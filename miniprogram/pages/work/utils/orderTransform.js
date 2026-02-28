@@ -87,6 +87,19 @@ function buildSizeMeta(order) {
  * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
  */
 function calcDeliveryInfo(source) {
+  // 已关单 / 已完成：停止倒计时，直接显示关单状态
+  const status = String(source.status || '').toLowerCase();
+  if (status === 'completed' || status === 'cancelled' || status === 'canceled') {
+    const raw = source.plannedEndDate || source.expectedShipDate || '';
+    const dateStr = raw ? String(raw).substring(0, 10) : '';
+    return {
+      deliveryDateStr: dateStr,
+      remainDays: null,
+      remainDaysText: '已关单',
+      remainDaysClass: 'days-done',
+    };
+  }
+
   const raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
 
