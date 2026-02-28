@@ -416,12 +416,25 @@ public class ProductionOrderFlowOrchestrationService {
                     continue;
                 }
                 String k = e.getKey();
-                if (!templateLibraryService.progressStageNameMatches(pn, k)) {
+                List<ScanRecord> v = e.getValue();
+                if (v == null || v.isEmpty()) {
                     continue;
                 }
-                List<ScanRecord> v = e.getValue();
-                if (v != null && !v.isEmpty()) {
+                if (templateLibraryService.progressStageNameMatches(pn, k)) {
+                    // key 直接匹配模板节点（常规情况）：整桶收入
                     list.addAll(v);
+                } else {
+                    // key 是父分类（如"二次工艺"）未匹配模板节点，但桶内某些记录的
+                    // processName（如"绣花"）可能直接匹配当前模板节点。
+                    // 逐条检查 processName，只收集匹配的记录，避免跨工序聚合。
+                    for (ScanRecord r : v) {
+                        if (r == null) continue;
+                        String rProcessName = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                        if (StringUtils.hasText(rProcessName)
+                                && templateLibraryService.progressStageNameMatches(pn, rProcessName)) {
+                            list.add(r);
+                        }
+                    }
                 }
             }
             list.sort((a, b) -> {
