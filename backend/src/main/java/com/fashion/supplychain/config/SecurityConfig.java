@@ -119,6 +119,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1", "ROLE_tenant_owner")
                         .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1", "ROLE_tenant_owner")
                         .antMatchers("/api/wechat/mini-program/login").permitAll()
+                        .antMatchers("/api/internal/maintenance/reinit-process-tracking").permitAll()  // 临时开放，初始化完成后删除
                         .antMatchers("/api/production/order/by-order-no/**").authenticated()
                         .antMatchers("/api/production/order/detail/**").authenticated()
                         .antMatchers("/api/production/cutting-bundle/by-no").authenticated()
