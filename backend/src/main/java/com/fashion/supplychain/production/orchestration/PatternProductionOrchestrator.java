@@ -568,7 +568,10 @@ public class PatternProductionOrchestrator {
         map.put("receiver", record.getReceiver());
         map.put("receiveTime", record.getReceiveTime());
         map.put("completeTime", record.getCompleteTime());
-        map.put("patternMaker", record.getPatternMaker());
+        // 旧记录 patternMaker 可能为 null（领取时未写入），兜底用 receiver（两者为同一人）
+        String patternMakerVal = StringUtils.hasText(record.getPatternMaker())
+                ? record.getPatternMaker() : record.getReceiver();
+        map.put("patternMaker", patternMakerVal);
         map.put("progressNodes", record.getProgressNodes());
         map.put("status", record.getStatus());
         map.put("createTime", record.getCreateTime());
