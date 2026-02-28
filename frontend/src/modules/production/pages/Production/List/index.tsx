@@ -714,7 +714,7 @@ const ProductionList: React.FC = () => {
       width: 155,
       render: (value: unknown, record: ProductionOrder) => {
         const dateStr = value ? formatDateTime(value as string) : '-';
-        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime);
+        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate);
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
@@ -1067,7 +1067,7 @@ const ProductionList: React.FC = () => {
                     label: '剩',
                     key: 'remainingDays',
                     render: (val: unknown, record: Record<string, unknown>) => {
-                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string);
+                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string);
                       return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
                     }
                   }

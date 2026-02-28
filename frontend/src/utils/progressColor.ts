@@ -45,9 +45,12 @@ export const getProgressColorStatus = (plannedEndDate?: string | null): Progress
  */
 export const getRemainingDaysDisplay = (
   endDate?: string | null,
-  createTime?: string | null
+  createTime?: string | null,
+  actualEndDate?: string | null
 ): { text: string; color: string } => {
   if (!endDate) return { text: '-', color: '#999' };
+  // 已关单：停止倒计时，固定显示"已关单"
+  if (actualEndDate) return { text: '已关单', color: '#52c41a' };
 
   const now = new Date();
   const deadline = new Date(endDate);

@@ -37,6 +37,7 @@ import {
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
 import SmartOrderHoverCard from './components/SmartOrderHoverCard';
+import FactoryCapacityPanel from './components/FactoryCapacityPanel';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -54,6 +55,7 @@ import { useRemarkModal } from './hooks/useRemarkModal';
 import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
+import { useStagnantDetection } from './hooks/useStagnantDetection';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -96,6 +98,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     todayOrders: 0, todayQuantity: 0,
   });
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
+  // 产能面板刷新key，每次拉取订单成功后+1触发面板重新请求
+  const [capacityRefreshKey, setCapacityRefreshKey] = useState(0);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
@@ -194,6 +198,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         if (showSmartErrorNotice) setSmartError(null);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
         clearAllBoardCache();
+        // 触发工厂产能面板重新请求
+        setCapacityRefreshKey(k => k + 1);
 
         const styleNos = Array.from(
           new Set(
@@ -677,6 +683,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     getCloseMinRequired,
   });
 
+  // ── 停滞订单检测（≥3天无新扫码）─────────────────────────────────────
+  const stagnantOrderIds = useStagnantDetection(orders, boardTimesByOrder);
+
   // ── 表格列定义 ─────────────────────────────────────────────────────
   const { columns } = useProgressColumns({
     orderSortField, orderSortOrder, handleOrderSort,
@@ -685,6 +694,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText,
     openScan,
+    stagnantOrderIds,
   });
 
 
@@ -728,6 +738,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           </Card>
 
+          {/* 工厂产能雷达 */}
+          <FactoryCapacityPanel refreshKey={capacityRefreshKey} />
+
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">
               <SmartErrorNotice
@@ -767,7 +780,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               fields={[]}
               fieldGroups={[
                 [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -797,6 +810,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
+            />
+          )}
+        </>
+      ) : (
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">生产进度</h2>
@@ -919,7 +936,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               fields={[]}
               fieldGroups={[
                 [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -953,6 +970,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
+            />
+          )}
+        </Card>
       )}
 
       <ScanConfirmModal

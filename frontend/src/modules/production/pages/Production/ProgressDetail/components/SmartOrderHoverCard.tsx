@@ -58,14 +58,32 @@ function calcPredict(o: ProductionOrder) {
   return { date: dayjs().add(days, 'day').format('MM-DD'), speed: `${speed.toFixed(1)}件/天` };
 }
 
+/** 速度缺口：需要多少天 vs 剩余多少天，差值 > 0 表示落后 */
+function calcGap(o: ProductionOrder) {
+  if (o.status === 'completed' || !o.plannedEndDate) return null;
+  const total = Number(o.orderQuantity) || 0;
+  const done  = Number(o.completedQuantity) || 0;
+  const start = o.createTime ? dayjs(o.createTime) : null;
+  if (!total || !start) return null;
+  const elap  = Math.max(1, dayjs().diff(start, 'day'));
+  const speed = done / elap;
+  if (speed <= 0) return null;
+  const needDays = Math.ceil((total - done) / speed);
+  const endDays  = Math.max(0, dayjs(o.plannedEndDate).diff(dayjs(), 'day'));
+  const gap      = needDays - endDays;
+  if (gap <= 0) return null; // 进度正常，不显示
+  return { needDays, endDays, gap };
+}
+
 function stageColor(v: number) {
   if (v >= 60) return '#1677ff';
   return '#fa8c16';
 }
 
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
-  const risk    = useMemo(() => calcRisk(order), [order]);
-  const predict = useMemo(() => calcPredict(order), [order]);
+  const risk       = useMemo(() => calcRisk(order), [order]);
+  const predict    = useMemo(() => calcPredict(order), [order]);
+  const gap        = useMemo(() => calcGap(order), [order]);
   const isCompleted = order.status === 'completed';
 
   // 只显示进行中的工序（1~99%）——完成了的隐藏，没开始的也隐藏
@@ -95,6 +113,22 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           </span>
         )}
       </div>
+
+      {/* 速度缺口：需X天·剩Y天·差Z天（落后才显示） */}
+      {gap && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', background: '#fff7e6', borderRadius: 5, marginBottom: 8,
+          fontSize: 11, color: '#d46b08',
+        }}>
+          <span role="img" aria-label="gap">⏱</span>
+          <span>需 <b>{gap.needDays}</b> 天</span>
+          <span style={{ color: '#ccc' }}>·</span>
+          <span>剩 <b>{gap.endDays}</b> 天</span>
+          <span style={{ color: '#ccc' }}>·</span>
+          <span style={{ color: '#ff4d4f', fontWeight: 700 }}>差 {gap.gap} 天</span>
+        </div>
+      )}
 
       {/* 进行中工序：完成了不显示，0%不显示，只显示 1~99% */}
       {activeStages.length > 0 && (

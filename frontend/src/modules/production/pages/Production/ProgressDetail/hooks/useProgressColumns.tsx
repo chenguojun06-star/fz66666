@@ -80,6 +80,8 @@ interface UseProgressColumnsParams {
   setRemarkPopoverId: (id: string | null) => void;
   setRemarkText: (text: string) => void;
   openScan: (order: ProductionOrder) => void;
+  /** 停滞订单 ID Set（≥3天无新扫码且非已完成） */
+  stagnantOrderIds?: Set<string>;
 }
 
 /**
@@ -101,6 +103,7 @@ export const useProgressColumns = ({
   setRemarkPopoverId,
   setRemarkText,
   openScan,
+  stagnantOrderIds,
 }: UseProgressColumnsParams) => {
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
@@ -284,7 +287,7 @@ export const useProgressColumns = ({
       width: 170,
       render: (_: any, record: ProductionOrder) => {
         const dateStr = formatTime(getOrderShipTime(record));
-        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime);
+        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate);
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
@@ -298,7 +301,7 @@ export const useProgressColumns = ({
       dataIndex: 'status',
       key: 'status',
       width: 110,
-      render: (value: ProductionOrder['status']) => {
+      render: (value: ProductionOrder['status'], record: ProductionOrder) => {
         const map: any = {
           pending: { color: 'default', label: '待开始' },
           production: { color: 'success', label: '生产中' },
@@ -306,7 +309,15 @@ export const useProgressColumns = ({
           delayed: { color: 'warning', label: '延期' },
         };
         const t = map[value] || { color: 'default', label: value };
-        return <Tag color={t.color}>{t.label}</Tag>;
+        const isStagnant = stagnantOrderIds?.has(String(record.id));
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag>
+            {isStagnant && (
+              <Tag color="orange" style={{ margin: 0, fontSize: 10, lineHeight: '16px', height: 16, padding: '0 4px' }}>⏸ 停滞</Tag>
+            )}
+          </div>
+        );
       },
     },
     {

@@ -6,6 +6,14 @@ export type ProductionOrderListParams = ProductionQueryParams & {
   endDate?: string;
 };
 
+export interface FactoryCapacityItem {
+  factoryName: string;
+  totalOrders: number;
+  totalQuantity: number;
+  atRiskCount: number;
+  overdueCount: number;
+}
+
 export const productionOrderApi = {
   list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
@@ -17,6 +25,8 @@ export const productionOrderApi = {
   // 节点操作记录 API
   getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
   saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
+  // 工厂产能雷达
+  getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
 };
 
 export const productionCuttingApi = {

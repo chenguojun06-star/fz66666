@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderDtoConverter;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
+import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,6 +45,9 @@ public class ProductionOrderController {
 
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Autowired
+    private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
 
     /**
      * 【新版统一查询】分页查询生产订单列表
@@ -236,5 +241,14 @@ public class ProductionOrderController {
             return Result.success(detail != null ? detail : productionOrder);
         }
         return Result.success(productionOrder);
+    }
+
+    /**
+     * 工厂产能雷达——按工厂汇总进行中订单信息
+     * 返回各工厂的：订单数、总件数、高风险数、已逾期数
+     */
+    @GetMapping("/factory-capacity")
+    public Result<List<FactoryCapacityOrchestrator.FactoryCapacityItem>> getFactoryCapacity() {
+        return Result.success(factoryCapacityOrchestrator.getFactoryCapacity());
     }
 }
