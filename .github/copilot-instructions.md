@@ -73,6 +73,78 @@ Controller → Orchestrator → Service → Mapper
 
 ---
 
+## 🧠 AI 写代码的标准思考顺序（每次必走，不可跳步）
+
+> **核心原则**：先想清楚再动手。动手前 10 分钟的思考，能省去事后 2 小时的 debug。
+
+### 第一步：读懂需求，识别影响范围
+```
+□ 这个功能属于哪个业务领域？（production / finance / style / warehouse / system）
+□ 纯前端？纯后端？还是全栈？
+□ 是否涉及数据库表结构变更？（需要新增 Flyway 脚本）
+□ 是否影响现有 API 或业务逻辑？（回归测试范围）
+□ 是否跨端？（PC端改了，小程序同步吗？validationRules 是否需要同步？）
+```
+
+### 第二步：数据层先行（最容易后悔的地方）
+```
+□ 需要哪些表？字段类型是否正确？（Integer / Long / String / LocalDateTime）
+□ 现有表够用还是要加列？→ 本地写 V*.sql + 云端手动执行
+□ MyBatis-Plus 查询：能用 QueryWrapper 就用 QueryWrapper，不要随手 @Select 写 SQL
+□ 字段非空约束？NOT NULL 的列必须有默认值或代码赋值，否则 MySQL STRICT 模式报 500
+□ 索引：高频查询字段（tenant_id + status）是否有复合索引？
+```
+
+### 第三步：编排层规划（架构核心，不可省略）
+```
+□ 是否有跨 Service 调用？→ 必须新建或使用已有 Orchestrator，禁止在 Controller/Service 内交叉调用
+□ 是否有多表写操作？→ Orchestrator 方法加 @Transactional(rollbackFor = Exception.class)
+□ 现有 56 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
+□ 新 Orchestrator 文件行数目标：≤ 200 行；单方法逻辑 ≤ 50 行
+□ 类型安全核查：UserContext.tenantId() → Long，userId() → String（见常见陷阱表）
+```
+
+### 第四步：后端接口设计
+```
+□ 遵循路由约定：列表 POST /list，状态流转 POST /{id}/stage-action?action=xxx
+□ 统一响应：返回 Result<T>，成功 Result.success(data)，失败 Result.error("message")
+□ Controller class 级别加 @PreAuthorize("isAuthenticated()")，方法级别不重复
+□ 权限码只用 t_permission 表中存在的（见权限控制章节），杜绝自造权限码导致全员 403
+□ 接口是否和已废弃的 58 个旧 API 重名？→ 检查 @Deprecated 标记
+```
+
+### 第五步：前端实现
+```
+□ 文件行数预估：组件目标 ≤ 300 行，页面 ≤ 500 行；超出先拆分再提交
+□ 弹窗尺寸：只能用 60vw / 40vw / 30vw 三档，禁止自定义
+□ 标准组件：ResizableModal / ModalContentLayout / RowActions（不要重复造轮子）
+□ API 调用：新接口要在 services/ 对应文件加 TS 类型定义
+□ 状态管理：跨组件共享的数据 → Zustand store；组件内局部数据 → useState
+□ 自定义 Hook：数据逻辑超过 30 行 → 抽取为独立 useXxx.ts，组件文件只保留 JSX
+```
+
+### 第六步：验收清单（提交前逐项勾选）
+```
+□ 本地 mvn clean compile -q → BUILD SUCCESS（有 Java 改动）
+□ npx tsc --noEmit → 0 errors（有 TS 改动）
+□ git status + git diff --stat HEAD → 所有改动文件都已 git add，无遗漏
+□ 新功能是否影响其他页面？（在浏览器快速点击一遍相关页面）
+□ 是否需要同步更新 copilot-instructions.md 或 系统状态.md？
+□ 云端是否需要手动执行 SQL？（FLYWAY_ENABLED=false）
+```
+
+### 快速判断：什么时候新建 Orchestrator？
+
+| 情况 | 是否需要 Orchestrator |
+|------|----------------------|
+| 单表 CRUD，无跨服务调用 | ❌ 直接 Service |
+| 读 2 个以上 Service 的数据拼装 | ✅ 需要 |
+| 任何写操作涉及 2 张以上表 | ✅ 需要（@Transactional） |
+| 涉及状态流转 + 审计日志 | ✅ 需要 |
+| 第三方 API 调用 + 本地数据更新 | ✅ 需要 |
+
+---
+
 ## �🛠️ 技术栈（版本敏感）
 
 ### 后端
@@ -784,14 +856,24 @@ SKU = styleNo + color + size
 
 ## 📁 代码质量约束（避免技术债）
 
-### 文件大小限制（强制执行）
-- ✅ **新建文件**：单文件 **严禁超过 500 行**（前端组件/后端类均适用）
-- ⚠️ **现有文件**（>1000 行）：计划拆分（使用 Hooks + 子组件）
-- 🔴 **现有文件**（>2000 行）：立即拆分（影响编译速度）
-- **新建页面规范**：一个页面 = index（框架） + 多个 Tab/子组件，每个文件 ≤500 行
+### 文件大小限制（强制执行，分级目标）
 
-**当前待优化文件**：
-- `Production/List/index.tsx`（2513 行）- 需拆分为独立的列表、过滤、导出组件
+| 类型 | 绿色目标 | 黄色警戒 | 红色禁止 | 超出时的拆分策略 |
+|------|---------|---------|---------|----------------|
+| React 组件 | ≤ 200 行 | 201-300 行 | > 300 行 | 拆子组件 |
+| React 页面 index | ≤ 400 行 | 401-500 行 | > 500 行 | 拆 Tab + Hook |
+| 自定义 Hook | ≤ 80 行 | 81-150 行 | > 150 行 | 按数据域拆分 |
+| Java Orchestrator | ≤ 150 行 | 151-200 行 | > 200 行 | 拆 Executor/Helper |
+| Java Service | ≤ 200 行 | 201-300 行 | > 300 行 | 按职责拆 Service |
+| Java Controller | ≤ 100 行 | 101-150 行 | > 150 行 | 拆子 Controller |
+
+**新建文件时的硬规则**：
+- 写代码前先估算行数；超出绿色目标时，先拆分结构再开始写
+- 单个方法/函数体 **≤ 40 行**（超出说明职责不单一）
+- 超出 50 行的函数必须拆成多个私有方法/子函数，并加 JSDoc/JavaDoc
+
+**当前待优化文件**（追踪中，新代码禁止参照）：
+- `Production/List/index.tsx`（2513 行）- 需拆分为列表、过滤、导出三个组件
 - `Cutting/index.tsx`（2190 行）- 需提取裁剪逻辑 Hook
 - `ScanRecordOrchestrator.java`（1891 行）- 需拆分工序识别和库存计算逻辑
 - ✅ ~~`TemplateCenter/index.tsx`（1912 行）~~ - 已拆分（900行 + 4个子组件）
