@@ -145,7 +145,9 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
       </div>
 
       {stages.length === 0 ? (
-        <div style={{ color: '#999', fontSize: 13 }}>近期暂无扫码记录</div>
+        <div style={{ color: '#999', fontSize: 13 }}>
+          {lastDate !== '—' ? '近期无扫码活动' : '暂无扫码历史'}
+        </div>
       ) : (
         <div>
           {stages.slice(0, 5).map(sp => (
@@ -155,7 +157,7 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
       )}
 
       <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
-        近{profile.dateDays}天 · 最近扫码：{lastDate}
+        {stages.length > 0 ? `近${profile.dateDays}天 · ` : ''}最近扫码：{lastDate}
       </div>
     </div>
   );

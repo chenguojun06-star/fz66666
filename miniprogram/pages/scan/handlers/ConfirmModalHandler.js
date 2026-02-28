@@ -13,6 +13,28 @@ const { toast } = require('../../../utils/uiHelper');
 
 const SKUProcessor = require('../processors/SKUProcessor');
 
+function normalizeScanType(processName, scanType) {
+  const raw = String(scanType || '').trim().toLowerCase();
+  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
+    return raw;
+  }
+
+  const stage = String(processName || '').trim();
+  if (stage === '质检' || stage === '质检领取' || stage === '质检验收' || stage === '质检确认') {
+    return 'quality';
+  }
+  if (stage === '入库') {
+    return 'warehouse';
+  }
+  if (stage === '裁剪') {
+    return 'cutting';
+  }
+  if (stage === '采购') {
+    return 'procurement';
+  }
+  return 'production';
+}
+
 /**
  * 显示确认弹窗
  * @param {Object} ctx - Page 上下文
@@ -264,7 +286,7 @@ async function processSKUSubmit(ctx, { detail, skuList }) {
   const tasks = requests.map(req =>
     api.production.executeScan({
       ...req,
-      scanType: ctx.mapScanType(detail.progressStage),
+      scanType: normalizeScanType(detail.progressStage, ctx.mapScanType(detail.progressStage)),
     }),
   );
 
@@ -272,7 +294,12 @@ async function processSKUSubmit(ctx, { detail, skuList }) {
     throw new Error('请至少输入一个数量');
   }
 
-  await Promise.all(tasks);
+  const results = await Promise.all(tasks);
+  const invalid = (results || []).find(r => !(r && r.scanRecord && (r.scanRecord.id || r.scanRecord.recordId)));
+  if (invalid) {
+    const msg = invalid && invalid.message ? String(invalid.message) : '部分扫码未落库，请重试';
+    throw new Error(msg);
+  }
 
   toast.success('批量提交成功');
   ctx.handleScanSuccess({

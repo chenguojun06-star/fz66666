@@ -24,6 +24,34 @@ function normalizePositiveInt(value, fallback = 1) {
 }
 
 /**
+ * 归一化扫码类型，防止模板配置中出现非标准类型导致后续识别/统计异常
+ * @param {string} processName - 工序名称
+ * @param {string} scanType - 原始扫码类型
+ * @returns {string} 标准扫码类型
+ */
+function normalizeScanType(processName, scanType) {
+  const raw = String(scanType || '').trim().toLowerCase();
+  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
+    return raw;
+  }
+
+  const stage = String(processName || '').trim();
+  if (stage === '质检' || stage === '质检领取' || stage === '质检验收' || stage === '质检确认') {
+    return 'quality';
+  }
+  if (stage === '入库') {
+    return 'warehouse';
+  }
+  if (stage === '裁剪') {
+    return 'cutting';
+  }
+  if (stage === '采购') {
+    return 'procurement';
+  }
+  return 'production';
+}
+
+/**
  * 从 stageResult 构建可用工序选项（过滤已扫工序）
  * @param {string} processName - 当前工序名
  * @param {string} progressStage - 当前阶段名
@@ -38,7 +66,7 @@ function buildProcessOptions(processName, progressStage, stageResult) {
     .map(p => ({
       label: `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
       value: p.processName,
-      scanType: p.scanType || 'production',
+      scanType: normalizeScanType(p.processName, p.scanType),
       unitPrice: Number(p.price || p.unitPrice || 0),
     }));
   let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);
@@ -121,6 +149,80 @@ function closeScanResultConfirm(ctx) {
 }
 
 /**
+ * 构建提交扫码数据
+ * @param {Object} confirm - 确认态数据
+ * @param {number} confirmedQty - 确认数量
+ * @returns {Object} 提交参数
+ */
+function buildScanData(confirm, confirmedQty) {
+  return {
+    ...confirm.scanData,
+    processName: confirm.processName,
+    progressStage: confirm.progressStage,
+    scanType: normalizeScanType(confirm.processName, confirm.scanType),
+    unitPrice: confirm.unitPrice || 0,
+    quantity: confirmedQty,
+    qualityStage: confirm.scanData && confirm.scanData.qualityStage
+      ? confirm.scanData.qualityStage
+      : '',
+    ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
+  };
+}
+
+/**
+ * 构建友好的错误提示
+ * @param {Error|Object} error - 错误对象
+ * @returns {string} 提示文本
+ */
+function buildFriendlyErrorMessage(error) {
+  const raw = error && (error.errMsg || error.message || '');
+  if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
+    return '网络连接中断，请稍后重试（服务器可能正在更新）';
+  }
+  if (raw.includes('timeout')) {
+    return '网络超时，请检查网络后重试';
+  }
+  if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
+    return '无法连接服务器，请检查网络设置';
+  }
+  return raw || '提交失败，请重试';
+}
+
+/**
+ * 处理提交成功后的UI更新
+ * @param {Object} params - 参数
+ * @param {Object} params.ctx - 页面上下文
+ * @param {Object} params.confirm - 确认态数据
+ * @param {Object} params.result - 接口返回数据
+ * @param {number} params.confirmedQty - 确认数量
+ * @param {Object} params.scanData - 提交数据
+ * @returns {void}
+ */
+function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData }) {
+  const recordId = result && result.scanRecord && (result.scanRecord.id || result.scanRecord.recordId);
+  if (!recordId) {
+    const msg = (result && result.message) ? String(result.message) : '提交未落库，请重试';
+    throw new Error(msg);
+  }
+
+  toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
+  closeScanResultConfirm(ctx);
+
+  ctx.handleScanSuccess({
+    ...result,
+    recordId,
+    processName: confirm.processName,
+    progressStage: confirm.progressStage || confirm.processName,
+    bundleNo: confirm.bundleNo,
+    orderNo: confirm.orderNo,
+    quantity: confirmedQty,
+    scanType: scanData.scanType,
+    success: true,
+    message: `${confirm.processName} ${confirmedQty}件`,
+  });
+}
+
+/**
  * 工序滚动选择器 - 点击选中
  * @param {Object} ctx - Page 上下文
  * @param {Object} e - 事件对象
@@ -165,61 +267,16 @@ async function onConfirmScanResult(ctx) {
       return;
     }
 
-    const scanData = {
-      ...confirm.scanData,
-      processName: confirm.processName,
-      progressStage: confirm.progressStage,
-      scanType: confirm.scanType,
-      unitPrice: confirm.unitPrice || 0,
-      quantity: confirmedQty,
-      // 🔧 修复：明确携带 qualityStage，防止被 spread 覆盖或遗漏
-      // quality 类型工序必须传此字段，否则后端默认走 confirm 阶段 → "请先领取再确认" 400
-      qualityStage: confirm.scanData && confirm.scanData.qualityStage
-        ? confirm.scanData.qualityStage
-        : '',
-      // 次品返修入库：告知后端跳过包装检查，仅校验次品数量上限
-      ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
-    };
+    const scanData = buildScanData(confirm, confirmedQty);
 
     // api.production.executeScan 使用 ok() 包装：
     //   成功 → 返回 resp.data = {success:true, message:"...", scanRecord:{id,...}}
     //   失败 → throw createBizError(resp)，被下方 catch 捕获
     const result = await api.production.executeScan(scanData);
 
-    if (result) {
-      // 使用后端返回的消息（领取成功/验收成功/确认成功/已领取等）
-      toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
-
-      closeScanResultConfirm(ctx);
-
-      // 调用 handleScanSuccess：触发撤回倒计时、addToLocalHistory、loadMyPanel
-      ctx.handleScanSuccess({
-        ...result,
-        // 供 UndoHandler.handleUndo 使用
-        recordId: result.scanRecord && (result.scanRecord.id || result.scanRecord.recordId),
-        processName: confirm.processName,
-        progressStage: confirm.progressStage || confirm.processName,
-        bundleNo: confirm.bundleNo,
-        orderNo: confirm.orderNo,
-        quantity: confirmedQty,
-        scanType: confirm.scanType,
-        success: true,
-        message: `${confirm.processName} ${confirmedQty}件`,
-      });
-    } else {
-      toast.error('提交失败');
-    }
+    handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData });
   } catch (e) {
-    const raw = e && (e.errMsg || e.message || '');
-    let msg = raw;
-    if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
-      msg = '网络连接中断，请稍后重试（服务器可能正在更新）';
-    } else if (raw.includes('timeout')) {
-      msg = '网络超时，请检查网络后重试';
-    } else if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
-      msg = '无法连接服务器，请检查网络设置';
-    }
-    toast.error(msg || '提交失败，请重试');
+    toast.error(buildFriendlyErrorMessage(e));
   } finally {
     ctx.setData({ 'scanResultConfirm.loading': false });
   }

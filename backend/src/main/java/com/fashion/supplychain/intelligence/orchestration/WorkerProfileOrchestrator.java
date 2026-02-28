@@ -46,13 +46,28 @@ public class WorkerProfileOrchestrator {
         Long tenantId = UserContext.tenantId();
         LocalDate dateTo   = parseDateOrDefault(request.getDateTo(),   LocalDate.now());
         LocalDate dateFrom = parseDateOrDefault(request.getDateFrom(), dateTo.minusDays(29));
-        int dateDays = (int) (dateTo.toEpochDay() - dateFrom.toEpochDay() + 1);
 
         LocalDateTime from = dateFrom.atStartOfDay();
         LocalDateTime to   = dateTo.plusDays(1).atStartOfDay();
 
-        // ①查询该工人的扫码记录
+        // ①查询该工人的扫码记录（默认30天）
         List<ScanRecord> workerRecords = queryRecords(tenantId, request.getOperatorName(), from, to);
+
+        // 若30天内无记录，自动扩展到90天（仅在未指定日期时自动扩展）
+        int dateDays;
+        if (workerRecords.isEmpty() && request.getDateFrom() == null && request.getDateTo() == null) {
+            LocalDate extFrom = dateTo.minusDays(89);
+            workerRecords = queryRecords(tenantId, request.getOperatorName(),
+                    extFrom.atStartOfDay(), to);
+            if (!workerRecords.isEmpty()) {
+                from = extFrom.atStartOfDay();
+                dateDays = 90;
+            } else {
+                dateDays = 30;
+            }
+        } else {
+            dateDays = (int) (dateTo.toEpochDay() - dateFrom.toEpochDay() + 1);
+        }
 
         // ②查询同期所有工人的扫码记录（用于计算工厂均值）
         List<ScanRecord> allRecords = queryAllRecords(tenantId, from, to);
@@ -109,13 +124,13 @@ public class WorkerProfileOrchestrator {
         // 按总件数降序
         stages.sort(Comparator.comparingLong(WorkerProfileResponse.StageProfile::getTotalQty).reversed());
 
-        // 最后扫码时间
+        // 最后扫码时间（优先从查询范围内取，若范围内无记录则全局查一次兜底）
         String lastScanTime = workerRecords.stream()
                 .filter(r -> r.getScanTime() != null)
                 .map(ScanRecord::getScanTime)
                 .max(Comparator.naturalOrder())
                 .map(t -> t.format(DT_FMT))
-                .orElse(null);
+                .orElseGet(() -> queryLastScanTime(tenantId, request.getOperatorName()));
 
         long totalQty = workerRecords.stream()
                 .mapToLong(r -> r.getQuantity() == null ? 0 : r.getQuantity())
@@ -144,6 +159,24 @@ public class WorkerProfileOrchestrator {
         List<ScanRecord> result = scanRecordMapper.selectList(qw);
         log.debug("[WorkerProfile] 工人={}, 记录数={}", operatorName, result.size());
         return result;
+    }
+
+    /**
+     * 查询工人全局最近一次成功扫码时间（不限日期，用于90天内也无活动时的兜底显示）
+     */
+    private String queryLastScanTime(Long tenantId, String operatorName) {
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
+        qw.eq("scan_result", "success")
+          .gt("quantity", 0)
+          .eq(tenantId != null, "tenant_id", tenantId)
+          .eq("operator_name", operatorName)
+          .orderByDesc("scan_time")
+          .last("LIMIT 1");
+        List<ScanRecord> result = scanRecordMapper.selectList(qw);
+        if (result.isEmpty() || result.get(0).getScanTime() == null) {
+            return null;
+        }
+        return result.get(0).getScanTime().format(DT_FMT);
     }
 
     private List<ScanRecord> queryAllRecords(Long tenantId, LocalDateTime from, LocalDateTime to) {

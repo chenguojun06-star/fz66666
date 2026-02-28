@@ -27,6 +27,7 @@ import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -644,9 +645,26 @@ const OrderManagement: React.FC = () => {
       .filter(Boolean);
   }
 
+  const parseSizeColorConfig = (raw: unknown): { sizes: string[]; colors: string[] } => {
+    const text = String(raw || '').trim();
+    if (!text) return { sizes: [], colors: [] };
+    try {
+      const config = JSON.parse(text);
+      const sizes = Array.isArray(config?.sizes)
+        ? config.sizes.map((s: unknown) => String(s || '').trim()).filter(Boolean)
+        : [];
+      const colors = Array.isArray(config?.colors)
+        ? config.colors.map((c: unknown) => String(c || '').trim()).filter(Boolean)
+        : [];
+      return { sizes, colors };
+    } catch {
+      return { sizes: [], colors: [] };
+    }
+  };
+
   const buildCommonFiveSizes = () => {
     const preset = ['S', 'M', 'L', 'XL', 'XXL'];
-    const fromStyle = splitOptions(String(selectedStyle?.size || '')).filter(Boolean);
+    const fromStyle = selectableSizes.filter(Boolean);
     const unique: string[] = [];
     const seen = new Set<string>();
     const push = (v: string) => {
@@ -843,15 +861,21 @@ const OrderManagement: React.FC = () => {
 
   const styleColorText = useMemo(() => {
     const raw = String(selectedStyle?.color || '').trim();
-    if (!raw) return '-';
-    return splitOptions(raw).join('、') || raw;
-  }, [selectedStyle?.color]);
+    if (raw) {
+      return splitOptions(raw).join('、') || raw;
+    }
+    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
+    return parsed.colors.length ? parsed.colors.join('、') : '-';
+  }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
 
   const styleSizeText = useMemo(() => {
     const raw = String(selectedStyle?.size || '').trim();
-    if (!raw) return '-';
-    return splitOptions(raw).join('、') || raw;
-  }, [selectedStyle?.size]);
+    if (raw) {
+      return splitOptions(raw).join('、') || raw;
+    }
+    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
+    return parsed.sizes.length ? parsed.sizes.join('、') : '-';
+  }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
   const orderColorText = useMemo(() => {
     return orderLineColors.length ? orderLineColors.join('、') : '-';
@@ -982,8 +1006,17 @@ const OrderManagement: React.FC = () => {
     }).catch(() => {/* 静默失败，不影响主流程 */});
   }, []);
 
-  const selectableColors = useMemo(() => splitOptions(selectedStyle?.color), [selectedStyle?.color]);
-  const selectableSizes = useMemo(() => splitOptions(selectedStyle?.size), [selectedStyle?.size]);
+  const selectableColors = useMemo(() => {
+    const fromColor = splitOptions(selectedStyle?.color);
+    if (fromColor.length) return fromColor;
+    return parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig).colors;
+  }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
+
+  const selectableSizes = useMemo(() => {
+    const fromSize = splitOptions(selectedStyle?.size);
+    if (fromSize.length) return fromSize;
+    return parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig).sizes;
+  }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
   // 智能添加订单行，自动填充颜色和尺码
   const addOrderLine = () => {
@@ -1064,8 +1097,9 @@ const OrderManagement: React.FC = () => {
       setBomList([]);
     }
 
-    const initColor = splitOptions(style.color)[0] || style.color || '';
-    const initSize = splitOptions(style.size)[0] || style.size || '';
+    const parsedConfig = parseSizeColorConfig((style as any)?.sizeColorConfig);
+    const initColor = splitOptions(style.color)[0] || style.color || parsedConfig.colors[0] || '';
+    const initSize = splitOptions(style.size)[0] || style.size || parsedConfig.sizes[0] || '';
     setOrderLines([
       {
         id: String(Date.now()),
@@ -1635,7 +1669,10 @@ const OrderManagement: React.FC = () => {
                         </Col>
                         <Col xs={24} sm={12}>
                           <Form.Item name="company" label="公司">
-                            <Input placeholder="请输入公司名称（选填）" allowClear />
+                            <SupplierSelect
+                              placeholder="请选择或输入公司名称（选填）"
+                              allowClear
+                            />
                           </Form.Item>
                         </Col>
                       </Row>
