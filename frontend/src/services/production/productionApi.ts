@@ -12,6 +12,8 @@ export interface FactoryCapacityItem {
   totalQuantity: number;
   atRiskCount: number;
   overdueCount: number;
+  /** 货期完成率 0-100，-1表示这年内无完工订单 */
+  deliveryOnTimeRate: number;
 }
 
 export const productionOrderApi = {

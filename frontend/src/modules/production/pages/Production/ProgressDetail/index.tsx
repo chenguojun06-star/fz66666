@@ -37,7 +37,6 @@ import {
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
 import SmartOrderHoverCard from './components/SmartOrderHoverCard';
-import FactoryCapacityPanel from './components/FactoryCapacityPanel';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -98,8 +97,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     todayOrders: 0, todayQuantity: 0,
   });
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
-  // 产能面板刷新key，每次拉取订单成功后+1触发面板重新请求
-  const [capacityRefreshKey, setCapacityRefreshKey] = useState(0);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
@@ -198,9 +195,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         if (showSmartErrorNotice) setSmartError(null);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
         clearAllBoardCache();
-        // 触发工厂产能面板重新请求
-        setCapacityRefreshKey(k => k + 1);
-
         const styleNos = Array.from(
           new Set(
             records
@@ -738,9 +732,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           </Card>
 
-          {/* 工厂产能雷达 */}
-          <FactoryCapacityPanel refreshKey={capacityRefreshKey} />
-
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">
               <SmartErrorNotice
@@ -896,9 +887,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               )}
             />
           </Card>
-
-          {/* 工厂产能雷达（独立页面） */}
-          <FactoryCapacityPanel refreshKey={capacityRefreshKey} />
 
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">

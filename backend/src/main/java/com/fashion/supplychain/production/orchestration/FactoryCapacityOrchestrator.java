@@ -38,6 +38,8 @@ public class FactoryCapacityOrchestrator {
         private int totalQuantity;
         private int atRiskCount;
         private int overdueCount;
+        /** 这年内货期完成率 0-100，-1 表示这年内无完工记录 */
+        private int deliveryOnTimeRate;
     }
 
     /**
@@ -83,8 +85,41 @@ public class FactoryCapacityOrchestrator {
             result.add(item);
         }
 
+        // 查询这年内完工订单，计算货期完成率
+        LocalDateTime yearAgo = now.minusDays(365);
+        QueryWrapper<ProductionOrder> doneQw = new QueryWrapper<>();
+        doneQw.eq("tenant_id", tenantId)
+              .eq("status", "completed")
+              .eq("delete_flag", 0)
+              .isNotNull("factory_name")
+              .ne("factory_name", "")
+              .isNotNull("actual_end_date")
+              .isNotNull("planned_end_date")
+              .ge("actual_end_date", yearAgo);
+        List<ProductionOrder> completedOrders = productionOrderService.list(doneQw);
+        // 按工厂分组，计算 actualEndDate <= plannedEndDate 的比例
+        Map<String, long[]> onTimeStats = new HashMap<>(); // key=factoryName, [0]=总数 [1]=按时数
+        for (ProductionOrder o : completedOrders) {
+            String fn = o.getFactoryName().trim();
+            onTimeStats.computeIfAbsent(fn, k -> new long[]{0, 0});
+            onTimeStats.get(fn)[0]++;
+            if (!o.getActualEndDate().isAfter(o.getPlannedEndDate())) {
+                onTimeStats.get(fn)[1]++;
+            }
+        }
+
         // 按订单数降序排列
         result.sort(Comparator.comparingInt(FactoryCapacityItem::getTotalOrders).reversed());
+
+        // 回填货期完成率
+        for (FactoryCapacityItem item : result) {
+            long[] stats = onTimeStats.get(item.getFactoryName());
+            if (stats == null || stats[0] == 0) {
+                item.setDeliveryOnTimeRate(-1);
+            } else {
+                item.setDeliveryOnTimeRate((int) Math.round(stats[1] * 100.0 / stats[0]));
+            }
+        }
         return result;
     }
 

@@ -22,6 +22,7 @@ import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { productionOrderApi, FactoryCapacityItem } from '@/services/production/productionApi';
 import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -97,6 +98,7 @@ const OrderManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const [factories, setFactories] = useState<Factory[]>([]);
+  const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
   const [factoryQuickAddName, setFactoryQuickAddName] = useState('');
   const [factoryQuickAdding, setFactoryQuickAdding] = useState(false);
   const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
@@ -624,6 +626,15 @@ const OrderManagement: React.FC = () => {
   };
 
   const _watchedOrderNo = Form.useWatch('orderNo', form) as string | undefined;
+  const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
+
+  // 当前选中工厂的产能信息（下单时即时显示）
+  const selectedFactoryStat = useMemo(() => {
+    if (!watchedFactoryId || !factoryCapacities.length) return null;
+    const factory = factories.find(f => f.id === watchedFactoryId);
+    if (!factory) return null;
+    return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
+  }, [watchedFactoryId, factoryCapacities, factories]);
 
   function splitOptions(value?: string) {
     if (!value) return [] as string[];
@@ -965,6 +976,10 @@ const OrderManagement: React.FC = () => {
   useEffect(() => {
     fetchFactories();
     fetchUsers();
+    // 拉取工厂产能（用于下单选厂时显示负荷）
+    productionOrderApi.getFactoryCapacity().then(res => {
+      if (res?.data) setFactoryCapacities(res.data);
+    }).catch(() => {/* 静默失败，不影响主流程 */});
   }, []);
 
   const selectableColors = useMemo(() => splitOptions(selectedStyle?.color), [selectedStyle?.color]);
@@ -1580,6 +1595,29 @@ const OrderManagement: React.FC = () => {
                               )}
                             />
                           </Form.Item>
+                          {/* 选中工厂后显示当前负荷（在制单数/货期完成率/高风险数） */}
+                          {selectedFactoryStat && (
+                            <div style={{
+                              marginTop: -12, marginBottom: 8, padding: '5px 10px',
+                              background: 'var(--color-bg-container, #fafafa)',
+                              border: '1px solid var(--color-border, #e8e8e8)',
+                              borderRadius: 6, fontSize: 12, display: 'flex', gap: 12, flexWrap: 'wrap',
+                              color: 'var(--color-text-secondary, #888)',
+                            }}>
+                              <span>在制 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
+                              <span>货期完成率&nbsp;
+                                <b style={{ color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
+                                  {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
+                                </b>
+                              </span>
+                              {selectedFactoryStat.atRiskCount > 0 && (
+                                <span style={{ color: '#fa8c16' }}>⚠ 高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span>
+                              )}
+                              {selectedFactoryStat.overdueCount > 0 && (
+                                <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span>
+                              )}
+                            </div>
+                          )}
                         </Col>
                       </Row>
 

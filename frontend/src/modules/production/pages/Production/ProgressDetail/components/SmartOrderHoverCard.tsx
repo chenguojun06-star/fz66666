@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
+import { useProductionBoardStore } from '@/stores/productionBoardStore';
 
 interface Props { order: ProductionOrder; }
 
@@ -86,6 +87,20 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const gap        = useMemo(() => calcGap(order), [order]);
   const isCompleted = order.status === 'completed';
 
+  // 找卡住节点：取该订单最新扫码时间的节点，判断是否≥3天无进展
+  const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
+  const stuckNode = useMemo(() => {
+    if (order.status === 'completed') return null;
+    const times = boardTimesByOrder[String(order.id)] ?? {};
+    const entries = Object.entries(times);
+    if (!entries.length) return null;
+    const [nodeName, lastTime] = entries.reduce((a, b) =>
+      dayjs(a[1]).isAfter(dayjs(b[1])) ? a : b
+    );
+    const days = dayjs().diff(dayjs(lastTime), 'day');
+    return days >= 3 ? { node: nodeName, days } : null;
+  }, [boardTimesByOrder, order.id, order.status]);
+
   // 只显示进行中的工序（1~99%）——完成了的隐藏，没开始的也隐藏
   const activeStages = useMemo(() =>
     STAGES_DEF.map(s => ({ ...s, val: getRate(order, s.key) }))
@@ -99,6 +114,14 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
 
   return (
     <div style={{ width: 240, fontSize: 12, lineHeight: 1.6 }}>
+
+      {/* 工厂名：有就显示 */}
+      {order.factoryName && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+          <span style={{ color: '#bbb', fontSize: 11 }}>工厂</span>
+          <span style={{ color: '#333', fontWeight: 600, fontSize: 12 }}>{order.factoryName}</span>
+        </div>
+      )}
 
       {/* 状态条：风险级别 + 动态预测（只有进行中才显示预测） */}
       <div style={{
@@ -127,6 +150,18 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           <span>剩 <b>{gap.endDays}</b> 天</span>
           <span style={{ color: '#ccc' }}>·</span>
           <span style={{ color: '#ff4d4f', fontWeight: 700 }}>差 {gap.gap} 天</span>
+        </div>
+      )}
+
+      {/* 卡住节点：最新扫码已≥3天无进展 */}
+      {stuckNode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px', background: '#fff7e6', borderRadius: 5, marginBottom: 8,
+          fontSize: 11, color: '#d46b08',
+        }}>
+          <span>⏸</span>
+          <span>卡在 <b>{stuckNode.node}</b> · 已 <b>{stuckNode.days}</b> 天无进展</span>
         </div>
       )}
 
