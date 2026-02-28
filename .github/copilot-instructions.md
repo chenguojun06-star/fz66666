@@ -1,13 +1,13 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（56个编排器 - 新增智能化）
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（57个编排器 - 新增智能化）
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖 | 代码优化（TemplateCenter 1912→900行）
-> **最后更新**：2026-02-28 | **AI指令版本**：v3.8
+> **最后更新**：2026-03-01 | **AI指令版本**：v3.9
 
 ---
 
-## 🚨 铁血规律速查（5大致命错误 - 优先避免）
+## 🚨 铁血规律速查（6大致命错误 - 优先避免）
 
 | 优先级 | 规律 | 触发条件 | 后果 | 详见 |
 |--------|------|---------|------|------|
@@ -15,9 +15,11 @@
 | 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | [编排层规划](#第三步编排层规划架构核心不可省略) |
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | [权限控制模式](#权限控制模式强制) |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | [第三步类型安全核查](#第三步编排层规划架构核心不可省略) |
+| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行不可省略) |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | [快速判断Orchestrator](#快速判断什么时候新建-orchestrator) |
 
-> **工作流**：每次开始前，先默念这 5 条。执行前，跑【推送前三步验证】。90% 的 bug 都能避免。
+> **工作流**：每次开始前，先默念这 6 条。执行前，跑【推送前三步验证】。90% 的 bug 都能避免。
+> **废弃代码清理（强制）**：所有代码修改、变更前必须检查：是否有同步修改的旧逻辑、注释代码、兼容逻辑需要删除？废除代码清查确认完毕才能 push。禁止有 TODO/FIXME 标记或未处理的兼容代码直接推送仓库。
 
 ---
 
@@ -194,7 +196,7 @@ Controller → Orchestrator → Service → Mapper
 
 **关键约束**（代码审查必查项）：
 - ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（55个编排器）
-  - **分布**：production(20) + finance(10) + style(6) + system(9) + integration(4) + warehouse(2) + template(2) + wechat(1) + dashboard(1) + datacenter(1) = **56个**
+  - **分布**：production(20) + finance(10) + style(6) + system(9) + integration(4) + warehouse(2) + template(2) + wechat(1) + dashboard(2) + datacenter(1) = **57个**
   - **新增4个智能化编排器**（2026-02）：FeedbackLearningOrchestrator、SmartPrecheckOrchestrator、ProgressPredictOrchestrator、InoutDecisionOrchestrator
   - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`, `ReconciliationStatusOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
@@ -290,6 +292,12 @@ backend/src/main/java/com/fashion/supplychain/
 > - **问题反馈**：`UserFeedbackController` / `UserFeedbackService` — 用户在系统内提交问题反馈，存储到 `t_user_feedback` 表
 > - **系统状态监控**：`SystemStatusController` — 提供系统健康状态端点（CPU/内存/DB连接池）
 > - **应用商店重构**：`AppStoreOrchestrator` — 租户开通/关闭模块权限，对应 PC 端个人中心"应用管理"
+> - **智能运营日报（2026-03-01）**：`DailyBriefOrchestrator.java` + `DailyBriefController.java` + 前端 `SmartDailyBrief/index.tsx`。展示在仪表盘 `TopStats` 上方，汇总昨日入库/今日扫码/逾期订单/高风险订单/首要关注订单/智能建议。接口 `GET /api/dashboard/daily-brief`。DB 无新增，独立编排器，不混入 `DashboardOrchestrator`。
+> - **Bug修复汇总（2026-03-01）**：
+>   - ① 登录成功同步写入 `t_user.last_login_time` + `last_login_ip`（`UserOrchestrator`）
+>   - ② 样板生产 COMPLETED 卡片进度显示非100%：progressNodes 所有 key 强制=100（不依赖硬编码列表）
+>   - ③ 样板生产纸样师傅列为空：旧记录 patternMaker=null 时 fallback 到 receiver（业务上两者同一人）
+>   - ④ 扫码 QR码/SIG-签名后缀剥离后回写 safeParams，修复 getByQrCode 永远查不到 DB 记录的 bug；补充 `[ScanExec/BundleLookup/ScanSave]` 诊断日志
 
 ### 前端目录结构（模块化）
 ```
@@ -2063,4 +2071,80 @@ Flyway版本序号：V20260226b（接 V20260226__add_notify_config.sql 之后）
 
 ---
 
+### 2026-03-01 变更批次（commits c98230ce / 5df35c20 / dac28184 / 03948cf5 / f5c14284，已推送 main）
 
+#### 变更 #A ｜ 🔴 BUG修复 — 登录成功未更新最后登录时间/IP
+
+```
+触发问题：人员管理页「最后登录时间/IP」列永远为空。
+根本原因：UserOrchestrator.recordLoginAttempt() 成功分支只写 t_login_log，
+  从未回写 t_user.last_login_time / last_login_ip。
+修复：成功分支补充两行 UPDATE t_user，用 userService.updateById() 写入。
+文件：backend/.../system/orchestration/UserOrchestrator.java
+废弃代码清查：✅ 纯补全缺失逻辑，无废弃代码
+commit: c98230ce
+```
+
+#### 变更 #B ｜ 🔴 BUG修复 — 样板生产 COMPLETED 卡片进度非100%
+
+```
+触发问题：已完成样板生产订单，卡片视图进度球显示 40~60%。
+根本原因：卡片视图仅对 5 个硬编码 key 强制设为 100，其余 key（ironing/quality/packaging）
+  仍为 DB 中 0 值，均值被拉低。
+修复：Object.fromEntries(Object.keys(nodes).map(k => [k, 100]))
+  — 把所有存在的 key 统一设为 100，不依赖硬编码列表。
+文件：frontend/src/modules/style/.../SampleProductionList（卡片渲染 hook）
+废弃代码清查：✅ 删除旧的硬编码 key 数组
+commit: 5df35c20
+```
+
+#### 变更 #C ｜ 🟡 BUG修复 — 样板生产纸样师傅列显示为空
+
+```
+触发问题：样板生产列表，旧记录纸样师傅列空白。
+根本原因：旧记录在领取时未写入 patternMaker 字段，enrichRecord() 直接透传 null。
+修复：patternMaker 为空时 fallback 到 receiver（业务规则：领取人=纸样师傅）。
+文件：backend/.../style/orchestration/SampleProductionOrchestrator.java
+废弃代码清查：✅ 无废弃代码，纯加兜底
+commit: dac28184
+```
+
+#### 变更 #D ｜ 🔴 BUG修复 — 扫码 getByQrCode 永远找不到菲号记录
+
+```
+触发问题：工厂小程序扫码后报「找不到菲号」，但 DB 中菲号确实存在。
+根本原因：部分菲号二维码含 QR码 或 SIG-xxx 后缀，代码剥离后缀后
+  未将干净值写回 safeParams，导致后续查询仍用含后缀原始串 → 永远查不到。
+修复：剥离后立即 params.put("bundleNo", cleanCode)；
+  并在 ScanExec/BundleLookup/ScanSave 三处补充 [关键诊断日志]。
+文件：backend/.../production/executor/ProductionScanExecutor.java
+废弃代码清查：✅ 无废弃，纯修复 + 补日志
+commit: 03948cf5
+```
+
+#### 变更 #E ｜ 🟢 新功能 — 智能运营日报（独立编排器）
+
+```
+功能：仪表盘 TopStats 上方新增「智能运营日报」模块。
+内容：昨日入库单数/件数 · 今日扫码次数 · 逾期订单数
+  · 高风险订单（7天内到期且进度<50%）· 首要关注订单卡片 · 智能建议文案
+
+新增文件：
+  📄 backend/.../dashboard/orchestration/DailyBriefOrchestrator.java（57号编排器）
+  📄 backend/.../dashboard/controller/DailyBriefController.java
+     → GET /api/dashboard/daily-brief
+  📄 frontend/src/modules/dashboard/components/SmartDailyBrief/index.tsx
+  📄 frontend/src/modules/dashboard/components/SmartDailyBrief/styles.css
+
+修改文件：
+  📄 frontend/.../dashboard/pages/Dashboard/index.tsx
+     → <SmartDailyBrief /> 插入 <TopStats /> 上方
+
+架构：独立编排器，不往 DashboardOrchestrator 混写
+  dashboard 编排器：1 → 2 / 全局编排器：56 → 57
+DB影响：无新增表/列，复用 DashboardQueryService 已有方法
+废弃代码清查：✅ DashboardOrchestrator 的临时 getDailyBrief() 已完全删除并清理多余 import
+commit: f5c14284
+```
+
+---
