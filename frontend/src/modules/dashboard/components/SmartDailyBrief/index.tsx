@@ -131,7 +131,7 @@ const SmartDailyBrief: React.FC = () => {
 
       {/* 智能建议 */}
       <div className="sdb-suggestions">
-        {data.suggestions.map((s, i) => (
+        {(data.suggestions ?? []).map((s, i) => (
           <div key={i} className="sdb-suggestion-item">{s}</div>
         ))}
       </div>
