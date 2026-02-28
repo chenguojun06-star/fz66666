@@ -369,6 +369,28 @@ public class ProductionOrderFlowOrchestrationService {
                 if (!StringUtils.hasText(pn)) {
                     continue;
                 }
+                // 当 progressStage 是父分类（如"尾部"/"二次工艺"），而 processName 能直接匹配
+                // 模板节点时，用 processName 作为分组 key，避免父分类名称乱入环节汇总。
+                if (!processOrder.isEmpty()) {
+                    boolean stageMatchable = false;
+                    for (String tpl : processOrder) {
+                        if (templateLibraryService.progressStageNameMatches(tpl, pn)) {
+                            stageMatchable = true;
+                            break;
+                        }
+                    }
+                    if (!stageMatchable) {
+                        String specificName = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                        if (StringUtils.hasText(specificName) && !specificName.equals(pn)) {
+                            for (String tpl : processOrder) {
+                                if (templateLibraryService.progressStageNameMatches(tpl, specificName)) {
+                                    pn = specificName; // 降级用子工序名分组
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
                 byProcess.computeIfAbsent(pn, k -> new ArrayList<>()).add(r);
             }
         }

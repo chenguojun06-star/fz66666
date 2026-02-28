@@ -308,12 +308,41 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     e);
         }
 
-        // 如果命中的是系统默认模板（非款式专属），尝试从该款式的 process 类型模板
-        // 读取 steps[].processName 作为实际工序顺序，避免使用硬编码的默认工序名（缝制/整烫/检验等）
-        if (!isStyleSpecific && StringUtils.hasText(sn)) {
+        // 无论是否命中款式专属 progress 模板，都尝试从 process 类型模板同步最新工序名称。
+        // 原因：process 类型模板是用户直接维护的"工序表"（如"工序表"页面），名称最新；
+        //       progress 类型模板可能是创建订单时快照的旧名称（如"整烫"→已改为"大烫"）。
+        // 策略：以 process 模板节点为权威名称，用同义词匹配将 progress 模板节点替换为最新名称，
+        //       并追加 progress 模板中不存在的 process 模板节点。
+        if (StringUtils.hasText(sn)) {
             List<String> fromProcess = resolveNodesFromStyleProcessTemplate(sn);
             if (!fromProcess.isEmpty()) {
-                return fromProcess;
+                if (nodes.isEmpty() || !isStyleSpecific) {
+                    // 直接使用 process 模板作为顺序和名称（默认/非专属 progress 模板情况）
+                    return fromProcess;
+                }
+                // style-specific progress 模板存在：用 process 模板名称替换同义词名称，保持 progress 模板顺序
+                List<String> merged = new ArrayList<>();
+                for (String nodeName : nodes) {
+                    String canonical = null;
+                    for (String pn : fromProcess) {
+                        if (progressStageNameMatches(nodeName, pn)) {
+                            canonical = pn; // 用 process 模板的最新名称替换
+                            break;
+                        }
+                    }
+                    String finalName = (canonical != null) ? canonical : nodeName;
+                    if (!merged.contains(finalName)) {
+                        merged.add(finalName);
+                    }
+                }
+                // 追加 process 模板中有但 progress 模板中没有的节点
+                for (String pn : fromProcess) {
+                    boolean found = merged.stream().anyMatch(m -> progressStageNameMatches(m, pn));
+                    if (!found) {
+                        merged.add(pn);
+                    }
+                }
+                return merged;
             }
         }
 
