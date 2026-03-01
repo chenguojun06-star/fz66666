@@ -115,12 +115,12 @@
     size="large"
     bind:close="closeOperationModal"
   >
-    <view class="mf-body" slot="body">
+    <view class="mf-body">
       <!-- 款号输入（归还模式不显示） -->
-      <view class="mf-item" wx:if="{{operationModal.type !== 'return'}}">
-        <text class="mf-label">款号</text>
-        <view class="mf-input-wrap">
-          <input class="mf-input" value="{{operationModal.formData.styleNo}}" placeholder="请输入款号" bindinput="onOperationInput" data-field="styleNo" />
+      <view class="mf-field" wx:if="{{operationModal.type !== 'return'}}">
+        <text class="mf-field-label">款号</text>
+        <view class="mf-field-ctrl mf-row-input">
+          <input class="mf-input mf-flex-1" value="{{operationModal.formData.styleNo}}" placeholder="请输入款号" bindinput="onOperationInput" data-field="styleNo" />
           <view class="mf-scan-btn" bindtap="handleScanStyle">
             <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
           </view>
@@ -129,47 +129,46 @@
 
       <!-- 入库专用字段 -->
       <block wx:if="{{operationModal.type === 'inbound'}}">
-        <view class="mf-item">
-          <text class="mf-label">款式名称</text>
-          <input class="mf-input" value="{{operationModal.formData.styleName}}" placeholder="选填" bindinput="onOperationInput" data-field="styleName" />
+        <view class="mf-field">
+          <text class="mf-field-label">款式名称</text>
+          <view class="mf-field-ctrl">
+            <input class="mf-input" value="{{operationModal.formData.styleName}}" placeholder="选填" bindinput="onOperationInput" data-field="styleName" />
+          </view>
         </view>
-        <view class="mf-item">
-          <text class="mf-label">样衣类型</text>
-          <view class="inline-selector">
-            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
-              <view
-                wx:for="{{operationModal.sampleTypes}}"
-                wx:key="key"
-                class="inline-selector-item {{operationModal.typeIndex == index ? 'active' : ''}}"
-                data-index="{{index}}"
-                bindtap="onTypeSelect">
-                <view class="inline-selector-left">
-                  <view class="inline-selector-radio {{operationModal.typeIndex == index ? 'checked' : ''}}">
-                    <view wx:if="{{operationModal.typeIndex == index}}" class="inline-selector-radio-dot"></view>
+        <view class="mf-field">
+          <text class="mf-field-label">样衣类型</text>
+          <view class="mf-field-ctrl">
+            <view class="inline-selector">
+              <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+                <view
+                  wx:for="{{operationModal.sampleTypes}}"
+                  wx:key="key"
+                  class="inline-selector-item {{operationModal.typeIndex == index ? 'active' : ''}}"
+                  data-index="{{index}}"
+                  bindtap="onTypeSelect">
+                  <view class="inline-selector-left">
+                    <view class="inline-selector-radio {{operationModal.typeIndex == index ? 'checked' : ''}}">
+                      <view wx:if="{{operationModal.typeIndex == index}}" class="inline-selector-radio-dot"></view>
+                    </view>
+                    <text class="inline-selector-label">{{item.label}}</text>
                   </view>
-                  <text class="inline-selector-label">{{item.label}}</text>
                 </view>
-              </view>
-            </scroll-view>
-          </view>
-        </view>
-        <view class="mf-row">
-          <view class="mf-col">
-            <view class="mf-item">
-              <text class="mf-label">颜色</text>
-              <input class="mf-input" value="{{operationModal.formData.color}}" placeholder="如: 红色" bindinput="onOperationInput" data-field="color" />
-            </view>
-          </view>
-          <view class="mf-col">
-            <view class="mf-item">
-              <text class="mf-label">尺码</text>
-              <input class="mf-input" value="{{operationModal.formData.size}}" placeholder="如: M" bindinput="onOperationInput" data-field="size" />
+              </scroll-view>
             </view>
           </view>
         </view>
-        <view class="mf-item">
-          <text class="mf-label">存放位置</text>
-          <input class="mf-input" value="{{operationModal.formData.location}}" placeholder="选填" bindinput="onOperationInput" data-field="location" />
+        <view class="mf-field">
+          <text class="mf-field-label">颜色/尺码</text>
+          <view class="mf-field-ctrl mf-row">
+            <input class="mf-input mf-flex-1" value="{{operationModal.formData.color}}" placeholder="如: 红色" bindinput="onOperationInput" data-field="color" />
+            <input class="mf-input mf-flex-1" value="{{operationModal.formData.size}}" placeholder="如: M" bindinput="onOperationInput" data-field="size" />
+          </view>
+        </view>
+        <view class="mf-field">
+          <text class="mf-field-label">存放位置</text>
+          <view class="mf-field-ctrl">
+            <input class="mf-input" value="{{operationModal.formData.location}}" placeholder="选填" bindinput="onOperationInput" data-field="location" />
+          </view>
         </view>
       </block>
 
@@ -192,22 +191,26 @@
           </view>
         </view>
         <view wx:if="{{operationModal.stockLoading}}" class="mf-loading">查询库存中...</view>
-        <view class="mf-item">
-          <text class="mf-label">借用人</text>
-          <input class="mf-input" value="{{operationModal.formData.borrower}}" placeholder="请输入姓名" bindinput="onOperationInput" data-field="borrower" />
+        <view class="mf-field">
+          <text class="mf-field-label">借用人</text>
+          <view class="mf-field-ctrl">
+            <input class="mf-input" value="{{operationModal.formData.borrower}}" placeholder="请输入姓名" bindinput="onOperationInput" data-field="borrower" />
+          </view>
         </view>
-        <view class="mf-item">
-          <text class="mf-label">预计归还时间</text>
-          <date-picker value="{{operationModal.returnDate}}" placeholder="请选择日期" bindchange="onDateChange" />
+        <view class="mf-field">
+          <text class="mf-field-label">归还时间</text>
+          <view class="mf-field-ctrl">
+            <date-picker value="{{operationModal.returnDate}}" placeholder="请选择日期" bindchange="onDateChange" />
+          </view>
         </view>
       </block>
 
       <!-- 归还专用字段 -->
       <block wx:if="{{operationModal.type === 'return'}}">
-        <view class="mf-item">
-          <text class="mf-label">借出单号</text>
-          <view class="mf-input-wrap">
-            <input class="mf-input" value="{{operationModal.formData.loanId}}" placeholder="请输入借出记录ID" bindinput="onOperationInput" data-field="loanId" />
+        <view class="mf-field">
+          <text class="mf-field-label">借出单号</text>
+          <view class="mf-field-ctrl mf-row-input">
+            <input class="mf-input mf-flex-1" value="{{operationModal.formData.loanId}}" placeholder="请输入借出记录ID" bindinput="onOperationInput" data-field="loanId" />
             <view class="mf-scan-btn" bindtap="handleScanLoan">
               <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
             </view>
@@ -216,18 +219,22 @@
       </block>
 
       <!-- 数量 -->
-      <view class="mf-item">
-        <text class="mf-label">数量</text>
-        <input class="mf-input" type="number" value="{{operationModal.formData.quantity}}" bindinput="onOperationInput" data-field="quantity" />
+      <view class="mf-field">
+        <text class="mf-field-label">数量</text>
+        <view class="mf-field-ctrl">
+          <input class="mf-input" type="number" value="{{operationModal.formData.quantity}}" bindinput="onOperationInput" data-field="quantity" />
+        </view>
       </view>
 
       <!-- 备注 -->
-      <view class="mf-item">
-        <text class="mf-label">备注</text>
-        <textarea class="mf-textarea" value="{{operationModal.formData.remark}}" placeholder="选填" bindinput="onOperationInput" data-field="remark" />
+      <view class="mf-field">
+        <text class="mf-field-label">备注</text>
+        <view class="mf-field-ctrl">
+          <textarea class="mf-textarea" value="{{operationModal.formData.remark}}" placeholder="选填" bindinput="onOperationInput" data-field="remark" />
+        </view>
       </view>
     </view>
-    <view class="mf-actions" slot="actions">
+    <view class="mf-actions">
       <view class="mf-btn cancel" bindtap="closeOperationModal">取消</view>
       <view class="mf-btn ok {{operationModal.submitting ? 'disabled' : ''}}" bindtap="onSubmitOperation">
         {{operationModal.submitting ? '提交中...' : '确认'}}
