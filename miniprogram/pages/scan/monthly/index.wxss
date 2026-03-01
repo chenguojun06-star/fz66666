@@ -49,52 +49,8 @@ page {
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
 }
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: var(--radius-full);
-}
-.search-icon {
-  font-size: var(--font-size-sm);
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-.search-input {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  width: 100%;
-}
-.search-btn {
-  padding: 5px 14px;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: rgba(224, 242, 254, 0.8);
-  border: 1px solid rgba(224, 242, 254, 0.9);
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-.search-btn-hover { opacity: 0.7; transform: scale(0.96); }
-.clear-btn {
-  padding: 5px 12px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-.clear-btn-hover { opacity: 0.7; }
+/* search-row / search-box / search-icon / search-input
+   search-btn / search-btn-hover / clear-btn / clear-btn-hover → app.wxss */
 
 /* ===== 汇总卡片 ===== */
 .summary-card {

@@ -9,45 +9,11 @@
  * ===================================================== */
 
 /* =====================================================
- * 一、空状态 Empty State
- * 用于列表为空、搜索无结果等场景
+ * 一、空状态 Empty State → 已移至 app.wxss（全局加载，无需再 @import）
+ * .empty-state / .empty-icon / .empty-img / .empty-text / .empty-hint
+ * 均在 app.wxss “空状态”区块定义。
  * ===================================================== */
 
-/* 容器：纵向居中排列 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 20px;
-}
-
-/* 图标（emoji / 文字符号） */
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.4;
-}
-
-/* 图片形式的空状态插图 */
-.empty-img {
-  width: 200rpx;
-  margin-bottom: 20rpx;
-}
-
-/* 主提示文字 */
-.empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  text-align: center;
-  margin-bottom: 6px;
-}
-
-/* 次级提示文字 */
-.empty-hint {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-disabled);
-  text-align: center;
-}
 
 
 /* =====================================================
