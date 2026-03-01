@@ -590,6 +590,14 @@ public class ProductionScanExecutor {
         } catch (Exception e) {
             log.warn("解析父进度节点失败: styleNo={}, processName={}", styleNo, processName, e);
         }
+        // ── 关键词兜底：模板中找不到父节点时，按工序名称关键词推断 ──
+        // 整烫/熨烫 → 尾部（与大烫/质检/包装同属尾部工序）
+        if (templateLibraryService.isProgressIroningStageName(processName)
+                || templateLibraryService.isProgressQualityStageName(processName)
+                || templateLibraryService.isProgressPackagingStageName(processName)) {
+            log.info("工序 '{}' 关键词兜底映射到父节点 '尾部' (styleNo={})", processName, styleNo);
+            return "尾部";
+        }
         return null;
     }
 
