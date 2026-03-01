@@ -9,14 +9,8 @@ page {
 }
 
 /* ============ 筛选区域 ============ */
-
-.filter-section {
-  margin: 0 12px 8px;
-  padding: 10px 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-}
+/* filter-section 卡片基样式 → app.wxss */
+.filter-section { margin: 0 12px 8px; }
 
 /* 日期选择行 */
 .date-row {
@@ -193,37 +187,11 @@ page {
   transform: scale(0.95);
 }
 
-/* ============ 空状态 ============ */
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 20px;
-  margin: 0 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-}
-
-.empty-icon {
-  font-size: 40px;
-  margin-bottom: 12px;
-  opacity: 0.5;
-}
-
-.empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.empty-hint {
-  margin-top: 6px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
-}
+/* ============ 空状态（基样式 → app.wxss .empty-state；.empty-state-card → app.wxss）============ */
+.empty-state { padding: 48px 20px; margin: 0 12px; background: var(--color-bg-card); border-radius: var(--radius-xl); border: 1px solid var(--color-border); }
+.empty-icon { font-size: 40px; opacity: 0.5; }
+.empty-text { font-size: var(--font-size-base); color: var(--color-text-secondary); font-weight: 500; }
+.empty-hint { margin-top: 6px; font-size: var(--font-size-xs); color: var(--color-text-disabled); }
 
 /* ============ 加载 ============ */
 

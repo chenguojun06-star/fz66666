@@ -42,13 +42,8 @@ page {
 }
 
 /* ===== 筛选区域 ===== */
-.filter-section {
-  margin: 0 12px 8px;
-  padding: 10px 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-}
+/* filter-section 卡片基样式 → app.wxss */
+.filter-section { margin: 0 12px 8px; }
 /* search-row / search-box / search-icon / search-input
    search-btn / search-btn-hover / clear-btn / clear-btn-hover → app.wxss */
 
@@ -153,17 +148,9 @@ page {
 .th-time, .td-time { width: 80px; }
 
 /* ===== 空/加载状态 ===== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 20px;
-  margin: 0 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-}
-.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+/* 基样式 → app.wxss .empty-state；卡片组合 → app.wxss .empty-state-card */
+.empty-state { padding: 48px 20px; margin: 0 12px; background: var(--color-bg-card); border-radius: var(--radius-xl); border: 1px solid var(--color-border); }
+.empty-icon { font-size: 40px; opacity: 0.5; }
 .empty-text { font-size: var(--font-size-base); color: var(--color-text-secondary); font-weight: 500; }
 .empty-hint { margin-top: 6px; font-size: var(--font-size-xs); color: var(--color-text-disabled); }
 .loading-row { text-align: center; padding: 16px; }

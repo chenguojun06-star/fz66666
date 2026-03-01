@@ -385,6 +385,26 @@ wx-vconsole,
 /* hover-class="clear-btn-hover" 替代 :active */
 .clear-btn-hover { opacity: 0.7; }
 
+/* ============ 筛选区域卡片 filter-section（各页面仅需覆盖 margin）============ */
+.filter-section {
+  padding: 10px 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+
+/* ============ 卡片式空状态 empty-state-card（与 .empty-state 搭配）============ */
+/* 新页面用法：class="empty-state empty-state-card" */
+/* 旧页面保留本地 .empty-state 覆盖（无需改 wxml） */
+.empty-state-card {
+  padding: 48px 20px;
+  margin: 0 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+.empty-state-card .empty-icon { font-size: 40px; opacity: 0.5; }
+
 /* ============ 空状态（empty-img / empty-hint 也在此定义，无需 @import page-utils）============ */
 .empty-state {
   display: flex;

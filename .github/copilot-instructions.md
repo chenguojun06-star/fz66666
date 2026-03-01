@@ -848,6 +848,8 @@ POST /api/style-info/{id}/stage-action?stage=pattern&action=complete
 
 > **`app.wxss` 全局样式（所有页面自动生效，无需 @import）**：
 > - 空状态：`.empty-state`、`.empty-icon`、`.empty-img`、`.empty-text`、`.empty-hint`
+> - 卡片空状态修饰：`.empty-state-card`（含 `.empty-state-card .empty-icon`）— 新页面用 `class="empty-state empty-state-card"`
+> - 筛选区域卡片：`.filter-section`（padding/bg/border-radius/border 已定义，各页面仅覆盖 margin）
 > - 搜索行：`.search-row`、`.search-box`、`.search-icon`、`.search-input`、`.search-btn`、`.search-btn-hover`、`.clear-btn`、`.clear-btn-hover`
 
 ### `page-utils.wxss` 类速查（禁止页面内重复定义）
