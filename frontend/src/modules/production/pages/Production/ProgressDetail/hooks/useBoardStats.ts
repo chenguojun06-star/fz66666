@@ -6,6 +6,8 @@ import { getRecordStageName, stageNameMatches, getDynamicParentMapping, setDynam
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;
   nodes: ProgressNode[];
+  /** 每个父节点下期望的子工序数量，用于正确平均计算（如 { "尾部": 3, "车缝": 1 }） */
+  childProcessCountByNode?: Record<string, number>;
   boardStatsByOrder: Record<string, Record<string, number> | null>;
   boardStatsLoadingByOrder: Record<string, boolean>;
   mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number> | null) => void;
@@ -46,6 +48,7 @@ const loadAllOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
 export const ensureBoardStatsForOrder = async ({
   order,
   nodes,
+  childProcessCountByNode,
   boardStatsByOrder,
   boardStatsLoadingByOrder,
   mergeBoardStatsForOrder,
@@ -107,24 +110,46 @@ export const ensureBoardStatsForOrder = async ({
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
       const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
-      // maxByBundle: 父节点下有多个子工序时，同一 bundle 会产生多条扫码记录（每个子工序一条）。
-      // 直接 SUM 会把子工序数量叠加，导致进度球数量虚高（尾部4子工序×10件=40，SUM=160）。
-      // 改用 maxByBundle：每个 bundle 只取最大量（= bundle 实际件数），确保父节点显示物理件数。
-      const maxByBundle = new Map<string, number>();
-      let nonBundleSum = 0;
+      // 父节点子工序平均聚合：
+      // 一个父节点（如"尾部"）可能包含多个子工序（剪线/质检/整烫），
+      // 同一菲号的每个子工序各产生一条扫码记录。
+      // 如果直接 maxByBundle，扫完一个子工序就显示 100%（虚高）。
+      // 正确做法：按 processName 分组，每组独立 maxByBundle 去重，
+      // 再将各组的物理完成件数求和 ÷ 期望子工序数 → 平均完成件数。
+      //
+      // 期望子工序数来源（按优先级）：
+      // 1. childProcessCountByNode（来自款式模板 progressNodesByStyleNo）
+      // 2. 扫码记录中实际出现的 distinct processName 数量
+      // 3. 兜底 = 1（单工序节点，行为与之前一致）
+      const byProcess = new Map<string, typeof matchingRecords>();
       for (const r of matchingRecords) {
-        const bundleId = String((r as any)?.cuttingBundleId || '').trim();
-        const qty = Number((r as any)?.quantity) || 0;
-        if (bundleId) {
-          const prev = maxByBundle.get(bundleId) ?? 0;
-          if (qty > prev) maxByBundle.set(bundleId, qty);
-        } else {
-          nonBundleSum += qty;
-        }
+        const procName = String((r as any)?.processName || '').trim() || '__self__';
+        if (!byProcess.has(procName)) byProcess.set(procName, []);
+        byProcess.get(procName)!.push(r);
       }
-      let done = nonBundleSum;
-      maxByBundle.forEach((q) => { done += q; });
-      stats[nodeName] = done;
+      // 每个子工序组独立 maxByBundle 去重
+      let totalProcessDone = 0;
+      for (const [, procRecords] of byProcess) {
+        const maxByBundle = new Map<string, number>();
+        let procNonBundleSum = 0;
+        for (const r of procRecords) {
+          const bundleId = String((r as any)?.cuttingBundleId || '').trim();
+          const qty = Number((r as any)?.quantity) || 0;
+          if (bundleId) {
+            const prev = maxByBundle.get(bundleId) ?? 0;
+            if (qty > prev) maxByBundle.set(bundleId, qty);
+          } else {
+            procNonBundleSum += qty;
+          }
+        }
+        let procDone = procNonBundleSum;
+        maxByBundle.forEach((q) => { procDone += q; });
+        totalProcessDone += procDone;
+      }
+      // 确定期望子工序数（>1 时需要平均）
+      const expectedCount = childProcessCountByNode?.[nodeName]
+        || Math.max(1, byProcess.size);
+      stats[nodeName] = Math.round(totalProcessDone / expectedCount);
       hasScanByNode[nodeName] = matchingRecords.length > 0;
     }
 

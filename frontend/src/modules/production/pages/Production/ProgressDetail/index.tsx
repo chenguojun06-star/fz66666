@@ -467,9 +467,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       for (const o of queue) {
         if (cancelled) return;
         const ns = stripWarehousingNode(resolveNodesForListOrder(o, progressNodesByStyleNo, defaultNodes));
+        // 计算每个父节点下期望的子工序数（从款式模板获取）
+        const sn = String((o as any)?.styleNo || '').trim();
+        const styleNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : [];
+        const cpcMap: Record<string, number> = {};
+        for (const s of styleNodes) {
+          const parent = String(s.progressStage || s.name || '').trim();
+          if (parent) cpcMap[parent] = (cpcMap[parent] || 0) + 1;
+        }
         await ensureBoardStatsForOrder({
           order: o,
           nodes: ns,
+          childProcessCountByNode: Object.keys(cpcMap).length > 0 ? cpcMap : undefined,
           boardStatsByOrder,
           boardStatsLoadingByOrder,
           mergeBoardStatsForOrder,
