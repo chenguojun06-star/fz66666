@@ -70,7 +70,7 @@ const StyleQuotePopover: React.FC<{
     <div style={{ width: 300, fontSize: 13 }}>
       {/* 标题 */}
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-        💰 报价参考　<span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
+        💰 报价参考 <span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
       </div>
 
       {/* 成本分解 */}
