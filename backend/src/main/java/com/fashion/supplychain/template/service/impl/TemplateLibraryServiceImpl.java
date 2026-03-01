@@ -69,7 +69,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         return n.contains("生产") || n.contains("车缝") || n.contains("缝制") || n.contains("缝纫") || n.contains("车工");
     }
 
-    private boolean isProgressIroningStageName(String name) {
+    @Override
+    public boolean isProgressIroningStageName(String name) {
         String n = normalizeStageName(name);
         if (!StringUtils.hasText(n)) {
             return false;

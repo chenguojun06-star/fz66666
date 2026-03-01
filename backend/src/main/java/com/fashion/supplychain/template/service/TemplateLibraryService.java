@@ -33,6 +33,8 @@ public interface TemplateLibraryService extends IService<TemplateLibrary> {
 
     boolean progressStageNameMatches(String stageName, String recordProcessName);
 
+    boolean isProgressIroningStageName(String name);
+
     boolean isProgressQualityStageName(String name);
 
     boolean isProgressPackagingStageName(String name);
