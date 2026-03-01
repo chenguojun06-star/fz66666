@@ -5,7 +5,6 @@ import {
   AlertOutlined,
   ClockCircleOutlined,
   TeamOutlined,
-  LineChartOutlined,
   DashboardOutlined,
   UserOutlined,
   CalendarOutlined,
@@ -16,7 +15,6 @@ import {
   BellOutlined,
   RobotOutlined,
   HeartOutlined,
-  ScheduleOutlined,
   FireOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -24,7 +22,6 @@ import BottleneckPanel from './panels/BottleneckPanel';
 import DeliveryRiskPanel from './panels/DeliveryRiskPanel';
 import AnomalyPanel from './panels/AnomalyPanel';
 import SmartAssignmentPanel from './panels/SmartAssignmentPanel';
-import LearningReportPanel from './panels/LearningReportPanel';
 import LivePulsePanel from './panels/LivePulsePanel';
 import WorkerEfficiencyPanel from './panels/WorkerEfficiencyPanel';
 import DeliveryPredictionPanel from './panels/DeliveryPredictionPanel';
@@ -35,7 +32,6 @@ import SelfHealingPanel from './panels/SelfHealingPanel';
 import SmartNotificationPanel from './panels/SmartNotificationPanel';
 import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
-import SchedulingSuggestionPanel from './panels/SchedulingSuggestionPanel';
 import DefectHeatmapPanel from './panels/DefectHeatmapPanel';
 import './styles.css';
 
@@ -71,11 +67,6 @@ const IntelligenceCenter: React.FC = () => {
       children: <SmartAssignmentPanel />,
     },
     {
-      key: 'learning',
-      label: <span><LineChartOutlined /> AI 学习</span>,
-      children: <LearningReportPanel />,
-    },
-    {
       key: 'worker-efficiency',
       label: <span><UserOutlined /> 工人效率</span>,
       children: <WorkerEfficiencyPanel />,
@@ -92,7 +83,7 @@ const IntelligenceCenter: React.FC = () => {
     },
     {
       key: 'factory-leaderboard',
-      label: <span><TrophyOutlined /> 工厂排行</span>,
+      label: <span><TrophyOutlined /> 工厂排行与排产</span>,
       children: <FactoryLeaderboardPanel />,
     },
     {
@@ -112,18 +103,13 @@ const IntelligenceCenter: React.FC = () => {
     },
     {
       key: 'nl-query',
-      label: <span><RobotOutlined /> AI助手</span>,
+      label: <span><RobotOutlined /> AI助手与学习</span>,
       children: <NlQueryPanel />,
     },
     {
       key: 'health-index',
       label: <span><HeartOutlined /> 健康指数</span>,
       children: <HealthIndexPanel />,
-    },
-    {
-      key: 'scheduling',
-      label: <span><ScheduleOutlined /> 排产建议</span>,
-      children: <SchedulingSuggestionPanel />,
     },
     {
       key: 'defect-heatmap',

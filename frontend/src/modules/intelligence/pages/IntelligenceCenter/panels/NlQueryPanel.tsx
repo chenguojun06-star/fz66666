@@ -1,8 +1,25 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Input, Button, Spin, Tag, Alert } from 'antd';
-import { SendOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
+import { Input, Button, Spin, Tag, Alert, Collapse, Progress, Table } from 'antd';
+import { SendOutlined, RobotOutlined, UserOutlined, BookOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
-import type { NlQueryResponse } from '@/services/production/productionApi';
+import type { NlQueryResponse, LearningReportResponse, StageLearningStat } from '@/services/production/productionApi';
+
+const stageColumns = [
+  { title: '工序', dataIndex: 'stageName', key: 'stageName', width: 100 },
+  {
+    title: '样本数', dataIndex: 'sampleCount', key: 'sampleCount', width: 90,
+    sorter: (a: StageLearningStat, b: StageLearningStat) => a.sampleCount - b.sampleCount,
+  },
+  {
+    title: '置信度', dataIndex: 'confidence', key: 'confidence', width: 120,
+    render: (v: number) => <Progress percent={Math.round(v * 100)} size="small" status={v >= 0.7 ? 'success' : v >= 0.4 ? 'normal' : 'exception'} />,
+    sorter: (a: StageLearningStat, b: StageLearningStat) => a.confidence - b.confidence,
+  },
+  {
+    title: '均值(分/件)', dataIndex: 'avgMinutesPerUnit', key: 'avgMinutesPerUnit', width: 110,
+    render: (v: number) => v?.toFixed(2),
+  },
+];
 
 /** 数据 key → 中文标签 */
 const DATA_LABELS: Record<string, string> = {
@@ -102,6 +119,11 @@ const NlQueryPanel: React.FC = () => {
   const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const sendingRef = useRef(false);
+  /* AI 学习状态 */
+  const [learnData, setLearnData] = useState<LearningReportResponse | null>(null);
+  useEffect(() => {
+    intelligenceApi.getLearningReport().then((res: any) => setLearnData(res?.data ?? null)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -152,6 +174,34 @@ const NlQueryPanel: React.FC = () => {
 
   return (
     <div className="intelligence-panel nl-panel">
+      {/* AI 学习状态（可折叠） */}
+      {learnData && (
+        <Collapse
+          size="small"
+          style={{ marginBottom: 12 }}
+          items={[{
+            key: 'learn',
+            label: (
+              <span>
+                <BookOutlined style={{ marginRight: 6 }} />
+                AI 学习状态 — 样本 {learnData.totalSamples} · 工序 {learnData.stageCount} · 置信度 {Math.round(learnData.avgConfidence * 100)}%
+              </span>
+            ),
+            children: (
+              <div>
+                <div className="stat-row">
+                  <div className="stat-card"><div className="stat-value" style={{ color: '#1677ff' }}>{learnData.totalSamples}</div><div className="stat-label">训练样本</div></div>
+                  <div className="stat-card"><div className="stat-value">{learnData.stageCount}</div><div className="stat-label">覆盖工序</div></div>
+                  <div className="stat-card"><Progress type="circle" percent={Math.round(learnData.avgConfidence * 100)} size={56} strokeColor={learnData.avgConfidence >= 0.7 ? '#52c41a' : '#faad14'} /><div className="stat-label">置信度</div></div>
+                  <div className="stat-card"><div className="stat-value" style={{ color: '#52c41a' }}>{learnData.feedbackCount}</div><div className="stat-label">反馈次数</div></div>
+                </div>
+                {learnData.lastLearnTime && <div style={{ fontSize: 12, color: '#8c8c8c', margin: '8px 0' }}>最后学习：{learnData.lastLearnTime}</div>}
+                <Table rowKey="stageName" columns={stageColumns} dataSource={learnData.stages || []} pagination={false} size="small" />
+              </div>
+            ),
+          }]}
+        />
+      )}
       <div className="chat-container">
         {messages.map((msg, idx) => (
           <div key={idx} className={`chat-bubble ${msg.role}`}>
