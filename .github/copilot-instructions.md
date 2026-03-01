@@ -836,6 +836,31 @@ POST /api/style-info/{id}/stage-action?stage=pattern&action=complete
 
 ---
 
+## 📱 小程序共享样式库（styles/ 目录）
+
+`miniprogram/styles/` 下三个共享 wxss，**新页面必须 @import，禁止页面内重复定义同名类**：
+
+| 文件 | 职责 | 引用格式 |
+|------|------|----------|
+| `design-tokens.wxss` | CSS 变量定义 | 全局已在 `app.wxss` 引入，无需重复 |
+| `modal-form.wxss` | 弹窗表单 `mf-*` 样式系统 | `@import '/styles/modal-form.wxss';` |
+| `page-utils.wxss` | 空状态 / 加载更多 / Tag 标签 | `@import '/styles/page-utils.wxss';` |
+
+### `page-utils.wxss` 类速查（禁止页面内重复定义）
+
+**空状态**：`.empty-state`（容器）、`.empty-icon`（emoji，48px）、`.empty-img`（图片，200rpx）、`.empty-text`（说明文字）、`.empty-hint`（次说明）
+
+**加载更多**：`.load-more`（蓝色，可点击）、`.load-more.disabled`（不可点击）、`.load-more-hover`（hover-class）、`.no-more`（灰色，无更多）、`.loading-more`（灰色，加载中）
+
+**Tag 标签**：`.tag`（基础样式）+ 修饰类 `.tag-blue`/`.tag-color`（蓝）、`.tag-gray`/`.tag-size`（灰）、`.tag-green`/`.tag-success`（绿）、`.tag-orange`/`.tag-warn`（橙）、`.tag-red`/`.tag-danger`（红）、`.tag-muted`（静音灰）
+
+> ❌ **禁止**：在页面 wxss 中重新写 `.empty-state { display:flex; ... }` 等重复样式。  
+> ✅ **允许**：局部覆盖差异 `.my-card .empty-state { padding: 40rpx 0; }`。
+
+**已使用 page-utils.wxss 的页面**：`order/index.wxss`、`payroll/payroll.wxss`、`warehouse/finished/list/index.wxss`、`admin/notification/index.wxss`、`warehouse/sample/list/index.wxss`
+
+---
+
 ## 📱 小程序扫码核心逻辑
 
 ### 三种扫码模式（自动识别）

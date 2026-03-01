@@ -1,4 +1,5 @@
 @import '/styles/inline-selector.wxss';
+@import '/styles/page-utils.wxss';
 @import '/styles/modal-form.wxss';
 
 .container {
@@ -46,15 +47,7 @@
   font-size: 28rpx;
 }
 
-.empty-icon {
-  font-size: 120rpx;
-  margin-bottom: 20rpx;
-}
-
-.empty-text {
-  color: var(--color-text-disabled);
-  font-size: 28rpx;
-}
+/* empty-icon / empty-text → page-utils.wxss */
 
 .user-list {
   padding-bottom: 20rpx;
@@ -161,16 +154,7 @@
   color: #fff;
 }
 
-.load-more {
-  text-align: center;
-  padding: 30rpx;
-  color: var(--color-primary);
-  font-size: 28rpx;
-}
-
-.load-more.disabled {
-  color: var(--color-text-disabled);
-}
+/* .load-more / .load-more.disabled → page-utils.wxss */
 
 /* 弹窗页面专用样式 */
 .modal-text {

@@ -1,4 +1,5 @@
 @import '/styles/modal-form.wxss';
+@import '/styles/page-utils.wxss';
 
 page {
   background: var(--color-bg-page);
@@ -54,30 +55,7 @@ page {
   opacity: 0.7;
 }
 
-/* ========== 空状态 ========== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 20px;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.4;
-}
-
-.empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin-bottom: 6px;
-}
-
-.empty-hint {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-disabled);
-}
+/* empty-state / empty-icon / empty-text / empty-hint → page-utils.wxss */
 
 /* 错误状态 */
 .error-state {

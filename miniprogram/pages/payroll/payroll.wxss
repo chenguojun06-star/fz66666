@@ -1,5 +1,6 @@
 /* pages/payroll/payroll.wxss */
 @import '../../styles/design-tokens.wxss';
+@import '../../styles/page-utils.wxss';
 
 .page {
   min-height: 100vh;
@@ -155,25 +156,7 @@
   font-weight: 700;
 }
 
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 120rpx 0;
-}
-
-.empty-icon {
-  font-size: 120rpx;
-  margin-bottom: 24rpx;
-  opacity: 0.3;
-}
-
-.empty-text {
-  font-size: 28rpx;
-  color: var(--color-text-disabled);
-}
+/* empty-state / empty-icon / empty-text → page-utils.wxss */
 
 /* 工序记录卡片 */
 .record-item {
