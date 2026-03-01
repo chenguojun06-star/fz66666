@@ -14,6 +14,7 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import OrderAuditPopover from './OrderAuditPopover';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -108,7 +109,13 @@ const FinishedSettlementContent: React.FC = () => {
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 150,
-      render: (text) => <span className={styles.orderNo}>{text}</span>,
+      render: (text: string, record: FinishedSettlementRow) => (
+        <OrderAuditPopover record={record}>
+          <span className={styles.orderNo} style={{ cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>
+            {text}
+          </span>
+        </OrderAuditPopover>
+      ),
     },
     {
       title: '款号',

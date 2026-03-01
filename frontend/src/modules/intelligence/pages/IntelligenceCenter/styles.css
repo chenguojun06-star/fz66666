@@ -356,12 +356,4 @@
   border-bottom: 1px solid #f0f0f0; color: #262626;
 }
 
-/* ===== 财务审核助手面板 ===== */
-.fap-panel { padding: 0 4px; }
-.fap-top-card { margin-bottom: 12px; }
-.fap-suggestion { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.fap-suggestion-text { color: #595959; font-size: 13px; margin-left: 4px; }
-.fap-section-title {
-  font-weight: 600; font-size: 14px; padding: 6px 0; margin: 8px 0;
-  border-bottom: 1px solid #f0f0f0; color: #262626;
-}
+
