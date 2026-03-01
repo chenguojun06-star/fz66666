@@ -123,10 +123,20 @@ Page({
       const data = await api.stock.listSamples(params);
 
       const records = (data && data.records) || [];
+
+      // 样衣类型 key → 中文标签映射
+      const TYPE_LABEL = {
+        development:    '开发样',
+        pre_production: '产前样',
+        shipment:       '大货样',
+        sales:          '销售样',
+      };
+
       // 对每条记录的 imageUrl 加 token（私有文件需要认证）
       const authedRecords = records.map(item => ({
         ...item,
         imageUrl: item.imageUrl ? getAuthedImageUrl(item.imageUrl) : '',
+        sampleTypeLabel: TYPE_LABEL[item.sampleType] || item.sampleType || '样衣',
       }));
 
       // ✅ 直接使用服务端返回的数据，不再客户端过滤

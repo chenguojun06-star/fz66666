@@ -1,0 +1,176 @@
+/* ============================================================
+   wh-card.wxss — 仓库页面通用卡片样式（样衣 / 成品 / 通用）
+   用法：@import '/styles/wh-card.wxss';
+   前缀：wc- (warehouse-card)
+   ============================================================ */
+
+/* ---- 卡片容器 ---- */
+.wc-card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* ---- 封面图 ---- */
+.wc-img {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.wc-img-placeholder {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+  background: #f5f6f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: #ccc;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ---- 内容区 ---- */
+.wc-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* ---- 右上角操作按钮 ---- */
+.wc-op-row {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  gap: 10rpx;
+}
+
+.wc-op-btn {
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid #e5e7eb;
+  color: #666;
+  background: #f8f9fa;
+  white-space: nowrap;
+}
+
+.wc-op-btn-primary {
+  background: var(--color-primary, #1890ff);
+  color: #fff;
+  border-color: var(--color-primary, #1890ff);
+}
+
+/* ---- 款号 ---- */
+.wc-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #222;
+  display: block;
+  padding-right: 150rpx;
+  margin-bottom: 4rpx;
+  line-height: 1.3;
+}
+
+/* ---- 款式名称 ---- */
+.wc-subtitle {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+/* ---- 标签行（颜色 / 尺码 / 类型）---- */
+.wc-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 6rpx;
+}
+
+.wc-tag {
+  font-size: 20rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  white-space: nowrap;
+}
+
+/* 颜色标签 — 玫红 */
+.wc-tag-color {
+  background: #fce8f3;
+  color: #c2185b;
+}
+
+/* 尺码标签 — 蓝 */
+.wc-tag-size {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+/* 类型标签 — 绿 */
+.wc-tag-type {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* ---- 库存数据行 ---- */
+.wc-stock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  margin-top: 10rpx;
+  padding-top: 10rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.wc-stock-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+}
+
+.wc-stock-label {
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+.wc-stock-val {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+.wc-stock-val.green  { color: #52c41a; }
+.wc-stock-val.orange { color: #faad14; }
+.wc-stock-val.red    { color: #ff4d4f; }
+
+.wc-stock-unit {
+  font-size: 20rpx;
+  color: #aaa;
+}
+
+/* ---- 底部操作链接（如「借调记录」）---- */
+.wc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10rpx;
+}
+
+.wc-action-link {
+  font-size: 22rpx;
+  color: var(--color-primary, #1890ff);
+  padding: 4rpx 14rpx;
+  border: 1rpx solid #d6e8ff;
+  border-radius: 20rpx;
+  background: #f5f9ff;
+}

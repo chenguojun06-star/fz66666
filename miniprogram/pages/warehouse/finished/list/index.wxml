@@ -39,61 +39,41 @@
     bindrefresherrefresh="onRefresh"
   >
     <block wx:if="{{list.length > 0}}">
-      <view class="list-item" wx:for="{{list}}" wx:key="id">
+      <view class="wc-card" wx:for="{{list}}" wx:key="id">
         <!-- 图片 -->
-        <image
-          wx:if="{{item.imageUrl}}"
-          class="item-img"
-          src="{{item.imageUrl}}"
-          mode="aspectFill"
-          data-index="{{index}}"
-          binderror="onImageError"
-        />
-        <view wx:else class="item-img-placeholder">
+        <image wx:if="{{item.imageUrl}}" class="wc-img" src="{{item.imageUrl}}" mode="aspectFill" data-index="{{index}}" binderror="onImageError" />
+        <view wx:else class="wc-img-placeholder">
           <text>暂无图片</text>
         </view>
 
         <!-- 信息区 -->
-        <view class="item-content">
-          <!-- 操作按钮 -->
-          <view class="item-op-row">
-            <view
-              class="item-op-btn item-op-btn-primary"
-              bindtap="openOutstockModal"
-              data-index="{{index}}"
-            >出库</view>
+        <view class="wc-content">
+          <view class="wc-op-row">
+            <view class="wc-op-btn wc-op-btn-primary" bindtap="openOutstockModal" data-index="{{index}}">出库</view>
           </view>
-
-          <!-- 款号 + 款名 -->
-          <view class="item-header">
-            <text class="item-title">{{item.styleNo}}</text>
+          <text class="wc-title">{{item.styleNo}}</text>
+          <text class="wc-subtitle">{{item.styleName || '未命名款式'}}</text>
+          <view class="wc-tags-row">
+            <text class="wc-tag wc-tag-color" wx:for="{{item.colors}}" wx:key="*this" wx:for-item="c">{{c}}</text>
           </view>
-          <view class="item-desc">{{item.styleName || '未命名款式'}}</view>
-
-          <!-- 颜色 & 尺码 -->
-          <view class="item-tags-row">
-            <text class="tag tag-color" wx:for="{{item.colors}}" wx:key="*this" wx:for-item="c">{{c}}</text>
+          <view class="wc-tags-row" wx:if="{{item.sizes.length > 0}}">
+            <text class="wc-tag wc-tag-size" wx:for="{{item.sizes}}" wx:key="*this" wx:for-item="s">{{s}}</text>
           </view>
-          <view class="item-tags-row" wx:if="{{item.sizes.length > 0}}">
-            <text class="tag tag-size" wx:for="{{item.sizes}}" wx:key="*this" wx:for-item="s">{{s}}</text>
-          </view>
-
-          <!-- 库存状态 -->
-          <view class="item-stock">
-            <view class="stock-info">
-              <text class="label">可用</text>
-              <text class="value green">{{item.availableQty}}</text>
-              <text class="unit">件</text>
+          <view class="wc-stock">
+            <view class="wc-stock-item">
+              <text class="wc-stock-label">可用</text>
+              <text class="wc-stock-val green">{{item.availableQty}}</text>
+              <text class="wc-stock-unit">件</text>
             </view>
-            <view class="stock-info">
-              <text class="label">锁定</text>
-              <text class="value orange">{{item.lockedQty}}</text>
-              <text class="unit">件</text>
+            <view class="wc-stock-item">
+              <text class="wc-stock-label">锁定</text>
+              <text class="wc-stock-val orange">{{item.lockedQty}}</text>
+              <text class="wc-stock-unit">件</text>
             </view>
-            <view class="stock-info">
-              <text class="label">次品</text>
-              <text class="value red">{{item.defectQty}}</text>
-              <text class="unit">件</text>
+            <view class="wc-stock-item">
+              <text class="wc-stock-label">次品</text>
+              <text class="wc-stock-val red">{{item.defectQty}}</text>
+              <text class="wc-stock-unit">件</text>
             </view>
           </view>
         </view>

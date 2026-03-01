@@ -1,6 +1,7 @@
 @import '../../../../styles/inline-selector.wxss';
 @import '../../../../styles/page-utils.wxss';
 @import '../../../../styles/modal-form.wxss';
+@import '../../../../styles/wh-card.wxss';
 
 .container {
   height: 100vh;
@@ -73,137 +74,7 @@
   box-sizing: border-box;
 }
 
-.list-item {
-  background-color: var(--color-bg-card);
-  border-radius: 12rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-  display: flex;
-}
-
-.item-img {
-  width: 120rpx;
-  height: 160rpx;
-  border-radius: 8rpx;
-  background-color: #eee;
-  margin-right: 20rpx;
-}
-
-.item-img-placeholder {
-  width: 120rpx;
-  height: 160rpx;
-  border-radius: 8rpx;
-  background-color: var(--color-bg-gray);
-  margin-right: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24rpx;
-  color: var(--color-text-disabled);
-}
-
-.item-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.item-op-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12rpx;
-  margin-bottom: 10rpx;
-}
-
-.item-op-btn {
-  font-size: 22rpx;
-  color: var(--color-text-secondary);
-  border: 1rpx solid var(--color-border-light);
-  border-radius: 20rpx;
-  padding: 4rpx 16rpx;
-  background-color: var(--color-bg-gray);
-}
-
-.item-op-btn-primary {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  background-color: var(--color-primary-light);
-}
-
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.item-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: var(--color-text-primary);
-}
-
-.item-tags .tag {
-  font-size: 20rpx;
-  background-color: #e6f7ff;
-  color: var(--color-primary);
-  padding: 4rpx 12rpx;
-  border-radius: 4rpx;
-}
-
-.item-desc {
-  font-size: 26rpx;
-  color: var(--color-text-secondary);
-  margin-top: 8rpx;
-}
-
-.item-spec {
-  font-size: 24rpx;
-  color: var(--color-text-disabled);
-  margin-top: 8rpx;
-}
-
-.ml-10 { margin-left: 20rpx; }
-.ml-20 { margin-left: 40rpx; }
-
-.item-stock {
-  display: flex;
-  margin-top: 12rpx;
-  padding-top: 12rpx;
-  border-top: 1rpx solid #f0f0f0;
-}
-
-.item-actions {
-  margin-top: 12rpx;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.action-link {
-  font-size: 24rpx;
-  color: var(--color-primary);
-  padding: 6rpx 16rpx;
-  border: 1rpx solid #d6e8ff;
-  border-radius: 20rpx;
-  background-color: #f5f9ff;
-}
-
-.stock-info {
-  font-size: 24rpx;
-}
-
-.stock-info .label {
-  color: var(--color-text-disabled);
-}
-
-.stock-info .value {
-  font-weight: bold;
-  margin-left: 8rpx;
-  font-size: 28rpx;
-}
-
-.green { color: var(--color-success); }
-.orange { color: var(--color-warning); }
+/* 旧卡片类名已迁移至 /styles/wh-card.wxss（wc-* 前缀） */
 
 /* empty-state / empty-img / loading-more / no-more → page-utils.wxss */
 
