@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { toast } = require('../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
 const DEFAULT_FORM = {
@@ -77,16 +77,10 @@ Page({
     try {
       const params = { page, pageSize: this.data.pageSize };
       if (this.data.keyword) params.keyword = this.data.keyword;
-      console.log('[Order] fetchStyles 开始请求, params=', JSON.stringify(params));
       const res = await api.style.listStyles(params);
-      console.log('[Order] fetchStyles 返回成功, type=', typeof res, ', keys=', res ? Object.keys(res) : 'null');
       const records = Array.isArray(res) ? res : (res && res.records) || [];
       const total = (res && res.total) || records.length;
-      console.log('[Order] records.length=', records.length, ', total=', total);
-      if (records.length === 0 && page === 1) {
-        console.warn('[Order] API 返回空数据, 完整返回值:', JSON.stringify(res).substring(0, 500));
-      }
-      let items = records.map(s => this._transformStyle(s));
+      const items = records.map(s => this._transformStyle(s));
       // 按下单次数降序排列（无搜索词时显示排行）
       if (!this.data.keyword) {
         items.sort((a, b) => (b.orderCount || 0) - (a.orderCount || 0));

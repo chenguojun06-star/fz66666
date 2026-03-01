@@ -242,6 +242,9 @@ public class PatternProductionOrchestrator {
         // 同步库存：根据操作类型自动更新 t_sample_stock / t_sample_loan
         syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
 
+        // 扫码时同步人员信息回样衣开发表（车板师等）
+        syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
+
         Map<String, Object> result = new HashMap<>();
         result.put("recordId", scanRecord.getId());
         result.put("patternId", patternId);
@@ -777,6 +780,55 @@ public class PatternProductionOrchestrator {
             }
         } catch (NumberFormatException e) {
             log.warn("Invalid styleId format: {}", styleIdStr);
+        }
+    }
+
+    /**
+     * 扫码操作时同步人员信息回样衣开发表（t_style_info）
+     * 解决直接扫码（未走"领取"流程）时车板师等字段不回写的问题
+     */
+    private void syncStyleInfoOnScan(String styleIdStr, String operatorName, String operationType) {
+        if (!StringUtils.hasText(styleIdStr)) return;
+        try {
+            Long styleId = Long.parseLong(styleIdStr);
+            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            if (styleInfo == null) return;
+
+            boolean updated = false;
+
+            // 车板师：扫码的人就是车板师（如果还没设置）
+            if (!StringUtils.hasText(styleInfo.getPlateWorker())) {
+                styleInfo.setPlateWorker(operatorName);
+                updated = true;
+                log.info("Scan synced plate worker to style info: styleId={}, plateWorker={}", styleId, operatorName);
+            }
+
+            // 纸样师：扫码的人补充为纸样师（如果还没设置）
+            if (!StringUtils.hasText(styleInfo.getSampleSupplier())) {
+                styleInfo.setSampleSupplier(operatorName);
+                updated = true;
+                log.info("Scan synced pattern developer to style info: styleId={}, patternDeveloper={}", styleId, operatorName);
+            }
+
+            // 生产开始时间：如果还没有，补充
+            if (styleInfo.getProductionStartTime() == null) {
+                styleInfo.setProductionStartTime(LocalDateTime.now());
+                updated = true;
+            }
+            if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
+                styleInfo.setProductionAssignee(operatorName);
+                updated = true;
+            }
+
+            if (updated) {
+                styleInfo.setUpdateTime(LocalDateTime.now());
+                styleInfoService.updateById(styleInfo);
+                log.info("Scan synced style info fields: styleId={}, operator={}, operation={}", styleId, operatorName, operationType);
+            }
+        } catch (NumberFormatException e) {
+            log.warn("syncStyleInfoOnScan: invalid styleId format: {}", styleIdStr);
+        } catch (Exception e) {
+            log.error("syncStyleInfoOnScan failed: styleId={}", styleIdStr, e);
         }
     }
 
