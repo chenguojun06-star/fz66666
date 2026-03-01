@@ -49,9 +49,11 @@ async function fetchProfile(name: string): Promise<WorkerProfile | null> {
     return pendingMap.get(name)!;
   }
   const p = api
-    .post<WorkerProfile>('/intelligence/worker-profile', { operatorName: name })
-    .then((data: WorkerProfile) => {
-      const safe = normalizeProfile(data, name);
+    .post<{ code: number; data: WorkerProfile; message?: string }>('/intelligence/worker-profile', { operatorName: name })
+    .then((res: { code: number; data: WorkerProfile }) => {
+      // axios 拦截器返回 Result 包装：{code, data, message}，需解包
+      const payload = (res && res.code === 200 && res.data) ? res.data : res as unknown as WorkerProfile;
+      const safe = normalizeProfile(payload, name);
       profileCache.set(name, safe);
       pendingMap.delete(name);
       return safe;
