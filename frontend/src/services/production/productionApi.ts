@@ -50,6 +50,90 @@ export const productionWarehousingApi = {
   rollbackByBundle: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/rollback-by-bundle', payload),
 };
 
+// ── 智能化第二批 TS 类型定义 ──
+
+export interface BottleneckItem {
+  stageName: string;
+  upstreamDone: number;
+  currentDone: number;
+  backlog: number;
+  severity: 'critical' | 'warning' | 'normal';
+  suggestion: string;
+}
+export interface BottleneckDetectionResponse {
+  hasBottleneck: boolean;
+  summary: string;
+  items: BottleneckItem[];
+}
+
+export interface DeliveryRiskItem {
+  orderId: string;
+  orderNo: string;
+  styleNo: string;
+  factoryName: string;
+  plannedEndDate: string;
+  predictedEndDate: string;
+  riskLevel: 'safe' | 'warning' | 'danger' | 'overdue';
+  daysLeft: number;
+  predictedDaysNeeded: number;
+  currentProgress: number;
+  requiredDailyOutput: number;
+  currentDailyOutput: number;
+  riskDescription: string;
+}
+export interface DeliveryRiskResponse {
+  items: DeliveryRiskItem[];
+  totalOrders: number;
+  overdueCount: number;
+  dangerCount: number;
+  warningCount: number;
+}
+
+export interface AnomalyItem {
+  type: 'output_spike' | 'quality_spike' | 'idle_worker' | 'night_scan';
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  targetName: string;
+  todayValue: number;
+  historyAvg: number;
+  deviationRatio: number;
+}
+export interface AnomalyDetectionResponse {
+  items: AnomalyItem[];
+  totalChecked: number;
+}
+
+export interface WorkerRecommendation {
+  operatorName: string;
+  score: number;
+  reason: string;
+  avgPerDay: number;
+  vsAvgPct: number;
+  level: 'excellent' | 'good' | 'normal';
+  lastActiveDate: string;
+}
+export interface SmartAssignmentResponse {
+  stageName: string;
+  recommendations: WorkerRecommendation[];
+}
+
+export interface StageLearningStat {
+  stageName: string;
+  sampleCount: number;
+  confidence: number;
+  avgMinutesPerUnit: number;
+}
+export interface LearningReportResponse {
+  totalSamples: number;
+  stageCount: number;
+  avgConfidence: number;
+  accuracyRate: number;
+  feedbackCount: number;
+  lastLearnTime: string;
+  stages: StageLearningStat[];
+}
+
 export const intelligenceApi = {
   precheckScan: (payload: {
     orderId?: string;
@@ -126,6 +210,28 @@ export const intelligenceApi = {
     lastScanTime?: string | null;
     dateDays?: number;
   } }>('/intelligence/worker-profile', payload),
+
+  // ── 第二批智能化 API ──
+
+  /** 工序瓶颈检测 */
+  detectBottleneck: (payload?: { orderId?: string; orderNo?: string }) =>
+    api.post<{ code: number; data: BottleneckDetectionResponse }>('/intelligence/bottleneck/detect', payload ?? {}),
+
+  /** 交期风险评估 */
+  assessDeliveryRisk: (payload?: { orderId?: string }) =>
+    api.post<{ code: number; data: DeliveryRiskResponse }>('/intelligence/delivery-risk/assess', payload ?? {}),
+
+  /** 异常行为检测 */
+  detectAnomalies: () =>
+    api.post<{ code: number; data: AnomalyDetectionResponse }>('/intelligence/anomaly/detect', {}),
+
+  /** 智能派工推荐 */
+  recommendAssignment: (payload: { stageName: string; quantity?: number; orderId?: string }) =>
+    api.post<{ code: number; data: SmartAssignmentResponse }>('/intelligence/smart-assignment/recommend', payload),
+
+  /** AI 学习报告 */
+  getLearningReport: () =>
+    api.get<{ code: number; data: LearningReportResponse }>('/intelligence/learning-report'),
 };
 
 export const materialPurchaseApi = {

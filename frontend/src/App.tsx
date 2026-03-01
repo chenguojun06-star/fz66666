@@ -29,6 +29,7 @@ import {
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
+import { IntelligenceCenter } from './modules/intelligence';
 import {
   ProductionList,
   CuttingManagement,
@@ -243,6 +244,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.appStore} element={<Suspense fallback={<Spin />}><AppStore /></Suspense>} />
           <Route path={paths.dataImport} element={<Suspense fallback={<Spin />}><DataImport /></Suspense>} />
           <Route path={paths.integrationCenter} element={<Suspense fallback={<Spin />}><IntegrationCenter /></Suspense>} />
+          <Route path={paths.intelligenceCenter} element={<Suspense fallback={<Spin />}><IntelligenceCenter /></Suspense>} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />

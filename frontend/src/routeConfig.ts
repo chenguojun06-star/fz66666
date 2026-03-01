@@ -19,6 +19,7 @@ import {
   UserSwitchOutlined,
   ShoppingCartOutlined,
   ScissorOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -79,6 +80,7 @@ export const paths = {
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
   integrationCenter: '/integration/center',
+  intelligenceCenter: '/intelligence/center',
 } as const;
 
 export const permissionCodes = {
@@ -122,6 +124,7 @@ export const permissionCodes = {
   appStore: 'MENU_APP_STORE_VIEW',
   dataImport: 'MENU_DATA_IMPORT',
   integrationCenter: 'MENU_INTEGRATION',
+  intelligenceCenter: 'MENU_DASHBOARD', // 智能中心复用仪表盘权限码
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
 } as const;
 
@@ -231,6 +234,12 @@ export const menuConfig: MenuSection[] = [
     path: paths.tenantManagement,
   },
   {
+    title: '智能运营中心',
+    key: 'intelligenceCenter',
+    icon: React.createElement(ThunderboltOutlined),
+    path: paths.intelligenceCenter,
+  },
+  {
     title: '集成对接中心',
     key: 'integrationCenter',
     icon: React.createElement(ApiOutlined),
@@ -277,6 +286,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.appStore]: permissionCodes.appStore,
   [paths.dataImport]: permissionCodes.dataImport,
   [paths.integrationCenter]: permissionCodes.integrationCenter,
+  [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
 };
 
