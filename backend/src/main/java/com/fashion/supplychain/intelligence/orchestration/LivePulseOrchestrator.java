@@ -41,6 +41,7 @@ public class LivePulseOrchestrator {
 
     public LivePulseResponse pulse() {
         LivePulseResponse resp = new LivePulseResponse();
+        try {
         Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime windowStart = now.minusMinutes(PULSE_WINDOW_MINUTES);
@@ -65,6 +66,9 @@ public class LivePulseOrchestrator {
         resp.setScanRatePerHour(windowQty * 60.0 / PULSE_WINDOW_MINUTES);
         resp.setTimeline(buildTimeline(windowScans, windowStart));
         resp.setStagnantFactories(detectStagnant(todayScans, now, orderFactoryMap));
+        } catch (Exception e) {
+            log.error("[实时脉搏] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

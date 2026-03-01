@@ -45,6 +45,7 @@ public class ProfitEstimationOrchestrator {
             return resp;
         }
 
+        try {
         ProductionOrder order = productionOrderService.getById(request.getOrderId());
         if (order == null) {
             resp.setCostWarning("订单不存在");
@@ -104,6 +105,10 @@ public class ProfitEstimationOrchestrator {
             resp.setCostWarning("毛利率低于5%，建议审查成本结构");
         }
 
+        } catch (Exception e) {
+            log.error("[利润预估] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+            resp.setCostWarning("数据加载异常，请稍后重试");
+        }
         return resp;
     }
 

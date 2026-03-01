@@ -52,6 +52,7 @@ public class SchedulingSuggestionOrchestrator {
 
     public SchedulingSuggestionResponse suggest(SchedulingSuggestionRequest req) {
         SchedulingSuggestionResponse resp = new SchedulingSuggestionResponse();
+        try {
         Long tenantId = UserContext.tenantId();
 
         // 获取所有工厂
@@ -122,6 +123,9 @@ public class SchedulingSuggestionOrchestrator {
         plans.sort(Comparator.comparingInt(SchedulePlan::getMatchScore).reversed());
         // 取前5
         resp.setPlans(plans.size() > 5 ? plans.subList(0, 5) : plans);
+        } catch (Exception e) {
+            log.error("[排产建议] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

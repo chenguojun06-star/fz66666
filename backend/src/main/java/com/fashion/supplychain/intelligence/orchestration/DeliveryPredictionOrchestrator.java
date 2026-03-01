@@ -50,6 +50,7 @@ public class DeliveryPredictionOrchestrator {
             return resp;
         }
 
+        try {
         ProductionOrder order = productionOrderService.getById(request.getOrderId());
         if (order == null) {
             resp.setRationale("订单不存在");
@@ -110,6 +111,10 @@ public class DeliveryPredictionOrchestrator {
                 "基于近7天加权日均产量 %.1f 件/天，剩余 %d 件，预计 %d ~ %d 天完成",
                 velocity, remaining, optDays, pesDays));
 
+        } catch (Exception e) {
+            log.error("[交期预测] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+            resp.setRationale("数据加载异常，请稍后重试");
+        }
         return resp;
     }
 

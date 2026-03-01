@@ -43,6 +43,8 @@ public class RhythmDnaOrchestrator {
 
     public RhythmDnaResponse analyze() {
         RhythmDnaResponse resp = new RhythmDnaResponse();
+        resp.setOrders(Collections.emptyList());
+        try {
         Long tenantId = UserContext.tenantId();
 
         // 取最近的已完成/进行中订单（最多20个）
@@ -77,6 +79,9 @@ public class RhythmDnaOrchestrator {
         }
 
         resp.setOrders(rhythms);
+        } catch (Exception e) {
+            log.error("[节奏DNA] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

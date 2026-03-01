@@ -45,6 +45,7 @@ public class FactoryLeaderboardOrchestrator {
 
     public FactoryLeaderboardResponse rank() {
         FactoryLeaderboardResponse resp = new FactoryLeaderboardResponse();
+        try {
         Long tenantId = UserContext.tenantId();
 
         List<Factory> factories = loadFactories(tenantId);
@@ -98,6 +99,9 @@ public class FactoryLeaderboardOrchestrator {
 
         resp.setRankings(rankings);
         resp.setTotalFactories(rankings.size());
+        } catch (Exception e) {
+            log.error("[工厂排行榜] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

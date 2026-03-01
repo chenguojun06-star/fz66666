@@ -39,6 +39,7 @@ public class SelfHealingOrchestrator {
 
     public SelfHealingResponse diagnose() {
         SelfHealingResponse resp = new SelfHealingResponse();
+        try {
         Long tenantId = UserContext.tenantId();
         List<DiagnosisItem> items = new ArrayList<>();
         int autoFixed = 0;
@@ -70,6 +71,9 @@ public class SelfHealingOrchestrator {
         resp.setHealthScore(items.isEmpty() ? 100
                 : Math.max(0, 100 - (int) issues * 25));
         resp.setStatus(issues == 0 ? "healthy" : issues <= 2 ? "warning" : "critical");
+        } catch (Exception e) {
+            log.error("[自愈诊断] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

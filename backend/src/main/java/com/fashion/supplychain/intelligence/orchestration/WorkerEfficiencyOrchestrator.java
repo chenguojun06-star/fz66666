@@ -37,6 +37,7 @@ public class WorkerEfficiencyOrchestrator {
 
     public WorkerEfficiencyResponse evaluate() {
         WorkerEfficiencyResponse resp = new WorkerEfficiencyResponse();
+        try {
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDate.now().minusDays(EVAL_DAYS).atStartOfDay();
 
@@ -70,6 +71,9 @@ public class WorkerEfficiencyOrchestrator {
         resp.setTotalEvaluated(workers.size());
         if (!workers.isEmpty()) {
             resp.setTopWorkerName(workers.get(0).getWorkerName());
+        }
+        } catch (Exception e) {
+            log.error("[员工效能] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
         }
         return resp;
     }

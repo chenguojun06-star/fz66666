@@ -44,6 +44,7 @@ public class HealthIndexOrchestrator {
 
     public HealthIndexResponse calculate() {
         HealthIndexResponse resp = new HealthIndexResponse();
+        try {
         Long tenantId = UserContext.tenantId();
 
         // ── 维度1: 生产执行 ──
@@ -87,6 +88,9 @@ public class HealthIndexOrchestrator {
             resp.setSuggestion("建议关注进度落后的订单，增加扫码频次");
         }
 
+        } catch (Exception e) {
+            log.error("[健康指数] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

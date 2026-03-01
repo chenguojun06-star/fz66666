@@ -41,6 +41,7 @@ public class SmartNotificationOrchestrator {
 
     public SmartNotificationResponse generateNotifications() {
         SmartNotificationResponse resp = new SmartNotificationResponse();
+        try {
         Long tenantId = UserContext.tenantId();
         List<NotificationItem> notifications = new ArrayList<>();
 
@@ -66,6 +67,9 @@ public class SmartNotificationOrchestrator {
                 .filter(n -> "high".equals(n.getPriority())).count());
         resp.setSentToday(sentToday);
         resp.setSuccessRate(sentToday > 0 ? 95.0 : 100.0); // 模拟推送成功率
+        } catch (Exception e) {
+            log.error("[智能通知] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

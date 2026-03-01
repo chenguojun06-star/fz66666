@@ -38,6 +38,7 @@ public class DefectHeatmapOrchestrator {
 
     public DefectHeatmapResponse analyze() {
         DefectHeatmapResponse resp = new DefectHeatmapResponse();
+        try {
         Long tenantId = UserContext.tenantId();
         LocalDateTime start = LocalDateTime.now().minusDays(30);
 
@@ -141,6 +142,9 @@ public class DefectHeatmapOrchestrator {
         resp.setTotalDefects(totalDefects);
         resp.setWorstProcess(findWorst(byProcess));
         resp.setWorstFactory(findWorst(byFactory));
+        } catch (Exception e) {
+            log.error("[缺陷热力图] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
+        }
         return resp;
     }
 

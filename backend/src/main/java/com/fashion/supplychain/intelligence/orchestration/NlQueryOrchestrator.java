@@ -45,6 +45,7 @@ public class NlQueryOrchestrator {
         Long tenantId = UserContext.tenantId();
         log.info("[NlQuery] question={}, tenant={}", question, tenantId);
 
+        try {
         // 意图识别（关键字匹配优先级）
         if (containsAny(question, "订单", "进度", "PO")) {
             return handleOrderQuery(question, tenantId);
@@ -70,8 +71,14 @@ public class NlQueryOrchestrator {
         fallback.setSuggestions(Arrays.asList(
                 "今天扫码多少件？", "有多少延期订单？",
                 "订单PO20260301001进度如何？", "质检通过率多少？"));
-        return fallback;
-    }
+        return fallback;        } catch (Exception e) {
+            log.error("[NL查询] 数据加载异常（降级返回兆底）: {}", e.getMessage(), e);
+            NlQueryResponse errorResp = new NlQueryResponse();
+            errorResp.setIntent("error");
+            errorResp.setAnswer("系统暂时无法处理您的询问，请稍后重试");
+            errorResp.setConfidence(0);
+            return errorResp;
+        }    }
 
     // ── 订单查询 ──
     private NlQueryResponse handleOrderQuery(String question, Long tenantId) {
