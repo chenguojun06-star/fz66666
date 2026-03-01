@@ -951,21 +951,23 @@ page {
 }
 
 .hgh-order {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: 700;
   color: var(--color-text-primary);
+  letter-spacing: 0.3px;
 }
 
 .hgh-style {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
 .hgh-stage {
-  font-size: 10px;
-  padding: 1px 8px;
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 2px 9px;
+  background: #e8f0ff;
+  color: #2D7FF9;
   border-radius: 999px;
 }
 
@@ -986,10 +988,10 @@ page {
 }
 
 .delivery-days-tag {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
 }
 
 .delivery-days-tag.days-safe {
@@ -1021,18 +1023,18 @@ page {
 }
 
 .hgh-total {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
 .hgh-expand-hint {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   margin-left: auto;
 }
 
 .hgh-delivery-tag {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -1060,8 +1062,8 @@ page {
 }
 
 .hgh-time {
-  font-size: 10px; /* 备注字体 */
-  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .hgh-expand {
