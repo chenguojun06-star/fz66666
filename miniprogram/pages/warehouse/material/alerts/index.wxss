@@ -82,15 +82,21 @@
 
 /* ---- 面辅料排行卡片本地覆盖 ---- */
 
-/* 左侧排名圆球 */
-.ri-rank {
+/* 标题行内的排名小圆圈 */
+.ri-rank-circle {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
   background: var(--color-blue-light, #e3f2fd);
-}
-
-.ri-rank-num {
-  font-size: 40rpx;
-  font-weight: 700;
   color: var(--color-primary, #1890ff);
+  font-size: 22rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 40rpx;
 }
 
 /* 充足 / 缺料 状态按钮 */

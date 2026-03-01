@@ -48,10 +48,12 @@
 
         <!-- 信息区 -->
         <view class="wc-content">
-          <view class="wc-op-row">
-            <view class="wc-op-btn wc-op-btn-primary" bindtap="openOutstockModal" data-index="{{index}}">出库</view>
+          <view class="wc-head">
+            <text class="wc-title">{{item.styleNo}}</text>
+            <view class="wc-op-row">
+              <view class="wc-op-btn wc-op-btn-primary" bindtap="openOutstockModal" data-index="{{index}}">出库</view>
+            </view>
           </view>
-          <text class="wc-title">{{item.styleNo}}</text>
           <text class="wc-subtitle">{{item.styleName || '未命名款式'}}</text>
           <view class="wc-tags-row">
             <text class="wc-tag wc-tag-color" wx:for="{{item.colors}}" wx:key="*this" wx:for-item="c">{{c}}</text>

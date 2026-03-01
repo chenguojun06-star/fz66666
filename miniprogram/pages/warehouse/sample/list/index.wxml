@@ -49,11 +49,13 @@
         <image wx:if="{{item.imageUrl}}" class="wc-img" src="{{item.imageUrl}}" mode="aspectFill" data-index="{{index}}" binderror="onImageError" />
         <view wx:else class="wc-img-placeholder">暂无图片</view>
         <view class="wc-content">
-          <view class="wc-op-row">
-            <view class="wc-op-btn" bindtap="openOperationModal" data-type="inbound" data-styleno="{{item.styleNo}}">入库</view>
-            <view class="wc-op-btn wc-op-btn-primary" bindtap="openOperationModal" data-type="loan" data-styleno="{{item.styleNo}}">借出</view>
+          <view class="wc-head">
+            <text class="wc-title">{{item.styleNo}}</text>
+            <view class="wc-op-row">
+              <view class="wc-op-btn" bindtap="openOperationModal" data-type="inbound" data-styleno="{{item.styleNo}}">入库</view>
+              <view class="wc-op-btn wc-op-btn-primary" bindtap="openOperationModal" data-type="loan" data-styleno="{{item.styleNo}}">借出</view>
+            </view>
           </view>
-          <text class="wc-title">{{item.styleNo}}</text>
           <text class="wc-subtitle">{{item.styleName || '未命名款式'}}</text>
           <view class="wc-tags-row">
             <text class="wc-tag wc-tag-color" wx:if="{{item.color}}">{{item.color}}</text>

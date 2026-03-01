@@ -30,19 +30,15 @@
       bindtap="onItemTap"
       data-item="{{item}}"
     >
-      <!-- 左侧排名数字 -->
-      <view class="wc-img-placeholder ri-rank">
-        <text class="ri-rank-num">{{index + 1}}</text>
-      </view>
-      <!-- 右侧内容 -->
+      <!-- 内容区（无封面图，排名展示在标题行内） -->
       <view class="wc-content">
-        <!-- 右上角：充足 / 缺料 状态 -->
-        <view class="wc-op-row">
+        <view class="wc-head">
+          <text class="ri-rank-circle">{{index + 1}}</text>
+          <text class="wc-title">{{item.materialName || item.materialCode || '物料'}}</text>
           <text class="wc-op-btn {{item.shortage > 0 ? 'ri-btn-warn' : 'ri-btn-ok'}}">
-            {{item.shortage > 0 ? '缺 ' + item.shortage : '充足'}}
+            {{item.shortage > 0 ? '缺' + item.shortage : '充足'}}
           </text>
         </view>
-        <text class="wc-title">{{item.materialName || item.materialCode || '物料'}}</text>
         <text class="wc-subtitle">{{item.materialCode || '-'}} · {{item.materialTypeText || '-'}}</text>
         <!-- 核心指标 -->
         <view class="wc-stock">

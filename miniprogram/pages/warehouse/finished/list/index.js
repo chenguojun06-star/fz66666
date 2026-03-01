@@ -9,6 +9,23 @@ function normalizePositiveInt(value) {
   return parsed;
 }
 
+// 尺码标准顺序排序（小→大）
+const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '4XXXXXL', '5XL'];
+function sortSizes(sizes) {
+  if (!Array.isArray(sizes) || sizes.length <= 1) return sizes;
+  return [...sizes].sort((a, b) => {
+    const au = String(a).toUpperCase().replace(/\s/g, '');
+    const bu = String(b).toUpperCase().replace(/\s/g, '');
+    const ai = SIZE_ORDER.indexOf(au);
+    const bi = SIZE_ORDER.indexOf(bu);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    // 纯数字规格（如 165/64A）按字符串自然排序
+    return a.localeCompare(b, 'zh-CN', { numeric: true });
+  });
+}
+
 Page({
   data: {
     keyword: '',
@@ -85,7 +102,7 @@ Page({
             styleName: item.styleName,
             imageUrl: item.styleImage ? getAuthedImageUrl(item.styleImage) : '',
             colors: item.colors || [],
-            sizes: item.sizes || [],
+            sizes: sortSizes(item.sizes || []),
             availableQty: 0,
             lockedQty: 0,
             defectQty: 0

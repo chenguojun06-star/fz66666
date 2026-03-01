@@ -9,6 +9,25 @@ function toInt(value) {
   return Math.max(0, Math.floor(n));
 }
 
+// 面辅料类型英文 → 中文映射
+function getMaterialTypeLabel(type) {
+  if (!type) return '-';
+  const t = String(type).toLowerCase().trim();
+  if (t.startsWith('fabric')) return '面料';
+  if (t.startsWith('accessor') || t.startsWith('trim')) return '辅料';
+  if (t.startsWith('lining')) return '里料';
+  if (t.startsWith('button')) return '纽扣';
+  if (t.startsWith('zipper')) return '拉链';
+  if (t.startsWith('thread')) return '缝线';
+  if (t.startsWith('label') || t.startsWith('tag')) return '标签';
+  if (t.startsWith('packag')) return '包材';
+  if (t.startsWith('ribbon') || t.startsWith('tape')) return '织带';
+  if (t.startsWith('elastic')) return '松紧带';
+  if (t.startsWith('interlining') || t.startsWith('pad')) return '衬料';
+  // 中文直接透传
+  return type;
+}
+
 Page({
   data: {
     list: [],
@@ -47,7 +66,7 @@ Page({
           quantity,
           safetyStock,
           shortage,
-          materialTypeText: item && item.materialType ? String(item.materialType) : '-',
+          materialTypeText: getMaterialTypeLabel(item && item.materialType),
           specText: `${item && item.color ? item.color : '-'} / ${item && item.size ? item.size : '-'}`,
           recentOutQuantity: toInt(item && item.recentOutQuantity),
           dailyOutQuantity: toInt(item && item.dailyOutQuantity),
