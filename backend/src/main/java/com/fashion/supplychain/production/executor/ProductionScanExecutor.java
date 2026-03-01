@@ -76,6 +76,9 @@ public class ProductionScanExecutor {
     private StyleAttachmentService styleAttachmentService;
 
     @Autowired
+    private ProcessParentMappingService processParentMappingService;
+
+    @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     /**
@@ -545,6 +548,13 @@ public class ProductionScanExecutor {
      * 模板 JSON 中通过 steps[].progressStage 字段定义父子关系
      *
      * 6个父进度节点：采购, 裁剪, 二次工艺, 车缝, 尾部, 入库
+     *
+     * 解析优先级：
+     * 1. 模板 progressStage 直接指向6个固定父节点 → 直接使用
+     * 2. 模板 progressStage 为别名 → normalizeFixedProductionNodeName 归一化
+     * 3. 模板 progressStage 为别名但无法归一化 → 动态映射表查找
+     * 4. 模板中找不到 / progressStage 与 name 相同 → 动态映射表按 processName 查找
+     * 5. 以上均无结果 → 返回 null（调用方决定是否使用 processName 本身）
      */
     private String resolveParentProgressStage(String styleNo, String processName) {
         if (!hasText(styleNo) || !hasText(processName)) {
@@ -556,47 +566,45 @@ public class ProductionScanExecutor {
         }
         try {
             List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo.trim());
-            if (nodes == null || nodes.isEmpty()) {
-                return null;
-            }
-            for (Map<String, Object> item : nodes) {
-                String name = item.get("name") != null ? item.get("name").toString().trim() : "";
-                String pStage = item.get("progressStage") != null ? item.get("progressStage").toString().trim() : "";
-                // 子工序名匹配，且 progressStage 指向不同的父节点
-                if (hasText(name) && name.equals(processName.trim()) && hasText(pStage) && !pStage.equals(name)) {
-                    // 验证父节点是已知的6个固定节点
-                    String normalizedParent = normalizeFixedProductionNodeName(pStage);
-                    if (normalizedParent != null && isFixedNode(normalizedParent)) {
-                        return normalizedParent;
+            if (nodes != null && !nodes.isEmpty()) {
+                for (Map<String, Object> item : nodes) {
+                    String name = item.get("name") != null ? item.get("name").toString().trim() : "";
+                    String pStage = item.get("progressStage") != null ? item.get("progressStage").toString().trim() : "";
+
+                    if (!hasText(name) || !name.equals(processName.trim())) {
+                        continue;
                     }
-                    // 模板中的 progressStage 可能用了别名，尝试映射到6个标准父节点
-                    if (templateLibraryService.progressStageNameMatches("车缝", pStage)) {
-                        return "车缝";
+                    // ── 找到匹配的工序 ──
+
+                    // Case 1: progressStage 直接是 6 个固定父节点之一
+                    if (hasText(pStage) && isFixedNode(pStage)) {
+                        return pStage;
                     }
-                    if (templateLibraryService.progressStageNameMatches("二次工艺", pStage)) {
-                        return "二次工艺";
+                    // Case 2: progressStage 是别名（如 "sewing"），尝试归一化
+                    if (hasText(pStage) && !pStage.equals(name)) {
+                        String normalizedParent = normalizeFixedProductionNodeName(pStage);
+                        if (normalizedParent != null && isFixedNode(normalizedParent)) {
+                            return normalizedParent;
+                        }
+                        // 别名无法归一化 → 尝试动态映射表
+                        String mapped = processParentMappingService.resolveParentNode(pStage);
+                        if (mapped != null) {
+                            return mapped;
+                        }
                     }
-                    // 尾部的子工序（大烫/质检/包装/剪线/整烫等）→ 父节点"尾部"
-                    if (templateLibraryService.progressStageNameMatches("尾部", pStage)
-                            || templateLibraryService.progressStageNameMatches("大烫", pStage)
-                            || templateLibraryService.progressStageNameMatches("包装", pStage)
-                            || templateLibraryService.isProgressQualityStageName(pStage)) {
-                        return "尾部";
-                    }
-                    // 直接使用模板中的值（信任模板配置）
-                    return pStage;
+                    // Case 3: progressStage 与 name 相同或为空
+                    //   → 模板未正确配置父节点，跳出循环走动态映射兜底
+                    break;
                 }
             }
         } catch (Exception e) {
             log.warn("解析父进度节点失败: styleNo={}, processName={}", styleNo, processName, e);
         }
-        // ── 关键词兜底：模板中找不到父节点时，按工序名称关键词推断 ──
-        // 整烫/熨烫 → 尾部（与大烫/质检/包装同属尾部工序）
-        if (templateLibraryService.isProgressIroningStageName(processName)
-                || templateLibraryService.isProgressQualityStageName(processName)
-                || templateLibraryService.isProgressPackagingStageName(processName)) {
-            log.info("工序 '{}' 关键词兜底映射到父节点 '尾部' (styleNo={})", processName, styleNo);
-            return "尾部";
+        // ── 动态映射兜底：从 t_process_parent_mapping 表按工序名查找 ──
+        String dynamicParent = processParentMappingService.resolveParentNode(processName);
+        if (dynamicParent != null) {
+            log.info("工序 '{}' 通过动态映射表 → 父节点 '{}' (styleNo={})", processName, dynamicParent, styleNo);
+            return dynamicParent;
         }
         return null;
     }

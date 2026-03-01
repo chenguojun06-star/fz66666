@@ -1,7 +1,7 @@
-import { productionScanApi, materialPurchaseApi } from '@/services/production/productionApi';
+import { productionScanApi, materialPurchaseApi, processParentMappingApi } from '@/services/production/productionApi';
 import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';
-import { getRecordStageName, stageNameMatches } from '../utils';
+import { getRecordStageName, stageNameMatches, getDynamicParentMapping, setDynamicParentMapping } from '../utils';
 
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;
@@ -55,6 +55,18 @@ export const ensureBoardStatsForOrder = async ({
 }: EnsureBoardStatsArgs) => {
   const oid = String(order?.id || '').trim();
   if (!oid) return;
+
+  // ── 懒加载动态映射（全局只请求一次） ──
+  if (!getDynamicParentMapping()) {
+    try {
+      const res = await processParentMappingApi.list();
+      const data = (res as any)?.data?.data ?? (res as any)?.data ?? {};
+      if (data && typeof data === 'object') {
+        setDynamicParentMapping(data);
+      }
+    } catch { /* 加载失败不影响功能，静态匹配仍然生效 */ }
+  }
+
   const existing = boardStatsByOrder[oid];
   // null = 已请求但 API 失败，不再重试；有数据且含全部节点 = 缓存命中
   if (existing === null) return;

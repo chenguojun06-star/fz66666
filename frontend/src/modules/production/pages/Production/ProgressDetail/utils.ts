@@ -3,6 +3,22 @@ import { ProductionOrder, ScanRecord, CuttingBundle } from '@/types/production';
 import { StyleProcess } from '@/types/style';
 import { ProgressNode } from './types';
 
+// ── 动态工序→父节点映射缓存（从 t_process_parent_mapping 获取） ──
+let _dynamicParentMapping: Record<string, string> | null = null;
+
+/**
+ * 注入动态映射数据（由外部调用方从 API 获取后设置）
+ * 格式: { "整烫": "尾部", "大烫": "尾部", "绣花": "二次工艺", ... }
+ */
+export function setDynamicParentMapping(mapping: Record<string, string>) {
+  _dynamicParentMapping = mapping;
+}
+
+/** 获取当前缓存的动态映射 */
+export function getDynamicParentMapping(): Record<string, string> | null {
+  return _dynamicParentMapping;
+}
+
 /**
  * 默认进度节点配置
  */
@@ -177,6 +193,34 @@ export const stageNameMatches = (a: any, b: any) => {
     isIroningStageKey(k) || isQualityStageKey(k) || isPackagingStageKey(k);
   if (isTailStageKey(x) && tailSubStage(y)) return true;
   if (isTailStageKey(y) && tailSubStage(x)) return true;
+
+  // ── 动态映射匹配（替代硬编码关键词的终极兜底） ──
+  // 从 t_process_parent_mapping 加载的映射，覆盖所有已知和未来新增的工序名变体
+  if (_dynamicParentMapping) {
+    const findParent = (name: string): string | null => {
+      if (!name) return null;
+      const exact = _dynamicParentMapping![name];
+      if (exact) return exact;
+      // contains 匹配（与后端 ProcessParentMappingService 一致）
+      for (const [kw, parent] of Object.entries(_dynamicParentMapping!)) {
+        if (name.includes(kw)) return parent;
+      }
+      return null;
+    };
+    const xOrig = normalizeStageKey(a);
+    const yOrig = normalizeStageKey(b);
+    const xParent = findParent(x) || findParent(xOrig);
+    const yParent = findParent(y) || findParent(yOrig);
+    // x 是父节点，y 的父节点 = x → 匹配
+    if (yParent && yParent === x) return true;
+    if (xParent && xParent === y) return true;
+    // 都映射到同一个父节点 → 匹配
+    if (xParent && yParent && xParent === yParent) return true;
+    // 原始名也尝试
+    if (yParent && yParent === xOrig) return true;
+    if (xParent && xParent === yOrig) return true;
+  }
+
   return x.includes(y) || y.includes(x);
 };
 

@@ -102,6 +102,13 @@ export const patternProductionApi = {
     }),
 };
 
+/** 工序→父节点动态映射 API（替代硬编码关键词列表） */
+export const processParentMappingApi = {
+  /** 获取全部映射 { keyword: parentNode } */
+  list: () =>
+    api.get<{ code: number; data: Record<string, string> }>('/production/process-mapping/list'),
+};
+
 export default {
   productionOrderApi,
   productionCuttingApi,
@@ -110,5 +117,6 @@ export default {
   intelligenceApi,
   patternProductionApi,
   materialPurchaseApi,
+  processParentMappingApi,
 };
 
