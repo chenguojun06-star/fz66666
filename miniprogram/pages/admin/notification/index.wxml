@@ -76,37 +76,37 @@
     show-close="{{true}}"
     bind:close="cancelApprove"
   >
-      <view class="modal-body">
-        <view class="modal-text">
-          批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
-        </view>
-        <view class="modal-hint">批准后该用户可以正常登录系统</view>
+    <view class="mf-body">
+      <view class="modal-text">
+        批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
+      </view>
+      <view class="modal-hint">批准后该用户可以正常登录系统</view>
 
-        <view class="form-item">
-          <view class="form-label">选择角色 <text class="required">*</text></view>
-          <view class="inline-selector">
-            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
-              <view
-                wx:for="{{roleOptions}}"
-                wx:key="id"
-                class="inline-selector-item {{selectedRoleId === String(item.id) ? 'active' : ''}}"
-                data-id="{{item.id}}"
-                bindtap="onRoleSelect">
-                <view class="inline-selector-left">
-                  <view class="inline-selector-radio {{selectedRoleId === String(item.id) ? 'checked' : ''}}">
-                    <view wx:if="{{selectedRoleId === String(item.id)}}" class="inline-selector-radio-dot"></view>
-                  </view>
-                  <text class="inline-selector-label">{{item.roleName}}</text>
+      <view class="mf-item">
+        <view class="mf-label">选择角色 <text class="required">*</text></view>
+        <view class="inline-selector">
+          <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view
+              wx:for="{{roleOptions}}"
+              wx:key="id"
+              class="inline-selector-item {{selectedRoleId === String(item.id) ? 'active' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="onRoleSelect">
+              <view class="inline-selector-left">
+                <view class="inline-selector-radio {{selectedRoleId === String(item.id) ? 'checked' : ''}}">
+                  <view wx:if="{{selectedRoleId === String(item.id)}}" class="inline-selector-radio-dot"></view>
                 </view>
+                <text class="inline-selector-label">{{item.roleName}}</text>
               </view>
-            </scroll-view>
-          </view>
+            </view>
+          </scroll-view>
         </view>
       </view>
-      <view class="modal-footer">
-        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelApprove">取消</view>
-        <view class="modal-btn confirm" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmApprove">批准并分配角色</view>
-      </view>
+    </view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" bindtap="cancelApprove">取消</view>
+      <view class="mf-btn ok" bindtap="confirmApprove">批准并分配角色</view>
+    </view>
   </mp-modal>
 
   <!-- 拒绝弹窗 —— mp-modal 通用组件 -->
@@ -116,26 +116,26 @@
     show-close="{{true}}"
     bind:close="cancelReject"
   >
-      <view class="modal-body">
-        <view class="modal-text">
-          确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
-        </view>
-        <view class="modal-hint danger">拒绝后该用户将无法登录系统</view>
+    <view class="mf-body">
+      <view class="modal-text">
+        确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
+      </view>
+      <view class="modal-hint danger">拒绝后该用户将无法登录系统</view>
 
-        <view class="form-item">
-          <view class="form-label">拒绝原因 <text class="required">*</text></view>
-          <textarea
-            class="textarea"
-            placeholder="请输入拒绝原因"
-            value="{{rejectReason}}"
-            bindinput="onRejectReasonInput"
-            maxlength="200"
-          />
-        </view>
+      <view class="mf-item">
+        <view class="mf-label">拒绝原因 <text class="required">*</text></view>
+        <textarea
+          class="mf-textarea"
+          placeholder="请输入拒绝原因"
+          value="{{rejectReason}}"
+          bindinput="onRejectReasonInput"
+          maxlength="200"
+        />
       </view>
-      <view class="modal-footer">
-        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelReject">取消</view>
-        <view class="modal-btn confirm danger" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmReject">确定拒绝</view>
-      </view>
+    </view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" bindtap="cancelReject">取消</view>
+      <view class="mf-btn danger" bindtap="confirmReject">确定拒绝</view>
+    </view>
   </mp-modal>
 </view>

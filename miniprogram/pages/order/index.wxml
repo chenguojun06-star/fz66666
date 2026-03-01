@@ -81,84 +81,84 @@
 
   <!-- 下单弹窗 -->
   <mp-modal visible="{{modal.visible}}" title="{{modal.title}}" size="large" bind:close="closeModal">
-    <view class="form-body">
+    <view class="mf-body">
       <!-- 基础信息 -->
-      <view class="form-section">
-        <text class="form-section-title">基础信息</text>
-        <view class="form-item">
-          <text class="form-label">订单号 <text class="required">*</text></text>
-          <view class="form-row-inline">
-            <input class="form-input flex-1" placeholder="自动生成" value="{{form.orderNo}}" data-field="orderNo" bindinput="onFormInput" />
-            <view class="gen-btn" hover-class="gen-btn-hover" bindtap="generateOrderNo">生成</view>
+      <view class="mf-section">
+        <text class="mf-section-title">基础信息</text>
+        <view class="mf-item">
+          <text class="mf-label">订单号 <text class="mf-required">*</text></text>
+          <view class="mf-row-input">
+            <input class="mf-input mf-flex-1" placeholder="自动生成" value="{{form.orderNo}}" data-field="orderNo" bindinput="onFormInput" />
+            <view class="mf-mini-btn" hover-class="mf-mini-btn-hover" bindtap="generateOrderNo">生成</view>
           </view>
         </view>
-        <view class="form-item">
-          <text class="form-label">加工厂 <text class="required">*</text></text>
+        <view class="mf-item">
+          <text class="mf-label">加工厂 <text class="mf-required">*</text></text>
           <picker mode="selector" range="{{factoryNames}}" value="{{form.factoryIndex}}" data-field="factoryIndex" bindchange="onFactoryChange">
-            <view class="form-picker">{{form.factoryIndex >= 0 ? factoryNames[form.factoryIndex] : '请选择加工厂'}}<text class="picker-arrow">▾</text></view>
+            <view class="mf-picker">{{form.factoryIndex >= 0 ? factoryNames[form.factoryIndex] : '请选择加工厂'}}<text class="mf-picker-arrow">▾</text></view>
           </picker>
         </view>
         <!-- 急单 + 单型 合并一行 -->
-        <view class="form-row-2col">
-          <view class="form-col">
-            <text class="form-label">急单</text>
-            <view class="toggle-row">
-              <view class="toggle-item {{form.urgencyLevel === 'normal' ? 'toggle-active' : ''}}" data-val="normal" bindtap="setUrgency">普通</view>
-              <view class="toggle-item toggle-urgent {{form.urgencyLevel === 'urgent' ? 'toggle-active' : ''}}" data-val="urgent" bindtap="setUrgency">急单</view>
+        <view class="mf-2col">
+          <view class="mf-col">
+            <text class="mf-label">急单</text>
+            <view class="mf-toggle-row">
+              <view class="mf-toggle {{form.urgencyLevel === 'normal' ? 'active' : ''}}" data-val="normal" bindtap="setUrgency">普通</view>
+              <view class="mf-toggle danger {{form.urgencyLevel === 'urgent' ? 'active' : ''}}" data-val="urgent" bindtap="setUrgency">急单</view>
             </view>
           </view>
-          <view class="form-col">
-            <text class="form-label">单型</text>
+          <view class="mf-col">
+            <text class="mf-label">单型</text>
             <picker mode="selector" range="{{plateTypes}}" range-key="label" value="{{form.plateTypeIndex}}" data-field="plateTypeIndex" bindchange="onPlateTypeChange">
-              <view class="form-picker">{{form.plateTypeIndex >= 0 ? plateTypes[form.plateTypeIndex].label : '选择单型'}}<text class="picker-arrow">▾</text></view>
+              <view class="mf-picker">{{form.plateTypeIndex >= 0 ? plateTypes[form.plateTypeIndex].label : '选择单型'}}<text class="mf-picker-arrow">▾</text></view>
             </picker>
           </view>
         </view>
-        <view class="form-item">
-          <text class="form-label">计划日期</text>
-          <view class="date-row">
-            <picker mode="date" value="{{form.plannedStartDate}}" bindchange="onStartDateChange">
-              <view class="form-picker date-picker">{{form.plannedStartDate || '开始'}}<text class="picker-arrow">▾</text></view>
+        <view class="mf-item">
+          <text class="mf-label">计划日期</text>
+          <view class="mf-date-row">
+            <picker mode="date" value="{{form.plannedStartDate}}" bindchange="onStartDateChange" class="mf-date-picker">
+              <view class="mf-picker">{{form.plannedStartDate || '开始'}}<text class="mf-picker-arrow">▾</text></view>
             </picker>
-            <text class="date-sep">→</text>
-            <picker mode="date" value="{{form.plannedEndDate}}" bindchange="onEndDateChange">
-              <view class="form-picker date-picker">{{form.plannedEndDate || '结束'}}<text class="picker-arrow">▾</text></view>
+            <text class="mf-date-sep">→</text>
+            <picker mode="date" value="{{form.plannedEndDate}}" bindchange="onEndDateChange" class="mf-date-picker">
+              <view class="mf-picker">{{form.plannedEndDate || '结束'}}<text class="mf-picker-arrow">▾</text></view>
             </picker>
           </view>
         </view>
       </view>
 
       <!-- 订单明细 -->
-      <view class="form-section">
-        <view class="form-section-head">
-          <text class="form-section-title">订单明细</text>
-          <view class="add-line-btn" hover-class="add-line-btn-hover" bindtap="addOrderLine">+ 添加</view>
+      <view class="mf-section">
+        <view class="mf-section-head">
+          <text class="mf-section-title">订单明细</text>
+          <view class="mf-add-btn" hover-class="mf-add-btn-hover" bindtap="addOrderLine">+ 添加</view>
         </view>
-        <view wx:if="{{form.orderLines.length === 0}}" class="empty-lines">请添加颜色/码数/数量</view>
+        <view wx:if="{{form.orderLines.length === 0}}" class="mf-empty">请添加颜色/码数/数量</view>
         <!-- 表头标签 -->
-        <view wx:if="{{form.orderLines.length > 0}}" class="order-line line-header">
-          <text class="line-label color-input">颜色</text>
-          <text class="line-label size-input">码数</text>
-          <text class="line-label qty-input">数量</text>
-          <view class="del-placeholder"></view>
+        <view wx:if="{{form.orderLines.length > 0}}" class="mf-line-header">
+          <text class="mf-line-label col-color">颜色</text>
+          <text class="mf-line-label col-size">码数</text>
+          <text class="mf-line-label col-qty">数量</text>
+          <view class="mf-del-placeholder"></view>
         </view>
-        <view wx:for="{{form.orderLines}}" wx:key="key" class="order-line">
-          <input class="line-input color-input" placeholder="如:红" value="{{item.color}}" data-idx="{{index}}" data-field="color" bindinput="onLineInput" />
-          <input class="line-input size-input" placeholder="如:XL" value="{{item.size}}" data-idx="{{index}}" data-field="size" bindinput="onLineInput" />
-          <input class="line-input qty-input" type="number" placeholder="件数" value="{{item.quantity}}" data-idx="{{index}}" data-field="quantity" bindinput="onLineInput" />
-          <view class="del-line" data-idx="{{index}}" bindtap="removeOrderLine">✕</view>
+        <view wx:for="{{form.orderLines}}" wx:key="key" class="mf-line">
+          <input class="mf-line-input col-color" placeholder="如:红" value="{{item.color}}" data-idx="{{index}}" data-field="color" bindinput="onLineInput" />
+          <input class="mf-line-input col-size" placeholder="如:XL" value="{{item.size}}" data-idx="{{index}}" data-field="size" bindinput="onLineInput" />
+          <input class="mf-line-input col-qty" type="number" placeholder="件数" value="{{item.quantity}}" data-idx="{{index}}" data-field="quantity" bindinput="onLineInput" />
+          <view class="mf-del" data-idx="{{index}}" bindtap="removeOrderLine">✕</view>
         </view>
-        <view wx:if="{{form.orderLines.length > 0}}" class="total-row">
-          <text class="total-label">合计</text>
-          <text class="total-value">{{form.totalQuantity}} 件</text>
+        <view wx:if="{{form.orderLines.length > 0}}" class="mf-total">
+          <text class="mf-total-label">合计</text>
+          <text class="mf-total-value">{{form.totalQuantity}} 件</text>
         </view>
       </view>
     </view>
 
     <!-- 操作按钮 -->
-    <view class="modal-actions">
-      <view class="mbtn cancel" hover-class="mbtn-hover" bindtap="closeModal">取消</view>
-      <view class="mbtn ok {{submitting ? 'off' : ''}}" hover-class="mbtn-hover" bindtap="submitOrder">{{submitting ? '提交中...' : '确认下单'}}</view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" hover-class="mf-btn-hover" bindtap="closeModal">取消</view>
+      <view class="mf-btn ok {{submitting ? 'disabled' : ''}}" hover-class="mf-btn-hover" bindtap="submitOrder">{{submitting ? '提交中...' : '确认下单'}}</view>
     </view>
   </mp-modal>
 </view>

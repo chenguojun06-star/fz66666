@@ -1,4 +1,5 @@
 @import '/styles/inline-selector.wxss';
+@import '/styles/modal-form.wxss';
 
 .container {
   min-height: 100vh;
@@ -171,29 +172,11 @@
   color: var(--color-text-disabled);
 }
 
-/* 弹窗样式 */
-/* .modal → mp-modal */
-
-/* .modal.show → mp-modal */
-
-/* .modal-mask → mp-modal */
-
-/* .modal-content → mp-modal */
-
-/* .modal-header → mp-modal */
-
-/* .modal-title → mp-modal */
-
-/* .modal-close → mp-modal */
-
-.modal-body {
-  padding: 30rpx;
-}
-
+/* 弹窗页面专用样式 */
 .modal-text {
   font-size: 28rpx;
   color: var(--color-text-primary);
-  margin-bottom: 12rpx;
+  margin-bottom: 8rpx;
 }
 
 .highlight {
@@ -204,85 +187,13 @@
 .modal-hint {
   font-size: 24rpx;
   color: var(--color-text-disabled);
-  margin-bottom: 24rpx;
+  margin-bottom: 12rpx;
 }
 
 .modal-hint.danger {
   color: var(--color-error);
 }
 
-.form-item {
-  margin-top: 24rpx;
-}
-
-.form-label {
-  font-size: 26rpx;
-  color: var(--color-text-secondary);
-  margin-bottom: 12rpx;
-}
-
 .required {
   color: var(--color-error);
-}
-
-/* 旧 .picker 样式已废弃，改用 inline-selector 通用组件 */
-
-.textarea {
-  width: 100%;
-  min-height: 160rpx;
-  background: var(--color-bg-gray);
-  padding: 20rpx;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  box-sizing: border-box;
-}
-
-.modal-footer {
-  display: flex;
-  gap: 12rpx;
-  padding: 24rpx;
-  border-top: 1rpx solid var(--color-border);
-}
-
-.modal-btn {
-  flex: 1;
-  text-align: center;
-  padding: 20rpx 36rpx;
-  font-size: 28rpx;
-  font-weight: 500;
-  border-radius: 999rpx;
-}
-
-.modal-btn.cancel {
-  color: var(--color-text-secondary);
-  background: rgba(255, 255, 255, 0.6);
-  border: 1rpx solid var(--color-border);
-}
-
-.modal-btn.cancel-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-
-.modal-btn.confirm {
-  color: var(--color-text-primary);
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
-  border: 1rpx solid rgba(147, 197, 253, 0.5);
-  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.15);
-}
-
-.modal-btn.confirm-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-
-.modal-btn.danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
-  color: #fff;
-  box-shadow: 0 8rpx 24rpx rgba(255, 77, 79, 0.25);
-}
-
-.modal-btn.danger-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
 }

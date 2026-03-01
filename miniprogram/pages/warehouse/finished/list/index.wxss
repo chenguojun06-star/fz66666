@@ -1,3 +1,5 @@
+@import '/styles/modal-form.wxss';
+
 .container {
   height: 100vh;
   background-color: #f5f6f8;
@@ -226,71 +228,7 @@
   color: #999;
 }
 
-/* ==================== 出库弹窗样式 ==================== */
-/* .modal → mp-modal 提供 */
-
-/* .modal-box → mp-modal 提供 */
-
-/* .modal-head → mp-modal 提供 */
-
-.modal-body {
-  padding: 20rpx;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  flex: 1;
-}
-
-.modal-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16rpx;
-  font-size: 24rpx;
-}
-
-.modal-row .label {
-  color: #999;
-}
-
-.modal-row .value {
-  color: #333;
-  font-weight: 600;
-}
-
-.modal-textarea {
-  flex: 1;
-  min-height: 100rpx;
-  font-size: 24rpx;
-  text-align: right;
-}
-
-.modal-actions {
-  display: flex;
-  border-top: 1rpx solid #f0f0f0;
-  flex-shrink: 0;
-}
-
-.btn {
-  flex: 1;
-  text-align: center;
-  padding: 20rpx 0;
-  font-size: 26rpx;
-}
-
-.btn.cancel {
-  color: #999;
-}
-
-.btn.ok {
-  color: #1890ff;
-  font-weight: 600;
-}
-
-.btn.disabled {
-  color: #ccc;
-}
-
-/* SKU列表样式 */
+/* SKU列表样式（页面专用） */
 .sku-section {
   margin: 20rpx 0;
   padding: 16rpx;

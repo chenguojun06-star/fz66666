@@ -1,0 +1,402 @@
+/* ============================================================
+   modal-form.wxss — 弹窗表单通用样式（参照扫码弹窗紧凑设计）
+   用法：在页面 wxss 顶部 @import '/styles/modal-form.wxss';
+   配合 mp-modal 组件使用，slot 内放置以下 class 即可
+
+   类名前缀: mf- (modal-form)
+   设计参数（对齐扫码弹窗）：
+     表单行间距  6px
+     标签字号    --font-size-xs
+     输入框 pad  6px 10px
+     按钮 pad    8px
+   ============================================================ */
+
+/* ---- 表单主体 ---- */
+.mf-body {
+  padding: 8px 0;
+}
+
+/* ---- 分区 ---- */
+.mf-section {
+  margin-bottom: 8px;
+}
+
+.mf-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.mf-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ---- 表单行 ---- */
+.mf-item {
+  margin-bottom: 6px;
+}
+
+.mf-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.mf-required {
+  color: var(--color-danger);
+}
+
+/* ---- 输入框 ---- */
+.mf-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-light, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.mf-textarea {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-light, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  min-height: 60px;
+}
+
+/* ---- 选择器 ---- */
+.mf-picker {
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-light, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mf-picker-arrow {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+/* ---- 行内横排 ---- */
+.mf-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mf-row-input {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mf-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.mf-flex-1 { flex: 1; }
+.mf-flex-2 { flex: 2; }
+
+/* ---- 两列并排 ---- */
+.mf-2col {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.mf-2col > .mf-col {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- 切换按钮组 ---- */
+.mf-toggle-row {
+  display: flex;
+  gap: 6px;
+}
+
+.mf-toggle {
+  flex: 1;
+  padding: 5px;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-light, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.mf-toggle.active {
+  color: var(--color-primary);
+  background: rgba(224, 242, 254, 0.6);
+  border-color: rgba(147, 197, 253, 0.5);
+  font-weight: 600;
+}
+
+.mf-toggle.danger.active {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ---- 日期行 ---- */
+.mf-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mf-date-sep {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  flex-shrink: 0;
+}
+
+.mf-date-picker {
+  flex: 1;
+}
+
+/* ---- 带扫码按钮的输入行 ---- */
+.mf-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mf-input-wrap .mf-input {
+  flex: 1;
+}
+
+.mf-scan-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ---- 小按钮（如「生成」） ---- */
+.mf-mini-btn {
+  padding: 5px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: rgba(224, 242, 254, 0.8);
+  border: 1px solid rgba(224, 242, 254, 0.9);
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mf-mini-btn-hover {
+  opacity: 0.7;
+}
+
+/* ---- 列表明细行（颜色/码数/数量） ---- */
+.mf-line-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.mf-line-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  padding: 0 2px;
+}
+
+.mf-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.mf-line-input {
+  padding: 4px 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-light, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.mf-del {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  background: var(--color-bg-gray, #f1f5f9);
+  border-radius: 50%;
+}
+
+.mf-del-placeholder {
+  flex-shrink: 0;
+  width: 22px;
+}
+
+.mf-add-btn {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  padding: 2px 10px;
+  background: rgba(224, 242, 254, 0.5);
+  border-radius: 20px;
+}
+
+.mf-add-btn-hover {
+  opacity: 0.7;
+}
+
+/* ---- 合计行 ---- */
+.mf-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 4px 0 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 2px;
+}
+
+.mf-total-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.mf-total-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* ---- 空状态 ---- */
+.mf-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-disabled);
+  background: var(--color-bg-light, #f8fafc);
+  border-radius: 6px;
+}
+
+/* ---- 选择项（如库存规格） ---- */
+.mf-select-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-light, #f8fafc);
+}
+
+.mf-select-item.active {
+  border-color: var(--color-primary);
+  background: rgba(224, 242, 254, 0.4);
+}
+
+/* ---- 底部操作按钮 ---- */
+.mf-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.mf-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 20px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.mf-btn-hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.mf-btn.cancel {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.mf-btn.ok {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.mf-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mf-btn.danger {
+  background: var(--color-error, #ff4d4f);
+  color: #fff;
+}
+
+/* ---- 关键值对列表（参照扫码 .cf-item） ---- */
+.mf-kv-list {
+  padding: 4px 0;
+}
+
+.mf-kv {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+}
+
+.mf-kv:last-child {
+  border-bottom: none;
+}
+
+.mf-kv-key {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+
+.mf-kv-val {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+/* ---- 加载提示 ---- */
+.mf-loading {
+  text-align: center;
+  padding: 20px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-disabled);
+}

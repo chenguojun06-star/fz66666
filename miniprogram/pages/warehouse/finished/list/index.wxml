@@ -121,79 +121,72 @@
     title="成品出库 - 多尺码明细"
     show-close="{{false}}"
   >
-    <view class="modal-body">
-        <!-- 基础信息 -->
-        <view class="modal-row">
-          <text class="label">款号</text>
-          <text class="value">{{modal.order.styleNo || '-'}}</text>
-        </view>
-        <view class="modal-row">
-          <text class="label">款式名称</text>
-          <text class="value">{{modal.order.styleName || '-'}}</text>
-        </view>
-        <view class="modal-row">
-          <text class="label">可用库存</text>
-          <text class="value">{{modal.order.availableQty || 0}} 件</text>
+    <view class="mf-body">
+      <!-- 基础信息 -->
+      <view class="mf-kv-list">
+        <view class="mf-kv"><text class="mf-kv-key">款号</text><text class="mf-kv-val">{{modal.order.styleNo || '-'}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">款式名称</text><text class="mf-kv-val">{{modal.order.styleName || '-'}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">可用库存</text><text class="mf-kv-val">{{modal.order.availableQty || 0}} 件</text></view>
+      </view>
+
+      <!-- SKU列表 -->
+      <view class="sku-section">
+        <view class="section-title">📋 请选择需要出库的颜色和尺码：</view>
+
+        <view wx:if="{{modal.loadingSkus}}" class="loading-skus">
+          <text>加载SKU信息中...</text>
         </view>
 
-        <!-- SKU列表 -->
-        <view class="sku-section">
-          <view class="section-title">📋 请选择需要出库的颜色和尺码：</view>
-
-          <view wx:if="{{modal.loadingSkus}}" class="loading-skus">
-            <text>加载SKU信息中...</text>
-          </view>
-
-          <view wx:elif="{{modal.skuList.length > 0}}" class="sku-list">
-            <view class="sku-item" wx:for="{{modal.skuList}}" wx:key="sku">
-              <view class="sku-info">
-                <view class="sku-header">
-                  <text class="sku-color">{{item.color}}</text>
-                  <text class="sku-size">{{item.size}}</text>
-                </view>
-                <view class="sku-stock">
-                  <text class="stock-label">可用:</text>
-                  <text class="stock-value">{{item.availableQty}}</text>
-                </view>
+        <view wx:elif="{{modal.skuList.length > 0}}" class="sku-list">
+          <view class="sku-item" wx:for="{{modal.skuList}}" wx:key="sku">
+            <view class="sku-info">
+              <view class="sku-header">
+                <text class="sku-color">{{item.color}}</text>
+                <text class="sku-size">{{item.size}}</text>
               </view>
-              <view class="sku-qty-input">
-                <input
-                  class="qty-input"
-                  type="number"
-                  placeholder="0"
-                  value="{{item.outboundQty}}"
-                  data-index="{{index}}"
-                  bindinput="onSkuQtyInput"
-                />
-                <view class="max-btn" data-index="{{index}}" bindtap="onFillMaxQty">MAX</view>
+              <view class="sku-stock">
+                <text class="stock-label">可用:</text>
+                <text class="stock-value">{{item.availableQty}}</text>
               </view>
             </view>
-          </view>
-
-          <view wx:else class="empty-skus">
-            <text>该款式暂无可用库存</text>
+            <view class="sku-qty-input">
+              <input
+                class="qty-input"
+                type="number"
+                placeholder="0"
+                value="{{item.outboundQty}}"
+                data-index="{{index}}"
+                bindinput="onSkuQtyInput"
+              />
+              <view class="max-btn" data-index="{{index}}" bindtap="onFillMaxQty">MAX</view>
+            </view>
           </view>
         </view>
 
-        <!-- 汇总信息 -->
-        <view class="summary-section">
-          <view class="summary-row">
-            <text class="summary-label">总出库数量</text>
-            <text class="summary-value">{{modal.totalOutbound}} 件</text>
-          </view>
-        </view>
-
-        <!-- 备注 -->
-        <view class="modal-row">
-          <text class="label">备注</text>
-          <textarea class="modal-textarea" placeholder="选填" value="{{modal.remark}}" bindinput="onModalRemarkInput" />
+        <view wx:else class="empty-skus">
+          <text>该款式暂无可用库存</text>
         </view>
       </view>
-    <view class="modal-actions">
-        <view class="btn cancel" bindtap="closeOutstockModal">取消</view>
-        <view class="btn ok {{modal.submitting || modal.totalOutbound === 0 ? 'disabled' : ''}}" bindtap="onConfirmOutstock">
-          {{modal.submitting ? '提交中...' : '确认出库'}}
+
+      <!-- 汇总信息 -->
+      <view class="summary-section">
+        <view class="summary-row">
+          <text class="summary-label">总出库数量</text>
+          <text class="summary-value">{{modal.totalOutbound}} 件</text>
         </view>
       </view>
+
+      <!-- 备注 -->
+      <view class="mf-item">
+        <text class="mf-label">备注</text>
+        <textarea class="mf-textarea" placeholder="选填" value="{{modal.remark}}" bindinput="onModalRemarkInput" />
+      </view>
+    </view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" bindtap="closeOutstockModal">取消</view>
+      <view class="mf-btn ok {{modal.submitting || modal.totalOutbound === 0 ? 'disabled' : ''}}" bindtap="onConfirmOutstock">
+        {{modal.submitting ? '提交中...' : '确认出库'}}
+      </view>
+    </view>
   </mp-modal>
 </view>

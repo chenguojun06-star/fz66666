@@ -61,35 +61,37 @@
     title="下发采购指令"
     show-close="{{false}}"
   >
-    <view class="modal-body">
-        <view class="modal-info">
-          <text class="modal-title">{{orderModal.item.materialName || orderModal.item.materialCode}}</text>
-          <text class="modal-sub">编码：{{orderModal.item.materialCode || '-'}}</text>
-          <text class="modal-sub">规格：{{orderModal.item.specText || '-'}}</text>
-          <text class="modal-sub">库存：{{orderModal.item.quantity || 0}} {{orderModal.item.unit || ''}} / 建议：{{orderModal.item.safetyStock || 0}}</text>
-          <text class="modal-sub">缺口：{{orderModal.shortage || 0}}</text>
-          <text class="modal-sub">单件用量：{{orderModal.item.perPieceUsage || '-'}}</text>
-          <text class="modal-sub">最少可生产：{{orderModal.item.minProductionQty || '-'}} / 最大可生产：{{orderModal.item.maxProductionQty || '-'}}</text>
-        </view>
-        <view class="modal-field">
-          <text class="field-label">采购数量</text>
-          <view class="qty-picker">
-            <view class="qty-btn" data-delta="-1" bindtap="onQtyStep">-</view>
-            <input class="field-input" type="number" value="{{orderModal.quantity}}" bindinput="onQtyInput" />
-            <view class="qty-btn" data-delta="1" bindtap="onQtyStep">+</view>
-            <view class="qty-shortage" bindtap="onUseShortageQty">按缺口</view>
-          </view>
-        </view>
-        <view class="modal-field">
-          <text class="field-label">备注</text>
-          <textarea class="field-textarea" value="{{orderModal.remark}}" bindinput="onRemarkInput" placeholder="可选" />
+    <view class="mf-body">
+      <view class="mf-section">
+        <view class="mf-section-title">{{orderModal.item.materialName || orderModal.item.materialCode}}</view>
+      </view>
+      <view class="mf-kv-list">
+        <view class="mf-kv"><text class="mf-kv-key">编码</text><text class="mf-kv-val">{{orderModal.item.materialCode || '-'}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">规格</text><text class="mf-kv-val">{{orderModal.item.specText || '-'}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">库存</text><text class="mf-kv-val">{{orderModal.item.quantity || 0}} {{orderModal.item.unit || ''}} / 建议：{{orderModal.item.safetyStock || 0}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">缺口</text><text class="mf-kv-val">{{orderModal.shortage || 0}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">单件用量</text><text class="mf-kv-val">{{orderModal.item.perPieceUsage || '-'}}</text></view>
+        <view class="mf-kv"><text class="mf-kv-key">可生产</text><text class="mf-kv-val">{{orderModal.item.minProductionQty || '-'}} ~ {{orderModal.item.maxProductionQty || '-'}}</text></view>
+      </view>
+      <view class="mf-item">
+        <text class="mf-label">采购数量</text>
+        <view class="qty-picker">
+          <view class="qty-btn" data-delta="-1" bindtap="onQtyStep">-</view>
+          <input class="qty-input" type="number" value="{{orderModal.quantity}}" bindinput="onQtyInput" />
+          <view class="qty-btn" data-delta="1" bindtap="onQtyStep">+</view>
+          <view class="qty-shortage" bindtap="onUseShortageQty">按缺口</view>
         </view>
       </view>
-    <view class="modal-actions">
-        <view class="btn-secondary" bindtap="onCancelOrder">取消</view>
-        <view class="btn-primary" bindtap="onConfirmOrder">
-          {{orderModal.submitting ? '提交中...' : '下发'}}
-        </view>
+      <view class="mf-item">
+        <text class="mf-label">备注</text>
+        <textarea class="mf-textarea" value="{{orderModal.remark}}" bindinput="onRemarkInput" placeholder="可选" />
       </view>
+    </view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" bindtap="onCancelOrder">取消</view>
+      <view class="mf-btn ok" bindtap="onConfirmOrder">
+        {{orderModal.submitting ? '提交中...' : '下发'}}
+      </view>
+    </view>
   </mp-modal>
 </view>

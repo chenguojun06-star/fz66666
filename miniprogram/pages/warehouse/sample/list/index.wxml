@@ -115,13 +115,13 @@
     size="large"
     bind:close="closeOperationModal"
   >
-    <view class="modal-body">
+    <view class="mf-body">
       <!-- 款号输入（归还模式不显示） -->
-      <view class="form-item" wx:if="{{operationModal.type !== 'return'}}">
-        <text class="label">款号</text>
-        <view class="input-wrap">
-          <input value="{{operationModal.formData.styleNo}}" placeholder="请输入款号" bindinput="onOperationInput" data-field="styleNo" />
-          <view class="scan-btn" bindtap="handleScanStyle">
+      <view class="mf-item" wx:if="{{operationModal.type !== 'return'}}">
+        <text class="mf-label">款号</text>
+        <view class="mf-input-wrap">
+          <input class="mf-input" value="{{operationModal.formData.styleNo}}" placeholder="请输入款号" bindinput="onOperationInput" data-field="styleNo" />
+          <view class="mf-scan-btn" bindtap="handleScanStyle">
             <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
           </view>
         </view>
@@ -129,12 +129,12 @@
 
       <!-- 入库专用字段 -->
       <block wx:if="{{operationModal.type === 'inbound'}}">
-        <view class="form-item">
-          <text class="label">款式名称</text>
-          <input value="{{operationModal.formData.styleName}}" placeholder="选填" bindinput="onOperationInput" data-field="styleName" />
+        <view class="mf-item">
+          <text class="mf-label">款式名称</text>
+          <input class="mf-input" value="{{operationModal.formData.styleName}}" placeholder="选填" bindinput="onOperationInput" data-field="styleName" />
         </view>
-        <view class="form-item">
-          <text class="label">样衣类型</text>
+        <view class="mf-item">
+          <text class="mf-label">样衣类型</text>
           <view class="inline-selector">
             <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
               <view
@@ -153,28 +153,32 @@
             </scroll-view>
           </view>
         </view>
-        <view class="form-row">
-          <view class="form-item flex-1">
-            <text class="label">颜色</text>
-            <input value="{{operationModal.formData.color}}" placeholder="如: 红色" bindinput="onOperationInput" data-field="color" />
+        <view class="mf-row">
+          <view class="mf-col">
+            <view class="mf-item">
+              <text class="mf-label">颜色</text>
+              <input class="mf-input" value="{{operationModal.formData.color}}" placeholder="如: 红色" bindinput="onOperationInput" data-field="color" />
+            </view>
           </view>
-          <view class="form-item flex-1 ml-20">
-            <text class="label">尺码</text>
-            <input value="{{operationModal.formData.size}}" placeholder="如: M" bindinput="onOperationInput" data-field="size" />
+          <view class="mf-col">
+            <view class="mf-item">
+              <text class="mf-label">尺码</text>
+              <input class="mf-input" value="{{operationModal.formData.size}}" placeholder="如: M" bindinput="onOperationInput" data-field="size" />
+            </view>
           </view>
         </view>
-        <view class="form-item">
-          <text class="label">存放位置</text>
-          <input value="{{operationModal.formData.location}}" placeholder="选填" bindinput="onOperationInput" data-field="location" />
+        <view class="mf-item">
+          <text class="mf-label">存放位置</text>
+          <input class="mf-input" value="{{operationModal.formData.location}}" placeholder="选填" bindinput="onOperationInput" data-field="location" />
         </view>
       </block>
 
       <!-- 借出专用字段 -->
       <block wx:if="{{operationModal.type === 'loan'}}">
-        <view class="stock-selection" wx:if="{{operationModal.stockList.length > 0}}">
-          <text class="section-label">请选择借出规格：</text>
+        <view wx:if="{{operationModal.stockList.length > 0}}" class="stock-selection">
+          <text class="mf-label">请选择借出规格：</text>
           <view
-            class="stock-item {{operationModal.selectedStockId === item.id ? 'active' : ''}}"
+            class="mf-select-item {{operationModal.selectedStockId === item.id ? 'active' : ''}}"
             wx:for="{{operationModal.stockList}}"
             wx:key="id"
             bindtap="onSelectStock"
@@ -187,24 +191,24 @@
             <view class="stock-qty">可用: {{item.quantity - item.loanedQuantity}}</view>
           </view>
         </view>
-        <view class="loading-stock" wx:if="{{operationModal.stockLoading}}">查询库存中...</view>
-        <view class="form-item">
-          <text class="label">借用人</text>
-          <input value="{{operationModal.formData.borrower}}" placeholder="请输入姓名" bindinput="onOperationInput" data-field="borrower" />
+        <view wx:if="{{operationModal.stockLoading}}" class="mf-loading">查询库存中...</view>
+        <view class="mf-item">
+          <text class="mf-label">借用人</text>
+          <input class="mf-input" value="{{operationModal.formData.borrower}}" placeholder="请输入姓名" bindinput="onOperationInput" data-field="borrower" />
         </view>
-        <view class="form-item">
-          <text class="label">预计归还时间</text>
+        <view class="mf-item">
+          <text class="mf-label">预计归还时间</text>
           <date-picker value="{{operationModal.returnDate}}" placeholder="请选择日期" bindchange="onDateChange" />
         </view>
       </block>
 
       <!-- 归还专用字段 -->
       <block wx:if="{{operationModal.type === 'return'}}">
-        <view class="form-item">
-          <text class="label">借出单号</text>
-          <view class="input-wrap">
-            <input value="{{operationModal.formData.loanId}}" placeholder="请输入借出记录ID" bindinput="onOperationInput" data-field="loanId" />
-            <view class="scan-btn" bindtap="handleScanLoan">
+        <view class="mf-item">
+          <text class="mf-label">借出单号</text>
+          <view class="mf-input-wrap">
+            <input class="mf-input" value="{{operationModal.formData.loanId}}" placeholder="请输入借出记录ID" bindinput="onOperationInput" data-field="loanId" />
+            <view class="mf-scan-btn" bindtap="handleScanLoan">
               <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
             </view>
           </view>
@@ -212,20 +216,20 @@
       </block>
 
       <!-- 数量 -->
-      <view class="form-item">
-        <text class="label">数量</text>
-        <input type="number" value="{{operationModal.formData.quantity}}" bindinput="onOperationInput" data-field="quantity" />
+      <view class="mf-item">
+        <text class="mf-label">数量</text>
+        <input class="mf-input" type="number" value="{{operationModal.formData.quantity}}" bindinput="onOperationInput" data-field="quantity" />
       </view>
 
       <!-- 备注 -->
-      <view class="form-item">
-        <text class="label">备注</text>
-        <textarea value="{{operationModal.formData.remark}}" placeholder="选填" bindinput="onOperationInput" data-field="remark" style="height: 100rpx;" />
+      <view class="mf-item">
+        <text class="mf-label">备注</text>
+        <textarea class="mf-textarea" value="{{operationModal.formData.remark}}" placeholder="选填" bindinput="onOperationInput" data-field="remark" />
       </view>
     </view>
-    <view class="modal-actions">
-      <view class="btn cancel" bindtap="closeOperationModal">取消</view>
-      <view class="btn ok {{operationModal.submitting ? 'disabled' : ''}}" bindtap="onSubmitOperation">
+    <view class="mf-actions">
+      <view class="mf-btn cancel" bindtap="closeOperationModal">取消</view>
+      <view class="mf-btn ok {{operationModal.submitting ? 'disabled' : ''}}" bindtap="onSubmitOperation">
         {{operationModal.submitting ? '提交中...' : '确认'}}
       </view>
     </view>
@@ -237,28 +241,28 @@
     title="借调记录 - {{loanModal.styleNo}}"
     bind:close="closeLoanModal"
   >
-    <view class="modal-body">
-      <view wx:if="{{loanModal.loading}}" class="loading-state">加载中...</view>
+    <view class="mf-body">
+      <view wx:if="{{loanModal.loading}}" class="mf-loading">加载中...</view>
       <view wx:elif="{{loanModal.list.length > 0}}" class="loan-list">
         <view class="loan-item" wx:for="{{loanModal.list}}" wx:key="id">
           <view class="loan-header">
             <text class="loan-borrower">{{item.borrower}}</text>
             <text class="loan-status {{item.status}}">{{item.statusText}}</text>
           </view>
-          <view class="loan-info"><text class="loan-label">数量:</text><text class="loan-value">{{item.quantity}}</text></view>
-          <view class="loan-info"><text class="loan-label">借出时间:</text><text class="loan-value">{{item.loanDate}}</text></view>
-          <view class="loan-info" wx:if="{{item.expectedReturnDate}}">
-            <text class="loan-label">预计归还:</text><text class="loan-value">{{item.expectedReturnDate}}</text>
+          <view class="mf-kv"><text class="mf-kv-key">数量:</text><text class="mf-kv-val">{{item.quantity}}</text></view>
+          <view class="mf-kv"><text class="mf-kv-key">借出时间:</text><text class="mf-kv-val">{{item.loanDate}}</text></view>
+          <view wx:if="{{item.expectedReturnDate}}" class="mf-kv">
+            <text class="mf-kv-key">预计归还:</text><text class="mf-kv-val">{{item.expectedReturnDate}}</text>
           </view>
-          <view class="loan-info" wx:if="{{item.returnDate}}">
-            <text class="loan-label">归还时间:</text><text class="loan-value">{{item.returnDate}}</text>
+          <view wx:if="{{item.returnDate}}" class="mf-kv">
+            <text class="mf-kv-key">归还时间:</text><text class="mf-kv-val">{{item.returnDate}}</text>
           </view>
         </view>
       </view>
-      <view wx:else class="empty-state">暂无借调记录</view>
+      <view wx:else class="mf-empty">暂无借调记录</view>
     </view>
-    <view class="modal-actions">
-      <view class="btn cancel full-width" bindtap="closeLoanModal">关闭</view>
+    <view class="mf-actions">
+      <view class="mf-btn cancel" style="flex: unset; width: 100%;" bindtap="closeLoanModal">关闭</view>
     </view>
   </mp-modal>
 </view>
