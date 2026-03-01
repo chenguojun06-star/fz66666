@@ -81,7 +81,7 @@
 
   <!-- 下单弹窗 -->
   <mp-modal visible="{{modal.visible}}" title="{{modal.title}}" size="large" bind:close="closeModal">
-    <view class="mf-body">
+    <view class="mf-body" slot="body">
       <!-- 基础信息 -->
       <view class="mf-section">
         <text class="mf-section-title">基础信息</text>
@@ -156,7 +156,7 @@
     </view>
 
     <!-- 操作按钮 -->
-    <view class="mf-actions">
+    <view class="mf-actions" slot="actions">
       <view class="mf-btn cancel" hover-class="mf-btn-hover" bindtap="closeModal">取消</view>
       <view class="mf-btn ok {{submitting ? 'disabled' : ''}}" hover-class="mf-btn-hover" bindtap="submitOrder">{{submitting ? '提交中...' : '确认下单'}}</view>
     </view>

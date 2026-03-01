@@ -13,7 +13,7 @@
 
 /* ---- 表单主体 ---- */
 .mf-body {
-  padding: 14px 0 8px;
+  padding: 10px 0 4px;
 }
 
 /* ---- 分区 ---- */
@@ -36,14 +36,14 @@
 
 /* ---- 表单行 ---- */
 .mf-item {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .mf-label {
   display: block;
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   line-height: 1.4;
   font-weight: 500;
 }
@@ -55,8 +55,8 @@
 /* ---- 输入框 ---- */
 .mf-input {
   width: 100%;
-  padding: 9px 12px;
-  font-size: var(--font-size-base);
+  padding: 7px 10px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   background: var(--color-bg-light, #f8fafc);
   border: 1px solid var(--color-border);
@@ -66,20 +66,20 @@
 
 .mf-textarea {
   width: 100%;
-  padding: 9px 12px;
-  font-size: var(--font-size-base);
+  padding: 7px 10px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   background: var(--color-bg-light, #f8fafc);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-sizing: border-box;
-  min-height: 76px;
+  min-height: 68px;
 }
 
 /* ---- 选择器 ---- */
 .mf-picker {
-  padding: 9px 12px;
-  font-size: var(--font-size-base);
+  padding: 7px 10px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   background: var(--color-bg-light, #f8fafc);
   border: 1px solid var(--color-border);
@@ -329,13 +329,12 @@
 .mf-actions {
   display: flex;
   gap: 8px;
-  padding: 12px 4px 6px;
-  border-top: 1px solid var(--color-border);
+  padding: 10px 0;
 }
 
 .mf-btn {
   flex: 1;
-  padding: 11px 8px;
+  padding: 10px 8px;
   border-radius: 24px;
   text-align: center;
   font-size: var(--font-size-base);

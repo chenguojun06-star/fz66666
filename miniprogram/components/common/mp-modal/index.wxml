@@ -22,10 +22,15 @@
       <view wx:if="{{showClose}}" class="mp-modal-close" bindtap="onClose">✕</view>
     </view>
 
-    <!-- slot：body + actions 完全由页面控制，scroll-view 保证长表单可滚动 -->
+    <!-- 可滚动内容区（表单 body）-->
     <scroll-view scroll-y class="mp-modal-content" enhanced show-scrollbar="{{false}}">
-      <slot></slot>
+      <slot name="body"></slot>
     </scroll-view>
+
+    <!-- 固定底部操作区（按鈕）-->
+    <view class="mp-modal-foot">
+      <slot name="actions"></slot>
+    </view>
 
   </view>
 </view>

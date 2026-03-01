@@ -27,14 +27,14 @@
 /* 弹窗主体 */
 .mp-modal-box {
   width: 90%;
-  max-height: 82vh;
+  max-height: 85vh;
   background: #fff;
   border-radius: 20rpx;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: mpModalIn 0.2s ease-out;
   box-shadow: 0 8rpx 40rpx rgba(0,0,0,0.18);
+  overflow: hidden;
+  animation: mpModalIn 0.2s ease-out;
 }
 
 @keyframes mpModalIn {
@@ -44,15 +44,15 @@
 
 /* large 变体 */
 .mp-modal-box.large {
-  max-height: 90vh;
+  max-height: 92vh;
 }
 
 /* 标题栏 */
 .mp-modal-head {
   position: relative;
-  padding: 24rpx 80rpx;
+  padding: 22rpx 80rpx;
   text-align: center;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: #1a1a1a;
   border-bottom: 1rpx solid #f0f0f0;
@@ -61,7 +61,7 @@
 }
 
 .mp-modal-title {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: #1a1a1a;
 }
@@ -70,7 +70,15 @@
 .mp-modal-content {
   flex: 1;
   min-height: 0;
-  padding: 0 32rpx;
+  padding: 0 24rpx;
+}
+
+/* 固定底部操作区 —— 不随内容滚动，固定显示在弹窗底部 */
+.mp-modal-foot {
+  flex-shrink: 0;
+  padding: 0 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+  background: #fff;
 }
 
 /* 关闭按钮（右上角绝对定位） */
@@ -83,6 +91,6 @@
   height: 52rpx;
   line-height: 52rpx;
   text-align: center;
-  color: #aaa;
-  font-size: 32rpx;
+  color: #bbb;
+  font-size: 28rpx;
 }

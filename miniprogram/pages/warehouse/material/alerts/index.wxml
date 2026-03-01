@@ -61,7 +61,7 @@
     title="下发采购指令"
     show-close="{{false}}"
   >
-    <view class="mf-body">
+    <view class="mf-body" slot="body">
       <view class="mf-section">
         <view class="mf-section-title">{{orderModal.item.materialName || orderModal.item.materialCode}}</view>
       </view>
@@ -87,7 +87,7 @@
         <textarea class="mf-textarea" value="{{orderModal.remark}}" bindinput="onRemarkInput" placeholder="可选" />
       </view>
     </view>
-    <view class="mf-actions">
+    <view class="mf-actions" slot="actions">
       <view class="mf-btn cancel" bindtap="onCancelOrder">取消</view>
       <view class="mf-btn ok" bindtap="onConfirmOrder">
         {{orderModal.submitting ? '提交中...' : '下发'}}

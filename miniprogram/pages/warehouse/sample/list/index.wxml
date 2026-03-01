@@ -115,7 +115,7 @@
     size="large"
     bind:close="closeOperationModal"
   >
-    <view class="mf-body">
+    <view class="mf-body" slot="body">
       <!-- 款号输入（归还模式不显示） -->
       <view class="mf-item" wx:if="{{operationModal.type !== 'return'}}">
         <text class="mf-label">款号</text>
@@ -227,7 +227,7 @@
         <textarea class="mf-textarea" value="{{operationModal.formData.remark}}" placeholder="选填" bindinput="onOperationInput" data-field="remark" />
       </view>
     </view>
-    <view class="mf-actions">
+    <view class="mf-actions" slot="actions">
       <view class="mf-btn cancel" bindtap="closeOperationModal">取消</view>
       <view class="mf-btn ok {{operationModal.submitting ? 'disabled' : ''}}" bindtap="onSubmitOperation">
         {{operationModal.submitting ? '提交中...' : '确认'}}
@@ -241,7 +241,7 @@
     title="借调记录 - {{loanModal.styleNo}}"
     bind:close="closeLoanModal"
   >
-    <view class="mf-body">
+    <view class="mf-body" slot="body">
       <view wx:if="{{loanModal.loading}}" class="mf-loading">加载中...</view>
       <view wx:elif="{{loanModal.list.length > 0}}" class="loan-list">
         <view class="loan-item" wx:for="{{loanModal.list}}" wx:key="id">
@@ -261,7 +261,7 @@
       </view>
       <view wx:else class="mf-empty">暂无借调记录</view>
     </view>
-    <view class="mf-actions">
+    <view class="mf-actions" slot="actions">
       <view class="mf-btn cancel" style="flex: unset; width: 100%;" bindtap="closeLoanModal">关闭</view>
     </view>
   </mp-modal>
