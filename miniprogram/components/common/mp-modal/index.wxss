@@ -58,6 +58,12 @@
   color: #333;
 }
 
+/* 内容区 —— flex:1 占满剩余空间，scroll-view 原生滚动（不受 catchtouchmove 阻断） */
+.mp-modal-content {
+  flex: 1;
+  min-height: 0;
+}
+
 /* 关闭按钮（右上角绝对定位） */
 .mp-modal-close {
   position: absolute;

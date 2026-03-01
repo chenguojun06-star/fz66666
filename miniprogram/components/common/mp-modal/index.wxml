@@ -22,8 +22,10 @@
       <view wx:if="{{showClose}}" class="mp-modal-close" bindtap="onClose">✕</view>
     </view>
 
-    <!-- slot：body + actions 完全由页面控制 -->
-    <slot></slot>
+    <!-- slot：body + actions 完全由页面控制，scroll-view 保证长表单可滚动 -->
+    <scroll-view scroll-y class="mp-modal-content" enhanced show-scrollbar="{{false}}">
+      <slot></slot>
+    </scroll-view>
 
   </view>
 </view>
