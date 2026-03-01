@@ -567,7 +567,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         },
       },
     ],
-     
+
     [actionLoading],
   );
 
@@ -645,7 +645,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           ]
         : []),
     ],
-     
+
     [isSupervisorOrAbove],
   );
 

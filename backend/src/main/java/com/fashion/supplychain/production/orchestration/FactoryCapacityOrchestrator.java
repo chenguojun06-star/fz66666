@@ -3,8 +3,12 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +27,13 @@ import java.util.stream.Collectors;
 @Service
 public class FactoryCapacityOrchestrator {
 
+    private static final Logger log = LoggerFactory.getLogger(FactoryCapacityOrchestrator.class);
+
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     /** 高风险预警：距截止日期不超过多少天 */
     private static final int AT_RISK_DAYS = 7;
@@ -40,6 +49,12 @@ public class FactoryCapacityOrchestrator {
         private int overdueCount;
         /** 这年内货期完成率 0-100，-1 表示这年内无完工记录 */
         private int deliveryOnTimeRate;
+        /** 近30天活跃生产人数（有扫码记录的不同操作员） */
+        private int activeWorkers;
+        /** 近30天日均产量（件/天） */
+        private double avgDailyOutput;
+        /** 预计完工天数（在制总件数 ÷ 日均产量），-1表示无产量数据 */
+        private int estimatedCompletionDays;
     }
 
     /**
@@ -120,7 +135,83 @@ public class FactoryCapacityOrchestrator {
                 item.setDeliveryOnTimeRate((int) Math.round(stats[1] * 100.0 / stats[0]));
             }
         }
+
+        // 基于扫码记录计算生产人数、日均产量、预计完工天数
+        fillScanBasedCapacity(orders, result, now);
+
         return result;
+    }
+
+    /**
+     * 从近30天扫码记录中提取：活跃工人数、日均产量、预计完工天数
+     */
+    private void fillScanBasedCapacity(List<ProductionOrder> inProgressOrders,
+                                       List<FactoryCapacityItem> items,
+                                       LocalDateTime now) {
+        if (inProgressOrders.isEmpty()) return;
+
+        // orderId → factoryName 映射
+        Map<String, String> orderToFactory = new HashMap<>();
+        for (ProductionOrder o : inProgressOrders) {
+            String fn = o.getFactoryName() == null ? "未指定工厂" : o.getFactoryName().trim();
+            orderToFactory.put(o.getId(), fn);
+        }
+
+        try {
+            LocalDateTime thirtyDaysAgo = now.minusDays(30);
+            QueryWrapper<ScanRecord> scanQw = new QueryWrapper<>();
+            scanQw.in("order_id", orderToFactory.keySet())
+                  .eq("scan_result", "success")
+                  .ge("scan_time", thirtyDaysAgo)
+                  .select("operator_id", "quantity", "scan_time", "order_id");
+            List<ScanRecord> recentScans = scanRecordService.list(scanQw);
+
+            // 按工厂分组
+            Map<String, List<ScanRecord>> scansByFactory = recentScans.stream()
+                .filter(r -> orderToFactory.containsKey(r.getOrderId()))
+                .collect(Collectors.groupingBy(r -> orderToFactory.get(r.getOrderId())));
+
+            for (FactoryCapacityItem item : items) {
+                List<ScanRecord> scans = scansByFactory.getOrDefault(item.getFactoryName(), Collections.emptyList());
+                if (scans.isEmpty()) {
+                    item.setEstimatedCompletionDays(-1);
+                    continue;
+                }
+
+                // 活跃工人数 = 不同操作员ID数
+                long workers = scans.stream()
+                    .map(ScanRecord::getOperatorId)
+                    .filter(Objects::nonNull)
+                    .distinct().count();
+                item.setActiveWorkers((int) workers);
+
+                // 活跃天数 = 有记录的不同日期数
+                long activeDays = scans.stream()
+                    .filter(r -> r.getScanTime() != null)
+                    .map(r -> r.getScanTime().toLocalDate())
+                    .distinct().count();
+                if (activeDays == 0) activeDays = 1;
+
+                // 日均产量
+                long totalScanQty = scans.stream()
+                    .mapToLong(r -> r.getQuantity() == null ? 0 : r.getQuantity())
+                    .sum();
+                double avgDaily = Math.round(totalScanQty * 10.0 / activeDays) / 10.0;
+                item.setAvgDailyOutput(avgDaily);
+
+                // 预计完工天数 = 在制总件数 / 日均产量
+                if (avgDaily > 0) {
+                    item.setEstimatedCompletionDays((int) Math.ceil(item.getTotalQuantity() / avgDaily));
+                } else {
+                    item.setEstimatedCompletionDays(-1);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[工厂产能] 扫码统计查询失败，降级跳过: {}", e.getMessage());
+            for (FactoryCapacityItem item : items) {
+                item.setEstimatedCompletionDays(-1);
+            }
+        }
     }
 
     private boolean isAtRisk(ProductionOrder o, LocalDateTime now) {

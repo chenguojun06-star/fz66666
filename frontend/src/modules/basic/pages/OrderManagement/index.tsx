@@ -1629,27 +1629,49 @@ const OrderManagement: React.FC = () => {
                               )}
                             />
                           </Form.Item>
-                          {/* 选中工厂后显示当前负荷（在制单数/货期完成率/高风险数） */}
+                          {/* 选中工厂后显示当前负荷（在制单数/产能数据/货期完成率/高风险数） */}
                           {selectedFactoryStat && (
                             <div style={{
-                              marginTop: -12, marginBottom: 8, padding: '5px 10px',
+                              marginTop: -12, marginBottom: 8, padding: '6px 10px',
                               background: 'var(--color-bg-container, #fafafa)',
                               border: '1px solid var(--color-border, #e8e8e8)',
-                              borderRadius: 6, fontSize: 12, display: 'flex', gap: 12, flexWrap: 'wrap',
+                              borderRadius: 6, fontSize: 12, lineHeight: '20px',
                               color: 'var(--color-text-secondary, #888)',
                             }}>
-                              <span>在制 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                              <span>货期完成率&nbsp;
-                                <b style={{ color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
-                                  {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
-                                </b>
-                              </span>
-                              {selectedFactoryStat.atRiskCount > 0 && (
-                                <span style={{ color: '#fa8c16' }}>⚠ 高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span>
-                              )}
-                              {selectedFactoryStat.overdueCount > 0 && (
-                                <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span>
-                              )}
+                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                <span>在制 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
+                                <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() || 0}</b> 件</span>
+                                <span>货期完成率&nbsp;
+                                  <b style={{ color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
+                                    {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
+                                  </b>
+                                </span>
+                                {selectedFactoryStat.atRiskCount > 0 && (
+                                  <span style={{ color: '#fa8c16' }}>⚠ 高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span>
+                                )}
+                                {selectedFactoryStat.overdueCount > 0 && (
+                                  <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
+                                {(selectedFactoryStat.activeWorkers > 0 || selectedFactoryStat.avgDailyOutput > 0) ? (
+                                  <>
+                                    {selectedFactoryStat.activeWorkers > 0 && (
+                                      <span>👷 生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
+                                    )}
+                                    {selectedFactoryStat.avgDailyOutput > 0 && (
+                                      <span>⚡ 日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天</span>
+                                    )}
+                                    {selectedFactoryStat.estimatedCompletionDays > 0 && (
+                                      <span>⏱ 预计 <b style={{ color: selectedFactoryStat.estimatedCompletionDays > 30 ? '#ff4d4f' : selectedFactoryStat.estimatedCompletionDays > 15 ? '#fa8c16' : '#52c41a' }}>
+                                        {selectedFactoryStat.estimatedCompletionDays}
+                                      </b> 天可完工</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span style={{ color: '#bbb', fontStyle: 'italic' }}>暂无产能数据（该工厂近30天无扫码记录）</span>
+                                )}
+                              </div>
                             </div>
                           )}
                         </Col>
