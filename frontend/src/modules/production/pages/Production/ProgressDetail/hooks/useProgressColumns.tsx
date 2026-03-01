@@ -4,6 +4,7 @@ import { ExclamationCircleOutlined } from '@ant-design/icons';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import RowActions from '@/components/common/RowActions';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
+import DefectTracePopover from '../components/DefectTracePopover';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isOrderFrozenByStatus } from '@/utils/api';
@@ -440,15 +441,29 @@ export const useProgressColumns = ({
                   ) : (
                     <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>--</div>
                   )}
-                  <LiquidProgressLottie
-                    progress={percent}
-                    size={60}
-                    nodeName={nodeName}
-                    text={`${completedQty}/${totalQty}`}
-                    paused={frozen}
-                    color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
-                    color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
-                  />
+                  {nodeType === 'quality' ? (
+                    <DefectTracePopover orderId={String(record.id || '')}>
+                      <LiquidProgressLottie
+                        progress={percent}
+                        size={60}
+                        nodeName={nodeName}
+                        text={`${completedQty}/${totalQty}`}
+                        paused={frozen}
+                        color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
+                        color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
+                      />
+                    </DefectTracePopover>
+                  ) : (
+                    <LiquidProgressLottie
+                      progress={percent}
+                      size={60}
+                      nodeName={nodeName}
+                      text={`${completedQty}/${totalQty}`}
+                      paused={frozen}
+                      color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
+                      color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
+                    />
+                  )}
                 </div>
               );
             })}

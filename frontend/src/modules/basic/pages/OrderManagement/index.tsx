@@ -29,6 +29,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 type OrderLine = {
@@ -1527,13 +1528,15 @@ const OrderManagement: React.FC = () => {
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>图片</div>
-                      <StyleCoverThumb
-                        styleId={selectedStyle?.id}
-                        styleNo={selectedStyle?.styleNo}
-                        src={selectedStyle?.cover || null}
-                        size={isMobile ? 160 : isTablet ? 200 : 240}
+                      <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
+                        <StyleCoverThumb
+                          styleId={selectedStyle?.id}
+                          styleNo={selectedStyle?.styleNo}
+                          src={selectedStyle?.cover || null}
+                          size={isMobile ? 160 : isTablet ? 200 : 240}
 
-                      />
+                        />
+                      </StyleQuotePopover>
                       <div>
                         <StyleAttachmentsButton
                           styleId={selectedStyle?.id}

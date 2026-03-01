@@ -487,6 +487,16 @@ export const intelligenceApi = {
   /** ⑬ 财务审核智能分析 */
   getFinanceAudit: () =>
     api.post<{ code: number; data: FinanceAuditResponse }>('/intelligence/finance-audit', {}),
+
+  // ── 嵌入式智能 API ──
+
+  /** 次品溯源（按订单聚合） */
+  getDefectTrace: (orderId: string) =>
+    api.get<{ code: number; data: unknown }>('/intelligence/defect-trace', { params: { orderId } }),
+
+  /** 款式报价建议（按款号聚合） */
+  getStyleQuoteSuggestion: (styleNo: string) =>
+    api.get<{ code: number; data: unknown }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
 };
 
 export const materialPurchaseApi = {

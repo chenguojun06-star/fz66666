@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -86,6 +87,12 @@ public class IntelligenceController {
 
     @Autowired
     private FinanceAuditOrchestrator financeAuditOrchestrator;
+
+    @Autowired
+    private DefectTraceOrchestrator defectTraceOrchestrator;
+
+    @Autowired
+    private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
@@ -204,5 +211,19 @@ public class IntelligenceController {
     @PostMapping("/finance-audit")
     public Result<FinanceAuditResponse> financeAudit() {
         return Result.success(financeAuditOrchestrator.audit());
+    }
+
+    // ── 第四批：嵌入式智能功能 ──
+
+    /** 次品溯源 — 按订单聚合各工人的缺陷数据 */
+    @GetMapping("/defect-trace")
+    public Result<DefectTraceResponse> defectTrace(@RequestParam("orderId") String orderId) {
+        return Result.success(defectTraceOrchestrator.trace(orderId));
+    }
+
+    /** 款式报价建议 — 基于历史订单与报价单提供定价参考 */
+    @GetMapping("/style-quote-suggestion")
+    public Result<StyleQuoteSuggestionResponse> styleQuoteSuggestion(@RequestParam("styleNo") String styleNo) {
+        return Result.success(styleQuoteSuggestionOrchestrator.suggest(styleNo));
     }
 }
