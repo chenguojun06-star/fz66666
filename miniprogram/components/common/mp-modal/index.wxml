@@ -1,0 +1,29 @@
+<!--
+  通用弹窗组件: mp-modal
+  只负责：遮罩 + 容器形状 + 标题栏（含关闭按钮）
+  body / actions 样式保留页面自身 CSS，放在 <slot> 中即可
+
+  用法示例:
+    <mp-modal visible="{{modal.visible}}" title="操作标题" size="large"
+              bind:close="closeModal">
+      <view class="modal-body">...表单内容...</view>
+      <view class="modal-actions">
+        <view class="btn cancel" bindtap="closeModal">取消</view>
+        <view class="btn ok" bindtap="onConfirm">确认</view>
+      </view>
+    </mp-modal>
+-->
+<view wx:if="{{visible}}" class="mp-modal-mask" catchtap="onMaskTap" catchtouchmove="stopProp">
+  <view class="mp-modal-box {{size}}" catchtap="stopProp">
+
+    <!-- 标题栏：居中文字 + 右侧 × -->
+    <view class="mp-modal-head" wx:if="{{title}}">
+      <text class="mp-modal-title">{{title}}</text>
+      <view wx:if="{{showClose}}" class="mp-modal-close" bindtap="onClose">✕</view>
+    </view>
+
+    <!-- slot：body + actions 完全由页面控制 -->
+    <slot></slot>
+
+  </view>
+</view>

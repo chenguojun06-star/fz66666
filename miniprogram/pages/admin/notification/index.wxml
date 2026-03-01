@@ -69,14 +69,13 @@
     没有更多了
   </view>
 
-  <!-- 批准弹窗 -->
-  <view class="modal {{showApprovalModal ? 'show' : ''}}" catchtouchmove="preventMove">
-    <view class="modal-mask" bindtap="cancelApprove"></view>
-    <view class="modal-content">
-      <view class="modal-header">
-        <view class="modal-title">批准用户</view>
-        <view class="modal-close" bindtap="cancelApprove">✕</view>
-      </view>
+  <!-- 批准弹窗 —— mp-modal 通用组件 -->
+  <mp-modal
+    visible="{{showApprovalModal}}"
+    title="批准用户"
+    show-close="{{true}}"
+    bind:close="cancelApprove"
+  >
       <view class="modal-body">
         <view class="modal-text">
           批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
@@ -108,17 +107,15 @@
         <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelApprove">取消</view>
         <view class="modal-btn confirm" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmApprove">批准并分配角色</view>
       </view>
-    </view>
-  </view>
+  </mp-modal>
 
-  <!-- 拒绝弹窗 -->
-  <view class="modal {{showRejectModal ? 'show' : ''}}" catchtouchmove="preventMove">
-    <view class="modal-mask" bindtap="cancelReject"></view>
-    <view class="modal-content">
-      <view class="modal-header">
-        <view class="modal-title">拒绝用户</view>
-        <view class="modal-close" bindtap="cancelReject">✕</view>
-      </view>
+  <!-- 拒绝弹窗 —— mp-modal 通用组件 -->
+  <mp-modal
+    visible="{{showRejectModal}}"
+    title="拒绝用户"
+    show-close="{{true}}"
+    bind:close="cancelReject"
+  >
       <view class="modal-body">
         <view class="modal-text">
           确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
@@ -140,6 +137,5 @@
         <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" hover-stay-time="100" bindtap="cancelReject">取消</view>
         <view class="modal-btn confirm danger" hover-class="modal-btn-confirm-hover" hover-stay-time="100" bindtap="confirmReject">确定拒绝</view>
       </view>
-    </view>
-  </view>
+  </mp-modal>
 </view>

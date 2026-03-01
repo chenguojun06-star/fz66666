@@ -115,11 +115,13 @@
     </view>
   </scroll-view>
 
-  <!-- 出库弹窗 -->
-  <view wx:if="{{modal.visible}}" class="modal">
-    <view class="modal-box">
-      <view class="modal-head">成品出库 - 多尺码明细</view>
-      <view class="modal-body">
+  <!-- 出库弹窗 —— mp-modal 通用组件 -->
+  <mp-modal
+    visible="{{modal.visible}}"
+    title="成品出库 - 多尺码明细"
+    show-close="{{false}}"
+  >
+    <view class="modal-body">
         <!-- 基础信息 -->
         <view class="modal-row">
           <text class="label">款号</text>
@@ -187,12 +189,11 @@
           <textarea class="modal-textarea" placeholder="选填" value="{{modal.remark}}" bindinput="onModalRemarkInput" />
         </view>
       </view>
-      <view class="modal-actions">
+    <view class="modal-actions">
         <view class="btn cancel" bindtap="closeOutstockModal">取消</view>
         <view class="btn ok {{modal.submitting || modal.totalOutbound === 0 ? 'disabled' : ''}}" bindtap="onConfirmOutstock">
           {{modal.submitting ? '提交中...' : '确认出库'}}
         </view>
       </view>
-    </view>
-  </view>
+  </mp-modal>
 </view>

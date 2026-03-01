@@ -196,31 +196,11 @@
   border-radius: var(--radius-sm);
 }
 
-.modal {
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
+/* .modal → mp-modal 提供 */
 
-.modal-box {
-  width: 80%;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-}
+/* .modal-box → mp-modal 提供 */
 
-.modal-head {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-md);
-}
+/* .modal-head → mp-modal 提供 */
 
 .modal-info {
   margin-bottom: var(--spacing-md);

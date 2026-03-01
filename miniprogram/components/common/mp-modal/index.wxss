@@ -1,0 +1,73 @@
+/* ============================================================
+   mp-modal — 通用弹窗组件样式
+   负责：遮罩层 / 容器外形 / 标题栏
+   body + actions 由各页面自定义，放入 slot 后自动继承页面 CSS
+   设计规范：
+     遮罩     rgba(0,0,0,0.5) / z-index 9999
+     box宽度   90% / max-height 80vh（large=88vh）
+     圆角     16rpx
+     标题     32rpx / 600 / 居中 / 右侧绝对定位 ×
+   ============================================================ */
+
+/* 遮罩层 —— fixed 全屏，flex 垂直水平居中 */
+.mp-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* 弹窗主体 */
+.mp-modal-box {
+  width: 90%;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* large 变体 */
+.mp-modal-box.large {
+  max-height: 88vh;
+}
+
+/* 标题栏 */
+.mp-modal-head {
+  position: relative;
+  padding: 32rpx 80rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1rpx solid #f0f0f0;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.mp-modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 关闭按钮（右上角绝对定位） */
+.mp-modal-close {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
+  color: #aaa;
+  font-size: 34rpx;
+}

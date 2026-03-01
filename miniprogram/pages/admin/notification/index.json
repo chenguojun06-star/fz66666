@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "用户审批通知",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#f3f5f9"
+  "backgroundColor": "#f3f5f9",
+  "usingComponents": {
+    "mp-modal": "/components/common/mp-modal/index"
+  }
 }

@@ -2,6 +2,7 @@
   "navigationBarTitleText": "样衣库存",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "date-picker": "/components/common/date-picker/index"
+    "date-picker": "/components/common/date-picker/index",
+    "mp-modal": "/components/common/mp-modal/index"
   }
 }
