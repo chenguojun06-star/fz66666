@@ -104,7 +104,6 @@ function showPatternConfirmModal(page, data) {
     scanConfirm: {
       visible: true,
       loading: false,
-      remain: 30,
       detail: {
         isPattern: true,
         patternId: data.patternId,

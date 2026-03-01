@@ -379,7 +379,6 @@
     <view class="modal-box {{(scanConfirm.detail.isProcurement || scanConfirm.detail.isPattern) ? 'wide' : ''}}">
       <view class="modal-head">
         {{scanConfirm.detail.isPattern ? '样板生产' : (scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交')}}
-        <text class="modal-cd">{{scanConfirm.remain}}s</text>
       </view>
       <view class="modal-body">
         <view wx:if="{{scanConfirm.detail}}" class="cf-list">

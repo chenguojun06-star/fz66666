@@ -47,7 +47,6 @@ function showConfirmModal(ctx, data) {
     scanConfirm: {
       visible: true,
       loading: false,
-      remain: 30,
       detail: { ...data, isProcurement, sizeDetails },
       skuList: formItems,
       summary: summary,

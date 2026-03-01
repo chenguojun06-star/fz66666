@@ -86,7 +86,6 @@ const scanPageData = {
   scanConfirm: {
     visible: false,
     loading: false,
-    remain: 0,
     detail: {
       orderId: '',
       orderNo: '',

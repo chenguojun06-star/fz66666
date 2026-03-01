@@ -85,7 +85,6 @@ async function handleCuttingTaskFromBell(ctx, task) {
       scanConfirm: {
         visible: true,
         loading: false,
-        remain: 30,
         detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId: task.id, quantity: task.orderQuantity || 0 },
         cuttingTasks: cuttingTasks,
         cuttingTaskReceived: true,
@@ -210,7 +209,6 @@ async function onHandleCutting(ctx, e) {
       scanConfirm: {
         visible: true,
         loading: false,
-        remain: 30,
         detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId, quantity: task.orderQuantity || 0 },
         cuttingTasks: cuttingTasks,
         cuttingTaskReceived: true,
