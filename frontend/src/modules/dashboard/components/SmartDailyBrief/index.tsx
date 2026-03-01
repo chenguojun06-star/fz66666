@@ -4,8 +4,11 @@ import {
   AlertOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  InboxOutlined,
   LineChartOutlined,
   ScanOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
 import './styles.css';
@@ -84,12 +87,14 @@ const SmartDailyBrief: React.FC = () => {
 
       {/* 四格数据 */}
       <div className="sdb-stats">
+        {/* 格子 1: 昨日入库 — 蓝色 */}
         <div className="sdb-stat-item">
+          <div className="sdb-stat-icon"><InboxOutlined /></div>
           <div className="sdb-stat-label">昨日入库</div>
           <div className="sdb-stat-value">
             {data.yesterdayWarehousingCount > 0
               ? <>{data.yesterdayWarehousingCount}<span className="sdb-stat-unit">单</span></>
-              : <span style={{ fontSize: 16, color: '#bbb' }}>暂无</span>}
+              : <span className="sdb-empty">暂无</span>}
           </div>
           <div className="sdb-stat-sub">
             {data.yesterdayWarehousingCount > 0
@@ -97,34 +102,42 @@ const SmartDailyBrief: React.FC = () => {
               : `近7天 ${data.weekWarehousingCount ?? 0} 单`}
           </div>
         </div>
-        <div className="sdb-stat-divider" />
+
+        {/* 格子 2: 今日扫码 — 紫色 */}
         <div className="sdb-stat-item">
-          <div className="sdb-stat-label">
-            <ScanOutlined style={{ marginRight: 4 }} />今日扫码
-          </div>
+          <div className="sdb-stat-icon"><ScanOutlined /></div>
+          <div className="sdb-stat-label">今日扫码</div>
           <div className="sdb-stat-value">
             {data.todayScanCount > 0
               ? <>{data.todayScanCount}<span className="sdb-stat-unit">次</span></>
-              : <span style={{ fontSize: 16, color: '#bbb' }}>暂无</span>}
+              : <span className="sdb-empty">暂无</span>}
           </div>
           <div className="sdb-stat-sub">
             {data.todayScanCount === 0 && (data.weekScanCount ?? 0) > 0
               ? `近7天 ${data.weekScanCount} 次`
-              : ' '}
+              : '\u00a0'}
           </div>
         </div>
-        <div className="sdb-stat-divider" />
-        <div className="sdb-stat-item">
+
+        {/* 格子 3: 逾期订单 — 绿/红 */}
+        <div className={`sdb-stat-item ${data.overdueOrderCount > 0 ? 'has-issue' : 'no-issue'}`}>
+          <div className="sdb-stat-icon">
+            {data.overdueOrderCount > 0 ? <ExclamationCircleOutlined /> : <CheckCircleOutlined />}
+          </div>
           <div className="sdb-stat-label">逾期订单</div>
-          <div className={`sdb-stat-value ${data.overdueOrderCount > 0 ? 'sdb-danger' : 'sdb-ok'}`}>
+          <div className="sdb-stat-value">
             {data.overdueOrderCount}<span className="sdb-stat-unit">张</span>
           </div>
-          <div className="sdb-stat-sub">{data.overdueOrderCount === 0 ? '无逾期 ✓' : '尽快跟进'}</div>
+          <div className="sdb-stat-sub">{data.overdueOrderCount === 0 ? '无逾期 ✓' : '尽快跟进工厂'}</div>
         </div>
-        <div className="sdb-stat-divider" />
-        <div className="sdb-stat-item">
+
+        {/* 格子 4: 高风险订单 — 绿/橙 */}
+        <div className={`sdb-stat-item ${data.highRiskOrderCount > 0 ? 'has-issue' : 'no-issue'}`}>
+          <div className="sdb-stat-icon">
+            {data.highRiskOrderCount > 0 ? <WarningOutlined /> : <CheckCircleOutlined />}
+          </div>
           <div className="sdb-stat-label">高风险订单</div>
-          <div className={`sdb-stat-value ${data.highRiskOrderCount > 0 ? 'sdb-warn' : 'sdb-ok'}`}>
+          <div className="sdb-stat-value">
             {data.highRiskOrderCount}<span className="sdb-stat-unit">张</span>
           </div>
           <div className="sdb-stat-sub">7天内到期 进度&lt;50%</div>
