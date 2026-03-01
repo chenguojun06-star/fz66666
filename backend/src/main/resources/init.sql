@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS t_scan_record (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     UNIQUE KEY uk_scan_request_id (request_id),
-    UNIQUE KEY uk_bundle_stage (cutting_bundle_id, scan_type, progress_stage),
+    UNIQUE KEY uk_bundle_process (cutting_bundle_id, scan_type, process_code),
     INDEX idx_order_id (order_id),
     INDEX idx_order_no (order_no),
     INDEX idx_style_no (style_no),

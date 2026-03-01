@@ -146,8 +146,11 @@ public class ProductionTableMigrator {
 
         // Add unique keys
         dbHelper.addUniqueKeyIfAbsent("t_scan_record", "uk_scan_request_id", "request_id");
-        dbHelper.addUniqueKeyIfAbsent("t_scan_record", "uk_bundle_stage", "cutting_bundle_id, scan_type, progress_stage");
-        dbHelper.addUniqueKeyIfAbsent("t_scan_record", "uk_bundle_stage_progress", "cutting_bundle_id, scan_type, progress_stage");
+        // 唯一键按子工序名(process_code)去重，而非父节点名(progress_stage)
+        // 原因：动态映射后多个子工序共用同一父节点（如 剪线/质检/整烫 → 尾部），按 progress_stage 会冲突
+        dbHelper.dropIndexIfExists("t_scan_record", "uk_bundle_stage");
+        dbHelper.dropIndexIfExists("t_scan_record", "uk_bundle_stage_progress");
+        dbHelper.addUniqueKeyIfAbsent("t_scan_record", "uk_bundle_process", "cutting_bundle_id, scan_type, process_code");
 
         // Add indexes
         dbHelper.addIndexIfAbsent("t_scan_record", "idx_request_id", "request_id");
