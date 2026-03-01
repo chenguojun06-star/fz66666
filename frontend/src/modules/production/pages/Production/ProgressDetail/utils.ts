@@ -151,6 +151,13 @@ export const canonicalStageKey = (k: string) => {
  * @param b 阶段名称b
  * @returns 是否匹配
  */
+/** 判断是否为「尾部」父节点 */
+const isTailStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n === '尾部' || n.includes('尾部') || n.includes('尾工');
+};
+
 export const stageNameMatches = (a: any, b: any) => {
   const x = canonicalStageKey(a);
   const y = canonicalStageKey(b);
@@ -163,6 +170,13 @@ export const stageNameMatches = (a: any, b: any) => {
   if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
+  // 尾部父节点可以匹配整烫/质检/包装等子阶段
+  // （与后端 resolveParentProgressStage 关键词兜底策略保持一致）
+  // 历史扫码记录 progressStage="整烫" 可以被尾部进度球正确计数
+  const tailSubStage = (k: string) =>
+    isIroningStageKey(k) || isQualityStageKey(k) || isPackagingStageKey(k);
+  if (isTailStageKey(x) && tailSubStage(y)) return true;
+  if (isTailStageKey(y) && tailSubStage(x)) return true;
   return x.includes(y) || y.includes(x);
 };
 
