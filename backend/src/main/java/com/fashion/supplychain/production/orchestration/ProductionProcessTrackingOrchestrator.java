@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 生产工序跟踪编排器
@@ -54,6 +56,9 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
 
     /**
      * 初始化工序跟踪记录（裁剪完成时调用）
@@ -255,6 +260,12 @@ public class ProductionProcessTrackingOrchestrator {
             }
         }
 
+        // 第三级回退：通过 t_process_parent_mapping 父节点映射匹配同义工序
+        // 场景：款式定义"大烫"但扫码端发送"整烫"，两者都映射到父节点"尾部"
+        if (tracking == null) {
+            tracking = matchBySameParentNode(cuttingBundleId, processCode);
+        }
+
         if (tracking == null) {
             log.warn("未找到跟踪记录：菲号ID={}, 工序={}", cuttingBundleId, processCode);
             return false;
@@ -290,6 +301,68 @@ public class ProductionProcessTrackingOrchestrator {
                 tracking.getBundleNo(), tracking.getProcessName(), operatorName, tracking.getSettlementAmount());
 
         return success;
+    }
+
+    /**
+     * 第三级回退匹配：通过 t_process_parent_mapping 父节点映射找同义工序
+     * <p>
+     * 场景：款式定义了"大烫"，但扫码端发送"整烫"。两者都映射到父节点"尾部"，
+     * 通过父节点匹配 + 字符相似度选出最佳 tracking 记录。
+     * </p>
+     *
+     * @param cuttingBundleId 菲号ID
+     * @param processCode 扫码端传入的工序名
+     * @return 匹配到的 tracking 记录，未找到返回 null
+     */
+    private ProductionProcessTracking matchBySameParentNode(String cuttingBundleId, String processCode) {
+        String incomingParent = processParentMappingService.resolveParentNode(processCode);
+        if (incomingParent == null) {
+            return null;
+        }
+
+        // 获取该菲号所有 tracking 记录，筛选同父节点 + pending 状态
+        List<ProductionProcessTracking> allTracking = trackingService.getByBundleId(cuttingBundleId);
+        List<ProductionProcessTracking> candidates = allTracking.stream()
+                .filter(t -> "pending".equals(t.getScanStatus()))
+                .filter(t -> {
+                    String trackingParent = processParentMappingService.resolveParentNode(t.getProcessCode());
+                    return incomingParent.equals(trackingParent);
+                })
+                .collect(Collectors.toList());
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        ProductionProcessTracking matched;
+        if (candidates.size() == 1) {
+            matched = candidates.get(0);
+        } else {
+            // 多个同父节点候选：用字符重叠度选最佳（如"整烫"和"大烫"共享"烫"字）
+            matched = candidates.stream()
+                    .max((a, b) -> charOverlap(processCode, a.getProcessCode())
+                            - charOverlap(processCode, b.getProcessCode()))
+                    .filter(t -> charOverlap(processCode, t.getProcessCode()) > 0)
+                    .orElse(null);
+        }
+
+        if (matched != null) {
+            log.info("通过父节点映射回退匹配成功：菲号ID={}, 扫码工序={} → tracking工序={}, 父节点={}",
+                    cuttingBundleId, processCode, matched.getProcessCode(), incomingParent);
+        }
+        return matched;
+    }
+
+    /**
+     * 计算两个字符串的字符重叠数（用于同义工序名相似度判断）
+     */
+    private int charOverlap(String a, String b) {
+        if (a == null || b == null) return 0;
+        int overlap = 0;
+        for (char c : a.toCharArray()) {
+            if (b.indexOf(c) >= 0) overlap++;
+        }
+        return overlap;
     }
 
     /**
