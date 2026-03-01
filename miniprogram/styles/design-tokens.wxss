@@ -81,12 +81,12 @@ page {
   --shadow-modal: 0 20px 50px rgba(15, 80, 180, 0.18);
 
   /* ========== 字体系统 ========== */
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  --font-size-2xl: 20px;
+  --font-size-xs: 12px;    /* 3级：辅助信息、标签 */
+  --font-size-sm: 13px;    /* 2级：次要文字、说明 */
+  --font-size-base: 15px;  /* 1级：主体内容 */
+  --font-size-lg: 17px;    /* 大标题 */
+  --font-size-xl: 19px;    /* 页面标题 */
+  --font-size-2xl: 22px;   /* 超大展示数字 */
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;

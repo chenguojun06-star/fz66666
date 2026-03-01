@@ -153,7 +153,7 @@ page {
 /* 工人注册标签 */
 .badge-tag {
   display: inline-block;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   background: rgba(45, 127, 249, 0.1);
   color: var(--color-primary, #2d7ff9);
   padding: 1px 6px;

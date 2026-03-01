@@ -388,7 +388,7 @@ page {
 }
 
 .picker-arrow {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
   margin-left: 2px;
 }
@@ -1039,8 +1039,8 @@ page {
 }
 
 .hgh-stat {
-  font-size: 10px;
-  padding: 1px 5px;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
   border-radius: 4px;
   font-weight: 500;
 }
@@ -1500,10 +1500,10 @@ page {
   text-overflow: ellipsis;
 }
 .cf-item.compact .cf-k {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
 }
 .cf-item.compact .cf-v {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   max-width: 220px;
 }
 .cf-v.wrap {

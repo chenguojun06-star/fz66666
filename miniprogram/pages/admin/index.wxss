@@ -68,7 +68,7 @@ page {
   padding: 0 4px;
   background: var(--color-error);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   line-height: 18px;
   border-radius: 9px;

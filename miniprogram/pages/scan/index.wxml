@@ -818,7 +818,7 @@
             </view>
             <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage">
               <text class="qm-upload-icon">+</text>
-              <text style="font-size: 10px; color: #999;">上传</text>
+              <text style="font-size: 12px; color: #999;">上传</text>
             </view>
           </view>
         </view>

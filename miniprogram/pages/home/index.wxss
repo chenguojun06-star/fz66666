@@ -124,7 +124,7 @@ page {
   background: var(--color-error);
   color: #ffffff;
   border-radius: 9px;
-  font-size: 10px; /* 极小字体 */
+  font-size: var(--font-size-xs);
   line-height: 18px;
   text-align: center;
   padding: 0 4px;
