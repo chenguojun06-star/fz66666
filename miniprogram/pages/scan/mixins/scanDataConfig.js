@@ -36,6 +36,7 @@ const scanPageData = {
     scanCode: '',
     parsedData: null,
     quantity: 0,
+    warehouseCode: '',
   },
 
   // 撤销功能

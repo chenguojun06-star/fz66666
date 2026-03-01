@@ -39,6 +39,10 @@ const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
+  /** 创建生产订单（与PC端POST /api/production/order一致） */
+  createOrder(payload) {
+    return ok('/api/production/order', 'POST', payload || {});
+  },
   createOutstock(payload) {
     return ok('/api/production/outstock', 'POST', payload || {});
   },
@@ -259,6 +263,20 @@ const system = {
   },
 };
 
+const serial = {
+  /** 生成序列号（如订单号 ORDER_NO） */
+  generate(ruleCode) {
+    return ok('/api/system/serial/generate', 'GET', { ruleCode });
+  },
+};
+
+const factory = {
+  /** 获取工厂列表 */
+  list(params) {
+    return ok('/api/system/factory/list', 'GET', { pageSize: 100, ...(params || {}) });
+  },
+};
+
 const style = {
   listStyles(params) {
     return ok('/api/style/info/list', 'GET', params || {});
@@ -383,6 +401,8 @@ const api = {
   style,
   warehouse,
   orderManagement,
+  serial,
+  factory,
   tenant,
   wechat,
   intelligence,
@@ -399,6 +419,8 @@ module.exports.materialRoll = materialRoll;
 module.exports.style = style;
 module.exports.warehouse = warehouse;
 module.exports.orderManagement = orderManagement;
+module.exports.serial = serial;
+module.exports.factory = factory;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
 module.exports.intelligence = intelligence;

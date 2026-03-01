@@ -354,21 +354,53 @@
             </scroll-view>
           </view>
 
+          <!-- 入库模式：仓库选择 -->
+          <view wx:if="{{scanResultConfirm.scanType === 'warehouse'}}" class="warehouse-input-row">
+            <view class="warehouse-label">目标仓库：</view>
+            <view class="warehouse-option-row">
+              <view
+                wx:for="{{warehouseOptions}}"
+                wx:key="index"
+                class="warehouse-chip {{scanResultConfirm.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
+                bindtap="onResultWarehouseChipTap"
+                data-value="{{item}}"
+              >{{item}}</view>
+              <view
+                class="warehouse-chip warehouse-chip--clear {{scanResultConfirm.warehouseCode ? '' : 'warehouse-chip--disabled'}}"
+                bindtap="onResultWarehouseClear"
+              >清除</view>
+            </view>
+            <input
+              class="warehouse-input-field"
+              placeholder="或手动输入仓库编号"
+              value="{{scanResultConfirm.warehouseCode}}"
+              bindinput="onResultWarehouseInput"
+            />
+          </view>
+
           <!-- 次品返修入库提示 -->
           <view wx:if="{{scanResultConfirm.isDefectiveReentry}}" class="result-hint defect-hint">
             <text class="hint-icon">⚠️</text>
             <text class="hint-text">此菲号有 {{scanResultConfirm.defectQty}} 件次品，返修后直接入库，入库数量不能超过次品数</text>
           </view>
+          <view wx:elif="{{scanResultConfirm.scanType === 'warehouse'}}" class="result-hint">
+            <text class="hint-icon">🏠</text>
+            <text class="hint-text">选择目标仓库，点击“入库”提交</text>
+          </view>
+          <view wx:elif="{{scanResultConfirm.scanData.qualityStage === 'confirm'}}" class="result-hint">
+            <text class="hint-icon">💡</text>
+            <text class="hint-text">填写质检结果，点击“录入结果”提交</text>
+          </view>
           <view wx:else class="result-hint">
             <text class="hint-icon">💡</text>
-            <text class="hint-text">{{scanResultConfirm.scanData.qualityStage === 'confirm' ? '填写质检结果，点击"录入结果"提交' : '确认工序无误后，点击"领取记录"提交'}}</text>
+            <text class="hint-text">确认工序无误后，点击“领取记录”提交</text>
           </view>
         </view>
       </view>
       <view class="modal-foot">
         <view class="modal-btn cancel" bindtap="closeScanResultConfirm">取消</view>
         <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" bindtap="onConfirmScanResult">
-          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取记录'))}}
+          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanType === 'warehouse' ? '入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取记录')))}}
         </view>
       </view>
     </view>

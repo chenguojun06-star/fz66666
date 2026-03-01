@@ -18,17 +18,17 @@
         </view>
         <text class="menu-name">成品管理</text>
       </view>
-      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/order-ranking/index">
-        <view class="icon-box bg-soft-amber">
-          <text class="iconfont">🏷️</text>
-        </view>
-        <text class="menu-name">下单排行</text>
-      </view>
       <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/material/alerts/index">
         <view class="icon-box bg-soft-green">
           <text class="iconfont">🧵</text>
         </view>
         <text class="menu-name">面辅料排行</text>
+      </view>
+      <view class="grid-item" bindtap="navTo" data-url="/pages/order/index">
+        <view class="icon-box bg-soft-slate">
+          <text class="iconfont">📝</text>
+        </view>
+        <text class="menu-name">下单管理</text>
       </view>
     </view>
   </view>

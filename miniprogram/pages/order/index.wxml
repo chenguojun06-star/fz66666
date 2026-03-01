@@ -1,0 +1,164 @@
+<view class="container">
+  <floating-bell />
+
+  <!-- 搜索栏 -->
+  <view class="search-row">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <input class="search-input" placeholder="搜索款号/款名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
+      <text wx:if="{{keyword}}" class="search-clear" bindtap="clearSearch">✕</text>
+    </view>
+    <view class="search-btn" hover-class="search-btn-hover" bindtap="doSearch">搜索</view>
+  </view>
+
+  <!-- 款式卡片列表 -->
+  <view wx:if="{{loading && styles.length === 0}}" class="hint">加载中...</view>
+
+  <!-- 错误提示（API 失败时显示） -->
+  <view wx:elif="{{errorMsg}}" class="error-state">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{errorMsg}}</text>
+    <view class="retry-btn" hover-class="retry-btn-hover" bindtap="retryLoad">点击重试</view>
+  </view>
+
+  <view wx:elif="{{!loading && styles.length === 0}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无款式数据</text>
+    <text class="empty-hint">请先在PC端创建款式</text>
+    <view class="retry-btn" hover-class="retry-btn-hover" bindtap="retryLoad">刷新试试</view>
+  </view>
+
+  <!-- 排行统计 -->
+  <view wx:if="{{styles.length > 0 && !keyword}}" class="rank-summary">
+    <text class="rank-summary-title">下单排行 TOP{{styles.length}}</text>
+    <text class="rank-summary-sub">按下单次数排序 · 数据与PC同步</text>
+  </view>
+
+  <view wx:for="{{styles}}" wx:key="id" class="style-card" hover-class="style-card-hover">
+    <view class="card-body">
+      <!-- 排名徽标 -->
+      <view wx:if="{{item.rank && !keyword}}" class="rank-badge rank-{{item.rank <= 3 ? 'top' : 'normal'}}">{{item.rank}}</view>
+      <!-- 左侧封面图 -->
+      <view class="card-cover-box">
+        <image wx:if="{{item.cover}}" class="card-cover" src="{{item.cover}}" mode="aspectFill" lazy-load />
+        <view wx:else class="card-cover-empty">暂无\n图片</view>
+      </view>
+      <!-- 右侧信息 -->
+      <view class="card-info">
+        <view class="card-head">
+          <text class="card-title">{{item.styleNo || '-'}}</text>
+          <text wx:if="{{item.orderCount > 0}}" class="order-tag order-tag-has">{{item.orderCount}}次下单</text>
+          <text wx:else class="order-tag order-tag-none">未下单</text>
+        </view>
+        <text class="card-subtitle">{{item.styleName || '-'}}</text>
+        <view class="card-meta-row">
+          <text class="meta-label">码数</text>
+          <text class="meta-value">{{item.size || '-'}}</text>
+          <text class="meta-sep">｜</text>
+          <text class="meta-label">数量</text>
+          <text class="meta-value meta-value-bold">{{item.displayQty}}</text>
+        </view>
+        <view class="card-meta-row">
+          <text class="meta-label">下单</text>
+          <text class="meta-value">{{item.latestOrderTimeShort || '-'}}</text>
+          <text class="meta-sep">｜</text>
+          <text class="meta-label">下单人</text>
+          <text class="meta-value">{{item.latestOrderCreator || '-'}}</text>
+        </view>
+        <view class="card-actions">
+          <view class="action-btn" hover-class="action-btn-hover" data-index="{{index}}" bindtap="openCreateOrder">下单</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view wx:if="{{styles.length > 0}}" class="load-more-row">
+    <view class="load-more-btn {{loading || !hasMore ? 'btn-disabled' : ''}}" bindtap="loadMore">
+      {{loading ? '加载中...' : (hasMore ? '加载更多' : '没有更多了')}}
+    </view>
+  </view>
+
+  <!-- 下单弹窗 -->
+  <mp-modal visible="{{modal.visible}}" title="{{modal.title}}" size="large" bind:close="closeModal">
+    <view class="form-body">
+      <!-- 基础信息 -->
+      <view class="form-section">
+        <text class="form-section-title">基础信息</text>
+        <view class="form-item">
+          <text class="form-label">订单号 <text class="required">*</text></text>
+          <view class="form-row-inline">
+            <input class="form-input flex-1" placeholder="自动生成" value="{{form.orderNo}}" data-field="orderNo" bindinput="onFormInput" />
+            <view class="gen-btn" hover-class="gen-btn-hover" bindtap="generateOrderNo">生成</view>
+          </view>
+        </view>
+        <view class="form-item">
+          <text class="form-label">加工厂 <text class="required">*</text></text>
+          <picker mode="selector" range="{{factoryNames}}" value="{{form.factoryIndex}}" data-field="factoryIndex" bindchange="onFactoryChange">
+            <view class="form-picker">{{form.factoryIndex >= 0 ? factoryNames[form.factoryIndex] : '请选择加工厂'}}<text class="picker-arrow">▾</text></view>
+          </picker>
+        </view>
+        <!-- 急单 + 单型 合并一行 -->
+        <view class="form-row-2col">
+          <view class="form-col">
+            <text class="form-label">急单</text>
+            <view class="toggle-row">
+              <view class="toggle-item {{form.urgencyLevel === 'normal' ? 'toggle-active' : ''}}" data-val="normal" bindtap="setUrgency">普通</view>
+              <view class="toggle-item toggle-urgent {{form.urgencyLevel === 'urgent' ? 'toggle-active' : ''}}" data-val="urgent" bindtap="setUrgency">急单</view>
+            </view>
+          </view>
+          <view class="form-col">
+            <text class="form-label">单型</text>
+            <picker mode="selector" range="{{plateTypes}}" range-key="label" value="{{form.plateTypeIndex}}" data-field="plateTypeIndex" bindchange="onPlateTypeChange">
+              <view class="form-picker">{{form.plateTypeIndex >= 0 ? plateTypes[form.plateTypeIndex].label : '选择单型'}}<text class="picker-arrow">▾</text></view>
+            </picker>
+          </view>
+        </view>
+        <view class="form-item">
+          <text class="form-label">计划日期</text>
+          <view class="date-row">
+            <picker mode="date" value="{{form.plannedStartDate}}" bindchange="onStartDateChange">
+              <view class="form-picker date-picker">{{form.plannedStartDate || '开始'}}<text class="picker-arrow">▾</text></view>
+            </picker>
+            <text class="date-sep">→</text>
+            <picker mode="date" value="{{form.plannedEndDate}}" bindchange="onEndDateChange">
+              <view class="form-picker date-picker">{{form.plannedEndDate || '结束'}}<text class="picker-arrow">▾</text></view>
+            </picker>
+          </view>
+        </view>
+      </view>
+
+      <!-- 订单明细 -->
+      <view class="form-section">
+        <view class="form-section-head">
+          <text class="form-section-title">订单明细</text>
+          <view class="add-line-btn" hover-class="add-line-btn-hover" bindtap="addOrderLine">+ 添加</view>
+        </view>
+        <view wx:if="{{form.orderLines.length === 0}}" class="empty-lines">请添加颜色/码数/数量</view>
+        <!-- 表头标签 -->
+        <view wx:if="{{form.orderLines.length > 0}}" class="order-line line-header">
+          <text class="line-label color-input">颜色</text>
+          <text class="line-label size-input">码数</text>
+          <text class="line-label qty-input">数量</text>
+          <view class="del-placeholder"></view>
+        </view>
+        <view wx:for="{{form.orderLines}}" wx:key="key" class="order-line">
+          <input class="line-input color-input" placeholder="如:红" value="{{item.color}}" data-idx="{{index}}" data-field="color" bindinput="onLineInput" />
+          <input class="line-input size-input" placeholder="如:XL" value="{{item.size}}" data-idx="{{index}}" data-field="size" bindinput="onLineInput" />
+          <input class="line-input qty-input" type="number" placeholder="件数" value="{{item.quantity}}" data-idx="{{index}}" data-field="quantity" bindinput="onLineInput" />
+          <view class="del-line" data-idx="{{index}}" bindtap="removeOrderLine">✕</view>
+        </view>
+        <view wx:if="{{form.orderLines.length > 0}}" class="total-row">
+          <text class="total-label">合计</text>
+          <text class="total-value">{{form.totalQuantity}} 件</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="modal-actions">
+      <view class="mbtn cancel" hover-class="mbtn-hover" bindtap="closeModal">取消</view>
+      <view class="mbtn ok {{submitting ? 'off' : ''}}" hover-class="mbtn-hover" bindtap="submitOrder">{{submitting ? '提交中...' : '确认下单'}}</view>
+    </view>
+  </mp-modal>
+</view>

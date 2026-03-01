@@ -281,6 +281,29 @@ Page({
   },
 
   /**
+   * 扫码结果页 - 入库仓库快捷选择
+   * @param {Object} e - 事件对象
+   */
+  onResultWarehouseChipTap(e) {
+    ScanResultHandler.onResultWarehouseChipTap(this, e);
+  },
+
+  /**
+   * 扫码结果页 - 入库仓库手动输入
+   * @param {Object} e - 事件对象
+   */
+  onResultWarehouseInput(e) {
+    ScanResultHandler.onResultWarehouseInput(this, e);
+  },
+
+  /**
+   * 扫码结果页 - 清除仓库选择
+   */
+  onResultWarehouseClear() {
+    ScanResultHandler.onResultWarehouseClear(this);
+  },
+
+  /**
    * 扫码结果页 - 确认提交
    * @returns {Promise<void>} 无返回值
    */

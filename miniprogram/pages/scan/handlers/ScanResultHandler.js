@@ -89,6 +89,8 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.parsedData': parsedData,
     'scanResultConfirm.isDefectiveReentry': !!(stageResult && stageResult.isDefectiveReentry),
     'scanResultConfirm.defectQty': (stageResult && stageResult.defectQty) || 0,
+    // 入库模式：仓库选择（重置）
+    'scanResultConfirm.warehouseCode': '',
     // 新增：领取/开始时间与录入结果/完成时间
     'scanResultConfirm.receiveTime': scanData && scanData.receiveTime ? scanData.receiveTime : '',
     'scanResultConfirm.confirmTime': scanData && scanData.confirmTime ? scanData.confirmTime : '',
@@ -138,6 +140,8 @@ function buildScanData(confirm, confirmedQty) {
     qualityStage: confirm.scanData && confirm.scanData.qualityStage
       ? confirm.scanData.qualityStage
       : '',
+    // 入库模式：携带仓库编号
+    warehouse: confirm.warehouseCode || '',
     ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
   };
 }
@@ -219,6 +223,44 @@ function onProcessScrollSelect(ctx, e) {
     existingScanData.qualityStage = existingScanData.qualityStage || 'receive';
     ctx.setData({ 'scanResultConfirm.scanData': existingScanData });
   }
+  // 切换工序时重置仓库选择
+  if (option.scanType !== 'warehouse') {
+    ctx.setData({ 'scanResultConfirm.warehouseCode': '' });
+  }
+}
+
+/**
+ * 入库仓库快捷选择（chip 点击）
+ * @param {Object} ctx - Page 上下文
+ * @param {Object} e - 事件对象
+ */
+function onResultWarehouseChipTap(ctx, e) {
+  const value = e.currentTarget.dataset.value;
+  const current = ctx.data.scanResultConfirm.warehouseCode;
+  ctx.setData({
+    'scanResultConfirm.warehouseCode': current === value ? '' : value,
+  });
+}
+
+/**
+ * 入库仓库手动输入
+ * @param {Object} ctx - Page 上下文
+ * @param {Object} e - 事件对象
+ */
+function onResultWarehouseInput(ctx, e) {
+  ctx.setData({
+    'scanResultConfirm.warehouseCode': e.detail.value,
+  });
+}
+
+/**
+ * 清除仓库选择
+ * @param {Object} ctx - Page 上下文
+ */
+function onResultWarehouseClear(ctx) {
+  ctx.setData({
+    'scanResultConfirm.warehouseCode': '',
+  });
 }
 
 /**
@@ -261,4 +303,7 @@ module.exports = {
   onScanResultQuantityInput,
   onProcessScrollSelect,
   onConfirmScanResult,
+  onResultWarehouseChipTap,
+  onResultWarehouseInput,
+  onResultWarehouseClear,
 };

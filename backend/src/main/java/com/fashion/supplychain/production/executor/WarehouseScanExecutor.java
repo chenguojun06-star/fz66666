@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,9 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private InventoryValidator inventoryValidator;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
     private SKUService skuService;
@@ -172,16 +176,45 @@ public class WarehouseScanExecutor {
             log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
         }
 
-        // 查找生成的扫码记录
-        ScanRecord sr = findWarehousingGeneratedRecord(w.getId());
-        if (sr == null) {
-            // 未找到记录，手动创建
-            sr = buildWarehouseRecord(params, requestId, operatorId, operatorName, order, bundle, qty, warehouse,
-                                     colorResolver, sizeResolver);
+        // 始终创建入库类型扫码记录（progressStage="入库"），确保进度球正确统计
+        // saveWarehousingAndUpdateOrder 内部会创建质检阶段记录（WAREHOUSING:xxx, progressStage="质检"），
+        // 但 warehousingType="scan" 时不会创建入库阶段记录，这里手动补充
+        ScanRecord sr = buildWarehouseRecord(params, requestId, operatorId, operatorName, order, bundle, qty, warehouse,
+                                             colorResolver, sizeResolver);
+        try {
+            scanRecordService.saveScanRecord(sr);
+        } catch (DuplicateKeyException dke) {
+            log.info("仓库扫码记录重复: requestId={}", requestId, dke);
+            // 重复时尝试查找已有记录
             try {
-                scanRecordService.saveScanRecord(sr);
-            } catch (DuplicateKeyException dke) {
-                log.info("仓库扫码记录重复: requestId={}", requestId, dke);
+                ScanRecord existing = scanRecordService.lambdaQuery()
+                        .eq(ScanRecord::getRequestId, requestId)
+                        .last("limit 1")
+                        .one();
+                if (existing != null) sr = existing;
+            } catch (Exception ex) {
+                log.warn("查找已有入库扫码记录失败: requestId={}", requestId, ex);
+            }
+        }
+
+        // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）
+        if (bundle != null && hasText(bundle.getId())) {
+            try {
+                boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
+                    bundle.getId(),
+                    "入库",     // 工序跟踪表的 processCode = 节点名 "入库"
+                    operatorId,
+                    operatorName,
+                    sr.getId()
+                );
+                if (trackingUpdated) {
+                    log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                } else {
+                    log.warn("入库工序跟踪记录未找到（不阻断入库）: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                }
+            } catch (Exception e) {
+                // 工序跟踪更新失败不应阻断入库操作（ProductWarehousing 已提交）
+                log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage());
             }
         }
 
@@ -292,13 +325,18 @@ public class WarehouseScanExecutor {
     }
 
     /**
-     * 查找入库生成的扫码记录
+     * 查找入库生成的扫码记录（仅查找入库类型，避免匹配到质检记录）
+     *
+     * 注意：upsertWarehousingStageScanRecord 使用前缀 "WAREHOUSING:" 创建质检记录，
+     * upsertWarehouseScanRecord 使用前缀 "WAREHOUSE:" 创建入库记录。
+     * 此处查询必须用 "WAREHOUSE:" 前缀，否则会误匹配质检记录，
+     * 导致 buildWarehouseRecord 永远不被调用、入库扫码记录缺失。
      */
     private ScanRecord findWarehousingGeneratedRecord(String warehousingId) {
         if (!hasText(warehousingId)) {
             return null;
         }
-        String requestId = "WAREHOUSING:" + warehousingId.trim();
+        String requestId = "WAREHOUSE:" + warehousingId.trim();
         try {
             return scanRecordService.lambdaQuery()
                     .eq(ScanRecord::getRequestId, requestId)
