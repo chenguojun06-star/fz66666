@@ -1,6 +1,6 @@
-@import '/styles/inline-selector.wxss';
-@import '/styles/page-utils.wxss';
-@import '/styles/modal-form.wxss';
+@import '../../../styles/inline-selector.wxss';
+@import '../../../styles/page-utils.wxss';
+@import '../../../styles/modal-form.wxss';
 
 .container {
   min-height: 100vh;

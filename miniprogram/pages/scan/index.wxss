@@ -1,6 +1,6 @@
 /* 极简紧凑风格 */
 @import './scan-result-modal.wxss';
-@import '/styles/inline-selector.wxss';
+@import '../../styles/inline-selector.wxss';
 
 page {
   background: var(--color-bg-page);

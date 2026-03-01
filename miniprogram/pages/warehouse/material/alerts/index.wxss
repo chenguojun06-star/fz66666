@@ -1,4 +1,4 @@
-@import '/styles/modal-form.wxss';
+@import '../../../../styles/modal-form.wxss';
 
 .container {
   padding: var(--spacing-lg);

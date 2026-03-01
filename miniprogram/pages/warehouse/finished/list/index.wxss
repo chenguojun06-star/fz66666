@@ -1,5 +1,5 @@
-@import '/styles/modal-form.wxss';
-@import '/styles/page-utils.wxss';
+@import '../../../../styles/modal-form.wxss';
+@import '../../../../styles/page-utils.wxss';
 
 .container {
   height: 100vh;
