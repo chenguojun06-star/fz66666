@@ -4,10 +4,7 @@ import {
   ThunderboltOutlined,
   AlertOutlined,
   ClockCircleOutlined,
-  TeamOutlined,
   DashboardOutlined,
-  UserOutlined,
-  CalendarOutlined,
   DollarOutlined,
   TrophyOutlined,
   ExperimentOutlined,
@@ -16,15 +13,13 @@ import {
   RobotOutlined,
   HeartOutlined,
   FireOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import BottleneckPanel from './panels/BottleneckPanel';
 import DeliveryRiskPanel from './panels/DeliveryRiskPanel';
 import AnomalyPanel from './panels/AnomalyPanel';
-import SmartAssignmentPanel from './panels/SmartAssignmentPanel';
 import LivePulsePanel from './panels/LivePulsePanel';
-import WorkerEfficiencyPanel from './panels/WorkerEfficiencyPanel';
-import DeliveryPredictionPanel from './panels/DeliveryPredictionPanel';
 import ProfitEstimationPanel from './panels/ProfitEstimationPanel';
 import FactoryLeaderboardPanel from './panels/FactoryLeaderboardPanel';
 import RhythmDnaPanel from './panels/RhythmDnaPanel';
@@ -33,6 +28,7 @@ import SmartNotificationPanel from './panels/SmartNotificationPanel';
 import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
 import DefectHeatmapPanel from './panels/DefectHeatmapPanel';
+import OrderSmartAnalysisPanel from './panels/OrderSmartAnalysisPanel';
 import './styles.css';
 
 const { Title } = Typography;
@@ -62,19 +58,9 @@ const IntelligenceCenter: React.FC = () => {
       children: <AnomalyPanel />,
     },
     {
-      key: 'assignment',
-      label: <span><TeamOutlined /> 智能派工</span>,
-      children: <SmartAssignmentPanel />,
-    },
-    {
-      key: 'worker-efficiency',
-      label: <span><UserOutlined /> 工人效率</span>,
-      children: <WorkerEfficiencyPanel />,
-    },
-    {
-      key: 'delivery-prediction',
-      label: <span><CalendarOutlined /> 完工预测</span>,
-      children: <DeliveryPredictionPanel />,
+      key: 'order-smart-analysis',
+      label: <span><BulbOutlined /> 订单智能分析</span>,
+      children: <OrderSmartAnalysisPanel />,
     },
     {
       key: 'profit-estimation',

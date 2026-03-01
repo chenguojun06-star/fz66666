@@ -160,6 +160,40 @@
 .pred-date-card .pred-label { font-size: 12px; color: #8c8c8c; }
 .pred-date-card .pred-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
 
+/* ===== 订单智能分析（合并面板） ===== */
+.osa-panel .osa-input-row {
+  display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;
+}
+.osa-section-title {
+  font-weight: 600; font-size: 15px; padding: 8px 0; margin: 20px 0 12px;
+  border-bottom: 1px solid #f0f0f0; color: #262626;
+}
+.osa-score-bar-wrap {
+  position: relative; height: 18px; background: #f0f0f0; border-radius: 3px; overflow: hidden;
+}
+.osa-score-bar { height: 100%; border-radius: 3px; transition: width .4s; }
+.osa-score-val {
+  position: absolute; top: 0; right: 4px; font-size: 11px; font-weight: 600;
+  line-height: 18px; color: #333;
+}
+.osa-pred-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.osa-pred-dates { display: flex; gap: 16px; flex-wrap: wrap; }
+.osa-date-card {
+  flex: 1; min-width: 140px; padding: 16px; border-radius: 8px;
+  text-align: center; border: 1px solid #f0f0f0;
+}
+.osa-date-card.optimistic  { background: #f6ffed; border-color: #b7eb8f; }
+.osa-date-card.realistic   { background: #e6f4ff; border-color: #91caff; }
+.osa-date-card.pessimistic { background: #fff1f0; border-color: #ffa39e; }
+.osa-date-label { font-size: 12px; color: #8c8c8c; }
+.osa-date-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+.osa-rationale {
+  margin-top: 12px; padding: 10px 12px; background: #fafafa;
+  border-radius: 6px; font-size: 13px; color: #595959; line-height: 1.6;
+}
+
 /* ===== 利润预估 ===== */
 .profit-panel .waterfall { display: flex; gap: 8px; align-items: flex-end; margin-top: 16px; height: 160px; }
 .waterfall-col {
