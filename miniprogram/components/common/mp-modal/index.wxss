@@ -66,31 +66,13 @@
   color: #1a1a1a;
 }
 
-/* 内容区 wrapper —— flex:1 占满剩余空间 */
-.mp-modal-content {
+/* 内容区 —— flex:1 撑满剩余空间，overflow-y 支持滚动 */
+.mp-modal-body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  position: relative;
-}
-
-/* scroll-view 满展 wrapper 高度，小程序必须显式设置 height */
-.mp-modal-content scroll-view {
-  height: 100%;
-}
-
-/* 内容布局内边距 —— 放在 inner 上避免影响 scroll-view 高度计算 */
-.mp-modal-inner {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0 24rpx;
-}
-
-/* 固定底部操作区 —— 不随内容滚动，固定显示在弹窗底部 */
-.mp-modal-foot {
-  flex-shrink: 0;
-  padding: 0 24rpx;
-  border-top: 1rpx solid #f0f0f0;
-  background: #fff;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* 关闭按钮（右上角绝对定位） */

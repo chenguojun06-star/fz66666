@@ -22,18 +22,9 @@
       <view wx:if="{{showClose}}" class="mp-modal-close" bindtap="onClose">✕</view>
     </view>
 
-    <!-- 可滚动内容区（表单 body）-->
-    <view class="mp-modal-content">
-      <scroll-view scroll-y style="height:100%" enhanced show-scrollbar="{{false}}">
-        <view class="mp-modal-inner">
-          <slot name="body"></slot>
-        </view>
-      </scroll-view>
-    </view>
-
-    <!-- 固定底部操作区（按鈕）-->
-    <view class="mp-modal-foot">
-      <slot name="actions"></slot>
+    <!-- 内容区（默认 slot，flex:1 + overflow-y:auto 自动滚动）-->
+    <view class="mp-modal-body">
+      <slot></slot>
     </view>
 
   </view>
