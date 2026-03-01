@@ -48,6 +48,7 @@ import { useInlineNodeOps } from './hooks/useInlineNodeOps';
 import { useOpenScan } from './hooks/useOpenScan';
 import { useOrderProgress } from './hooks/useOrderProgress';
 import { useCloseOrder } from './hooks/useCloseOrder';
+import { useScanFeedback } from './hooks/useScanFeedback';
 import { useNodeDetail } from './hooks/useNodeDetail';
 import { usePrintFlow } from './hooks/usePrintFlow';
 import { useRemarkModal } from './hooks/useRemarkModal';
@@ -157,6 +158,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     closeConfirm: closeScanConfirmState,
     setLoading: setScanConfirmLoading,
   } = useScanConfirm();
+
+  const { submitScanFeedback } = useScanFeedback();
 
   // ── 子模块 Hooks ──────────────────────────────────────────────
   const {
@@ -330,6 +333,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           message.info('已处理');
         } else {
           message.success(serverMsg || '扫码成功');
+          // 静默反馈闭环 — 扫码成功后向智能模型提交实际数据
+          submitScanFeedback({
+            orderId: String(activeOrder.id || ''),
+            orderNo: activeOrder.orderNo,
+            stageName: values.progressStage,
+            processName: values.processName,
+          });
         }
         const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder, progressNodesByStyleNo, nodes));
         const isProd = String(values.scanType || '').trim() === 'production';

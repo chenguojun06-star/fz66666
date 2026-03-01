@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
+import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 
 interface Props { order: ProductionOrder; }
 
@@ -224,6 +225,16 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     ? Math.max(1, Math.ceil(total / speed))
     : 7; // 速度未知默认7天/道
 
+  /* AI 预测完工时间（后端算法，模块级缓存） */
+  const firstActive = inProgressList[0];
+  const predictHint = useOrderPredictHint(
+    String(order.id || ''),
+    order.orderNo,
+    firstActive?.stageName || firstActive?.label,
+    prog,
+    isCompleted || !firstActive,
+  );
+
   /* ─────── RENDER ─────── */
   return (
     <div style={{ width: 270, fontSize: 12, lineHeight: 1.5 }}>
@@ -245,6 +256,20 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           </span>
         )}
       </div>
+
+      {/* AI 预测完工 */}
+      {predictHint && (
+        <div style={{
+          padding: '3px 10px', background: '#f0f5ff', borderRadius: 6,
+          marginBottom: 8, fontSize: 11, color: '#1677ff',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span>🔮</span>
+          <span>AI预测完工 <b>{predictHint.text}</b></span>
+          {predictHint.confidence && <span style={{ color: '#8c8c8c' }}>置信{predictHint.confidence}</span>}
+          {predictHint.remaining > 0 && <span style={{ color: '#8c8c8c' }}>剩{predictHint.remaining}件</span>}
+        </div>
+      )}
 
       {/* 风险条 */}
       {risk && (

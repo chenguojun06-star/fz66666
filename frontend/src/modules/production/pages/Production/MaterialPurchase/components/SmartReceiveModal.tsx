@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import PageStatCards, { StatCard } from '@/components/common/PageStatCards';
+import InoutRecommendBanner from './InoutRecommendBanner';
 import api from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
@@ -709,6 +710,13 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         </Button>,
       ]}
     >
+      {/* AI 智能分流建议 */}
+      <InoutRecommendBanner
+        orderNo={orderNo}
+        purchaseIds={materials.filter(m => m.purchaseStatus === 'pending').map(m => m.purchaseId)}
+        visible={open}
+      />
+
       {/* 汇总卡片 - 使用通用组件 */}
       <PageStatCards
         cards={[

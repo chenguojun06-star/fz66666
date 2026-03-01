@@ -73,13 +73,59 @@ export const intelligenceApi = {
     reasons?: string[];
     suggestions?: string[];
     predictionId?: string;
-    /** 订单总件数（与进度球分母同源） */
     totalQuantity?: number;
-    /** 已完成件数（与进度球已完成同源） */
     doneQuantity?: number;
-    /** 剩余件数（预测计算基准） */
     remainingQuantity?: number;
   } }>('/intelligence/predict/finish-time', payload),
+
+  /** 出入库智能分流建议 */
+  recommendInout: (payload: {
+    orderNo?: string;
+    operatorId?: string;
+    operatorName?: string;
+    purchaseIds?: string[];
+  }) => api.post<{ code: number; data: {
+    strategy?: string;
+    reason?: string;
+    suggestions?: string[];
+    relatedPurchaseIds?: string[];
+  } }>('/intelligence/recommend/inout', payload),
+
+  /** 反馈闭环 — 静默提交实际完成数据 */
+  feedback: (payload: {
+    predictionId?: string;
+    orderId?: string;
+    orderNo?: string;
+    stageName?: string;
+    processName?: string;
+    predictedFinishTime?: string;
+    actualFinishTime?: string;
+    acceptedSuggestion?: boolean;
+  }) => api.post<{ code: number; data: {
+    accepted?: boolean;
+    deviationMinutes?: number;
+    message?: string;
+  } }>('/intelligence/feedback', payload),
+
+  /** 工人效率画像 */
+  workerProfile: (payload: {
+    operatorName?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) => api.post<{ code: number; data: {
+    operatorName?: string;
+    stages?: Array<{
+      stageName: string;
+      avgPerDay: number;
+      totalQty: number;
+      activeDays: number;
+      vsFactoryAvgPct: number;
+      level: string;
+    }>;
+    totalQty?: number;
+    lastScanTime?: string | null;
+    dateDays?: number;
+  } }>('/intelligence/worker-profile', payload),
 };
 
 export const materialPurchaseApi = {

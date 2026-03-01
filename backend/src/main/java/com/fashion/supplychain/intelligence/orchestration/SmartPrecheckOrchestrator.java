@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.PrecheckIssue;
 import com.fashion.supplychain.intelligence.dto.PrecheckScanRequest;
 import com.fashion.supplychain.intelligence.dto.PrecheckScanResponse;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,9 @@ public class SmartPrecheckOrchestrator {
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private ProductionOrderMapper productionOrderMapper;
 
     public PrecheckScanResponse precheckScan(PrecheckScanRequest request) {
         PrecheckScanResponse response = new PrecheckScanResponse();
@@ -73,6 +78,9 @@ public class SmartPrecheckOrchestrator {
             response.getSuggestions().add("建议在前端输入框增加最小值限制");
         }
 
+        // ── 订单状态预检 ─────────────────────────────────────────────────
+        checkOrderStatus(request, response);
+
         // ── 数据驱动预检（需要 operatorId）──────────────────────────────
         if (StringUtils.hasText(request.getOperatorId())) {
             checkDuplicateScan(request, response);
@@ -87,6 +95,45 @@ public class SmartPrecheckOrchestrator {
     }
 
     // ── 私有方法 ────────────────────────────────────────────────────────────
+
+    /**
+     * 订单状态检测：订单已完成/未开始/不存在时发出预警
+     */
+    private void checkOrderStatus(PrecheckScanRequest request, PrecheckScanResponse response) {
+        try {
+            if (!StringUtils.hasText(request.getOrderId())) return;
+            ProductionOrder order = productionOrderMapper.selectById(request.getOrderId());
+            if (order == null) {
+                addIssue(response, "INTEL_PRECHECK_ORDER_NOT_FOUND", "MEDIUM",
+                        "订单不存在", "未找到对应的生产订单记录", "请确认订单号是否正确");
+                return;
+            }
+            if ("completed".equals(order.getStatus())) {
+                addIssue(response, "INTEL_PRECHECK_ORDER_COMPLETED", "MEDIUM",
+                        "订单已完成", "该生产订单状态为[已完成]，继续扫码可能产生多余记录",
+                        "请确认是否需要补扫，确认后可继续提交");
+            } else if ("pending".equals(order.getStatus())) {
+                addIssue(response, "INTEL_PRECHECK_ORDER_PENDING", "LOW",
+                        "订单尚未开始生产", "该订单状态为[待生产]，首次扫码将自动切换为生产中",
+                        "如确认开工，可继续提交扫码");
+            }
+        } catch (Exception e) {
+            log.debug("[预检] 订单状态检查失败（降级跳过）: {}", e.getMessage());
+        }
+    }
+
+    /** 快捷添加预检问题 */
+    private void addIssue(PrecheckScanResponse resp, String code, String level,
+                          String title, String reason, String suggestion) {
+        PrecheckIssue issue = new PrecheckIssue();
+        issue.setCode(code);
+        issue.setLevel(level);
+        issue.setTitle(title);
+        issue.setReason(reason);
+        issue.setSuggestion(suggestion);
+        resp.getIssues().add(issue);
+        upgradeRiskLevel(resp, level);
+    }
 
     /**
      * 重复扫码检测：同一操作员+订单+工序，10 分钟内是否已有成功扫码
