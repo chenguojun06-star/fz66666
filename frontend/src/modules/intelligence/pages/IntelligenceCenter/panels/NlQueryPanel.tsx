@@ -4,6 +4,81 @@ import { SendOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 
+/** 数据 key → 中文标签 */
+const DATA_LABELS: Record<string, string> = {
+  // 基础查询
+  overdueCount: '延期订单',
+  todayScanQty: '今日扫码件数',
+  todayScans: '今日扫码次数',
+  yesterdayScans: '昨日扫码次数',
+  todayWarehouse: '今日入库',
+  yesterdayWarehouse: '昨日入库',
+  totalWarehousing: '累计入库',
+  todayCutting: '今日裁剪件数',
+  inProgress: '在制订单',
+  overdue: '延期订单',
+  activeWorkers: '活跃工人',
+  totalOrders: '在制订单数',
+  totalQty: '在制总件数',
+  qualifiedRate: '合格率',
+  qualified: '合格件数',
+  unqualified: '不合格件数',
+  progress: '进度',
+  completed: '已完成件数',
+  total: '总件数',
+  orderNo: '订单号',
+  status: '状态',
+  factory: '工厂',
+  // 健康指数
+  healthIndex: '健康指数',
+  grade: '评级',
+  productionScore: '生产评分',
+  deliveryScore: '交期评分',
+  qualityScore: '质量评分',
+  inventoryScore: '库存评分',
+  financeScore: '财务评分',
+  topRisk: '首要风险',
+  // 瓶颈检测
+  hasBottleneck: '存在瓶颈',
+  bottleneckCount: '瓶颈数量',
+  topBottleneck: '首要瓶颈',
+  // 风险 & 异常
+  dangerCount: '高危数量',
+  warningCount: '预警数量',
+  totalChecked: '检查总数',
+  anomalyCount: '异常数量',
+  topAnomaly: '首要异常',
+  // 工厂 & 员工
+  totalFactories: '参评工厂',
+  totalEvaluated: '评估总人数',
+  topFactory: '排名最高工厂',
+  topWorkerName: '最高效率员工',
+  scanRatePerHour: '每小时扫码量',
+  activeFactories: '活跃工厂',
+  // 利润 & 成本
+  quotationTotal: '报价总额',
+  totalCost: '总成本',
+  estimatedProfit: '预估利润',
+  grossMarginPct: '毛利率 %',
+  profitStatus: '利润状态',
+  // 缺陷 & 节拍
+  totalDefects: '缺陷总数',
+  worstProcess: '最差工序',
+  worstFactory: '最差工厂',
+  avgPace: '平均节拍',
+  // 排程 & 通知
+  planCount: '排程方案数',
+  pendingCount: '待处理通知',
+  sentToday: '今日已发送',
+  // 自检 & 学习
+  healthScore: '系统健康分',
+  issuesFound: '发现问题',
+  autoFixed: '自动修复',
+  totalSamples: '样本总量',
+  stageCount: '工序数',
+  avgConfidence: '平均置信度',
+};
+
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
@@ -12,22 +87,30 @@ interface ChatMessage {
   data?: Record<string, unknown>;
 }
 
+const WELCOME = '👋 你好！我是AI决策助手，掌握全系统22项智能分析能力。\n\n试试问我：\n• 「整体情况怎么样？」— 全景概要+健康指数\n• 「系统健康指数？」— 五维评分\n• 「有瓶颈吗？」— 瓶颈检测\n• 「交期风险？」— 延期预警\n• 「你能做什么？」— 查看完整能力列表';
+
 const NlQueryPanel: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'ai', content: '你好！我是 AI 决策助手。你可以用自然语言提问，例如：\n• "今天产量多少？"\n• "哪个工厂效率最高？"\n• "逾期订单有几个？"' },
+    {
+      role: 'ai',
+      content: WELCOME,
+      suggestions: ['整体情况怎么样？', '系统健康指数？', '有瓶颈吗？', '你能做什么？'],
+    },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const send = useCallback(async () => {
-    const q = input.trim();
-    if (!q || loading) return;
+  const doSend = useCallback(async (question: string) => {
+    const q = question.trim();
+    if (!q || sendingRef.current) return;
+    sendingRef.current = true;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: q }]);
     setLoading(true);
@@ -51,11 +134,20 @@ const NlQueryPanel: React.FC = () => {
       setMessages(prev => [...prev, { role: 'ai', content: '出错了，请稍后再试。' }]);
     } finally {
       setLoading(false);
+      sendingRef.current = false;
     }
-  }, [input, loading]);
+  }, []);
 
-  const handleSuggestion = (s: string) => {
-    setInput(s);
+  const send = useCallback(() => doSend(input), [input, doSend]);
+
+  const handleSuggestion = (s: string) => doSend(s);
+
+  const formatDataValue = (key: string, value: unknown): string => {
+    if (key === 'qualifiedRate') return `${value}%`;
+    if (key === 'progress') return `${value}%`;
+    // skip complex objects
+    if (typeof value === 'object') return '';
+    return String(value);
   };
 
   return (
@@ -76,14 +168,18 @@ const NlQueryPanel: React.FC = () => {
                 </div>
               )}
               {msg.data && Object.keys(msg.data).length > 0 && (
-                <div className="chat-data">
-                  {Object.entries(msg.data).map(([k, v]) => (
-                    <Tag key={k} color="blue">{k}: {String(v)}</Tag>
-                  ))}
+                <div className="chat-data" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                  {Object.entries(msg.data)
+                    .filter(([, v]) => typeof v !== 'object')
+                    .map(([k, v]) => {
+                      const label = DATA_LABELS[k] || k;
+                      const val = formatDataValue(k, v);
+                      return val ? <Tag key={k} color="blue">{label}：{val}</Tag> : null;
+                    })}
                 </div>
               )}
               {msg.suggestions && msg.suggestions.length > 0 && (
-                <div className="chat-suggestions">
+                <div className="chat-suggestions" style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {msg.suggestions.map((s, si) => (
                     <Button key={si} size="small" type="dashed" onClick={() => handleSuggestion(s)}>{s}</Button>
                   ))}
@@ -105,7 +201,7 @@ const NlQueryPanel: React.FC = () => {
         <Input
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="输入你的问题…"
+          placeholder="试试问「整体情况怎么样？」「和昨天比呢？」「谁产量最高？」"
           onPressEnter={send}
           disabled={loading}
           style={{ flex: 1 }}

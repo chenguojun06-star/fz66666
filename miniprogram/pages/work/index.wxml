@@ -132,7 +132,7 @@
         </view>
 
       <view class="btn">
-        <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
+        <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" hover-class="btn-secondary-hover" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
       </view>
   </view>
 

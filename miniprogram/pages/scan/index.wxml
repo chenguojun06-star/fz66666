@@ -398,8 +398,8 @@
         </view>
       </view>
       <view class="modal-foot">
-        <view class="modal-btn cancel" bindtap="closeScanResultConfirm">取消</view>
-        <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" bindtap="onConfirmScanResult">
+        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeScanResultConfirm">取消</view>
+        <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" hover-class="modal-btn-confirm-hover" bindtap="onConfirmScanResult">
           {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanType === 'warehouse' ? '入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取记录')))}}
         </view>
       </view>
@@ -866,8 +866,8 @@
     </view>
 
     <view class="modal-footer">
-      <button class="modal-btn cancel" bindtap="closeQualityModal">取消</button>
-      <button class="modal-btn confirm" bindtap="submitQualityResult" disabled="{{!qualityModal.result}}">
+      <button class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeQualityModal">取消</button>
+      <button class="modal-btn confirm" hover-class="modal-btn-confirm-hover" bindtap="submitQualityResult" disabled="{{!qualityModal.result}}">
         {{qualityModal.result === 'qualified' ? '提交质检合格' : (qualityModal.result === 'unqualified' ? '提交不合格' : '请先选择结果')}}
       </button>
     </view>
@@ -922,8 +922,8 @@
     </view>
 
     <view class="modal-footer">
-      <button class="modal-btn cancel" bindtap="closeProcurementModal">取消</button>
-      <button class="modal-btn confirm" bindtap="submitProcurementResult">提交</button>
+      <button class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeProcurementModal">取消</button>
+      <button class="modal-btn confirm" hover-class="modal-btn-confirm-hover" bindtap="submitProcurementResult">提交</button>
     </view>
   </view>
 </view>

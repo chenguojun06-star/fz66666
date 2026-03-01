@@ -189,7 +189,7 @@ page {
 
 .reminder-empty {
   text-align: center;
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
   padding: 40px 20px;
   font-size: var(--font-size-base); /* 正文字体 */
 }
@@ -220,7 +220,7 @@ page {
 
 .reminder-item-time {
   font-size: var(--font-size-sm);
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
 }
 
 .reminder-item-desc {
@@ -605,6 +605,6 @@ page {
 
 .home-activity-time {
   font-size: 20rpx;
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
