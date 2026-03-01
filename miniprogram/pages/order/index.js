@@ -247,6 +247,18 @@ Page({
     this.setData({ 'form.orderLines': lines });
   },
 
+  // 一键导入 S/M/L/XL/XXL 五条空行（颜色留空，码数已预填）
+  importFiveSizes() {
+    const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+    const newLines = sizes.map(size => {
+      const line = this._newLine();
+      line.size = size;
+      return line;
+    });
+    const lines = this.data.form.orderLines.concat(newLines);
+    this._recalcTotal(lines);
+  },
+
   removeOrderLine(e) {
     const idx = e.currentTarget.dataset.idx;
     const lines = this.data.form.orderLines.filter((_, i) => i !== idx);

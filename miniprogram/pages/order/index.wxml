@@ -138,7 +138,10 @@
       <view class="mf-section">
         <view class="mf-section-head">
           <text class="mf-section-title">订单明细</text>
-          <view class="mf-add-btn" hover-class="mf-add-btn-hover" bindtap="addOrderLine">+ 添加</view>
+          <view style="display:flex;align-items:center;gap:6rpx;">
+            <view class="mf-add-btn mf-import-btn" hover-class="mf-add-btn-hover" bindtap="importFiveSizes">导入5码</view>
+            <view class="mf-add-btn" hover-class="mf-add-btn-hover" bindtap="addOrderLine">+ 添加</view>
+          </view>
         </view>
         <view wx:if="{{form.orderLines.length === 0}}" class="mf-empty">请添加颜色/码数/数量</view>
         <!-- 表头标签 -->
