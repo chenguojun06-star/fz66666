@@ -40,9 +40,13 @@ const SmartDailyBrief: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get('/dashboard/daily-brief')
-      .then((res: DailyBriefData) => {
-        setData(res);
+    api.get<{ code: number; data: DailyBriefData; message?: string }>('/dashboard/daily-brief')
+      .then((res) => {
+        if (res.code === 200 && res.data) {
+          setData(res.data);
+        } else {
+          setError(res.message || '日报数据加载失败');
+        }
       })
       .catch(() => setError('日报数据加载失败'))
       .finally(() => setLoading(false));
