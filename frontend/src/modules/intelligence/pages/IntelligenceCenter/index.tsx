@@ -2,60 +2,36 @@ import React, { useState } from 'react';
 import { Tabs, Typography } from 'antd';
 import {
   ThunderboltOutlined,
-  AlertOutlined,
-  ClockCircleOutlined,
   DashboardOutlined,
   DollarOutlined,
   TrophyOutlined,
   ExperimentOutlined,
   SafetyOutlined,
-  BellOutlined,
   RobotOutlined,
   HeartOutlined,
-  FireOutlined,
   BulbOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
-import BottleneckPanel from './panels/BottleneckPanel';
-import DeliveryRiskPanel from './panels/DeliveryRiskPanel';
-import AnomalyPanel from './panels/AnomalyPanel';
-import LivePulsePanel from './panels/LivePulsePanel';
+import ProductionMonitorPanel from './panels/ProductionMonitorPanel';
 import ProfitEstimationPanel from './panels/ProfitEstimationPanel';
 import FactoryLeaderboardPanel from './panels/FactoryLeaderboardPanel';
 import RhythmDnaPanel from './panels/RhythmDnaPanel';
 import SelfHealingPanel from './panels/SelfHealingPanel';
-import SmartNotificationPanel from './panels/SmartNotificationPanel';
 import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
-import DefectHeatmapPanel from './panels/DefectHeatmapPanel';
 import OrderSmartAnalysisPanel from './panels/OrderSmartAnalysisPanel';
 import './styles.css';
 
 const { Title } = Typography;
 
 const IntelligenceCenter: React.FC = () => {
-  const [activeKey, setActiveKey] = useState('live-pulse');
+  const [activeKey, setActiveKey] = useState('production-monitor');
 
   const tabItems = [
     {
-      key: 'live-pulse',
-      label: <span><DashboardOutlined /> 实时脉搏</span>,
-      children: <LivePulsePanel />,
-    },
-    {
-      key: 'bottleneck',
-      label: <span><ThunderboltOutlined /> 瓶颈检测</span>,
-      children: <BottleneckPanel />,
-    },
-    {
-      key: 'delivery-risk',
-      label: <span><ClockCircleOutlined /> 交期预警</span>,
-      children: <DeliveryRiskPanel />,
-    },
-    {
-      key: 'anomaly',
-      label: <span><AlertOutlined /> 异常检测</span>,
-      children: <AnomalyPanel />,
+      key: 'production-monitor',
+      label: <span><DashboardOutlined /> 生产监控总览</span>,
+      children: <ProductionMonitorPanel />,
     },
     {
       key: 'order-smart-analysis',
@@ -83,11 +59,6 @@ const IntelligenceCenter: React.FC = () => {
       children: <SelfHealingPanel />,
     },
     {
-      key: 'smart-notification',
-      label: <span><BellOutlined /> 智能提醒</span>,
-      children: <SmartNotificationPanel />,
-    },
-    {
       key: 'nl-query',
       label: <span><RobotOutlined /> AI助手与学习</span>,
       children: <NlQueryPanel />,
@@ -96,11 +67,6 @@ const IntelligenceCenter: React.FC = () => {
       key: 'health-index',
       label: <span><HeartOutlined /> 健康指数</span>,
       children: <HealthIndexPanel />,
-    },
-    {
-      key: 'defect-heatmap',
-      label: <span><FireOutlined /> 缺陷热力图</span>,
-      children: <DefectHeatmapPanel />,
     },
   ];
 

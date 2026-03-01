@@ -330,7 +330,7 @@
 .gantt-axis { display: flex; justify-content: space-between; font-size: 10px; color: #8c8c8c; margin-top: 2px; padding-left: 64px; }
 
 /* ===== 缺陷热力图 ===== */
-.heatmap-panel .heatmap-grid-wrapper { overflow-x: auto; margin-top: 12px; }
+.heatmap-panel .heatmap-grid-wrapper, .pmo-panel .heatmap-grid-wrapper { overflow-x: auto; margin-top: 12px; }
 .heatmap-table { border-collapse: collapse; width: 100%; }
 .heatmap-table th, .heatmap-table td { text-align: center; padding: 6px 8px; font-size: 12px; }
 .heatmap-corner { background: #fafafa; font-weight: 600; }
@@ -346,3 +346,12 @@
 .heatmap-cell-inner:hover { transform: scale(1.15); }
 .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 12px; font-size: 11px; color: #8c8c8c; justify-content: center; }
 .heatmap-legend-cell { width: 20px; height: 14px; border-radius: 2px; }
+
+/* ===== 生产监控总览（合并面板） ===== */
+.pmo-panel .ant-collapse-header { font-weight: 600; font-size: 14px; }
+.pmo-panel .ant-collapse > .ant-collapse-item { border-bottom: 1px solid #f0f0f0; }
+.pmo-panel .ant-collapse-content-box { padding: 12px 0 !important; }
+.pmo-section-title {
+  font-weight: 600; font-size: 14px; padding: 6px 0; margin: 8px 0;
+  border-bottom: 1px solid #f0f0f0; color: #262626;
+}
