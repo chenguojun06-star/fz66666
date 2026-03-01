@@ -14,6 +14,12 @@ export interface FactoryCapacityItem {
   overdueCount: number;
   /** 货期完成率 0-100，-1表示这年内无完工订单 */
   deliveryOnTimeRate: number;
+  /** 近30天活跃生产人数 */
+  activeWorkers: number;
+  /** 近30天日均产量（件/天） */
+  avgDailyOutput: number;
+  /** 预计完工天数，-1表示无产量数据 */
+  estimatedCompletionDays: number;
 }
 
 export const productionOrderApi = {
@@ -286,6 +292,49 @@ export interface DefectHeatmapResponse {
   worstFactory: string;
 }
 
+/* ===== 财务审核智能分析 ===== */
+export interface FinanceAuditSummary {
+  totalOrders: number;
+  totalWarehousedQty: number;
+  totalSettlementAmount: number;
+  anomalyCount: number;
+  highRiskCount: number;
+  duplicateSuspectCount: number;
+}
+export interface AuditFinding {
+  type: string;
+  riskLevel: string;
+  orderNo: string;
+  description: string;
+  amount: number;
+  action: string;
+}
+export interface ProfitAnalysis {
+  avgProfitMargin: number;
+  negativeCount: number;
+  abnormalHighCount: number;
+  lowProfitCount: number;
+  normalCount: number;
+}
+export interface PriceDeviation {
+  orderNo: string;
+  styleNo: string;
+  factoryName: string;
+  currentPrice: number;
+  avgHistoryPrice: number;
+  deviationPercent: number;
+  riskLevel: string;
+}
+export interface FinanceAuditResponse {
+  overallRisk: string;
+  suggestion: string;
+  suggestionText: string;
+  summary: FinanceAuditSummary;
+  findings: AuditFinding[];
+  profitAnalysis: ProfitAnalysis;
+  priceDeviations: PriceDeviation[];
+}
+
 export const intelligenceApi = {
   precheckScan: (payload: {
     orderId?: string;
@@ -434,6 +483,10 @@ export const intelligenceApi = {
   /** ⑫ 质量缺陷热力图 */
   getDefectHeatmap: () =>
     api.post<{ code: number; data: DefectHeatmapResponse }>('/intelligence/defect-heatmap', {}),
+
+  /** ⑬ 财务审核智能分析 */
+  getFinanceAudit: () =>
+    api.post<{ code: number; data: FinanceAuditResponse }>('/intelligence/finance-audit', {}),
 };
 
 export const materialPurchaseApi = {

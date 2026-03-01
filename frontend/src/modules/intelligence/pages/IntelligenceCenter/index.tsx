@@ -10,6 +10,7 @@ import {
   RobotOutlined,
   HeartOutlined,
   BulbOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ProductionMonitorPanel from './panels/ProductionMonitorPanel';
@@ -20,6 +21,7 @@ import SelfHealingPanel from './panels/SelfHealingPanel';
 import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
 import OrderSmartAnalysisPanel from './panels/OrderSmartAnalysisPanel';
+import FinanceAuditPanel from './panels/FinanceAuditPanel';
 import './styles.css';
 
 const { Title } = Typography;
@@ -67,6 +69,11 @@ const IntelligenceCenter: React.FC = () => {
       key: 'health-index',
       label: <span><HeartOutlined /> 健康指数</span>,
       children: <HealthIndexPanel />,
+    },
+    {
+      key: 'finance-audit',
+      label: <span><AuditOutlined /> 财务审核助手</span>,
+      children: <FinanceAuditPanel />,
     },
   ];
 

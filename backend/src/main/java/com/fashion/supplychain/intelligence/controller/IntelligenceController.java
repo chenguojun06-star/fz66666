@@ -84,6 +84,9 @@ public class IntelligenceController {
     @Autowired
     private DefectHeatmapOrchestrator defectHeatmapOrchestrator;
 
+    @Autowired
+    private FinanceAuditOrchestrator financeAuditOrchestrator;
+
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
         return Result.success(smartPrecheckOrchestrator.precheckScan(request));
@@ -196,5 +199,10 @@ public class IntelligenceController {
     @PostMapping("/defect-heatmap")
     public Result<DefectHeatmapResponse> defectHeatmap() {
         return Result.success(defectHeatmapOrchestrator.analyze());
+    }
+
+    @PostMapping("/finance-audit")
+    public Result<FinanceAuditResponse> financeAudit() {
+        return Result.success(financeAuditOrchestrator.audit());
     }
 }
