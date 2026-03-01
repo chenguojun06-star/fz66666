@@ -149,11 +149,15 @@ const StyleQuotePopover: React.FC<{
     <Popover
       content={content}
       trigger="hover"
-      placement="rightTop"
-      mouseEnterDelay={0.4}
+      placement="bottom"
+      mouseEnterDelay={0.3}
+      destroyTooltipOnHide
+      getPopupContainer={(node) => node.closest('.ant-modal-body') || document.body}
       onOpenChange={(open) => { if (open) fetchData(); }}
     >
-      {children}
+      <div style={{ display: 'inline-block', cursor: 'pointer' }}>
+        {children}
+      </div>
     </Popover>
   );
 };

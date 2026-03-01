@@ -1529,13 +1529,18 @@ const OrderManagement: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>图片</div>
                       <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
-                        <StyleCoverThumb
-                          styleId={selectedStyle?.id}
-                          styleNo={selectedStyle?.styleNo}
-                          src={selectedStyle?.cover || null}
-                          size={isMobile ? 160 : isTablet ? 200 : 240}
+                        <div>
+                          <StyleCoverThumb
+                            styleId={selectedStyle?.id}
+                            styleNo={selectedStyle?.styleNo}
+                            src={selectedStyle?.cover || null}
+                            size={isMobile ? 160 : isTablet ? 200 : 240}
 
-                        />
+                          />
+                          <div style={{ fontSize: 11, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
+                            💰 悬停查看报价参考
+                          </div>
+                        </div>
                       </StyleQuotePopover>
                       <div>
                         <StyleAttachmentsButton
