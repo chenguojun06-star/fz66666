@@ -91,7 +91,7 @@ const DefectTracePopover: React.FC<{
       </div>
 
       {/* 工人缺陷明细 */}
-      {data.workers.length > 0 && (
+      {(data.workers?.length ?? 0) > 0 && (
         <>
           <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>👷 工人缺陷明细</div>
           {data.workers.slice(0, 5).map((w, i) => (
@@ -114,7 +114,7 @@ const DefectTracePopover: React.FC<{
       )}
 
       {/* 高频缺陷工序 */}
-      {data.hotProcesses.length > 0 && (
+      {(data.hotProcesses?.length ?? 0) > 0 && (
         <>
           <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}>🔥 高频缺陷工序</div>
           {data.hotProcesses.map((p, i) => (
@@ -128,7 +128,7 @@ const DefectTracePopover: React.FC<{
       )}
 
       {/* 7天趋势（简化为mini sparkline数字） */}
-      {data.trend.length > 0 && data.trend.some(t => t.defectCount > 0) && (
+      {(data.trend?.length ?? 0) > 0 && data.trend.some(t => t.defectCount > 0) && (
         <>
           <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}>📈 近7天趋势</div>
           <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end' }}>

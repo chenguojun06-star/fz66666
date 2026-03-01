@@ -20,7 +20,7 @@ interface StyleQuoteData {
   processCost: number | null;
   totalCost: number | null;
   suggestedPrice: number | null;
-  historicalOrders: HistoricalOrder[];
+  recentOrders: HistoricalOrder[];   // 后端字段名为 recentOrders
   suggestion: string | null;
 }
 
@@ -108,13 +108,13 @@ const StyleQuotePopover: React.FC<{
       )}
 
       {/* 历史订单 */}
-      {data.historicalOrders.length > 0 && (
+      {(data.recentOrders?.length ?? 0) > 0 && (
         <>
           <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
             📦 最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
-            {data.historicalOrders.slice(0, 5).map((o, i) => {
+            {data.recentOrders.slice(0, 5).map((o, i) => {
               const st = statusMap[o.status] || { text: o.status, color: '#d9d9d9' };
               return (
                 <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0', fontSize: 12 }}>
