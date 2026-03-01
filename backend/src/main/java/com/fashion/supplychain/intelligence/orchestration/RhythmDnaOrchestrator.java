@@ -1,0 +1,151 @@
+package com.fashion.supplychain.intelligence.orchestration;
+
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse;
+import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse.OrderRhythm;
+import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse.RhythmSegment;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * 生产节奏DNA编排器 — 工序耗时占比基因图
+ *
+ * <p>算法：利用 flow_stage_snapshot 视图，计算每个订单各阶段
+ * 从开始到完成的耗时，生成色带宽度=耗时占比的DNA条形图。
+ */
+@Service
+@Slf4j
+public class RhythmDnaOrchestrator {
+
+    // 阶段名 → 色带颜色
+    private static final Map<String, String> STAGE_COLORS = new LinkedHashMap<>();
+    static {
+        STAGE_COLORS.put("采购", "#4FC3F7");
+        STAGE_COLORS.put("裁剪", "#81C784");
+        STAGE_COLORS.put("二次工艺", "#FFB74D");
+        STAGE_COLORS.put("车缝", "#7986CB");
+        STAGE_COLORS.put("尾部", "#E57373");
+        STAGE_COLORS.put("质检", "#BA68C8");
+        STAGE_COLORS.put("入库", "#4DB6AC");
+    }
+
+    @Autowired
+    private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
+    public RhythmDnaResponse analyze() {
+        RhythmDnaResponse resp = new RhythmDnaResponse();
+        Long tenantId = UserContext.tenantId();
+
+        // 取最近的已完成/进行中订单（最多20个）
+        var qw = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>();
+        qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq("delete_flag", 0)
+          .in("status", "COMPLETED", "IN_PROGRESS")
+          .orderByDesc("update_time")
+          .last("LIMIT 20");
+        var orders = productionOrderService.list(qw);
+
+        if (orders.isEmpty()) {
+            resp.setOrders(Collections.emptyList());
+            return resp;
+        }
+
+        List<String> orderIds = orders.stream()
+                .map(com.fashion.supplychain.production.entity.ProductionOrder::getId)
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds);
+        Map<String, Map<String, Object>> snapshotMap = snapshots.stream()
+                .collect(Collectors.toMap(
+                        m -> String.valueOf(m.get("orderId")), m -> m, (a, b) -> a));
+
+        List<OrderRhythm> rhythms = new ArrayList<>();
+        for (var order : orders) {
+            Map<String, Object> snap = snapshotMap.get(order.getId());
+            if (snap == null) continue;
+            OrderRhythm or = buildRhythm(order, snap);
+            if (or != null) rhythms.add(or);
+        }
+
+        resp.setOrders(rhythms);
+        return resp;
+    }
+
+    private OrderRhythm buildRhythm(
+            com.fashion.supplychain.production.entity.ProductionOrder order,
+            Map<String, Object> snap) {
+        // 从 snapshot 中提取各阶段开始/结束时间
+        List<RhythmSegment> segments = new ArrayList<>();
+        String[][] stageKeys = {
+            {"采购", "procurementScanEndTime", null},
+            {"裁剪", "cuttingStartTime", "cuttingEndTime"},
+            {"二次工艺", "secondaryProcessStartTime", "secondaryProcessEndTime"},
+            {"车缝", "carSewingStartTime", "carSewingEndTime"},
+            {"尾部", "ironingStartTime", "ironingEndTime"},
+            {"质检", "qualityStartTime", "qualityEndTime"},
+            {"入库", "warehousingStartTime", "warehousingEndTime"},
+        };
+
+        LocalDateTime orderStart = parseTime(snap.get("orderStartTime"));
+        if (orderStart == null && order.getCreateTime() != null) {
+            orderStart = order.getCreateTime();
+        }
+        if (orderStart == null) return null;
+
+        double totalDays = 0;
+        for (String[] keys : stageKeys) {
+            LocalDateTime start = parseTime(snap.get(keys[1]));
+            LocalDateTime end = keys[2] != null ? parseTime(snap.get(keys[2])) : null;
+
+            double days = 0;
+            if (start != null && end != null) {
+                days = Math.max(0.1, ChronoUnit.HOURS.between(start, end) / 24.0);
+            } else if (start != null) {
+                days = Math.max(0.1, ChronoUnit.HOURS.between(start, LocalDateTime.now()) / 24.0);
+            }
+
+            RhythmSegment seg = new RhythmSegment();
+            seg.setStageName(keys[0]);
+            seg.setDays(Math.round(days * 10.0) / 10.0);
+            seg.setColor(STAGE_COLORS.getOrDefault(keys[0], "#9E9E9E"));
+            segments.add(seg);
+            totalDays += days;
+        }
+
+        // 计算占比 + 瓶颈检测
+        double avgDays = totalDays / Math.max(1, segments.size());
+        for (RhythmSegment seg : segments) {
+            seg.setPct(totalDays > 0
+                    ? Math.round(seg.getDays() / totalDays * 1000.0) / 10.0 : 0);
+            seg.setBottleneck(seg.getDays() > avgDays * 1.5);
+        }
+
+        OrderRhythm rhythm = new OrderRhythm();
+        rhythm.setOrderId(order.getId());
+        rhythm.setOrderNo(order.getOrderNo());
+        rhythm.setStyleName(order.getStyleName());
+        rhythm.setTotalDays((int) Math.ceil(totalDays));
+        rhythm.setSegments(segments);
+        return rhythm;
+    }
+
+    private LocalDateTime parseTime(Object value) {
+        if (value instanceof LocalDateTime) return (LocalDateTime) value;
+        if (value instanceof java.sql.Timestamp) return ((java.sql.Timestamp) value).toLocalDateTime();
+        if (value instanceof String) {
+            try {
+                return LocalDateTime.parse((String) value);
+            } catch (Exception e) { /* ignore */ }
+        }
+        return null;
+    }
+}

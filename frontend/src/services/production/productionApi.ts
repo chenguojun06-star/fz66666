@@ -134,6 +134,158 @@ export interface LearningReportResponse {
   stages: StageLearningStat[];
 }
 
+// ── 第三批智能化 TS 类型定义（12大黑科技） ──
+
+export interface PulsePoint { time: string; count: number; }
+export interface StagnantFactory { factoryName: string; lastScanTime: string; minutesSilent: number; }
+export interface LivePulseResponse {
+  activeFactories: number;
+  activeWorkers: number;
+  todayScanQty: number;
+  scanRatePerHour: number;
+  timeline: PulsePoint[];
+  stagnantFactories: StagnantFactory[];
+}
+
+export interface WorkerEfficiencyItem {
+  operatorName: string;
+  speedScore: number;
+  qualityScore: number;
+  stabilityScore: number;
+  versatilityScore: number;
+  attendanceScore: number;
+  overallScore: number;
+  bestProcess: string;
+  dailyAvgOutput: number;
+  trend: string;
+}
+export interface WorkerEfficiencyResponse {
+  workers: WorkerEfficiencyItem[];
+}
+
+export interface DeliveryPredictionResponse {
+  orderId: string;
+  orderNo: string;
+  optimisticDate: string;
+  realisticDate: string;
+  pessimisticDate: string;
+  dailyVelocity: number;
+  remainingQty: number;
+  confidence: number;
+  rationale: string;
+}
+
+export interface ProfitEstimationResponse {
+  orderId: string;
+  orderNo: string;
+  revenue: number;
+  materialCost: number;
+  laborCost: number;
+  overheadCost: number;
+  totalCost: number;
+  grossProfit: number;
+  grossMarginPct: number;
+  profitStatus: string;
+}
+
+export interface FactoryRank {
+  factoryId: string;
+  factoryName: string;
+  rank: number;
+  medal: string;
+  qualityScore: number;
+  speedScore: number;
+  deliveryScore: number;
+  costScore: number;
+  totalScore: number;
+}
+export interface FactoryLeaderboardResponse {
+  rankings: FactoryRank[];
+}
+
+export interface RhythmSegment { stageName: string; days: number; pct: number; color: string; bottleneck: boolean; }
+export interface OrderRhythm { orderId: string; orderNo: string; segments: RhythmSegment[]; }
+export interface RhythmDnaResponse {
+  orders: OrderRhythm[];
+}
+
+export interface DiagnosisItem {
+  checkName: string;
+  status: string;
+  detail: string;
+  autoFixed: boolean;
+}
+export interface SelfHealingResponse {
+  healthScore: number;
+  status: string;
+  totalChecks: number;
+  issuesFound: number;
+  autoFixed: number;
+  needManual: number;
+  items: DiagnosisItem[];
+}
+
+export interface NotificationItem {
+  type: string;
+  priority: string;
+  title: string;
+  message: string;
+  targetUser: string;
+  orderId: string;
+  orderNo: string;
+}
+export interface SmartNotificationResponse {
+  pendingCount: number;
+  sentToday: number;
+  successRate: number;
+  items: NotificationItem[];
+}
+
+export interface NlQueryResponse {
+  intent: string;
+  answer: string;
+  confidence: number;
+  data: Record<string, unknown>;
+  suggestions: string[];
+}
+
+export interface DailyIndex { date: string; index: number; }
+export interface HealthIndexResponse {
+  healthIndex: number;
+  grade: string;
+  deliveryScore: number;
+  qualityScore: number;
+  efficiencyScore: number;
+  capacityScore: number;
+  costScore: number;
+  trend: DailyIndex[];
+  topRisk: string;
+  suggestion: string;
+}
+
+export interface GanttItem { stage: string; startDate: string; endDate: string; days: number; }
+export interface SchedulePlan {
+  factoryName: string;
+  factoryId: string;
+  totalDays: number;
+  estimatedEnd: string;
+  capacityUtilization: number;
+  gantt: GanttItem[];
+}
+export interface SchedulingSuggestionResponse {
+  plans: SchedulePlan[];
+}
+
+export interface HeatCell { process: string; factory: string; defectCount: number; intensity: number; }
+export interface DefectHeatmapResponse {
+  processes: string[];
+  factories: string[];
+  cells: HeatCell[];
+  totalDefects: number;
+  worstProcess: string;
+  worstFactory: string;
+}
+
 export const intelligenceApi = {
   precheckScan: (payload: {
     orderId?: string;
@@ -232,6 +384,56 @@ export const intelligenceApi = {
   /** AI 学习报告 */
   getLearningReport: () =>
     api.get<{ code: number; data: LearningReportResponse }>('/intelligence/learning-report'),
+
+  // ── 第三批：12大黑科技 API ──
+
+  /** ① 实时生产脉搏 */
+  getLivePulse: () =>
+    api.post<{ code: number; data: LivePulseResponse }>('/intelligence/live-pulse', {}),
+
+  /** ② 工人效率画像 */
+  getWorkerEfficiency: () =>
+    api.post<{ code: number; data: WorkerEfficiencyResponse }>('/intelligence/worker-efficiency', {}),
+
+  /** ③ 完工日期预测 */
+  predictDelivery: (payload: { orderId: string }) =>
+    api.post<{ code: number; data: DeliveryPredictionResponse }>('/intelligence/delivery-prediction', payload),
+
+  /** ④ 订单利润预估 */
+  estimateProfit: (payload: { orderId: string }) =>
+    api.post<{ code: number; data: ProfitEstimationResponse }>('/intelligence/profit-estimation', payload),
+
+  /** ⑤ 工厂绩效排行 */
+  getFactoryLeaderboard: () =>
+    api.post<{ code: number; data: FactoryLeaderboardResponse }>('/intelligence/factory-leaderboard', {}),
+
+  /** ⑥ 生产节奏DNA */
+  getRhythmDna: () =>
+    api.post<{ code: number; data: RhythmDnaResponse }>('/intelligence/rhythm-dna', {}),
+
+  /** ⑦ 智能异常自愈 */
+  runSelfHealing: () =>
+    api.post<{ code: number; data: SelfHealingResponse }>('/intelligence/self-healing', {}),
+
+  /** ⑧ 小程序智能提醒 */
+  getSmartNotifications: () =>
+    api.post<{ code: number; data: SmartNotificationResponse }>('/intelligence/smart-notification', {}),
+
+  /** ⑨ AI决策助手 */
+  nlQuery: (payload: { question: string }) =>
+    api.post<{ code: number; data: NlQueryResponse }>('/intelligence/nl-query', payload),
+
+  /** ⑩ 供应链健康指数 */
+  getHealthIndex: () =>
+    api.post<{ code: number; data: HealthIndexResponse }>('/intelligence/health-index', {}),
+
+  /** ⑪ 自动排产建议 */
+  suggestScheduling: (payload: { styleNo: string; quantity: number; deadline: string }) =>
+    api.post<{ code: number; data: SchedulingSuggestionResponse }>('/intelligence/scheduling-suggestion', payload),
+
+  /** ⑫ 质量缺陷热力图 */
+  getDefectHeatmap: () =>
+    api.post<{ code: number; data: DefectHeatmapResponse }>('/intelligence/defect-heatmap', {}),
 };
 
 export const materialPurchaseApi = {

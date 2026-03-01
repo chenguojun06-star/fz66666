@@ -46,6 +46,44 @@ public class IntelligenceController {
     @Autowired
     private LearningReportOrchestrator learningReportOrchestrator;
 
+    // ── 第三批（12大黑科技）──
+
+    @Autowired
+    private LivePulseOrchestrator livePulseOrchestrator;
+
+    @Autowired
+    private WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
+
+    @Autowired
+    private DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
+
+    @Autowired
+    private ProfitEstimationOrchestrator profitEstimationOrchestrator;
+
+    @Autowired
+    private FactoryLeaderboardOrchestrator factoryLeaderboardOrchestrator;
+
+    @Autowired
+    private RhythmDnaOrchestrator rhythmDnaOrchestrator;
+
+    @Autowired
+    private SelfHealingOrchestrator selfHealingOrchestrator;
+
+    @Autowired
+    private SmartNotificationOrchestrator smartNotificationOrchestrator;
+
+    @Autowired
+    private NlQueryOrchestrator nlQueryOrchestrator;
+
+    @Autowired
+    private HealthIndexOrchestrator healthIndexOrchestrator;
+
+    @Autowired
+    private SchedulingSuggestionOrchestrator schedulingSuggestionOrchestrator;
+
+    @Autowired
+    private DefectHeatmapOrchestrator defectHeatmapOrchestrator;
+
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
         return Result.success(smartPrecheckOrchestrator.precheckScan(request));
@@ -96,5 +134,67 @@ public class IntelligenceController {
     @GetMapping("/learning-report")
     public Result<?> getLearningReport() {
         return Result.success(learningReportOrchestrator.getReport());
+    }
+
+    // ── 第三批：12大黑科技端点 ──
+
+    @PostMapping("/live-pulse")
+    public Result<LivePulseResponse> livePulse() {
+        return Result.success(livePulseOrchestrator.pulse());
+    }
+
+    @PostMapping("/worker-efficiency")
+    public Result<WorkerEfficiencyResponse> workerEfficiency() {
+        return Result.success(workerEfficiencyOrchestrator.evaluate());
+    }
+
+    @PostMapping("/delivery-prediction")
+    public Result<DeliveryPredictionResponse> deliveryPrediction(@RequestBody DeliveryPredictionRequest request) {
+        return Result.success(deliveryPredictionOrchestrator.predict(request));
+    }
+
+    @PostMapping("/profit-estimation")
+    public Result<ProfitEstimationResponse> profitEstimation(@RequestBody ProfitEstimationRequest request) {
+        return Result.success(profitEstimationOrchestrator.estimate(request));
+    }
+
+    @PostMapping("/factory-leaderboard")
+    public Result<FactoryLeaderboardResponse> factoryLeaderboard() {
+        return Result.success(factoryLeaderboardOrchestrator.rank());
+    }
+
+    @PostMapping("/rhythm-dna")
+    public Result<RhythmDnaResponse> rhythmDna() {
+        return Result.success(rhythmDnaOrchestrator.analyze());
+    }
+
+    @PostMapping("/self-healing")
+    public Result<SelfHealingResponse> selfHealing() {
+        return Result.success(selfHealingOrchestrator.diagnose());
+    }
+
+    @PostMapping("/smart-notification")
+    public Result<SmartNotificationResponse> smartNotification() {
+        return Result.success(smartNotificationOrchestrator.generateNotifications());
+    }
+
+    @PostMapping("/nl-query")
+    public Result<NlQueryResponse> nlQuery(@RequestBody NlQueryRequest request) {
+        return Result.success(nlQueryOrchestrator.query(request));
+    }
+
+    @PostMapping("/health-index")
+    public Result<HealthIndexResponse> healthIndex() {
+        return Result.success(healthIndexOrchestrator.calculate());
+    }
+
+    @PostMapping("/scheduling-suggestion")
+    public Result<SchedulingSuggestionResponse> schedulingSuggestion(@RequestBody SchedulingSuggestionRequest request) {
+        return Result.success(schedulingSuggestionOrchestrator.suggest(request));
+    }
+
+    @PostMapping("/defect-heatmap")
+    public Result<DefectHeatmapResponse> defectHeatmap() {
+        return Result.success(defectHeatmapOrchestrator.analyze());
     }
 }
