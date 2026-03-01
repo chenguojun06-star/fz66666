@@ -60,7 +60,7 @@ function canAccessNode(nodeName) {
   const roleNodeMap = {
     [ROLES.PURCHASER]: ['采购', '物料'],
     [ROLES.CUTTER]: ['裁剪'],
-    [ROLES.SEWING]: ['生产', '车缝', '缝制', '大烫'],
+    [ROLES.SEWING]: ['生产', '车缝', '缝制', '大烫', '整烫'],
     [ROLES.PACKAGER]: ['包装'],
     [ROLES.QUALITY]: ['质检'],
     [ROLES.WAREHOUSE]: ['入库', '出库', '仓库'],
@@ -135,7 +135,8 @@ function filterOrders(orders) {
         currentProcess.includes('生产') ||
         currentProcess.includes('车缝') ||
         currentProcess.includes('缝制') ||
-        currentProcess.includes('大烫')
+        currentProcess.includes('大烫') ||
+        currentProcess.includes('整烫')
       );
     }
 

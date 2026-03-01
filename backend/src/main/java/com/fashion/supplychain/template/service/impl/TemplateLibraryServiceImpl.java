@@ -75,7 +75,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (!StringUtils.hasText(n)) {
             return false;
         }
-        return n.contains("整烫") || n.contains("熨烫");
+        return n.contains("整烫") || n.contains("熨烫") || n.contains("大烫");
     }
 
     private boolean isProgressCuttingStageName(String name) {
