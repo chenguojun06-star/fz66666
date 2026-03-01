@@ -1,4 +1,5 @@
 @import '../../../../styles/modal-form.wxss';
+@import '../../../../styles/wh-card.wxss';
 
 .container {
   padding: var(--spacing-lg);
@@ -77,118 +78,39 @@
 .ranking-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
 }
 
-.ranking-item {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--color-border-light);
+/* ---- 面辅料排行卡片本地覆盖 ---- */
+
+/* 左侧排名圆球 */
+.ri-rank {
+  background: var(--color-blue-light, #e3f2fd);
 }
 
-.item-head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
+.ri-rank-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--color-primary, #1890ff);
 }
 
-.rank-badge {
-  width: 32rpx;
-  height: 32rpx;
-  border-radius: 50%;
-  background: var(--color-blue-light);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 充足 / 缺料 状态按钮 */
+.ri-btn-ok {
+  background: rgba(209, 250, 229, 0.9);
+  color: #059669;
+  border-color: #a7f3d0;
 }
 
-.rank-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.ri-btn-warn {
+  background: rgba(254, 243, 199, 0.9);
+  color: #d97706;
+  border-color: #fde68a;
 }
 
-.rank-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rank-sub {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rank-count {
-  font-size: var(--font-size-xs);
-  padding: 4rpx 12rpx;
-  border-radius: 999rpx;
-}
-
-.rank-count.warn {
-  color: var(--color-warning, #d97706);
-  background: var(--color-warning-light, #fef3c7);
-}
-
-.rank-count.ok {
-  color: var(--color-success, #059669);
-  background: var(--color-success-light, #d1fae5);
-}
-
-.item-metrics {
-  margin-top: var(--spacing-sm);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8rpx 12rpx;
-}
-
-.item-actions {
-  margin-top: var(--spacing-sm);
+/* 底部操作行：左右两按钮并列 */
+.ri-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-xs);
-}
-
-.action {
-  padding: 8rpx 14rpx;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-}
-
-.action.secondary {
-  background: var(--color-bg-light);
-  color: var(--color-text-secondary);
-}
-
-.action.primary {
-  background: var(--color-blue-light);
-  color: var(--color-primary);
-}
-
-.metric {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--font-size-xs);
-}
-
-.m-label {
-  color: var(--color-text-secondary);
-}
-
-.m-value {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
+  gap: 10rpx;
 }
 
 .btn {
@@ -198,7 +120,7 @@
   border-radius: var(--radius-sm);
 }
 
-/* 采购数量选择器（页面专用） */
+/* 采购数量选择器（弹窗专用） */
 .qty-input {
   width: 140rpx;
   text-align: center;

@@ -26,29 +26,49 @@
     <view
       wx:for="{{list}}"
       wx:key="stockId"
-      class="ranking-item"
+      class="wc-card"
       bindtap="onItemTap"
       data-item="{{item}}"
     >
-      <view class="item-head">
-        <view class="rank-badge">{{index + 1}}</view>
-        <view class="rank-info">
-          <text class="rank-title">{{item.materialName || item.materialCode || '物料'}}</text>
-          <text class="rank-sub">编码：{{item.materialCode || '-'}} · 类型：{{item.materialTypeText || '-'}}</text>
-        </view>
-        <view class="rank-count {{item.shortage > 0 ? 'warn' : 'ok'}}">
-          {{item.shortage > 0 ? ('缺 ' + item.shortage) : '充足'}}
-        </view>
+      <!-- 左侧排名数字 -->
+      <view class="wc-img-placeholder ri-rank">
+        <text class="ri-rank-num">{{index + 1}}</text>
       </view>
-      <view class="item-metrics">
-        <view class="metric"><text class="m-label">规格</text><text class="m-value">{{item.specText}}</text></view>
-        <view class="metric"><text class="m-label">库存</text><text class="m-value">{{item.quantity || 0}} {{item.unit || ''}}</text></view>
-        <view class="metric"><text class="m-label">建议水位</text><text class="m-value">{{item.suggestedSafetyStock || item.safetyStock || 0}}</text></view>
-        <view class="metric"><text class="m-label">近{{days}}天出库</text><text class="m-value">{{item.recentOutQuantity || 0}}</text></view>
-      </view>
-      <view class="item-actions">
-        <view class="action secondary" catchtap="onViewDetailTap" data-item="{{item}}">查看明细</view>
-        <view class="action primary" catchtap="onQuickOrderTap" data-item="{{item}}">快捷下发</view>
+      <!-- 右侧内容 -->
+      <view class="wc-content">
+        <!-- 右上角：充足 / 缺料 状态 -->
+        <view class="wc-op-row">
+          <text class="wc-op-btn {{item.shortage > 0 ? 'ri-btn-warn' : 'ri-btn-ok'}}">
+            {{item.shortage > 0 ? '缺 ' + item.shortage : '充足'}}
+          </text>
+        </view>
+        <text class="wc-title">{{item.materialName || item.materialCode || '物料'}}</text>
+        <text class="wc-subtitle">{{item.materialCode || '-'}} · {{item.materialTypeText || '-'}}</text>
+        <!-- 核心指标 -->
+        <view class="wc-stock">
+          <view class="wc-stock-item">
+            <text class="wc-stock-label">规格</text>
+            <text class="wc-stock-val">{{item.specText || '-'}}</text>
+          </view>
+          <view class="wc-stock-item">
+            <text class="wc-stock-label">库存</text>
+            <text class="wc-stock-val {{item.shortage > 0 ? 'red' : 'green'}}">{{item.quantity || 0}}</text>
+            <text class="wc-stock-unit">{{item.unit || ''}}</text>
+          </view>
+          <view class="wc-stock-item">
+            <text class="wc-stock-label">安全水位</text>
+            <text class="wc-stock-val">{{item.suggestedSafetyStock || item.safetyStock || 0}}</text>
+          </view>
+          <view class="wc-stock-item">
+            <text class="wc-stock-label">近{{days}}天出库</text>
+            <text class="wc-stock-val orange">{{item.recentOutQuantity || 0}}</text>
+          </view>
+        </view>
+        <!-- 操作按钮 -->
+        <view class="wc-actions ri-actions">
+          <view class="wc-op-btn" catchtap="onViewDetailTap" data-item="{{item}}">查看明细</view>
+          <view class="wc-op-btn wc-op-btn-primary" catchtap="onQuickOrderTap" data-item="{{item}}">快捷下发</view>
+        </view>
       </view>
     </view>
   </view>

@@ -34,40 +34,38 @@
     <text class="rank-summary-sub">按下单次数排序 · 数据与PC同步</text>
   </view>
 
-  <view wx:for="{{styles}}" wx:key="id" class="style-card" hover-class="style-card-hover">
-    <view class="card-body">
-      <!-- 排名徽标 -->
-      <view wx:if="{{item.rank && !keyword}}" class="rank-badge rank-{{item.rank <= 3 ? 'top' : 'normal'}}">{{item.rank}}</view>
-      <!-- 左侧封面图 -->
-      <view class="card-cover-box">
-        <image wx:if="{{item.cover}}" class="card-cover" src="{{item.cover}}" mode="aspectFill" lazy-load />
-        <view wx:else class="card-cover-empty">暂无\n图片</view>
+  <view wx:for="{{styles}}" wx:key="id" class="wc-card od-card" hover-class="od-card-hover">
+    <!-- 排名徽标（绝对定位） -->
+    <view wx:if="{{item.rank && !keyword}}" class="rank-badge rank-{{item.rank <= 3 ? 'top' : 'normal'}}">{{item.rank}}</view>
+    <!-- 封面图 -->
+    <image wx:if="{{item.cover}}" class="wc-img" src="{{item.cover}}" mode="aspectFill" lazy-load />
+    <view wx:else class="wc-img-placeholder">暂无\n图片</view>
+    <!-- 右侧信息 -->
+    <view class="wc-content">
+      <!-- 右上角：下单次数 tag（position:absolute，排在 wc-title 右上方） -->
+      <view class="wc-op-row">
+        <text class="order-tag {{item.orderCount > 0 ? 'order-tag-has' : 'order-tag-none'}}">
+          {{item.orderCount > 0 ? item.orderCount + '次下单' : '未下单'}}
+        </text>
       </view>
-      <!-- 右侧信息 -->
-      <view class="card-info">
-        <view class="card-head">
-          <text class="card-title">{{item.styleNo || '-'}}</text>
-          <text wx:if="{{item.orderCount > 0}}" class="order-tag order-tag-has">{{item.orderCount}}次下单</text>
-          <text wx:else class="order-tag order-tag-none">未下单</text>
-        </view>
-        <text class="card-subtitle">{{item.styleName || '-'}}</text>
-        <view class="card-meta-row">
-          <text class="meta-label">码数</text>
-          <text class="meta-value">{{item.size || '-'}}</text>
-          <text class="meta-sep">｜</text>
-          <text class="meta-label">数量</text>
-          <text class="meta-value meta-value-bold">{{item.displayQty}}</text>
-        </view>
-        <view class="card-meta-row">
-          <text class="meta-label">下单</text>
-          <text class="meta-value">{{item.latestOrderTimeShort || '-'}}</text>
-          <text class="meta-sep">｜</text>
-          <text class="meta-label">下单人</text>
-          <text class="meta-value">{{item.latestOrderCreator || '-'}}</text>
-        </view>
-        <view class="card-actions">
-          <view class="action-btn" hover-class="action-btn-hover" data-index="{{index}}" bindtap="openCreateOrder">下单</view>
-        </view>
+      <text class="wc-title">{{item.styleNo || '-'}}</text>
+      <text class="wc-subtitle">{{item.styleName || '-'}}</text>
+      <view class="card-meta-row">
+        <text class="meta-label">码数</text>
+        <text class="meta-value">{{item.size || '-'}}</text>
+        <text class="meta-sep">｜</text>
+        <text class="meta-label">数量</text>
+        <text class="meta-value meta-value-bold">{{item.displayQty}}</text>
+      </view>
+      <view class="card-meta-row">
+        <text class="meta-label">下单</text>
+        <text class="meta-value">{{item.latestOrderTimeShort || '-'}}</text>
+        <text class="meta-sep">｜</text>
+        <text class="meta-label">下单人</text>
+        <text class="meta-value">{{item.latestOrderCreator || '-'}}</text>
+      </view>
+      <view class="wc-actions">
+        <view class="wc-action-link" hover-class="od-action-hover" data-index="{{index}}" bindtap="openCreateOrder">下单</view>
       </view>
     </view>
   </view>
