@@ -1467,37 +1467,3 @@ body {
   flex-shrink: 0;
   animation: stagnant-dot-blink 1.8s ease-in-out infinite;
 }
-
-/* ================================================================
-   AI 对话浮层（AiChatWidget）
-   ================================================================ */
-@keyframes ai-widget-bounce-in {
-  0%   { transform: scale(0.4) translateY(20px); opacity: 0; }
-  70%  { transform: scale(1.05) translateY(-4px); }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-.ai-chat-fab {
-  position: fixed;
-  right: 24px;
-  bottom: 32px;
-  z-index: 1050;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1677ff 0%, #722ed1 100%);
-  box-shadow: 0 4px 18px rgba(22, 119, 255, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 22px;
-  color: #fff;
-  border: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: ai-widget-bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-.ai-chat-fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 24px rgba(22, 119, 255, 0.55);
-}
-.ai-chat-fab:active { transform: scale(0.95); }
