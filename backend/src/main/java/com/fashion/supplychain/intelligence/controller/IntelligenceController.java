@@ -267,7 +267,9 @@ public class IntelligenceController {
         NlQueryRequest req = new NlQueryRequest();
         req.setQuestion(question);
         NlQueryResponse nlResp = nlQueryOrchestrator.query(req);
-        if (nlResp != null && nlResp.getAnswer() != null && !nlResp.getAnswer().contains("暂不支持")) {
+        // confidence >= 70：本地规则命中了具体意图，直接返回（快速、免费）
+        // confidence < 70（fallback=40）：没命中关键词，转给 DeepSeek 做深度分析
+        if (nlResp != null && nlResp.getAnswer() != null && nlResp.getConfidence() >= 70) {
             return Result.success(java.util.Map.of("answer", nlResp.getAnswer(), "source", "local"));
         }
         // 规则引擎无法回答 → 调用 AI

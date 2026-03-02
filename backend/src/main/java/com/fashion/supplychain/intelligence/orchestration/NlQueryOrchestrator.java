@@ -171,8 +171,12 @@ public class NlQueryOrchestrator {
             return handleSummaryQuery(tenantId);
         }
 
-        // ── 智能兜底：不说"不理解"，给出系统全景概要 ──
-        return handleSummaryQuery(tenantId);
+        // ── 智能兜底：没命中任何关键词 → 给全景概要，但 confidence=40 标记「本地不确定」
+        // Controller 检测到低置信度时会转发给 DeepSeek 做深度分析
+        NlQueryResponse fallback = handleSummaryQuery(tenantId);
+        fallback.setConfidence(40);
+        fallback.setIntent("fallback");
+        return fallback;
     }
 
     // ── 订单查询 ──
