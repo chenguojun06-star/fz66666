@@ -10,6 +10,7 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isOrderFrozenByStatus } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
+import { stageAliasMap } from '@/utils/productionStage';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
 import { usePredictFinishHint } from './usePredictFinishHint';
@@ -22,17 +23,14 @@ import {
   defaultNodes,
 } from '../utils';
 
-// 节点名称 → 节点类型映射（兜底）；优先用模板中的 progressStage 父分类字段
-const NODE_TYPE_MAP: Record<string, string> = {
-  '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
-  '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
-  '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing', '整件': 'sewing',
-  '整烫': 'ironing', '熨烫': 'ironing', '大烫': 'ironing',
-  '质检': 'quality', '检验': 'quality', '品检': 'quality', '验货': 'quality',
-  '包装': 'packaging', '后整': 'packaging', '打包': 'packaging', '装箱': 'packaging',
-  '二次工艺': 'secondaryProcess', '绣花': 'secondaryProcess', '印花': 'secondaryProcess',
-  '入库': 'warehousing', '仓库': 'warehousing',
-};
+// 节点名称 → 节点类型映射（从 stageAliasMap 自动派生，禁止手动维护关键词）
+// 修改关键词请直接修改 frontend/src/utils/productionStage.ts
+// stageAliasMap.warehousing 已含「质检入库」→ warehousing，无需重复处理
+const NODE_TYPE_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(stageAliasMap).flatMap(([nodeType, keywords]) =>
+    keywords.map(kw => [kw, nodeType])
+  )
+);
 
 /** 格式化完成时间为 MM-DD HH:mm */
 const formatCompletionTime = (timeStr: string): string => {

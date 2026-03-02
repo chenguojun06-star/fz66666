@@ -5,6 +5,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
 import { productionScanApi } from '@/services/production/productionApi';
+import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 
 interface ProcessTrackingRecord {
   id: string;
@@ -75,21 +76,16 @@ function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string): b
  * 工序类型 → 关键词映射
  * 用于通过 processName 匹配工序记录是否属于某个阶段
  */
+/**
+ * 统一工序关键词表（从 productionStage.ts 派生，禁止在此处内联关键词数组）
+ * 修改关键词请直接修改 frontend/src/utils/productionStage.ts
+ */
 const STAGE_KEYWORDS: Record<string, string[]> = {
-  // NodeType (来自进度球)
-  procurement: ['采购', '物料', '备料'],
-  cutting: ['裁剪', '裁床', '开裁', '剪裁'],
-  // 注：「整件」在服装行业是将裁片缝合成成衣的缝制工序，等同于车缝
-  sewing: ['车缝', '缝制', '缝纫', '车工', '整件'],
-  ironing: ['整烫', '熨烫', '大烫'],
-  quality: ['质检', '检验', '品检', '验货'],
-  packaging: ['包装', '后整', '打包', '装箱'],
-  secondaryProcess: ['二次工艺', '绣花', '印花', '二次'],
-  warehousing: ['入库', '仓库', '质检入库'],
-  // ProcessType (来自列表页)
-  // 注：「整件」在服装行业是将裁片缝合成成衣的缝制工序，等同于车缝
-  carSewing: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'],
-  tailProcess: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包', '装箱'],
+  // NodeType (来自进度球) — 与 stageAliasMap 完全同步
+  ...stageAliasMap,
+  // ProcessType (来自列表页) — carSewing/tailProcess 为组合型阶段
+  carSewing: carSewingKeywords,
+  tailProcess: tailProcessKeywords,
 };
 
 /**

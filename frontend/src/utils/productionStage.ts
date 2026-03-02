@@ -1,13 +1,30 @@
 export const stageAliasMap: Record<string, string[]> = {
-  procurement: ['采购'],
+  procurement: ['采购', '物料', '备料'],
   cutting: ['裁剪', '裁床', '剪裁', '开裁'],
   sewing: ['车缝', '缝制', '缝纫', '车工', '整件'],
   ironing: ['整烫', '熨烫', '大烫'],
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
-  secondaryProcess: ['二次工艺', '绣花', '印花'],
-  warehousing: ['入库', '质检入库'],
+  secondaryProcess: ['二次工艺', '绣花', '印花', '二次'],
+  warehousing: ['入库', '仓库', '质检入库'],
 };
+
+/**
+ * carSewing 工序关键词（含宽泛别名「生产」，用于列表页/详情页工序分类匹配）
+ * sewing 与 carSewing 区别：sewing=进度球节点匹配（精确），carSewing=列表页工序分类（含「生产」宽泛匹配）
+ */
+export const carSewingKeywords: string[] = [...stageAliasMap.sewing, '生产'];
+
+/**
+ * 尾部工序关键词集合（整烫/包装/质检/后整等大尾工序合集）
+ * 派生自 ironing + quality + packaging 子集，额外补「尾部」「剪线」
+ */
+export const tailProcessKeywords: string[] = [
+  '尾部', '剪线',
+  ...stageAliasMap.ironing,
+  ...stageAliasMap.quality,
+  ...stageAliasMap.packaging,
+];
 
 /**
  * 规范化阶段名（解决"质检入库"同时匹配质检和入库的歧义问题）
