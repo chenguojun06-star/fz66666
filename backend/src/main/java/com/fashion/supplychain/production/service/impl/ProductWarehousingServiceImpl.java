@@ -133,9 +133,15 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String repairRemark = helper.trimToNull(productWarehousing.getRepairRemark());
 
         if (!skipRangeCheck) {
-            String msg = helper.warehousingQuantityRuleViolationMessage(order.getId(), warehousingQty, null);
-            if (StringUtils.hasText(msg)) {
-                throw new IllegalStateException(msg);
+            // 返修重检入库（repairRemark + qualified）不受订单总量上限约束：
+            // 这不是新增入库，而是对已入库次品的重新质检，后续 repair breakdown 校验会限制数量
+            boolean isRepairReQc = StringUtils.hasText(repairRemark)
+                    && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus);
+            if (!isRepairReQc) {
+                String msg = helper.warehousingQuantityRuleViolationMessage(order.getId(), warehousingQty, null);
+                if (StringUtils.hasText(msg)) {
+                    throw new IllegalStateException(msg);
+                }
             }
         }
 
