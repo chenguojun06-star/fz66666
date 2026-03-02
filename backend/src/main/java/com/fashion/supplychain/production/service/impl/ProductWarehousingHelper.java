@@ -396,6 +396,10 @@ public class ProductWarehousingHelper {
             if (q <= 0) {
                 continue;
             }
+            // 返修记录（有 repairRemark）不视为重复入库，支持多次分批返修入库
+            if (trimToNull(w.getRepairRemark()) != null) {
+                continue;
+            }
             String qs = w.getQualityStatus() == null ? "" : w.getQualityStatus().trim();
             if (!StringUtils.hasText(qs) || STATUS_QUALIFIED.equalsIgnoreCase(qs)) {
                 throw new IllegalStateException("该菲号已合格入库，不能重复入库");
@@ -460,7 +464,9 @@ public class ProductWarehousingHelper {
             nextBundleStatus = STATUS_UNQUALIFIED;
         } else if (STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus) && blocked
                 && StringUtils.hasText(repairRemark)) {
-            nextBundleStatus = STATUS_REPAIRED;
+            // 支持分批返修：还有剩余待返修数量时维持 unqualified，全部归零后才转 repaired
+            int remaining = remainingRepairQuantityByBundle(bundle.getProductionOrderId(), bundle.getId(), null);
+            nextBundleStatus = remaining > 0 ? STATUS_UNQUALIFIED : STATUS_REPAIRED;
         } else {
             nextBundleStatus = STATUS_QUALIFIED;
         }
