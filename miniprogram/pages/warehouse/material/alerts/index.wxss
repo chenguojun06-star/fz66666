@@ -99,7 +99,18 @@
   line-height: 40rpx;
 }
 
-/* 充足 / 缺料 状态按钮 */
+/* 充足 / 缺料 状态按钮 — 外圈与字体等大，居中 */
+.ri-btn-ok,
+.ri-btn-warn {
+  padding: 2rpx 10rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+  border-radius: 20rpx;
+  line-height: 32rpx;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .ri-btn-ok {
   background: rgba(209, 250, 229, 0.9);
   color: #059669;
