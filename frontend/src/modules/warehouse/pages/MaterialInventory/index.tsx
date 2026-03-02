@@ -620,7 +620,15 @@ const _MaterialInventory: React.FC = () => {
       </div>
     </body></html>`;
     const w = window.open('', '_blank', 'width=900,height=700');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 600); }
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => {
+        w.focus();
+        w.print();
+        w.addEventListener('afterprint', () => w.close());
+      }, 600);
+    }
   };
 
   const handleGenerateRollLabels = async () => {
