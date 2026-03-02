@@ -562,10 +562,10 @@ const InspectionDetail: React.FC = () => {
             </div>
           ) : (
             <ResizableTable<BatchSelectBundleRow>
-              storageKey="inspection-batch-select"
+              storageKey="inspection-batch-select-v2"
               size="small" rowKey="qr" pagination={false}
               dataSource={batchSelectRows}
-              scroll={{ y: 360 }}
+              scroll={{ x: 820, y: 360 }}
               rowSelection={{
                 selectedRowKeys: batchSelectedBundleQrs,
                 onChange: (keys, rows) => handleBatchSelectionChange(keys, rows as BatchSelectBundleRow[]),
