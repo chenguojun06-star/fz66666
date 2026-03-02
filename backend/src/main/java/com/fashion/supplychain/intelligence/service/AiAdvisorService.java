@@ -11,6 +11,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AI 顾问服务 — 统一的 AI API 接入层
@@ -40,14 +43,55 @@ public class AiAdvisorService {
     @Value("${ai.deepseek.model:deepseek-chat}")
     private String model;
 
+    /** 每个租户每天最多允许调用 DeepSeek 的次数（0 = 不限制） */
+    @Value("${ai.deepseek.daily-quota-per-tenant:50}")
+    private int dailyQuotaPerTenant;
+
     private static final int TIMEOUT_SECONDS = 30;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * 每租户每日调用计数器
+     * key = "tenantId_yyyyMMdd"，value = 当日已调用次数
+     * 不同日期的 key 自动过期（不再被读写），内存占用可忽略不计
+     */
+    private final ConcurrentHashMap<String, AtomicInteger> dailyCounters = new ConcurrentHashMap<>();
 
     /**
      * 是否已启用 AI（有 API Key）
      */
     public boolean isEnabled() {
         return apiKey != null && !apiKey.isBlank();
+    }
+
+    /**
+     * 检查当前租户今日配额是否已用完
+     *
+     * @param tenantId 租户ID（null 视为系统内部调用，不限制）
+     * @return true = 配额充足可以调用；false = 今日配额已用完
+     */
+    public boolean checkAndConsumeQuota(Long tenantId) {
+        if (dailyQuotaPerTenant <= 0 || tenantId == null) return true;   // 0=不限
+        String key = tenantId + "_" + LocalDate.now();
+        AtomicInteger count = dailyCounters.computeIfAbsent(key, k -> new AtomicInteger(0));
+        int used = count.incrementAndGet();
+        if (used > dailyQuotaPerTenant) {
+            count.decrementAndGet();   // 回滚，不消耗
+            log.warn("[AiAdvisor] 租户 {} 今日AI调用已达配额上限 {}", tenantId, dailyQuotaPerTenant);
+            return false;
+        }
+        log.debug("[AiAdvisor] 租户 {} 今日AI调用 {}/{}", tenantId, used, dailyQuotaPerTenant);
+        return true;
+    }
+
+    /**
+     * 查询当前租户今日已用配额
+     */
+    public int getTodayUsage(Long tenantId) {
+        if (tenantId == null) return 0;
+        String key = tenantId + "_" + LocalDate.now();
+        AtomicInteger count = dailyCounters.get(key);
+        return count == null ? 0 : count.get();
     }
 
     /**

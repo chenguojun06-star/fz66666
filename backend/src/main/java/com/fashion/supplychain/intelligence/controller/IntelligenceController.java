@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -279,7 +280,19 @@ public class IntelligenceController {
                     "source", "none"
             ));
         }
-        // 构建全系统上下文，让 AI 知道活生订单/健康指数/面料缺口/逐期情况
+        // 每租户每日配额检查（默认50次/天，防止被滥用或产生意外费用）
+        Long tenantId = UserContext.tenantId();
+        if (!aiAdvisorService.checkAndConsumeQuota(tenantId)) {
+            int used = aiAdvisorService.getTodayUsage(tenantId);
+            return Result.success(java.util.Map.of(
+                    "answer", String.format(
+                            "今日 AI 深度分析次数已达上限（已用 %d 次）。\n" +
+                            "数据查询类问题（产量、逾期、工厂排名等）不受此限制，请直接提问。\n" +
+                            "如需提升配额请联系管理员。", used),
+                    "source", "none"
+            ));
+        }
+        // 构建全系统上下文，让 AI 知道活生订单/健康指数/面料缺口/逾期情况
         String systemPrompt = aiContextBuilderService.buildSystemPrompt();
         String aiAnswer = aiAdvisorService.chat(systemPrompt, question);
         return Result.success(java.util.Map.of(
