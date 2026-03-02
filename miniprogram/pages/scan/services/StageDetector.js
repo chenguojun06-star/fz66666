@@ -502,6 +502,8 @@ class StageDetector {
 
         hasAnyRecord = true;
         const pageQty = records.reduce((sum, item) => {
+          // 排除质检产生的待返修记录（warehousingType=quality_scan），只统计真实入库操作
+          if (item && item.warehousingType === 'quality_scan') return sum;
           const qualified = Number(item && item.qualifiedQuantity);
           if (!Number.isNaN(qualified) && qualified > 0) {
             return sum + qualified;
