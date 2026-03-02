@@ -6,13 +6,16 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import java.util.LinkedHashMap;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +51,9 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -921,6 +927,93 @@ public class ProductionProcessTrackingOrchestrator {
         log.warn("批量刷新完成 - 总: {}, 更新: {}, 跳过: {}, 失败: {}",
                 total, updatedCount, skipCount, errorCount);
 
+        return summary;
+    }
+
+    /**
+     * 补齐历史漏更新的入库工序跟踪记录
+     * 场景：commit 7b0d8817 之前已入库的菲号，t_production_process_tracking 未同步更新为 scanned
+     * 操作：遍历有效入库记录 → 找到对应 tracking pending 行 → 置为 scanned
+     *
+     * @param orderId 生产订单ID
+     * @return repaired/skipped/total 汇总
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> repairWarehousingTracking(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        String oid = orderId.trim();
+
+        List<ProductWarehousing> warehousingList = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getOrderId, oid)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getQualityStatus, "qualified")
+                .list();
+
+        int repaired = 0;
+        int skipped = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+
+        for (ProductWarehousing w : warehousingList) {
+            String bundleId = StringUtils.hasText(w.getCuttingBundleId()) ? w.getCuttingBundleId().trim() : null;
+            if (!StringUtils.hasText(bundleId)) {
+                skipped++;
+                continue;
+            }
+
+            // 优先按 processName 精确匹配「入库」跟踪记录
+            ProductionProcessTracking tracking = trackingService.getByBundleAndProcessName(bundleId, "入库");
+            // fallback：按 processCode 匹配（scan_type=warehouse_manual 时生成的tracking）
+            if (tracking == null) {
+                tracking = trackingService.getByBundleAndProcess(bundleId, "warehouse_manual");
+            }
+
+            if (tracking == null || !"pending".equals(tracking.getScanStatus())) {
+                // tracking 不存在或已经是 scanned，跳过
+                skipped++;
+                continue;
+            }
+
+            // 补填扫码状态与操作人信息
+            tracking.setScanStatus("scanned");
+            tracking.setScanTime(w.getCreateTime() != null ? w.getCreateTime() : LocalDateTime.now());
+            if (StringUtils.hasText(w.getWarehousingOperatorId())) {
+                tracking.setOperatorId(w.getWarehousingOperatorId());
+                tracking.setOperatorName(w.getWarehousingOperatorName());
+            } else if (StringUtils.hasText(w.getReceiverId())) {
+                tracking.setOperatorId(w.getReceiverId());
+                tracking.setOperatorName(w.getReceiverName());
+            }
+
+            // 结算金额：有单价且数量 > 0 时自动计算
+            if (tracking.getUnitPrice() != null
+                    && tracking.getQuantity() != null
+                    && tracking.getUnitPrice().compareTo(BigDecimal.ZERO) > 0
+                    && tracking.getQuantity() > 0) {
+                tracking.setSettlementAmount(
+                        tracking.getUnitPrice().multiply(new BigDecimal(tracking.getQuantity())));
+            }
+
+            trackingService.updateById(tracking);
+            repaired++;
+
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("bundleId", bundleId);
+            detail.put("trackingId", tracking.getId());
+            detail.put("operatorName", tracking.getOperatorName());
+            details.add(detail);
+            log.info("[RepairTracking] 修复入库跟踪: bundleId={}, trackingId={}, operator={}",
+                    bundleId, tracking.getId(), tracking.getOperatorName());
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("repaired", repaired);
+        summary.put("skipped", skipped);
+        summary.put("total", warehousingList.size());
+        summary.put("details", details);
+        log.info("[RepairTracking] 订单 {} 修复完成 repaired={} skipped={} total={}",
+                oid, repaired, skipped, warehousingList.size());
         return summary;
     }
 }

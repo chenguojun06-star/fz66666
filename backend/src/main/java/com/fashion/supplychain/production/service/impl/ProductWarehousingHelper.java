@@ -122,7 +122,7 @@ public class ProductWarehousingHelper {
      *   <li>awaitingReQc  = repairReturnQty - reQcDoneQty（已返回待质检重检）</li>
      * </ul>
      */
-    int[] calcRepairBreakdown(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+    public int[] calcRepairBreakdown(String orderId, String cuttingBundleId, String excludeWarehousingId) {
         // returns [repairPool, repairReturnQty, reQcDoneQty]  – all ≥ 0
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         String bid = StringUtils.hasText(cuttingBundleId) ? cuttingBundleId.trim() : null;
@@ -153,11 +153,15 @@ public class ProductWarehousingHelper {
         if (list != null) {
             for (ProductWarehousing w : list) {
                 if (w == null) continue;
+                String wType = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+
+                // ★ 报废记录（quality_scan_scrap）不计入返修池
+                if ("quality_scan_scrap".equalsIgnoreCase(wType)) continue;
+
                 int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
                 if (uq > 0) repairPool += uq;
 
-                boolean isRepairReturn = WAREHOUSING_TYPE_REPAIR_RETURN.equalsIgnoreCase(
-                        w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
+                boolean isRepairReturn = WAREHOUSING_TYPE_REPAIR_RETURN.equalsIgnoreCase(wType);
                 int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
                 if (q > 0) {
                     if (isRepairReturn) {
@@ -191,6 +195,32 @@ public class ProductWarehousingHelper {
         int[] bd = calcRepairBreakdown(orderId, cuttingBundleId, excludeWarehousingId);
         // awaitingRepair = repairPool - repairReturnQty - reQcDoneQty
         return Math.max(0, bd[0] - bd[1] - bd[2]);
+    }
+
+    /**
+     * 查询该菲号的报废数量（quality_scan_scrap 记录的 unqualifiedQuantity 之和）。
+     * 报废数量不计入返修池，用于计算菲号可入库有效容量。
+     */
+    public int getScrapQtyByBundle(String orderId, String cuttingBundleId) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(cuttingBundleId)) {
+            return 0;
+        }
+        try {
+            List<ProductWarehousing> list = productWarehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .select(ProductWarehousing::getUnqualifiedQuantity)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(ProductWarehousing::getOrderId, orderId.trim())
+                            .eq(ProductWarehousing::getCuttingBundleId, cuttingBundleId.trim())
+                            .eq(ProductWarehousing::getWarehousingType, "quality_scan_scrap"));
+            if (list == null) return 0;
+            return list.stream()
+                    .mapToInt(w -> w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity())
+                    .sum();
+        } catch (Exception e) {
+            log.warn("查询菲号报废数量失败: orderId={}, bundleId={}", orderId, cuttingBundleId, e);
+            return 0;
+        }
     }
 
     void ensureRepairQuantityNotExceeded(String orderId, String cuttingBundleId, int requestWarehousingQty,

@@ -151,7 +151,12 @@ public class WarehouseScanExecutor {
         } else {
             // 正常入库：检查是否有次品待返修阻止
             if (warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus())) {
-                throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
+                // ★ 如果所有次品都是报废（无返修池），不阻止入库，合格品可直接入库
+                int repairPool = warehousingHelper.calcRepairBreakdown(order.getId(), bundle.getId(), null)[0];
+                if (repairPool > 0) {
+                    throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
+                }
+                // repairPool == 0 → 仅有报废记录，不阻止
             }
             // ★ 验证单个菲号累计入库数量不超过菲号裁剪数量
             validateBundleWarehousingQuantity(bundle, qty);
@@ -282,6 +287,11 @@ public class WarehouseScanExecutor {
 
         int bundleQty = bundle.getQuantity();
 
+        // ★ 减去报废数量：报废的件数不可入库，从有效容量中扣除
+        int scrapQty = warehousingHelper.getScrapQtyByBundle(
+                bundle.getProductionOrderId(), bundle.getId());
+        int effectiveBundleQty = bundleQty - scrapQty;
+
         int bundleWarehoused;
         try {
             bundleWarehoused = productWarehousingService.list(
@@ -300,17 +310,19 @@ public class WarehouseScanExecutor {
 
         int totalAfterScan = bundleWarehoused + incomingQty;
 
-        if (totalAfterScan > bundleQty) {
+        if (totalAfterScan > effectiveBundleQty) {
             String msg = String.format(
-                    "菲号入库数量超出限制！菲号裁剪数=%d，已入库=%d，本次入库=%d，总计=%d",
-                    bundleQty, bundleWarehoused, incomingQty, totalAfterScan);
+                    "菲号入库数量超出限制！菲号裁剪数=%d%s，已入库=%d，本次入库=%d，总计=%d",
+                    bundleQty,
+                    scrapQty > 0 ? "（报废" + scrapQty + "件，可入库" + effectiveBundleQty + "件）" : "",
+                    bundleWarehoused, incomingQty, totalAfterScan);
             log.warn("单菲号数量验证失败: bundleId={}, bundleNo={}, {}",
                     bundle.getId(), bundle.getBundleNo(), msg);
             throw new IllegalArgumentException(msg);
         }
 
-        log.debug("单菲号数量验证通过: bundleId={}, bundleNo={}, 裁剪数={}, 已入库={}, 本次={}",
-                bundle.getId(), bundle.getBundleNo(), bundleQty, bundleWarehoused, incomingQty);
+        log.debug("单菲号数量验证通过: bundleId={}, bundleNo={}, 裁剪数={}, 报废={}, 有效={}, 已入库={}, 本次={}",
+                bundle.getId(), bundle.getBundleNo(), bundleQty, scrapQty, effectiveBundleQty, bundleWarehoused, incomingQty);
     }
 
     /**

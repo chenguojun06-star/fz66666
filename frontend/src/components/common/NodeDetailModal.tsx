@@ -198,6 +198,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 工序跟踪（工资结算）数据
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [repairLoading, setRepairLoading] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
 
   const addLoadWarning = useCallback((warning: string) => {
@@ -397,6 +398,27 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     loadProcessTrackingData();
     onSaved?.();
   }, [loadScanRecords, loadBundles, loadProcessTrackingData, onSaved]);
+
+  // 修复历史入库漏更新的跟踪记录
+  const handleRepairTracking = useCallback(async () => {
+    if (!orderId) return;
+    setRepairLoading(true);
+    try {
+      const res = await api.post(`/production/process-tracking/${orderId}/repair-warehousing`);
+      const data = (res as any)?.data || {};
+      const repaired = data.repaired ?? 0;
+      if (repaired > 0) {
+        message.success(`同步成功，已修复 ${repaired} 条入库跟踪记录`);
+        loadProcessTrackingData();
+      } else {
+        message.info('没有需要修复的记录，已是最新状态');
+      }
+    } catch (err: any) {
+      message.error(`同步失败: ${err?.message || '未知错误'}`);
+    } finally {
+      setRepairLoading(false);
+    }
+  }, [orderId, loadProcessTrackingData, message]);
 
   // 弹窗打开时加载数据
   useEffect(() => {
@@ -1097,14 +1119,26 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     return pName && (pName === nodeLabel || pName.includes(nodeLabel) || nodeLabel.includes(pName));
                   });
                   return (
-                    <ProcessTrackingTable
-                      records={processTrackingRecords}
-                      loading={trackingLoading}
-                      nodeType={nodeType}
-                      nodeName={nodeName}
-                      processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}
-                      onUndoSuccess={handleUndoSuccess}
-                    />
+                    <>
+                      <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                        <Button
+                          size="small"
+                          loading={repairLoading}
+                          onClick={handleRepairTracking}
+                          title="将已入库但跟踪记录为pending的历史数据补同步"
+                        >
+                          同步入库跟踪
+                        </Button>
+                      </div>
+                      <ProcessTrackingTable
+                        records={processTrackingRecords}
+                        loading={trackingLoading}
+                        nodeType={nodeType}
+                        nodeName={nodeName}
+                        processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}
+                        onUndoSuccess={handleUndoSuccess}
+                      />
+                    </>
                   );
                 })(),
               },

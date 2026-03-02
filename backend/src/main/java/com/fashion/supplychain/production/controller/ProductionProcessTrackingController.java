@@ -66,4 +66,15 @@ public class ProductionProcessTrackingController {
         int count = trackingOrchestrator.initializeProcessTracking(productionOrderId);
         return Result.success(count);
     }
+
+    /**
+     * 修复历史入库漏更新的工序跟踪记录
+     * 将 qualityStatus=qualified 但 tracking.scanStatus=pending 的旧记录补齐为 scanned
+     */
+    @Operation(summary = "修复入库工序跟踪", description = "补齐commit 7b0d8817之前已入库但tracking仍为pending的历史记录")
+    @PostMapping("/{orderId}/repair-warehousing")
+    public Result<Map<String, Object>> repairWarehousingTracking(@PathVariable String orderId) {
+        Map<String, Object> result = trackingOrchestrator.repairWarehousingTracking(orderId);
+        return Result.success(result);
+    }
 }

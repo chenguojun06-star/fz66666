@@ -399,7 +399,8 @@ class StageDetector {
                 };
               }
 
-              if (qualityMeta.isUnqualified && defects > 0) {
+              // ★ 报废不走"次品入库"（报废件数不回流待质检）
+              if (qualityMeta.isUnqualified && defects > 0 && !qualityMeta.isScrap) {
                 return {
                   processName: _warehouseProcess.processName,
                   progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
@@ -497,8 +498,8 @@ class StageDetector {
           };
         }
 
-        // 合格品已入完，剩余全是次品 → 次品入库
-        if (qualityMeta.isUnqualified && defects > 0) {
+        // 合格品已入完，剩余全是次品 → 次品入库（★ 报废不走此路径）
+        if (qualityMeta.isUnqualified && defects > 0 && !qualityMeta.isScrap) {
           return {
             processName: _warehouseProcess.processName,
             progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
@@ -553,14 +554,15 @@ class StageDetector {
    * @private
    * @param {string} orderNo - 订单号
    * @param {string} bundleNo - 菲号
-   * @returns {Promise<boolean>} 是否已入库
+   * @returns {Promise<{isComplete: boolean, warehousedQty: number}>} 入库状态与已入库数量
    */
   async _checkBundleWarehoused(orderNo, bundleNo, expectedQuantity) {
+    const EMPTY = { isComplete: false, warehousedQty: 0 };
     try {
       // 先获取菲号ID
       const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
       if (!bundleInfo || !bundleInfo.id) {
-        return false;
+        return EMPTY;
       }
 
       const fallbackQty = Number(bundleInfo.quantity || 0) || 0;
@@ -588,9 +590,8 @@ class StageDetector {
 
         hasAnyRecord = true;
         const pageQty = records.reduce((sum, item) => {
-          // 排除质检产生的待返修记录（warehousingType=quality_scan），只统计真实入库操作
-          // 排除次品返修申报记录（warehousingType=repair_return），只统计最终合格入库
-          if (item && (item.warehousingType === 'quality_scan' || item.warehousingType === 'repair_return')) return sum;
+          // 排除质检产生的待返修记录（quality_scan）、报废记录（quality_scan_scrap）、次品返修申报（repair_return）
+          if (item && (item.warehousingType === 'quality_scan' || item.warehousingType === 'quality_scan_scrap' || item.warehousingType === 'repair_return')) return sum;
           const qualified = Number(item && item.qualifiedQuantity);
           if (!Number.isNaN(qualified) && qualified > 0) {
             return sum + qualified;
@@ -604,7 +605,7 @@ class StageDetector {
         warehousedQty += pageQty;
 
         if (targetQty > 0 && warehousedQty >= targetQty) {
-          return true;
+          return { isComplete: true, warehousedQty };
         }
 
         if (records.length < pageSize) {
@@ -614,17 +615,17 @@ class StageDetector {
       }
 
       if (!hasAnyRecord) {
-        return false;
+        return EMPTY;
       }
 
-      // 无目标数量时退化为“有记录即已入库”，避免阻塞异常数据
+      // 无目标数量时退化为"有记录即已入库"，避免阻塞异常数据
       if (!(targetQty > 0)) {
-        return warehousedQty > 0;
+        return { isComplete: warehousedQty > 0, warehousedQty };
       }
-      return warehousedQty >= targetQty;
+      return { isComplete: warehousedQty >= targetQty, warehousedQty };
     } catch (e) {
       console.warn('[StageDetector] 检查入库状态失败:', e);
-      return false;
+      return EMPTY;
     }
   }
 
@@ -713,10 +714,25 @@ class StageDetector {
     allConfirmRecs.sort((a, b) => (a.confirmTime || '').localeCompare(b.confirmTime || ''));
     const confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
 
-    const isUnqualified = !!(confirmRec && String(confirmRec.remark || '').startsWith('unqualified'));
+    const remarkStr = confirmRec ? String(confirmRec.remark || '') : '';
+    const isUnqualified = !!(confirmRec && remarkStr.startsWith('unqualified'));
     const defectQty = isUnqualified
-      ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
+      ? _parseDefectQtyFromRemark(remarkStr, confirmRec.quantity)
       : 0;
+
+    // ★ 解析处理方式：remark 格式 "unqualified|category|返修|defectQty=N" 或 "unqualified|category|报废|defectQty=N"
+    let handleMethod = '返修'; // 默认返修
+    if (isUnqualified) {
+      const parts = remarkStr.split('|');
+      for (const part of parts) {
+        if (part === '报废' || part === '返修') {
+          handleMethod = part;
+          break;
+        }
+      }
+    }
+    const isScrap = handleMethod === '报废';
+
     // expectedQty 始终 = 菲号总件数（用于判断是否全部入库完成）
     // 不能用 defectQty，否则 8件入库>=2件次品 → 误判为已全部入库
     const expectedQty = Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0;
@@ -724,7 +740,9 @@ class StageDetector {
     return {
       isUnqualified,
       defectQty,
-      defectRemark: isUnqualified ? String(confirmRec.remark || '') : '',
+      handleMethod,
+      isScrap,
+      defectRemark: isUnqualified ? remarkStr : '',
       expectedQty,
     };
   }
