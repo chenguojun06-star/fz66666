@@ -38,25 +38,35 @@ ALTER TABLE t_product_warehousing
 ALTER TABLE t_product_warehousing
     ADD COLUMN quality_operator_name VARCHAR(128) DEFAULT NULL COMMENT '质检人员姓名';
 
--- 7. 租户ID（Spring Boot AutoFill 自动写入）
+-- 7. 领货人ID（WarehouseScanExecutor + ServiceImpl.saveRepairReturnDeclaration 都会写入非 null 值）
+ALTER TABLE t_product_warehousing
+    ADD COLUMN receiver_id VARCHAR(64) DEFAULT NULL COMMENT '领货人ID';
+
+-- 8. 领货人姓名
+ALTER TABLE t_product_warehousing
+    ADD COLUMN receiver_name VARCHAR(128) DEFAULT NULL COMMENT '领货人姓名';
+
+-- 9. 租户ID（Spring Boot AutoFill 自动写入）
 ALTER TABLE t_product_warehousing
     ADD COLUMN tenant_id BIGINT DEFAULT NULL COMMENT '租户ID';
 
--- 8. 租户ID 索引（可选，若索引已存在忽略）
+-- 10. 租户ID 索引（可选，若索引已存在忽略）
 ALTER TABLE t_product_warehousing
     ADD INDEX idx_warehousing_tenant_id (tenant_id);
 
 -- =====================================================================
--- 验证：执行完毕后，运行以下 SELECT 确认所有列存在
+-- 验证：执行完毕后，运行以下 SELECT 确认所有列存在（期望返回 9 行）
 -- =====================================================================
--- SELECT COLUMN_NAME
--- FROM information_schema.COLUMNS
--- WHERE TABLE_SCHEMA = DATABASE()
---   AND TABLE_NAME = 't_product_warehousing'
---   AND COLUMN_NAME IN (
---     'warehousing_start_time','warehousing_end_time',
---     'warehousing_operator_id','warehousing_operator_name',
---     'quality_operator_id','quality_operator_name',
---     'tenant_id'
---   );
--- 期望返回 7 行
+SELECT COLUMN_NAME
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 't_product_warehousing'
+  AND COLUMN_NAME IN (
+    'warehousing_start_time','warehousing_end_time',
+    'warehousing_operator_id','warehousing_operator_name',
+    'quality_operator_id','quality_operator_name',
+    'receiver_id','receiver_name',
+    'tenant_id'
+  )
+ORDER BY COLUMN_NAME;
+-- 期望返回 9 行

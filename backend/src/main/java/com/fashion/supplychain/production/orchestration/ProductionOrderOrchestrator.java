@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -453,17 +454,21 @@ public class ProductionOrderOrchestrator {
         return result;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // ⚠️ REQUIRES_NEW：这三个方法经常被 try-catch 包围调用。
+    // 若使用默认 REQUIRED，内部失败会把外层事务标记为 rollback-only，
+    // 导致外层提交时抛 UnexpectedRollbackException（HTTP 500）。
+    // 改为 REQUIRES_NEW 后，内部事务独立提交/回滚，不影响外层事务。
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean autoCloseOrderIfEligible(String id) {
         return financeOrchestrationService.autoCloseOrderIfEligible(id);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean ensureFinanceRecordsForOrder(String orderId) {
         return financeOrchestrationService.ensureFinanceRecordsForOrder(orderId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean ensureShipmentReconciliationForOrder(String orderId) {
         return financeOrchestrationService.ensureShipmentReconciliationForOrder(orderId);
     }

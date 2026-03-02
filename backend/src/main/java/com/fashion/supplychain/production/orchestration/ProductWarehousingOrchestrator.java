@@ -817,7 +817,11 @@ public class ProductWarehousingOrchestrator {
                         productWarehousing == null ? null : productWarehousing.getId(),
                         e);
             }
-            productionOrderService.recomputeProgressFromRecords(orderId);
+            try {
+                productionOrderService.recomputeProgressFromRecords(orderId);
+            } catch (Exception ex) {
+                log.warn("save: recomputeProgress失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
+            }
 
             // 已禁用系统自动完成
         }

@@ -163,7 +163,16 @@ public class QualityScanExecutor {
         ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
                                           qty, stageCode, stageName, colorResolver, sizeResolver);
         sr.setReceiveTime(LocalDateTime.now());
-        scanRecordService.saveScanRecord(sr);
+        try {
+            scanRecordService.saveScanRecord(sr);
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("[QualityScan] 质检扫码记录重复（幂等）: bundleId={}, stageCode={}",
+                    bundle.getId(), stageCode);
+            // 幂等：记录已存在，视为此次扫码已成功完成
+        } catch (Exception e) {
+            log.warn("[QualityScan] 扫码记录保存失败（不阻断质检）: bundleId={}, stageCode={}, error={}",
+                    bundle.getId(), stageCode, e.getMessage(), e);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -219,7 +228,16 @@ public class QualityScanExecutor {
             existed.setRemark(qualityResult);
         }
 
-        scanRecordService.updateById(existed);
+        try {
+            scanRecordService.updateById(existed);
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("[QualityScan] 质检确认记录重复（幂等）: bundleId={}, recordId={}",
+                    bundle.getId(), existed.getId());
+            // 幂等处理：记录已存在，继续返回成功
+        } catch (Exception e) {
+            log.warn("[QualityScan] 质检确认记录更新失败（不阻断流程）: bundleId={}, recordId={}, error={}",
+                    bundle.getId(), existed.getId(), e.getMessage(), e);
+        }
 
         // 更新工序跟踪记录：质检验收时将 tracking 表中对应子工序状态置为已扫码
         // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
