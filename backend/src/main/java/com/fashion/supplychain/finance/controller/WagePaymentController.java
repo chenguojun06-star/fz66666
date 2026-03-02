@@ -288,9 +288,17 @@ public class WagePaymentController {
 
         // 内部工厂防重复结算：INTERNAL工厂按人员工资结算，不允许在订单结算中重复创建付款
         if ("ORDER_SETTLEMENT".equals(request.getBizType())) {
-            String factoryId = request.getBizId();
-            if (factoryId != null) {
-                Factory factory = factoryService.getById(factoryId);
+            String bizId = request.getBizId();
+            if (org.springframework.util.StringUtils.hasText(bizId)) {
+                // 优先按ID查（UUID），查不到再按名字查（降级兜底：factoryId为空时bizId=factoryName）
+                Factory factory = factoryService.getById(bizId);
+                if (factory == null) {
+                    factory = factoryService.getOne(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Factory>()
+                            .eq(Factory::getFactoryName, bizId)
+                            .eq(Factory::getDeleteFlag, 0)
+                            .last("limit 1"));
+                }
                 if (factory != null && "INTERNAL".equals(factory.getFactoryType())) {
                     return Result.fail("本厂属于内部工厂，工人工资已通过工资结算模块按人员审核，请勿在订单结算中重复发起付款");
                 }

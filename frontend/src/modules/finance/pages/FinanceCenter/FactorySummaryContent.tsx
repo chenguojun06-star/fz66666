@@ -21,6 +21,8 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 interface FactorySummaryRow {
   factoryId: string;
   factoryName: string;
+  /** 工厂类型: INTERNAL=本厂内部(工资结算), EXTERNAL=外部工厂(订单结算) */
+  factoryType?: string;
   orderCount: number;
   totalOrderQuantity: number;
   totalWarehousedQuantity: number;
@@ -192,11 +194,16 @@ const FactorySummaryContent: React.FC = () => {
       title: '工厂名称',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 180,
-      render: (text: string) => (
+      width: 210,
+      render: (text: string, record: FactorySummaryRow) => (
         <Space>
-          <ShopOutlined style={{ color: 'var(--primary-color)' }} />
+          <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
           <span style={{ fontWeight: 500 }}>{text}</span>
+          {record.factoryType === 'INTERNAL' && (
+            <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
+              <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -302,6 +309,14 @@ const FactorySummaryContent: React.FC = () => {
         const factoryKey = record.factoryId || record.factoryName;
         if (pushedFactoryIds.has(factoryKey)) {
           return <Tag icon={<CheckCircleOutlined />} color="success">已推送</Tag>;
+        }
+        // 内部工厂不允许走订单结算，需通过「工资结算」按人员审核
+        if (record.factoryType === 'INTERNAL') {
+          return (
+            <Tooltip title="内部工厂需到「工资结算」按人员审核，无需在此推送">
+              <Tag color="default">设工资结算</Tag>
+            </Tooltip>
+          );
         }
         const actions: RowAction[] = [
           {

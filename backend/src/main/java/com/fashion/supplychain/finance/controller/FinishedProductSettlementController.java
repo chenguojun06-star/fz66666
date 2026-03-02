@@ -9,6 +9,8 @@ import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementExportService;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.service.FactoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -45,6 +50,7 @@ public class FinishedProductSettlementController {
     private final FinishedProductSettlementService settlementService;
     private final FinishedProductSettlementExportService exportService;
     private final FinishedSettlementApprovalStatusService approvalStatusService;
+    private final FactoryService factoryService;
 
     @Operation(summary = "分页查询成品结算列表")
     @GetMapping("/list")
@@ -287,6 +293,29 @@ public class FinishedProductSettlementController {
             if (StringUtils.isNotBlank(item.getOrderNo())) {
                 orderNos.add(item.getOrderNo());
             }
+        }
+
+        // 批量查询工厂类型：factoryType（INTERNAL=本厂内部/EXTERNAL=外部工厂）
+        Set<String> factoryIds = new HashSet<>();
+        for (Map<String, Object> row : grouped.values()) {
+            String fId = (String) row.get("factoryId");
+            if (StringUtils.isNotBlank(fId)) factoryIds.add(fId);
+        }
+        if (!factoryIds.isEmpty()) {
+            List<Factory> factoryList = factoryService.listByIds(factoryIds);
+            Map<String, String> typeMap = factoryList.stream()
+                    .filter(f -> StringUtils.isNotBlank(f.getId()))
+                    .collect(Collectors.toMap(Factory::getId,
+                            f -> f.getFactoryType() != null ? f.getFactoryType() : "EXTERNAL",
+                            (a, b) -> a));
+            for (Map<String, Object> row : grouped.values()) {
+                String fId = (String) row.get("factoryId");
+                row.put("factoryType", StringUtils.isNotBlank(fId)
+                        ? typeMap.getOrDefault(fId, "EXTERNAL")
+                        : "EXTERNAL");
+            }
+        } else {
+            grouped.values().forEach(row -> row.put("factoryType", "EXTERNAL"));
         }
 
         return Result.success(new ArrayList<>(grouped.values()));
