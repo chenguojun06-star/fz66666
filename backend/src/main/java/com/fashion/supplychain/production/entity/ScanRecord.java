@@ -186,6 +186,14 @@ public class ScanRecord {
     private Integer bedNo;
 
     /**
+     * 下一生产环节是否已有成功扫码（非数据库字段，仅用于API返回）
+     * true = 后续环节已扫码，此记录禁止退回/撤回
+     * cutting→production→quality→warehouse 四阶段链路
+     */
+    @TableField(exist = false)
+    private Boolean hasNextStageScan;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

@@ -25,9 +25,12 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -734,6 +737,8 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime,
                 orderNo, bundleNo, workerName, operatorName);
         enrichBedNo(result.getRecords());
+        // 为每条记录注氨1「下一生产环节是否已扫码」，用于预防展示错误的「退回」按鈕
+        markHasNextStageScan(result.getRecords());
         return result;
     }
 
@@ -842,6 +847,57 @@ public class ScanRecordOrchestrator {
                     tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
         } catch (Exception e) {
             log.error("[resetTracking] 重置失败（不影响主流程）: scanRecordId={}", scanRecordId, e);
+        }
+    }
+
+    /**
+     * 批量标注扫码记录的「下一生产环节是否已扫码」字段 (hasNextStageScan)
+     * 原理：只查这批菲号在后继环节的扫码情况，避免 N+1 查询
+     * cutting→production→quality→warehouse
+     */
+    private void markHasNextStageScan(List<ScanRecord> records) {
+        if (records == null || records.isEmpty()) return;
+
+        // 收集需要检查的 cuttingBundleId（只有有「下一环节」类型的材料才检查）
+        Set<String> bundleIdsToCheck = new HashSet<>();
+        for (ScanRecord r : records) {
+            if (r.getCuttingBundleId() == null) continue;
+            if (!"success".equalsIgnoreCase(r.getScanResult())) continue;
+            if (getNextStageScanType(r.getScanType()) != null) {
+                bundleIdsToCheck.add(r.getCuttingBundleId());
+            }
+        }
+        if (bundleIdsToCheck.isEmpty()) return;
+
+        // 批量查询：这些菲号在 production/quality/warehouse 三类中是否有 success 扫码
+        List<ScanRecord> nextScans = scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                        .in(ScanRecord::getCuttingBundleId, bundleIdsToCheck)
+                        .in(ScanRecord::getScanType, Arrays.asList("production", "quality", "warehouse"))
+                        .eq(ScanRecord::getScanResult, "success")
+                        .select(ScanRecord::getCuttingBundleId, ScanRecord::getScanType));
+
+        // 构建「被阻断的 bundleId:prevScanType」集合
+        // 示例：发现 bundleX 有 quality 成功记录 → bundleX:production 被阻断
+        final Map<String, String> prevStageType = new HashMap<>();
+        prevStageType.put("production", "cutting");
+        prevStageType.put("quality", "production");
+        prevStageType.put("warehouse", "quality");
+
+        Set<String> blockedKeys = new HashSet<>();
+        for (ScanRecord ns : nextScans) {
+            String prev = prevStageType.get(ns.getScanType());
+            if (prev != null && ns.getCuttingBundleId() != null) {
+                blockedKeys.add(ns.getCuttingBundleId() + ":" + prev);
+            }
+        }
+
+        // 标注每条记录
+        for (ScanRecord r : records) {
+            if (r.getCuttingBundleId() != null && r.getScanType() != null) {
+                String key = r.getCuttingBundleId() + ":" + r.getScanType();
+                r.setHasNextStageScan(blockedKeys.contains(key));
+            }
         }
     }
 
