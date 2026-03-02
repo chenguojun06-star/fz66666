@@ -7,6 +7,7 @@ import {
   ShopOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
+import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
@@ -43,6 +44,7 @@ const FactorySummaryContent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FactorySummaryRow[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [pushedFactoryIds, setPushedFactoryIds] = useState<Set<string>>(new Set());
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -82,9 +84,24 @@ const FactorySummaryContent: React.FC = () => {
     }
   }, [form, message]);
 
+  /** 加载已推送到付款中心的工厂ID（防重复推送） */
+  const loadPushedFactories = useCallback(async () => {
+    try {
+      const res: any = await wagePaymentApi.listPendingPayables('ORDER_SETTLEMENT');
+      const payables = res?.data ?? res ?? [];
+      if (Array.isArray(payables)) {
+        const ids = new Set<string>(payables.map((p: { bizId: string }) => p.bizId).filter(Boolean));
+        setPushedFactoryIds(ids);
+      }
+    } catch {
+      // 查询失败不影响主流程
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    loadPushedFactories();
+  }, [fetchData, loadPushedFactories]);
 
   // 汇总统计
   const summary = useMemo(() => {
@@ -115,6 +132,8 @@ const FactorySummaryContent: React.FC = () => {
             orderNos: record.orderNos,
           });
           message.success(`工厂「${record.factoryName}」已推送到付款中心`);
+          // 标记为已推送，隐藏按钮
+          setPushedFactoryIds(prev => new Set([...prev, record.factoryId || record.factoryName]));
           fetchData();
         } catch (e: any) {
           message.error(String((e as Error)?.message || '推送失败'));
@@ -125,9 +144,12 @@ const FactorySummaryContent: React.FC = () => {
 
   // 批量推送到付款中心
   const handleBatchApprove = () => {
-    const selected = data.filter(r => selectedRowKeys.includes(r.factoryName));
+    const selected = data.filter(r =>
+      selectedRowKeys.includes(r.factoryName)
+      && !pushedFactoryIds.has(r.factoryId || r.factoryName)
+    );
     if (selected.length === 0) {
-      message.warning('请先选择要推送的工厂');
+      message.warning('请先选择未推送的工厂');
       return;
     }
 
@@ -141,6 +163,7 @@ const FactorySummaryContent: React.FC = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
+          const newPushedIds: string[] = [];
           for (const record of selected) {
             await api.post('/finance/wage-payment/create-payable', {
               bizType: 'ORDER_SETTLEMENT',
@@ -150,8 +173,10 @@ const FactorySummaryContent: React.FC = () => {
               description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件`,
               orderNos: record.orderNos,
             });
+            newPushedIds.push(record.factoryId || record.factoryName);
           }
           message.success(`${selected.length} 个工厂已推送到付款中心`);
+          setPushedFactoryIds(prev => new Set([...prev, ...newPushedIds]));
           setSelectedRowKeys([]);
           fetchData();
         } catch (e: any) {
@@ -274,6 +299,10 @@ const FactorySummaryContent: React.FC = () => {
       width: 160,
       fixed: 'right',
       render: (_: unknown, record: FactorySummaryRow) => {
+        const factoryKey = record.factoryId || record.factoryName;
+        if (pushedFactoryIds.has(factoryKey)) {
+          return <Tag icon={<CheckCircleOutlined />} color="success">已推送</Tag>;
+        }
         const actions: RowAction[] = [
           {
             key: 'push',

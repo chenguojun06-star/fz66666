@@ -59,6 +59,7 @@ import {
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import PaymentAuditPopover from '@/modules/finance/pages/FinanceCenter/PaymentAuditPopover';
 
 const { RangePicker } = DatePicker;
 
@@ -528,6 +529,11 @@ const PaymentCenterPage: React.FC = () => {
         key: 'bizNo',
         width: 180,
         ellipsis: true,
+        render: (v: string, record: PayableItem) => (
+          <PaymentAuditPopover record={record}>
+            <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9' }}>{v || '-'}</span>
+          </PaymentAuditPopover>
+        ),
       },
       {
         title: '收款方',

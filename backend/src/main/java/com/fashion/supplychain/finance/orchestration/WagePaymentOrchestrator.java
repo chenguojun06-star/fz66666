@@ -513,7 +513,7 @@ public class WagePaymentOrchestrator {
     /**
      * 创建待付款记录（工厂订单结算/工资结算审核后调用）
      * 状态为 pending，等待在付款中心手动支付
-     * 幂等保护：相同 bizType + bizId 只允许一条 pending 记录
+     * 幂等保护：相同 bizType + bizId 只允许一条有效记录（pending/processing/success）
      */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment createPendingPayable(WagePaymentRequest request) {
@@ -523,26 +523,20 @@ public class WagePaymentOrchestrator {
         String bizType = request.getBizType() != null ? request.getBizType() : "ORDER_SETTLEMENT";
         String bizId = request.getBizId();
 
-        // 幂等检查：同一 bizType + bizId 是否已有 pending 记录
+        // 幂等检查：同一 bizType + bizId 是否已有有效记录（pending/processing/success 均视为已存在）
         if (bizId != null) {
-            long existCount = wagePaymentService.count(
+            WagePayment existing = wagePaymentService.getOne(
                 new LambdaQueryWrapper<WagePayment>()
                     .eq(WagePayment::getBizType, bizType)
                     .eq(WagePayment::getBizId, bizId)
-                    .eq(WagePayment::getStatus, "pending")
+                    .notIn(WagePayment::getStatus, "cancelled", "rejected", "failed")
                     .eq(WagePayment::getTenantId, tenantId)
+                    .last("LIMIT 1")
             );
-            if (existCount > 0) {
-                log.info("[付款中心] 已存在待付款记录，跳过重复创建: bizType={}, bizId={}", bizType, bizId);
-                // 返回已有记录
-                return wagePaymentService.getOne(
-                    new LambdaQueryWrapper<WagePayment>()
-                        .eq(WagePayment::getBizType, bizType)
-                        .eq(WagePayment::getBizId, bizId)
-                        .eq(WagePayment::getStatus, "pending")
-                        .eq(WagePayment::getTenantId, tenantId)
-                        .last("LIMIT 1")
-                );
+            if (existing != null) {
+                log.info("[付款中心] 已存在有效付款记录(status={})，跳过重复创建: bizType={}, bizId={}",
+                         existing.getStatus(), bizType, bizId);
+                return existing;
             }
         }
 
