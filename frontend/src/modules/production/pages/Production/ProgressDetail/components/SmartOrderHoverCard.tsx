@@ -43,14 +43,16 @@ function fieldRate(o: ProductionOrder, key: string): number {
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
   const boardStatsByOrder = useProductionBoardStore(s => s.boardStatsByOrder);
-  const processStatsByOrder  = useProductionBoardStore(s => s.processStatsByOrder);
-  const processGroupsByOrder = useProductionBoardStore(s => s.processGroupsByOrder);
-  const processTimesByOrder  = useProductionBoardStore(s => s.processTimesByOrder);
+  const processStatsByOrder      = useProductionBoardStore(s => s.processStatsByOrder);
+  const processGroupsByOrder     = useProductionBoardStore(s => s.processGroupsByOrder);
+  const processTimesByOrder      = useProductionBoardStore(s => s.processTimesByOrder);
+  const processWorkerCountsByOrder = useProductionBoardStore(s => s.processWorkerCountsByOrder);
   const boardStats    = boardStatsByOrder[String(order.id)]  ?? null;
   const boardTimes    = boardTimesByOrder[String(order.id)]  ?? {};
   const processStats  = processStatsByOrder[String(order.id)]  ?? null;
   const processGroups = processGroupsByOrder[String(order.id)] ?? {};
   const processTimes  = processTimesByOrder[String(order.id)]  ?? {};
+  const processWorkers = processWorkerCountsByOrder[String(order.id)] ?? {};
 
   const total       = Number(order.orderQuantity) || 0;
   const isCompleted = order.status === 'completed';
@@ -75,6 +77,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       const pStats  = processStats  as Record<string, number>;
       const pGroups = processGroups as Record<string, string[]>;
       const pTimes  = processTimes  as Record<string, string>;
+      const pWorkerCounts = processWorkers as Record<string, number>;
       // 每个 processName 找到对应的父工序 (stageName)
       const pToStage = (pName: string): string =>
         Object.entries(pGroups).find(([, pNames]) => pNames.includes(pName))?.[0] ?? '';
@@ -82,11 +85,12 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       const items = Object.entries(pStats)
         .filter(([, qty]) => qty > 0)
         .map(([pName, qty]) => ({
-          label:     pName,
-          stageName: pToStage(pName),
+          label:       pName,
+          stageName:   pToStage(pName),
           qty,
-          pct:      total > 0 ? Math.min(100, Math.round(qty / total * 100)) : 0,
-          lastTime: pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD HH:mm') : null,
+          pct:         total > 0 ? Math.min(100, Math.round(qty / total * 100)) : 0,
+          lastTime:    pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD HH:mm') : null,
+          workerCount: pWorkerCounts[pName] ?? 0,
         }));
 
       // 按父工序 STAGE_ORDER 排序，父工序相同时子工序按名字排
@@ -147,9 +151,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         : fromField;
       const rawT = normBoardTimeMap.get(label);
       const lastTime = rawT ? dayjs(rawT).format('MM-DD HH:mm') : null;
-      return { label, stageName: '' as string, qty, pct, lastTime };
+      return { label, stageName: '' as string, qty, pct, lastTime, workerCount: 0 };
     });
-  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes]);
+  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes, processWorkers]);
 
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
@@ -362,9 +366,22 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                       {s.pct}%
                     </span>
                   </div>
-                  {/* 第二行：件数 + 最近扫码时间 + 预计完成日 */}
-                  <div style={{ paddingLeft: 17, fontSize: 10, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {/* 第二行：件数 + 操作人数 + 人均产能 + 最近扫码时间 + 预计完成日 */}
+                  <div style={{ paddingLeft: 17, fontSize: 10, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
+                    {s.workerCount > 0 && (
+                      <span style={{
+                        color: '#1677ff', background: '#e6f4ff',
+                        padding: '0px 5px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+                      }}>
+                        👥 {s.workerCount}人
+                      </span>
+                    )}
+                    {s.workerCount > 0 && speed > 0 && (
+                      <span style={{ color: '#999' }}>
+                        约{(speed / s.workerCount).toFixed(1)}件/人·天
+                      </span>
+                    )}
                     {s.lastTime && <span>最近 {s.lastTime}</span>}
                     {estFinish && <span style={{ color: '#1677ff' }}>预计 {estFinish}</span>}
                   </div>

@@ -31,6 +31,7 @@ interface EnsureBoardStatsArgs {
     stats: Record<string, number>,
     groups: Record<string, string[]>,
     times: Record<string, string>,
+    workerCounts: Record<string, number>,
   ) => void;
 }
 
@@ -228,6 +229,8 @@ export const ensureBoardStatsForOrder = async ({
       const pStats: Record<string, number> = {};
       const pGroups: Record<string, string[]> = {};  // progressStage → processName[]
       const pTimes: Record<string, string> = {};
+      // 每个 processName 对应的操作人 Set（统计 distinct 人数）
+      const pWorkerSets: Record<string, Set<string>> = {};
       for (const r of valid) {
         const pName = String((r as any)?.processName || '').trim();
         if (!pName) continue;
@@ -239,8 +242,19 @@ export const ensureBoardStatsForOrder = async ({
         }
         const t = String((r as any)?.scanTime || (r as any)?.createTime || '').trim();
         if (t && (!pTimes[pName] || t > pTimes[pName])) pTimes[pName] = t;
+        // 统计操作人（distinct operatorId，为空时用 operatorName 兜底）
+        const opId = String((r as any)?.operatorId || (r as any)?.operatorName || '').trim();
+        if (opId) {
+          if (!pWorkerSets[pName]) pWorkerSets[pName] = new Set();
+          pWorkerSets[pName].add(opId);
+        }
       }
-      mergeProcessDataForOrder(oid, pStats, pGroups, pTimes);
+      // Set → 数字
+      const pWorkers: Record<string, number> = {};
+      for (const [pName, idSet] of Object.entries(pWorkerSets)) {
+        pWorkers[pName] = idSet.size;
+      }
+      mergeProcessDataForOrder(oid, pStats, pGroups, pTimes, pWorkers);
     }
   } catch {
     // API 失败时写入 null 标记，2 分钟 TTL 过期后允许重试

@@ -14,6 +14,8 @@ interface ProductionBoardState {
   processGroupsByOrder: Record<string, Record<string, string[]>>;
   /** 子工序最后扫码时间：processName → lastScanTime */
   processTimesByOrder: Record<string, Record<string, string>>;
+  /** 子工序操作人数：processName → distinct operatorId 数量（真实在岗人数） */
+  processWorkerCountsByOrder: Record<string, Record<string, number>>;
   mergeBoardStatsForOrder: (orderId: string, stats: Record<string, number> | null) => void;
   mergeBoardTimesForOrder: (orderId: string, times: Record<string, string>) => void;
   setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
@@ -22,6 +24,7 @@ interface ProductionBoardState {
     stats: Record<string, number>,
     groups: Record<string, string[]>,
     times: Record<string, string>,
+    workerCounts: Record<string, number>,
   ) => void;
   clearAllBoardCache: () => void;
 }
@@ -33,6 +36,7 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
   processStatsByOrder: {},
   processGroupsByOrder: {},
   processTimesByOrder: {},
+  processWorkerCountsByOrder: {},
   mergeBoardStatsForOrder: (orderId, stats) => {
     const oid = String(orderId || '').trim();
     if (!oid) return;
@@ -63,13 +67,14 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
       },
     }));
   },
-  mergeProcessDataForOrder: (orderId, stats, groups, times) => {
+  mergeProcessDataForOrder: (orderId, stats, groups, times, workerCounts) => {
     const oid = String(orderId || '').trim();
     if (!oid) return;
     set((state) => ({
-      processStatsByOrder:  { ...state.processStatsByOrder,  [oid]: stats  },
-      processGroupsByOrder: { ...state.processGroupsByOrder, [oid]: groups },
-      processTimesByOrder:  { ...state.processTimesByOrder,  [oid]: times  },
+      processStatsByOrder:        { ...state.processStatsByOrder,        [oid]: stats        },
+      processGroupsByOrder:       { ...state.processGroupsByOrder,       [oid]: groups       },
+      processTimesByOrder:        { ...state.processTimesByOrder,        [oid]: times        },
+      processWorkerCountsByOrder: { ...state.processWorkerCountsByOrder, [oid]: workerCounts },
     }));
   },
   clearAllBoardCache: () => {
@@ -80,6 +85,7 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
       processStatsByOrder: {},
       processGroupsByOrder: {},
       processTimesByOrder: {},
+      processWorkerCountsByOrder: {},
     });
   },
 }));
