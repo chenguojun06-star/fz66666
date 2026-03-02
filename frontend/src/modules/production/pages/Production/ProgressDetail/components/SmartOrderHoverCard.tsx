@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
+import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
 
 interface Props { order: ProductionOrder; }
 
@@ -235,6 +236,18 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     isCompleted || !firstActive,
   );
 
+  /* 智能进度分析（瓶颈/人员/资源/风险） */
+  const progressInsight = useMemo(() => {
+    if (isCompleted) return null;
+    const snapshots = stages.map(s => ({
+      name: s.label,
+      qty: s.qty,
+      pct: s.pct,
+      lastTime: s.lastTime,
+    }));
+    return analyzeProgress(order, snapshots, boardTimes, speed);
+  }, [order, stages, boardTimes, speed, isCompleted]);
+
   /* ─────── RENDER ─────── */
   return (
     <div style={{ width: 270, fontSize: 12, lineHeight: 1.5 }}>
@@ -390,6 +403,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           <span><b>{stuckNode.node}</b> 已 <b>{stuckNode.days}</b> 天无扫码</span>
         </div>
       )}
+
+      {/* 🤖 智能进度分析 */}
+      {progressInsight && renderProgressInsight(progressInsight)}
 
       {/* 跟单 + 备注 */}
       {(order.merchandiser || (order as any).operationRemark) && (
