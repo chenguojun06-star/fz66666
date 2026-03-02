@@ -660,7 +660,15 @@ public class ProductWarehousingOrchestrator {
                             .map(Map.Entry::getKey)
                             .orElse("");
                     if (StringUtils.hasText(topCategory)) {
-                        tips.add(1, "⚠ 高频次品类别: " + topCategory + " (" + categoryCounts.get(topCategory) + "次)");
+                        // 将英文枚举 key 翻译为中文显示
+                        java.util.Map<String, String> categoryLabels = new java.util.HashMap<>();
+                        categoryLabels.put("appearance_integrity", "外观完整性问题");
+                        categoryLabels.put("size_accuracy", "尺寸精准度问题");
+                        categoryLabels.put("process_compliance", "工艺符合性问题");
+                        categoryLabels.put("functional_effectiveness", "功能有效性问题");
+                        categoryLabels.put("other", "其他问题");
+                        String topCategoryLabel = categoryLabels.getOrDefault(topCategory, topCategory);
+                        tips.add(1, "⚠ 高频次品类别: " + topCategoryLabel + " (" + categoryCounts.get(topCategory) + "次)");
                     }
                 }
             }
