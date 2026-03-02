@@ -122,8 +122,8 @@ export const buildOrdersCsv = (rows: ProductionOrder[]) => {
 export const mainStages = [
   { key: 'procurement', name: '采购', color: '#1e40af', keywords: ['采购', '物料', '备料'] },
   { key: 'cutting', name: '裁剪', color: '#92400e', keywords: ['裁剪', '裁床', '开裁'] },
-  { key: 'carSewing', name: '车缝', color: '#065f46', keywords: ['车缝', '缝制', '缝纫', '车工', '生产'] },
-  { key: 'secondaryProcess', name: '二次工艺', color: '#5b21b6', keywords: ['二次工艺', '二次', '工艺'] },
+  { key: 'carSewing', name: '车缝', color: '#065f46', keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
+  { key: 'secondaryProcess', name: '二次工艺', color: '#5b21b6', keywords: ['二次工艺', '绣花', '印花', '二次'] },
   { key: 'tailProcess', name: '尾部', color: '#9d174d', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
   { key: 'warehousing', name: '入库', color: '#374151', keywords: ['入库', '仓库', '质检入库'] },
 ] as const;

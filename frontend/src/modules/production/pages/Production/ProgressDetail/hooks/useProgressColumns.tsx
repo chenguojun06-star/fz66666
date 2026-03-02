@@ -26,7 +26,7 @@ import {
 const NODE_TYPE_MAP: Record<string, string> = {
   '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
   '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
-  '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing',
+  '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing', '整件': 'sewing',
   '整烫': 'ironing', '熨烫': 'ironing', '大烫': 'ironing',
   '质检': 'quality', '检验': 'quality', '品检': 'quality', '验货': 'quality',
   '包装': 'packaging', '后整': 'packaging', '打包': 'packaging', '装箱': 'packaging',

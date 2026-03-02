@@ -1,7 +1,7 @@
 export const stageAliasMap: Record<string, string[]> = {
   procurement: ['采购'],
   cutting: ['裁剪', '裁床', '剪裁', '开裁'],
-  sewing: ['车缝', '缝制', '缝纫', '车工'],
+  sewing: ['车缝', '缝制', '缝纫', '车工', '整件'],
   ironing: ['整烫', '熨烫', '大烫'],
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
@@ -44,10 +44,13 @@ export const getScanTypeFromNodeKey = (nodeTypeKey?: string) => {
     procurement: 'procurement',
     cutting: 'cutting',
     sewing: 'sewing',
+    carSewing: 'sewing',       // List/utils.ts 使用 carSewing 键名，需对齐
     quality: 'quality',
     ironing: 'pressing',
     packaging: 'packaging',
+    tailProcess: 'packaging',  // 尾部=大尾部工序（整烫/包装/质检）
     warehousing: 'warehousing',
+    secondaryProcess: 'sewing', // 二次工艺归入扫码类型 sewing
   };
   const key = String(nodeTypeKey || '').trim();
   return map[key];
