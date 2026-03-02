@@ -180,6 +180,32 @@ async function loadQualityTasks() {
 }
 
 /**
+ * 加载次品待返修任务（status=unqualified 的菲号）
+ * @returns {Promise<Array>} 返修任务列表
+ */
+async function loadRepairTasks() {
+  try {
+    const res = await api.production.myRepairTasks();
+    const list = Array.isArray(res) ? res : (res && Array.isArray(res.records) ? res.records : []);
+    return list.map(item => ({
+      ...item,
+      id: item.bundleId || item.id,
+      orderNo: item.orderNo || '',
+      styleNo: item.styleNo || '',
+      bundleNo: item.bundleNo || '',
+      qrCode: item.qrCode || '',
+      color: item.color || '',
+      size: item.size || '',
+      defectQty: Number(item.defectQty) || 0,
+      defectCategory: item.defectCategory || '',
+    }));
+  } catch (err) {
+    console.error('[loadRepairTasks] 加载失败:', err);
+    return [];
+  }
+}
+
+/**
  * 加载超时提醒（从本地 reminderManager）
  * @returns {Array} 超时提醒列表
  */
@@ -274,10 +300,11 @@ async function loadAllTasks(ctx) {
     const canManageRegistrations = checkCanManageRegistrations();
     ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
 
-    const [cutting, procurement, quality, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
+    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
       loadCuttingTasks(),
       loadProcurementTasks(),
       loadQualityTasks(),
+      loadRepairTasks(),         // 次品待返修
       loadTimeoutReminders(),
       isAdmin ? loadPendingUsers() : Promise.resolve([]),
       canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
@@ -294,21 +321,23 @@ async function loadAllTasks(ctx) {
       cutting.length +
       procurement.length +
       quality.length +
+      repair.length +
       timeouts.length +
       pending.length +
       tenantRegistrations.length +
-      overdueOrders.length; // 添加延期订单数量
+      overdueOrders.length;
 
     ctx.setData({
       urgentEvents,
       cuttingTasks: cutting,
       procurementTasks: procurement,
       qualityTasks: quality,
+      repairTasks: repair,       // 次品待返修列表
       timeoutReminders: timeouts,
       pendingUsers: pending,
       pendingRegistrations: tenantRegistrations,
-      overdueOrders, // 延期订单列表
-      overdueSummary, // 延期订单统计
+      overdueOrders,
+      overdueSummary,
       totalCount,
       hasAnyTask: totalCount > 0,
       loading: false,
@@ -327,6 +356,7 @@ module.exports = {
   loadCuttingTasks,
   loadProcurementTasks,
   loadQualityTasks,
+  loadRepairTasks,
   loadTimeoutReminders,
   loadPendingUsers,
   loadTenantPendingRegistrations,

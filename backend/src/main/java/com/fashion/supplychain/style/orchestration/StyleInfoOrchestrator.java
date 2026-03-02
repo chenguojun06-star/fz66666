@@ -541,6 +541,8 @@ public class StyleInfoOrchestrator {
                 return today.minusDays(today.getDayOfWeek().getValue() - 1).atStartOfDay();
             case "month":
                 return today.withDayOfMonth(1).atStartOfDay();
+            case "year":
+                return today.withDayOfYear(1).atStartOfDay();
             default:
                 return today.atStartOfDay();
         }

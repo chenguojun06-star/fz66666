@@ -31,6 +31,7 @@ Component({
     cuttingTasks: [], // 裁剪任务
     procurementTasks: [], // 采购任务
     qualityTasks: [], // 质检待处理任务
+    repairTasks: [], // 次品待返修任务
     timeoutReminders: [], // 超时提醒
     pendingUsers: [], // 待审批用户（管理员）
     pendingRegistrations: [], // 待审批员工注册（租户主账号）

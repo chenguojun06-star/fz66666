@@ -63,6 +63,27 @@ function handleQualityTask(task) {
 }
 
 /**
+ * 处理次品返修任务 - 提示工人修好后去扫码页扫码申报
+ * @param {Object} task - 任务对象
+ * @returns {void}
+ */
+function handleRepairTask(task) {
+  const orderNo = task.orderNo || '';
+  const bundleNo = task.bundleNo ? String(task.bundleNo) : '';
+  const hint = bundleNo ? `订单${orderNo} 菲号${bundleNo}修好后请扫码申报` : `订单${orderNo} 次品修好后请扫码申报`;
+  try {
+    wx.setStorageSync('pending_repair_task', JSON.stringify(task));
+    wx.setStorageSync('pending_order_hint', orderNo);
+  } catch (e) {
+    console.error('存储失败', e);
+  }
+  wx.showToast({ title: hint, icon: 'none', duration: 2500 });
+  setTimeout(() => {
+    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
+  }, 800);
+}
+
+/**
  * 处理审批任务 - 跳转审批页面
  * @param {Object} _task - 任务对象（保留用于未来扩展）
  * @returns {void} 无返回值
@@ -255,6 +276,9 @@ function onTaskClick(ctx, e) {
     case 'overdue':
       handleOverdueOrder(task);
       break;
+    case 'repair':
+      handleRepairTask(task);
+      break;
     default:
       break;
   }
@@ -264,6 +288,7 @@ module.exports = {
   handleCuttingTask,
   handleProcurementTask,
   handleQualityTask,
+  handleRepairTask,
   handleApprovalTask,
   onApproveUser,
   onApproveRegistration,

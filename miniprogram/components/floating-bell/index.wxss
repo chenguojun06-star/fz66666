@@ -207,6 +207,10 @@
   color: var(--color-success);
 }
 
+.section-title.repair {
+  color: #ea580c;
+}
+
 .section-icon {
   font-size: 28rpx;
 }

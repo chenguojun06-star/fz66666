@@ -148,6 +148,10 @@ const production = {
   myQualityTasks() {
     return ok('/api/production/scan/my-quality-tasks', 'GET', {});
   },
+  // 获取我的次品待返修任务（status=unqualified 的菲号）
+  myRepairTasks() {
+    return ok('/api/production/warehousing/pending-repair-tasks', 'GET', {});
+  },
   // 查询裁剪菲号信息（验证菲号是否存在，获取准确数量）
   getCuttingBundle(orderNo, bundleNo) {
     return ok('/api/production/cutting/list', 'GET', { orderNo, bundleNo });

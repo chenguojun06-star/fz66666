@@ -1593,5 +1593,73 @@ public class ProductWarehousingOrchestrator {
         }
     }
 
+    /**
+     * 待返修任务列表（铃铛专用）
+     * 返回当前租户中 status=unqualified（质检不合格、尚未申报返修完成）的菲号列表
+     * 逻辑：quality_scan 记录（次品池）关联的菲号中，bundle.status 仍为 unqualified 的
+     */
+    public List<Map<String, Object>> listPendingRepairTasks(Long tenantId) {
+        if (tenantId == null) return Collections.emptyList();
+
+        // 1) 从 t_product_warehousing 查当前租户的 quality_scan 记录（次品来源）
+        List<ProductWarehousing> qualityScans = productWarehousingService.list(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getTenantId, tenantId)
+                        .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
+                        .select(ProductWarehousing::getCuttingBundleId,
+                                ProductWarehousing::getOrderId,
+                                ProductWarehousing::getOrderNo,
+                                ProductWarehousing::getUnqualifiedQuantity,
+                                ProductWarehousing::getDefectCategory));
+
+        if (qualityScans == null || qualityScans.isEmpty()) return Collections.emptyList();
+
+        // 2) 按 bundleId 去重（同一菲号多轮质检取 unqualifiedQty 最大那条）
+        Map<String, ProductWarehousing> qsMap = new HashMap<>();
+        for (ProductWarehousing qs : qualityScans) {
+            String bid = qs.getCuttingBundleId();
+            if (!StringUtils.hasText(bid)) continue;
+            ProductWarehousing existing = qsMap.get(bid);
+            int newQty = qs.getUnqualifiedQuantity() == null ? 0 : qs.getUnqualifiedQuantity();
+            int oldQty = (existing == null || existing.getUnqualifiedQuantity() == null) ? 0 : existing.getUnqualifiedQuantity();
+            if (existing == null || newQty > oldQty) {
+                qsMap.put(bid, qs);
+            }
+        }
+        if (qsMap.isEmpty()) return Collections.emptyList();
+
+        // 3) 查 t_cutting_bundle：只取 status=unqualified（已申报返修则 status=repaired_waiting_qc 不出现）
+        List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+                .in(CuttingBundle::getId, qsMap.keySet())
+                .eq(CuttingBundle::getStatus, "unqualified")
+                .list();
+
+        if (bundles == null || bundles.isEmpty()) return Collections.emptyList();
+
+        // 4) 组装响应 DTO
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (CuttingBundle bundle : bundles) {
+            ProductWarehousing qs = qsMap.get(bundle.getId());
+            Map<String, Object> item = new HashMap<>();
+            item.put("bundleId", bundle.getId());
+            item.put("bundleNo", bundle.getBundleNo());
+            item.put("qrCode", bundle.getQrCode());
+            item.put("color", TextUtils.safeText(bundle.getColor()));
+            item.put("size", TextUtils.safeText(bundle.getSize()));
+            item.put("styleNo", TextUtils.safeText(bundle.getStyleNo()));
+            item.put("orderId", bundle.getProductionOrderId());
+            item.put("orderNo", bundle.getProductionOrderNo());
+            int defectQty = (qs != null && qs.getUnqualifiedQuantity() != null)
+                    ? qs.getUnqualifiedQuantity()
+                    : (bundle.getQuantity() == null ? 0 : bundle.getQuantity());
+            item.put("defectQty", defectQty);
+            item.put("defectCategory", qs != null ? TextUtils.safeText(qs.getDefectCategory()) : "");
+            result.add(item);
+        }
+        return result;
+    }
+
     // 使用TextUtils.safeText()和NumberUtils.toInt()替代
 }

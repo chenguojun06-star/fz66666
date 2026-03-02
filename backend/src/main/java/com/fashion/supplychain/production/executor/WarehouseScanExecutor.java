@@ -19,7 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -492,7 +494,15 @@ public class WarehouseScanExecutor {
         // 根据新语义：检查“尚在工厂返修中尚未申报返回”的件数
         int remaining = warehousingHelper.repairDeclarationRemainingQtyByBundle(orderId, bid, null);
         if (remaining <= 0) {
-            throw new IllegalStateException("未找到待返修次品记录，无法进行次品入库");
+            // 兜底：quality_scan 记录可能因 DB 异常未创建（createQualityScanRecord 静默失败），
+            // 从 t_scan_record 的最新质检确认 remark 中恢复次品数量
+            int defectFromScan = getDefectQtyFromScanRecord(orderId, bid);
+            if (defectFromScan <= 0) {
+                throw new IllegalStateException("未找到待返修次品记录，无法进行次品入库");
+            }
+            log.warn("[WarehouseScan] 次品入库：quality_scan 记录缺失，从质检扫码记录恢复次品数 bundleId={}, defectQty={}",
+                    bid, defectFromScan);
+            remaining = defectFromScan;
         }
         if (qty > remaining) {
             throw new IllegalArgumentException(String.format(
@@ -500,5 +510,60 @@ public class WarehouseScanExecutor {
                     remaining, qty, qty - remaining));
         }
         log.debug("次品入库验证通过: bundleId={}, remaining={}, 本次={}", bid, remaining, qty);
+    }
+
+    /**
+     * 从质检扫码记录的 remark 中获取次品数量（quality_scan warehousing 记录缺失时的兜底）
+     */
+    private int getDefectQtyFromScanRecord(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) return 0;
+        try {
+            // 查最新的质检确认记录（processCode=quality_receive, confirmTime 不为空, remark 以 unqualified 开头）
+            List<ScanRecord> qualityRecs = scanRecordService.lambdaQuery()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getProcessCode, "quality_receive")
+                    .isNotNull(ScanRecord::getConfirmTime)
+                    .eq(ScanRecord::getScanResult, "success")
+                    .list();
+            if (qualityRecs == null || qualityRecs.isEmpty()) return 0;
+
+            // 取 confirmTime 最新的记录
+            qualityRecs.sort(Comparator.comparing(ScanRecord::getConfirmTime).reversed());
+            ScanRecord latest = qualityRecs.get(0);
+            String remark = latest.getRemark() == null ? "" : latest.getRemark();
+            if (!remark.startsWith("unqualified")) return 0;
+
+            // 报废不走次品入库流程（与 StageDetector.isScrap 逻辑保持一致）
+            if (remark.contains("|报废|") || remark.endsWith("|报废")) return 0;
+
+            return parseDefectQtyFromRemark(remark,
+                    latest.getQuantity() == null ? 0 : latest.getQuantity());
+        } catch (Exception e) {
+            log.warn("[WarehouseScan] 从扫码记录获取次品数量失败: orderId={}, bundleId={}, error={}",
+                    orderId, bundleId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 从 remark 字符串中解析次品数量
+     * remark 格式：「unqualified|category|返修|defectQty=N」或「unqualified|defectQty=N」
+     */
+    private int parseDefectQtyFromRemark(String remark, int fallbackQty) {
+        if (!hasText(remark)) return fallbackQty;
+        String[] parts = remark.split("\\|");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.startsWith("defectQty=")) {
+                try {
+                    int v = Integer.parseInt(trimmed.substring("defectQty=".length()).trim());
+                    if (v > 0) return v;
+                } catch (NumberFormatException ignore) {
+                    // 解析失败时使用 fallback
+                }
+            }
+        }
+        return fallbackQty;
     }
 }

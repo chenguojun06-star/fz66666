@@ -98,7 +98,7 @@ const StyleInfoListPage: React.FC = () => {
 
   // 统计时间范围切换
   const handleStatsRangeChange = (value: string | number) => {
-    const rangeType = value as 'day' | 'week' | 'month';
+    const rangeType = value as 'day' | 'week' | 'month' | 'year';
     setStatsRangeType(rangeType);
     loadDevelopmentStats(rangeType);
   };

@@ -2,20 +2,22 @@ import React, { useState, useCallback } from 'react';
 import api from '@/utils/api';
 import type { PatternDevelopmentStats } from '@/types/production';
 
+export type StatsRangeType = 'day' | 'week' | 'month' | 'year';
+
 interface UseStyleStatsReturn {
-  statsRangeType: 'day' | 'week' | 'month';
-  setStatsRangeType: React.Dispatch<React.SetStateAction<'day' | 'week' | 'month'>>;
+  statsRangeType: StatsRangeType;
+  setStatsRangeType: React.Dispatch<React.SetStateAction<StatsRangeType>>;
   developmentStats: PatternDevelopmentStats | null;
   statsLoading: boolean;
-  loadDevelopmentStats: (rangeType: 'day' | 'week' | 'month') => Promise<void>;
+  loadDevelopmentStats: (rangeType: StatsRangeType) => Promise<void>;
 }
 
 export const useStyleStats = (): UseStyleStatsReturn => {
-  const [statsRangeType, setStatsRangeType] = useState<'day' | 'week' | 'month'>('day');
+  const [statsRangeType, setStatsRangeType] = useState<StatsRangeType>('day');
   const [developmentStats, setDevelopmentStats] = useState<PatternDevelopmentStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const loadDevelopmentStats = useCallback(async (rangeType: 'day' | 'week' | 'month') => {
+  const loadDevelopmentStats = useCallback(async (rangeType: StatsRangeType) => {
     setStatsLoading(true);
     try {
       const response = await api.get<{ code: number; data: PatternDevelopmentStats }>(
@@ -37,6 +39,6 @@ export const useStyleStats = (): UseStyleStatsReturn => {
     setStatsRangeType,
     developmentStats,
     statsLoading,
-    loadDevelopmentStats
+    loadDevelopmentStats,
   };
 };

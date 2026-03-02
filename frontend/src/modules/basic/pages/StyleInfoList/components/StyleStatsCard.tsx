@@ -1,86 +1,77 @@
 import React from 'react';
-import { Card, Col, Row, Segmented, Spin, Statistic, Tag } from 'antd';
+import { Card, Segmented, Spin } from 'antd';
 import type { PatternDevelopmentStats } from '@/types/production';
+import type { StatsRangeType } from '../../StyleInfo/hooks/useStyleStats';
 
 interface StyleStatsCardProps {
   stats: PatternDevelopmentStats | null;
   loading: boolean;
-  rangeType: 'day' | 'week' | 'month';
+  rangeType: StatsRangeType;
   onRangeChange: (value: string | number) => void;
 }
 
+const fmt = (v: number) => v.toFixed(2);
+
 /**
- * 开发费用统计迷你看板
- * 显示：面辅料、工序单价、二次工艺、总开发费、样衣数量
+ * 开发费用统计迷你看板（紧凑单行版）
  */
 const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
   stats,
   loading,
   rangeType,
-  onRangeChange
+  onRangeChange,
 }) => {
   return (
     <Card
       size="small"
       className="development-stats-card mb-sm"
+      styles={{ body: { padding: '6px 12px' } }}
       style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: 'var(--neutral-text)' }}>📊 开发费用统计</span>
-        <Segmented
-          value={rangeType}
-          onChange={onRangeChange}
-          options={[
-            { label: '今日', value: 'day' },
-            { label: '本周', value: 'week' },
-            { label: '本月', value: 'month' },
-          ]}
-          size="small"
-        />
-      </div>
-      <Spin spinning={loading}>
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic
-              title={<span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>🧵 面辅料</span>}
-              value={stats?.materialCost ?? 0}
-              precision={2}
-              prefix="¥"
-              valueStyle={{ color: 'var(--neutral-text)', fontSize: "var(--font-size-xl)", fontWeight: 600 }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title={<span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>⚙️ 工序单价</span>}
-              value={stats?.processCost ?? 0}
-              precision={2}
-              prefix="¥"
-              valueStyle={{ color: 'var(--neutral-text)', fontSize: "var(--font-size-xl)", fontWeight: 600 }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title={<span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>🔧 二次工艺</span>}
-              value={stats?.secondaryProcessCost ?? 0}
-              precision={2}
-              prefix="¥"
-              valueStyle={{ color: 'var(--neutral-text)', fontSize: "var(--font-size-xl)", fontWeight: 600 }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title={<span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>💰 总开发费</span>}
-              value={stats?.totalCost ?? 0}
-              precision={2}
-              prefix="¥"
-              valueStyle={{ color: 'var(--primary-color)', fontSize: "var(--font-size-xxl)", fontWeight: 700 }}
-            />
-          </Col>
-        </Row>
-        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-          <Tag color="default">
-            样衣数量: {stats?.patternCount ?? 0} 件
-          </Tag>
+      <Spin spinning={loading} size="small">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'nowrap' }}>
+          {/* 标题 */}
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)', whiteSpace: 'nowrap', marginRight: 16 }}>
+            📊 开发费用统计
+          </span>
+
+          {/* 数据条目 */}
+          <div style={{ display: 'flex', flex: 1, gap: 24, alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>🧵 面辅料</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>⚙️ 工序单价</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.processCost ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>🔧 二次工艺</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.secondaryProcessCost ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>💰 总开发费</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>¥{fmt(stats?.totalCost ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>👗 样衣数量</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{stats?.patternCount ?? 0} 件</span>
+            </div>
+          </div>
+
+          {/* 时间筛选 */}
+          <Segmented
+            value={rangeType}
+            onChange={onRangeChange}
+            options={[
+              { label: '今日', value: 'day' },
+              { label: '本周', value: 'week' },
+              { label: '本月', value: 'month' },
+              { label: '本年', value: 'year' },
+            ]}
+            size="small"
+            style={{ flexShrink: 0, marginLeft: 16 }}
+          />
         </div>
       </Spin>
     </Card>

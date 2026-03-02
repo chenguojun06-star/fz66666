@@ -137,6 +137,35 @@
         </view>
       </view>
 
+      <!-- 次品待返修 -->
+      <view wx:if="{{repairTasks.length > 0}}" class="task-section">
+        <view class="section-title repair">
+          <text class="section-icon">🔧</text>
+          <text>次品待返修 ({{repairTasks.length}})</text>
+        </view>
+        <view
+          wx:for="{{repairTasks}}"
+          wx:key="id"
+          class="task-item repair-item"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="repair"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.orderNo}}</view>
+            <view class="task-desc">菲号: {{item.bundleNo}} · {{item.color || '-'}} · {{item.size || '-'}} · 次品: {{item.defectQty}}件</view>
+            <view class="task-desc" wx:if="{{item.defectCategory}}">缺陷: {{item.defectCategory}}</view>
+            <view class="task-hint">🔧 修好后扫码申报返修完成</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">去扫码</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
       <!-- 延期订单 -->
       <view wx:if="{{overdueOrders.length > 0}}" class="task-section">
         <view class="section-title overdue">

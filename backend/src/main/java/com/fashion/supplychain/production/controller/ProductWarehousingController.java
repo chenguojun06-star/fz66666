@@ -100,6 +100,16 @@ public class ProductWarehousingController {
      * @param body 请求体（POST方式，用于批量查询）
      * @return 统计结果
      */
+    /**
+     * 待返修任务列表（铃铛专用）
+     * 返回当前租户中 status=unqualified 的菲号列表供工人认领
+     */
+    @GetMapping("/pending-repair-tasks")
+    public Result<?> listPendingRepairTasks() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return Result.success(productWarehousingOrchestrator.listPendingRepairTasks(tenantId));
+    }
+
     @RequestMapping(value = "/repair-stats", method = {RequestMethod.GET, RequestMethod.POST})
     public Result<?> repairStats(
             @RequestParam(required = false) Map<String, Object> params,
