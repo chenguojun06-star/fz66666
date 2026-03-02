@@ -2,7 +2,9 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.DataPermissionHelper;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.Data;
 import org.springframework.stereotype.Component;
@@ -22,9 +24,12 @@ import java.util.stream.Collectors;
 public class PayrollAggregationOrchestrator {
 
     private final ScanRecordService scanRecordService;
+    private final ProductionOrderService productionOrderService;
 
-    public PayrollAggregationOrchestrator(ScanRecordService scanRecordService) {
+    public PayrollAggregationOrchestrator(ScanRecordService scanRecordService,
+                                          ProductionOrderService productionOrderService) {
         this.scanRecordService = scanRecordService;
+        this.productionOrderService = productionOrderService;
     }
 
     /**
@@ -93,7 +98,7 @@ public class PayrollAggregationOrchestrator {
                 ));
 
         // 转换为 DTO
-        return grouped.values().stream()
+        List<PayrollOperatorProcessSummaryDTO> dtoList = grouped.values().stream()
                 .map(this::convertToDTO)
                 .filter(Objects::nonNull)
                 .sorted(Comparator
@@ -102,6 +107,28 @@ public class PayrollAggregationOrchestrator {
                         .thenComparing(d -> d.getProcessName() != null ? d.getProcessName() : "",
                                 Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
+
+        // 批量回填订单状态（关单审核条件需要）
+        Set<String> orderNos = dtoList.stream()
+                .map(PayrollOperatorProcessSummaryDTO::getOrderNo)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!orderNos.isEmpty()) {
+            QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
+            orderQw.in("order_no", orderNos);
+            Map<String, String> orderNoToStatus = productionOrderService.list(orderQw).stream()
+                    .collect(Collectors.toMap(
+                            ProductionOrder::getOrderNo,
+                            o -> o.getStatus() != null ? o.getStatus() : "",
+                            (a, b) -> a));
+            dtoList.forEach(d -> {
+                if (d.getOrderNo() != null) {
+                    d.setOrderStatus(orderNoToStatus.getOrDefault(d.getOrderNo(), ""));
+                }
+            });
+        }
+
+        return dtoList;
     }
 
     /**
@@ -158,6 +185,7 @@ public class PayrollAggregationOrchestrator {
                 .orElse(null);
 
         PayrollOperatorProcessSummaryDTO dto = new PayrollOperatorProcessSummaryDTO();
+        dto.setOrderId(first.getOrderId());
         dto.setOrderNo(first.getOrderNo());
         dto.setStyleNo(first.getStyleNo());
         dto.setColor(first.getColor());
@@ -188,7 +216,9 @@ public class PayrollAggregationOrchestrator {
     public static class PayrollOperatorProcessSummaryDTO implements Serializable {
         private static final long serialVersionUID = 1L;
 
+        private String orderId;      // 订单ID
         private String orderNo;      // 订单号
+        private String orderStatus;  // 订单状态（completed=已关单，可审核）
         private String styleNo;      // 款号
         private String color;        // 颜色
         private String size;         // 尺码

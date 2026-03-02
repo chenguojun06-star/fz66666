@@ -192,6 +192,7 @@ export interface OrderProfitResponse {
 export interface PayrollOperatorProcessSummaryRow {
   orderId?: string;
   orderNo?: string;
+  orderStatus?: string;
   styleNo?: string;
   color?: string;
   size?: string;

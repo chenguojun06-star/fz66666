@@ -12,6 +12,8 @@ type TabKey = 'settlement' | 'factory' | 'dashboard';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  // 已审核订单号集合：Tab1审核后流入Tab2，Tab2驳回后回流Tab1
+  const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
 
   // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
@@ -48,7 +50,12 @@ const FinanceCenter: React.FC = () => {
           订单汇总
         </span>
       ),
-      children: <FinishedSettlementContent />,
+      children: (
+        <FinishedSettlementContent
+          auditedOrderNos={auditedOrderNos}
+          onAuditNosChange={setAuditedOrderNos}
+        />
+      ),
     },
     {
       key: 'factory',
@@ -58,7 +65,12 @@ const FinanceCenter: React.FC = () => {
           工厂订单汇总
         </span>
       ),
-      children: <FactorySummaryContent />,
+      children: (
+        <FactorySummaryContent
+          auditedOrderNos={auditedOrderNos}
+          onAuditNosChange={setAuditedOrderNos}
+        />
+      ),
     },
     {
       key: 'dashboard',

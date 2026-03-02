@@ -84,7 +84,7 @@ public class ProductionOrderFinanceOrchestrationService {
     /**
      * ★ 自注入：解决同类内部方法调用不经过 AOP 代理的问题
      * 使用 @Lazy 避免循环依赖
-     * 
+     *
      * 根因：Spring AOP 默认使用代理模式，同一个类内部的方法调用（this.xxx()）不会经过代理，
      * 导致内部方法上的 @Transactional(propagation=REQUIRES_NEW) 注解不生效。
      * 自注入后通过 self.xxx() 调用，会经过代理，@Transactional 正常生效。
@@ -374,7 +374,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
     /**
      * 确保订单的财务记录存在
-     * 
+     *
      * ★ 移除 @Transactional：此方法只做查询和条件判断，实际事务操作委托给 ensureShipmentReconciliationForOrder
      * 这样可以避免同类调用时事务传播导致的 "rollback-only" 污染问题
      */
@@ -395,7 +395,7 @@ public class ProductionOrderFinanceOrchestrationService {
                 self.ensureShipmentReconciliationForOrder(oid);
             } catch (Exception e) {
                 // 出货对账单创建失败不应阻断入库主流程
-                log.warn("ensureFinanceRecordsForOrder: 确保出货对账单时异常（不阻断入库）orderId={}, error={}", 
+                log.warn("ensureFinanceRecordsForOrder: 确保出货对账单时异常（不阻断入库）orderId={}, error={}",
                         oid, e.getMessage());
             }
             return true;
@@ -405,7 +405,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
     /**
      * 确保出货对账单存在
-     * 
+     *
      * ★ 使用 REQUIRES_NEW：该方法在独立事务中执行，失败不会污染外层事务
      * 通过 self.xxx() 调用（而非 this.xxx()）才能让这个注解生效
      */

@@ -3,6 +3,7 @@ import { Card, Input, Button, App, Tooltip, Timeline } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import api from '@/utils/api';
+import { isOrderFrozenByStatus } from '@/utils/api/production';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -14,7 +15,6 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import OrderAuditPopover from './OrderAuditPopover';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -53,7 +53,12 @@ interface PageParams {
   endDate?: string;
 }
 
-const FinishedSettlementContent: React.FC = () => {
+interface Props {
+  auditedOrderNos: Set<string>;
+  onAuditNosChange: (s: Set<string>) => void;
+}
+
+const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
   const { message } = App.useApp();
   const [searchOrderNo, setSearchOrderNo] = useState('');
   const [searchStyleNo, setSearchStyleNo] = useState('');
@@ -73,10 +78,6 @@ const FinishedSettlementContent: React.FC = () => {
     page: 1,
     pageSize: 20,
   });
-  // 审核状态：已审核的订单 ID 集合（本地追踪，含跨页加载）
-  const [approvedOrderIds, setApprovedOrderIds] = useState<Set<string>>(new Set());
-  // 正在审核中的订单 ID 集合（防重复点击）
-  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
 
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -114,12 +115,8 @@ const FinishedSettlementContent: React.FC = () => {
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 150,
-      render: (text: string, record: FinishedSettlementRow) => (
-        <OrderAuditPopover record={record}>
-          <span className={styles.orderNo} style={{ cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>
-            {text}
-          </span>
-        </OrderAuditPopover>
+      render: (text: string, _record: FinishedSettlementRow) => (
+        <span className={styles.orderNo}>{text}</span>
       ),
     },
     {
@@ -322,18 +319,18 @@ const FinishedSettlementContent: React.FC = () => {
       width: 200,
       fixed: 'right' as const,
       render: (_: unknown, record: FinishedSettlementRow) => {
-        const isApproved = approvedOrderIds.has(record.orderId);
-        const isApproving = approvingIds.has(record.orderId);
+        const canAudit = isOrderFrozenByStatus(record) && !auditedOrderNos.has(record.orderNo);
+        const isAudited = auditedOrderNos.has(record.orderNo);
         const isCancelled = ['CANCELLED', 'cancelled', 'DELETED', 'deleted', 'scrapped', '废弃', '已取消'].includes(record.status || '');
         return (
           <RowActions
             actions={[
               {
                 key: 'approve',
-                label: isApproved ? '已审核' : '审核',
-                primary: !isApproved,
-                disabled: isCancelled || isApproved || isApproving,
-                onClick: () => handleApproveOrder(record),
+                label: isAudited ? '已审核' : '审核',
+                primary: canAudit,
+                disabled: isCancelled || isAudited || !isOrderFrozenByStatus(record),
+                onClick: () => handleAuditOrder(record),
               },
               {
                 key: 'remark',
@@ -396,6 +393,34 @@ const FinishedSettlementContent: React.FC = () => {
     loadData(params);
   };
 
+  // 审核单条订单（前端本地状态，已关单才可审核）
+  const handleAuditOrder = (record: FinishedSettlementRow) => {
+    if (!isOrderFrozenByStatus(record)) {
+      message.warning('该订单尚未关单，无法审核');
+      return;
+    }
+    onAuditNosChange(new Set([...auditedOrderNos, record.orderNo]));
+    message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
+  };
+
+  // 批量审核（只审核已关单且未审核的）
+  const handleBatchAudit = () => {
+    const eligible = data.filter(r =>
+      selectedRowKeys.includes(r.orderId) &&
+      isOrderFrozenByStatus(r) &&
+      !auditedOrderNos.has(r.orderNo)
+    );
+    if (eligible.length === 0) {
+      message.warning('选中订单中没有可审核的（已关单且未审核）');
+      return;
+    }
+    const newNos = new Set(auditedOrderNos);
+    eligible.forEach(r => newNos.add(r.orderNo));
+    onAuditNosChange(newNos);
+    message.success(`批量审核 ${eligible.length} 个订单成功`);
+    setSelectedRowKeys([]);
+  };
+
   // 导出选中的数据
   const handleExportSelected = () => {
     if (selectedRowKeys.length === 0) {
@@ -434,48 +459,7 @@ const FinishedSettlementContent: React.FC = () => {
     }
   };
 
-  // 批量加载审核状态（页面数据更新后调用）
-  const loadApprovalStatuses = async (orderIds: string[]) => {
-    if (orderIds.length === 0) return;
-    try {
-      const results = await Promise.allSettled(
-        orderIds.map(id =>
-          api.get<{ code: number; data: { id: string; status: string } }>(
-            `/finance/finished-settlement/approval-status/${id}`
-          )
-        )
-      );
-      const approvedSet = new Set<string>();
-      results.forEach((res, idx) => {
-        if (res.status === 'fulfilled' && res.value?.data?.status === 'approved') {
-          approvedSet.add(orderIds[idx]);
-        }
-      });
-      setApprovedOrderIds(approvedSet);
-    } catch (_e) {
-      // 审核状态加载失败不阻断主流程
-    }
-  };
-
-  // 对单个订单进行结算审核
-  const handleApproveOrder = async (record: FinishedSettlementRow) => {
-    const orderId = record.orderId;
-    setApprovingIds(prev => new Set([...prev, orderId]));
-    try {
-      await api.post('/finance/finished-settlement/approve', { id: orderId });
-      setApprovedOrderIds(prev => new Set([...prev, orderId]));
-      message.success(`订单 ${record.orderNo} 审核确认成功`);
-    } catch (error: any) {
-      const errMsg = error instanceof Error ? error.message : '审核失败，请稍后重试';
-      message.error(errMsg);
-    } finally {
-      setApprovingIds(prev => {
-        const next = new Set(prev);
-        next.delete(orderId);
-        return next;
-      });
-    }
-  };
+  // 已除去：新流程不再向后端查询审核状态
 
   // 打开日志弹窗 - 从后端获取操作日志
   const openLogModal = async (orderId: string) => {
@@ -542,13 +526,6 @@ const FinishedSettlementContent: React.FC = () => {
     loadData();
   }, []);
 
-  // 数据变化后加载审核状态
-  useEffect(() => {
-    if (data.length > 0) {
-      loadApprovalStatuses(data.map(d => d.orderId));
-    }
-  }, [data]);
-
   return (
     <>
       <Card>
@@ -595,6 +572,13 @@ const FinishedSettlementContent: React.FC = () => {
           )}
           right={(
             <>
+              <Button
+                type="primary"
+                onClick={handleBatchAudit}
+                disabled={selectedRowKeys.length === 0}
+              >
+                批量审核 ({selectedRowKeys.length})
+              </Button>
               <Button onClick={handleReset}>
                 重置
               </Button>

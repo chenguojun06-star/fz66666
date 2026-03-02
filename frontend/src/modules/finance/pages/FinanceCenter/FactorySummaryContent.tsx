@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Form, Input, Button, Space, App, Table, Tag, Tooltip } from 'antd';
+import { Card, Form, Input, Button, Space, App, Table, Tag, Tooltip, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ReloadOutlined,
@@ -15,6 +15,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import FactoryAuditPopover from './FactoryAuditPopover';
 
 
 /** 工厂汇总行数据 */
@@ -35,12 +36,17 @@ interface FactorySummaryRow {
   [key: string]: unknown;
 }
 
+interface Props {
+  auditedOrderNos: Set<string>;
+  onAuditNosChange: (s: Set<string>) => void;
+}
+
 const toMoney = (v: unknown): string => {
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(2) : '0.00';
 };
 
-const FactorySummaryContent: React.FC = () => {
+const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -105,22 +111,42 @@ const FactorySummaryContent: React.FC = () => {
     loadPushedFactories();
   }, [fetchData, loadPushedFactories]);
 
-  // 汇总统计
-  const summary = useMemo(() => {
-    const totalOrders = data.reduce((s, r) => s + (r.orderCount || 0), 0);
-    const totalQty = data.reduce((s, r) => s + (r.totalOrderQuantity || 0), 0);
-    const totalWarehoused = data.reduce((s, r) => s + (r.totalWarehousedQuantity || 0), 0);
-    const totalAmount = data.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
-    const totalProfit = data.reduce((s, r) => s + Number(r.totalProfit || 0), 0);
-    return { totalOrders, totalQty, totalWarehoused, totalAmount, totalProfit };
-  }, [data]);
+  // 过滤：只显示含已审核订单的工厂
+  const filteredData = useMemo(() => {
+    if (auditedOrderNos.size === 0) return [];
+    return data.filter(row =>
+      (row.orderNos || []).some(no => auditedOrderNos.has(no))
+    );
+  }, [data, auditedOrderNos]);
 
-  // 推送单个工厂结算到付款中心
+  // 汇总统计基于过滤后数据
+  const summary = useMemo(() => {
+    const totalOrders = filteredData.reduce((s, r) => s + (r.orderCount || 0), 0);
+    const totalQty = filteredData.reduce((s, r) => s + (r.totalOrderQuantity || 0), 0);
+    const totalWarehoused = filteredData.reduce((s, r) => s + (r.totalWarehousedQuantity || 0), 0);
+    const totalAmount = filteredData.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
+    const totalProfit = filteredData.reduce((s, r) => s + Number(r.totalProfit || 0), 0);
+    return { totalOrders, totalQty, totalWarehoused, totalAmount, totalProfit };
+  }, [filteredData]);
+
+  // 驳回：将工厂所有订单从 auditedOrderNos 移除，回流Tab1重审
+  const handleReject = (record: FactorySummaryRow) => {
+    const factoryOrderNos = new Set(record.orderNos || []);
+    if (factoryOrderNos.size === 0) {
+      message.warning('这个工厂没有可驳回的审核订单');
+      return;
+    }
+    const newNos = new Set([...auditedOrderNos].filter(no => !factoryOrderNos.has(no)));
+    onAuditNosChange(newNos);
+    message.success(`工厂「${record.factoryName}」的订单已驳回，请回「订单汇总」重新审核`);
+  };
+
+  // 终审推送单个工厂结算到付款中心
   const handleApprove = async (record: FactorySummaryRow) => {
     modal.confirm({
       title: '推送到付款中心',
-      content: `确认将工厂「${record.factoryName}」的 ${record.orderCount} 个订单（总金额 ¥${toMoney(record.totalAmount)}）推送到付款中心？`,
-      okText: '确认推送',
+      content: `确认将工厂「${record.factoryName}」的 ${record.orderCount} 个订单（总金额 ¥${toMoney(record.totalAmount)}）终审推送到付款中心？`,
+        okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
         try {
@@ -144,9 +170,9 @@ const FactorySummaryContent: React.FC = () => {
     });
   };
 
-  // 批量推送到付款中心
+  // 批量终审推送到付款中心
   const handleBatchApprove = () => {
-    const selected = data.filter(r =>
+    const selected = filteredData.filter(r =>
       selectedRowKeys.includes(r.factoryName)
       && !pushedFactoryIds.has(r.factoryId || r.factoryName)
     );
@@ -160,8 +186,8 @@ const FactorySummaryContent: React.FC = () => {
 
     modal.confirm({
       title: '批量推送确认',
-      content: `确认将 ${selected.length} 个工厂（共 ${totalOrders} 个订单，总金额 ¥${toMoney(totalAmount)}）推送到付款中心？`,
-      okText: '确认推送',
+      content: `确认将 ${selected.length} 个工厂（共 ${totalOrders} 个订单，总金额 ¥${toMoney(totalAmount)}）终审推送到付款中心？`,
+        okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
         try {
@@ -196,15 +222,17 @@ const FactorySummaryContent: React.FC = () => {
       key: 'factoryName',
       width: 210,
       render: (text: string, record: FactorySummaryRow) => (
-        <Space>
-          <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
-          <span style={{ fontWeight: 500 }}>{text}</span>
-          {record.factoryType === 'INTERNAL' && (
-            <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-              <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
-            </Tooltip>
-          )}
-        </Space>
+        <FactoryAuditPopover record={record} auditedOrderNos={auditedOrderNos}>
+          <Space>
+            <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
+            <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
+            {record.factoryType === 'INTERNAL' && (
+              <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
+                <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
+              </Tooltip>
+            )}
+          </Space>
+        </FactoryAuditPopover>
       ),
     },
     {
@@ -321,9 +349,15 @@ const FactorySummaryContent: React.FC = () => {
         const actions: RowAction[] = [
           {
             key: 'push',
-            label: '推送付款',
+            label: '终审推送',
             primary: true,
             onClick: () => handleApprove(record),
+          },
+          {
+            key: 'reject',
+            label: '驳回',
+            danger: true,
+            onClick: () => handleReject(record),
           },
         ];
         return <RowActions actions={actions} />;
@@ -364,7 +398,7 @@ const FactorySummaryContent: React.FC = () => {
         <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>工厂数</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--primary-color)' }}>
-            {data.length}
+            {filteredData.length}
           </div>
         </Card>
         <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
@@ -410,7 +444,7 @@ const FactorySummaryContent: React.FC = () => {
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchApprove}
             >
-              批量推送付款 ({selectedRowKeys.length})
+              批量终审推送 ({selectedRowKeys.length})
             </Button>
           </Space>
         }
@@ -424,7 +458,7 @@ const FactorySummaryContent: React.FC = () => {
       {/* 数据表格 */}
       <ResizableTable
         columns={columns}
-        dataSource={data}
+        dataSource={filteredData}
         rowKey="factoryName"
         loading={loading}
         scroll={{ x: 1400 }}
@@ -437,7 +471,7 @@ const FactorySummaryContent: React.FC = () => {
           <Table.Summary fixed>
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={2}>
-                <strong>合计 ({data.length} 个工厂)</strong>
+                <strong>合计 ({filteredData.length} 个工厂)</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} align="center">
                 <strong>{summary.totalOrders}</strong>

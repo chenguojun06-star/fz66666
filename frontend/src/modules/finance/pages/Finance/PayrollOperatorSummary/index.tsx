@@ -9,6 +9,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import api, { unwrapApiData } from '@/utils/api';
+import { isOrderFrozenByStatus } from '@/utils/api/production';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -81,6 +82,10 @@ const PayrollOperatorSummary: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
     const hasAutoFetched = useRef(false);
+    // Tab1 工序明细审核状态（已审核的行key集合）
+    const [auditedDetailKeys, setAuditedDetailKeys] = useState<Set<string>>(new Set());
+    // Tab1 已选中行（用于批量审核）
+    const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
     const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -103,6 +108,16 @@ const PayrollOperatorSummary: React.FC = () => {
         const n = typeof v === 'number' ? v : Number(v);
         return Number.isFinite(n) ? n : 0;
     };
+
+    // 明细行唯一key（与表格 rowKey 保持一致）
+    const getDetailRowKey = (r: any): string =>
+        [
+            String(r?.orderNo || ''),
+            String(r?.styleNo || ''),
+            String(r?.operatorId || r?.operatorName || ''),
+            String(r?.processName || ''),
+            String(r?.scanType || ''),
+        ].join('|');
 
     const toMoneyText = (v: unknown) => {
         const n = typeof v === 'number' ? v : Number(v);
@@ -141,9 +156,11 @@ const PayrollOperatorSummary: React.FC = () => {
         return sorted;
     }, [rows, detailSortField, detailSortOrder]);
 
-    // 工资汇总数据：按人员聚合
+    // 工资汇总数据：仅聚合已审核的明细行
     const summaryRows = useMemo(() => {
-        const grouped = rows.reduce((acc, row) => {
+        // 只已审核的明细行才进入汇总
+        const auditedRows = rows.filter(row => auditedDetailKeys.has(getDetailRowKey(row)));
+        const grouped = auditedRows.reduce((acc, row) => {
             const name = String((row as Record<string, unknown>)?.operatorName || '').trim();
             if (!name) return acc;
 
@@ -209,7 +226,7 @@ const PayrollOperatorSummary: React.FC = () => {
         });
 
         return result;
-    }, [rows, sortField, sortOrder]);
+    }, [rows, sortField, sortOrder, auditedDetailKeys]);
 
     // 处理URL参数，自动填充筛选条件并查询
     useEffect(() => {
@@ -374,9 +391,43 @@ const PayrollOperatorSummary: React.FC = () => {
         return text;
     };
 
-    // 单条审核 → 推送到付款中心
-    const handleApprove = async (operatorName: string) => {
-        // 找到该人员的汇总数据
+    // Tab1: 审核单条明细行（加入已审核集合）
+    const handleAuditDetail = (row: any) => {
+        const key = getDetailRowKey(row);
+        setAuditedDetailKeys(prev => new Set([...prev, key]));
+        message.success(`已审核：${row.operatorName || ''} - ${row.processName || ''}`);
+    };
+
+    // Tab1: 批量审核已选明细行
+    const handleBatchAuditDetails = () => {
+        const eligibleKeys = detailSelectedKeys.filter(key => {
+            const row = rows.find(r => getDetailRowKey(r) === key);
+            return row && isOrderFrozenByStatus({ status: row.orderStatus }) && !auditedDetailKeys.has(key);
+        });
+        if (eligibleKeys.length === 0) {
+            message.warning('请选择状态为「已完成」且未审核的行');
+            return;
+        }
+        setAuditedDetailKeys(prev => new Set([...prev, ...eligibleKeys]));
+        setDetailSelectedKeys([]);
+        message.success(`已批量审核 ${eligibleKeys.length} 条记录`);
+    };
+
+    // Tab2: 驳回——移除该人员所有明细的已审核标记，回流Tab1重新审核
+    const handleRejectOperator = (operName: string) => {
+        const keysOfOperator = rows
+            .filter(r => String((r as any)?.operatorName || '') === operName)
+            .map(r => getDetailRowKey(r));
+        setAuditedDetailKeys(prev => {
+            const next = new Set(prev);
+            keysOfOperator.forEach(k => next.delete(k));
+            return next;
+        });
+        message.success(`「${operName}」的明细已驳回，请回「工序明细」重新审核`);
+    };
+
+    // Tab2: 终审推送单个人员工资到付款中心
+    const handleFinalPush = async (operatorName: string) => {
         const summary = summaryRows.find((r: any) => r.operatorName === operatorName);
         if (!summary) {
             message.error('未找到该人员汇总数据');
@@ -397,15 +448,15 @@ const PayrollOperatorSummary: React.FC = () => {
                 }
                 return row;
             }));
-            message.success(`已审核 ${operatorName} 的工资并推送到付款中心`);
+            message.success(`已终审并推送 ${operatorName} 的工资到付款中心`);
         } catch (error: any) {
-            console.error('工资审核失败:', error);
-            message.error(error?.message || '审核失败，请稍后重试');
+            console.error('终审推送失败:', error);
+            message.error(error?.message || '终审失败，请稍后重试');
         }
     };
 
-    // 批量审核 → 推送到付款中心
-    const handleBatchApprove = async () => {
+    // Tab2: 批量终审推送到付款中心
+    const handleBatchFinalPush = async () => {
         if (selectedRowKeys.length === 0) {
             message.warning('请选择要审核的人员');
             return;
@@ -430,11 +481,11 @@ const PayrollOperatorSummary: React.FC = () => {
                 }
                 return row;
             }));
-            message.success(`已批量审核 ${selectedRowKeys.length} 人并推送到付款中心`);
+            message.success(`已批量终审并推送 ${selectedRowKeys.length} 人到付款中心`);
             setSelectedRowKeys([]);
         } catch (error: any) {
-            console.error('批量审核失败:', error);
-            message.error(error?.message || '批量审核失败，请稍后重试');
+            console.error('批量终审失败:', error);
+            message.error(error?.message || '批量终审失败，请稍后重试');
         }
     };
 
@@ -503,10 +554,18 @@ const PayrollOperatorSummary: React.FC = () => {
                 const actions: RowAction[] = [
                     {
                         key: 'approve',
-                        label: approved ? '已审核' : '审核',
+                        label: approved ? '已推送' : '终审推送',
                         disabled: approved,
-                        onClick: () => handleApprove(String(record.operatorName))
-                    }
+                        primary: !approved,
+                        onClick: () => handleFinalPush(String(record.operatorName))
+                    },
+                    {
+                        key: 'reject',
+                        label: '驳回',
+                        danger: true,
+                        disabled: approved,
+                        onClick: () => handleRejectOperator(String(record.operatorName))
+                    },
                 ];
 
                 return <RowActions actions={actions} />;
@@ -659,6 +718,43 @@ const PayrollOperatorSummary: React.FC = () => {
             align: 'right' as const,
             render: (v: unknown) => toMoneyText(v),
         },
+        {
+            title: '订单状态',
+            dataIndex: 'orderStatus',
+            key: 'orderStatus',
+            width: 110,
+            fixed: 'right' as const,
+            render: (v: unknown) => {
+                const status = String(v || '').toLowerCase();
+                if (status === 'completed') return <Tag color="green">已完成·可审核</Tag>;
+                if (status === 'closed') return <Tag color="blue">已关单·可审核</Tag>;
+                if (status === 'cancelled') return <Tag color="red">已取消</Tag>;
+                if (status) return <Tag color="default">{v as string}</Tag>;
+                return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+            },
+        },
+        {
+            title: '审核',
+            key: 'audit',
+            width: 90,
+            fixed: 'right' as const,
+            render: (_: unknown, record: any) => {
+                const rowKey = getDetailRowKey(record);
+                const canAudit = isOrderFrozenByStatus({ status: record.orderStatus });
+                const audited = auditedDetailKeys.has(rowKey);
+                if (audited) return <Tag color="cyan">已审核</Tag>;
+                if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>未关单</span>;
+                return (
+                    <Button
+                        size="small"
+                        type="primary"
+                        onClick={() => handleAuditDetail(record)}
+                    >
+                        审核
+                    </Button>
+                );
+            },
+        },
     ];
 
     return (
@@ -771,6 +867,13 @@ const PayrollOperatorSummary: React.FC = () => {
                                                     统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}
                                                 </span>
                                             )}
+                                            <Button
+                                                type="primary"
+                                                disabled={detailSelectedKeys.length === 0}
+                                                onClick={handleBatchAuditDetails}
+                                            >
+                                                批量审核 ({detailSelectedKeys.length})
+                                            </Button>
                                         </Space>
                                     </Card>
 
@@ -785,6 +888,13 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 String(r?.scanType || ''),
                                             ].join('|')
                                         }
+                                        rowSelection={{
+                                            selectedRowKeys: detailSelectedKeys,
+                                            onChange: (keys: React.Key[]) => setDetailSelectedKeys(keys as string[]),
+                                            getCheckboxProps: (record: Record<string, unknown>) => ({
+                                                disabled: auditedDetailKeys.has(getDetailRowKey(record)) || !isOrderFrozenByStatus({ status: String(record.orderStatus || '') }),
+                                            }),
+                                        }}
                                         columns={columns}
                                         dataSource={sortedRows as any}
                                         loading={loading}
@@ -794,7 +904,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: 20,
                                         }}
-                                        scroll={{ x: 1400 }}
+                                        scroll={{ x: 1600 }}
                                     />
                                 </>
                             ),
@@ -811,10 +921,10 @@ const PayrollOperatorSummary: React.FC = () => {
                                             <span style={{ color: 'var(--neutral-text-secondary)' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
                                             <Button
                                                 type="primary"
-                                                onClick={handleBatchApprove}
+                                                onClick={handleBatchFinalPush}
                                                 disabled={selectedRowKeys.length === 0}
                                             >
-                                                批量审核 ({selectedRowKeys.length})
+                                                批量终审推送 ({selectedRowKeys.length})
                                             </Button>
                                         </Space>
                                     </Card>

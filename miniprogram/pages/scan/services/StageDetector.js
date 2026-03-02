@@ -374,22 +374,59 @@ class StageDetector {
           // 质检是最后一道可计数工序 → 检查是否有入库环节
           if (_warehouseProcess) {
             const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
-            const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
-            if (!isWarehoused) {
+            const whResult = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
+            if (!whResult.isComplete) {
+              const totalQty = qualityMeta.expectedQty || accurateQuantity;
+              const defects = qualityMeta.defectQty || 0;
+              const qualifiedTarget = qualityMeta.isUnqualified ? Math.max(0, totalQty - defects) : totalQty;
+              const qualifiedPending = Math.max(0, qualifiedTarget - whResult.warehousedQty);
+
+              if (qualifiedPending > 0) {
+                return {
+                  processName: _warehouseProcess.processName,
+                  progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+                  scanType: 'warehouse',
+                  hint: qualityMeta.isUnqualified
+                    ? `${_warehouseProcess.processName}（合格 ${qualifiedPending}件）`
+                    : _warehouseProcess.processName,
+                  isDuplicate: false,
+                  quantity: qualifiedPending,
+                  unitPrice: Number(_warehouseProcess.price || 0),
+                  qualityStage: '',
+                  isDefectiveReentry: false,
+                  scannedProcessNames: [...scannedProcessNames],
+                  allBundleProcesses: bundleProcesses,
+                };
+              }
+
+              if (qualityMeta.isUnqualified && defects > 0) {
+                return {
+                  processName: _warehouseProcess.processName,
+                  progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+                  scanType: 'warehouse',
+                  hint: `次品入库 ${defects}件`,
+                  isDuplicate: false,
+                  quantity: defects,
+                  unitPrice: Number(_warehouseProcess.price || 0),
+                  qualityStage: '',
+                  isDefectiveReentry: true,
+                  defectQty: defects,
+                  defectRemark: qualityMeta.defectRemark,
+                  scannedProcessNames: [...scannedProcessNames],
+                  allBundleProcesses: bundleProcesses,
+                };
+              }
+
               return {
                 processName: _warehouseProcess.processName,
                 progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
                 scanType: 'warehouse',
-                hint: (qualityMeta.isUnqualified && qualityMeta.defectQty > 0)
-                  ? `次品入库 ${qualityMeta.defectQty}件`
-                  : _warehouseProcess.processName,
+                hint: _warehouseProcess.processName,
                 isDuplicate: false,
-                quantity: qualityMeta.expectedQty,
+                quantity: Math.max(1, totalQty - whResult.warehousedQty),
                 unitPrice: Number(_warehouseProcess.price || 0),
                 qualityStage: '',
-                isDefectiveReentry: qualityMeta.isUnqualified && qualityMeta.defectQty > 0,
-                defectQty: qualityMeta.defectQty,
-                defectRemark: qualityMeta.defectRemark,
+                isDefectiveReentry: false,
                 scannedProcessNames: [...scannedProcessNames],
                 allBundleProcesses: bundleProcesses,
               };
@@ -433,22 +470,63 @@ class StageDetector {
     // === 步骤5：所有可计数工序已完成 → 检查是否有入库环节 ===
     if (_warehouseProcess) {
       const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
-      const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
-      if (!isWarehoused) {
+      const whResult = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
+      if (!whResult.isComplete) {
+        // 计算合格品待入库数量 vs 次品待入库数量
+        const totalQty = qualityMeta.expectedQty || accurateQuantity;
+        const defects = qualityMeta.defectQty || 0;
+        const qualifiedTarget = qualityMeta.isUnqualified ? Math.max(0, totalQty - defects) : totalQty;
+        const qualifiedPending = Math.max(0, qualifiedTarget - whResult.warehousedQty);
+
+        if (qualifiedPending > 0) {
+          // 合格品尚未入完 → 正常入库（数量=合格品待入库数）
+          return {
+            processName: _warehouseProcess.processName,
+            progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+            scanType: 'warehouse',
+            hint: qualityMeta.isUnqualified
+              ? `${_warehouseProcess.processName}（合格 ${qualifiedPending}件）`
+              : _warehouseProcess.processName,
+            isDuplicate: false,
+            quantity: qualifiedPending,
+            unitPrice: Number(_warehouseProcess.price || 0),
+            qualityStage: '',
+            isDefectiveReentry: false,
+            scannedProcessNames: [...scannedProcessNames],
+            allBundleProcesses: bundleProcesses,
+          };
+        }
+
+        // 合格品已入完，剩余全是次品 → 次品入库
+        if (qualityMeta.isUnqualified && defects > 0) {
+          return {
+            processName: _warehouseProcess.processName,
+            progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
+            scanType: 'warehouse',
+            hint: `次品入库 ${defects}件`,
+            isDuplicate: false,
+            quantity: defects,
+            unitPrice: Number(_warehouseProcess.price || 0),
+            qualityStage: '',
+            isDefectiveReentry: true,
+            defectQty: defects,
+            defectRemark: qualityMeta.defectRemark,
+            scannedProcessNames: [...scannedProcessNames],
+            allBundleProcesses: bundleProcesses,
+          };
+        }
+
+        // 无次品但未全部入库（异常兜底）
         return {
           processName: _warehouseProcess.processName,
           progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
           scanType: 'warehouse',
-          hint: (qualityMeta.isUnqualified && qualityMeta.defectQty > 0)
-            ? `次品入库 ${qualityMeta.defectQty}件`
-            : _warehouseProcess.processName,
+          hint: _warehouseProcess.processName,
           isDuplicate: false,
-          quantity: qualityMeta.expectedQty,
+          quantity: Math.max(1, totalQty - whResult.warehousedQty),
           unitPrice: Number(_warehouseProcess.price || 0),
           qualityStage: '',
-          isDefectiveReentry: qualityMeta.isUnqualified && qualityMeta.defectQty > 0,
-          defectQty: qualityMeta.defectQty,
-          defectRemark: qualityMeta.defectRemark,
+          isDefectiveReentry: false,
           scannedProcessNames: [...scannedProcessNames],
           allBundleProcesses: bundleProcesses,
         };
@@ -631,15 +709,17 @@ class StageDetector {
     const allConfirmRecs = (scanHistory || []).filter(r =>
       r && r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
     );
+
     allConfirmRecs.sort((a, b) => (a.confirmTime || '').localeCompare(b.confirmTime || ''));
     const confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
+
     const isUnqualified = !!(confirmRec && String(confirmRec.remark || '').startsWith('unqualified'));
     const defectQty = isUnqualified
       ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)
       : 0;
-    const expectedQty = (isUnqualified && defectQty > 0)
-      ? defectQty
-      : (Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0);
+    // expectedQty 始终 = 菲号总件数（用于判断是否全部入库完成）
+    // 不能用 defectQty，否则 8件入库>=2件次品 → 误判为已全部入库
+    const expectedQty = Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0;
 
     return {
       isUnqualified,

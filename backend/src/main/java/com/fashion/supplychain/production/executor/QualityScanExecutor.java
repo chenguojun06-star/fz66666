@@ -239,6 +239,14 @@ public class QualityScanExecutor {
                     bundle.getId(), existed.getId(), e.getMessage(), e);
         }
 
+        // ★ 次品池记录：质检确认存在次品时，创建 quality_scan 类型入库记录，
+        //   使 calcRepairBreakdown.repairPool > 0，后续"次品入库"校验才能通过
+        if (isUnqualified) {
+            Integer defectQtyForRecord = NumberUtils.toInt(params.get("defectQuantity"));
+            int dq = (defectQtyForRecord != null && defectQtyForRecord > 0) ? defectQtyForRecord : qty;
+            createQualityScanRecord(order, bundle, dq, operatorId, operatorName);
+        }
+
         // 更新工序跟踪记录：质检验收时将 tracking 表中对应子工序状态置为已扫码
         // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
         try {
@@ -466,6 +474,70 @@ public class QualityScanExecutor {
         if (!isSameOperator) {
             String otherName = hasText(receivedOperatorName) ? receivedOperatorName : "他人";
             throw new IllegalStateException("该菲号已被「" + otherName + "」领取，只能由领取人验收");
+        }
+    }
+
+    /**
+     * 质检确认次品时，创建 quality_scan 类型入库记录（建立"次品池" repairPool）。
+     *
+     * 业务背景：
+     * 菲号10件 → 质检发现2件次品 → 先正常入库8件合格品 → 剩余2件走返修→再质检→入库。
+     * calcRepairBreakdown 统计 repairPool 时依赖 unqualifiedQuantity > 0 的记录，
+     * 若不在此处创建，repairPool=0 → validateDefectiveReentryQty 报"无可返修入库数量"→ 400。
+     *
+     * warehousingType=quality_scan 不会被小程序/PC 端计入真实入库数量。
+     */
+    private void createQualityScanRecord(ProductionOrder order, CuttingBundle bundle,
+                                         int defectQty, String operatorId, String operatorName) {
+        try {
+            // 幂等：同一菲号只创建一条 quality_scan 记录
+            List<ProductWarehousing> existing = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, order.getId())
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            if (existing != null && !existing.isEmpty()) {
+                log.info("[QualityScan] quality_scan 记录已存在，跳过: orderId={}, bundleId={}",
+                        order.getId(), bundle.getId());
+                return;
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            ProductWarehousing w = new ProductWarehousing();
+            w.setOrderId(order.getId());
+            w.setOrderNo(order.getOrderNo());
+            w.setStyleId(order.getStyleId());
+            w.setStyleNo(order.getStyleNo());
+            w.setStyleName(order.getStyleName());
+            w.setWarehousingType("quality_scan");
+            w.setWarehouse("待分配");
+            w.setWarehousingQuantity(0);        // 不产生库存变动
+            w.setQualifiedQuantity(0);
+            w.setUnqualifiedQuantity(defectQty); // ← 次品池，供 calcRepairBreakdown 使用
+            w.setQualityStatus("unqualified");
+            w.setCuttingBundleId(bundle.getId());
+            w.setCuttingBundleNo(bundle.getBundleNo());
+            w.setCuttingBundleQrCode(bundle.getQrCode());
+            if (hasText(operatorId)) {
+                w.setQualityOperatorId(operatorId);
+            }
+            if (hasText(operatorName)) {
+                w.setQualityOperatorName(operatorName);
+            }
+            w.setCreateTime(now);
+            w.setUpdateTime(now);
+            w.setDeleteFlag(0);
+
+            productWarehousingService.save(w);
+            log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}",
+                    order.getId(), bundle.getId(), defectQty);
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("[QualityScan] quality_scan 记录重复（幂等）: orderId={}, bundleId={}",
+                    order.getId(), bundle.getId());
+        } catch (Exception e) {
+            log.warn("[QualityScan] 创建 quality_scan 记录失败（不阻断主流程）: orderId={}, bundleId={}, error={}",
+                    order.getId(), bundle.getId(), e.getMessage(), e);
         }
     }
 
