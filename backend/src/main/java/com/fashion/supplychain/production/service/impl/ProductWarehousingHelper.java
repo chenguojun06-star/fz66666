@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +72,9 @@ public class ProductWarehousingHelper {
 
     @Autowired
     private ProductSkuService productSkuService;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     // ──────────── 工具方法 ────────────
 
@@ -574,9 +578,11 @@ public class ProductWarehousingHelper {
             return;
         }
 
+        String scanRecordId;
         if (existing == null) {
             ScanRecord sr = new ScanRecord();
-            sr.setId(UUID.randomUUID().toString());
+            scanRecordId = UUID.randomUUID().toString();
+            sr.setId(scanRecordId);
             sr.setScanCode(scanCode);
             sr.setRequestId(requestId);
             sr.setOrderId(order.getId());
@@ -602,8 +608,9 @@ public class ProductWarehousingHelper {
             sr.setUpdateTime(t);
             scanRecordMapper.insert(sr);
         } else {
+            scanRecordId = existing.getId();
             ScanRecord patch = new ScanRecord();
-            patch.setId(existing.getId());
+            patch.setId(scanRecordId);
             patch.setScanCode(scanCode);
             patch.setOrderId(order.getId());
             patch.setOrderNo(order.getOrderNo());
@@ -626,6 +633,24 @@ public class ProductWarehousingHelper {
             patch.setCuttingBundleQrCode(cuttingBundleQr);
             patch.setUpdateTime(t);
             scanRecordMapper.updateById(patch);
+        }
+
+        // 同步更新工序跟踪记录（t_production_process_tracking）
+        // 工序跟踪表以节点名（如"入库"、"质检"）作为 processCode 初始化
+        // 参考 WarehouseScanExecutor 的实现模式：失败不阻断主流程
+        if (StringUtils.hasText(cuttingBundleId)) {
+            try {
+                boolean updated = processTrackingOrchestrator.updateScanRecord(
+                        cuttingBundleId, progressStage, operatorId, operatorName, scanRecordId);
+                if (updated) {
+                    log.info("PC入库工序跟踪更新成功: bundleId={}, stage={}", cuttingBundleId, progressStage);
+                } else {
+                    log.warn("PC入库工序跟踪未找到记录（不阻断入库）: bundleId={}, stage={}", cuttingBundleId, progressStage);
+                }
+            } catch (Exception e) {
+                log.warn("PC入库工序跟踪更新失败（不阻断入库）: bundleId={}, stage={}, msg={}",
+                        cuttingBundleId, progressStage, e.getMessage());
+            }
         }
     }
 }
