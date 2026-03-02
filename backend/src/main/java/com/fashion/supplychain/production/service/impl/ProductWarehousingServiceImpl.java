@@ -229,7 +229,18 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         productWarehousing.setDeleteFlag(0);
 
         // 保存质检入库记录
-        boolean ok = this.save(productWarehousing);
+        // ⚠️ 必须在 @Transactional 方法内部捕获 DuplicateKeyException，
+        // 不能让它传播到方法边界外——否则 Spring 会将外层事务标记为 rollback-only，
+        // 导致 ScanRecordOrchestrator.execute() 提交时抛 UnexpectedRollbackException (500)。
+        boolean ok;
+        try {
+            ok = this.save(productWarehousing);
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("入库记录重复（幂等，视为成功）: orderId={}, bundleId={}",
+                    productWarehousing.getOrderId(),
+                    productWarehousing.getCuttingBundleId(), dke);
+            return true; // 重复入库 = 幂等，不抛出，不污染外层事务
+        }
         if (ok) {
             if (bundle != null && StringUtils.hasText(bundle.getId())) {
                 helper.updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
