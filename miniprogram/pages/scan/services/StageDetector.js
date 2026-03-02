@@ -300,10 +300,18 @@ class StageDetector {
     let precomputedQualityStage = '';
     let qualityIsFullyDone = false;
     if (qualityProcess) {
+      // 获取菲号当前状态，判断是否处于返修后重新质检（repaired_waiting_qc）场景
+      let bundleStatus = '';
+      try {
+        const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
+        bundleStatus = (bundleInfo && bundleInfo.status) ? bundleInfo.status : '';
+      } catch (e) {
+        console.warn('[StageDetector] 获取菲号状态失败，跳过返修质检判断:', e);
+      }
       // 🔧 修复：用 scanType 匹配而非 processName，避免 "质检领取" !== "质检" 的问题
       const hasAnyQualityScan = scanHistory.some(r => (r.scanType || '').toLowerCase() === 'quality');
-      if (hasAnyQualityScan) {
-        precomputedQualityStage = await this._inferQualityStage(orderNo, scanHistory);
+      if (hasAnyQualityScan || bundleStatus === 'repaired_waiting_qc') {
+        precomputedQualityStage = await this._inferQualityStage(orderNo, scanHistory, bundleStatus);
         qualityIsFullyDone = precomputedQualityStage === 'done';
       } else {
         // 无任何质检记录，默认需要先领取
@@ -503,7 +511,8 @@ class StageDetector {
         hasAnyRecord = true;
         const pageQty = records.reduce((sum, item) => {
           // 排除质检产生的待返修记录（warehousingType=quality_scan），只统计真实入库操作
-          if (item && item.warehousingType === 'quality_scan') return sum;
+          // 排除次品返修申报记录（warehousingType=repair_return），只统计最终合格入库
+          if (item && (item.warehousingType === 'quality_scan' || item.warehousingType === 'repair_return')) return sum;
           const qualified = Number(item && item.qualifiedQuantity);
           if (!Number.isNaN(qualified) && qualified > 0) {
             return sum + qualified;
@@ -575,7 +584,24 @@ class StageDetector {
    * @param {Array} scanHistory - 当前菲号扫码历史（已过滤的）
    * @returns {Promise<string>} 'confirm' | 'done'
    */
-  async _inferQualityStage(orderNo, scanHistory) {
+  async _inferQualityStage(orderNo, scanHistory, bundleStatus) {
+    try {
+      // 返修后重新质检场景：菲号状态为 repaired_waiting_qc，忽略旧的质检确认记录
+      // 以最新未确认的 quality_receive 记录（本轮新开）为判断依据
+      if (bundleStatus === 'repaired_waiting_qc') {
+        const receiveRecords = (scanHistory || []).filter(r => {
+          const scanType = (r.scanType || '').toLowerCase();
+          return scanType === 'quality' && r.processCode === 'quality_receive';
+        });
+        // 有未确认的领取记录 → 本轮已领取，等待录入验收结果
+        const hasNewUnconfirmed = receiveRecords.some(r => !r.confirmTime);
+        if (hasNewUnconfirmed) {
+          return 'confirm';
+        }
+        // 无未确认记录（全部是旧轮的 confirmTime）→ 等待质检员重新领取
+        return 'receive';
+      }
+
     try {
       // 从已有扫码历史里查找 quality 子阶段记录
       const qualityRecords = scanHistory.filter(r => {
@@ -602,9 +628,12 @@ class StageDetector {
   }
 
   _extractQualityMeta(scanHistory, fallbackQty) {
-    const confirmRec = (scanHistory || []).find(r =>
+    // 使用最新的质检确认记录（多轮质检时取最近一次，避免用返修前的旧记录）
+    const allConfirmRecs = (scanHistory || []).filter(r =>
       r && r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
     );
+    allConfirmRecs.sort((a, b) => (a.confirmTime || '').localeCompare(b.confirmTime || ''));
+    const confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
     const isUnqualified = !!(confirmRec && String(confirmRec.remark || '').startsWith('unqualified'));
     const defectQty = isUnqualified
       ? _parseDefectQtyFromRemark(confirmRec.remark, confirmRec.quantity)

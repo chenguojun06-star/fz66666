@@ -49,12 +49,15 @@ export const normalizeStageKey = (v: unknown) => String(v || '').trim().replace(
 
 /**
  * 判断是否为质检阶段
+ * 注意："质检入库"不是质检，是入库（质检后入仓），需用 isWarehouseStageKey 判断
  * @param k 阶段名称
  * @returns 是否为质检阶段
  */
 export const isQualityStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
+  // "质检入库""入库质检" 等含"入库"的不算质检
+  if (n.includes('入库')) return false;
   return n.includes('质检') || n.includes('检验') || n.includes('品检') || n.includes('验货');
 };
 

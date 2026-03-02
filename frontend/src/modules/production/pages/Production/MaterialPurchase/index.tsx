@@ -44,7 +44,6 @@ import SmartReceiveModal from './components/SmartReceiveModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 
 const MaterialPurchase: React.FC = () => {
   const [messageApi, contextHolder] = antdMessage.useMessage();
@@ -111,7 +110,6 @@ const MaterialPurchase: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-  const showPurchaseAI = useMemo(() => isSmartFeatureEnabled('smart.material.purchase.ai.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -1337,13 +1335,6 @@ const MaterialPurchase: React.FC = () => {
                         <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
                       </Card>
                     ) : null}
-                    {/* AI 采购分析：根据当前订单号展示到货情况与裁剪可行性 */}
-                    {showPurchaseAI && (
-                      <MaterialPurchaseAIBanner
-                        purchaseList={purchaseList}
-                        currentOrderNo={queryParams.orderNo}
-                      />
-                    )}
                     <div className="page-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <Select

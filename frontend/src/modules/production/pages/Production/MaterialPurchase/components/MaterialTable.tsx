@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Tag, App, Input } from 'antd';
+import { Tag, App, Input, Tooltip } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -158,7 +158,51 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'orderNo',
       width: 140,
       ellipsis: true,
-      render: (v: string) => v || '-',
+      render: (v: string, _record: MaterialPurchaseType) => {
+        const orderNo = String(v || '').trim();
+        if (!orderNo || orderNo === '-') return '-';
+
+        // 基于当前 dataSource 计算该订单的到货情况
+        const orderRecs = dataSource.filter(r => r.orderNo === orderNo && r.status !== 'cancelled');
+        let tooltipContent: React.ReactNode = null;
+        if (orderRecs.length > 0) {
+          const totalP   = orderRecs.reduce((s, r) => s + (Number(r.purchaseQuantity) || 0), 0);
+          const totalA   = orderRecs.reduce((s, r) => s + (Number(r.arrivedQuantity) || 0), 0);
+          const rate     = totalP > 0 ? Math.round(totalA / totalP * 100) : 0;
+          const notArr   = orderRecs.filter(r => (Number(r.arrivedQuantity) || 0) === 0);
+          const partial  = orderRecs.filter(r => {
+            const a = Number(r.arrivedQuantity) || 0; const p = Number(r.purchaseQuantity) || 0;
+            return a > 0 && a < p;
+          });
+
+          const lines: React.ReactNode[] = [
+            <div key="rate">共 {orderRecs.length} 种物料，到货率 {rate}%（{totalA}/{totalP}）</div>,
+          ];
+          if (notArr.length > 0) {
+            lines.push(<div key="no" style={{ color: '#ff4d4f' }}>未到货：{notArr.slice(0,3).map(r => r.materialName).join('、')}{notArr.length > 3 ? `等${notArr.length}种` : ''}</div>);
+            lines.push(<div key="hint" style={{ color: '#ff4d4f' }}>❌ 暂不可裁剪，建议催供应商到货</div>);
+          } else if (partial.length > 0) {
+            lines.push(<div key="partial" style={{ color: '#fa8c16' }}>部分在途：{partial.slice(0,2).map(r => `${r.materialName} ${r.arrivedQuantity}/${r.purchaseQuantity}`).join('、')}</div>);
+          } else {
+            lines.push(<div key="ok" style={{ color: '#52c41a' }}>✅ 材料已备齐，可安排裁剪</div>);
+          }
+
+          tooltipContent = (
+            <div style={{ fontSize: 12, maxWidth: 280 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>🤖 采购分析 · {orderNo}</div>
+              {lines}
+            </div>
+          );
+        }
+
+        return tooltipContent
+          ? (
+            <Tooltip title={tooltipContent} placement="right">
+              <span style={{ borderBottom: '1px dotted var(--color-primary)', cursor: 'help' }}>{orderNo}</span>
+            </Tooltip>
+          )
+          : orderNo;
+      },
     },
     {
       title: '下单数量',

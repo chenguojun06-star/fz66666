@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Tag } from 'antd';
 
@@ -15,7 +15,6 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import WarehousingAuditBanner from './WarehousingAuditBanner';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
 interface WarehousingListProps {
@@ -24,7 +23,6 @@ interface WarehousingListProps {
 
 const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
   const navigate = useNavigate();
-  const showWarehousingAudit = useMemo(() => isSmartFeatureEnabled('smart.warehousing.audit.enabled'), []);
   const {
     loading,
     warehousingList,
@@ -122,15 +120,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
               />
             </Card>
           ) : null}
-
-          {/* AI 质检入库洞察：有订单筛选时展示订单维度分析，否则展示全局积压建议 */}
-          {showWarehousingAudit && (
-            <WarehousingAuditBanner
-              stats={warehousingStats}
-              warehousingList={warehousingList}
-              currentOrderNo={queryParams.orderNo}
-            />
-          )}
 
           {/* 统计卡片（可点击筛选） */}
           <PageStatCards

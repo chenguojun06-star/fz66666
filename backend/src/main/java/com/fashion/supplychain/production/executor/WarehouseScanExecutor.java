@@ -76,9 +76,17 @@ public class WarehouseScanExecutor {
             throw new IllegalArgumentException("扫码内容不能为空");
         }
 
+        // ★ 提前判断 isDefectiveReentry，返修申报不强制要求仓库（避免 400）
+        boolean isDefectiveReentry = "true".equalsIgnoreCase(
+                TextUtils.safeText(params.get("isDefectiveReentry")));
+
         String warehouse = TextUtils.safeText(params.get("warehouse"));
         if (!hasText(warehouse)) {
-            throw new IllegalArgumentException("请指定仓库");
+            if (isDefectiveReentry) {
+                warehouse = "待分配"; // 返修申报不必指定仓库，使用默认值
+            } else {
+                throw new IllegalArgumentException("请指定仓库");
+            }
         }
 
         CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
@@ -114,10 +122,7 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("进度节点已完成，该订单已结束入库");
         }
 
-        // 判断是否为次品返修入库（跳过包装前置检查）
-        boolean isDefectiveReentry = "true".equalsIgnoreCase(
-                TextUtils.safeText(params.get("isDefectiveReentry")));
-
+        // isDefectiveReentry 已在方法入口处解析（方法顶部）
         if (isDefectiveReentry) {
             // ── 返修完成申报：不直接入库，记录"修好了"让质检重检 ──
             // 不做 validateQualityConfirmBeforeWarehousing（返修申报不是正式入库）

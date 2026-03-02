@@ -6,7 +6,17 @@ export const stageAliasMap: Record<string, string[]> = {
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
   secondaryProcess: ['二次工艺', '绣花', '印花'],
-  warehousing: ['入库'],
+  warehousing: ['入库', '质检入库'],
+};
+
+/**
+ * 规范化阶段名（解决"质检入库"同时匹配质检和入库的歧义问题）
+ * "质检入库"业务含义是"入库"（质检后入仓），不是"质检"
+ */
+const canonicalizeStage = (raw: string): string => {
+  const s = raw.trim();
+  if (s === '质检入库') return '入库';
+  return s;
 };
 
 export const getStageAliases = (nodeTypeKey: string, nodeName?: string) => {
@@ -19,8 +29,9 @@ export const getStageAliases = (nodeTypeKey: string, nodeName?: string) => {
 export const matchRecordToStage = (recordStage?: string, recordProcess?: string, nodeTypeKey?: string, nodeName?: string) => {
   const aliases = getStageAliases(String(nodeTypeKey || '').trim(), nodeName)
     .map((v) => v.toLowerCase());
-  const stage = String(recordStage || '').trim().toLowerCase();
-  const process = String(recordProcess || '').trim().toLowerCase();
+  // 规范化记录的阶段/工序名称，消除"质检入库"歧义
+  const stage = canonicalizeStage(String(recordStage || '').trim()).toLowerCase();
+  const process = canonicalizeStage(String(recordProcess || '').trim()).toLowerCase();
   if (!stage && !process) return false;
   return aliases.some((alias) =>
     stage.includes(alias) || alias.includes(stage) ||

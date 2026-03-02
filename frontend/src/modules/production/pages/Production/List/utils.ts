@@ -125,7 +125,7 @@ export const mainStages = [
   { key: 'carSewing', name: '车缝', color: '#065f46', keywords: ['车缝', '缝制', '缝纫', '车工', '生产'] },
   { key: 'secondaryProcess', name: '二次工艺', color: '#5b21b6', keywords: ['二次工艺', '二次', '工艺'] },
   { key: 'tailProcess', name: '尾部', color: '#9d174d', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
-  { key: 'warehousing', name: '入库', color: '#374151', keywords: ['入库', '仓库'] },
+  { key: 'warehousing', name: '入库', color: '#374151', keywords: ['入库', '仓库', '质检入库'] },
 ] as const;
 
 export const stageKeyByType: Record<string, string> = {
@@ -138,7 +138,10 @@ export const stageKeyByType: Record<string, string> = {
 };
 
 export const matchStageKey = (progressStage: string, processName: string) => {
-  const text = `${progressStage || ''} ${processName || ''}`;
+  // 规范化：解决"质检入库"同时匹配质检(tailProcess)和入库(warehousing)的歧义
+  // "质检入库"业务含义是"入库"，不是"质检"
+  const canonicalize = (s: string) => s.replace(/质检入库/g, '入库');
+  const text = canonicalize(`${progressStage || ''} ${processName || ''}`);
   for (const stage of mainStages) {
     if (stage.keywords.some(kw => text.includes(kw))) {
       return stage.key;

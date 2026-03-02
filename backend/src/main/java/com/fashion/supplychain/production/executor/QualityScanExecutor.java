@@ -139,6 +139,17 @@ public class QualityScanExecutor {
 
         // 检查是否已存在记录
         ScanRecord existed = findQualityStageRecord(order.getId(), bundle.getId(), stageCode);
+
+        // ★ 返修再质检：原质检已确认（confirmTime非空）且存在待质检返修申报记录时，允许重新领取
+        //   业务背景：次品→返修申报→再质检，需要新的 quality_receive 轮次
+        if ("quality_receive".equals(stageCode)
+                && existed != null && existed.getConfirmTime() != null
+                && hasActiveRepairReturn(order.getId(), bundle.getId())) {
+            log.info("[QC再检] 检测到返修待质检，允许创建新质检记录: orderId={}, bundleId={}, bundleNo={}",
+                    order.getId(), bundle.getId(), bundle.getBundleNo());
+            existed = null; // 强制走新建路径
+        }
+
         if (existed != null && hasText(existed.getId())) {
             return handleExistedRecord(existed, operatorId, operatorName, qualityStage, order, bundle);
         }
@@ -584,5 +595,24 @@ public class QualityScanExecutor {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
+    }
+
+    /**
+     * 检查是否存在待质检的返修申报记录（warehousingType=repair_return）
+     * 用于判断质检员是否需要为修好的次品进行再次验收
+     */
+    private boolean hasActiveRepairReturn(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) return false;
+        try {
+            return productWarehousingService.lambdaQuery()
+                    .eq(ProductWarehousing::getOrderId, orderId)
+                    .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                    .eq(ProductWarehousing::getWarehousingType, "repair_return")
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .count() > 0;
+        } catch (Exception e) {
+            log.warn("[QC再检] 查询返修记录失败，默认不触发再检: orderId={}, bundleId={}", orderId, bundleId, e);
+            return false;
+        }
     }
 }

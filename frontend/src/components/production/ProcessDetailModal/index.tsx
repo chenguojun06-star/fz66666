@@ -888,6 +888,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   records={Array.isArray(processTrackingRecords) ? processTrackingRecords : []}
                   loading={trackingLoading}
                   processType={processType}
+                  nodeName={{ procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' }[processType] || processType}
                   orderStatus={record?.status}
                   onUndoSuccess={handleUndoSuccess}
                 />

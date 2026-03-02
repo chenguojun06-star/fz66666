@@ -84,7 +84,7 @@ const STAGE_KEYWORDS: Record<string, string[]> = {
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
   secondaryProcess: ['二次工艺', '绣花', '印花', '二次'],
-  warehousing: ['入库', '仓库'],
+  warehousing: ['入库', '仓库', '质检入库'],
   // ProcessType (来自列表页)
   carSewing: ['车缝', '缝制', '缝纫', '车工', '生产'],
   tailProcess: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包', '装箱'],
@@ -110,7 +110,10 @@ const TYPE_TO_CODE_PREFIX: Record<string, string[]> = {
 /** 判断一条记录是否匹配过滤条件 */
 const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeName?: string, processList?: ProcessListItem[]): boolean => {
   const code = (record.processCode || '').toLowerCase();
-  const name = record.processName || '';
+  const rawName = record.processName || '';
+  // 规范化名称：解决"质检入库"同时匹配质检和入库的歧义问题
+  // "质检入库"业务含义是"入库"（质检后入仓），不是"质检"
+  const name = rawName === '质检入库' ? '入库' : rawName;
 
   // 策略0（最高优先级）：通过 processList 的 processCode 做精确动态匹配
   // 当模板修改了工序名称时，processCode 不变，因此这个策略始终有效

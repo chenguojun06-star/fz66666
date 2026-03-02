@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Tag, message } from 'antd';
+import { Button, Tag, Tooltip, message } from 'antd';
 import QRCode from 'qrcode';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -115,13 +115,53 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         if (!text) return '-';
         const urgencyTag = getUrgencyTag((record as any).urgencyLevel);
         const plateTag = getPlateTypeTag((record as any).plateType);
-        return (
-          <span title={text} style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <span>{text}</span>
+
+        // 计算该订单的质检汇总（从当前加载的 dataSource 中筛选）
+        const orderRecs = (dataSource as WarehousingType[]).filter(r => r.orderNo === text);
+        let tooltipContent: React.ReactNode = null;
+        if (orderRecs.length > 0) {
+          const totalQ   = orderRecs.reduce((s, r) => s + (Number(r.qualifiedQuantity) || 0), 0);
+          const totalUQ  = orderRecs.reduce((s, r) => s + (Number(r.unqualifiedQuantity) || 0), 0);
+          const totalW   = orderRecs.reduce((s, r) => s + (Number(r.warehousingQuantity) || 0), 0);
+          const processed = totalQ + totalUQ;
+          const rate = processed > 0 ? Math.round(totalQ / processed * 100) : 0;
+
+          // 按尺码分组不合格件
+          const badSizes: string[] = [];
+          const sizeMap = new Map<string, { q: number; uq: number }>();
+          orderRecs.forEach(r => {
+            const sz = String(r.size || '通码');
+            const prev = sizeMap.get(sz) ?? { q: 0, uq: 0 };
+            sizeMap.set(sz, { q: prev.q + (Number(r.qualifiedQuantity) || 0), uq: prev.uq + (Number(r.unqualifiedQuantity) || 0) });
+          });
+          sizeMap.forEach((v, sz) => { if (v.uq > 0) badSizes.push(`${sz}码 ${v.uq}件不合格`); });
+
+          const statusLine = totalUQ === 0
+            ? `全部合格 ✅，已入库 ${totalW} 件`
+            : rate >= 85
+              ? `合格率 ${rate}%，${badSizes.join('、')}，已入库 ${totalW} 件`
+              : `⚠️ 合格率仅 ${rate}%，${badSizes.join('、')}`;
+
+          tooltipContent = (
+            <div style={{ fontSize: 12, maxWidth: 260 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>🤖 质检分析 · {text}</div>
+              <div>共质检 {processed} 件：合格 {totalQ} / 不合格 {totalUQ}</div>
+              <div>{statusLine}</div>
+            </div>
+          );
+        }
+
+        const inner = (
+          <span style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
             {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{plateTag.text}</Tag>}
             {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{urgencyTag.text}</Tag>}
           </span>
         );
+
+        return tooltipContent
+          ? <Tooltip title={tooltipContent} placement="right">{inner}</Tooltip>
+          : inner;
       },
     },
     {
