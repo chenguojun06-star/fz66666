@@ -120,6 +120,7 @@ public class WarehouseScanExecutor {
 
         if (isDefectiveReentry) {
             // 次品返修入库：必须有质检confirm记录，只验证次品件数上限，跳过包装检查
+            // 注意：不做 validateNotExceedOrderQuantity，次品返修不新增消耗，由 validateDefectiveReentryQty 保护上限
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
             validateDefectiveReentryQty(order.getId(), bundle, qty);
         } else {
@@ -133,10 +134,9 @@ public class WarehouseScanExecutor {
             validateProductionPrerequisite(order.getId(), bundle.getId());
             // ★ 质检前置校验：必须有质检验收记录（quality_receive + confirmTime 不为空）才能入库
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
+            // 验证数量不超过订单/裁剪总量
+            inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
         }
-
-        // 验证数量不超过订单数量
-        inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
 
         // 创建入库记录
         ProductWarehousing w = new ProductWarehousing();
@@ -147,6 +147,11 @@ public class WarehouseScanExecutor {
         w.setQualifiedQuantity(qty);
         w.setUnqualifiedQuantity(0);
         w.setQualityStatus("qualified");
+        if (isDefectiveReentry) {
+            // 返修入库必须带 repairRemark，否则 saveWarehousingAndUpdateOrderInternal 会因
+            // blocked+qualified+无remark 拒绝入库
+            w.setRepairRemark("返修完成");
+        }
         w.setCuttingBundleQrCode(bundle.getQrCode());
         // 填充操作人信息
         if (StringUtils.hasText(operatorId)) {
