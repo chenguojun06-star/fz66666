@@ -68,10 +68,17 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
+  /**
+   * 从模板库 API 返回的完整节点列表（含 progressStage 字段）
+   * 作为 workflowNodesByStage 的主数据源，支持任意自定义工序名精确归类
+   */
+  const [templateNodesList, setTemplateNodesList] = useState<{ name: string; processCode?: string; progressStage?: string }[]>([]);
 
   /**
-   * 根据 progressWorkflowJson 解析模板节点并按阶段分组
-   * 用于给 ProcessTrackingTable 传 processList，支持自定义工序名（如「整件」）精确匹配
+   * 将模板节点按阶段分组，传给 ProcessTrackingTable.processList
+   * 优先用 templateNodesList（来自 progressNodeUnitPrices API，含 progressStage）
+   * 次用 record.progressNodeUnitPrices（list API 解析的，无 progressStage 但可关键词兜底）
+   * 这样无论模板里叫「整件」「绣花」还是任何自定义名字，都能精确匹配
    */
   const workflowNodesByStage = useMemo<Record<string, { name: string; processCode?: string }[]>>(() => {
     const result: Record<string, { name: string; processCode?: string }[]> = {};
@@ -79,22 +86,31 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     if (!record) return result;
     try {
       let nodes: any[] = [];
-      const json = record.progressWorkflowJson;
-      if (json) {
-        const w = typeof json === 'string' ? JSON.parse(json) : json;
-        const rawNodes = w?.nodes || [];
-        if (rawNodes.length > 0 && rawNodes[0]?.name) {
-          nodes = rawNodes;
-        } else {
-          const pbn = w?.processesByNode || {};
-          for (const n of rawNodes) {
-            for (const p of (pbn[n?.id] || [])) nodes.push({ ...p, progressStage: p.progressStage || n?.progressStage || n?.name || '' });
+
+      // 优先：使用 templateNodesList（弹窗打开时从 API 加载，含 progressStage 字段）
+      if (templateNodesList.length > 0) {
+        nodes = templateNodesList;
+      } else {
+        // 次选：从 record.progressWorkflowJson 解析（list API 响应，节点无 progressStage）
+        const json = record.progressWorkflowJson;
+        if (json) {
+          const w = typeof json === 'string' ? JSON.parse(json) : json;
+          const rawNodes = w?.nodes || [];
+          if (rawNodes.length > 0 && rawNodes[0]?.name) {
+            nodes = rawNodes;
+          } else {
+            const pbn = w?.processesByNode || {};
+            for (const n of rawNodes) {
+              for (const p of (pbn[n?.id] || [])) nodes.push({ ...p, progressStage: p.progressStage || n?.progressStage || n?.name || '' });
+            }
           }
         }
+        // 兜底：record.progressNodeUnitPrices（同样来自 progressWorkflowJson，无 progressStage）
+        if (nodes.length === 0 && Array.isArray((record as any).progressNodeUnitPrices)) {
+          nodes = (record as any).progressNodeUnitPrices;
+        }
       }
-      if (nodes.length === 0 && Array.isArray((record as any).progressNodeUnitPrices)) {
-        nodes = (record as any).progressNodeUnitPrices;
-      }
+
       nodes.forEach((n: any) => {
         const name = String(n?.name || n?.processName || '').trim();
         const stage = classifyNodeStage(String(n?.progressStage || ''), name);
@@ -102,29 +118,37 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       });
     } catch { /* ignore */ }
     return result;
-  }, [record]);
+  }, [record, templateNodesList]);
 
-  // 加载模板最新单价
+  // 加载模板最新单价 & 节点列表（弹窗每次打开时触发）
   useEffect(() => {
     if (!visible || !record) return;
     const styleNo = String((record as any)?.styleNo || '').trim();
-    if (!styleNo) return;
+    if (!styleNo) {
+      setTemplateNodesList([]);
+      return;
+    }
     (async () => {
       try {
         const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
         const r = res as any;
-        const rows = Array.isArray(r?.data) ? r.data : [];
+        const rows: any[] = Array.isArray(r?.data) ? r.data : [];
+        // 存价格 Map
         const pm = new Map<string, number>();
+        // 存完整节点列表（含 progressStage）
+        const nl: { name: string; processCode?: string; progressStage?: string }[] = [];
         rows.forEach((n: any) => {
           const name = String(n?.name || '').trim();
+          if (!name) return;
           const price = Number(n?.unitPrice);
-          if (name && Number.isFinite(price) && price > 0) {
-            pm.set(name, price);
-          }
+          if (Number.isFinite(price) && price > 0) pm.set(name, price);
+          // id 字段即 processCode（见后端 resolveProgressNodeUnitPrices: item.put("id", processCode)）
+          nl.push({ name, processCode: String(n?.id || n?.processCode || name).trim(), progressStage: String(n?.progressStage || '').trim() });
         });
         setTemplatePriceMap(pm);
+        setTemplateNodesList(nl);
       } catch {
-        // ignore
+        setTemplateNodesList([]);
       }
     })();
   }, [visible, record]);
