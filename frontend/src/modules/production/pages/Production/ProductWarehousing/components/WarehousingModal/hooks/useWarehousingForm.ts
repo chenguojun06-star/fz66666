@@ -120,6 +120,9 @@ export const useWarehousingForm = (
             const q = Number(r?.qualifiedQuantity || 0) || 0;
             if (q <= 0) return false;
             const qs = String(r?.qualityStatus || '').trim().toLowerCase();
+            // 排除「返修申报」记录（qualityStatus='repair_return'）
+            // 这类记录不代表已完成质检入库，返修物品还需质检重检
+            if (qs === 'repair_return') return false;
             return !qs || qs === 'qualified';
           })
           .map((r) => String(r?.cuttingBundleQrCode || '').trim())
@@ -374,6 +377,7 @@ export const useWarehousingForm = (
         const bundleNo = Number(b.bundleNo || 0) || 0;
         const rawStatus = String((b as any)?.status || '').trim();
         const isBlocked = isBundleBlockedForWarehousing(rawStatus);
+        const isRepairedWaitingQc = rawStatus === 'repaired_waiting_qc' || rawStatus === '返修待质检';
         const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
         const availableQty = isBlocked ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
         const isUsed = qualifiedWarehousedBundleQrSet.has(qr);
@@ -386,6 +390,10 @@ export const useWarehousingForm = (
           statusText = '已合格质检';
         } else if (!isProductionReady) {
           statusText = '生产未完成';
+        } else if (isRepairedWaitingQc) {
+          // 返修完成，待质检重检
+          if (remaining === undefined) statusText = '返修完成待质检（计算中）';
+          else statusText = availableQty > 0 ? `返修完成待质检｜可质检${availableQty}` : '返修完成待质检｜无可质检';
         } else if (isBlocked) {
           if (remaining === undefined) statusText = '次品待返修（计算中）';
           else statusText = availableQty > 0 ? `次品待返修｜可入库${availableQty}` : '次品待返修｜无可入库';

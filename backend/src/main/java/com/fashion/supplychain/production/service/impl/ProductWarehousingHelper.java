@@ -44,6 +44,8 @@ public class ProductWarehousingHelper {
     static final String STATUS_QUALIFIED = "qualified";
     static final String STATUS_UNQUALIFIED = "unqualified";
     static final String STATUS_REPAIRED = "repaired";
+    /** 返修完成、待质检重检 */
+    static final String STATUS_REPAIRED_WAITING_QC = "repaired_waiting_qc";
     static final String STATUS_COMPLETED = "completed";
 
     static final String SCAN_RESULT_SUCCESS = "success";
@@ -52,12 +54,15 @@ public class ProductWarehousingHelper {
     static final String SCAN_TYPE_WAREHOUSE = "warehouse";
     static final String WAREHOUSING_TYPE_MANUAL = "manual";
     static final String WAREHOUSING_TYPE_SCAN = "scan";
+    /** 返修完成申报（不计入库存，等待质检重检） */
+    static final String WAREHOUSING_TYPE_REPAIR_RETURN = "repair_return";
 
     static final Set<String> REPAIRED_STATUS_SET = new HashSet<>(Arrays.asList(
             "repaired", "返修完成", "已返修", "返修合格", "已修复"));
 
     static final Set<String> UNQUALIFIED_STATUS_SET = new HashSet<>(Arrays.asList(
-            "unqualified", "不合格", "次品", "次品待返修", "待返修"));
+            "unqualified", "不合格", "次品", "次品待返修", "待返修",
+            "repaired_waiting_qc", "返修待质检", "待质检返修"));
 
     // ──────────── 依赖注入 ────────────
 
@@ -107,19 +112,30 @@ public class ProductWarehousingHelper {
 
     // ──────────── 聚合查询 ────────────
 
-    public int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+    /**
+     * 查询 bundle 的 repair 统计（核心计算方法）。
+     * <ul>
+     *   <li>repairPool  = 历史累计次品件数（sum unqualifiedQty > 0）</li>
+     *   <li>repairReturnQty = 已从返修处申报返回、尚未质检的件数（repair_return 类型记录）</li>
+     *   <li>reQcDoneQty    = 已经过质检重检确认入库的件数（有 repairRemark 且 type != repair_return）</li>
+     *   <li>awaitingRepair = repairPool - repairReturnQty - reQcDoneQty（仍在工厂返修中）</li>
+     *   <li>awaitingReQc  = repairReturnQty - reQcDoneQty（已返回待质检重检）</li>
+     * </ul>
+     */
+    int[] calcRepairBreakdown(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+        // returns [repairPool, repairReturnQty, reQcDoneQty]  – all ≥ 0
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         String bid = StringUtils.hasText(cuttingBundleId) ? cuttingBundleId.trim() : null;
         String exId = StringUtils.hasText(excludeWarehousingId) ? excludeWarehousingId.trim() : null;
         if (!StringUtils.hasText(oid) || !StringUtils.hasText(bid)) {
-            return 0;
+            return new int[]{0, 0, 0};
         }
         List<ProductWarehousing> list;
         try {
             LambdaQueryWrapper<ProductWarehousing> qw = new LambdaQueryWrapper<ProductWarehousing>()
                     .select(ProductWarehousing::getId, ProductWarehousing::getUnqualifiedQuantity,
                             ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getRepairRemark,
-                            ProductWarehousing::getQualityStatus)
+                            ProductWarehousing::getQualityStatus, ProductWarehousing::getWarehousingType)
                     .eq(ProductWarehousing::getDeleteFlag, 0)
                     .eq(ProductWarehousing::getOrderId, oid)
                     .eq(ProductWarehousing::getCuttingBundleId, bid);
@@ -128,35 +144,53 @@ public class ProductWarehousingHelper {
             }
             list = productWarehousingMapper.selectList(qw);
         } catch (Exception e) {
-            return 0;
+            return new int[]{0, 0, 0};
         }
 
         long repairPool = 0;
-        long repairedOut = 0;
+        long repairReturnQty = 0;
+        long reQcDoneQty = 0;
         if (list != null) {
             for (ProductWarehousing w : list) {
-                if (w == null) {
-                    continue;
-                }
+                if (w == null) continue;
                 int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
-                if (uq > 0) {
-                    repairPool += uq;
-                }
+                if (uq > 0) repairPool += uq;
 
-                String rr = trimToNull(w.getRepairRemark());
-                if (rr != null) {
-                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-                    if (q > 0) {
-                        repairedOut += q;
+                boolean isRepairReturn = WAREHOUSING_TYPE_REPAIR_RETURN.equalsIgnoreCase(
+                        w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
+                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                if (q > 0) {
+                    if (isRepairReturn) {
+                        repairReturnQty += q;  // 已申报返修完成，待质检
+                    } else if (trimToNull(w.getRepairRemark()) != null) {
+                        reQcDoneQty += q;       // 已质检重检通过并入库
                     }
                 }
             }
         }
-        long remaining = repairPool - repairedOut;
-        if (remaining <= 0) {
-            return 0;
-        }
-        return (int) Math.min(Integer.MAX_VALUE, remaining);
+        return new int[]{
+                (int) Math.min(Integer.MAX_VALUE, Math.max(0, repairPool)),
+                (int) Math.min(Integer.MAX_VALUE, Math.max(0, repairReturnQty)),
+                (int) Math.min(Integer.MAX_VALUE, Math.max(0, reQcDoneQty))
+        };
+    }
+
+    /**
+     * 已返修申报、尚待质检重检的件数（用于质检页 availableQty 及 ensureRepairQuantityNotExceeded）。
+     */
+    public int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+        int[] bd = calcRepairBreakdown(orderId, cuttingBundleId, excludeWarehousingId);
+        // awaitingReQc = repairReturnQty - reQcDoneQty
+        return Math.max(0, bd[1] - bd[2]);
+    }
+
+    /**
+     * 仍在工厂返修中（尚未申报返回）的件数（用于 validateDefectiveReentryQty）。
+     */
+    public int repairDeclarationRemainingQtyByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+        int[] bd = calcRepairBreakdown(orderId, cuttingBundleId, excludeWarehousingId);
+        // awaitingRepair = repairPool - repairReturnQty - reQcDoneQty
+        return Math.max(0, bd[0] - bd[1] - bd[2]);
     }
 
     void ensureRepairQuantityNotExceeded(String orderId, String cuttingBundleId, int requestWarehousingQty,
@@ -464,9 +498,9 @@ public class ProductWarehousingHelper {
             nextBundleStatus = STATUS_UNQUALIFIED;
         } else if (STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus) && blocked
                 && StringUtils.hasText(repairRemark)) {
-            // 支持分批返修：还有剩余待返修数量时维持 unqualified，全部归零后才转 repaired
-            int remaining = remainingRepairQuantityByBundle(bundle.getProductionOrderId(), bundle.getId(), null);
-            nextBundleStatus = remaining > 0 ? STATUS_UNQUALIFIED : STATUS_REPAIRED;
+            // 质检重检通过：awaitingReQc == 0 则所有返修项均已质检 → repaired；否则仍有待质检 → repaired_waiting_qc
+            int awaitingReQc = remainingRepairQuantityByBundle(bundle.getProductionOrderId(), bundle.getId(), null);
+            nextBundleStatus = awaitingReQc > 0 ? STATUS_REPAIRED_WAITING_QC : STATUS_REPAIRED;
         } else {
             nextBundleStatus = STATUS_QUALIFIED;
         }

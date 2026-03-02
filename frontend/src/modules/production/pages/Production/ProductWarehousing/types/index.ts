@@ -85,6 +85,11 @@ export type BundleRepairStats = {
   repairPool: number;
   repairedOut: number;
   remaining: number;
+  // 新字段（次品返修二次质检流程）
+  repairReturnQty?: number;  // 已申报返修完成件数
+  reQcDoneQty?: number;      // 已质检重检入库件数
+  awaitingReQc?: number;     // 待质检重检件数
+  awaitingRepair?: number;   // 仍在工厂返修件数
 };
 
 export type OrderLine = {

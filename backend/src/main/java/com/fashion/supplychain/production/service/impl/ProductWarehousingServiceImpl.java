@@ -164,6 +164,14 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
                 throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，返修完成后才可以入库哦～");
             }
+            // 对于「返修完成待质检」的 bundle，如果未填写 repairRemark，自动补充默认备注
+            if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+                    && STATUS_REPAIRED_WAITING_QC.equalsIgnoreCase(
+                            bundle.getStatus() == null ? "" : bundle.getStatus().trim())
+                    && !StringUtils.hasText(repairRemark)) {
+                repairRemark = "返修检验合格";
+                productWarehousing.setRepairRemark(repairRemark);
+            }
             if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                     && !StringUtils.hasText(repairRemark)) {
                 throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，请填写返修备注后再进行质检入库");
@@ -537,6 +545,85 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     @Override
     public Map<String, Object> getWarehousingStats() {
         return baseMapper.selectWarehousingStats();
+    }
+
+    /**
+     * 保存「返修完成申报」记录（不更新 SKU 库存，不更新订单完成数量）。
+     * 这步僅记录工厂已完成返修，实际入库在质检重检通过后才执行。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveRepairReturnDeclaration(CuttingBundle bundle, ProductionOrder order,
+            int qty, String repairRemark, String operatorId, String operatorName, String warehouse) {
+        if (bundle == null || !StringUtils.hasText(bundle.getId())) {
+            throw new IllegalArgumentException("菲号信息不完整");
+        }
+        if (order == null || !StringUtils.hasText(order.getId())) {
+            throw new IllegalArgumentException("订单信息不完整");
+        }
+        if (qty <= 0) {
+            throw new IllegalArgumentException("返修申报数量必须大于 0");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String rr = StringUtils.hasText(repairRemark) ? repairRemark.trim() : "返修完成";
+
+        // 查找已有入库单号 (和其他记录共用同一入库单号)
+        String warehousingNo = helper.findExistingWarehousingNoByOrderId(order.getId());
+        if (!StringUtils.hasText(warehousingNo)) {
+            warehousingNo = helper.buildWarehousingNo(now);
+        }
+
+        ProductWarehousing w = new ProductWarehousing();
+        w.setOrderId(order.getId());
+        w.setOrderNo(order.getOrderNo());
+        w.setStyleId(order.getStyleId());
+        w.setStyleNo(order.getStyleNo());
+        w.setStyleName(order.getStyleName());
+        w.setWarehousingNo(warehousingNo);
+        w.setWarehousingType(WAREHOUSING_TYPE_REPAIR_RETURN);  // 区别于直接入库
+        w.setWarehouse(warehouse);
+        // 次品返修申报：warehousingQuantity=0 （不发生库存变动）；qualifiedQty=qty 仅用于统计
+        w.setWarehousingQuantity(0);
+        w.setQualifiedQuantity(qty);
+        w.setUnqualifiedQuantity(0);
+        w.setQualityStatus(WAREHOUSING_TYPE_REPAIR_RETURN);  // 区别于普通 qualified
+        w.setRepairRemark(rr);
+        w.setCuttingBundleId(bundle.getId());
+        w.setCuttingBundleNo(bundle.getBundleNo());
+        w.setCuttingBundleQrCode(bundle.getQrCode());
+        if (StringUtils.hasText(operatorId)) {
+            w.setWarehousingOperatorId(operatorId);
+            w.setReceiverId(operatorId);
+        }
+        if (StringUtils.hasText(operatorName)) {
+            w.setWarehousingOperatorName(operatorName);
+            w.setReceiverName(operatorName);
+        }
+        w.setWarehousingStartTime(now);
+        w.setWarehousingEndTime(now);
+        w.setCreateTime(now);
+        w.setUpdateTime(now);
+        w.setDeleteFlag(0);
+
+        // 需要跳过 saveWarehousingAndUpdateOrderInternal 的库存更新逻辑，直接保存
+        boolean ok = this.save(w);
+        if (ok) {
+            // 更新 bundle 状态：核算尚在工厂返修中的件数，全部申报完成则转 repaired_waiting_qc
+            int awaitingRepair = helper.repairDeclarationRemainingQtyByBundle(
+                    order.getId(), bundle.getId(), null);
+            String nextStatus = awaitingRepair > 0 ? STATUS_UNQUALIFIED : STATUS_REPAIRED_WAITING_QC;
+            try {
+                cuttingBundleService.lambdaUpdate()
+                        .eq(CuttingBundle::getId, bundle.getId())
+                        .set(CuttingBundle::getStatus, nextStatus)
+                        .set(CuttingBundle::getUpdateTime, now)
+                        .update();
+            } catch (Exception e) {
+                log.warn("返修申报后更新菲号状态失败: bundleId={}, status={}",
+                        bundle.getId(), nextStatus, e);
+            }
+        }
+        return ok;
     }
 
 }

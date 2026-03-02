@@ -22,8 +22,14 @@ export const isBundleBlockedForWarehousing = (rawStatus: unknown) => {
     status === '次品待返修' ||
     status === '待返修';
 
+  // 返修后待质检重检 — 也需阻止直接入库
+  const isRepairedWaitingQc =
+    s === 'repaired_waiting_qc' ||
+    status === '返修待质检' ||
+    status === '返修完成待质检';
+
   if (isRepaired) return false;
-  return isUnqualified;
+  return isUnqualified || isRepairedWaitingQc;
 };
 
 export const parseUrlsValue = (value: unknown): string[] => {

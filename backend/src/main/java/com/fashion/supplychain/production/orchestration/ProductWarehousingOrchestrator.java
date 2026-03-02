@@ -1102,7 +1102,8 @@ public class ProductWarehousingOrchestrator {
 
         List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
                 .select(ProductWarehousing::getId, ProductWarehousing::getUnqualifiedQuantity,
-                        ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getRepairRemark)
+                        ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getRepairRemark,
+                        ProductWarehousing::getWarehousingType)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .eq(ProductWarehousing::getOrderId, oid)
                 .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
@@ -1110,7 +1111,8 @@ public class ProductWarehousingOrchestrator {
                 .orderByDesc(ProductWarehousing::getCreateTime));
 
         long repairPool = 0;
-        long repairedOut = 0;
+        long repairReturnQty = 0;  // 已申报返修完成、等待质检重检的件数
+        long reQcDoneQty = 0;       // 已质检重检并入库的件数
         if (list != null) {
             for (ProductWarehousing w : list) {
                 if (w == null) {
@@ -1121,24 +1123,34 @@ public class ProductWarehousingOrchestrator {
                     repairPool += uq;
                 }
 
+                boolean isRepairReturn = "repair_return".equalsIgnoreCase(
+                        w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
                 String rr = TextUtils.safeText(w.getRepairRemark());
-                if (rr != null) {
-                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-                    if (q > 0) {
-                        repairedOut += q;
+                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                if (q > 0) {
+                    if (isRepairReturn) {
+                        repairReturnQty += q;   // 申报返修完成，等待质检
+                    } else if (rr != null) {
+                        reQcDoneQty += q;       // 质检重检通过，实际入库
                     }
                 }
             }
         }
-        long remaining = repairPool - repairedOut;
+        long awaitingReQc = Math.max(0, repairReturnQty - reQcDoneQty);
+        long awaitingRepair = Math.max(0, repairPool - repairReturnQty - reQcDoneQty);
+        long remaining = awaitingReQc;  // 前端 remaining = 可质检重检件数
 
         Map<String, Object> data = new HashMap<>();
         data.put("orderId", oid);
         data.put("cuttingBundleId", bundle.getId());
         data.put("cuttingBundleQrCode", qr);
         data.put("repairPool", Math.max(0, repairPool));
-        data.put("repairedOut", Math.max(0, repairedOut));
-        data.put("remaining", remaining <= 0 ? 0 : remaining);
+        data.put("repairReturnQty", repairReturnQty);   // 新增：已申报返修完成件数
+        data.put("reQcDoneQty", reQcDoneQty);           // 新增：已质检重检件数
+        data.put("awaitingReQc", awaitingReQc);         // 新增：待质检重检件数
+        data.put("awaitingRepair", awaitingRepair);     // 新增：仍在工厂返修件数
+        data.put("repairedOut", reQcDoneQty);           // 兼容旧字段：已完成全流程件数
+        data.put("remaining", remaining);               // 可质检重检件数
         return data;
     }
 
@@ -1195,7 +1207,7 @@ public class ProductWarehousingOrchestrator {
             List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
                     .select(ProductWarehousing::getId, ProductWarehousing::getCuttingBundleId,
                             ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getQualifiedQuantity,
-                            ProductWarehousing::getRepairRemark)
+                            ProductWarehousing::getRepairRemark, ProductWarehousing::getWarehousingType)
                     .eq(ProductWarehousing::getDeleteFlag, 0)
                     .eq(ProductWarehousing::getOrderId, oid)
                     .in(ProductWarehousing::getCuttingBundleId, bundleIds)
@@ -1209,16 +1221,21 @@ public class ProductWarehousingOrchestrator {
                     if (!StringUtils.hasText(bid)) {
                         continue;
                     }
-                    long[] agg = statsByBundleId.computeIfAbsent(bid, k -> new long[] { 0, 0 });
+                    // agg[0]=repairPool, agg[1]=repairReturnQty, agg[2]=reQcDoneQty
+                    long[] agg = statsByBundleId.computeIfAbsent(bid, k -> new long[] { 0, 0, 0 });
                     int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
                     if (uq > 0) {
                         agg[0] += uq;
                     }
+                    boolean isRepairReturn = "repair_return".equalsIgnoreCase(
+                            w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
                     String rr = TextUtils.safeText(w.getRepairRemark());
-                    if (rr != null) {
-                        int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-                        if (q > 0) {
-                            agg[1] += q;
+                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                    if (q > 0) {
+                        if (isRepairReturn) {
+                            agg[1] += q;   // repairReturnQty
+                        } else if (rr != null) {
+                            agg[2] += q;   // reQcDoneQty
                         }
                     }
                 }
@@ -1234,28 +1251,27 @@ public class ProductWarehousingOrchestrator {
             boolean mismatch = bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid);
 
             long pool = 0;
-            long out = 0;
-            long remain = 0;
+            long repairReturnQty = 0;
+            long reQcDoneQty = 0;
             if (mismatch || bid == null) {
                 pool = 0;
-                out = 0;
-                remain = 0;
             } else {
                 long[] agg = statsByBundleId.get(bid);
                 pool = agg == null ? 0 : Math.max(0, agg[0]);
-                out = agg == null ? 0 : Math.max(0, agg[1]);
-                remain = pool - out;
-                if (remain < 0) {
-                    remain = 0;
-                }
+                repairReturnQty = agg == null ? 0 : Math.max(0, agg[1]);
+                reQcDoneQty = agg == null ? 0 : Math.max(0, agg[2]);
             }
+            long awaitingReQc = Math.max(0, repairReturnQty - reQcDoneQty);
 
             Map<String, Object> m = new HashMap<>();
             m.put("qr", qr);
             m.put("cuttingBundleId", bid);
             m.put("repairPool", pool);
-            m.put("repairedOut", out);
-            m.put("remaining", remain);
+            m.put("repairReturnQty", repairReturnQty);
+            m.put("reQcDoneQty", reQcDoneQty);
+            m.put("awaitingReQc", awaitingReQc);
+            m.put("repairedOut", reQcDoneQty);  // 兼容旧字段
+            m.put("remaining", awaitingReQc);   // 可质检重检件数
             items.add(m);
         }
 

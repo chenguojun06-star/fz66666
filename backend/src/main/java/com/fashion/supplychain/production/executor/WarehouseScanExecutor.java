@@ -119,10 +119,23 @@ public class WarehouseScanExecutor {
                 TextUtils.safeText(params.get("isDefectiveReentry")));
 
         if (isDefectiveReentry) {
-            // 次品返修入库：必须有质检confirm记录，只验证次品件数上限，跳过包装检查
-            // 注意：不做 validateNotExceedOrderQuantity，次品返修不新增消耗，由 validateDefectiveReentryQty 保护上限
-            validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
+            // ── 返修完成申报：不直接入库，记录"修好了"让质检重检 ──
+            // 不做 validateQualityConfirmBeforeWarehousing（返修申报不是正式入库）
             validateDefectiveReentryQty(order.getId(), bundle, qty);
+
+            // 保存返修申报记录（不更新 SKU 库存，不更新订单完成数量）
+            try {
+                productWarehousingService.saveRepairReturnDeclaration(
+                        bundle, order, qty, "返修完成", operatorId, operatorName, warehouse);
+            } catch (DuplicateKeyException dke) {
+                log.info("返修申报重复扫码: orderId={}, bundle={}", order.getId(), bundle.getBundleNo(), dke);
+            }
+            // 返修申报成功后直接返回，等待质检重检
+            Map<String, Object> repairResult = new HashMap<>();
+            repairResult.put("success", true);
+            repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");
+            repairResult.put("bundleStatus", "repaired_waiting_qc");
+            return repairResult;
         } else {
             // 正常入库：检查是否有次品待返修阻止
             if (warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus())) {
@@ -138,7 +151,7 @@ public class WarehouseScanExecutor {
             inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
         }
 
-        // 创建入库记录
+        // 创建入库记录（正常入库路径）
         ProductWarehousing w = new ProductWarehousing();
         w.setOrderId(order.getId());
         w.setWarehousingType("scan");
@@ -147,11 +160,6 @@ public class WarehouseScanExecutor {
         w.setQualifiedQuantity(qty);
         w.setUnqualifiedQuantity(0);
         w.setQualityStatus("qualified");
-        if (isDefectiveReentry) {
-            // 返修入库必须带 repairRemark，否则 saveWarehousingAndUpdateOrderInternal 会因
-            // blocked+qualified+无remark 拒绝入库
-            w.setRepairRemark("返修完成");
-        }
         w.setCuttingBundleQrCode(bundle.getQrCode());
         // 填充操作人信息
         if (StringUtils.hasText(operatorId)) {
@@ -442,7 +450,8 @@ public class WarehouseScanExecutor {
      */
     private void validateDefectiveReentryQty(String orderId, CuttingBundle bundle, int qty) {
         String bid = bundle == null ? null : bundle.getId();
-        int remaining = warehousingHelper.remainingRepairQuantityByBundle(orderId, bid, null);
+        // 根据新语义：检查“尚在工厂返修中尚未申报返回”的件数
+        int remaining = warehousingHelper.repairDeclarationRemainingQtyByBundle(orderId, bid, null);
         if (remaining <= 0) {
             throw new IllegalStateException("未找到待返修次品记录，无法进行次品入库");
         }

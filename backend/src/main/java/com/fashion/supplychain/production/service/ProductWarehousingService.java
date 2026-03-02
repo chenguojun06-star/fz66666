@@ -1,7 +1,9 @@
 package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import java.util.Map;
 
@@ -54,4 +56,11 @@ public interface ProductWarehousingService extends IService<ProductWarehousing> 
          * SQL聚合：质检入库页面顶部统计（totalCount/totalOrders/totalQuantity/today/qualified等）
          */
         Map<String, Object> getWarehousingStats();
+
+        /**
+         * 保存「返修完成申报」记录并将 bundle 状态推进到 repaired_waiting_qc。
+         * 不更新 SKU 库存，不更新订单完成数量；实际入库在质检重检通过后执行。
+         */
+        boolean saveRepairReturnDeclaration(CuttingBundle bundle, ProductionOrder order,
+                int qty, String repairRemark, String operatorId, String operatorName, String warehouse);
 }
