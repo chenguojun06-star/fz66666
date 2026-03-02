@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -13,6 +14,7 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
+import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +60,9 @@ public class QualityScanExecutor {
 
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Autowired
+    private ProductWarehousingHelper warehousingHelper;
 
     /**
      * 执行质检扫码
@@ -540,6 +545,10 @@ public class QualityScanExecutor {
             productWarehousingService.save(w);
             log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}",
                     order.getId(), bundle.getId(), defectQty);
+
+            // ★ 更新菲号状态为 unqualified，阻止后续入库（必须返修后才能入库）
+            syncBundleStatusAfterQualityScan(order.getId(), bundle);
+
         } catch (org.springframework.dao.DuplicateKeyException dke) {
             log.info("[QualityScan] quality_scan 记录重复（幂等）: orderId={}, bundleId={}",
                     order.getId(), bundle.getId());
@@ -553,11 +562,37 @@ public class QualityScanExecutor {
      * 创建报废记录（quality_scan_scrap）。
      * 与返修记录的区别：warehousingType="quality_scan_scrap"，qualityStatus="scrapped"。
      * 报废记录不建返修池，不流回"待质检"状态，calcRepairBreakdown 会排除此类型。
+     *
+     * ★ 历史数据兼容：旧代码不区分返修/报废，全部创建 quality_scan 记录。
+     *   用户选择"报废"时，先把该菲号已有的 quality_scan 转为 quality_scan_scrap，
+     *   再创建新记录（幂等），最后更新菲号状态以解除入库阻止。
      */
     private void createScrapRecord(ProductionOrder order, CuttingBundle bundle,
                                    int defectQty, String operatorId, String operatorName) {
         try {
-            // 幂等：同一菲号只创建一条 scrap 记录
+            // ★ 第一步：把该菲号所有旧 quality_scan 转为 quality_scan_scrap（历史兼容 + 用户改选）
+            try {
+                boolean converted = productWarehousingService.update(
+                        null,
+                        new LambdaUpdateWrapper<ProductWarehousing>()
+                                .eq(ProductWarehousing::getOrderId, order.getId())
+                                .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                                .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                                .eq(ProductWarehousing::getDeleteFlag, 0)
+                                .set(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
+                                .set(ProductWarehousing::getQualityStatus, "scrapped")
+                                .set(ProductWarehousing::getWarehouse, "报废")
+                                .set(ProductWarehousing::getUpdateTime, LocalDateTime.now()));
+                if (converted) {
+                    log.info("[QualityScan] 已将旧quality_scan转为scrap: orderId={}, bundleId={}",
+                            order.getId(), bundle.getId());
+                }
+            } catch (Exception e) {
+                log.warn("[QualityScan] 转换旧quality_scan记录失败（继续创建新记录）: orderId={}, bundleId={}",
+                        order.getId(), bundle.getId(), e);
+            }
+
+            // ★ 第二步：幂等创建 scrap 记录
             List<ProductWarehousing> existing = productWarehousingService.list(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getOrderId, order.getId())
@@ -565,46 +600,83 @@ public class QualityScanExecutor {
                             .eq(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
                             .eq(ProductWarehousing::getDeleteFlag, 0));
             if (existing != null && !existing.isEmpty()) {
-                log.info("[QualityScan] quality_scan_scrap 记录已存在，跳过: orderId={}, bundleId={}",
+                log.info("[QualityScan] quality_scan_scrap 记录已存在（含转换），跳过新建: orderId={}, bundleId={}",
                         order.getId(), bundle.getId());
-                return;
+            } else {
+                LocalDateTime now = LocalDateTime.now();
+                ProductWarehousing w = new ProductWarehousing();
+                w.setOrderId(order.getId());
+                w.setOrderNo(order.getOrderNo());
+                w.setStyleId(order.getStyleId());
+                w.setStyleNo(order.getStyleNo());
+                w.setStyleName(order.getStyleName());
+                w.setWarehousingType("quality_scan_scrap");
+                w.setWarehouse("报废");
+                w.setWarehousingQuantity(0);
+                w.setQualifiedQuantity(0);
+                w.setUnqualifiedQuantity(defectQty);
+                w.setQualityStatus("scrapped");
+                w.setCuttingBundleId(bundle.getId());
+                w.setCuttingBundleNo(bundle.getBundleNo());
+                w.setCuttingBundleQrCode(bundle.getQrCode());
+                if (hasText(operatorId)) {
+                    w.setQualityOperatorId(operatorId);
+                }
+                if (hasText(operatorName)) {
+                    w.setQualityOperatorName(operatorName);
+                }
+                w.setCreateTime(now);
+                w.setUpdateTime(now);
+                w.setDeleteFlag(0);
+
+                productWarehousingService.save(w);
+                log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}",
+                        order.getId(), bundle.getId(), defectQty);
             }
 
-            LocalDateTime now = LocalDateTime.now();
-            ProductWarehousing w = new ProductWarehousing();
-            w.setOrderId(order.getId());
-            w.setOrderNo(order.getOrderNo());
-            w.setStyleId(order.getStyleId());
-            w.setStyleNo(order.getStyleNo());
-            w.setStyleName(order.getStyleName());
-            w.setWarehousingType("quality_scan_scrap");
-            w.setWarehouse("报废");
-            w.setWarehousingQuantity(0);
-            w.setQualifiedQuantity(0);
-            w.setUnqualifiedQuantity(defectQty);
-            w.setQualityStatus("scrapped");
-            w.setCuttingBundleId(bundle.getId());
-            w.setCuttingBundleNo(bundle.getBundleNo());
-            w.setCuttingBundleQrCode(bundle.getQrCode());
-            if (hasText(operatorId)) {
-                w.setQualityOperatorId(operatorId);
-            }
-            if (hasText(operatorName)) {
-                w.setQualityOperatorName(operatorName);
-            }
-            w.setCreateTime(now);
-            w.setUpdateTime(now);
-            w.setDeleteFlag(0);
+            // ★ 第三步：更新菲号状态（解除/保持入库阻止）
+            syncBundleStatusAfterQualityScan(order.getId(), bundle);
 
-            productWarehousingService.save(w);
-            log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}",
-                    order.getId(), bundle.getId(), defectQty);
         } catch (org.springframework.dao.DuplicateKeyException dke) {
             log.info("[QualityScan] quality_scan_scrap 记录重复（幂等）: orderId={}, bundleId={}",
                     order.getId(), bundle.getId());
         } catch (Exception e) {
             log.warn("[QualityScan] 创建报废记录失败（不阻断主流程）: orderId={}, bundleId={}, error={}",
                     order.getId(), bundle.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 质检扫码后同步菲号状态：
+     * - repairPool > 0 且菲号未被阻止 → 设为 "unqualified"（阻止入库）
+     * - repairPool == 0 且菲号处于阻止状态 → 设为 "qualified"（解除阻止，全部报废无需返修）
+     * - 其他情况不变
+     */
+    private void syncBundleStatusAfterQualityScan(String orderId, CuttingBundle bundle) {
+        try {
+            int repairPool = warehousingHelper.calcRepairBreakdown(orderId, bundle.getId(), null)[0];
+            boolean isCurrentlyBlocked = warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus());
+
+            if (repairPool == 0 && isCurrentlyBlocked) {
+                // 无返修池（全部报废）→ 清除阻止，合格品可正常入库
+                cuttingBundleService.lambdaUpdate()
+                        .eq(CuttingBundle::getId, bundle.getId())
+                        .set(CuttingBundle::getStatus, "qualified")
+                        .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                        .update();
+                log.info("[QualityScan] 无返修池，菲号状态→qualified: bundleId={}", bundle.getId());
+            } else if (repairPool > 0 && !isCurrentlyBlocked) {
+                // 有返修池但未阻止 → 设为 unqualified，阻止入库
+                cuttingBundleService.lambdaUpdate()
+                        .eq(CuttingBundle::getId, bundle.getId())
+                        .set(CuttingBundle::getStatus, "unqualified")
+                        .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                        .update();
+                log.info("[QualityScan] 有返修池，菲号状态→unqualified: bundleId={}", bundle.getId());
+            }
+            // else: 状态已匹配，无需更新
+        } catch (Exception e) {
+            log.warn("[QualityScan] 同步菲号状态失败（不阻断流程）: bundleId={}", bundle.getId(), e);
         }
     }
 

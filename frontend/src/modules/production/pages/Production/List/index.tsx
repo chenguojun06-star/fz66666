@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Badge, Tooltip, Tabs, Popover } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -123,6 +123,46 @@ const ProductionList: React.FC = () => {
   const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
   useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
   useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
+
+  // 卡片进度：取 boardStats 实时扫码数据与 productionProgress DB值 的较大值
+  const calcCardProgress = useCallback((record: ProductionOrder): number => {
+    const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
+    if (record.status === 'completed') return 100;
+    const orderId = String(record.id || '');
+    const stats = boardStatsByOrder[orderId];
+    if (!stats) return dbProgress;
+    const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
+    const PIPELINE = ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
+    const normalizeKey = (k: string) => {
+      if (k.includes('入库') || k.includes('入仓')) return '入库';
+      if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '质检';
+      if (k.includes('包装') || k.includes('后整') || k.includes('打包')) return '包装';
+      if (k.includes('裁剪') || k.includes('裁床')) return '裁剪';
+      if (k.includes('车缝') || k.includes('车间')) return '车缝';
+      return k;
+    };
+    const normMap = new Map<string, number>();
+    for (const [rawKey, rawQty] of Object.entries(stats as Record<string, number>)) {
+      const nk = normalizeKey(rawKey);
+      const pct = Math.min(100, Math.round(Number(rawQty) / total * 100));
+      if (pct > 0) normMap.set(nk, Math.max(normMap.get(nk) ?? 0, pct));
+    }
+    if (normMap.size === 0) return dbProgress;
+    let lastIdx = -1;
+    let lastPct = 0;
+    for (const [nk, pct] of normMap.entries()) {
+      const idx = PIPELINE.indexOf(nk);
+      if (idx > lastIdx || (idx === lastIdx && pct > lastPct)) {
+        lastIdx = idx;
+        lastPct = pct;
+      }
+    }
+    if (lastIdx < 0) return dbProgress;
+    const perStage = 100 / PIPELINE.length;
+    const boardProgress = Math.round(lastIdx * perStage + lastPct * perStage / 100);
+    return Math.min(100, Math.max(dbProgress, boardProgress));
+  }, [boardStatsByOrder]);
+
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -1169,7 +1209,7 @@ const ProductionList: React.FC = () => {
                 ]
               ]}
               progressConfig={{
-                calculate: (record: ProductionOrder) => Math.min(100, Math.max(0, Number(record.productionProgress) || 0)),
+                calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,

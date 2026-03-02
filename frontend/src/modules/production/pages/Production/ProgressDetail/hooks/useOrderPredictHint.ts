@@ -14,7 +14,13 @@ interface PredictHint {
   remaining: number;    // 剩余件数
 }
 
-const cache    = new Map<string, PredictHint | null>();
+interface CacheEntry {
+  hint: PredictHint | null;
+  ts: number; // 缓存时间戳（ms）
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 分钟 TTL
+const cache    = new Map<string, CacheEntry>();
 const pending  = new Set<string>();
 
 export function useOrderPredictHint(
@@ -25,16 +31,26 @@ export function useOrderPredictHint(
   skip?: boolean,
 ) {
   const [hint, setHint] = useState<PredictHint | null>(null);
-  const key = String(orderId || '');
+  // ★ 缓存 key 包含进度 + 当前工序，进度变化或工序推进时自动失效
+  const progBucket = Math.floor(currentProgress / 5) * 5; // 每5%为一个桶，避免微小浮动
+  const key = `${orderId || ''}_${stageName || ''}_${progBucket}`;
+
+  // key 变化时清空旧结果，避免闪烁旧数据
+  useEffect(() => { setHint(null); }, [key]);
 
   useEffect(() => {
-    if (!key || skip || currentProgress >= 100 || !stageName) return;
-    if (cache.has(key)) { setHint(cache.get(key)!); return; }
+    if (!orderId || skip || currentProgress >= 100 || !stageName) return;
+    // 命中缓存且未过期
+    const entry = cache.get(key);
+    if (entry && Date.now() - entry.ts < CACHE_TTL_MS) {
+      setHint(entry.hint);
+      return;
+    }
     if (pending.has(key)) return;
 
     pending.add(key);
     intelligenceApi.predictFinishTime({
-      orderId: key,
+      orderId: orderId!,
       orderNo: orderNo || undefined,
       stageName,
       currentProgress,
@@ -46,14 +62,14 @@ export function useOrderPredictHint(
           confidence: d.confidence != null ? `${Math.round(d.confidence * 100)}%` : '',
           remaining: Number(d.remainingQuantity) || 0,
         };
-        cache.set(key, h);
+        cache.set(key, { hint: h, ts: Date.now() });
         setHint(h);
       } else {
-        cache.set(key, null);
+        cache.set(key, { hint: null, ts: Date.now() });
       }
-    }).catch(() => { cache.set(key, null); })
+    }).catch(() => { cache.set(key, { hint: null, ts: Date.now() }); })
       .finally(() => pending.delete(key));
-  }, [key, skip, stageName, currentProgress, orderNo]);
+  }, [key, orderId, skip, stageName, currentProgress, orderNo]);
 
   return hint;
 }

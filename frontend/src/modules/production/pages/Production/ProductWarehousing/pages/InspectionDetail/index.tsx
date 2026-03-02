@@ -596,11 +596,11 @@ const InspectionDetail: React.FC = () => {
                   message={`已选 ${batchSelectedBundleQrs.length} 个菲号，合计 ${batchSelectedSummary.totalQty} 件`} />
               )}
 
-              {/* 返修统计（单选且次品待返修） */}
+              {/* 返修统计（单选且次品待返修）→ 提示可重新质检 */}
               {isSingleSelected && isSingleSelectedBundleBlocked && singleSelectedBundleRepairStats && (
                 <Alert type="warning" style={{ marginBottom: 12 }}
-                  message="该菲号为次品待返修"
-                  description={`返修池: ${singleSelectedBundleRepairStats.repairPool}  已返修: ${singleSelectedBundleRepairStats.repairedOut}  可入库: ${singleSelectedBundleRepairStats.remaining}`}
+                  message="该菲号为次品待返修 — 可进行返修质检"
+                  description={`次品数量: ${singleSelectedBundleRepairStats.repairPool}  已返修: ${singleSelectedBundleRepairStats.repairedOut}  |  设置不合格数量为0即表示返修质检全部合格`}
                 />
               )}
 
@@ -639,7 +639,6 @@ const InspectionDetail: React.FC = () => {
                           style={{ width: '100%' }}
                           min={0}
                           max={Number(watchedWarehousingQty || 0) || 0}
-                          disabled={isSingleSelectedBundleBlocked}
                           onChange={(val) => {
                             const total = Number(watchedWarehousingQty || 0) || 0;
                             const unq = Math.max(0, Math.min(total, Number(val || 0) || 0));
@@ -697,9 +696,16 @@ const InspectionDetail: React.FC = () => {
                     </>
                   )}
 
+                  {/* 返修质检合格时也显示备注字段（后端需要 repairRemark） */}
+                  {unqQty === 0 && isSingleSelectedBundleBlocked && (
+                    <Form.Item name="repairRemark" label="返修备注" initialValue="返修检验合格">
+                      <Input.TextArea rows={2} placeholder="返修检验说明" />
+                    </Form.Item>
+                  )}
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                     <Button type="primary" size="large" loading={submitLoading} onClick={handleQcSubmit}>
-                      确定
+                      {isSingleSelectedBundleBlocked ? '返修质检' : '确定'}
                     </Button>
                     <Button onClick={handleBatchSelectClear}>取消选择</Button>
                   </div>

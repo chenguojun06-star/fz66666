@@ -551,6 +551,37 @@ public class ProductWarehousingHelper {
         }
     }
 
+    /**
+     * 返修重检合格后，将旧的 quality_scan 次品记录的 unqualifiedQuantity 置为 0，
+     * 使 calcRepairBreakdown 不再计入 repairPool，从而解除菲号阻塞。
+     * 同时更新 qualityStatus 和 repairRemark 标记「已通过重检」。
+     *
+     * @param orderId             订单ID
+     * @param cuttingBundleId     菲号ID
+     * @param excludeWarehousingId 本次新建的入库记录ID（排除，避免影响刚插入的记录）
+     */
+    void resolveDefectRecordsAfterReQc(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(cuttingBundleId)) return;
+
+        LambdaUpdateWrapper<ProductWarehousing> wrapper = new LambdaUpdateWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getOrderId, orderId.trim())
+                .eq(ProductWarehousing::getCuttingBundleId, cuttingBundleId.trim())
+                .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
+                .set(ProductWarehousing::getUnqualifiedQuantity, 0)
+                .set(ProductWarehousing::getQualityStatus, STATUS_QUALIFIED)
+                .set(ProductWarehousing::getRepairRemark, "返修后重检合格")
+                .set(ProductWarehousing::getUpdateTime, LocalDateTime.now());
+
+        if (StringUtils.hasText(excludeWarehousingId)) {
+            wrapper.ne(ProductWarehousing::getId, excludeWarehousingId.trim());
+        }
+
+        productWarehousingMapper.update(null, wrapper);
+        log.info("[ReQc] 旧次品记录已清理: orderId={}, bundleId={}", orderId, cuttingBundleId);
+    }
+
     public void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
         if (deltaQuantity == 0) {
             return;

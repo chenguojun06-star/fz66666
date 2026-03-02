@@ -570,6 +570,7 @@ export const useWarehousingForm = (
       unqualifiedQuantity: unq,
       qualifiedQuantity: qual,
       qualityStatus: unq > 0 ? 'unqualified' : 'qualified',
+      ...(isRepairFlow ? { repairRemark: '返修检验合格' } : {}),
     });
   }, [batchQtyByQr, batchSelectedBundleQrs, bundles, currentWarehousing, form]);
 
