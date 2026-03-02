@@ -195,7 +195,7 @@ export const useWarehousingForm = (
         throw new Error(res.message || '获取返修统计失败');
       }
       const items = (res.data?.items || []) as any[];
-      if (!Array.isArray(items) || !items.length) return;
+      if (!Array.isArray(items) || !items.length) throw new Error('batch items empty');
 
       setBundleRepairStatsByQr((prev) => {
         const next = { ...prev };
@@ -216,7 +216,11 @@ export const useWarehousingForm = (
         for (const it of items) {
           const qr = String(it?.qr || '').trim();
           if (!qr) continue;
-          next[qr] = Math.max(0, Number(it?.remaining ?? 0) || 0);
+          // 与后端 saveWarehousingAndUpdateOrderInternal 保持一致：
+          // availableQty = Math.max(remaining, repairPool)
+          const rem = Math.max(0, Number(it?.remaining ?? 0) || 0);
+          const pool = Math.max(0, Number(it?.repairPool ?? 0) || 0);
+          next[qr] = Math.max(rem, pool);
         }
         return next;
       });
