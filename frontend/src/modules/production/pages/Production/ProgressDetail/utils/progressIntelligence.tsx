@@ -162,7 +162,13 @@ export function analyzeProgress(
 
   // ── 4. 跟进要点（完全动态） ──
   // 未开工的工序（在有活跃工序的情况下）
-  const notStarted = allStages.filter(s => s.pct === 0 && s.qty === 0);
+  // ★ 智能推断：若某工序的下游已有进度，说明该工序已完成（可能无扫码记录），不应报"尚未开始"
+  //   例：入库 25% → 采购必然已完成，即使 procurementCompletionRate=0 也不报
+  const notStarted = allStages.filter((s, idx) => {
+    if (s.pct > 0 || s.qty > 0) return false;
+    const hasDownstreamProgress = allStages.slice(idx + 1).some(d => d.pct > 0 || d.qty > 0);
+    return !hasDownstreamProgress; // 下游有进度 → 上游已完成，跳过
+  });
   if (notStarted.length > 0 && activeStages.length > 0) {
     followUpPoints.push(`${notStarted.map(s => s.name).join('/')} 尚未开始 — 确认前序是否完成`);
   }

@@ -104,11 +104,24 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     }
 
     // 备用：boardStats 父工序级别
-    const boardKeys = boardStats
-      ? Object.keys(boardStats as Record<string, number>).filter(
-          k => ((boardStats as Record<string, number>)[k] ?? 0) > 0
-        )
-      : [];
+    // ★ 提前规范化 boardStats key（"仓库入库"→"入库"），防止与 STAGES_DEF 生成重复同名条目
+    //   若不规范化，"仓库入库"(qty=10,pct=25%) 与 STAGES_DEF "入库"(qty=0,pct=0) 并存
+    //   导致 AI 看到两条"入库"，错误地把 pct=0 那条识别为"未开始"
+    const normBoardMap = new Map<string, number>(); // normalizedLabel → qty
+    const normBoardTimeMap = new Map<string, string>(); // normalizedLabel → time
+    if (boardStats) {
+      for (const [k, v] of Object.entries(boardStats as Record<string, number>)) {
+        if (v > 0) {
+          const nk = normalizeNodeLabel(k);
+          normBoardMap.set(nk, Math.max(normBoardMap.get(nk) ?? 0, v));
+        }
+      }
+    }
+    for (const [k, t] of Object.entries(boardTimes)) {
+      const nk = normalizeNodeLabel(k);
+      if (!normBoardTimeMap.has(nk)) normBoardTimeMap.set(nk, t);
+    }
+    const boardKeys = Array.from(normBoardMap.keys());
     const allLabels = Array.from(
       new Set([...boardKeys, ...STAGES_DEF.map(s => s.label)])
     );
@@ -121,9 +134,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       return ai - bi;
     });
     return allLabels.map(label => {
-      const fromBoard = boardStats
-        ? ((boardStats as Record<string, number>)[label] ?? 0)
-        : 0;
+      const fromBoard = normBoardMap.get(label) ?? 0;
       const fieldDef = STAGES_DEF.find(s => s.label === label);
       const fromField = fieldDef ? fieldRate(order, fieldDef.key) : 0;
       const qty = fromBoard > 0
@@ -134,9 +145,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       const pct = fromBoard > 0 && total > 0
         ? Math.min(100, Math.round(fromBoard / total * 100))
         : fromField;
-      const lastTime = boardTimes[label]
-        ? dayjs(boardTimes[label]).format('MM-DD HH:mm') : null;
-      return { label: normalizeNodeLabel(label), stageName: '' as string, qty, pct, lastTime };
+      const rawT = normBoardTimeMap.get(label);
+      const lastTime = rawT ? dayjs(rawT).format('MM-DD HH:mm') : null;
+      return { label, stageName: '' as string, qty, pct, lastTime };
     });
   }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes]);
 
