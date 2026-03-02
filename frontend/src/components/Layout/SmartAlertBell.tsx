@@ -13,6 +13,8 @@ import {
 } from '@ant-design/icons';
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
+import { intelligenceApi } from '../../services/production/productionApi';
+import type { NlQueryResponse } from '../../services/production/productionApi';
 
 // ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
@@ -42,6 +44,15 @@ interface UrgentEvent {
   time: string;
 }
 
+interface AiMessage {
+  role: 'user' | 'ai';
+  content: string;
+  suggestions?: string[];
+}
+
+const AI_WELCOME = '👋 我是内置AI助手，可回答整体情况、逾期预警、工厂进度等问题。';
+const AI_DEFAULT_SUGGESTIONS = ['整体情况怎么样？', '有逾期订单吗？', '工厂进度怎么样？', '有瓶颈吗？'];
+
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -50,8 +61,11 @@ const SmartAlertBell: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([
+    { role: 'ai', content: AI_WELCOME, suggestions: AI_DEFAULT_SUGGESTIONS },
+  ]);
   const [fetchedToday, setFetchedToday] = useState('');
+  const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -118,29 +132,41 @@ const SmartAlertBell: React.FC = () => {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
+  // 自动滚到底
+  useEffect(() => {
+    if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages, open]);
+
   // 点击按钮时先拉数据
   const handleToggle = () => {
     if (!open) fetchData();
     setOpen(v => !v);
-    setAiAnswer('');
   };
 
-  // AI 问答
-  const askAi = async () => {
-    const question = aiInput.trim();
-    if (!question || aiLoading) return;
+  // AI 问答 — 使用系统内置 Intelligence API，无需外部 Key
+  const askAi = async (question?: string) => {
+    const q = (question ?? aiInput).trim();
+    if (!q || aiLoading) return;
+    setAiInput('');
+    setAiMessages(prev => [...prev, { role: 'user', content: q }]);
     setAiLoading(true);
-    setAiAnswer('');
     try {
-      const res = await api.post<{ answer: string }>('/ai/chat', { question }) as any;
-      const answer = res?.answer ?? res?.data?.answer ?? '暂无回复，请重试。';
-      setAiAnswer(answer);
+      const res = await intelligenceApi.nlQuery({ question: q }) as any;
+      const d: NlQueryResponse | null = res?.data ?? null;
+      if (d) {
+        setAiMessages(prev => [...prev, {
+          role: 'ai',
+          content: d.answer,
+          suggestions: d.suggestions?.slice(0, 3),
+        }]);
+      } else {
+        setAiMessages(prev => [...prev, { role: 'ai', content: '抱歉，暂时无法理解该问题。' }]);
+      }
     } catch {
-      setAiAnswer('AI 暂时不可用，请稍后再试。');
+      setAiMessages(prev => [...prev, { role: 'ai', content: 'AI 暂时不可用，请稍后再试。' }]);
     } finally {
       setAiLoading(false);
     }
-    setAiInput('');
   };
 
   // ── 渲染 ──────────────────────────────────────────────────
@@ -167,7 +193,10 @@ const SmartAlertBell: React.FC = () => {
             <span className="smart-alert-dot" style={{ background: dotColor }} />
           )}
         </span>
-        <span className="smart-alert-btn-label">今日预警</span>
+        <span className="smart-alert-btn-label">
+          <span className="smart-alert-btn-sub">AI助手</span>
+          <span className="smart-alert-btn-main">今日预警</span>
+        </span>
         {alertCount > 0 && (
           <Badge
             count={alertCount}
@@ -288,34 +317,63 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── AI 问答区（始终显示，无 key 时返回提示） ── */}
+          {/* ── AI 助手区 —— 使用系统内置 Intelligence API，无需外部 Key ── */}
             <div className="sap-ai-zone">
               <div className="sap-ai-label">
                 <RobotOutlined style={{ color: '#6d28d9', marginRight: 4 }} />
-                <span>问 AI 跟单助手</span>
+                <span>AI 跟单助手（系统内置）</span>
               </div>
-              {aiAnswer && (
-                <div className="sap-ai-answer">{aiAnswer}</div>
-              )}
-              {aiLoading && (
-                <div className="sap-ai-thinking">
-                  <Spin size="small" />
-                  <span>思考中…</span>
-                </div>
-              )}
+              {/* 对话历史 */}
+              <div className="sap-ai-chat-history">
+                {aiMessages.map((msg, i) => (
+                  <div key={i} className={`sap-ai-msg sap-ai-msg-${msg.role}`}>
+                    {msg.role === 'ai' && (
+                      <span className="sap-ai-msg-avatar"><RobotOutlined /></span>
+                    )}
+                    <div className="sap-ai-msg-bubble">
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+                      {/* 建议词 */}
+                      {msg.role === 'ai' && msg.suggestions && msg.suggestions.length > 0 && (
+                        <div className="sap-ai-suggestions">
+                          {msg.suggestions.map((s, si) => (
+                            <button
+                              key={si}
+                              className="sap-ai-suggestion-btn"
+                              onClick={() => askAi(s)}
+                              disabled={aiLoading}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {aiLoading && (
+                  <div className="sap-ai-msg sap-ai-msg-ai">
+                    <span className="sap-ai-msg-avatar"><RobotOutlined /></span>
+                    <div className="sap-ai-msg-bubble sap-ai-thinking">
+                      <Spin size="small" style={{ marginRight: 6 }} /><span>思考中…</span>
+                    </div>
+                  </div>
+                )}
+                <div ref={aiChatEndRef} />
+              </div>
+              {/* 输入框 */}
               <div className="sap-ai-input-row">
                 <Input
                   size="small"
                   placeholder="问今日风险、订单进度…"
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
-                  onPressEnter={askAi}
+                  onPressEnter={() => askAi()}
                   disabled={aiLoading}
                   style={{ fontSize: 12 }}
                 />
                 <button
                   className="sap-ai-send"
-                  onClick={askAi}
+                  onClick={() => askAi()}
                   disabled={!aiInput.trim() || aiLoading}
                 >
                   <SendOutlined style={{ fontSize: 12 }} />

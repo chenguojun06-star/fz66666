@@ -695,6 +695,22 @@
   50%       { transform: scale(1.35); opacity: 0.75; }
 }
 .smart-alert-btn-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+.smart-alert-btn-sub {
+  font-size: 9px;
+  color: #9d5fff;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  opacity: 0.85;
+}
+.smart-alert-btn-main {
+  font-size: 12px;
+  color: #111;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
@@ -952,3 +968,66 @@
 .sap-ai-send:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
 .sap-ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── AI 对话历史气泡样式 ── */
+.sap-ai-chat-history {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+.sap-ai-chat-history::-webkit-scrollbar { width: 4px; }
+.sap-ai-chat-history::-webkit-scrollbar-thumb { background: rgba(109,40,217,0.2); border-radius: 4px; }
+.sap-ai-msg { display: flex; align-items: flex-start; gap: 6px; }
+.sap-ai-msg-ai { flex-direction: row; }
+.sap-ai-msg-user { flex-direction: row-reverse; }
+.sap-ai-msg-avatar {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(109, 40, 217, 0.1);
+  color: #6d28d9;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.sap-ai-msg-bubble {
+  max-width: 88%;
+  padding: 6px 9px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.sap-ai-msg-ai .sap-ai-msg-bubble {
+  background: rgba(109, 40, 217, 0.07);
+  color: #222;
+  border-bottom-left-radius: 3px;
+}
+.sap-ai-msg-user .sap-ai-msg-bubble {
+  background: #6d28d9;
+  color: #fff;
+  border-bottom-right-radius: 3px;
+  margin-left: auto;
+}
+.sap-ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.sap-ai-suggestion-btn {
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(109, 40, 217, 0.35);
+  background: rgba(109, 40, 217, 0.05);
+  color: #6d28d9;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.sap-ai-suggestion-btn:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
+.sap-ai-suggestion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
