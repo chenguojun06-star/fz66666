@@ -331,7 +331,11 @@ export const useWarehousingForm = (
         const qr = String(b?.qrCode || '').trim();
         if (!qr) return '';
         const rawStatus = String(b?.status || '').trim();
-        if (!isBundleBlockedForWarehousing(rawStatus)) return '';
+        const sLower = rawStatus.toLowerCase();
+        // repaired_waiting_qc 菲号也需要拉取返修统计，计算可质检数量
+        const needsRepairStats = isBundleBlockedForWarehousing(rawStatus) ||
+          sLower === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检';
+        if (!needsRepairStats) return '';
         return qr;
       })
       .filter(Boolean);
@@ -378,12 +382,14 @@ export const useWarehousingForm = (
         const rawStatus = String((b as any)?.status || '').trim();
         const isBlocked = isBundleBlockedForWarehousing(rawStatus);
         const isRepairedWaitingQc = rawStatus === 'repaired_waiting_qc' || rawStatus === '返修待质检';
-        const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
-        const availableQty = isBlocked ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
+        // repaired_waiting_qc 菲号需要走返修统计获取可质检数量（与 blocked 菲号相同逻辑）
+        const needsRepairQty = isBlocked || isRepairedWaitingQc;
+        const remaining = needsRepairQty ? bundleRepairRemainingByQr[qr] : undefined;
+        const availableQty = needsRepairQty ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
         const isUsed = qualifiedWarehousedBundleQrSet.has(qr);
         // 检查生产就绪：菲号必须完成车缝扫码才可质检
         const isProductionReady = productionReadyQrSet.size === 0 || productionReadyQrSet.has(qr);
-        const disabled = isUsed || !isProductionReady || (isBlocked && (remaining === undefined || availableQty <= 0));
+        const disabled = isUsed || !isProductionReady || (needsRepairQty && (remaining === undefined || availableQty <= 0));
 
         let statusText = '';
         if (isUsed) {
@@ -465,15 +471,18 @@ export const useWarehousingForm = (
     for (const qr of qrs) {
       const b = bundleByQrForSummary.get(qr);
       const rawStatus = String((b as any)?.status || '').trim();
+      const sLower = rawStatus.toLowerCase();
       const isBlocked = isBundleBlockedForWarehousing(rawStatus);
-      const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
-      const maxQty = isBlocked
+      const isRepairedWaitingQc2 = sLower === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检';
+      const needsRepairQty = isBlocked || isRepairedWaitingQc2;
+      const remaining = needsRepairQty ? bundleRepairRemainingByQr[qr] : undefined;
+      const maxQty = needsRepairQty
         ? Math.max(0, Number(remaining === undefined ? 0 : remaining) || 0)
         : Math.max(0, Number(b?.quantity ?? 0) || 0);
       const currentQty = Math.max(0, Math.min(maxQty, Number(batchQtyByQr[qr] || 0) || 0));
 
       totalQty += currentQty;
-      if (isBlocked) {
+      if (needsRepairQty) {
         blockedCount += 1;
         blockedQty += currentQty;
         if (remaining === undefined) blockedMissing += 1;
@@ -520,7 +529,9 @@ export const useWarehousingForm = (
 
   const isSingleSelectedBundleBlocked = useMemo(() => {
     const rawStatus = String((singleSelectedBundle as any)?.status || '').trim();
-    return Boolean(singleSelectedQr && isBundleBlockedForWarehousing(rawStatus));
+    const s = rawStatus.toLowerCase();
+    const isRepairQc = s === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检';
+    return Boolean(singleSelectedQr && (isBundleBlockedForWarehousing(rawStatus) || isRepairQc));
   }, [singleSelectedBundle, singleSelectedQr]);
 
   const singleSelectedBundleRepairStats = useMemo(() => {
@@ -562,7 +573,9 @@ export const useWarehousingForm = (
 
     const total = qrs.reduce((sum, qr) => sum + (Number(batchQtyByQr[qr] || 0) || 0), 0);
     const rawStatus = qrs.length === 1 ? String((bundles.find((x) => String(x.qrCode || '').trim() === qrs[0]) as any)?.status || '').trim() : '';
-    const isRepairFlow = qrs.length === 1 && isBundleBlockedForWarehousing(rawStatus);
+    const sLower = rawStatus.toLowerCase();
+    const isRepairFlow = qrs.length === 1 && (isBundleBlockedForWarehousing(rawStatus) ||
+      sLower === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检');
     const baseUnq = qrs.length === 1 ? Number(form.getFieldValue('unqualifiedQuantity') || 0) || 0 : 0;
     const unq = isRepairFlow ? 0 : (qrs.length === 1 ? Math.max(0, Math.min(total, baseUnq)) : 0);
     const qual = Math.max(0, total - unq);
