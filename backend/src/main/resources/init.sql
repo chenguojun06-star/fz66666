@@ -289,6 +289,14 @@ CREATE TABLE IF NOT EXISTS t_product_warehousing (
     receiver_name VARCHAR(50) COMMENT '领取人名称',
     received_time DATETIME COMMENT '领取时间',
     inspection_status VARCHAR(20) COMMENT '验收状态',
+    -- ==================== 入库操作人员字段（WarehouseScanExecutor 写入）====================
+    warehousing_start_time DATETIME DEFAULT NULL COMMENT '入库开始时间',
+    warehousing_end_time DATETIME DEFAULT NULL COMMENT '入库完成时间',
+    warehousing_operator_id VARCHAR(64) DEFAULT NULL COMMENT '入库人员ID',
+    warehousing_operator_name VARCHAR(128) DEFAULT NULL COMMENT '入库人员姓名',
+    quality_operator_id VARCHAR(64) DEFAULT NULL COMMENT '质检人员ID',
+    quality_operator_name VARCHAR(128) DEFAULT NULL COMMENT '质检人员姓名',
+    tenant_id BIGINT DEFAULT NULL COMMENT '租户ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除',
@@ -296,7 +304,8 @@ CREATE TABLE IF NOT EXISTS t_product_warehousing (
     INDEX idx_order_no (order_no),
     INDEX idx_style_no (style_no),
     INDEX idx_create_time (create_time),
-    INDEX idx_cutting_bundle_id (cutting_bundle_id)
+    INDEX idx_cutting_bundle_id (cutting_bundle_id),
+    INDEX idx_warehousing_tenant_id (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='质检入库表';
 
 -- 16. 扫码记录表

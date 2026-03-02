@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.orchestration.ProductionProcessTrackin
 import com.fashion.supplychain.production.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -187,6 +188,11 @@ public class WarehouseScanExecutor {
             log.info("仓库扫码重复: orderId={}, bundle={}, warehouse={}", order.getId(),
                     bundle.getBundleNo(), warehouse, dke);
             // 忽略重复扫码，视为成功
+        } catch (DataAccessException dae) {
+            // 若出现 DB 列缺失（Unknown column）等异常，给出明确错误而非"系统内部错误"
+            log.error("[WarehouseScan] 入库记录写入DB失败 orderId={}, bundle={}: {}",
+                    order.getId(), bundle.getBundleNo(), dae.getMessage(), dae);
+            throw new IllegalStateException("入库记录保存失败，请联系管理员（DB错误）");
         }
 
         // 重新计算订单进度
