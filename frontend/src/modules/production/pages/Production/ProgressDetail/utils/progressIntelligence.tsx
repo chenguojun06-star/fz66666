@@ -1,9 +1,11 @@
 /**
- * 生产进度智能分析 v1.0 (2026-03)
+ * 生产进度智能分析 v2.0 (2026-03)
  *
- * 基于订单进度球数据做深层洞察：
- * 1. 🔍 瓶颈识别 — 哪个工序卡住了全链路？
- * 2. 👥 人员分析 — 各节点人员配置是否合理？
+ * ★ 全动态：不硬编码任何节点名称，完全基于传入的 stages 数组分析
+ *   工厂自定义工序（如 烫衣/包装/贴标/水洗 等）同样被分析
+ *
+ * 1. 🔍 瓶颈识别 — 相邻工序进度落差最大的环节
+ * 2. 👥 人员分析 — 各节点人员配置是否合理（已知字段 + 动态推断）
  * 3. 📊 资源建议 — 应该在哪里加人/减人？
  * 4. 📋 跟进要点 — 跟单员最该关注什么？
  * 5. ⚡ 风险预测 — 按当前趋势会出什么问题？
@@ -12,16 +14,16 @@ import React from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
 
-/** 工序流水线顺序（越靠前越上游） */
-const PIPELINE = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '质检', '入库'] as const;
-
-/** 各阶段的字段映射 */
-const STAGE_FIELDS: Record<string, { rate: string; operator: string; start: string; end: string }> = {
-  '采购': { rate: 'procurementCompletionRate', operator: 'procurementOperatorName', start: 'procurementStartTime', end: 'procurementEndTime' },
-  '裁剪': { rate: 'cuttingCompletionRate',     operator: 'cuttingOperatorName',     start: 'cuttingStartTime',     end: 'cuttingEndTime' },
-  '车缝': { rate: 'sewingCompletionRate',      operator: 'sewingOperatorName',      start: 'sewingStartTime',      end: 'sewingEndTime' },
-  '质检': { rate: 'qualityCompletionRate',      operator: 'qualityOperatorName',     start: 'qualityStartTime',     end: 'qualityEndTime' },
-  '入库': { rate: 'warehousingCompletionRate',  operator: 'warehousingOperatorName', start: 'warehousingStartTime', end: 'warehousingEndTime' },
+/**
+ * 已知阶段→订单字段映射（best-effort 人员查询）
+ * 没在此表中的自定义节点会被安全跳过，不影响其他分析维度
+ */
+const KNOWN_OPERATOR_FIELDS: Record<string, string> = {
+  '采购': 'procurementOperatorName',
+  '裁剪': 'cuttingOperatorName',
+  '车缝': 'sewingOperatorName',
+  '质检': 'qualityOperatorName',
+  '入库': 'warehousingOperatorName',
 };
 
 export interface StageSnapshot {
@@ -41,7 +43,9 @@ export interface ProgressInsight {
 }
 
 /**
- * 核心分析函数 — 从订单 + boardStats/Times 中提取智能洞察
+ * 核心分析函数 — 完全动态，基于传入的 stages 数组做智能洞察
+ *
+ * @param stages 已按流水线顺序排列的工序快照（由 SmartOrderHoverCard 动态构建）
  */
 export function analyzeProgress(
   order: ProductionOrder,
@@ -64,25 +68,18 @@ export function analyzeProgress(
   let verdict: 'good' | 'warn' | 'critical' = 'good';
   let bottleneck: ProgressInsight['bottleneck'] = null;
 
-  // ── 1. 构建工序快照（按流水线顺序） ──
-  const pipelineStages = PIPELINE.map(name => {
-    const found = stages.find(s => s.name === name);
-    const qty = found?.qty ?? 0;
-    const pct = found?.pct ?? 0;
-    const lastTime = found?.lastTime ?? null;
-    return { name, qty, pct, lastTime };
-  }).filter(s => {
-    // 只分析有数据或者有字段定义的工序
-    return s.qty > 0 || s.pct > 0 || STAGE_FIELDS[s.name];
-  });
+  // ── 直接使用传入的动态 stages（已排序），过滤掉无数据节点 ──
+  const activeStages = stages.filter(s => s.qty > 0 || s.pct > 0);
+  // 全量节点（含未开始的），用于跟进分析
+  const allStages = stages;
 
-  // ── 2. 瓶颈检测（流水线中进度落差最大的环节） ──
+  // ── 1. 瓶颈检测（相邻工序进度落差最大的环节，完全动态） ──
   let maxGap = 0;
   let bnStage = '';
   let bnReason = '';
-  for (let i = 1; i < pipelineStages.length; i++) {
-    const upstream = pipelineStages[i - 1];
-    const current = pipelineStages[i];
+  for (let i = 1; i < allStages.length; i++) {
+    const upstream = allStages[i - 1];
+    const current = allStages[i];
     if (upstream.pct <= 0) continue; // 上游没开始，不算瓶颈
     const gap = upstream.pct - current.pct;
     if (gap > maxGap && gap >= 20) {
@@ -97,20 +94,24 @@ export function analyzeProgress(
     else if (maxGap >= 30) verdict = 'warn';
   }
 
-  // ── 3. 人员分析 ──
+  // ── 2. 人员分析（best-effort：已知字段查 + 动态节点标记） ──
   const operators = new Map<string, string[]>(); // operatorName → stages[]
-  for (const [stage, fields] of Object.entries(STAGE_FIELDS)) {
-    const opName = String(o[fields.operator] || '').trim();
+
+  for (const s of allStages) {
+    const fieldName = KNOWN_OPERATOR_FIELDS[s.name];
+    if (!fieldName) {
+      // 自定义工序无对应字段 — 不报缺人（因为本身无法查到）
+      continue;
+    }
+    const opName = String(o[fieldName] || '').trim();
     if (!opName) {
-      // 该阶段有进度但无操作人，标记
-      const stageData = pipelineStages.find(s => s.name === stage);
-      if (stageData && stageData.pct > 0 && stageData.pct < 100) {
-        personnelNotes.push(`${stage}进行中但未记录操作人员`);
+      if (s.pct > 0 && s.pct < 100) {
+        personnelNotes.push(`${s.name} 进行中但未记录操作人员`);
       }
       continue;
     }
     const prev = operators.get(opName) ?? [];
-    prev.push(stage);
+    prev.push(s.name);
     operators.set(opName, prev);
   }
 
@@ -124,25 +125,26 @@ export function analyzeProgress(
     }
   });
 
-  // 人员覆盖率
-  const activeStages = pipelineStages.filter(s => s.pct > 0 && s.pct < 100);
-  const coveredStages = activeStages.filter(s => {
-    const f = STAGE_FIELDS[s.name];
-    return f && String(o[f.operator] || '').trim();
-  });
-  if (activeStages.length > 0 && coveredStages.length === 0) {
+  // 进行中工序的人员覆盖率（仅统计有对应字段的工序）
+  const inProgressStages = allStages.filter(s => s.pct > 0 && s.pct < 100);
+  const checkableInProgress = inProgressStages.filter(s => KNOWN_OPERATOR_FIELDS[s.name]);
+  const coveredCount = checkableInProgress.filter(s => {
+    const f = KNOWN_OPERATOR_FIELDS[s.name];
+    return f && String(o[f] || '').trim();
+  }).length;
+  if (checkableInProgress.length > 0 && coveredCount === 0) {
     personnelNotes.push('当前所有进行中环节均无操作人员记录');
   }
 
-  // ── 4. 资源建议 ──
+  // ── 3. 资源建议（动态定位瓶颈上下游） ──
   if (bottleneck) {
     resourceSuggestions.push(`${bottleneck.stage} 是当前瓶颈 — 建议优先增派人手或延长该工序工时`);
 
-    // 上游是否可以减人？
-    const upIdx = PIPELINE.indexOf(bottleneck.stage as any) - 1;
-    if (upIdx >= 0) {
-      const upStage = pipelineStages.find(s => s.name === PIPELINE[upIdx]);
-      if (upStage && upStage.pct >= 90) {
+    // 动态查找瓶颈的上游节点
+    const bnIdx = allStages.findIndex(s => s.name === bottleneck!.stage);
+    if (bnIdx > 0) {
+      const upStage = allStages[bnIdx - 1];
+      if (upStage.pct >= 90) {
         resourceSuggestions.push(`${upStage.name} 已近完工(${upStage.pct}%)，可将人力调配至 ${bottleneck.stage}`);
       }
     }
@@ -158,24 +160,22 @@ export function analyzeProgress(
     }
   }
 
-  // ── 5. 跟进要点 ──
-  // 未开工的上游工序
-  const notStarted = pipelineStages.filter(s => s.pct === 0 && s.qty === 0);
-  if (notStarted.length > 0 && pipelineStages.some(s => s.pct > 0)) {
+  // ── 4. 跟进要点（完全动态） ──
+  // 未开工的工序（在有活跃工序的情况下）
+  const notStarted = allStages.filter(s => s.pct === 0 && s.qty === 0);
+  if (notStarted.length > 0 && activeStages.length > 0) {
     followUpPoints.push(`${notStarted.map(s => s.name).join('/')} 尚未开始 — 确认前序是否完成`);
   }
 
-  // 长时间无扫码的节点
-  const staleNodes = pipelineStages.filter(s => {
-    if (s.pct >= 100 || s.pct === 0) return false;
+  // 长时间无扫码的节点（动态遍历所有节点）
+  for (const s of allStages) {
+    if (s.pct >= 100 || s.pct === 0) continue;
     const t = boardTimes[s.name];
-    return t && now.diff(dayjs(t), 'day') >= 2;
-  });
-  if (staleNodes.length > 0) {
-    staleNodes.forEach(s => {
-      const days = now.diff(dayjs(boardTimes[s.name]), 'day');
+    if (!t) continue;
+    const days = now.diff(dayjs(t), 'day');
+    if (days >= 2) {
       followUpPoints.push(`${s.name} 已 ${days} 天无新扫码（${s.pct}%），需确认是否停工`);
-    });
+    }
   }
 
   // 急单额外关注
@@ -183,7 +183,7 @@ export function analyzeProgress(
     followUpPoints.push('⚡ 急单！总进度不足80%，建议每日跟进');
   }
 
-  // ── 6. 风险预测 ──
+  // ── 5. 风险预测 ──
   // 交期风险
   if (daysLeft !== null) {
     if (daysLeft < 0) {
@@ -209,7 +209,7 @@ export function analyzeProgress(
   }
 
   // 全链路顺畅正面反馈
-  if (verdict === 'good' && prog > 0 && pipelineStages.every(s => s.pct === 0 || s.pct >= 50)) {
+  if (verdict === 'good' && prog > 0 && allStages.every(s => s.pct === 0 || s.pct >= 50)) {
     riskPredictions.push('各环节推进均衡，按当前节奏可正常交付');
   }
 
