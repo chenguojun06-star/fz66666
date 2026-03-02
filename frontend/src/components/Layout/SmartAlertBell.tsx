@@ -53,12 +53,10 @@ interface AiMessage {
 
 const AI_WELCOME = '👋 我是内置AI助手，可回答整体情况、逾期预警、工厂进度等问题。';
 const AI_DEFAULT_SUGGESTIONS = ['整体情况怎么样？', '有逾期订单吗？', '工厂进度怎么样？', '有瓶颈吗？'];
-// 建议词跟路径映射表
+// 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
 const SUGGESTION_NAV: Record<string, string> = {
   '整体情况怎么样？': '/dashboard',
   '有逆期订单吗？': '/production',
-  '工厂进度怎么样？': '/production/progress-detail',
-  '有瓶颈吗？': '/production/progress-detail',
 };
 
 // 小统计格子 —— 点击路径映射
