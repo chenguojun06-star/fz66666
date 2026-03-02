@@ -60,7 +60,7 @@ function canAccessNode(nodeName) {
   const roleNodeMap = {
     [ROLES.PURCHASER]: ['采购', '物料'],
     [ROLES.CUTTER]: ['裁剪'],
-    [ROLES.SEWING]: ['生产', '车缝', '缝制', '大烫', '整烫'],
+    [ROLES.SEWING]: ['生产', '车缝', '缝制', '大烫', '整烫', '整件'],
     [ROLES.PACKAGER]: ['包装'],
     [ROLES.QUALITY]: ['质检'],
     [ROLES.WAREHOUSE]: ['入库', '出库', '仓库'],
@@ -129,14 +129,15 @@ function filterOrders(orders) {
       return currentProcess.includes('裁剪');
     }
 
-    // 车缝员：只看生产/车缝节点的订单
+    // 车缝员：只看生产/车缝节点的订单（含整件工序）
     if (role === ROLES.SEWING) {
       return (
         currentProcess.includes('生产') ||
         currentProcess.includes('车缝') ||
         currentProcess.includes('缝制') ||
         currentProcess.includes('大烫') ||
-        currentProcess.includes('整烫')
+        currentProcess.includes('整烫') ||
+        currentProcess.includes('整件')
       );
     }
 

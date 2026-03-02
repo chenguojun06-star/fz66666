@@ -502,6 +502,7 @@ const scanCoreMixin = Behavior({
         车缝: 'production',
         大烫: 'production',
         整烫: 'production',
+        整件: 'production',  // 整件车缝工序
         质检: 'quality',
         包装: 'production',
         入库: 'warehouse',

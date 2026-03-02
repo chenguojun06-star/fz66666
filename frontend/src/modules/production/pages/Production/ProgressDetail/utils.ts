@@ -91,7 +91,7 @@ export const isProductionStageKey = (k: string) => {
 export const isSewingStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
+  return n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工') || n.includes('整件');
 };
 
 /**
@@ -147,6 +147,7 @@ export const canonicalStageKey = (k: string) => {
     缝制: '车缝',
     缝纫: '车缝',
     车工: '车缝',
+    整件: '车缝',  // 整件车缝工序规范化为车缝
     大烫: '整烫',
     熨烫: '整烫',
     后整: '包装',
