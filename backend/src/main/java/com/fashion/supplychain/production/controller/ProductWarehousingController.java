@@ -110,6 +110,16 @@ public class ProductWarehousingController {
         return Result.success(productWarehousingOrchestrator.listPendingRepairTasks(tenantId));
     }
 
+    /**
+     * PC端标记菲号为已返修完成（次品待返修 → 返修完成待质检）
+     * 用于质检员在PC端确认工厂已完成返修，跳过小程序扫码步骤
+     */
+    @PostMapping("/mark-bundle-repaired")
+    public Result<?> markBundleRepaired(@RequestBody java.util.Map<String, Object> body) {
+        String bundleId = String.valueOf(body.getOrDefault("bundleId", "")).trim();
+        return Result.success(productWarehousingOrchestrator.markBundleRepaired(bundleId));
+    }
+
     @RequestMapping(value = "/repair-stats", method = {RequestMethod.GET, RequestMethod.POST})
     public Result<?> repairStats(
             @RequestParam(required = false) Map<String, Object> params,

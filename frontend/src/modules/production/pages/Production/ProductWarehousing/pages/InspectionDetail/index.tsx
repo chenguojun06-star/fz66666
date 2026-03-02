@@ -3,11 +3,11 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card, Spin, Button, message, Tabs, Alert, Descriptions, Table, Tag,
   Image, List, Typography, Select, Space, Statistic, Row, Col,
-  Form, InputNumber, Input, Modal,
+  Form, InputNumber, Input, Modal, Popconfirm,
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ExperimentOutlined,
-  InboxOutlined, OrderedListOutlined,
+  InboxOutlined, OrderedListOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -78,6 +78,7 @@ const InspectionDetail: React.FC = () => {
   const [warehouseValue, setWarehouseValue] = useState('');
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
+  const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
   const [warehouseOptions, setWarehouseOptions] = useState<string[]>(['A仓', 'B仓', 'C仓', '成品仓', '面辅料仓', '次品仓']);
 
   // 动态加载字典中配置的仓库列表
@@ -488,6 +489,32 @@ const InspectionDetail: React.FC = () => {
     );
   };
 
+  /* ==================== 标记已返修 ==================== */
+  const handleMarkRepaired = useCallback(async (bundleId: string) => {
+    if (!bundleId) return;
+    setMarkingRepairBundleId(bundleId);
+    try {
+      const res = await api.post<{ code: number; message?: string }>(
+        '/production/warehousing/mark-bundle-repaired',
+        { bundleId },
+      );
+      if (res.code === 200) {
+        message.success('已标记为返修完成，可重新进行质检');
+        // 刷新菲号列表（useWarehousingForm 内部菲号）
+        const orderNo = briefing?.order?.orderNo;
+        if (orderNo) await formHook.fetchBundlesByOrderNo(orderNo);
+        // 刷新质检记录列表
+        fetchQcRecords();
+      } else {
+        message.error(res.message || '标记失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    } finally {
+      setMarkingRepairBundleId(null);
+    }
+  }, [briefing, formHook, fetchQcRecords]);
+
   /* ==================== 渲染：质检操作（平铺菲号 + 内联表单） ==================== */
   const renderInspectForm = () => {
     const {
@@ -560,6 +587,33 @@ const InspectionDetail: React.FC = () => {
                     if (record.disabled) return <Tag color="default">{v || '不可质检'}</Tag>;
                     if (isBundleBlockedForWarehousing(record.rawStatus)) return <Tag color="warning">{v}</Tag>;
                     return <Tag color="processing">{v || '可质检'}</Tag>;
+                  },
+                },
+                {
+                  title: '操作', key: 'action', width: 100,
+                  render: (_: any, record: BatchSelectBundleRow) => {
+                    const isUnqualified = record.rawStatus === 'unqualified';
+                    if (!isUnqualified || !record.bundleId) return null;
+                    return (
+                      <Popconfirm
+                        title="确认标记已返修？"
+                        description="工厂已将次品返修完成，接下来可重新进行质检"
+                        onConfirm={() => handleMarkRepaired(record.bundleId!)}
+                        okText="确认"
+                        cancelText="取消"
+                      >
+                        <Button
+                          size="small"
+                          type="primary"
+                          ghost
+                          icon={<ToolOutlined />}
+                          loading={markingRepairBundleId === record.bundleId}
+                          danger
+                        >
+                          标记已返修
+                        </Button>
+                      </Popconfirm>
+                    );
                   },
                 },
               ]}

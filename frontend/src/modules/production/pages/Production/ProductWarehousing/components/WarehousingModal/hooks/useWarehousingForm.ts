@@ -406,6 +406,7 @@ export const useWarehousingForm = (
         return {
           key: qr,
           qr,
+          bundleId: String((b as any).id || '').trim() || undefined,
           bundleNo: bundleNo || undefined,
           color: color || undefined,
           size: size || undefined,

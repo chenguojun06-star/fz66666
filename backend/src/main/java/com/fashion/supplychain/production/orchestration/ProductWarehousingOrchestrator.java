@@ -1661,5 +1661,28 @@ public class ProductWarehousingOrchestrator {
         return result;
     }
 
+    /**
+     * PC端直接标记菲号为「返修完成待质检」
+     * 适用场景：质检员在PC端确认工厂已完成返修，无需等待小程序扫码
+     * 前置条件：bundle.status 必须为 unqualified
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean markBundleRepaired(String bundleId) {
+        if (!org.springframework.util.StringUtils.hasText(bundleId)) {
+            throw new IllegalArgumentException("bundleId 不能为空");
+        }
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        if (bundle == null) {
+            throw new IllegalArgumentException("菲号不存在: " + bundleId);
+        }
+        String currentStatus = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
+        if (!"unqualified".equals(currentStatus)) {
+            throw new IllegalStateException(
+                "当前状态不是次品待返修，无法操作（当前：" + currentStatus + "）");
+        }
+        bundle.setStatus("repaired_waiting_qc");
+        return cuttingBundleService.updateById(bundle);
+    }
+
     // 使用TextUtils.safeText()和NumberUtils.toInt()替代
 }

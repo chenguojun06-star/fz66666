@@ -71,6 +71,7 @@ export type CuttingBundleRow = {
 export type BatchSelectBundleRow = {
   key: string;
   qr: string;
+  bundleId?: string;
   bundleNo?: number;
   color?: string;
   size?: string;
