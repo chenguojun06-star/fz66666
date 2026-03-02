@@ -56,7 +56,7 @@ public class ProcessSynonymMapping {
 
     /**
      * 获取标准工序名称
-     * 
+     *
      * @param processName 任意工序名称
      * @return 标准工序名称，如果无法匹配则返回原名称
      */
@@ -83,7 +83,7 @@ public class ProcessSynonymMapping {
 
     /**
      * 判断两个工序名称是否等价
-     * 
+     *
      * @param name1 工序名称1
      * @param name2 工序名称2
      * @return 是否等价
@@ -104,7 +104,7 @@ public class ProcessSynonymMapping {
 
     /**
      * 获取某个标准工序的所有同义词
-     * 
+     *
      * @param standardName 标准工序名称
      * @return 同义词集合
      */
@@ -114,7 +114,7 @@ public class ProcessSynonymMapping {
 
     /**
      * 获取所有标准工序名称
-     * 
+     *
      * @return 标准工序名称列表
      */
     public static List<String> getStandardProcessNames() {
