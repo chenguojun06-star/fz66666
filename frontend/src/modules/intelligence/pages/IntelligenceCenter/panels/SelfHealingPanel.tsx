@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button, Alert, Spin, Empty, Tag, Progress, Table } from 'antd';
-import { ReloadOutlined, SafetyCertificateOutlined, CheckCircleFilled, CloseCircleFilled, ToolFilled } from '@ant-design/icons';
+import { ReloadOutlined, SafetyCertificateOutlined, CheckCircleFilled, CloseCircleFilled, ToolFilled, RobotOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { SelfHealingResponse, DiagnosisItem } from '@/services/production/productionApi';
 
@@ -39,6 +39,33 @@ const SelfHealingPanel: React.FC = () => {
   const [data, setData] = useState<SelfHealingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleAiAdvice = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiAdvice('');
+    setAiError('');
+    try {
+      const manualItems = data.items?.filter(i => i.status === 'manual' || i.status === 'fail') ?? [];
+      const question = `系统自疑诊断结果：健康分${data.healthScore}分（${
+        data.status === 'healthy' ? '健康' : data.status === 'degraded' ? '亚健康' : '异常'
+      }），发现问题${data.issuesFound}个，已自动修复${data.autoFixed}个，需人工处理${data.needManual}个。${
+        manualItems.length > 0
+          ? '需人工处理的问题：' + manualItems.slice(0, 3).map(i => i.checkName).join('、')
+          : ''
+      }。请给出优先处理顺序和操作建议。`;
+      const res = await intelligenceApi.aiAdvisorChat(question) as any;
+      const answer = res?.data?.answer || res?.answer || '';
+      answer ? setAiAdvice(answer) : setAiError('未收到 AI 回复，请稍后重试');
+    } catch (e: any) {
+      setAiError(e?.message || 'AI 请求失败');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -94,6 +121,17 @@ const SelfHealingPanel: React.FC = () => {
               pagination={false}
               size="small"
             />
+            <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+              <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAdvice} type="primary" ghost size="small">
+                AI 修复建议
+              </Button>
+              {aiError && <Alert type="error" message={aiError} showIcon style={{ marginTop: 10 }} />}
+              {aiAdvice && !aiError && (
+                <Alert type="info" message="AI 优先处理建议"
+                  description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{aiAdvice}</pre>}
+                  showIcon icon={<RobotOutlined />} style={{ marginTop: 10 }} />
+                )}
+            </div>
           </>
         ) : !loading && <Empty description="点击诊断开始检测" />}
       </Spin>

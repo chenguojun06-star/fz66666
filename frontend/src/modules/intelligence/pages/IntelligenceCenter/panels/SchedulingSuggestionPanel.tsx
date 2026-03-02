@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Input, Button, Spin, Alert, Tag, Card, Row, Col, Progress, DatePicker } from 'antd';
-import { ScheduleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { ScheduleOutlined, ThunderboltOutlined, RobotOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { SchedulingSuggestionResponse, SchedulePlan, GanttItem } from '@/services/production/productionApi';
 import dayjs from 'dayjs';
@@ -18,6 +18,29 @@ const SchedulingSuggestionPanel: React.FC = () => {
   const [data, setData] = useState<SchedulingSuggestionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleAiAdvice = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiAdvice('');
+    setAiError('');
+    try {
+      const planSummary = data.plans?.[0]
+        ? `最优方案天数${data.plans[0].totalDays || '?'}天，工厂${data.plans[0].factoryName || '?'}，产能利用率${((data.plans[0].capacityUtilization ?? 0) * 100).toFixed(0)}%`
+        : '暂无方案';
+      const question = `款号${styleNo}，数量${quantity}件，${deadline ? '交期' + deadline + '，' : ''}排产建议：${planSummary}。请评估方案合理性，给出2-3条排产执行优化建议。`;
+      const res = await intelligenceApi.aiAdvisorChat(question) as any;
+      const answer = res?.data?.answer || res?.answer || '';
+      answer ? setAiAdvice(answer) : setAiError('未收到 AI 回复，请稍后重试');
+    } catch (e: any) {
+      setAiError(e?.message || 'AI 请求失败');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const submit = useCallback(async () => {
     if (!styleNo || !quantity) return;
@@ -136,6 +159,17 @@ const SchedulingSuggestionPanel: React.FC = () => {
           ) : (
             <Alert type="info" message="暂无合适排产方案" showIcon />
           )}
+          <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+            <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAdvice} type="primary" ghost size="small">
+              AI 评估方案
+            </Button>
+            {aiError && <Alert type="error" message={aiError} showIcon style={{ marginTop: 10 }} />}
+            {aiAdvice && !aiError && (
+              <Alert type="info" message="AI 排产优化建议"
+                description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{aiAdvice}</pre>}
+                showIcon icon={<RobotOutlined />} style={{ marginTop: 10 }} />
+            )}
+          </div>
         </div>
       )}
     </div>

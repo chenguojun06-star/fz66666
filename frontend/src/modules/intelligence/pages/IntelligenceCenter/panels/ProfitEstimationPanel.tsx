@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Input, Button, Spin, Empty, Alert, Tag } from 'antd';
-import { DollarOutlined, SearchOutlined } from '@ant-design/icons';
+import { DollarOutlined, SearchOutlined, RobotOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { ProfitEstimationResponse } from '@/services/production/productionApi';
 
@@ -15,6 +15,27 @@ const ProfitEstimationPanel: React.FC = () => {
   const [data, setData] = useState<ProfitEstimationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleAiAdvice = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiAdvice('');
+    setAiError('');
+    try {
+      const statusMap: Record<string, string> = { profitable: '盈利', marginal: '微利', loss: '亏损' };
+      const question = `订单${data.orderNo}：毛利率${data.grossMarginPct.toFixed(1)}%（${statusMap[data.profitStatus] || data.profitStatus}），营收${data.revenue.toFixed(0)}元，面料成本${data.materialCost.toFixed(0)}元，人工${data.laborCost.toFixed(0)}元，管理费${data.overheadCost.toFixed(0)}元，毛利${data.grossProfit.toFixed(0)}元。分析盈利风险并给出2-3条改善建议。`;
+      const res = await intelligenceApi.aiAdvisorChat(question) as any;
+      const answer = res?.data?.answer || res?.answer || '';
+      answer ? setAiAdvice(answer) : setAiError('未收到 AI 回复，请稍后重试');
+    } catch (e: any) {
+      setAiError(e?.message || 'AI 请求失败');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const fetch = useCallback(async () => {
     if (!orderId.trim()) return;
@@ -95,6 +116,19 @@ const ProfitEstimationPanel: React.FC = () => {
           </div>
         ) : !loading && <Empty description="输入订单ID后点击预估" />}
       </Spin>
+      {data && (
+        <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+          <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAdvice} type="primary" ghost size="small">
+            AI 盈利分析
+          </Button>
+          {aiError && <Alert type="error" message={aiError} showIcon style={{ marginTop: 10 }} />}
+          {aiAdvice && !aiError && (
+            <Alert type="info" message="AI 利润风险分析"
+              description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{aiAdvice}</pre>}
+              showIcon icon={<RobotOutlined />} style={{ marginTop: 10 }} />
+          )}
+        </div>
+      )}
     </div>
   );
 };

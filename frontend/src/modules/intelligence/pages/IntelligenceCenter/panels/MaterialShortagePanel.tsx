@@ -4,7 +4,7 @@ import {
 } from 'antd';
 import {
   WarningOutlined, CheckCircleOutlined, ReloadOutlined, ShoppingCartOutlined,
-  PhoneOutlined, UserOutlined,
+  PhoneOutlined, UserOutlined, RobotOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { MaterialShortageItem } from '@/services/production/productionApi';
@@ -114,6 +114,9 @@ const MaterialShortagePanel: React.FC = () => {
     summary: string;
   } | null>(null);
   const [error, setError] = useState('');
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -135,6 +138,25 @@ const MaterialShortagePanel: React.FC = () => {
 
   const highCount = data?.shortageItems.filter(i => i.riskLevel === 'HIGH').length ?? 0;
   const mediumCount = data?.shortageItems.filter(i => i.riskLevel === 'MEDIUM').length ?? 0;
+
+  const handleAiAdvice = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiAdvice('');
+    setAiError('');
+    try {
+      const question = `当前面料缺口分析：高风险${highCount}种、中风险${mediumCount}种、单总计${data.shortageItems.length}种缺货物料，已覆盖${data.coveredOrderCount}张在产订单。${
+        data.shortageItems.slice(0, 3).map(i => `${i.materialName || i.materialCode}缺${i.shortageQuantity}${i.unit || ''}`).join('、')
+      }等。请给出补货优先级排序和应对策略。`;
+      const res = await intelligenceApi.aiAdvisorChat(question) as any;
+      const answer = res?.data?.answer || res?.answer || '';
+      answer ? setAiAdvice(answer) : setAiError('未收到 AI 回复，请稍后重试');
+    } catch (e: any) {
+      setAiError(e?.message || 'AI 请求失败');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: '16px 0' }}>
@@ -245,6 +267,21 @@ const MaterialShortagePanel: React.FC = () => {
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#bbb' }}>
           <WarningOutlined style={{ fontSize: 40, marginBottom: 12, display: 'block' }} />
           <div>点击「开始预测」，系统将自动分析在产订单的面料缺口并评估风险</div>
+        </div>
+      )}
+
+      {/* AI 补货建议 */}
+      {data && (
+        <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+          <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAdvice} type="primary" ghost size="small">
+            AI 补货建议
+          </Button>
+          {aiError && <Alert type="error" message={aiError} showIcon style={{ marginTop: 10 }} />}
+          {aiAdvice && !aiError && (
+            <Alert type="info" message="AI 补货策略建议"
+              description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{aiAdvice}</pre>}
+              showIcon icon={<RobotOutlined />} style={{ marginTop: 10 }} />
+          )}
         </div>
       )}
 
