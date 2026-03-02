@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -242,7 +243,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param scanRecordId 扫码记录ID（关联 t_scan_record，String类型）
      * @return 更新成功返回true，记录不存在或已扫码返回false
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean updateScanRecord(String cuttingBundleId, String processCode,
                                    String operatorId, String operatorName, String scanRecordId) {
 
@@ -375,7 +376,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param scanRecordId 扫码记录ID
      * @return 更新成功返回true
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean forcedUpdateCuttingScan(String cuttingBundleId, String operatorId,
                                           String operatorName, String scanRecordId) {
         // 查询裁剪工序的跟踪记录
