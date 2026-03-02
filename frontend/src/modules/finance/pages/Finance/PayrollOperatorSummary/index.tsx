@@ -15,6 +15,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import WorkerPerformanceBadge from '@/smart/components/WorkerPerformanceBadge';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -463,7 +464,23 @@ const PayrollOperatorSummary: React.FC = () => {
             ),
         },
         createSortableNumberColumn('总数量', 'totalQuantity', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
-        createSortableNumberColumn('总金额(元)', 'totalAmount', sortField, sortOrder, handleSort, 140, toMoneyText),
+        {
+            title: <SortableColumnTitle title="总金额(元)" fieldName="totalAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'totalAmount',
+            key: 'totalAmount',
+            width: 160,
+            render: (v: unknown, record: Record<string, unknown>) => (
+                <WorkerPayrollAuditPopover
+                    record={record as any}
+                    grandTotal={totalAmount}
+                    workerCount={summaryRows.length}
+                >
+                    <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9', whiteSpace: 'nowrap' }}>
+                        {toMoneyText(v)}
+                    </span>
+                </WorkerPayrollAuditPopover>
+            ),
+        },
         createSortableNumberColumn('扫码次数', 'recordCount', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
         createSortableNumberColumn('订单数', 'orderCount', sortField, sortOrder, handleSort, 100, (v) => toNumberOrZero(v) || 0),
         {
