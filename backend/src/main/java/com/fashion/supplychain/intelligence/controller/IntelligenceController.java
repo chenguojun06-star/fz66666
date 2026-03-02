@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -93,6 +94,12 @@ public class IntelligenceController {
 
     @Autowired
     private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
+
+    @Autowired
+    private MaterialShortageOrchestrator materialShortageOrchestrator;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
 
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
@@ -225,5 +232,51 @@ public class IntelligenceController {
     @GetMapping("/style-quote-suggestion")
     public Result<StyleQuoteSuggestionResponse> styleQuoteSuggestion(@RequestParam("styleNo") String styleNo) {
         return Result.success(styleQuoteSuggestionOrchestrator.suggest(styleNo));
+    }
+
+    // ── 第五批：面料预测 + AI 顾问 ──
+
+    /** 面料缺口预测 — 基于在产订单 BOM 计算面料需求缺口 */
+    @GetMapping("/material-shortage")
+    public Result<MaterialShortageResponse> materialShortage() {
+        return Result.success(materialShortageOrchestrator.predict());
+    }
+
+    /** AI 顾问状态检查 — 检查 AI API Key 是否已配置 */
+    @GetMapping("/ai-advisor/status")
+    public Result<?> aiAdvisorStatus() {
+        boolean enabled = aiAdvisorService.isEnabled();
+        return Result.success(java.util.Map.of(
+                "enabled", enabled,
+                "message", enabled ? "AI 顾问已启用" : "AI 顾问未配置，请设置环境变量 DEEPSEEK_API_KEY"
+        ));
+    }
+
+    /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */
+    @PostMapping("/ai-advisor/chat")
+    public Result<?> aiAdvisorChat(@RequestBody java.util.Map<String, String> body) {
+        String question = body.getOrDefault("question", "");
+        if (question == null || question.isBlank()) {
+            return Result.fail("问题不能为空");
+        }
+        // 先用本地规则引擎（快速响应）
+        NlQueryRequest req = new NlQueryRequest();
+        req.setQuestion(question);
+        NlQueryResponse nlResp = nlQueryOrchestrator.query(req);
+        if (nlResp != null && nlResp.getAnswer() != null && !nlResp.getAnswer().contains("暂不支持")) {
+            return Result.success(java.util.Map.of("answer", nlResp.getAnswer(), "source", "local"));
+        }
+        // 规则引擎无法回答 → 调用 AI
+        if (!aiAdvisorService.isEnabled()) {
+            return Result.success(java.util.Map.of(
+                    "answer", "暂未配置 AI 服务，请联系管理员设置 DEEPSEEK_API_KEY",
+                    "source", "none"
+            ));
+        }
+        String aiAnswer = aiAdvisorService.getDailyAdvice("用户问：" + question);
+        return Result.success(java.util.Map.of(
+                "answer", aiAnswer != null ? aiAnswer : "AI 暂时无法回答，请稍后再试",
+                "source", "ai"
+        ));
     }
 }
