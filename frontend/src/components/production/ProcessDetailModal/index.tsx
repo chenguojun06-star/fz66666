@@ -10,6 +10,28 @@ import api from '@/utils/api';
 import { getProductionProcessTracking } from '@/utils/api/production';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
+/**
+ * 模块级工序阶段定义（包含自定义别名，如「整件」=车缝）
+ * 与 ProcessTrackingTable.STAGE_KEYWORDS 保持同步
+ */
+const PROCESS_STAGE_DEFS: { key: string; keywords: string[] }[] = [
+  { key: 'procurement',     keywords: ['采购', '物料', '备料'] },
+  { key: 'cutting',         keywords: ['裁剪', '裁床', '开裁'] },
+  { key: 'carSewing',       keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
+  { key: 'secondaryProcess',keywords: ['二次工艺', '二次', '绣花', '印花'] },
+  { key: 'tailProcess',     keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包'] },
+  { key: 'warehousing',     keywords: ['入库', '仓库'] },
+];
+
+/** 将模板节点分类到对应阶段（matchStage的模块级版本） */
+const classifyNodeStage = (progressStage: string, nodeName: string): string => {
+  const text = `${progressStage || ''} ${nodeName || ''}`;
+  for (const s of PROCESS_STAGE_DEFS) {
+    if (s.keywords.some(kw => text.includes(kw))) return s.key;
+  }
+  return 'tailProcess';
+};
+
 interface CuttingBundle {
   id: string;
   size: string;
@@ -46,6 +68,41 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
+
+  /**
+   * 根据 progressWorkflowJson 解析模板节点并按阶段分组
+   * 用于给 ProcessTrackingTable 传 processList，支持自定义工序名（如「整件」）精确匹配
+   */
+  const workflowNodesByStage = useMemo<Record<string, { name: string; processCode?: string }[]>>(() => {
+    const result: Record<string, { name: string; processCode?: string }[]> = {};
+    PROCESS_STAGE_DEFS.forEach(s => { result[s.key] = []; });
+    if (!record) return result;
+    try {
+      let nodes: any[] = [];
+      const json = record.progressWorkflowJson;
+      if (json) {
+        const w = typeof json === 'string' ? JSON.parse(json) : json;
+        const rawNodes = w?.nodes || [];
+        if (rawNodes.length > 0 && rawNodes[0]?.name) {
+          nodes = rawNodes;
+        } else {
+          const pbn = w?.processesByNode || {};
+          for (const n of rawNodes) {
+            for (const p of (pbn[n?.id] || [])) nodes.push({ ...p, progressStage: p.progressStage || n?.progressStage || n?.name || '' });
+          }
+        }
+      }
+      if (nodes.length === 0 && Array.isArray((record as any).progressNodeUnitPrices)) {
+        nodes = (record as any).progressNodeUnitPrices;
+      }
+      nodes.forEach((n: any) => {
+        const name = String(n?.name || n?.processName || '').trim();
+        const stage = classifyNodeStage(String(n?.progressStage || ''), name);
+        if (name) result[stage].push({ name, processCode: n?.processCode || n?.id || name });
+      });
+    } catch { /* ignore */ }
+    return result;
+  }, [record]);
 
   // 加载模板最新单价
   useEffect(() => {
@@ -461,7 +518,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     const mainStages = [
       { key: 'procurement', name: '采购', keywords: ['采购', '物料', '备料'] },
       { key: 'cutting', name: '裁剪', keywords: ['裁剪', '裁床', '开裁'] },
-      { key: 'carSewing', name: '车缝', keywords: ['车缝', '缝制', '缝纫', '车工', '生产'] },
+      { key: 'carSewing', name: '车缝', keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
       { key: 'secondaryProcess', name: '二次工艺', keywords: ['二次工艺', '二次', '工艺'] },
       { key: 'tailProcess', name: '尾部', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
       { key: 'warehousing', name: '入库', keywords: ['入库', '仓库'] },
@@ -891,6 +948,9 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   nodeName={{ procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' }[processType] || processType}
                   orderStatus={record?.status}
                   onUndoSuccess={handleUndoSuccess}
+                  processList={workflowNodesByStage[processType] && workflowNodesByStage[processType].length > 0
+                    ? workflowNodesByStage[processType]
+                    : undefined}
                 />
               </div>
             ),

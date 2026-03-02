@@ -86,7 +86,8 @@ const STAGE_KEYWORDS: Record<string, string[]> = {
   secondaryProcess: ['二次工艺', '绣花', '印花', '二次'],
   warehousing: ['入库', '仓库', '质检入库'],
   // ProcessType (来自列表页)
-  carSewing: ['车缝', '缝制', '缝纫', '车工', '生产'],
+  // 注：「整件」在服装行业是将裁片缝合成成衣的缝制工序，等同于车缝
+  carSewing: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'],
   tailProcess: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包', '装箱'],
 };
 
