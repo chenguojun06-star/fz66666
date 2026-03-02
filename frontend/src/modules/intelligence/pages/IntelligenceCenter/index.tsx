@@ -10,6 +10,7 @@ import {
   RobotOutlined,
   HeartOutlined,
   BulbOutlined,
+  AlertOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ProductionMonitorPanel from './panels/ProductionMonitorPanel';
@@ -20,6 +21,7 @@ import SelfHealingPanel from './panels/SelfHealingPanel';
 import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
 import OrderSmartAnalysisPanel from './panels/OrderSmartAnalysisPanel';
+import MaterialShortagePanel from './panels/MaterialShortagePanel';
 import './styles.css';
 
 const { Title } = Typography;
@@ -28,6 +30,11 @@ const IntelligenceCenter: React.FC = () => {
   const [activeKey, setActiveKey] = useState('production-monitor');
 
   const tabItems = [
+    {
+      key: 'material-shortage',
+      label: <span><AlertOutlined /> 面料缺口预警</span>,
+      children: <MaterialShortagePanel />,
+    },
     {
       key: 'production-monitor',
       label: <span><DashboardOutlined /> 生产监控总览</span>,

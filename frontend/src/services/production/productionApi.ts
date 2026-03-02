@@ -255,6 +255,26 @@ export interface NlQueryResponse {
   suggestions: string[];
 }
 
+export interface MaterialShortageItem {
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  spec: string;
+  currentStock: number;
+  demandQuantity: number;
+  shortageQuantity: number;
+  riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  supplierName: string;
+  supplierContact: string;
+  supplierPhone: string;
+}
+export interface MaterialShortageResult {
+  shortageItems: MaterialShortageItem[];
+  sufficientCount: number;
+  coveredOrderCount: number;
+  summary: string;
+}
+
 export interface DailyIndex { date: string; index: number; }
 export interface HealthIndexResponse {
   healthIndex: number;
@@ -497,6 +517,21 @@ export const intelligenceApi = {
   /** 款式报价建议（按款号聚合） */
   getStyleQuoteSuggestion: (styleNo: string) =>
     api.get<{ code: number; data: unknown }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
+
+  /** 面料缺口预测 */
+  getMaterialShortage: () =>
+    api.get<{ code: number; data: MaterialShortageResult }>('/intelligence/material-shortage'),
+
+  /** AI顾问状态（是否已配置 DEEPSEEK_API_KEY） */
+  getAiAdvisorStatus: () =>
+    api.get<{ code: number; data: { enabled: boolean; message: string } }>('/intelligence/ai-advisor/status'),
+
+  /** AI顾问问答 — 优先本地规则引擎，无法回答时走 DeepSeek */
+  aiAdvisorChat: (question: string) =>
+    api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' } }>(
+      '/intelligence/ai-advisor/chat',
+      { question },
+    ),
 };
 
 export const materialPurchaseApi = {
