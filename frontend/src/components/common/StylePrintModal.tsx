@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Checkbox, Button, Space, Spin, Tag, message, QRCode } from 'antd';
 
 import api from '@/utils/api';
+import { sortSizeNames } from '@/utils/api/size';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -698,16 +699,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             const sizeNames = [...new Set(data.sizes.map((s: any) => s.sizeName).filter(Boolean))];
             const partNames = [...new Set(data.sizes.map((s: any) => s.partName).filter(Boolean))];
 
-            // 尺码排序
-            const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL', '4XL', '5XL'];
-            const sortedSizeNames = [...sizeNames].sort((a, b) => {
-              const ai = sizeOrder.indexOf(a?.toUpperCase());
-              const bi = sizeOrder.indexOf(b?.toUpperCase());
-              if (ai !== -1 && bi !== -1) return ai - bi;
-              if (ai !== -1) return -1;
-              if (bi !== -1) return 1;
-              return String(a).localeCompare(String(b));
-            });
+            // 尺码排序（统一使用 size.ts 的算法排序，禁止内联尺码数组）
+            const sortedSizeNames = sortSizeNames([...sizeNames]);
 
             // 构建数据映射 partName -> sizeName -> { standardValue, tolerance }
             const dataMap: Record<string, Record<string, any>> = {};

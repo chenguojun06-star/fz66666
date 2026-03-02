@@ -3,6 +3,7 @@ import { App, Button, Input, InputNumber, Modal, Space, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 
 import api, { toNumberSafe } from '@/utils/api';
+import { STANDARD_SIZE_ORDER } from '@/utils/api/size';
 import StyleStageControlBar from './StyleStageControlBar';
 
 interface Props {
@@ -44,7 +45,8 @@ const expandXlSize = (value: string) => {
   return value;
 };
 
-const sizeOrder = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL', 'XXXXXL', 'XXXXXXL'];
+// 尺码标准顺序（从 size.ts 导入，禁止内联数组）
+const sizeOrder = STANDARD_SIZE_ORDER;
 
 const getSizeWeight = (value: string) => {
   const normalized = expandXlSize(normalizeSize(value));

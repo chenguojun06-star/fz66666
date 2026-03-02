@@ -2,6 +2,14 @@
  * 尺码相关工具函数
  */
 
+/**
+ * 标准尺码顺序表（X设尺码权威来源，禁止在其他文件内联）
+ * 修改尺码顺序请直接修改此文件
+ */
+export const STANDARD_SIZE_ORDER: string[] = [
+  'XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL', 'XXXXXL', 'XXXXXXL',
+];
+
 export const compareSizeAsc = (a: unknown, b: unknown) => {
   const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
   const parse = (v: unknown) => {

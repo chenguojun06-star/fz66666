@@ -10,6 +10,7 @@ import api from '@/utils/api';
 import { getProductionProcessTracking } from '@/utils/api/production';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
+import { compareSizeAsc } from '@/utils/api/size';
 
 /**
  * 模块级工序阶段定义（关键词统一从 productionStage.ts 导入，禁止在此处内联数组）
@@ -198,8 +199,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   const cuttingSizeItems = useMemo(() => {
     if (cuttingBundles.length === 0) return [];
 
-    // 定义标准尺码顺序
-    const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
     const sizeMap: Record<string, number> = {};
 
     // 聚合相同尺码的数量
@@ -210,18 +209,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       }
     });
 
-    // 转换为数组并排序
+    // 转换为数组并排序（统一使用 size.ts 的算法排序，禁止内联尺码数组）
     return Object.entries(sizeMap)
       .filter(([_, qty]) => qty > 0)
       .map(([size, quantity]) => ({ size, quantity }))
-      .sort((a, b) => {
-        const indexA = sizeOrder.indexOf(a.size);
-        const indexB = sizeOrder.indexOf(b.size);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.size.localeCompare(b.size);
-      });
+      .sort((a, b) => compareSizeAsc(a.size, b.size));
   }, [cuttingBundles]);
 
   if (!record) return null;
