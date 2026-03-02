@@ -2,9 +2,11 @@ package com.fashion.supplychain.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -135,6 +137,32 @@ public class GlobalExceptionHandler {
                 logger.warn("SQL语法异常（可能DB列缺失，等待迁移自动修复）: {} {} - {}", method, uri, e.getMessage());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(Result.fail(500, "数据库结构不一致，请联系管理员执行数据库迁移"));
+        }
+
+        /**
+         * 处理事务意外回滚（通常是内层@Transactional捕获异常后外层事务被标记rollback-only）。
+         * 将堆栈信息暴露出来便于定位根本原因。
+         */
+        @ExceptionHandler(UnexpectedRollbackException.class)
+        public ResponseEntity<Result<?>> handleUnexpectedRollback(UnexpectedRollbackException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.error("事务意外回滚: {} {} - {}", method, uri, e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Result.fail(500, "操作失败（事务回滚）：" + e.getMessage()));
+        }
+
+        /**
+         * 处理DB访问异常（BadSqlGrammarException已单独处理，此处捕获其余DataAccessException）。
+         * 将错误信息暴露出来便于诊断列缺失/连接异常等问题。
+         */
+        @ExceptionHandler(DataAccessException.class)
+        public ResponseEntity<Result<?>> handleDataAccess(DataAccessException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.error("DB访问异常: {} {} - {}", method, uri, e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Result.fail(500, "数据库操作失败：" + e.getMessage()));
         }
 
         /**

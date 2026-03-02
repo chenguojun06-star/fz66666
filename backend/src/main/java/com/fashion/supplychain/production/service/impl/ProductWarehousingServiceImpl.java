@@ -246,12 +246,16 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 helper.updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
             }
 
-            int qualifiedSum = helper.sumQualifiedByOrderId(productWarehousing.getOrderId());
-            ProductionOrder patch = new ProductionOrder();
-            patch.setId(productWarehousing.getOrderId());
-            patch.setCompletedQuantity(qualifiedSum);
-            patch.setUpdateTime(LocalDateTime.now());
-            productionOrderService.updateById(patch);
+            try {
+                int qualifiedSum = helper.sumQualifiedByOrderId(productWarehousing.getOrderId());
+                ProductionOrder patch = new ProductionOrder();
+                patch.setId(productWarehousing.getOrderId());
+                patch.setCompletedQuantity(qualifiedSum);
+                patch.setUpdateTime(LocalDateTime.now());
+                productionOrderService.updateById(patch);
+            } catch (Exception e) {
+                log.warn("更新订单完成数量失败（不阻断入库）: orderId={}", productWarehousing.getOrderId(), e);
+            }
 
             try {
                 helper.upsertWarehousingStageScanRecord(productWarehousing, order, bundle, now);
@@ -275,7 +279,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
             // Update SKU Stock
             if (productWarehousing.getQualifiedQuantity() != null && productWarehousing.getQualifiedQuantity() > 0) {
-                helper.updateSkuStock(productWarehousing, order, bundle, productWarehousing.getQualifiedQuantity());
+                try {
+                    helper.updateSkuStock(productWarehousing, order, bundle, productWarehousing.getQualifiedQuantity());
+                } catch (Exception e) {
+                    log.warn("更新SKU库存失败（不阻断入库）: orderId={}", productWarehousing.getOrderId(), e);
+                }
             }
         }
         return ok;
