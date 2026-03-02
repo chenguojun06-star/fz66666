@@ -31,8 +31,12 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
-  // 同步 ref
+  // 同步 ref（boardStats 相关 ref 用于避免 useEffect 依赖引起无限循环）
+  const boardStatsByOrderRef = useRef(boardStatsByOrder);
+  const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
   useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
+  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
+  useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
 
   // 加载工序节点模板
   useEffect(() => {
@@ -93,8 +97,8 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
           order: o,
           nodes: ns,
           childProcessCountByNode: Object.keys(cpcMap).length > 0 ? cpcMap : undefined,
-          boardStatsByOrder,
-          boardStatsLoadingByOrder,
+          boardStatsByOrder: boardStatsByOrderRef.current,
+          boardStatsLoadingByOrder: boardStatsLoadingByOrderRef.current,
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
@@ -107,8 +111,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   }, [
     productionList,
     progressNodesByStyleNo,
-    boardStatsByOrder,
-    boardStatsLoadingByOrder,
+    // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免每次 store 更新都触发重刷
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,
     setBoardLoadingForOrder,

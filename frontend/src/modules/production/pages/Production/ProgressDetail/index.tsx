@@ -113,12 +113,65 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
   const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
   const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
+  // ref 版：传给 ensureBoardStatsForOrder，避免放入 useEffect 依赖导致无限循环
+  const boardStatsByOrderRef = useRef(boardStatsByOrder);
+  const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
+  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
+  useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  /**
+   * 基于 boardStats 实时数据计算卡片进度。
+   * 解决：进度球用 boardStats（含订单级字段兜底）显示 100%，而卡片只用 productionProgress（纯扫码公式）显示 60% 的割裂感。
+   * 策略：取 boardStats 最远下游节点位置权重 与 productionProgress 的较大值。
+   */
+  const calcCardProgress = useCallback((record: ProductionOrder): number => {
+    const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
+    if (record.status === 'completed') return 100;
+    const orderId = String(record.id || '');
+    const stats = boardStatsByOrder[orderId];
+    if (!stats) return dbProgress;
+    const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
+    // 工序流水线顺序（从前到后）
+    const PIPELINE = ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
+    // 规范化节点名：把 "仓库入库" / "质检入库" 等都归到最近的标准节点
+    const normalizeKey = (k: string) => {
+      if (k.includes('入库') || k.includes('入仓')) return '入库';
+      if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '质检';
+      if (k.includes('包装') || k.includes('后整') || k.includes('打包')) return '包装';
+      if (k.includes('裁剪') || k.includes('裁床')) return '裁剪';
+      if (k.includes('车缝') || k.includes('车间')) return '车缝';
+      return k;
+    };
+    // 汇总 boardStats，规范化后取最大值
+    const normMap = new Map<string, number>();
+    for (const [rawKey, rawQty] of Object.entries(stats as Record<string, number>)) {
+      const nk = normalizeKey(rawKey);
+      const pct = Math.min(100, Math.round(Number(rawQty) / total * 100));
+      if (pct > 0) normMap.set(nk, Math.max(normMap.get(nk) ?? 0, pct));
+    }
+    if (normMap.size === 0) return dbProgress;
+    // 找到最远下游节点
+    let lastIdx = -1;
+    let lastPct = 0;
+    for (const [nk, pct] of normMap.entries()) {
+      const idx = PIPELINE.indexOf(nk);
+      if (idx > lastIdx || (idx === lastIdx && pct > lastPct)) {
+        lastIdx = idx;
+        lastPct = pct;
+      }
+    }
+    if (lastIdx < 0) return dbProgress;
+    // 该节点之前所有节点贡献 (lastIdx / PIPELINE.length * 100)，该节点贡献 (lastPct / PIPELINE.length)
+    const perStage = 100 / PIPELINE.length;
+    const boardProgress = Math.round(lastIdx * perStage + lastPct * perStage / 100);
+    return Math.min(100, Math.max(dbProgress, boardProgress));
+  }, [boardStatsByOrder]);
 
   // ── 用户列表（跟单员筛选）────────────────────────────────────────
   const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
@@ -489,8 +542,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           order: o,
           nodes: ns,
           childProcessCountByNode: Object.keys(cpcMap).length > 0 ? cpcMap : undefined,
-          boardStatsByOrder,
-          boardStatsLoadingByOrder,
+          boardStatsByOrder: boardStatsByOrderRef.current,
+          boardStatsLoadingByOrder: boardStatsLoadingByOrderRef.current,
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
@@ -505,8 +558,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   }, [
     orders,
     progressNodesByStyleNo,
-    boardStatsByOrder,
-    boardStatsLoadingByOrder,
+    // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免每次 store 更新都触发重刷
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,
     setBoardLoadingForOrder,
@@ -850,10 +902,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
-                calculate: (record: ProductionOrder) => {
-                  const progress = Number(record.productionProgress) || 0;
-                  return Math.min(100, Math.max(0, progress));
-                },
+                calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
@@ -1040,10 +1089,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
-                calculate: (record: ProductionOrder) => {
-                  const progress = Number(record.productionProgress) || 0;
-                  return Math.min(100, Math.max(0, progress));
-                },
+                calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Badge, Tooltip, Tabs, Popover } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -118,6 +118,11 @@ const ProductionList: React.FC = () => {
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
+  // ref 版：避免放入 useEffect 依赖导致无限循环
+  const boardStatsByOrderRef = useRef(boardStatsByOrder);
+  const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
+  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
+  useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -227,8 +232,8 @@ const ProductionList: React.FC = () => {
         await ensureBoardStatsForOrder({
           order: o,
           nodes: DEFAULT_HOVER_NODES,
-          boardStatsByOrder,
-          boardStatsLoadingByOrder,
+          boardStatsByOrder: boardStatsByOrderRef.current,
+          boardStatsLoadingByOrder: boardStatsLoadingByOrderRef.current,
           mergeBoardStatsForOrder,
           mergeBoardTimesForOrder,
           setBoardLoadingForOrder,
@@ -238,8 +243,8 @@ const ProductionList: React.FC = () => {
     };
     void run();
     return () => { cancelled = true; };
-  }, [productionList, boardStatsByOrder, boardStatsLoadingByOrder,
-      mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
+  // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免无限循环
+  }, [productionList, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
 
   // URL 参数解析
   useEffect(() => {
