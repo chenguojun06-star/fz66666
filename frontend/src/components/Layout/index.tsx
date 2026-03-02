@@ -13,6 +13,7 @@ import { t } from '../../i18n';
 import SmartGuideBar from '@/smart/components/SmartGuideBar';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
+import SmartAlertBell from './SmartAlertBell';
 import './styles.css';
 
 interface LayoutProps {
@@ -499,8 +500,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             ) : null}
           </div>
-          <div className="header-user">
-            {/* 紧急事件铃铛 */}
+          <div className="header-user">            {/* AI 今日预警 — 铃铛左侧 */}
+            <SmartAlertBell />            {/* 紧急事件铃铛 */}
             <Popover
               placement="bottomRight"
               title={t('layout.urgentEvents', language)}

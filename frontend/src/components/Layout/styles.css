@@ -644,3 +644,311 @@
   background: rgba(255, 255, 255, 0.15);
   color: var(--sidebar-text-strong);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SmartAlertBell — 顶栏今日预警按钮 + 下滑面板
+   配色：蓝紫系（#6d28d9 / #0284c7），禁止橙红色
+════════════════════════════════════════════════════════════ */
+
+/* ── 触发按钮 ── */
+.smart-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 8px;
+  border: 1.5px solid rgba(109, 40, 217, 0.22);
+  border-radius: 20px;
+  background: rgba(109, 40, 217, 0.05);
+  color: #4c1d95;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.smart-alert-btn:hover,
+.smart-alert-btn.open {
+  background: rgba(109, 40, 217, 0.1);
+  border-color: rgba(109, 40, 217, 0.45);
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.15);
+}
+
+/* 图标 + 红点容器 */
+.smart-alert-btn-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.smart-alert-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  animation: sab-dot-pulse 2s ease-in-out infinite;
+}
+@keyframes sab-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.35); opacity: 0.75; }
+}
+.smart-alert-btn-label {
+  letter-spacing: 0.02em;
+}
+
+/* ── 下滑面板 ── */
+.smart-alert-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 360px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(109, 40, 217, 0.13), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid rgba(109, 40, 217, 0.14);
+  z-index: 1100;
+  overflow: hidden;
+
+  /* 下滑动画初始态（隐藏） */
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.smart-alert-panel.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* 面板顶部渐变装饰条 */
+.smart-alert-panel::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, #6d28d9, #0284c7);
+}
+
+/* 面板头 */
+.sap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.sap-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+.sap-date {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+.sap-close {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+}
+.sap-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* 加载态 */
+.sap-loading {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #888;
+  font-size: 12px;
+}
+
+/* ── 数字统计行 ── */
+.sap-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.sap-stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  border-right: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+.sap-stat-cell:last-child { border-right: none; }
+.sap-stat-cell.alert { background: rgba(var(--sap-cell-color, 0,0,0), 0.03); }
+.sap-stat-icon { font-size: 14px; line-height: 1; }
+.sap-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+.sap-stat-label {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* ── 通用 section ── */
+.sap-section {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.sap-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 首要关注卡片 */
+.sap-priority-card {
+  background: #faf5ff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(109, 40, 217, 0.1);
+}
+.sap-priority-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.sap-priority-no  { font-size: 12px; font-weight: 600; color: #4c1d95; }
+.sap-priority-factory { font-size: 11px; color: #9ca3af; }
+.sap-priority-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ede9fe;
+  border-radius: 4px;
+  height: 14px;
+  padding: 2px 6px 2px 2px;
+  overflow: hidden;
+  position: relative;
+}
+.sap-priority-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, #6d28d9, #8b5cf6);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.sap-priority-pct {
+  position: relative;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4c1d95;
+  margin-left: auto;
+  z-index: 1;
+}
+.sap-priority-days {
+  position: relative;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 1;
+}
+
+/* 事件行 */
+.sap-event-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.sap-event-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+}
+.sap-event-title { font-size: 12px; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sap-event-time  { font-size: 10px; color: #d1d5db; white-space: nowrap; }
+
+/* 智能建议 */
+.sap-suggestion {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.6;
+  padding: 1px 0;
+}
+
+/* ── AI 问答区 ── */
+.sap-ai-zone {
+  padding: 10px 14px 12px;
+  background: #fafafe;
+}
+.sap-ai-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6d28d9;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+.sap-ai-answer {
+  background: #ede9fe;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #2e1065;
+  line-height: 1.65;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+}
+.sap-ai-thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 8px;
+}
+.sap-ai-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.sap-ai-send {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(109, 40, 217, 0.35);
+  background: rgba(109, 40, 217, 0.06);
+  color: #6d28d9;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.sap-ai-send:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
+.sap-ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
