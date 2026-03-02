@@ -86,7 +86,7 @@ public class ProductWarehousingHelper {
         return StringUtils.hasText(s) ? s : null;
     }
 
-    boolean isBundleBlockedForWarehousing(String rawStatus) {
+    public boolean isBundleBlockedForWarehousing(String rawStatus) {
         String status = rawStatus == null ? "" : rawStatus.trim();
         if (!StringUtils.hasText(status)) {
             return false;
@@ -107,7 +107,7 @@ public class ProductWarehousingHelper {
 
     // ──────────── 聚合查询 ────────────
 
-    int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+    public int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         String bid = StringUtils.hasText(cuttingBundleId) ? cuttingBundleId.trim() : null;
         String exId = StringUtils.hasText(excludeWarehousingId) ? excludeWarehousingId.trim() : null;
