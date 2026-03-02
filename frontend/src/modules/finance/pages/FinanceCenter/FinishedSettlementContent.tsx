@@ -73,6 +73,11 @@ const FinishedSettlementContent: React.FC = () => {
     page: 1,
     pageSize: 20,
   });
+  // 审核状态：已审核的订单 ID 集合（本地追踪，含跨页加载）
+  const [approvedOrderIds, setApprovedOrderIds] = useState<Set<string>>(new Set());
+  // 正在审核中的订单 ID 集合（防重复点击）
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -314,25 +319,36 @@ const FinishedSettlementContent: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 200,
       fixed: 'right' as const,
-      render: (_: unknown, record: FinishedSettlementRow) => (
-        <RowActions
-          actions={[
-            {
-              key: 'remark',
-              label: '备注',
-              primary: true,
-              onClick: () => openRemarkModal(record),
-            },
-            {
-              key: 'log',
-              label: '日志',
-              onClick: () => openLogModal(record.orderId),
-            },
-          ]}
-        />
-      ),
+      render: (_: unknown, record: FinishedSettlementRow) => {
+        const isApproved = approvedOrderIds.has(record.orderId);
+        const isApproving = approvingIds.has(record.orderId);
+        const isCancelled = ['CANCELLED', 'cancelled', 'DELETED', 'deleted', 'scrapped', '废弃', '已取消'].includes(record.status || '');
+        return (
+          <RowActions
+            actions={[
+              {
+                key: 'approve',
+                label: isApproved ? '已审核' : '审核',
+                primary: !isApproved,
+                disabled: isCancelled || isApproved || isApproving,
+                onClick: () => handleApproveOrder(record),
+              },
+              {
+                key: 'remark',
+                label: '备注',
+                onClick: () => openRemarkModal(record),
+              },
+              {
+                key: 'log',
+                label: '日志',
+                onClick: () => openLogModal(record.orderId),
+              },
+            ]}
+          />
+        );
+      },
     },
   ];
 
@@ -418,6 +434,49 @@ const FinishedSettlementContent: React.FC = () => {
     }
   };
 
+  // 批量加载审核状态（页面数据更新后调用）
+  const loadApprovalStatuses = async (orderIds: string[]) => {
+    if (orderIds.length === 0) return;
+    try {
+      const results = await Promise.allSettled(
+        orderIds.map(id =>
+          api.get<{ code: number; data: { id: string; status: string } }>(
+            `/finance/finished-settlement/approval-status/${id}`
+          )
+        )
+      );
+      const approvedSet = new Set<string>();
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled' && res.value?.data?.status === 'approved') {
+          approvedSet.add(orderIds[idx]);
+        }
+      });
+      setApprovedOrderIds(approvedSet);
+    } catch (_e) {
+      // 审核状态加载失败不阻断主流程
+    }
+  };
+
+  // 对单个订单进行结算审核
+  const handleApproveOrder = async (record: FinishedSettlementRow) => {
+    const orderId = record.orderId;
+    setApprovingIds(prev => new Set([...prev, orderId]));
+    try {
+      await api.post('/finance/finished-settlement/approve', { id: orderId });
+      setApprovedOrderIds(prev => new Set([...prev, orderId]));
+      message.success(`订单 ${record.orderNo} 审核确认成功`);
+    } catch (error: any) {
+      const errMsg = error instanceof Error ? error.message : '审核失败，请稍后重试';
+      message.error(errMsg);
+    } finally {
+      setApprovingIds(prev => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    }
+  };
+
   // 打开日志弹窗 - 从后端获取操作日志
   const openLogModal = async (orderId: string) => {
     try {
@@ -482,6 +541,13 @@ const FinishedSettlementContent: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // 数据变化后加载审核状态
+  useEffect(() => {
+    if (data.length > 0) {
+      loadApprovalStatuses(data.map(d => d.orderId));
+    }
+  }, [data]);
 
   return (
     <>
