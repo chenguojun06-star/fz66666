@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, Popover } from 'antd';
-import { BellOutlined, CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
+import { CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
@@ -27,13 +27,6 @@ type RecentPage = {
   ts: number;
 };
 
-interface UrgentEvent {
-  id: string;
-  type: 'overdue' | 'defective' | 'approval';
-  title: string;
-  orderNo: string;
-  time: string;
-}
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
@@ -143,8 +136,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (typeof window === 'undefined') return [];
     return readRecentPages().slice(0, maxRecentPages);
   });
-  const [urgentEvents, setUrgentEvents] = useState<UrgentEvent[]>([]);
-
   // 标签栏滚动容器的ref
   const recentsContainerRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);
@@ -154,22 +145,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const collapsed = sidebarCollapsed;
   const sidebarIsCollapsed = isMobile ? true : collapsed;
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
-
-  // 获取紧急事件
-  const fetchUrgentEvents = async () => {
-    if (!isAuthenticated) {
-      return;
-    }
-    try {
-      const response = (await api.get('/dashboard/urgent-events', { timeout: 3000 })) as ApiResult<UrgentEvent[]>;
-      if (response.code === 200) {
-        setUrgentEvents(response.data || []);
-      }
-    } catch (error: any) {
-      // 静默失败，不显示错误提示
-      console.error('获取紧急事件失败:', error);
-    }
-  };
 
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
   const isSuperAdmin = user?.isSuperAdmin === true;
@@ -338,22 +313,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [activeSectionKey, menuOpenKeys, sidebarIsCollapsed]);
 
-  // 加载紧急事件
-  useEffect(() => {
-    fetchUrgentEvents();
-    // 每5分钟刷新一次
-    const timer = setInterval(fetchUrgentEvents, 300000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // 加载紧急事件
-  useEffect(() => {
-    fetchUrgentEvents();
-    // 每5分钟刷新一次
-    const timer = setInterval(fetchUrgentEvents, 300000);
-    return () => clearInterval(timer);
-  }, []);
-
   const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
     const base = basePath || pathname;
     if (base === '/style-info' && pathname !== base) return t('layout.styleInfoDetail', language);
@@ -500,63 +459,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             ) : null}
           </div>
-          <div className="header-user">            {/* AI 今日预警 — 铃铛左侧 */}
-            <SmartAlertBell />            {/* 紧急事件铃铛 */}
-            <Popover
-              placement="bottomRight"
-              title={t('layout.urgentEvents', language)}
-              content={
-                <div style={{ maxWidth: 360, maxHeight: 400, overflow: 'auto' }}>
-                  {urgentEvents.length === 0 ? (
-                    <div style={{ padding: '20px 0', textAlign: 'center', color: '#999' }}>
-                      {t('layout.noUrgentEvents', language)}
-                    </div>
-                  ) : (
-                    <div>
-                      {urgentEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          style={{
-                            padding: '12px 0',
-                            borderBottom: '1px solid #f0f0f0',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => {
-                            // 根据类型跳转到对应页面
-                            if (event.type === 'overdue') {
-                              navigate(`/production?orderNo=${event.orderNo}`);
-                            } else if (event.type === 'defective') {
-                              navigate(`/production/warehousing?orderNo=${event.orderNo}`);
-                            } else if (event.type === 'approval') {
-                              navigate(`/finance/center?tab=factory`);
-                            } else if (event.type === 'material') {
-                              navigate(paths.materialInventory);
-                            }
-                          }}
-                        >
-                          <div style={{ fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: '#666' }}>
-                            {t('layout.orderNoPrefix', language)}: {event.orderNo}
-                          </div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: '#999', marginTop: 4 }}>
-                            {event.time}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              }
-              trigger="click"
-            >
-              <Badge count={urgentEvents.length} offset={[-2, 2]} size="small">
-                <Button
-                  type="text"
-                  icon={<BellOutlined style={{ fontSize: "var(--font-size-xl)" }} />}
-                  style={{ marginRight: 12 }}
-                />
-              </Badge>
-            </Popover>
+          <div className="header-user">
+            <SmartAlertBell />
 
             <Dropdown
               placement="bottomRight"
