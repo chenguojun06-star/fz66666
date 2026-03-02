@@ -582,7 +582,13 @@ export const useWarehousingForm = (
       });
     }
 
-    const total = qrs.reduce((sum, qr) => sum + (Number(batchQtyByQr[qr] || 0) || 0), 0);
+    // 计算总数时 clamp 到 availableQty，避免返修菲号用菲号总数（10）而非可质检数（2）
+    const total = qrs.reduce((sum, qr) => {
+      const raw = Number(batchQtyByQr[qr] || 0) || 0;
+      const row = batchSelectRows.find((r) => r.qr === qr);
+      const cap = row ? Math.max(0, Number(row.availableQty || 0) || 0) : raw;
+      return sum + (cap > 0 ? Math.min(raw, cap) : raw);
+    }, 0);
     const rawStatus = qrs.length === 1 ? String((bundles.find((x) => String(x.qrCode || '').trim() === qrs[0]) as any)?.status || '').trim() : '';
     const sLower = rawStatus.toLowerCase();
     const isRepairFlow = qrs.length === 1 && (isBundleBlockedForWarehousing(rawStatus) ||
@@ -597,7 +603,7 @@ export const useWarehousingForm = (
       qualityStatus: unq > 0 ? 'unqualified' : 'qualified',
       ...(isRepairFlow ? { repairRemark: '返修检验合格' } : {}),
     });
-  }, [batchQtyByQr, batchSelectedBundleQrs, bundles, currentWarehousing, form]);
+  }, [batchQtyByQr, batchSelectedBundleQrs, bundles, currentWarehousing, form, batchSelectRows, bundleRepairRemainingByQr]);
 
   const handleBatchSelectAll = () => {
     const nextQrs = batchSelectableQrs.slice();
