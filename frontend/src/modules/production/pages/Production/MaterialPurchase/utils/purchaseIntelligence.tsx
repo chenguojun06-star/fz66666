@@ -178,7 +178,7 @@ const VERDICT_LABEL = { good: '可开工', warn: '需关注', critical: '阻塞�
 /** 渲染智能分析 Tooltip 内容 */
 export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string): React.ReactNode {
   return (
-    <div style={{ fontSize: 12, maxWidth: 360, lineHeight: 1.7 }}>
+    <div style={{ fontSize: 12, maxWidth: 360, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span>🤖 智能采购分析</span>
@@ -189,14 +189,14 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string)
       </div>
 
       {/* 核心数据 */}
-      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(255,255,255,0.08)', borderRadius: 4 }}>
+      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: '#555' }}>
         {insight.totalMaterials} 种物料 · 到货率 {insight.arrivalRate}%
         {insight.canStartCutting ? ' · ✂️ 可开裁' : ' · 🚫 不可开裁'}
       </div>
 
       {/* 关键路径 */}
       {insight.criticalPath && (
-        <div style={{ marginBottom: 6, fontWeight: 500 }}>
+        <div style={{ marginBottom: 6, fontWeight: 500, color: '#262626' }}>
           🎯 {insight.criticalPath}
         </div>
       )}
@@ -205,7 +205,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string)
       {insight.risks.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.risks.map((r, i) => (
-            <div key={`r${i}`} style={{ color: '#ff7875' }}>⚠ {r}</div>
+            <div key={`r${i}`} style={{ color: '#d4380d' }}>⚠ {r}</div>
           ))}
         </div>
       )}
@@ -214,7 +214,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string)
       {insight.supplierIssues.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.supplierIssues.map((s, i) => (
-            <div key={`sp${i}`} style={{ color: '#d9d9d9' }}>🏭 {s}</div>
+            <div key={`sp${i}`} style={{ color: '#595959' }}>🏭 {s}</div>
           ))}
         </div>
       )}
@@ -223,7 +223,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string)
       {insight.impact.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.impact.map((line, i) => (
-            <div key={`i${i}`} style={{ color: '#69b1ff' }}>📈 {line}</div>
+            <div key={`i${i}`} style={{ color: '#1677ff' }}>📈 {line}</div>
           ))}
         </div>
       )}
@@ -232,7 +232,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, orderNo: string)
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#95de64' }}>💡 {s}</div>
+            <div key={`s${i}`} style={{ color: '#389e0d' }}>💡 {s}</div>
           ))}
         </div>
       )}

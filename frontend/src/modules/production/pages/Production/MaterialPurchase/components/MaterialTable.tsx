@@ -173,7 +173,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 
         return tooltipContent
           ? (
-            <Tooltip title={tooltipContent} placement="right">
+            <Tooltip title={tooltipContent} placement="right" color="white" overlayInnerStyle={{ color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' }}>
               <span style={{ borderBottom: '1px dotted var(--color-primary)', cursor: 'help' }}>{orderNo}</span>
             </Tooltip>
           )

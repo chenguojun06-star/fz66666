@@ -152,7 +152,7 @@ const VERDICT_LABEL = { good: '质量良好', warn: '需关注', critical: '风�
 /** 渲染智能分析 Tooltip 内容 */
 export function renderQualityTooltip(insight: QualityInsight, orderNo: string): React.ReactNode {
   return (
-    <div style={{ fontSize: 12, maxWidth: 340, lineHeight: 1.7 }}>
+    <div style={{ fontSize: 12, maxWidth: 340, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态标签 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span>🤖 智能质检分析</span>
@@ -163,7 +163,7 @@ export function renderQualityTooltip(insight: QualityInsight, orderNo: string): 
       </div>
 
       {/* 核心数据 */}
-      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(255,255,255,0.08)', borderRadius: 4 }}>
+      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: '#555' }}>
         质检 {insight.processed} 件 · 合格 {insight.totalQ} · 不合格 {insight.totalUQ} · 已入库 {insight.totalW}
         {insight.totalCut > 0 && ` · 裁剪 ${insight.totalCut}`}
       </div>
@@ -172,7 +172,7 @@ export function renderQualityTooltip(insight: QualityInsight, orderNo: string): 
       {insight.risks.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.risks.map((r, i) => (
-            <div key={`r${i}`} style={{ color: '#ff7875' }}>⚠ {r}</div>
+            <div key={`r${i}`} style={{ color: '#d4380d' }}>⚠ {r}</div>
           ))}
         </div>
       )}
@@ -181,7 +181,7 @@ export function renderQualityTooltip(insight: QualityInsight, orderNo: string): 
       {insight.impact.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.impact.map((line, i) => (
-            <div key={`i${i}`} style={{ color: '#69b1ff' }}>📈 {line}</div>
+            <div key={`i${i}`} style={{ color: '#1677ff' }}>📈 {line}</div>
           ))}
         </div>
       )}
@@ -190,7 +190,7 @@ export function renderQualityTooltip(insight: QualityInsight, orderNo: string): 
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#95de64' }}>💡 {s}</div>
+            <div key={`s${i}`} style={{ color: '#389e0d' }}>💡 {s}</div>
           ))}
         </div>
       )}

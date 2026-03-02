@@ -26,6 +26,16 @@ const STAGES_DEF = [
 /** 固定展示顺序（工厂有自定义工序时也按此排） */
 const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '质检', '入库'];
 
+/**
+ * 规范化节点显示名称：将冗长变体名简化为标准名，仅用于 UI 显示层
+ * 例："仓库入库" / "成品入库" / "质检入库" / "入仓" → "入库"
+ */
+const normalizeNodeLabel = (name: string): string => {
+  if (!name) return name;
+  if (name.includes('入库') || name.includes('入仓')) return '入库';
+  return name;
+};
+
 function fieldRate(o: ProductionOrder, key: string): number {
   return Math.min(100, Math.max(0, Number((o as any)[key]) || 0));
 }
@@ -126,7 +136,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         : fromField;
       const lastTime = boardTimes[label]
         ? dayjs(boardTimes[label]).format('MM-DD HH:mm') : null;
-      return { label, stageName: '' as string, qty, pct, lastTime };
+      return { label: normalizeNodeLabel(label), stageName: '' as string, qty, pct, lastTime };
     });
   }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes]);
 
