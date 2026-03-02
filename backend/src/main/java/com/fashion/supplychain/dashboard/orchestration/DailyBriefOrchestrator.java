@@ -2,10 +2,12 @@ package com.fashion.supplychain.dashboard.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -14,6 +16,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +34,10 @@ public class DailyBriefOrchestrator {
 
     private final DashboardQueryService dashboardQueryService;
     private final ProductionOrderService productionOrderService;
+
+    /** 可选注入：Key 未配置时为 null，业务逻辑降级为规则建议 */
+    @Autowired(required = false)
+    private AiAdvisorService aiAdvisorService;
 
     /**
      * 获取智能运营日报
@@ -113,6 +120,39 @@ public class DailyBriefOrchestrator {
         if (suggestions.isEmpty()) {
             suggestions.add("✅ 整体生产状态良好，暂无高风险订单");
         }
+
+        // ⑥+ AI增强建议：Key 已配置时调用 DeepSeek 替换规则文案，失败则无缝降级
+        if (aiAdvisorService != null && aiAdvisorService.isEnabled()) {
+            try {
+                StringBuilder ctx = new StringBuilder();
+                ctx.append("逾期").append(overdueCount).append("张");
+                if (!highRisk.isEmpty()) {
+                    ProductionOrder top = highRisk.get(0);
+                    long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
+                    ctx.append("，高风险").append(highRisk.size()).append("张，最紧急：")
+                       .append(top.getOrderNo())
+                       .append("（进度").append(top.getProductionProgress() == null ? 0 : top.getProductionProgress())
+                       .append("%，还剩").append(daysLeft).append("天）");
+                }
+                ctx.append("，今日扫码").append(todayScan).append("次")
+                   .append("，昨日入库").append(ydCount).append("单/").append(ydQty).append("件");
+                String aiText = aiAdvisorService.getDailyAdvice(ctx.toString());
+                if (aiText != null && !aiText.isBlank()) {
+                    List<String> aiList = Arrays.stream(aiText.split("\n"))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+                    if (!aiList.isEmpty()) {
+                        suggestions.clear();
+                        suggestions.addAll(aiList);
+                        brief.put("suggestionsSource", "ai");
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[DailyBrief] AI建议生成失败，降级使用规则建议: {}", e.getMessage());
+            }
+        }
+
         brief.put("suggestions", suggestions);
 
         return brief;

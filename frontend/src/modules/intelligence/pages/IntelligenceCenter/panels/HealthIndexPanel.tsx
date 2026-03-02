@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spin, Tag, Alert, Statistic, Row, Col, Tooltip } from 'antd';
-import { HeartOutlined, DashboardOutlined } from '@ant-design/icons';
+import { Spin, Tag, Alert, Statistic, Row, Col, Tooltip, Button } from 'antd';
+import { HeartOutlined, DashboardOutlined, RobotOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { HealthIndexResponse } from '@/services/production/productionApi';
 
@@ -26,6 +26,9 @@ const HealthIndexPanel: React.FC = () => {
   const [data, setData] = useState<HealthIndexResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -41,6 +44,44 @@ const HealthIndexPanel: React.FC = () => {
   }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  /** 调用 AI 生成健康评估建议 */
+  const handleAiDiagnosis = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiAdvice('');
+    setAiError('');
+    try {
+      const question = `系统健康指数为 ${
+        data.healthIndex
+      } 分（${
+        data.grade
+      } 级），五维评分：交付 ${
+        data.deliveryScore
+      }、质量 ${
+        data.qualityScore
+      }、效率 ${
+        data.efficiencyScore
+      }、产能 ${
+        data.capacityScore
+      }、成本 ${
+        data.costScore
+      }。首要风险：${
+        data.topRisk || '无'
+      }。请根据当前评分给出 3 条具指导意义的改进建议。`;
+      const res = await intelligenceApi.aiAdvisorChat(question) as any;
+      const answer = res?.data?.answer || res?.answer || '';
+      if (answer) {
+        setAiAdvice(answer);
+      } else {
+        setAiError('未收到 AI 回复，请稍后重试');
+      }
+    } catch (e: any) {
+      setAiError(e?.message || 'AI 请求失败');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   if (loading) return <Spin style={{ display: 'block', padding: 60, textAlign: 'center' }} />;
   if (error) return <Alert type="error" message={error} showIcon />;
@@ -147,6 +188,33 @@ const HealthIndexPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* AI 诊断 */}
+      <div style={{ marginTop: 20, borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
+        <Button
+          icon={<RobotOutlined />}
+          loading={aiLoading}
+          onClick={handleAiDiagnosis}
+          type="primary"
+          ghost
+          size="small"
+        >
+          AI 诊断
+        </Button>
+        {aiError && (
+          <Alert type="error" message={aiError} showIcon style={{ marginTop: 10 }} />
+        )}
+        {aiAdvice && !aiError && (
+          <Alert
+            type="info"
+            message="AI 诊断建议"
+            description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{aiAdvice}</pre>}
+            showIcon
+            icon={<RobotOutlined />}
+            style={{ marginTop: 10 }}
+          />
+        )}
+      </div>
     </div>
   );
 };
