@@ -2,6 +2,7 @@ package com.fashion.supplychain.common;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -10,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -65,18 +67,45 @@ public class TenantFileController {
                 }
             }
 
-            // ✅ COS 已启用：直接生成预签名URL，302跳转到COS
-            // 不再调用 exists()（HeadObject 可能缺权限导致误判404）
-            // 如果文件在COS不存在，COS本身会返回404，效果一样但不会误杀
+            // ✅ COS 已启用：代理屁流返回 COS 内容（不再 302 跳转）
+            // 原因：302 跳转后浏览器直接访问 COS 跨域链接，若 Content-Type 非 image/* ，Chrome ORB 会拦截图片
             if (cosService.isEnabled()) {
                 try {
-                    String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
-                    return ResponseEntity.status(302)
-                            .header(HttpHeaders.LOCATION, presignedUrl)
-                            .build();
+                    com.qcloud.cos.model.COSObject cosObject = cosService.streamObject(tenantId, fileName);
+                    // 优先用 COS 返回的 ContentType；若为空或 octet-stream，根据文件名进行内容类型推断
+                    String cosContentType = cosObject.getObjectMetadata().getContentType();
+                    if (cosContentType == null || cosContentType.startsWith("application/octet-stream")) {
+                        String lowerName = fileName.toLowerCase();
+                        if (lowerName.endsWith(".png")) cosContentType = "image/png";
+                        else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) cosContentType = "image/jpeg";
+                        else if (lowerName.endsWith(".gif")) cosContentType = "image/gif";
+                        else if (lowerName.endsWith(".webp")) cosContentType = "image/webp";
+                        else if (lowerName.endsWith(".pdf")) cosContentType = "application/pdf";
+                        else cosContentType = "application/octet-stream";
+                    }
+                    final String contentType = cosContentType;
+                    long contentLength = cosObject.getObjectMetadata().getContentLength();
+                    InputStream cosStream = cosObject.getObjectContent();
+                    InputStreamResource resource = new InputStreamResource(cosStream);
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_TYPE, contentType)
+                            .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                            .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                            .contentLength(contentLength)
+                            .body(resource);
                 } catch (Exception e) {
-                    log.warn("[COS] 生成预签名URL失败，尝试本地回退: tenantId={}, fileName={}, error={}",
+                    log.warn("[COS] 流式获取失败，改用 302回退: tenantId={}, fileName={}, error={}",
                             tenantId, fileName, e.getMessage());
+                    // 回退：302 跳转预签名 URL
+                    try {
+                        String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
+                        return ResponseEntity.status(302)
+                                .header(HttpHeaders.LOCATION, presignedUrl)
+                                .build();
+                    } catch (Exception ex) {
+                        log.error("[COS] 预签名回退也失败: {}", ex.getMessage());
+                        return ResponseEntity.notFound().build();
+                    }
                 }
             }
 

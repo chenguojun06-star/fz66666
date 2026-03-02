@@ -5,7 +5,9 @@ import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.http.HttpMethodName;
+import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GeneratePresignedUrlRequest;
+import com.qcloud.cos.model.GetObjectRequest;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.region.Region;
 import lombok.extern.slf4j.Slf4j;
@@ -190,6 +192,18 @@ public class CosService {
             throw new RuntimeException("COS 上传失败: " + key, e);
         }
         log.info("[COS] 文件上传成功 (bytes): key={}, size={}", key, content.length);
+    }
+
+    /**
+     * 直接流式获取 COS 对象（用于代理输出，避免 302 跳转后浏览器 ORB 拦截）
+     *
+     * @param tenantId 租户ID
+     * @param filename 文件名
+     * @return COSObject（包含内容流和 metadata），调用方负责关闭流
+     */
+    public COSObject streamObject(Long tenantId, String filename) {
+        String key = buildKey(tenantId, filename);
+        return cosClient.getObject(new GetObjectRequest(bucket, key));
     }
 
     /**
