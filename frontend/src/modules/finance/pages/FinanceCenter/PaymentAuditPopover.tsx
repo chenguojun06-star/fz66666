@@ -41,6 +41,16 @@ function parseDescriptionFields(desc: string) {
   };
 }
 
+/* ===== 从 description 解析工资结算字段 ===== */
+function parsePayrollDescription(desc: string) {
+  const scanMatch = desc.match(/(\d+)\s*次扫码/);
+  const qtyMatch = desc.match(/共\s*(\d+)\s*件/);
+  return {
+    scanCount: scanMatch ? parseInt(scanMatch[1]) : 0,
+    totalQty: qtyMatch ? parseInt(qtyMatch[1]) : 0,
+  };
+}
+
 /* ===== 核心分析逻辑（针对 PayableItem 数据，细化版） ===== */
 function analyzePayable(item: PayableItem): AnalysisResult {
   const checks: CheckItem[] = [];
@@ -180,17 +190,74 @@ function analyzePayable(item: PayableItem): AnalysisResult {
       }
     }
 
+  } else if (item.bizType === 'PAYROLL_SETTLEMENT' || item.bizType === 'PAYROLL') {
+    // 工资结算：解析扫码次数 + 件数，计算件均工资
+    const pp = parsePayrollDescription(item.description || '');
+    if (pp.scanCount > 0) breakdown.push({ label: '扫码次数', value: `${pp.scanCount} 次` });
+    if (pp.totalQty > 0) breakdown.push({ label: '完成件数', value: `${pp.totalQty} 件` });
+    if (pp.totalQty > 0 && amount > 0) {
+      const avgPerPiece = amount / pp.totalQty;
+      if (avgPerPiece < 2) {
+        checks.push({ label: '件均工资', status: 'warn', detail: `¥${avgPerPiece.toFixed(2)}/件，偏低` });
+        warnCount++;
+      } else if (avgPerPiece > 200) {
+        checks.push({ label: '件均工资', status: 'warn', detail: `¥${avgPerPiece.toFixed(1)}/件，偏高` });
+        warnCount++;
+      } else {
+        checks.push({ label: '件均工资', status: 'ok', detail: `${pp.totalQty}件 · 均¥${avgPerPiece.toFixed(1)}` });
+      }
+    }
+    if (pp.scanCount > 0 && pp.totalQty > 0) {
+      const avgPerScan = Math.round(pp.totalQty / pp.scanCount);
+      if (avgPerScan > 300) {
+        checks.push({ label: '扫码频次', status: 'warn', detail: `单次均${avgPerScan}件，数量较多` });
+        warnCount++;
+      } else {
+        checks.push({ label: '扫码记录', status: 'ok', detail: `${pp.scanCount}次扫码，共${pp.totalQty}件` });
+      }
+    }
+
   } else if (item.bizType === 'REIMBURSEMENT') {
-    // 报销金额检查
-    if (amount > 10000) {
-      checks.push({ label: '报销审查', status: 'warn', detail: `¥${amount.toLocaleString()} 大额报销需审批` });
+    // 费用报销：识别类型 + 大额检查
+    const desc = item.description || '';
+    let expenseType = '通用报销';
+    if (/差旅|出差|交通|机票|高铁/.test(desc)) expenseType = '差旅费';
+    else if (/设备|维修|保养|maintenance/.test(desc)) expenseType = '设备维修';
+    else if (/面料|材料|辅料|原材料/.test(desc)) expenseType = '材料采购';
+    else if (/水电|房租|物业/.test(desc)) expenseType = '运营费用';
+    else if (/餐饮|招待|接待/.test(desc)) expenseType = '接待费用';
+    breakdown.push({ label: '报销类型', value: expenseType });
+    if (amount > 20000) {
+      checks.push({ label: '报销审查', status: 'danger', detail: `¥${amount.toLocaleString()} 超大额，须专项审批` });
+      dangerCount++;
+    } else if (amount > 5000) {
+      checks.push({ label: '报销审查', status: 'warn', detail: `¥${amount.toLocaleString()} 大额，建议核实凭证` });
       warnCount++;
     } else {
-      checks.push({ label: '报销审查', status: 'ok', detail: '金额在正常范围' });
+      checks.push({ label: '报销审查', status: 'ok', detail: `¥${amount.toFixed(2)} 金额正常` });
     }
+    if (/餐饮|招待|接待/.test(desc) && amount > 2000) {
+      checks.push({ label: '合规提示', status: 'warn', detail: '接待费用建议附签字审批单' });
+      warnCount++;
+    }
+
   } else if (item.bizType === 'RECONCILIATION') {
-    // 对账类型
-    checks.push({ label: '对账审查', status: 'ok', detail: `¥${amount.toLocaleString()}` });
+    // 物料对账：检测零金额 + 大额预警
+    const desc = item.description || '';
+    let reconType = '物料对账';
+    if (/面料/.test(desc)) reconType = '面料对账';
+    else if (/辅料/.test(desc)) reconType = '辅料对账';
+    else if (/成品/.test(desc)) reconType = '成品对账';
+    breakdown.push({ label: '对账类型', value: reconType });
+    if (amount === 0) {
+      checks.push({ label: '对账状态', status: 'warn', detail: '应付为零，请确认是否已线下结清' });
+      warnCount++;
+    } else if (amount > 50000) {
+      checks.push({ label: '对账审查', status: 'warn', detail: `¥${amount.toLocaleString()} 大额，建议复核明细` });
+      warnCount++;
+    } else {
+      checks.push({ label: '对账审查', status: 'ok', detail: `¥${amount.toFixed(2)} 金额核实` });
+    }
   }
 
   // ④ 时效检查

@@ -529,17 +529,11 @@ const PaymentCenterPage: React.FC = () => {
         key: 'bizNo',
         width: 180,
         ellipsis: true,
-        render: (v: string, record: PayableItem) => {
-          // 内部工资结算只展示，不做AI审核
-          if (record.bizType === 'PAYROLL_SETTLEMENT' || record.bizType === 'PAYROLL') {
-            return <span>{v || '-'}</span>;
-          }
-          return (
-            <PaymentAuditPopover record={record}>
-              <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9' }}>{v || '-'}</span>
-            </PaymentAuditPopover>
-          );
-        },
+        render: (v: string, record: PayableItem) => (
+          <PaymentAuditPopover record={record}>
+            <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9' }}>{v || '-'}</span>
+          </PaymentAuditPopover>
+        ),
       },
       {
         title: '收款方',
