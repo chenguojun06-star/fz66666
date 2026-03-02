@@ -79,7 +79,8 @@ const STAGE_KEYWORDS: Record<string, string[]> = {
   // NodeType (来自进度球)
   procurement: ['采购', '物料', '备料'],
   cutting: ['裁剪', '裁床', '开裁', '剪裁'],
-  sewing: ['车缝', '缝制', '缝纫', '车工'],
+  // 注：「整件」在服装行业是将裁片缝合成成衣的缝制工序，等同于车缝
+  sewing: ['车缝', '缝制', '缝纫', '车工', '整件'],
   ironing: ['整烫', '熨烫', '大烫'],
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
