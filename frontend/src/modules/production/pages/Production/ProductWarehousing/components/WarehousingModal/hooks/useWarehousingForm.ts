@@ -176,9 +176,10 @@ export const useWarehousingForm = (
       const records = (res.data?.records || []) as any[];
       const stats = computeBundleRepairStats(records);
       setBundleRepairStatsByQr((prev) => ({ ...prev, [qr]: stats }));
-      setBundleRepairRemainingByQr((prev) => ({ ...prev, [qr]: stats.remaining }));
+      setBundleRepairRemainingByQr((prev) => ({ ...prev, [qr]: Math.max(stats.remaining, stats.repairPool) }));
     } catch {
-      // ignore
+      // 回退失败仍设为 0，避免 undefined 导致永久 "计算中"
+      setBundleRepairRemainingByQr((prev) => ({ ...prev, [qr]: 0 }));
     }
   };
 
@@ -385,15 +386,21 @@ export const useWarehousingForm = (
         const bundleNo = Number(b.bundleNo || 0) || 0;
         const rawStatus = String((b as any)?.status || '').trim();
         const isBlocked = isBundleBlockedForWarehousing(rawStatus);
-        const isRepairedWaitingQc = rawStatus === 'repaired_waiting_qc' || rawStatus === '返修待质检';
+        const isRepairedWaitingQc = rawStatus === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检';
         // repaired_waiting_qc 菲号需要走返修统计获取可质检数量（与 blocked 菲号相同逻辑）
         const needsRepairQty = isBlocked || isRepairedWaitingQc;
         const remaining = needsRepairQty ? bundleRepairRemainingByQr[qr] : undefined;
-        const availableQty = needsRepairQty ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
+        // repaired_waiting_qc: 统计未加载时用菲号总数做回退（后端会校验），避免永久禁用
+        const availableQty = needsRepairQty
+          ? (remaining !== undefined ? Math.max(0, Number(remaining || 0) || 0) : (isRepairedWaitingQc ? qty : 0))
+          : qty;
         const isUsed = qualifiedWarehousedBundleQrSet.has(qr);
         // 检查生产就绪：菲号必须完成车缝扫码才可质检
         const isProductionReady = productionReadyQrSet.size === 0 || productionReadyQrSet.has(qr);
-        const disabled = isUsed || !isProductionReady || (needsRepairQty && (remaining === undefined || availableQty <= 0));
+        // blocked 菲号：统计未取到时禁用；repaired_waiting_qc：统计未取到时仍可选（后端校验数量）
+        const disabled = isUsed || !isProductionReady ||
+          (isBlocked && !isRepairedWaitingQc && (remaining === undefined || availableQty <= 0)) ||
+          (isRepairedWaitingQc && remaining !== undefined && availableQty <= 0);
 
         let statusText = '';
         if (isUsed) {
