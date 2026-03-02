@@ -418,7 +418,7 @@ const SmartAlertBell: React.FC = () => {
                   onChange={e => setAiInput(e.target.value)}
                   onPressEnter={() => askAi()}
                   disabled={aiLoading}
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 12, flex: 1, minWidth: 0 }}
                 />
                 <button
                   className="sap-ai-send"

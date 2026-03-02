@@ -962,6 +962,11 @@
   gap: 6px;
   align-items: center;
 }
+.sap-ai-input-row .ant-input-affix-wrapper,
+.sap-ai-input-row .ant-input {
+  flex: 1;
+  min-width: 0;
+}
 .sap-ai-send {
   width: 28px; height: 28px;
   border-radius: 8px;
