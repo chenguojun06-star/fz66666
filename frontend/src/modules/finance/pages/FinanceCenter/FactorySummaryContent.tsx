@@ -128,7 +128,7 @@ const FactorySummaryContent: React.FC = () => {
             bizId: record.factoryId || record.factoryName,
             payeeName: record.factoryName,
             amount: record.totalAmount,
-            description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件`,
+            description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件 | 面料:${record.totalMaterialCost || 0} · 工费:${record.totalProductionCost || 0} · 利润:${record.totalProfit || 0} · 次品:${record.totalDefectQuantity || 0} · 入库:${record.totalWarehousedQuantity || 0} · 订单量:${record.totalOrderQuantity || 0}`,
             orderNos: record.orderNos,
           });
           message.success(`工厂「${record.factoryName}」已推送到付款中心`);
@@ -170,7 +170,7 @@ const FactorySummaryContent: React.FC = () => {
               bizId: record.factoryId || record.factoryName,
               payeeName: record.factoryName,
               amount: record.totalAmount,
-              description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件`,
+              description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件 | 面料:${record.totalMaterialCost || 0} · 工费:${record.totalProductionCost || 0} · 利润:${record.totalProfit || 0} · 次品:${record.totalDefectQuantity || 0} · 入库:${record.totalWarehousedQuantity || 0} · 订单量:${record.totalOrderQuantity || 0}`,
               orderNos: record.orderNos,
             });
             newPushedIds.push(record.factoryId || record.factoryName);
