@@ -14,16 +14,16 @@ import { templateLibraryApi } from '@/services/template/templateLibraryApi';
  * 模块级工序阶段定义（包含自定义别名，如「整件」=车缝）
  * 与 ProcessTrackingTable.STAGE_KEYWORDS 保持同步
  */
-const PROCESS_STAGE_DEFS: { key: string; keywords: string[] }[] = [
-  { key: 'procurement',     keywords: ['采购', '物料', '备料'] },
-  { key: 'cutting',         keywords: ['裁剪', '裁床', '开裁'] },
-  { key: 'carSewing',       keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
-  { key: 'secondaryProcess',keywords: ['二次工艺', '二次', '绣花', '印花'] },
-  { key: 'tailProcess',     keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包'] },
-  { key: 'warehousing',     keywords: ['入库', '仓库'] },
+const PROCESS_STAGE_DEFS: { key: string; name: string; keywords: string[] }[] = [
+  { key: 'procurement',      name: '采购',     keywords: ['采购', '物料', '备料'] },
+  { key: 'cutting',          name: '裁剪',     keywords: ['裁剪', '裁床', '开裁'] },
+  { key: 'carSewing',        name: '车缝',     keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
+  { key: 'secondaryProcess', name: '二次工艺', keywords: ['二次工艺', '二次', '绣花', '印花'] },
+  { key: 'tailProcess',      name: '尾部',     keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线', '熨烫', '大烫', '检验', '品检', '打包'] },
+  { key: 'warehousing',      name: '入库',     keywords: ['入库', '仓库'] },
 ];
 
-/** 将模板节点分类到对应阶段（matchStage的模块级版本） */
+/** 将模板节点分类到对应阶段（全局唯一实现，供 workflowNodesByStage 和 renderNormalProcessDetail 共用）*/
 const classifyNodeStage = (progressStage: string, nodeName: string): string => {
   const text = `${progressStage || ''} ${nodeName || ''}`;
   for (const s of PROCESS_STAGE_DEFS) {
@@ -76,49 +76,18 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
   /**
    * 将模板节点按阶段分组，传给 ProcessTrackingTable.processList
-   * 优先用 templateNodesList（来自 progressNodeUnitPrices API，含 progressStage）
-   * 次用 record.progressNodeUnitPrices（list API 解析的，无 progressStage 但可关键词兜底）
-   * 这样无论模板里叫「整件」「绣花」还是任何自定义名字，都能精确匹配
+   * 数据来源：templateNodesList（弹窗打开时从 progressNodeUnitPrices API 加载，含 progressStage）
+   * 无需解析 record.progressWorkflowJson，后者仅在 list API 响应中且缺少 progressStage 字段
    */
   const workflowNodesByStage = useMemo<Record<string, { name: string; processCode?: string }[]>>(() => {
     const result: Record<string, { name: string; processCode?: string }[]> = {};
     PROCESS_STAGE_DEFS.forEach(s => { result[s.key] = []; });
-    if (!record) return result;
-    try {
-      let nodes: any[] = [];
-
-      // 优先：使用 templateNodesList（弹窗打开时从 API 加载，含 progressStage 字段）
-      if (templateNodesList.length > 0) {
-        nodes = templateNodesList;
-      } else {
-        // 次选：从 record.progressWorkflowJson 解析（list API 响应，节点无 progressStage）
-        const json = record.progressWorkflowJson;
-        if (json) {
-          const w = typeof json === 'string' ? JSON.parse(json) : json;
-          const rawNodes = w?.nodes || [];
-          if (rawNodes.length > 0 && rawNodes[0]?.name) {
-            nodes = rawNodes;
-          } else {
-            const pbn = w?.processesByNode || {};
-            for (const n of rawNodes) {
-              for (const p of (pbn[n?.id] || [])) nodes.push({ ...p, progressStage: p.progressStage || n?.progressStage || n?.name || '' });
-            }
-          }
-        }
-        // 兜底：record.progressNodeUnitPrices（同样来自 progressWorkflowJson，无 progressStage）
-        if (nodes.length === 0 && Array.isArray((record as any).progressNodeUnitPrices)) {
-          nodes = (record as any).progressNodeUnitPrices;
-        }
-      }
-
-      nodes.forEach((n: any) => {
-        const name = String(n?.name || n?.processName || '').trim();
-        const stage = classifyNodeStage(String(n?.progressStage || ''), name);
-        if (name) result[stage].push({ name, processCode: n?.processCode || n?.id || name });
-      });
-    } catch { /* ignore */ }
+    templateNodesList.forEach((n) => {
+      const stage = classifyNodeStage(n.progressStage || '', n.name);
+      if (n.name) result[stage].push({ name: n.name, processCode: n.processCode || n.name });
+    });
     return result;
-  }, [record, templateNodesList]);
+  }, [templateNodesList]);
 
   // 加载模板最新单价 & 节点列表（弹窗每次打开时触发）
   useEffect(() => {
@@ -467,114 +436,34 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
   // 渲染普通工序详情（采购、裁剪、车缝等）
   const renderNormalProcessDetail = () => {
-    // 解析工序工作流
-    let workflowNodes: any[] = [];
-    try {
-      if (record.progressWorkflowJson) {
-        const workflow = typeof record.progressWorkflowJson === 'string'
-          ? JSON.parse(record.progressWorkflowJson)
-          : record.progressWorkflowJson;
+    // 直接使用 templateNodesList（弹窗打开时已从 progressNodeUnitPrices API 加载，含 progressStage）
+    // 用 templatePriceMap 覆盖最新单价
+    const workflowNodes = templateNodesList.map((item, idx) => ({
+      id: item.processCode || item.name,
+      name: item.name,
+      progressStage: item.progressStage || '',
+      machineType: '',
+      standardTime: 0,
+      unitPrice: templatePriceMap.get(item.name) ?? 0,
+      sortOrder: idx,
+    }));
 
-        const nodes = workflow?.nodes || [];
-        if (nodes.length > 0 && nodes[0]?.name) {
-          workflowNodes = nodes.map((item: any, idx: number) => {
-            const name = String(item.name || item.processName || '').trim();
-            const storedPrice = Number(item.unitPrice) || 0;
-            return {
-              id: item.id || `proc_${idx}`,
-              name,
-              progressStage: item.progressStage || '',
-              machineType: item.machineType || '',
-              standardTime: item.standardTime || 0,
-              unitPrice: templatePriceMap.get(name) ?? storedPrice,
-              sortOrder: item.sortOrder ?? idx,
-            };
-          });
-        } else {
-          // 旧格式处理
-          const processesByNode = workflow?.processesByNode || {};
-          const allProcesses: any[] = [];
-          let sortIdx = 0;
-
-          for (const node of nodes) {
-            const nodeId = node?.id || '';
-            const nodeProcesses = processesByNode[nodeId] || [];
-            for (const p of nodeProcesses) {
-              const pName = String(p.name || p.processName || '').trim();
-              const storedP = Number(p.unitPrice) || 0;
-              allProcesses.push({
-                id: p.id || `proc_${sortIdx}`,
-                name: pName,
-                progressStage: p.progressStage || node?.progressStage || node?.name || '',
-                machineType: p.machineType || '',
-                standardTime: p.standardTime || 0,
-                unitPrice: templatePriceMap.get(pName) ?? storedP,
-                sortOrder: sortIdx,
-              });
-              sortIdx++;
-            }
-          }
-          workflowNodes = allProcesses;
-        }
-      }
-
-      // 从 progressNodeUnitPrices 读取
-      if (workflowNodes.length === 0 && Array.isArray(record.progressNodeUnitPrices) && record.progressNodeUnitPrices.length > 0) {
-        workflowNodes = record.progressNodeUnitPrices.map((item: any, idx: number) => {
-          const itemName = String(item.name || item.processName || '').trim();
-          const storedItemPrice = Number(item.unitPrice) || Number(item.price) || 0;
-          return {
-            id: item.id || item.processId || `node_${idx}`,
-            name: itemName,
-            progressStage: item.progressStage || '',
-            machineType: item.machineType || '',
-            standardTime: item.standardTime || 0,
-            unitPrice: templatePriceMap.get(itemName) ?? storedItemPrice,
-            sortOrder: item.sortOrder ?? idx,
-          };
-        });
-      }
-    } catch (e) {
-      console.error('解析工艺模板失败:', e);
-    }
-
-    // 主进度节点定义
-    const mainStages = [
-      { key: 'procurement', name: '采购', keywords: ['采购', '物料', '备料'] },
-      { key: 'cutting', name: '裁剪', keywords: ['裁剪', '裁床', '开裁'] },
-      { key: 'carSewing', name: '车缝', keywords: ['车缝', '缝制', '缝纫', '车工', '生产', '整件'] },
-      { key: 'secondaryProcess', name: '二次工艺', keywords: ['二次工艺', '二次', '工艺'] },
-      { key: 'tailProcess', name: '尾部', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
-      { key: 'warehousing', name: '入库', keywords: ['入库', '仓库'] },
-    ];
-
-    // 匹配工序到主进度节点
-    const matchStage = (progressStage: string, processName: string): string => {
-      const text = `${progressStage || ''} ${processName || ''}`;
-      for (const stage of mainStages) {
-        if (stage.keywords.some(kw => text.includes(kw))) {
-          return stage.key;
-        }
-      }
-      return 'tailProcess';
-    };
-
-    // 按主进度节点分组
+    // 按主进度节点分组（复用模块级 PROCESS_STAGE_DEFS + classifyNodeStage，无需重复定义）
     const groupedProcesses: Record<string, any[]> = {};
-    mainStages.forEach(s => { groupedProcesses[s.key] = []; });
+    PROCESS_STAGE_DEFS.forEach(s => { groupedProcesses[s.key] = []; });
 
     workflowNodes.forEach((node: any) => {
-      const stageKey = matchStage(node.progressStage || '', node.name || '');
+      const stageKey = classifyNodeStage(node.progressStage || '', node.name || '');
       if (!groupedProcesses[stageKey]) {
         groupedProcesses[stageKey] = [];
       }
       groupedProcesses[stageKey].push(node);
     });
 
-    // 显示哪些阶段
+    // 显示哪些阶段（复用模块级 PROCESS_STAGE_DEFS）
     const stagesToShow = processType === 'all'
-      ? mainStages.filter(s => groupedProcesses[s.key].length > 0)
-      : mainStages.filter(s => s.key === processType && groupedProcesses[s.key].length > 0);
+      ? PROCESS_STAGE_DEFS.filter(s => (groupedProcesses[s.key] || []).length > 0)
+      : PROCESS_STAGE_DEFS.filter(s => s.key === processType && (groupedProcesses[s.key] || []).length > 0);
 
     // 计算总工价
     const totalPrice = workflowNodes.reduce((sum: number, node: any) => sum + (Number(node.unitPrice) || 0), 0);
