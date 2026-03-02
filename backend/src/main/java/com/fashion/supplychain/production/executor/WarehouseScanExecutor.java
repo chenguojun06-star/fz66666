@@ -223,6 +223,9 @@ public class WarehouseScanExecutor {
             } catch (Exception ex) {
                 log.warn("查找已有入库扫码记录失败: requestId={}", requestId, ex);
             }
+        } catch (org.springframework.dao.DataAccessException dbEx) {
+            log.error("[ScanSave-Warehouse] t_scan_record保存失败(可能缺少列): requestId={}, error={}", requestId, dbEx.getMessage(), dbEx);
+            throw new IllegalStateException("扫码记录保存失败，请联系管理员（DB列缺失，错误：" + dbEx.getMessage() + "）");
         }
 
         // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）
