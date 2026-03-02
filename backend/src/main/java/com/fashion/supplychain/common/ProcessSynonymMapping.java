@@ -35,7 +35,7 @@ public class ProcessSynonymMapping {
 
         // 车缝/生产环节同义词（核心映射）
         SYNONYM_MAP.put(PROCESS_SEWING, new HashSet<>(Arrays.asList(
-                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产")));
+                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产", "整件")));
 
         // 大烫环节同义词
         SYNONYM_MAP.put(PROCESS_IRONING, new HashSet<>(Arrays.asList(

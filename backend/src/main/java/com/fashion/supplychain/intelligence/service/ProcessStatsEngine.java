@@ -170,7 +170,7 @@ public class ProcessStatsEngine {
     static {
         java.util.Map<String, String> m = new java.util.HashMap<>();
         m.put("裁剪工序", "裁剪");   m.put("裁剪分菲", "裁剪");
-        m.put("车缝工序", "车缝");   m.put("缝制工序", "车缝");   m.put("缝制", "车缝");
+        m.put("輵剥工序", "车缝");   m.put("缝制工序", "车缝");   m.put("缝制", "车缝");   m.put("整件", "车缝");
         m.put("尾部工序", "尾部");   m.put("尾部处理", "尾部");
         m.put("质检工序", "质检");   m.put("质检验收", "质检");   m.put("验收", "质检");
         m.put("入库工序", "入库");   m.put("成品入库", "入库");
