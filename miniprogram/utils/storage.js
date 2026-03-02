@@ -1,6 +1,30 @@
 const TOKEN_KEY = 'auth_token';
 const USER_INFO_KEY = 'user_info';
 
+/**
+ * 小程序环境没有 atob，手写 Base64 解码
+ * 支持标准 Base64（已补 padding）
+ */
+function base64Decode(str) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+  str = str.replace(/=+$/, '');
+  for (let i = 0, len = str.length; i < len; i += 4) {
+    const enc1 = chars.indexOf(str[i]);
+    const enc2 = chars.indexOf(str[i + 1]);
+    const enc3 = i + 2 < len ? chars.indexOf(str[i + 2]) : 0;
+    const enc4 = i + 3 < len ? chars.indexOf(str[i + 3]) : 0;
+    output += String.fromCharCode((enc1 << 2) | (enc2 >> 4));
+    if (i + 2 < len && str[i + 2] !== '=') {
+      output += String.fromCharCode(((enc2 & 15) << 4) | (enc3 >> 2));
+    }
+    if (i + 3 < len && str[i + 3] !== '=') {
+      output += String.fromCharCode(((enc3 & 3) << 6) | enc4);
+    }
+  }
+  return output;
+}
+
 function getToken() {
   try {
     return wx.getStorageSync(TOKEN_KEY) || '';
@@ -115,7 +139,7 @@ function isTokenExpired() {
     let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     // 补齐 padding
     while (payload.length % 4 !== 0) payload += '=';
-    const decoded = JSON.parse(decodeURIComponent(escape(atob(payload))));
+    const decoded = JSON.parse(decodeURIComponent(escape(base64Decode(payload))));
     if (!decoded.exp) return false; // 无过期时间视为永不过期
     const nowSec = Math.floor(Date.now() / 1000);
     // 提前5分钟视为过期，避免请求途中过期
