@@ -179,12 +179,13 @@ const _MaterialInventory: React.FC = () => {
         const list = res.data.records.map((item: any) => ({
           ...item,
           // 保留后端返回的真实数据，只做必要的字段映射和默认值处理
-          availableQty: item.quantity - (item.lockedQuantity || 0), // 可用 = 总量 - 锁定
+          availableQty: (item.quantity || 0) - (item.lockedQuantity || 0), // 可用 = 总量 - 锁定
+          lockedQty: item.lockedQuantity || 0, // 后端字段 lockedQuantity → 前端 lockedQty
           specification: item.specifications, // 字段映射
           safetyStock: item.safetyStock || 100, // 使用后端值或默认100
           inTransitQty: 0, // 暂无在途数据
-          unitPrice: item.unitPrice || 0, // 使用后端返回的单价
-          totalValue: item.totalValue || (item.quantity || 0) * (item.unitPrice || 0), // 优先用后端计算值
+          unitPrice: Number(item.unitPrice) || 0, // 使用后端返回的单价
+          totalValue: Number(item.totalValue) || (item.quantity || 0) * (Number(item.unitPrice) || 0), // 优先用后端计算值
           warehouseLocation: item.location || '默认仓',
           lastInboundDate: item.lastInboundDate ? String(item.lastInboundDate).replace('T', ' ').substring(0, 16) : (item.updateTime ? String(item.updateTime).replace('T', ' ').substring(0, 16) : '-'),
           lastOutboundDate: item.lastOutboundDate ? String(item.lastOutboundDate).replace('T', ' ').substring(0, 16) : '-',
@@ -979,7 +980,7 @@ const _MaterialInventory: React.FC = () => {
           }}>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
             <div style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, color: 'var(--primary-color)' }}>
-              {canViewPrice(user) ? `¥${(record.totalValue ?? 0).toLocaleString()}` : '***'}
+              {canViewPrice(user) ? `¥${Number(record.totalValue ?? 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}` : '***'}
             </div>
           </div>
         </Space>
