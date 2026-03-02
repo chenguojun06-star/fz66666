@@ -67,6 +67,14 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
         title: '工人效率画像',
         desc: '工资汇总人员列显示效率徽标，悬停展示该工人近期各工序日均件数与工厂均值对比。',
     },
+    'smart.warehousing.audit.enabled': {
+        title: '质检入库 AI 洞察',
+        desc: '质检入库页顶部显示当前各阶段积压分析与优先行动建议。',
+    },
+    'smart.material.inventory.ai.enabled': {
+        title: '面辅料库存 AI 摘要',
+        desc: '面辅料库存页显示低库存预警自然语言摘要，标注最紧缺物料与补货建议。',
+    },
 };
 
 const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -76,6 +84,8 @@ const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
     'smart.finance.explain.enabled',
     'smart.system.guard.enabled',
     'smart.worker-profile.enabled',
+    'smart.warehousing.audit.enabled',
+    'smart.material.inventory.ai.enabled',
 ];
 
 const ProfileInfoTab: React.FC = () => {

@@ -4,7 +4,9 @@ export type SmartFeatureKey =
   | 'smart.production.precheck.enabled'
   | 'smart.finance.explain.enabled'
   | 'smart.system.guard.enabled'
-  | 'smart.worker-profile.enabled';
+  | 'smart.worker-profile.enabled'
+  | 'smart.warehousing.audit.enabled'
+  | 'smart.material.inventory.ai.enabled';
 
 const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.guide.enabled': false,
@@ -13,6 +15,8 @@ const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.finance.explain.enabled': false,
   'smart.system.guard.enabled': false,
   'smart.worker-profile.enabled': true,
+  'smart.warehousing.audit.enabled': true,
+  'smart.material.inventory.ai.enabled': true,
 };
 
 const storageKey = 'smart-feature-flags';

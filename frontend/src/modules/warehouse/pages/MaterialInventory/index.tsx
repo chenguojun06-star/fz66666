@@ -39,6 +39,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { safePrint } from '@/utils/safePrint';
 import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialAlertRanking, { MaterialStockAlertItem } from './components/MaterialAlertRanking';
+import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
 import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -100,6 +101,7 @@ const _MaterialInventory: React.FC = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const { user } = useAuth(); // 获取当前用户信息
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const showMaterialAI = useMemo(() => isSmartFeatureEnabled('smart.material.inventory.ai.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -1087,6 +1089,7 @@ const _MaterialInventory: React.FC = () => {
         </Card>
 
         <div className="material-alerts-section">
+          {showMaterialAI && <MaterialInventoryAISummary stats={stats} alertList={alertList} />}
           <MaterialAlertRanking
             loading={alertLoading}
             alerts={alertList}
