@@ -36,6 +36,7 @@ import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAsset
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
 import { getQualityStatusConfig } from '../utils';
+import { analyzeQuality, renderQualityTooltip } from '../utils/qualityIntelligence';
 
 const getUrgencyTag = (value: unknown): { text: string; color: string } | null => {
   const key = String(value || '').trim().toLowerCase();
@@ -116,39 +117,13 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const urgencyTag = getUrgencyTag((record as any).urgencyLevel);
         const plateTag = getPlateTypeTag((record as any).plateType);
 
-        // 计算该订单的质检汇总（从当前加载的 dataSource 中筛选）
+        // 智能质检分析（风险 + 瓶颈 + 建议 + 预计影响）
         const orderRecs = (dataSource as WarehousingType[]).filter(r => r.orderNo === text);
         let tooltipContent: React.ReactNode = null;
         if (orderRecs.length > 0) {
-          const totalQ   = orderRecs.reduce((s, r) => s + (Number(r.qualifiedQuantity) || 0), 0);
-          const totalUQ  = orderRecs.reduce((s, r) => s + (Number(r.unqualifiedQuantity) || 0), 0);
-          const totalW   = orderRecs.reduce((s, r) => s + (Number(r.warehousingQuantity) || 0), 0);
-          const processed = totalQ + totalUQ;
-          const rate = processed > 0 ? Math.round(totalQ / processed * 100) : 0;
-
-          // 按尺码分组不合格件
-          const badSizes: string[] = [];
-          const sizeMap = new Map<string, { q: number; uq: number }>();
-          orderRecs.forEach(r => {
-            const sz = String(r.size || '通码');
-            const prev = sizeMap.get(sz) ?? { q: 0, uq: 0 };
-            sizeMap.set(sz, { q: prev.q + (Number(r.qualifiedQuantity) || 0), uq: prev.uq + (Number(r.unqualifiedQuantity) || 0) });
-          });
-          sizeMap.forEach((v, sz) => { if (v.uq > 0) badSizes.push(`${sz}码 ${v.uq}件不合格`); });
-
-          const statusLine = totalUQ === 0
-            ? `全部合格 ✅，已入库 ${totalW} 件`
-            : rate >= 85
-              ? `合格率 ${rate}%，${badSizes.join('、')}，已入库 ${totalW} 件`
-              : `⚠️ 合格率仅 ${rate}%，${badSizes.join('、')}`;
-
-          tooltipContent = (
-            <div style={{ fontSize: 12, maxWidth: 260 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>🤖 质检分析 · {text}</div>
-              <div>共质检 {processed} 件：合格 {totalQ} / 不合格 {totalUQ}</div>
-              <div>{statusLine}</div>
-            </div>
-          );
+          const isUrgent = String((record as any).urgencyLevel || '').toLowerCase() === 'urgent';
+          const insight = analyzeQuality(orderRecs, isUrgent);
+          tooltipContent = renderQualityTooltip(insight, text);
         }
 
         const inner = (
