@@ -157,6 +157,14 @@ export const canonicalStageKey = (k: string) => {
     裁床: '裁剪',
     剪裁: '裁剪',
     开裁: '裁剪',
+    // 入库别名：小程序上报 progressStage="质检入库""入仓" 等需统一到 "入库"
+    质检入库: '入库',
+    入仓: '入库',
+    仓库: '入库',
+    仓储: '入库',
+    入库质检: '入库',
+    成品入库: '入库',
+    完工入库: '入库',
   };
   return normalizeStageKey(map[n] || n);
 };
@@ -174,6 +182,13 @@ const isTailStageKey = (k: string) => {
   return n === '尾部' || n.includes('尾部') || n.includes('尾工');
 };
 
+/** 判断是否为入库阶段（包含质检入库、入仓、仓库等别名） */
+export const isWarehouseStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('入库') || n.includes('入仓') || n.includes('仓库') || n.includes('仓储');
+};
+
 export const stageNameMatches = (a: any, b: any) => {
   const x = canonicalStageKey(a);
   const y = canonicalStageKey(b);
@@ -186,6 +201,7 @@ export const stageNameMatches = (a: any, b: any) => {
   if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
+  if (isWarehouseStageKey(x) && isWarehouseStageKey(y)) return true;
   // 尾部父节点可以匹配整烫/质检/包装等子阶段
   // （与后端 resolveParentProgressStage 关键词兜底策略保持一致）
   // 历史扫码记录 progressStage="整烫" 可以被尾部进度球正确计数
