@@ -105,15 +105,24 @@ public class ScanRecordOrchestrator {
         String operatorName = safeParams.get("operatorName") == null ? null
                 : String.valueOf(safeParams.get("operatorName"));
 
+        // ★ 兼容小程序：小程序发送 workerId/workerName 而非 operatorId/operatorName
+        if (!hasText(operatorId) && safeParams.get("workerId") != null) {
+            operatorId = String.valueOf(safeParams.get("workerId"));
+        }
+        if (!hasText(operatorName) && safeParams.get("workerName") != null) {
+            operatorName = String.valueOf(safeParams.get("workerName"));
+        }
+
         UserContext ctx = UserContext.get();
         String ctxUserId = ctx == null ? null : ctx.getUserId();
         String ctxUsername = ctx == null ? null : ctx.getUsername();
         if (hasText(ctxUserId) && hasText(ctxUsername)) {
             operatorId = ctxUserId;
             operatorName = ctxUsername;
-            safeParams.put("operatorId", operatorId);
-            safeParams.put("operatorName", operatorName);
         }
+        // 无论来源如何，确保 safeParams 中有 operatorId/operatorName 供下游使用
+        safeParams.put("operatorId", operatorId);
+        safeParams.put("operatorName", operatorName);
 
         String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
 
@@ -149,7 +158,14 @@ public class ScanRecordOrchestrator {
 
         if (!hasText(operatorId) || !hasText(operatorName)
                 || (!hasText(scanCode) && !hasText(orderNo) && !hasText(orderId))) {
-            throw new IllegalArgumentException("参数错误");
+            log.warn("[ScanExec] 参数校验失败: operatorId={}, operatorName={}, scanCode={}, orderNo={}, orderId={}, source={}",
+                    operatorId, operatorName,
+                    hasText(scanCode) ? scanCode.substring(0, Math.min(20, scanCode.length())) : "null",
+                    orderNo, orderId, safeParams.get("source"));
+            if (!hasText(operatorId) || !hasText(operatorName)) {
+                throw new IllegalArgumentException("参数错误：缺少操作人信息，请重新登录后再试");
+            }
+            throw new IllegalArgumentException("参数错误：缺少扫码内容或订单信息");
         }
 
         // 关键参数日志（方便云端排查）

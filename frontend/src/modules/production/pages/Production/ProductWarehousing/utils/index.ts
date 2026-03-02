@@ -22,14 +22,14 @@ export const isBundleBlockedForWarehousing = (rawStatus: unknown) => {
     status === '次品待返修' ||
     status === '待返修';
 
-  // 返修后待质检重检 — 也需阻止直接入库
+  // 返修完成待质检 — 允许重新质检，不阻止选择
   const isRepairedWaitingQc =
     s === 'repaired_waiting_qc' ||
     status === '返修待质检' ||
     status === '返修完成待质检';
 
-  if (isRepaired) return false;
-  return isUnqualified || isRepairedWaitingQc;
+  if (isRepaired || isRepairedWaitingQc) return false;
+  return isUnqualified;
 };
 
 export const parseUrlsValue = (value: unknown): string[] => {
@@ -124,6 +124,7 @@ export const mapBundleStatusText = (rawStatus: unknown) => {
     qualified: '已合格',
     unqualified: '次品待返修',
     repaired: '返修完成',
+    repaired_waiting_qc: '返修完成待质检',
     repairing: '返修中',
     returned: '已退回',
   };
