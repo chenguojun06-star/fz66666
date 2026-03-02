@@ -132,20 +132,10 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         productWarehousing.setQualityStatus(computedQualityStatus);
         String repairRemark = helper.trimToNull(productWarehousing.getRepairRemark());
 
-        if (!skipRangeCheck) {
-            // 返修重检入库（repairRemark + qualified）不受订单总量上限约束：
-            // 这不是新增入库，而是对已入库次品的重新质检，后续 repair breakdown 校验会限制数量
-            boolean isRepairReQc = StringUtils.hasText(repairRemark)
-                    && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus);
-            if (!isRepairReQc) {
-                String msg = helper.warehousingQuantityRuleViolationMessage(order.getId(), warehousingQty, null);
-                if (StringUtils.hasText(msg)) {
-                    throw new IllegalStateException(msg);
-                }
-            }
-        }
+        // ★ 范围检查已移到菲号加载之后，以便根据菲号 blocked 状态判断是否跳过
 
         CuttingBundle bundle = null;
+        boolean bundleIsBlocked = false;
         String bundleId = StringUtils.hasText(productWarehousing.getCuttingBundleId())
                 ? productWarehousing.getCuttingBundleId().trim()
                 : null;
@@ -166,17 +156,17 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     && !order.getId().trim().equals(bundle.getProductionOrderId().trim())) {
                 throw new IllegalArgumentException("菲号与订单不匹配");
             }
-            boolean blocked = helper.isBundleBlockedForWarehousing(bundle.getStatus());
-            if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
+            bundleIsBlocked = helper.isBundleBlockedForWarehousing(bundle.getStatus());
+            if (bundleIsBlocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
                 throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，返修完成后才可以入库哦～");
             }
             // 所有 blocked 状态的菲号，返修重检合格时自动补充默认备注
-            if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+            if (bundleIsBlocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                     && !StringUtils.hasText(repairRemark)) {
                 repairRemark = "返修检验合格";
                 productWarehousing.setRepairRemark(repairRemark);
             }
-            if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+            if (bundleIsBlocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                     && StringUtils.hasText(repairRemark)) {
                 // 优先检查 repair_return 流程的数量，退回为 PC/手动直接重检场景以 repairPool 作为上限
                 int[] bd = helper.calcRepairBreakdown(order.getId(), bundle.getId(), null);
@@ -195,6 +185,18 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             productWarehousing.setCuttingBundleQrCode(bundle.getQrCode());
 
             helper.ensureBundleNotAlreadyQualifiedWarehoused(order.getId(), bundle.getId(), null);
+        }
+
+        // ★ 范围检查：返修重检入库（blocked菲号 + 合格 或 有repairRemark）跳过订单总量上限
+        if (!skipRangeCheck) {
+            boolean isRepairReQc = (bundleIsBlocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus))
+                    || StringUtils.hasText(repairRemark);
+            if (!isRepairReQc) {
+                String msg = helper.warehousingQuantityRuleViolationMessage(order.getId(), warehousingQty, null);
+                if (StringUtils.hasText(msg)) {
+                    throw new IllegalStateException(msg);
+                }
+            }
         }
 
         if (!StringUtils.hasText(productWarehousing.getOrderNo())) {
