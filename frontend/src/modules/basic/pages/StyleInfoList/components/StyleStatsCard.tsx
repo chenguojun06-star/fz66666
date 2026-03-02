@@ -36,7 +36,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
           </span>
 
           {/* 数据条目 */}
-          <div style={{ display: 'flex', flex: 1, gap: 24, alignItems: 'center' }}>
+          <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center', justifyContent: 'space-evenly' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}>🧵 面辅料</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
