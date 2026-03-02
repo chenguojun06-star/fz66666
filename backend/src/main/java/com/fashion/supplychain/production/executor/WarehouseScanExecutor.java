@@ -329,13 +329,13 @@ public class WarehouseScanExecutor {
         sr.setQuantity(qty);
         sr.setProcessCode("warehouse");
         sr.setProgressStage("入库");
-        sr.setProcessName("仓库入库");
+        sr.setProcessName("入库");
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
         sr.setScanTime(LocalDateTime.now());
         sr.setScanType("warehouse");
         sr.setScanResult("success");
-        sr.setRemark("仓库入库: " + warehouse);
+        sr.setRemark("入库: " + warehouse);
         sr.setCuttingBundleId(bundle.getId());
         sr.setCuttingBundleNo(bundle.getBundleNo());
         sr.setCuttingBundleQrCode(bundle.getQrCode());
