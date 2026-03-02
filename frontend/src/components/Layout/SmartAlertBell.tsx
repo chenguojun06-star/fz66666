@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertOutlined,
   CheckCircleOutlined,
@@ -52,9 +53,33 @@ interface AiMessage {
 
 const AI_WELCOME = '👋 我是内置AI助手，可回答整体情况、逾期预警、工厂进度等问题。';
 const AI_DEFAULT_SUGGESTIONS = ['整体情况怎么样？', '有逾期订单吗？', '工厂进度怎么样？', '有瓶颈吗？'];
+// 建议词跟路径映射表
+const SUGGESTION_NAV: Record<string, string> = {
+  '整体情况怎么样？': '/dashboard',
+  '有逆期订单吗？': '/production',
+  '工厂进度怎么样？': '/production/progress-detail',
+  '有瓶颈吗？': '/production/progress-detail',
+};
 
+// 小统计格子 —— 点击路径映射
+const STAT_NAV: Record<string, string> = {
+  '逆期订单': '/production',
+  '高风险': '/production/progress-detail',
+  '昨日入库': '/production/warehousing',
+  '今日扫码': '/production/progress-detail',
+};
+
+// 根据事件类型获取跳转路径
+const getEventNav = (ev: UrgentEvent): string => {
+  if (ev.type === 'overdue')   return `/production?orderNo=${ev.orderNo}`;
+  if (ev.type === 'defective') return `/production/warehousing?orderNo=${ev.orderNo}`;
+  if (ev.type === 'approval')  return '/finance/center?tab=factory';
+  if (ev.type === 'material')  return '/warehouse/material';
+  return '/dashboard';
+};
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [events, setEvents] = useState<UrgentEvent[]>([]);
@@ -136,6 +161,12 @@ const SmartAlertBell: React.FC = () => {
   useEffect(() => {
     if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages, open]);
+
+  // 跳转辅助：关闭面板并导航
+  const goTo = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
 
   // 点击按钮时先拉数据
   const handleToggle = () => {
@@ -267,7 +298,12 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
                 </div>
-                <div className="sap-priority-card">
+                <div
+                className="sap-priority-card"
+                onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder.orderNo}`)}
+                style={{ cursor: 'pointer' }}
+                title="点击查看该订单"
+              >
                   <div className="sap-priority-row">
                     <span className="sap-priority-no">{brief.topPriorityOrder.orderNo}</span>
                     <span className="sap-priority-factory">{brief.topPriorityOrder.factoryName}</span>
@@ -296,7 +332,13 @@ const SmartAlertBell: React.FC = () => {
                   <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
                 </div>
                 {events.slice(0, 4).map(ev => (
-                  <div key={ev.id} className="sap-event-row">
+                  <div
+                    key={ev.id}
+                    className="sap-event-row"
+                    onClick={() => goTo(getEventNav(ev))}
+                    style={{ cursor: 'pointer' }}
+                    title="点击前往处理"
+                  >
                     <span className="sap-event-dot" />
                     <span className="sap-event-title">{ev.title}</span>
                     <span className="sap-event-time">{ev.time}</span>
@@ -339,7 +381,14 @@ const SmartAlertBell: React.FC = () => {
                             <button
                               key={si}
                               className="sap-ai-suggestion-btn"
-                              onClick={() => askAi(s)}
+                              onClick={() => {
+                                const navPath = SUGGESTION_NAV[s];
+                                if (navPath) {
+                                  goTo(navPath);
+                                } else {
+                                  askAi(s);
+                                }
+                              }}
                               disabled={aiLoading}
                             >
                               {s}
@@ -394,8 +443,14 @@ const StatCell: React.FC<{
   value: string | number;
   color: string;
   alert?: boolean;
-}> = ({ icon, label, value, color, alert }) => (
-  <div className={`sap-stat-cell${alert ? ' alert' : ''}`} style={{ '--sap-cell-color': color } as React.CSSProperties}>
+  onClick?: () => void;
+}> = ({ icon, label, value, color, alert, onClick }) => (
+  <div
+    className={`sap-stat-cell${alert ? ' alert' : ''}${onClick ? ' clickable' : ''}`}
+    style={{ '--sap-cell-color': color, cursor: onClick ? 'pointer' : 'default' } as React.CSSProperties}
+    onClick={onClick}
+    title={onClick ? '点击查看详情' : undefined}
+  >
     <span className="sap-stat-icon" style={{ color }}>{icon}</span>
     <span className="sap-stat-val" style={{ color: alert ? color : '#111' }}>{value}</span>
     <span className="sap-stat-label">{label}</span>
