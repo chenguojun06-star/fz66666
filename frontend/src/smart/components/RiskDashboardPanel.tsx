@@ -11,7 +11,7 @@ import type { ProductionOrder } from '@/types/production';
 interface Props {
   orders: ProductionOrder[];
   boardTimesByOrder: Record<string, Record<string, string>>;
-  stagnantOrderIds: Set<string>;
+  stagnantOrderIds: Map<string, number>;
   /** 点击订单卡：将表格定位到该订单 */
   onLocate: (orderNo: string) => void;
 }
@@ -68,15 +68,9 @@ const RiskDashboardPanel: React.FC<Props> = ({
 
       // 停滞（可与上面并存）
       if (stagnantOrderIds.has(orderId)) {
-        const timeMap = boardTimesByOrder[orderId] ?? {};
-        const times = Object.values(timeMap).filter(Boolean);
-        const lastScan = times.length
-          ? times.reduce((a, b) => (a > b ? a : b))
-          : null;
-        const staleDays = lastScan ? now.diff(dayjs(lastScan), 'day') : 0;
-        const stuckNode = timeMap
-          ? Object.entries(timeMap).sort(([, a], [, b]) => b.localeCompare(a))[0]?.[0]
-          : '';
+        const staleDays = stagnantOrderIds.get(orderId) ?? 0;
+        const stuckNode = Object.entries(boardTimesByOrder[orderId] ?? {})
+          .sort(([, a], [, b]) => b.localeCompare(a))[0]?.[0] ?? '';
         sg.push({
           ...item,
           hint: `${stuckNode ? stuckNode + ' · ' : ''}停工 ${staleDays} 天`,

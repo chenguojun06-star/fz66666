@@ -237,3 +237,12 @@ sto-express:
   api-url: "https://ecapi.sto.cn/api/"
   sandbox: false
   notify-url: "https://你的域名/api/webhook/logistics/sto"
+
+# AI 大模型配置（生产跟单助手）
+ai:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}          # 生产/云端：在环境变量中设置
+    api-url: https://api.deepseek.com/v1/chat/completions
+    model: deepseek-chat
+    max-tokens: 1024
+    timeout-seconds: 30

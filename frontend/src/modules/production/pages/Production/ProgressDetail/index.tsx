@@ -57,6 +57,7 @@ import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
 import { useProductionBoardStore } from '@/stores';
+import AiChatWidget from '../../../components/AiChatWidget';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -1169,6 +1170,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           void fetchOrders();
         }}
       />
+
+      {/* AI 跟单助手浮层（已登录即可使用） */}
+      <AiChatWidget />
 
     </div>
   );

@@ -82,8 +82,8 @@ interface UseProgressColumnsParams {
   setRemarkPopoverId: (id: string | null) => void;
   setRemarkText: (text: string) => void;
   openScan: (order: ProductionOrder) => void;
-  /** 停滞订单 ID Set（≥3天无新扫码且非已完成） */
-  stagnantOrderIds?: Set<string>;
+  /** 停滞订单 Map（orderId → 停滞天数） */
+  stagnantOrderIds?: Map<string, number>;
 }
 
 /**
@@ -319,12 +319,15 @@ export const useProgressColumns = ({
           delayed: { color: 'warning', label: '延期' },
         };
         const t = map[value] || { color: 'default', label: value };
-        const isStagnant = stagnantOrderIds?.has(String(record.id));
+        const stagnantDays = stagnantOrderIds?.get(String(record.id));
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag>
-            {isStagnant && (
-              <Tag color="orange" style={{ margin: 0, fontSize: 10, lineHeight: '16px', height: 16, padding: '0 4px' }}>⏸ 停滞</Tag>
+            {stagnantDays !== undefined && (
+              <div className="stagnant-pulse-badge">
+                <span className="stagnant-pulse-dot" />
+                停滞 {stagnantDays} 天
+              </div>
             )}
           </div>
         );

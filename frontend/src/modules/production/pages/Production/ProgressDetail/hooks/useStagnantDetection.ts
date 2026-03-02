@@ -6,17 +6,17 @@ import type { ProductionOrder } from '@/types/production';
 const STAGNANT_DAYS = 3;
 
 /**
- * 停滞订单检测
+ * 停滞订单检测 v2 — 返回 Map<orderId, stagnantDays>
  * - 使用已在全局 store 中缓存的 boardTimesByOrder，无需额外 API 调用
  * - 只判断进行中（非 completed）且有过扫码记录的订单
- * - 返回停滞的订单 ID Set，供列表列显示徽标
+ * - 返回停滞天数 Map，供列表列显示脉冲动画 + 天数
  */
 export function useStagnantDetection(
   orders: ProductionOrder[],
   boardTimesByOrder: Record<string, Record<string, string>>,
-): Set<string> {
+): Map<string, number> {
   return useMemo(() => {
-    const stagnant = new Set<string>();
+    const stagnant = new Map<string, number>();
     const now = dayjs();
 
     for (const order of orders) {
@@ -31,8 +31,9 @@ export function useStagnantDetection(
       if (times.length === 0) continue;
 
       const lastScan = times.reduce((max, t) => (t > max ? t : max));
-      if (now.diff(dayjs(lastScan), 'day') >= STAGNANT_DAYS) {
-        stagnant.add(String(order.id));
+      const days = now.diff(dayjs(lastScan), 'day');
+      if (days >= STAGNANT_DAYS) {
+        stagnant.set(String(order.id), days);
       }
     }
     return stagnant;
