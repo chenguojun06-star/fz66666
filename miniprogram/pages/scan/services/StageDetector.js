@@ -602,7 +602,6 @@ class StageDetector {
         return 'receive';
       }
 
-    try {
       // 从已有扫码历史里查找 quality 子阶段记录
       const qualityRecords = scanHistory.filter(r => {
         const scanType = (r.scanType || '').toLowerCase();
