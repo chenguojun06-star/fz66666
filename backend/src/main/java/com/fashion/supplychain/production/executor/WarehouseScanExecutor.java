@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * 仓库入库扫码执行器
@@ -133,8 +134,13 @@ public class WarehouseScanExecutor {
             try {
                 productWarehousingService.saveRepairReturnDeclaration(
                         bundle, order, qty, "返修完成", operatorId, operatorName, warehouse);
-            } catch (DuplicateKeyException dke) {
-                log.info("返修申报重复扫码: orderId={}, bundle={}", order.getId(), bundle.getBundleNo(), dke);
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                throw e; // 业务验证异常透传
+            } catch (Exception e) {
+                // DuplicateKeyException 已在 saveRepairReturnDeclaration 内部捕获，
+                // 此处捕获其他意外异常，防止 500
+                log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
+                        order.getId(), bundle.getBundleNo(), e.getMessage(), e);
             }
             // 返修申报成功后直接返回，等待质检重检
             Map<String, Object> repairResult = new HashMap<>();
@@ -184,12 +190,18 @@ public class WarehouseScanExecutor {
             if (!ok) {
                 throw new IllegalStateException("入库失败");
             }
+        } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
+            // 业务验证异常，直接透传（GlobalExceptionHandler → 400/404）
+            throw e;
         } catch (DataAccessException dae) {
-            // DuplicateKeyException 已在 saveWarehousingAndUpdateOrderInternal 内部捕获并返回 true，
-            // 不会再传播到此处。此 catch 仅处理真正的 DB 错误（列缺失等）。
             log.error("[WarehouseScan] 入库记录写入DB失败 orderId={}, bundle={}: {}",
                     order.getId(), bundle.getBundleNo(), dae.getMessage(), dae);
-            throw new IllegalStateException("入库记录保存失败，请联系管理员（DB错误）");
+            throw new IllegalStateException("入库记录保存失败，请联系管理员（DB错误：" + dae.getMessage() + "）");
+        } catch (Exception e) {
+            // ★ 兜底：防止任何意外异常逃逸到 GlobalExceptionHandler 的通用 Exception 处理器（500）
+            log.error("[WarehouseScan] 入库操作意外异常 orderId={}, bundle={}: {}",
+                    order.getId(), bundle.getBundleNo(), e.getMessage(), e);
+            throw new IllegalStateException("入库操作失败：" + e.getMessage());
         }
 
         // 重新计算订单进度
@@ -220,9 +232,13 @@ public class WarehouseScanExecutor {
             } catch (Exception ex) {
                 log.warn("查找已有入库扫码记录失败: requestId={}", requestId, ex);
             }
-        } catch (org.springframework.dao.DataAccessException dbEx) {
-            log.error("[ScanSave-Warehouse] t_scan_record保存失败(可能缺少列): requestId={}, error={}", requestId, dbEx.getMessage(), dbEx);
-            throw new IllegalStateException("扫码记录保存失败，请联系管理员（DB列缺失，错误：" + dbEx.getMessage() + "）");
+        } catch (Exception dbEx) {
+            // ★ 兜底：捕获所有异常（DataAccessException/BadSqlGrammarException/其他），防止500
+            log.error("[ScanSave-Warehouse] t_scan_record保存失败: requestId={}, exType={}, error={}",
+                    requestId, dbEx.getClass().getSimpleName(), dbEx.getMessage(), dbEx);
+            // 入库记录已保存成功，扫码记录保存失败不应阻断入库
+            // 记录详细错误日志供排查，但不抛异常，让入库操作正常返回
+            log.warn("[ScanSave-Warehouse] 扫码记录保存失败但入库已成功，继续返回成功: requestId={}", requestId);
         }
 
         // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）

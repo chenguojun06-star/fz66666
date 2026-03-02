@@ -243,7 +243,12 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         }
         if (ok) {
             if (bundle != null && StringUtils.hasText(bundle.getId())) {
-                helper.updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
+                try {
+                    helper.updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
+                } catch (Exception e) {
+                    log.warn("更新菲号状态失败（不阻断入库）: bundleId={}, orderId={}",
+                            bundle.getId(), productWarehousing.getOrderId(), e);
+                }
             }
 
             try {
@@ -624,8 +629,16 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         w.setUpdateTime(now);
         w.setDeleteFlag(0);
 
-        // 需要跳过 saveWarehousingAndUpdateOrderInternal 的库存更新逻辑，直接保存
-        boolean ok = this.save(w);
+        // ❗ 必须在 @Transactional 方法内部捕获 DuplicateKeyException，
+        // 不能让它传播到方法边界外——否则 Spring 会将外层事务标记为 rollback-only。
+        boolean ok;
+        try {
+            ok = this.save(w);
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("返修申报记录重复（幂等，视为成功）: orderId={}, bundleId={}",
+                    order.getId(), bundle.getId(), dke);
+            return true; // 重复申报 = 幂等，不抛出，不污染外层事务
+        }
         if (ok) {
             // 更新 bundle 状态：核算尚在工厂返修中的件数，全部申报完成则转 repaired_waiting_qc
             int awaitingRepair = helper.repairDeclarationRemainingQtyByBundle(

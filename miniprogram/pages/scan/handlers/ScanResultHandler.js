@@ -130,18 +130,23 @@ function closeScanResultConfirm(ctx) {
  * @returns {Object} 提交参数
  */
 function buildScanData(confirm, confirmedQty) {
+  const normalizedScanType = normalizeScanType(confirm.processName, confirm.scanType);
+  const existingScanData = confirm.scanData || {};
+  const qualityStage = existingScanData.qualityStage
+    ? existingScanData.qualityStage
+    : (normalizedScanType === 'quality' ? 'receive' : '');
+  const warehouseCode = (confirm.warehouseCode || existingScanData.warehouse || '').trim();
+
   return {
-    ...confirm.scanData,
+    ...existingScanData,
     processName: confirm.processName,
     progressStage: confirm.progressStage,
-    scanType: normalizeScanType(confirm.processName, confirm.scanType),
+    scanType: normalizedScanType,
     unitPrice: confirm.unitPrice || 0,
     quantity: confirmedQty,
-    qualityStage: confirm.scanData && confirm.scanData.qualityStage
-      ? confirm.scanData.qualityStage
-      : '',
+    qualityStage,
     // 入库模式：携带仓库编号
-    warehouse: confirm.warehouseCode || '',
+    warehouse: warehouseCode,
     ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
   };
 }
