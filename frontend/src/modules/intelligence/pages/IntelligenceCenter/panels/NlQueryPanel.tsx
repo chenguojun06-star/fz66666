@@ -102,9 +102,10 @@ interface ChatMessage {
   confidence?: number;
   suggestions?: string[];
   data?: Record<string, unknown>;
+  source?: 'local' | 'ai' | 'none';
 }
 
-const WELCOME = '👋 你好！我是AI决策助手，掌握全系统22项智能分析能力。\n\n试试问我：\n• 「整体情况怎么样？」— 全景概要+健康指数\n• 「系统健康指数？」— 五维评分\n• 「有瓶颈吗？」— 瓶颈检测\n• 「交期风险？」— 延期预警\n• 「你能做什么？」— 查看完整能力列表';
+const WELCOME = '👋 你好！我是AI决策助手，模式：实时业务数据 + DeepSeek智能分析。\n\n试试问我：\n• 「整体情况怎么样？」\n• 「有哪些订单即将达交期？」\n• 「面料缺口风险怎么处理？」\n• 「今日扫码多少次？」\n• 「如何提高交期达成率？」';
 
 const NlQueryPanel: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -138,15 +139,14 @@ const NlQueryPanel: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await intelligenceApi.nlQuery({ question: q }) as any;
-      const d: NlQueryResponse | null = res?.data ?? null;
-      if (d) {
+      // 统一走 ai-advisor/chat 接口：后端自动本地规则引擎 → DeepSeek（注入全系统上下文）
+      const res = await intelligenceApi.aiAdvisorChat(q) as any;
+      const d = res?.data ?? null;
+      if (d?.answer) {
         setMessages(prev => [...prev, {
           role: 'ai',
           content: d.answer,
-          confidence: d.confidence,
-          suggestions: d.suggestions,
-          data: d.data,
+          source: d.source,
         }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', content: '抱歉，未能理解你的提问。' }]);
@@ -210,11 +210,19 @@ const NlQueryPanel: React.FC = () => {
             </div>
             <div className="chat-body">
               <div className="chat-text" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-              {msg.confidence !== undefined && (
-                <div className="chat-meta">
-                  <Tag color={msg.confidence >= 80 ? 'green' : msg.confidence >= 50 ? 'orange' : 'red'}>
-                    置信度 {msg.confidence}%
-                  </Tag>
+              {(msg.confidence !== undefined || msg.source) && (
+                <div className="chat-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                  {msg.confidence !== undefined && (
+                    <Tag color={msg.confidence >= 80 ? 'green' : msg.confidence >= 50 ? 'orange' : 'red'}>
+                      置信度 {msg.confidence}%
+                    </Tag>
+                  )}
+                  {msg.source === 'ai' && (
+                    <Tag color="purple" style={{ fontSize: 11 }}>🤖 DeepSeek分析</Tag>
+                  )}
+                  {msg.source === 'local' && (
+                    <Tag color="geekblue" style={{ fontSize: 11 }}>⚡ 本地规则</Tag>
+                  )}
                 </div>
               )}
               {msg.data && Object.keys(msg.data).length > 0 && (

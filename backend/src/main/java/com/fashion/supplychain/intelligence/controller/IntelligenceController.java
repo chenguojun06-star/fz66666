@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -100,6 +101,9 @@ public class IntelligenceController {
 
     @Autowired
     private AiAdvisorService aiAdvisorService;
+
+    @Autowired
+    private AiContextBuilderService aiContextBuilderService;
 
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
@@ -273,7 +277,9 @@ public class IntelligenceController {
                     "source", "none"
             ));
         }
-        String aiAnswer = aiAdvisorService.getDailyAdvice("用户问：" + question);
+        // 构建全系统上下文，让 AI 知道活生订单/健康指数/面料缺口/逐期情况
+        String systemPrompt = aiContextBuilderService.buildSystemPrompt();
+        String aiAnswer = aiAdvisorService.chat(systemPrompt, question);
         return Result.success(java.util.Map.of(
                 "answer", aiAnswer != null ? aiAnswer : "AI 暂时无法回答，请稍后再试",
                 "source", "ai"
