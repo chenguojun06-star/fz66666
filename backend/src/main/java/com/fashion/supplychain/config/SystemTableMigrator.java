@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 系统基础表迁移器
- * 负责: t_user, t_factory, t_operation_log, t_system_operation_log, t_login_log, t_dict,
+ * 负责: t_user, t_factory, t_operation_log, t_login_log, t_dict,
  *       t_permission, t_role, t_role_permission, 管理员账号
  */
 @Component
@@ -24,7 +24,6 @@ public class SystemTableMigrator {
         createUserTable(jdbc);
         ensureLoginLogTable();
         createFactoryTable(jdbc);
-        createSystemOperationLogTable(jdbc);
         createOperationLogTable(jdbc);
         ensurePermissionTables();
         seedDefaultAuthData();
@@ -114,26 +113,6 @@ public class SystemTableMigrator {
             }
             dbHelper.addIndexIfAbsent("t_factory", "idx_factory_code", "factory_code");
             dbHelper.addIndexIfAbsent("t_factory", "idx_factory_name", "factory_name");
-        }
-    }
-
-    private void createSystemOperationLogTable(JdbcTemplate jdbc) {
-        String sql = "CREATE TABLE IF NOT EXISTS t_system_operation_log (" +
-                "id VARCHAR(36) PRIMARY KEY COMMENT '操作日志ID'," +
-                "biz_type VARCHAR(50) NOT NULL COMMENT '业务类型'," +
-                "biz_id VARCHAR(64) NOT NULL COMMENT '业务ID'," +
-                "action VARCHAR(50) NOT NULL COMMENT '操作动作'," +
-                "operator VARCHAR(50) COMMENT '操作人'," +
-                "remark VARCHAR(255) COMMENT '备注'," +
-                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
-                "INDEX idx_system_biz (biz_type, biz_id)," +
-                "INDEX idx_system_action (action)" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统操作日志表'";
-
-        try {
-            jdbc.execute(sql);
-        } catch (Exception e) {
-            log.warn("Failed to create system operation log table: {}", e.getMessage());
         }
     }
 
