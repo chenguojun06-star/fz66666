@@ -81,8 +81,8 @@ public class MaterialShortageOrchestrator {
 
         QueryWrapper<StyleBom> bomQw = new QueryWrapper<>();
         bomQw.eq(tenantId != null, "tenant_id", tenantId)
-             .in("style_id", styleIds)
-             .eq("delete_flag", 0);
+             .in("style_id", styleIds);
+        // 注意：t_style_bom 表无 delete_flag 列，不可加此条件
         List<StyleBom> bomList = styleBomMapper.selectList(bomQw);
 
         // styleId → BOM列表
