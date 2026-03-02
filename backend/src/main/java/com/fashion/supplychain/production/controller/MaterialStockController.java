@@ -1,21 +1,34 @@
 package com.fashion.supplychain.production.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
+import com.fashion.supplychain.production.dto.MaterialTransactionDto;
+import com.fashion.supplychain.production.entity.MaterialInbound;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/production/material/stock")
@@ -27,6 +40,12 @@ public class MaterialStockController {
 
     @Autowired
     private MaterialStockOrchestrator materialStockOrchestrator;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
+
+    @Autowired
+    private MaterialInboundMapper materialInboundMapper;
 
     @GetMapping("/list")
     public Result<IPage<MaterialStock>> getPage(@RequestParam Map<String, Object> params) {
@@ -60,7 +79,7 @@ public class MaterialStockController {
     }
 
     /**
-     * 手动出库（仓库页面直接扣减库存）
+     * 手动出库（仓库页面直接扣减库存，并写入出库日志）
      */
     @PostMapping("/manual-outbound")
     public Result<Void> manualOutbound(@RequestBody java.util.Map<String, Object> body) {
@@ -73,7 +92,96 @@ public class MaterialStockController {
             return Result.fail("出库数量必须大于0");
         }
         materialStockService.decreaseStockById(stockId, quantity);
+
+        // ── 写出库日志 ──
+        try {
+            MaterialStock stock = materialStockService.getById(stockId);
+            String operatorName = body.get("operatorName") != null ? String.valueOf(body.get("operatorName")) : null;
+            String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : "手动出库";
+            if (!org.springframework.util.StringUtils.hasText(operatorName)) {
+                operatorName = UserContext.username();
+            }
+            MaterialOutboundLog log = new MaterialOutboundLog();
+            log.setStockId(stockId);
+            log.setMaterialCode(stock != null ? stock.getMaterialCode() : "");
+            log.setMaterialName(stock != null ? stock.getMaterialName() : "");
+            log.setQuantity(quantity);
+            log.setOperatorId(UserContext.userId());
+            log.setOperatorName(operatorName);
+            log.setWarehouseLocation(stock != null ? stock.getLocation() : null);
+            log.setRemark(reason);
+            log.setOutboundTime(LocalDateTime.now());
+            log.setCreateTime(LocalDateTime.now());
+            log.setDeleteFlag(0);
+            materialOutboundLogMapper.insert(log);
+        } catch (Exception e) {
+            // 日志写入失败不影响出库主流程
+            org.slf4j.LoggerFactory.getLogger(getClass()).warn("写出库日志失败: {}", e.getMessage());
+        }
+
         return Result.success(null);
+    }
+
+    /**
+     * 查询面辅料出入库流水（合并入库+出库，按时间倒序）
+     */
+    @GetMapping("/transactions")
+    public Result<List<MaterialTransactionDto>> getTransactions(
+            @RequestParam String materialCode,
+            @RequestParam(required = false) String stockId) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        List<MaterialTransactionDto> result = new ArrayList<>();
+
+        // 1. 入库记录（来自 t_material_inbound）
+        LambdaQueryWrapper<MaterialInbound> inQuery = new LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getMaterialCode, materialCode)
+                .eq(MaterialInbound::getDeleteFlag, 0)
+                .orderByDesc(MaterialInbound::getInboundTime);
+        List<MaterialInbound> inbounds = materialInboundMapper.selectList(inQuery);
+        for (MaterialInbound ib : inbounds) {
+            MaterialTransactionDto dto = new MaterialTransactionDto();
+            dto.setType("IN");
+            dto.setTypeLabel("入库");
+            dto.setQuantity(ib.getInboundQuantity());
+            dto.setOperatorName(ib.getOperatorName());
+            dto.setWarehouseLocation(ib.getWarehouseLocation());
+            dto.setRemark(ib.getRemark());
+            if (ib.getInboundTime() != null) {
+                dto.setOperationTime(ib.getInboundTime().format(fmt));
+            }
+            result.add(dto);
+        }
+
+        // 2. 出库记录（来自 t_material_outbound_log）
+        QueryWrapper<MaterialOutboundLog> outQuery = new QueryWrapper<MaterialOutboundLog>()
+                .eq("material_code", materialCode)
+                .eq("delete_flag", 0);
+        if (org.springframework.util.StringUtils.hasText(stockId)) {
+            outQuery.eq("stock_id", stockId);
+        }
+        outQuery.orderByDesc("outbound_time");
+        List<MaterialOutboundLog> outbounds = materialOutboundLogMapper.selectList(outQuery);
+        for (MaterialOutboundLog ob : outbounds) {
+            MaterialTransactionDto dto = new MaterialTransactionDto();
+            dto.setType("OUT");
+            dto.setTypeLabel("出库");
+            dto.setQuantity(ob.getQuantity());
+            dto.setOperatorName(ob.getOperatorName());
+            dto.setWarehouseLocation(ob.getWarehouseLocation());
+            dto.setRemark(ob.getRemark());
+            if (ob.getOutboundTime() != null) {
+                dto.setOperationTime(ob.getOutboundTime().format(fmt));
+            }
+            result.add(dto);
+        }
+
+        // 3. 按时间倒序排序
+        result.sort(Comparator.comparing(
+                dto -> dto.getOperationTime() == null ? "" : dto.getOperationTime(),
+                Comparator.reverseOrder()
+        ));
+
+        return Result.success(result);
     }
 
     /**

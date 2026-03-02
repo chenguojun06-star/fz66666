@@ -125,6 +125,13 @@ const _MaterialInventory: React.FC = () => {
   const inboundModal = useModal<MaterialInventory>();
   const outboundModal = useModal<MaterialInventory>();
 
+  // 出入库流水
+  const [txLoading, setTxLoading] = useState(false);
+  const [txList, setTxList] = useState<Array<{
+    type: string; typeLabel: string; operationTime: string | null;
+    quantity: number; operatorName: string; warehouseLocation: string; remark: string;
+  }>>([]);
+
   const [inboundForm] = Form.useForm();
   const [outboundForm] = Form.useForm();
   const [rollForm] = Form.useForm();
@@ -207,6 +214,25 @@ const _MaterialInventory: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType, dateRange]);
+
+  // 出入库流水：弹窗打开时拉取
+  useEffect(() => {
+    if (!detailModal.visible || !detailModal.data?.materialCode) {
+      setTxList([]);
+      return;
+    }
+    const code = detailModal.data.materialCode;
+    setTxLoading(true);
+    api.get('/production/material/stock/transactions', {
+      params: { materialCode: code }
+    }).then((res: any) => {
+      setTxList(Array.isArray(res) ? res : (res?.data ? res.data : []));
+    }).catch(() => {
+      message.error('加载出入库记录失败');
+    }).finally(() => {
+      setTxLoading(false);
+    });
+  }, [detailModal.visible, detailModal.data?.materialCode]);
 
   const fetchAlerts = async () => {
     setAlertLoading(true);
@@ -1435,60 +1461,46 @@ const _MaterialInventory: React.FC = () => {
             <ResizableTable
               storageKey="material-inventory-details"
               size="small"
-              dataSource={[
-                {
-                  id: '1',
-                  type: '入库',
-                  date: detailModal.data.lastInboundDate,
-                  operator: detailModal.data.lastInboundBy,
-                  quantity: 2000,
-                  unit: detailModal.data.unit,
-                  warehouseLocation: detailModal.data.warehouseLocation,
-                  remark: '正常入库',
-                },
-                {
-                  id: '2',
-                  type: '出库',
-                  date: detailModal.data.lastOutboundDate,
-                  operator: detailModal.data.lastOutboundBy,
-                  quantity: 500,
-                  unit: detailModal.data.unit,
-                  warehouseLocation: detailModal.data.warehouseLocation,
-                  remark: '生产领料',
-                },
-              ]}
+              loading={txLoading}
+              dataSource={txList}
+              rowKey={(_, idx) => String(idx)}
               columns={[
                 {
                   title: '类型',
-                  dataIndex: 'type',
+                  dataIndex: 'typeLabel',
                   width: 80,
-                  render: (text) => (
-                    <Tag color={text === '入库' ? 'blue' : 'orange'}>{text}</Tag>
+                  render: (text: string, record: any) => (
+                    <Tag color={record.type === 'IN' ? 'blue' : 'orange'}>{text || record.type}</Tag>
                   ),
                 },
                 {
                   title: '日期',
-                  dataIndex: 'date',
-                  width: 120,
+                  dataIndex: 'operationTime',
+                  width: 160,
+                  render: (v: string) => v || '-',
                 },
                 {
                   title: '数量',
-                  width: 120,
-                  render: (_, record) => `${record.quantity} ${record.unit}`,
+                  dataIndex: 'quantity',
+                  width: 100,
+                  render: (v: number) => `${v} ${detailModal.data?.unit || ''}`,
                 },
                 {
                   title: '操作人',
-                  dataIndex: 'operator',
+                  dataIndex: 'operatorName',
                   width: 100,
+                  render: (v: string) => v || '-',
                 },
                 {
                   title: '库位',
                   dataIndex: 'warehouseLocation',
                   width: 100,
+                  render: (v: string) => v || '-',
                 },
                 {
                   title: '备注',
                   dataIndex: 'remark',
+                  render: (v: string) => v || '-',
                 },
               ]}
               pagination={false}
