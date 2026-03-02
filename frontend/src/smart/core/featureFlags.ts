@@ -6,7 +6,8 @@ export type SmartFeatureKey =
   | 'smart.system.guard.enabled'
   | 'smart.worker-profile.enabled'
   | 'smart.warehousing.audit.enabled'
-  | 'smart.material.inventory.ai.enabled';
+  | 'smart.material.inventory.ai.enabled'
+  | 'smart.material.purchase.ai.enabled';
 
 const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.guide.enabled': false,
@@ -17,6 +18,7 @@ const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.worker-profile.enabled': true,
   'smart.warehousing.audit.enabled': true,
   'smart.material.inventory.ai.enabled': true,
+  'smart.material.purchase.ai.enabled': true,
 };
 
 const storageKey = 'smart-feature-flags';

@@ -123,8 +123,14 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             </Card>
           ) : null}
 
-          {/* AI 质检入库洞察 */}
-          {showWarehousingAudit && <WarehousingAuditBanner stats={warehousingStats} />}
+          {/* AI 质检入库洞察：有订单筛选时展示订单维度分析，否则展示全局积压建议 */}
+          {showWarehousingAudit && (
+            <WarehousingAuditBanner
+              stats={warehousingStats}
+              warehousingList={warehousingList}
+              currentOrderNo={queryParams.orderNo}
+            />
+          )}
 
           {/* 统计卡片（可点击筛选） */}
           <PageStatCards

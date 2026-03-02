@@ -75,6 +75,10 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
         title: '面辅料库存 AI 摘要',
         desc: '面辅料库存页显示低库存预警自然语言摘要，标注最紧缺物料与补货建议。',
     },
+    'smart.material.purchase.ai.enabled': {
+        title: '物料采购 AI 分析',
+        desc: '物料采购页顶部按订单展示到货情况、裁剪可行性判断与未到货物料供应商提醒。',
+    },
 };
 
 const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -86,6 +90,7 @@ const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
     'smart.worker-profile.enabled',
     'smart.warehousing.audit.enabled',
     'smart.material.inventory.ai.enabled',
+    'smart.material.purchase.ai.enabled',
 ];
 
 const ProfileInfoTab: React.FC = () => {
