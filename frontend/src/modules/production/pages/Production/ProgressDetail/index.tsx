@@ -37,7 +37,7 @@ import {
 import { ProgressNode } from './types';
 import ScanConfirmModal from './components/ScanConfirmModal';
 import SmartOrderHoverCard from './components/SmartOrderHoverCard';
-import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
+import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
 import { useNodeStats } from './hooks/useNodeStats';
@@ -124,6 +124,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
+  const [boardRefreshTick, setBoardRefreshTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setBoardRefreshTick(t => t + 1), 2 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   /**
    * 基于 boardStats 实时数据计算卡片进度。
@@ -262,6 +269,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         if (showSmartErrorNotice) setSmartError(null);
         // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
         clearAllBoardCache();
+        clearBoardStatsTimestamps();
         // 同时清空工序节点缓存，确保模板改词汇后刷新能重新加载最新节点配置
         setProgressNodesByStyleNo({});
         progressNodesByStyleNoRef.current = {};
@@ -558,6 +566,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   }, [
     orders,
     progressNodesByStyleNo,
+    boardRefreshTick, // 每 2 分钟递增，触发 TTL 过期的 boardStats 重新拉取
     // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免每次 store 更新都触发重刷
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,

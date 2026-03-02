@@ -186,8 +186,8 @@ const _MaterialInventory: React.FC = () => {
           unitPrice: item.unitPrice || 0, // 使用后端返回的单价
           totalValue: item.totalValue || (item.quantity || 0) * (item.unitPrice || 0), // 优先用后端计算值
           warehouseLocation: item.location || '默认仓',
-          lastInboundDate: item.lastInboundDate || item.updateTime || '-',
-          lastOutboundDate: item.lastOutboundDate || '-',
+          lastInboundDate: item.lastInboundDate ? String(item.lastInboundDate).replace('T', ' ').substring(0, 16) : (item.updateTime ? String(item.updateTime).replace('T', ' ').substring(0, 16) : '-'),
+          lastOutboundDate: item.lastOutboundDate ? String(item.lastOutboundDate).replace('T', ' ').substring(0, 16) : '-',
           // 保留供应商信息
           supplierName: item.supplierName || '-',
         }));

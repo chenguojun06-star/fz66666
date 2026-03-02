@@ -31,6 +31,13 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
+  /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
+  const [boardRefreshTick, setBoardRefreshTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setBoardRefreshTick(t => t + 1), 2 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // 同步 ref（boardStats 相关 ref 用于避免 useEffect 依赖引起无限循环）
   const boardStatsByOrderRef = useRef(boardStatsByOrder);
   const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
@@ -111,6 +118,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   }, [
     productionList,
     progressNodesByStyleNo,
+    boardRefreshTick, // 每 2 分钟递增，触发 TTL 过期的 boardStats 重新拉取
     // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免每次 store 更新都触发重刷
     mergeBoardStatsForOrder,
     mergeBoardTimesForOrder,

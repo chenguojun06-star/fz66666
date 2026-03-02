@@ -114,6 +114,12 @@ public class MaterialStockController {
             log.setCreateTime(LocalDateTime.now());
             log.setDeleteFlag(0);
             materialOutboundLogMapper.insert(log);
+
+            // 同步更新 t_material_stock.last_outbound_date
+            MaterialStock toUpdate = new MaterialStock();
+            toUpdate.setId(stockId);
+            toUpdate.setLastOutboundDate(LocalDateTime.now());
+            materialStockService.updateById(toUpdate);
         } catch (Exception e) {
             // 日志写入失败不影响出库主流程
             org.slf4j.LoggerFactory.getLogger(getClass()).warn("写出库日志失败: {}", e.getMessage());

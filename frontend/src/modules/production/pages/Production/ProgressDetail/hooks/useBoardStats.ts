@@ -3,6 +3,18 @@ import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';
 import { getRecordStageName, stageNameMatches, getDynamicParentMapping, setDynamicParentMapping } from '../utils';
 
+/**
+ * boardStats 缓存 TTL：2 分钟后自动过期重新拉取。
+ * 解决悬停卡/进度球在工厂扫码后数据不自动更新的问题。
+ */
+const BOARD_STATS_TTL_MS = 2 * 60 * 1000;
+
+/** 模块级时间戳缓存（不放 store 内，避免触发无关 re-render） */
+const fetchTimestamps = new Map<string, number>();
+
+/** 清空时间戳缓存 — 在调用 clearAllBoardCache() 时同步调用 */
+export const clearBoardStatsTimestamps = () => fetchTimestamps.clear();
+
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;
   nodes: ProgressNode[];
@@ -71,9 +83,12 @@ export const ensureBoardStatsForOrder = async ({
   }
 
   const existing = boardStatsByOrder[oid];
-  // null = 已请求但 API 失败，不再重试；有数据且含全部节点 = 缓存命中
-  if (existing === null) return;
-  if (existing && nodes.every((n) => {
+  // null = 已请求但 API 失败；有数据且含全部节点 = 缓存命中
+  // ★ TTL 检查：超过 2 分钟的缓存视为过期，允许重新拉取（解决数据不动态更新）
+  const fetchTs = fetchTimestamps.get(oid) ?? 0;
+  const isExpired = Date.now() - fetchTs >= BOARD_STATS_TTL_MS;
+  if (existing === null && !isExpired) return;
+  if (existing && !isExpired && nodes.every((n) => {
     const name = String((n as any)?.name || '').trim();
     return !name || Object.prototype.hasOwnProperty.call(existing, name);
   })) {
@@ -183,6 +198,7 @@ export const ensureBoardStatsForOrder = async ({
     }
 
     mergeBoardStatsForOrder(oid, stats);
+    fetchTimestamps.set(oid, Date.now()); // 记录拉取时间戳，用于 TTL 过期判断
 
     // 计算每个工序节点的最后完成时间（用于进度球下方显示）
     if (mergeBoardTimesForOrder) {
@@ -227,8 +243,9 @@ export const ensureBoardStatsForOrder = async ({
       mergeProcessDataForOrder(oid, pStats, pGroups, pTimes);
     }
   } catch {
-    // API 失败时写入 null 标记，防止无限重试（例如云端 DB 缺列导致 500）
+    // API 失败时写入 null 标记，2 分钟 TTL 过期后允许重试
     mergeBoardStatsForOrder(oid, null);
+    fetchTimestamps.set(oid, Date.now());
   } finally {
     setBoardLoadingForOrder(oid, false);
   }

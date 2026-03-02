@@ -26,7 +26,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
-import { ensureBoardStatsForOrder } from '../ProgressDetail/hooks/useBoardStats';
+import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -191,6 +191,7 @@ const ProductionList: React.FC = () => {
         setProductionList(response.data.records || []);
         setTotal(response.data.total || 0);
         clearAllBoardCache();
+        clearBoardStatsTimestamps();
         if (showSmartErrorNotice) setSmartError(null);
       } else {
         const errMessage =
