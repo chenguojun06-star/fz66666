@@ -206,8 +206,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     confidence?: number;
     reasons?: string[];
     suggestions?: string[];
+    predictionId?: string;
   } | null>(null);
   const [predicting, setPredicting] = useState(false);
+  // 反馈闭环 ref：每次弹窗打开，同一 orderId+nodeName 只上报一次
+  const feedbackSentKeyRef = React.useRef<string>('');
 
   const addLoadWarning = useCallback((warning: string) => {
     const text = String(warning || '').trim();
@@ -451,6 +454,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
       setLoadWarnings([]);
       setPrediction(null);
+      feedbackSentKeyRef.current = ''; // 重置反馈标记，下次打开可重新上报
     }
   }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
 
@@ -479,6 +483,37 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       matchRecordToStage(r.progressStage, r.processName, String(nodeTypeKey || '').trim(), normalizeText(nodeName))
     );
   }, [scanRecords, nodeName, nodeTypeKey, normalizeText]);
+
+  // 反馈闭环：节点完成(100%)时，静默上报实际完工时间，训练预测模型
+  useEffect(() => {
+    if (!orderId || !visible || isPatternProduction) return;
+    if ((nodeStats?.percent ?? 0) < 100) return;
+    if (filteredScanRecords.length === 0) return;
+
+    // 每次 orderId+nodeName 组合只上报一次，避免 scanRecords 更新触发重复调用
+    const key = `${orderId}::${nodeName}`;
+    if (feedbackSentKeyRef.current === key) return;
+    feedbackSentKeyRef.current = key;
+
+    // 取最后一次成功扫码时间作为实际完工时间
+    const maxScanTime = filteredScanRecords.reduce((latest, r) => {
+      const t = String((r as any).scanTime || '');
+      return t > latest ? t : latest;
+    }, '');
+
+    if (!maxScanTime) return;
+
+    intelligenceApi.feedback({
+      predictionId: prediction?.predictionId,
+      orderId,
+      orderNo: orderSummary.orderNo,
+      stageName: nodeName,
+      predictedFinishTime: prediction?.predictedFinishTime,
+      actualFinishTime: maxScanTime,
+      actualResult: 'completed',
+      acceptedSuggestion: false,
+    }).catch(() => { /* 静默失败 */ });
+  }, [orderId, nodeName, visible, isPatternProduction, nodeStats?.percent, filteredScanRecords, prediction, orderSummary.orderNo]);
 
   // 计算菲号在当前节点的完成情况
   const bundlesWithStatus = useMemo(() => {
