@@ -774,7 +774,7 @@ public class QualityScanExecutor {
         sr.setSize(sizeResolver.apply(null));
         sr.setQuantity(qty);
         sr.setProcessCode(stageCode);
-        sr.setProgressStage(stageName);
+        sr.setProgressStage("质检");  // 父工序名统一用"质检"，不用 stageName("质检领取"/"质检验收")
         // processName 统一用工序模板中的名称"质检"，而非 stageName("质检领取"/"质检验收")
         // 这样小程序 _inferQualityStage 可以用 scanType=quality 匹配，processName 也一致
         sr.setProcessName("质检");
