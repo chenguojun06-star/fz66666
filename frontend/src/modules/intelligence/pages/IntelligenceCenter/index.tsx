@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Tag, Input, Button, Tooltip, Popover } from 'antd';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
@@ -456,6 +456,45 @@ const IntelligenceCenter: React.FC = () => {
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, orders } = data;
 
+  /* ── 逾期 & 延期风险订单（纯前端推导，无需额外接口） ── */
+  const overdueRisk = useMemo(() => {
+    const overdue: typeof orders = [];
+    const highRisk: typeof orders = [];
+    const watch: typeof orders = [];
+    for (const o of orders) {
+      const prog = Number(o.productionProgress) || 0;
+      const daysLeft = o.plannedEndDate
+        ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)
+        : null;
+      if (daysLeft !== null && daysLeft < 0)                        overdue.push(o);
+      else if (daysLeft !== null && daysLeft <= 7 && prog < 50)     highRisk.push(o);
+      else if (daysLeft !== null && daysLeft <= 14 && prog < 30)    watch.push(o);
+    }
+    return { overdue, highRisk, watch };
+  }, [orders]);
+
+  /* ── 工厂卡点分析（按工厂聚合，找最落后工序） ── */
+  const factoryBottleneck = useMemo(() => {
+    const map = new Map<string, { name: string; sums: Record<string, number>; count: number }>();
+    for (const o of orders) {
+      const name = o.factoryName ?? '未分配';
+      if (!map.has(name)) map.set(name, { name, sums: {}, count: 0 });
+      const f = map.get(name)!;
+      f.count++;
+      for (const { key, label } of STAGE_FIELDS) {
+        f.sums[label] = (f.sums[label] ?? 0) + (Number((o as any)[key]) || 0);
+      }
+    }
+    return Array.from(map.values()).map(f => {
+      let minStage = '—'; let minAvg = 101;
+      for (const { label } of STAGE_FIELDS) {
+        const avg = f.count > 0 ? f.sums[label] / f.count : 0;
+        if (avg < minAvg) { minAvg = avg; minStage = label; }
+      }
+      return { name: f.name, count: f.count, stuckStage: minStage, stuckPct: Math.round(minAvg) };
+    }).sort((a, b) => a.stuckPct - b.stuckPct).slice(0, 8);
+  }, [orders]);
+
   /* 派生警报数量 */
   const alertCount = (pulse?.stagnantFactories?.length ?? 0) + (shortage?.shortageItems?.length ?? 0);
   const healWarnCount = healing?.items?.filter(i => i.status !== 'OK' && !i.autoFixed).length ?? 0;
@@ -758,6 +797,98 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无排行数据</div>}
+          </div>
+
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   第2.5行：逾期风险订单 + 工厂卡点分析       ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-2">
+
+          {/* 逾期 & 预计延期订单 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <LiveDot color={overdueRisk.overdue.length > 0 ? '#ff4136' : '#f7a600'} />
+              逾期 &amp; 延期风险订单
+              {overdueRisk.overdue.length > 0 && (
+                <span className="c-card-badge" style={{ background: 'rgba(255,65,54,0.15)', color: '#ff4136', borderColor: '#ff413644' }}>
+                  逾期 {overdueRisk.overdue.length} 单
+                </span>
+              )}
+              {overdueRisk.highRisk.length > 0 && (
+                <span className="c-card-badge" style={{ background: 'rgba(247,166,0,0.12)', color: '#f7a600', borderColor: '#f7a60044' }}>
+                  高风险 {overdueRisk.highRisk.length} 单
+                </span>
+              )}
+            </div>
+            {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
+              <div className="c-all-ok"><CheckCircleOutlined style={{ marginRight: 6 }} />所有订单均在健康交期内</div>
+            ) : (
+              <div className="c-risk-list">
+                {overdueRisk.overdue.slice(0, 4).map(o => {
+                  const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
+                  return (
+                    <div key={String(o.id)} className="c-risk-row">
+                      <span className="c-risk-badge" style={{ color: '#ff4136', borderColor: '#ff413655' }}>逾{-d}天</span>
+                      <span className="c-risk-order">{o.orderNo}</span>
+                      <span className="c-risk-factory">{o.factoryName}</span>
+                      <span className="c-risk-prog" style={{ color: '#ff4136' }}>{Number(o.productionProgress)||0}%</span>
+                    </div>
+                  );
+                })}
+                {overdueRisk.highRisk.slice(0, 3).map(o => {
+                  const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
+                  return (
+                    <div key={String(o.id)} className="c-risk-row">
+                      <span className="c-risk-badge" style={{ color: '#f7a600', borderColor: '#f7a60055' }}>剩{d}天</span>
+                      <span className="c-risk-order">{o.orderNo}</span>
+                      <span className="c-risk-factory">{o.factoryName}</span>
+                      <span className="c-risk-prog" style={{ color: '#f7a600' }}>{Number(o.productionProgress)||0}%</span>
+                    </div>
+                  );
+                })}
+                {overdueRisk.watch.slice(0, 2).map(o => {
+                  const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
+                  return (
+                    <div key={String(o.id)} className="c-risk-row">
+                      <span className="c-risk-badge" style={{ color: '#3a8aff', borderColor: '#3a8aff55' }}>关注{d}d</span>
+                      <span className="c-risk-order">{o.orderNo}</span>
+                      <span className="c-risk-factory">{o.factoryName}</span>
+                      <span className="c-risk-prog" style={{ color: '#3a8aff' }}>{Number(o.productionProgress)||0}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 工厂卡点分析 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              🔍 工厂工序卡点
+              <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
+            </div>
+            {factoryBottleneck.length === 0 ? (
+              <div className="c-empty">暂无在制订单</div>
+            ) : (
+              <div className="c-bottleneck-list">
+                {factoryBottleneck.map(f => {
+                  const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
+                  return (
+                    <div key={f.name} className="c-bottleneck-row">
+                      <span className="c-bottleneck-factory">{f.name}</span>
+                      <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
+                      <div className="c-bottleneck-bar-wrap">
+                        <div className="c-bottleneck-bar" style={{ width: `${f.stuckPct}%`, background: c }} />
+                      </div>
+                      <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
+                      <span className="c-bottleneck-cnt">{f.count}单</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>

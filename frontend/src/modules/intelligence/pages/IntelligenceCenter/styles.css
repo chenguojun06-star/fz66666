@@ -654,6 +654,51 @@
 }
 
 /* ────────────────────────────────────────────────
+   逾期 & 延期风险订单列表
+──────────────────────────────────────────────── */
+.c-risk-list { display: flex; flex-direction: column; gap: 4px; }
+.c-risk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 11px;
+}
+.c-risk-row:last-child { border-bottom: none; }
+.c-risk-badge {
+  font-size: 10px; font-weight: 700;
+  border: 1px solid; border-radius: 3px;
+  padding: 0 5px; flex-shrink: 0; min-width: 40px; text-align: center;
+}
+.c-risk-order {
+  color: #6a9aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.c-risk-factory {
+  color: #3a5470; width: 58px; flex-shrink: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.c-risk-prog { font-weight: 700; width: 32px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* ────────────────────────────────────────────────
+   工厂工序卡点分析列表
+──────────────────────────────────────────────── */
+.c-bottleneck-list { display: flex; flex-direction: column; gap: 5px; }
+.c-bottleneck-row {
+  display: flex; align-items: center; gap: 8px; font-size: 11px;
+}
+.c-bottleneck-factory {
+  color: #5c9abf; font-weight: 500; width: 70px; flex-shrink: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.c-bottleneck-stage { font-weight: 700; width: 58px; flex-shrink: 0; font-size: 11px; }
+.c-bottleneck-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+.c-bottleneck-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.c-bottleneck-pct { font-weight: 700; width: 30px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.c-bottleneck-cnt { color: #2a4455; font-size: 10px; width: 20px; text-align: right; flex-shrink: 0; }
+
+/* ────────────────────────────────────────────────
    订单悬浮详情卡（cockpit-order-pop）
 ──────────────────────────────────────────────── */
 
