@@ -786,7 +786,8 @@ const IntelligenceCenter: React.FC = () => {
           {/* 工厂绩效排行（右侧） */}
           <div className="c-card">
             <div className="c-card-title">
-              🏆 工厂绩效排行榜
+              <LiveDot size={7} color="#ffd700" />
+              工厂绩效排行榜
               <span className="c-card-badge purple-badge">实时评分</span>
             </div>
             {ranking?.rankings?.length ? (
@@ -872,7 +873,8 @@ const IntelligenceCenter: React.FC = () => {
           {/* 工厂卡点分析 */}
           <div className="c-card">
             <div className="c-card-title">
-              🔍 工厂工序卡点
+              <LiveDot size={7} color="#00e5ff" />
+              工厂工序卡点
               <span className="c-card-badge cyan-badge">全部 {factoryBottleneck.length} 家工厂</span>
             </div>
             {factoryBottleneck.length === 0 ? (
@@ -945,7 +947,8 @@ const IntelligenceCenter: React.FC = () => {
           {/* 缺陷热力图 */}
           <div className="c-card">
             <div className="c-card-title">
-              🌡️ 质量缺陷热力图
+              <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#ff4136' : '#39ff14'} />
+              质量缺陷热力图
               {heatmap && (
                 <span className="c-card-badge red-badge">
                   总缺陷 {heatmap.totalDefects}
@@ -1022,7 +1025,8 @@ const IntelligenceCenter: React.FC = () => {
           {/* 异常自愈诊断 */}
           <div className="c-card">
             <div className="c-card-title">
-              🔧 系统异常自愈诊断
+              <LiveDot size={7} color={healing && healing.healthScore < 80 ? '#f7a600' : '#39ff14'} />
+              系统异常自愈诊断
               {healing && (
                 <span className="c-card-badge" style={{
                   background: healing.healthScore >= 80 ? 'rgba(57,255,20,0.15)' : 'rgba(247,166,0,0.15)',
