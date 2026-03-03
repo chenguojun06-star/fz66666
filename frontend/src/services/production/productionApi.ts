@@ -405,6 +405,7 @@ export const intelligenceApi = {
     processName?: string;
     predictedFinishTime?: string;
     actualFinishTime?: string;
+    actualResult?: string;
     acceptedSuggestion?: boolean;
   }) => api.post<{ code: number; data: {
     accepted?: boolean;

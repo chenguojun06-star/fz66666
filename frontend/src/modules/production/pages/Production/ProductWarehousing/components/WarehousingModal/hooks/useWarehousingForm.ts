@@ -20,6 +20,7 @@ import {
   toUploadFileList,
   mapBundleStatusText
 } from '../../../utils';
+import { intelligenceApi } from '@/services/production/productionApi';
 
 export const useWarehousingForm = (
   visible: boolean,
@@ -707,6 +708,13 @@ export const useWarehousingForm = (
       });
       if (res.code === 200) {
         message.success('批量合格质检成功');
+        // 反馈闭环：批量入库时上报实际完成时间（fire-and-forget）
+        intelligenceApi.feedback({
+          orderId: String(orderId || ''),
+          stageName: '入库',
+          actualFinishTime: new Date().toISOString(),
+          actualResult: 'success',
+        }).catch(() => { /* 静默，反馈失败不阻断 */ });
         onSuccess();
         onCancel();
       } else {
@@ -771,6 +779,16 @@ export const useWarehousingForm = (
       const result = response as any;
       if (result.code === 200) {
         message.success(currentWarehousing?.id ? '编辑质检入库成功' : '新增质检入库成功');
+        // 反馈闭环：新增入库时上报实际完成时间（fire-and-forget，不影响主流程）
+        if (!currentWarehousing?.id) {
+          intelligenceApi.feedback({
+            orderId: String(values.orderId || ''),
+            orderNo: String(values.orderNo || ''),
+            stageName: '入库',
+            actualFinishTime: new Date().toISOString(),
+            actualResult: 'success',
+          }).catch(() => { /* 静默，反馈失败不阻断 */ });
+        }
         onSuccess();
         onCancel();
       } else {
