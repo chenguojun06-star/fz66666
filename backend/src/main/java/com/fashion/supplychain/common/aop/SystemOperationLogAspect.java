@@ -110,6 +110,12 @@ public class SystemOperationLogAspect {
 
         String module       = resolveModule(uri);
         String targetType   = resolveTargetType(uri);
+
+        // 纯 POST fallback 成"新增"但 URL 无法识别目标类型 → 非核心业务操作，跳过不记录（避免噪音日志）
+        if ("新增".equals(operation) && (targetType == null || targetType.isBlank())) {
+            return pjp.proceed();
+        }
+
         String operatorName = resolveOperator();
         String ip           = request == null ? null : request.getRemoteAddr();
         String reason       = extractReason(pjp.getArgs());
