@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Tag, Input, Button, Tooltip } from 'antd';
+import { Tag, Input, Button, Tooltip, Popover } from 'antd';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
@@ -56,6 +56,27 @@ const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; heigh
     </svg>
   );
 };
+
+/* ─── KPI Hover 详情弹出卡片 ─── */
+type KpiPopItem = { label: string; value: React.ReactNode; color?: string };
+const KpiPop: React.FC<{
+  title: string;
+  items: KpiPopItem[];
+  aiTip?: string;
+  warning?: string;
+}> = ({ title, items, aiTip, warning }) => (
+  <div className="kpi-pop-body">
+    <div className="kpi-pop-title">{title}</div>
+    {items.map((it, i) => (
+      <div key={i} className="kpi-pop-row">
+        <span className="kpi-pop-label">{it.label}</span>
+        <span className="kpi-pop-value" style={it.color ? { color: it.color } : undefined}>{it.value}</span>
+      </div>
+    ))}
+    {warning && <div className="kpi-pop-warn">⚠️ {warning}</div>}
+    {aiTip   && <div className="kpi-pop-ai">🤖 AI 预测：{aiTip}</div>}
+  </div>
+);
 
 /* ─── 数据 hook ─── */
 interface CockpitData {
@@ -141,6 +162,102 @@ const IntelligenceCenter: React.FC = () => {
   const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
+  /* ── 各 KPI 卡片悬浮详情内容 ── */
+  const hourNow = Math.max(now.getHours(), 1);
+  const projectedToday = ((pulse?.scanRatePerHour ?? 0) * (24 - hourNow) + (pulse?.todayScanQty ?? 0));
+
+  const scanPop = (
+    <KpiPop
+      title="今日扫码详情"
+      items={[
+        { label: '扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: '#00e5ff' },
+        { label: '实时速率',  value: `${pulse?.scanRatePerHour ?? '—'} 件/时` },
+        { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
+        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家` },
+        ...(pulse?.timeline?.length ? [{ label: '最新采样点', value: pulse.timeline[pulse.timeline.length - 1]?.time.slice(-5) }] : []),
+      ]}
+      aiTip={pulse ? `按当前速率，今日预计完成 ${projectedToday.toLocaleString()} 件` : undefined}
+    />
+  );
+
+  const factoryPop = (
+    <KpiPop
+      title="工厂在线状态"
+      items={[
+        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: '#39ff14' },
+        { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
+        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' },
+        ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
+          label: (['🥇 ', '🥈 ', '🥉 '][i] ?? '') + r.factoryName,
+          value: `${r.totalScore} 分`,
+          color: (['#ffd700', '#c0c0c0', '#cd7f32'][i] as string | undefined),
+        })) ?? []),
+      ]}
+      aiTip="高产工厂建议持续跟踪，停工工厂建议立即联系确认"
+    />
+  );
+
+  const healthPop = (
+    <KpiPop
+      title="供应链健康分析"
+      items={[
+        { label: '健康指数',  value: `${health?.healthIndex ?? '—'} 分`, color: grade2color(health?.grade ?? '') },
+        { label: '评级',      value: `${health?.grade ?? '—'} 级`,       color: grade2color(health?.grade ?? '') },
+        { label: '异常项目',  value: `${healing?.issuesFound ?? 0} 项`,  color: (healing?.issuesFound ?? 0) > 0 ? '#f7a600' : '#39ff14' },
+        { label: '自愈健康',  value: `${healing?.healthScore ?? '—'} 分` },
+      ]}
+      aiTip={health?.grade === 'A' ? '系统运行优秀，继续保持' : health?.grade === 'B' ? '整体良好，关注预警项' : '建议立即处理异常，提升供应链健康'}
+    />
+  );
+
+  const stagnantPop = (
+    <KpiPop
+      title="停工预警详情"
+      items={pulse?.stagnantFactories?.length
+        ? pulse.stagnantFactories.slice(0, 5).map(f => ({
+            label: f.factoryName,
+            value: `停滞 ${Math.floor(f.minutesSilent / 60)}h ${Math.round(f.minutesSilent % 60)}m`,
+            color: '#ff4136',
+          }))
+        : [{ label: '状态', value: '所有工厂正常运转', color: '#39ff14' }]}
+      warning={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '建议 15 分钟内联系工厂确认原因' : undefined}
+      aiTip={(pulse?.stagnantFactories?.length ?? 0) > 0
+        ? `${pulse!.stagnantFactories.length} 家工厂停工，订单交付风险上升，建议立即介入`
+        : '停工率 0%，生产节拍正常，供应链健康'}
+    />
+  );
+
+  const shortagePop = (
+    <KpiPop
+      title="面料缺口预警"
+      items={shortage?.shortageItems?.length
+        ? shortage.shortageItems.slice(0, 5).map(item => ({
+            label: item.materialName,
+            value: `缺 ${item.shortageQuantity} ${item.unit}`,
+            color: risk2color(item.riskLevel),
+          }))
+        : [{ label: '状态', value: '所有面辅料库存充足', color: '#39ff14' }]}
+      warning={(shortage?.shortageItems?.length ?? 0) > 0 ? (shortage?.summary ?? undefined) : undefined}
+      aiTip={(shortage?.shortageItems?.length ?? 0) > 0
+        ? 'HIGH 级缺料将影响 3 天内生产，建议立即下补采购单'
+        : '面辅料储备率良好，暂无补单压力'}
+    />
+  );
+
+  const notifyPop = (
+    <KpiPop
+      title="智能通知概况"
+      items={[
+        { label: '待发送', value: `${notify?.pendingCount ?? '—'} 条`, color: '#a78bfa' },
+        { label: '今日已发', value: `${notify?.sentToday ?? 0} 条` },
+        { label: '通知命中率', value: notify?.sentToday
+          ? `${Math.round(Math.min(100, ((notify.sentToday) / Math.max(notify.sentToday + (notify.pendingCount ?? 0), 1)) * 100))}%`
+          : '—' },
+      ]}
+      aiTip={`待处理 ${notify?.pendingCount ?? 0} 条，建议及时下发确保工厂按时接收指令`}
+    />
+  );
+
   return (
     <Layout>
       <div className="cockpit-root">
@@ -191,33 +308,43 @@ const IntelligenceCenter: React.FC = () => {
         <div className="cockpit-grid-6">
 
           {/* 今日生产扫码量 */}
-          <div className="c-card c-kpi">
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />今日扫码量</div>
             <div className="c-kpi-val cyan neon-cyan">{pulse?.todayScanQty?.toLocaleString() ?? '—'}</div>
             <div className="c-kpi-unit">件</div>
             <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}>{pulse?.scanRatePerHour ?? '—'}</b>&nbsp;件/时</div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
           {/* 活跃工厂 */}
-          <div className="c-card c-kpi">
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />活跃工厂</div>
             <div className="c-kpi-val green neon-green">{pulse?.activeFactories ?? '—'}</div>
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">员工&nbsp;<b style={{ color: '#39ff14' }}>{pulse?.activeWorkers ?? '—'}</b>&nbsp;人在线</div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
           {/* 供应链健康 */}
-          <div className="c-card c-kpi">
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={healthPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color={grade2color(health?.grade ?? '')} />供应链健康</div>
             <div className="c-kpi-val" style={{ color: grade2color(health?.grade ?? ''), textShadow: `0 0 18px ${grade2color(health?.grade ?? '')}88` }}>
               {health?.healthIndex ?? '—'}
             </div>
             <div className="c-kpi-unit">分</div>
             <div className="c-kpi-sub">等级&nbsp;<b style={{ color: grade2color(health?.grade ?? '') }}>{health?.grade ?? '—'}&nbsp;级</b></div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
           {/* 停工预警 */}
-          <div className={`c-card c-kpi ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'c-kpi-danger' : ''}`}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={stagnantPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className={`c-card c-kpi c-kpi-hoverable ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
               <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14'} />
               停工预警
@@ -231,10 +358,13 @@ const IntelligenceCenter: React.FC = () => {
                 ? <span className="blink-text">⚠️ 需立即处理</span>
                 : '生产运转正常'}
             </div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
           {/* 面料缺口 */}
-          <div className={`c-card c-kpi ${(shortage?.shortageItems?.length ?? 0) > 0 ? 'c-kpi-warn' : ''}`}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={shortagePop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className={`c-card c-kpi c-kpi-hoverable ${(shortage?.shortageItems?.length ?? 0) > 0 ? 'c-kpi-warn' : ''}`}>
             <div className="c-kpi-label">
               <LiveDot size={7} color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
               面料缺口
@@ -248,15 +378,20 @@ const IntelligenceCenter: React.FC = () => {
                 ? <span style={{ color: '#f7a600' }}>⚡ 请及时补单</span>
                 : '库存储备充足'}
             </div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
           {/* 待处理通知 */}
-          <div className="c-card c-kpi">
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={notifyPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color="#7c4dff" />待处理通知</div>
             <div className="c-kpi-val purple">{notify?.pendingCount ?? '—'}</div>
             <div className="c-kpi-unit">条待发</div>
             <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: '#7c4dff' }}>{notify?.sentToday ?? 0}</b>&nbsp;条</div>
+            <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
+          </Popover>
 
         </div>
 
