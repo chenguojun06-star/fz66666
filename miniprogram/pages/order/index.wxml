@@ -38,7 +38,7 @@
     <!-- 排名徽标（绝对定位） -->
     <view wx:if="{{item.rank && !keyword}}" class="rank-badge rank-{{item.rank <= 3 ? 'top' : 'normal'}}">{{item.rank}}</view>
     <!-- 封面图 -->
-    <image wx:if="{{item.cover}}" class="wc-img" src="{{item.cover}}" mode="aspectFill" lazy-load />
+    <image wx:if="{{item.cover}}" class="wc-img" src="{{item.cover}}" mode="aspectFill" lazy-load data-index="{{index}}" binderror="onCoverImageError" />
     <view wx:else class="wc-img-placeholder">暂无\n图片</view>
     <!-- 右侧信息 -->
     <view class="wc-content">

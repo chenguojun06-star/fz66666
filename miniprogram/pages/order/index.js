@@ -333,4 +333,11 @@ Page({
       this.setData({ submitting: false });
     }
   },
+
+  onCoverImageError(e) {
+    const idx = e.currentTarget.dataset.index;
+    if (idx !== undefined) {
+      this.setData({ [`styles[${idx}].cover`]: '' });
+    }
+  },
 });

@@ -532,4 +532,8 @@ Page({
       console.error('加载我的反馈失败', e);
     }
   },
+
+  onAvatarError() {
+    this.setData({ avatarImgUrl: '' });
+  },
 });
