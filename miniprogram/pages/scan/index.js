@@ -785,6 +785,14 @@ Page({
   },
 
   /**
+   * 手动触发离线队列同步（点击提示条时调用）
+   * @returns {void}
+   */
+  onManualSync() {
+    this._flushOfflineQueue();
+  },
+
+  /**
    * 手动输入仓库代码
    * @param {Object} e - 事件对象
    * @returns {void}

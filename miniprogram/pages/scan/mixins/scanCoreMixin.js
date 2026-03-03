@@ -419,6 +419,24 @@ const scanCoreMixin = Behavior({
         return;
       }
 
+      // 离线缓存成功：扫码数据已入队，展示缓存提示而非错误
+      if (e.isOfflineQueued) {
+        wx.showToast({ title: '📶 已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
+        this.setData({
+          lastResult: {
+            success: false,
+            queued: true,
+            message: '📶 无网络，已离线缓存，联网后自动上传',
+            displayTime: new Date().toLocaleTimeString(),
+            statusText: '已缓存',
+            statusClass: 'queued',
+            errorAction: null, // 不显示下一步按钮，联网后自动上传
+          },
+          offlinePendingCount: e.offlineCount || 0,
+        });
+        return;
+      }
+
       toast.error(e.errMsg || e.message || '系统异常');
       errorHandler.logError(e, '_handleScanException');
     },

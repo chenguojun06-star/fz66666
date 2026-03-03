@@ -15,6 +15,7 @@ const CuttingHandler = require('../handlers/CuttingHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus } = require('../../../utils/eventBus');
+const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 
 /**
  * 生命周期 Mixin
@@ -75,6 +76,18 @@ const scanLifecycleMixin = Behavior({
     setTimeout(() => this.loadLocalHistory(), 80);
     // 异步加载仓库选项（不阻塞页面显示）
     this._loadWarehouseOptions();
+    // 初始化离线队列计数 + 注册网络状态变化监听
+    try {
+      const pendingCount = ScanOfflineQueue.count();
+      if (pendingCount > 0) this.setData({ offlinePendingCount: pendingCount });
+    } catch (_) { /* 静默忽略 */ }
+    this._networkChangeHandler = (networkRes) => {
+      if (networkRes.isConnected && ScanOfflineQueue.count() > 0 && !this.data.offlineSyncing) {
+        this._flushOfflineQueue();
+      }
+      this.setData({ offlinePendingCount: ScanOfflineQueue.count() });
+    };
+    wx.onNetworkStatusChange(this._networkChangeHandler);
   },
 
   /**
@@ -100,7 +113,16 @@ const scanLifecycleMixin = Behavior({
 
       // ✅ 数据加载完成后，检查是否有待处理任务（从铃铛点击过来）
       this.checkPendingTasks();
-    }
+      // 检查离线队列，有项目就尝试同步（切回此页时网络可能已恢复）
+      const offlineCount = ScanOfflineQueue.count();
+      if (offlineCount > 0) {
+        this.setData({ offlinePendingCount: offlineCount });
+        setTimeout(() => {
+          if (this && this.data && !this.data.offlineSyncing) {
+            this._flushOfflineQueue();
+          }
+        }, 1200);
+      }    }
   },
 
   /**
@@ -124,6 +146,12 @@ const scanLifecycleMixin = Behavior({
 
     // 清理撤销定时器（委托给 UndoHandler）
     this.stopUndoTimer();
+
+    // 清理网络状态监听
+    if (this._networkChangeHandler) {
+      try { wx.offNetworkStatusChange(this._networkChangeHandler); } catch (_) { /* 静默 */ }
+      this._networkChangeHandler = null;
+    }
   },
 
   /**
@@ -220,8 +248,33 @@ const scanLifecycleMixin = Behavior({
       this.loadMyPanel(true);
     },
 
-    /**
-     * 从字典API加载仓库选项，失败时保留默认值
+    /**     * 批量上传离线队列中的扫码记录
+     * 联网恢复或用户手动点击时调用
+     * @returns {Promise<void>}
+     */
+    async _flushOfflineQueue() {
+      if (ScanOfflineQueue.count() === 0) return;
+      if (this.data.offlineSyncing) return; // 防重入
+      this.setData({ offlineSyncing: true });
+      try {
+        const { submitted, failed } = await ScanOfflineQueue.flush(api, () => {
+          this.setData({ offlinePendingCount: ScanOfflineQueue.count() });
+        });
+        this.setData({ offlineSyncing: false, offlinePendingCount: ScanOfflineQueue.count() });
+        if (submitted > 0) {
+          wx.showToast({ title: '✅ 已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
+          setTimeout(() => { if (this && this.data) this.loadMyPanel(true); }, 500);
+        }
+        if (failed > 0 && ScanOfflineQueue.count() > 0) {
+          wx.showToast({ title: '⚠️ ' + failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
+        }
+      } catch (e) {
+        console.warn('[lifecycle] _flushOfflineQueue 异常:', e);
+        this.setData({ offlineSyncing: false });
+      }
+    },
+
+    /**     * 从字典API加载仓库选项，失败时保留默认值
      * @returns {Promise<void>}
      */
     async _loadWarehouseOptions() {

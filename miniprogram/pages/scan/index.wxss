@@ -2287,3 +2287,26 @@ page {
   color: #1677ff;
   font-weight: 500;
 }
+
+/* ===== 离线待同步提示条 ===== */
+.offline-badge-bar {
+  display: flex;
+  align-items: center;
+  background: #ff8c00;
+  border-radius: 12rpx;
+  margin: 0 24rpx 16rpx;
+  padding: 16rpx 24rpx;
+  gap: 12rpx;
+}
+
+.offline-badge-icon {
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.offline-badge-text {
+  font-size: 26rpx;
+  color: #fff;
+  flex: 1;
+  font-weight: 500;
+}

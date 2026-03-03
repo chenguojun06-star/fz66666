@@ -24,6 +24,8 @@ const scanPageData = {
   quantity: '',
   warehouse: '',
   lastUsedProcessName: '', // 上次拍码成功的工序名称，页面内显示提示
+  offlinePendingCount: 0,  // 离线待同步条数（无网时扫码进队列）
+  offlineSyncing: false,   // 联网后正在批量上传时为 true
   lastResult: null,
   scanHistory: [],
 

@@ -42,6 +42,8 @@ function _friendlyNetworkError(e) {
   return e && e.errMsg || e && e.message || '提交失败，请重试';
 }
 
+const ScanOfflineQueue = require('../../services/ScanOfflineQueue');
+
 class ScanSubmitter {
   constructor(api) {
     this.api = api;
@@ -94,10 +96,28 @@ class ScanSubmitter {
       }
     } catch (e) {
       console.error('[ScanSubmitter] 提交扫码失败:', e);
-      return {
-        success: false,
-        message: _friendlyNetworkError(e),
-      };
+      const friendlyMsg = _friendlyNetworkError(e);
+      // 网络错误时自动将扫码数据加入离线队列
+      const rawErr = (e && (e.errMsg || e.message)) || '';
+      const isNetworkErr =
+        rawErr.includes('timeout') ||
+        rawErr.includes('errcode:-101') ||
+        rawErr.includes('errcode:-102') ||
+        rawErr.includes('errcode:-105') ||
+        rawErr.includes('ERR_CONNECTION') ||
+        rawErr.includes('fail network');
+      if (isNetworkErr && !ScanOfflineQueue.isFull()) {
+        const ok = ScanOfflineQueue.enqueue(scanData);
+        if (ok) {
+          return {
+            success: false,
+            isOfflineQueued: true,
+            offlineCount: ScanOfflineQueue.count(),
+            message: '📤 网络异常，已离线缓存，联网后自动同步',
+          };
+        }
+      }
+      return { success: false, message: friendlyMsg };
     }
   }
 
@@ -112,7 +132,12 @@ class ScanSubmitter {
   async submitAndBuildResult(scanMode, parsedData, stageResult, scanData) {
     const submitResult = await this.submitScan(scanData);
     if (!submitResult.success) {
-      throw new Error(submitResult.message || '提交失败');
+      const err = new Error(submitResult.message || '提交失败');
+      if (submitResult.isOfflineQueued) {
+        err.isOfflineQueued = true;
+        err.offlineCount = submitResult.offlineCount;
+      }
+      throw err;
     }
 
     return {
