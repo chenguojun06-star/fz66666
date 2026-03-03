@@ -1,21 +1,24 @@
 /**
- * SmartStyleInsightCard — 下单智能分析卡
+ * SmartStyleInsightCard — 下单智能分析卡 v2
  *
- * 展示在「下单管理」弹窗中，基于历史数据给出：
- *  - 本款下单频率（多少次/年，翻单热度）
- *  - 平均生产周期（建议提前 N 天下单）
- *  - 爆单风险（该工厂是否同时在生产多个订单）
+ * 展示在「下单管理」弹窗中，基于历史数据 + 工厂实时产能数据给出：
+ *  - 本款下单频率、平均周期、确认准时率
+ *  - 工厂日均产量、当前排期占用、风险单数
+ *  - 第一屏 限制/紧张 风险 Banner
  *  - AI 文字建议
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button, Spin, Tag, Tooltip } from 'antd';
-import { RobotOutlined, ReloadOutlined } from '@ant-design/icons';
+import { RobotOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import { productionOrderApi, intelligenceApi } from '@/services/production/productionApi';
+import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import dayjs from 'dayjs';
 
 interface Props {
   styleNo: string;
   factoryName?: string;
+  /** 工厂实时产能数据（来自父组件 selectedFactoryStat）*/
+  capacityData?: FactoryCapacityItem | null;
 }
 
 interface StyleInsight {
@@ -30,7 +33,7 @@ interface StyleInsight {
   onTimeRate: number;
 }
 
-const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
+const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacityData }) => {
   const [insight, setInsight] = useState<StyleInsight | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState('');
@@ -67,29 +70,30 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
       }
       const avgCycleDays = cycleCount > 0 ? Math.round(totalDays / cycleCount) : 0;
       const onTimeTotal = lateCount + onTimeCount;
-      const onTimeRate = onTimeTotal > 0 ? Math.round((onTimeCount / onTimeTotal) * 100) : 100;
+      // 只有实际有完工记录时才算准时率，避免"0完工→100%"的误导
+      const onTimeRate = onTimeTotal > 0 ? Math.round((onTimeCount / onTimeTotal) * 100) : -1;
 
       // 下单频率（每年）
       const dates = records.map(r => r.createTime).filter(Boolean).sort();
-      const firstDate = dates[0];
+      const firstDate = dates[0] as string | undefined;
       const monthsSpan = firstDate
         ? Math.max(1, dayjs().diff(dayjs(firstDate), 'month'))
         : 12;
       const freqPerYear = Math.round((records.length / monthsSpan) * 12 * 10) / 10;
 
-      // 当前进行中订单（该款或该工厂）
+      // 当前进行中订单（该款）
       const activeOrders = records.filter(r => r.status === 'production');
       const factoryActiveCount = factoryName
         ? activeOrders.filter(r => r.factoryName === factoryName).length
         : 0;
       const factoryBusy = factoryActiveCount >= 3;
 
-      // 建议提前下单天数
+      // 建议提前下单天数 = 平均周期 + 7 天缓冲
       const recommendLeadDays = avgCycleDays > 0 ? avgCycleDays + 7 : 0;
 
       // 最近一次下单时间
       const lastOrderDate = dates[dates.length - 1]
-        ? dayjs(dates[dates.length - 1]).format('YYYY-MM-DD')
+        ? dayjs(dates[dates.length - 1] as string).format('YYYY-MM-DD')
         : '';
 
       setInsight({
@@ -172,6 +176,19 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
   const { orderCount, avgCycleDays, recommendLeadDays, activeOrderCount,
     factoryBusy, factoryActiveCount, freqPerYear, lastOrderDate, onTimeRate } = insight;
 
+  // 工厂产能信息（优先使用真实产能数据）
+  const factoryOnTimeRate = capacityData?.deliveryOnTimeRate ?? -1;
+  const displayOnTimeRate = factoryOnTimeRate >= 0 ? factoryOnTimeRate : onTimeRate;
+  const avgDailyOutput = capacityData?.avgDailyOutput ?? 0;
+  const estimatedDays = capacityData?.estimatedCompletionDays ?? -1;
+  const atRiskCount = capacityData?.atRiskCount ?? 0;
+  const overdueCount = capacityData?.overdueCount ?? 0;
+  const factoryTotalOrders = capacityData?.totalOrders ?? 0;
+
+  // 工厂风险等级
+  const isFactoryHighRisk = overdueCount > 0 || (atRiskCount >= 2) || factoryBusy;
+  const isFactoryMedRisk = !isFactoryHighRisk && (atRiskCount >= 1 || factoryActiveCount >= 2 || estimatedDays > 30);
+
   return (
     <div style={{
       background: 'linear-gradient(135deg, #f0f7ff 0%, #fafbff 100%)',
@@ -182,13 +199,12 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
       marginTop: 8,
     }}>
       {/* 标题行 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 13, color: '#1677ff' }}>
           📊 {styleNo} — 下单智能分析
         </span>
         <Button
-          type="link"
-          size="small"
+          type="link" size="small"
           icon={<ReloadOutlined style={{ fontSize: 11 }} />}
           onClick={calcInsight}
           style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 11 }}
@@ -197,82 +213,104 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
         </Button>
       </div>
 
-      {/* 核心指标行 */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 8,
-        marginBottom: 10,
-      }}>
-        {/* 历史下单次数 */}
+      {/* 工厂风险 Banner（选了工厂才显示）*/}
+      {factoryName && capacityData && (isFactoryHighRisk || isFactoryMedRisk) && (
         <div style={{
-          background: '#fff', borderRadius: 8, padding: '8px 10px',
-          textAlign: 'center', border: '1px solid #e8f0fe',
+          background: isFactoryHighRisk ? '#fff2f0' : '#fffbe6',
+          border: `1px solid ${isFactoryHighRisk ? '#ffccc7' : '#ffe58f'}`,
+          borderRadius: 6, padding: '6px 10px',
+          marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#1677ff' }}>{orderCount}</div>
+          <WarningOutlined style={{ color: isFactoryHighRisk ? '#ff4d4f' : '#faad14' }} />
+          <span style={{ color: isFactoryHighRisk ? '#cf1322' : '#874d00', fontSize: 12, flex: 1 }}>
+            {isFactoryHighRisk
+              ? `${factoryName} 当前接单紧张：${overdueCount > 0 ? `${overdueCount} 单逾期` : ''}${atRiskCount > 0 ? `、${atRiskCount} 单高风险` : ''}，建议提前沟通排期`
+              : `${factoryName} 在产 ${factoryTotalOrders} 单${atRiskCount > 0 ? `，其中 ${atRiskCount} 单偏慢` : ''}，排产较满`}
+          </span>
+        </div>
+      )}
+
+      {/* 2×2 核心指标格 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+        {/* 左上：历史下单 + 翻单频率 */}
+        <div style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 17, fontWeight: 700, color: '#1677ff' }}>{orderCount}</span>
+            <span style={{ fontSize: 11, color: freqPerYear >= 6 ? '#52c41a' : freqPerYear >= 2 ? '#1677ff' : '#8c8c8c' }}>
+              {freqPerYear > 0 ? `${freqPerYear.toFixed(1)}次/年` : ''}
+            </span>
+          </div>
           <div style={{ color: '#8c8c8c', fontSize: 11 }}>历史下单</div>
         </div>
 
-        {/* 翻单频率 */}
-        <div style={{
-          background: '#fff', borderRadius: 8, padding: '8px 10px',
-          textAlign: 'center', border: '1px solid #e8f0fe',
-        }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: freqPerYear >= 3 ? '#52c41a' : '#faad14' }}>
-            {freqPerYear > 0 ? freqPerYear.toFixed(1) : '-'}
+        {/* 右上：平均周期 + 建议提前天数 */}
+        <div style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 17, fontWeight: 700, color: avgCycleDays > 45 ? '#ff4d4f' : avgCycleDays > 30 ? '#faad14' : '#52c41a' }}>
+              {avgCycleDays > 0 ? avgCycleDays : '-'}
+            </span>
+            <span style={{ fontSize: 11, color: '#8c8c8c' }}>
+              {recommendLeadDays > 0 ? `提前${recommendLeadDays}天` : ''}
+            </span>
           </div>
-          <div style={{ color: '#8c8c8c', fontSize: 11 }}>次/年</div>
+          <div style={{ color: '#8c8c8c', fontSize: 11 }}>平均周期(天)</div>
         </div>
 
-        {/* 平均周期 */}
-        <div style={{
-          background: '#fff', borderRadius: 8, padding: '8px 10px',
-          textAlign: 'center', border: '1px solid #e8f0fe',
-        }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: avgCycleDays > 45 ? '#ff4d4f' : avgCycleDays > 30 ? '#faad14' : '#52c41a' }}>
-            {avgCycleDays > 0 ? avgCycleDays : '-'}
+        {/* 左下：准时率 / 工厂货期达成率 */}
+        <div style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: displayOnTimeRate >= 80 ? '#52c41a' : displayOnTimeRate >= 60 ? '#faad14' : displayOnTimeRate >= 0 ? '#ff4d4f' : '#d9d9d9' }}>
+            {displayOnTimeRate >= 0 ? `${displayOnTimeRate}%` : '-'}
           </div>
-          <div style={{ color: '#8c8c8c', fontSize: 11 }}>平均天数</div>
+          <div style={{ color: '#8c8c8c', fontSize: 11 }}>
+            {capacityData ? '工厂达成率' : '本款准时率'}
+          </div>
         </div>
 
-        {/* 准时率 */}
-        <div style={{
-          background: '#fff', borderRadius: 8, padding: '8px 10px',
-          textAlign: 'center', border: '1px solid #e8f0fe',
-        }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: onTimeRate >= 80 ? '#52c41a' : onTimeRate >= 60 ? '#faad14' : '#ff4d4f' }}>
-            {onTimeRate}%
-          </div>
-          <div style={{ color: '#8c8c8c', fontSize: 11 }}>准时率</div>
+        {/* 右下：日均产量 or 在产单数 */}
+        <div style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          {avgDailyOutput > 0 ? (
+            <>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#722ed1' }}>
+                {Math.round(avgDailyOutput)}
+              </div>
+              <div style={{ color: '#8c8c8c', fontSize: 11 }}>
+                件/天{estimatedDays > 0 ? `·排期${estimatedDays}天` : ''}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 17, fontWeight: 700, color: activeOrderCount >= 3 ? '#ff4d4f' : activeOrderCount >= 1 ? '#faad14' : '#52c41a' }}>
+                {activeOrderCount}
+              </div>
+              <div style={{ color: '#8c8c8c', fontSize: 11 }}>本款在产单</div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* 关键提示行 */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+      {/* 关键提示标签行 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {recommendLeadDays > 0 && (
-          <Tooltip title={`该款平均生产周期 ${avgCycleDays} 天，建议额外预留 7 天缓冲`}>
+          <Tooltip title={`该款平均生产周期 ${avgCycleDays} 天，额外预留 7 天缓冲`}>
             <Tag color="blue" style={{ cursor: 'pointer', fontSize: 11 }}>
-              📅 建议提前 {recommendLeadDays} 天下单
+              📅 提前 {recommendLeadDays} 天下单
             </Tag>
           </Tooltip>
         )}
-
-        {activeOrderCount > 0 && (
-          <Tooltip title={`当前有 ${activeOrderCount} 个该款在产订单`}>
-            <Tag color={activeOrderCount >= 2 ? 'orange' : 'default'} style={{ fontSize: 11 }}>
-              🔄 在产 {activeOrderCount} 单
+        {estimatedDays > 0 && (
+          <Tooltip title={`${factoryName ?? '该工厂'} 按当前日均产量，现有订单还需约 ${estimatedDays} 天消化`}>
+            <Tag color={estimatedDays > 30 ? 'orange' : 'default'} style={{ fontSize: 11 }}>
+              ⏳ 工厂排期 {estimatedDays} 天
             </Tag>
           </Tooltip>
         )}
-
-        {factoryName && factoryActiveCount > 0 && (
-          <Tooltip title={`${factoryName} 工厂当前正在生产 ${factoryActiveCount} 个订单`}>
+        {factoryName && factoryActiveCount > 0 && !capacityData && (
+          <Tooltip title={`${factoryName} 正在生产 ${factoryActiveCount} 个该账期订单`}>
             <Tag color={factoryBusy ? 'red' : 'orange'} style={{ fontSize: 11 }}>
-              {factoryBusy ? '🔴' : '🟡'} {factoryName} 在产 {factoryActiveCount} 单{factoryBusy ? '（偏忙）' : ''}
+              {factoryBusy ? '🔴' : '🟡'} {factoryName} {factoryActiveCount} 单在产
             </Tag>
           </Tooltip>
         )}
-
         {lastOrderDate && (
           <Tag style={{ fontSize: 11, color: '#8c8c8c', background: '#f5f5f5', border: 'none' }}>
             最近下单 {lastOrderDate}
@@ -304,9 +342,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName }) => {
               <RobotOutlined style={{ marginRight: 6 }} />AI 下单建议
             </span>
             <Button
-              type="link"
-              size="small"
-              loading={aiLoading}
+              type="link" size="small" loading={aiLoading}
               onClick={handleAiAdvice}
               style={{ padding: 0, height: 'auto', fontSize: 11 }}
             >
