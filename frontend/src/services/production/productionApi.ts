@@ -374,6 +374,37 @@ export interface ProcessPriceHintRecord {
   standardTime?: number;
 }
 
+/** 交货期智能建议响应 */
+export interface DeliveryDateSuggestionResponse {
+  earliestDays: number;
+  recommendedDays: number;
+  latestDays: number;
+  factoryAvgDailyOutput: number;
+  factoryInProgressOrders: number;
+  factoryInProgressQty: number;
+  factoryOnTimeRate: number;
+  confidence: number;
+  reason: string;
+  algorithm: string;
+}
+
+/** 工序模板单项 */
+export interface ProcessTemplateItem {
+  processName: string;
+  progressStage?: string;
+  frequency: number;
+  avgPrice: number;
+  avgStandardTime: number;
+  suggestedPrice: number;
+}
+
+/** 工序AI补全响应 */
+export interface ProcessTemplateResponse {
+  category: string;
+  sampleStyleCount: number;
+  processes: ProcessTemplateItem[];
+}
+
 /** 工序单价 AI 提示响应 */
 export interface ProcessPriceHintResponse {
   processName: string;
@@ -570,6 +601,22 @@ export const intelligenceApi = {
     api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' } }>(
       '/intelligence/ai-advisor/chat',
       { question },
+    ),
+
+  // ── 第五批：新建订单智能辅助 ──
+
+  /** 交货期智能建议 — 根据工厂产能推荐合理交货天数 */
+  getDeliveryDateSuggestion: (factoryName?: string, orderQuantity?: number) =>
+    api.get<{ code: number; data: DeliveryDateSuggestionResponse }>(
+      '/intelligence/delivery-date-suggestion',
+      { params: { ...(factoryName ? { factoryName } : {}), ...(orderQuantity != null ? { orderQuantity } : {}) } },
+    ),
+
+  /** 工序AI补全 — 根据品类返回历史高频工序清单 */
+  getProcessTemplate: (category?: string) =>
+    api.get<{ code: number; data: ProcessTemplateResponse }>(
+      '/intelligence/process-template',
+      { params: { ...(category ? { category } : {}) } },
     ),
 };
 

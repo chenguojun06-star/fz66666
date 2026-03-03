@@ -22,7 +22,7 @@ import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
-import { productionOrderApi, FactoryCapacityItem } from '@/services/production/productionApi';
+import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
 import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import SmartStyleInsightCard from './components/SmartStyleInsightCard';
@@ -639,6 +639,25 @@ const OrderManagement: React.FC = () => {
     return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
   }, [watchedFactoryId, factoryCapacities, factories]);
 
+  // 交货期智能建议
+  const [deliverySuggestion, setDeliverySuggestion] = useState<DeliveryDateSuggestionResponse | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+
+  const fetchDeliverySuggestion = React.useCallback(async (factoryName?: string, qty?: number) => {
+    if (!factoryName && !qty) return;
+    setSuggestionLoading(true);
+    try {
+      const res = await intelligenceApi.getDeliveryDateSuggestion(factoryName, qty);
+      if ((res as any).code === 200 && (res as any).data) {
+        setDeliverySuggestion((res as any).data as DeliveryDateSuggestionResponse);
+      }
+    } catch { /* 静默失败 */ } finally {
+      setSuggestionLoading(false);
+    }
+  }, []);
+
+  // 工厂或数量变化时自动重新计算建议（effect 移至 totalOrderQuantity 声明之后）
+
   function splitOptions(value?: string) {
     if (!value) return [] as string[];
     return value
@@ -723,6 +742,16 @@ const OrderManagement: React.FC = () => {
   const totalOrderQuantity = useMemo(() => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
+
+  // 工厂或数量变化时自动重新计算交货期建议
+  useEffect(() => {
+    if (!selectedFactoryStat || !totalOrderQuantity) {
+      setDeliverySuggestion(null);
+      return;
+    }
+    fetchDeliverySuggestion(selectedFactoryStat.factoryName, totalOrderQuantity);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFactoryStat?.factoryName, totalOrderQuantity]);
 
   const confirmPricingReady = () =>
     new Promise<boolean>((resolve) => {
@@ -1792,7 +1821,26 @@ const OrderManagement: React.FC = () => {
                         <Col xs={24} sm={8}>
                           <Form.Item
                             name="plannedEndDate"
-                            label="计划完成时间"
+                            label={
+                              <span>
+                                计划完成时间
+                                {deliverySuggestion && !suggestionLoading && (
+                                  <Tooltip title={deliverySuggestion.reason}>
+                                    <Tag
+                                      color="blue"
+                                      style={{ marginLeft: 4, cursor: 'pointer', fontSize: 11 }}
+                                      onClick={() => {
+                                        const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
+                                        form.setFieldValue('plannedEndDate', d);
+                                      }}
+                                    >
+                                      💡 建议{deliverySuggestion.recommendedDays}天
+                                    </Tag>
+                                  </Tooltip>
+                                )}
+                                {suggestionLoading && <span style={{ marginLeft: 4, color: '#1677ff', fontSize: 11 }}>⏳</span>}
+                              </span>
+                            }
                             rules={[{ required: true, message: '请选择计划完成时间' }]}
                           >
                             <UnifiedDatePicker showTime />

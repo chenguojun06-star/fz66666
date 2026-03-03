@@ -6,7 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from './ResizableModal';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
-import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
+import { intelligenceApi, productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useAuth } from '@/utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
@@ -200,6 +200,14 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [repairLoading, setRepairLoading] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
+  // 进度预测
+  const [prediction, setPrediction] = useState<{
+    predictedFinishTime?: string;
+    confidence?: number;
+    reasons?: string[];
+    suggestions?: string[];
+  } | null>(null);
+  const [predicting, setPredicting] = useState(false);
 
   const addLoadWarning = useCallback((warning: string) => {
     const text = String(warning || '').trim();
@@ -442,8 +450,25 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       setActiveTab('settings');
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
       setLoadWarnings([]);
+      setPrediction(null);
     }
   }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
+
+  // 进度预测：弹窗打开且有订单ID时异步拉取
+  useEffect(() => {
+    if (!visible || !orderId || isPatternProduction) return;
+    let cancelled = false;
+    setPredicting(true);
+    intelligenceApi.predictFinishTime({ orderId, stageName: nodeName })
+      .then((res: any) => {
+        if (!cancelled && res.code === 200 && res.data) {
+          setPrediction(res.data);
+        }
+      })
+      .catch(() => { /* 静默失败，不影响主流程 */ })
+      .finally(() => { if (!cancelled) setPredicting(false); });
+    return () => { cancelled = true; };
+  }, [visible, orderId, nodeName, isPatternProduction]);
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
@@ -1079,6 +1104,45 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             message="部分数据加载失败"
             description={loadWarnings.join('；')}
           />
+        )}
+        {/* 进度预测卡 */}
+        {!isPatternProduction && orderId && (predicting || prediction) && (
+          <div style={{
+            background: 'linear-gradient(135deg,#f0f7ff 0%,#e8f4fd 100%)',
+            border: '1px solid #91caff',
+            borderRadius: 6,
+            padding: '8px 12px',
+            marginBottom: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontSize: 13,
+          }}>
+            <span style={{ fontSize: 16 }}>🎯</span>
+            {predicting ? (
+              <span style={{ color: '#1677ff' }}>预测中…</span>
+            ) : prediction?.predictedFinishTime ? (
+              <>
+                <span style={{ color: '#333' }}>
+                  预计完工：<b style={{ color: '#1677ff' }}>
+                    {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
+                  </b>
+                </span>
+                {(prediction.confidence != null) && (
+                  <span style={{ color: '#888', marginLeft: 4 }}>
+                    置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
+                      {prediction.confidence}%
+                    </b>
+                  </span>
+                )}
+                {prediction.reasons && prediction.reasons.length > 0 && (
+                  <span style={{ color: '#aaa', fontSize: 11, marginLeft: 4 }}>
+                    · {prediction.reasons[0]}
+                  </span>
+                )}
+              </>
+            ) : null}
+          </div>
         )}
         <Tabs
           activeKey={activeTab}

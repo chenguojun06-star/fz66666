@@ -104,6 +104,12 @@ public class IntelligenceController {
     private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
 
     @Autowired
+    private DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
+
+    @Autowired
+    private ProcessTemplateOrchestrator processTemplateOrchestrator;
+
+    @Autowired
     private AiAdvisorService aiAdvisorService;
 
     @Autowired
@@ -262,6 +268,30 @@ public class IntelligenceController {
     @GetMapping("/material-shortage")
     public Result<MaterialShortageResponse> materialShortage() {
         return Result.success(materialShortageOrchestrator.predict());
+    }
+
+    /**
+     * 交货期智能建议 — 根据工厂产能 + 在制负荷推荐合理交货天数
+     *
+     * @param factoryName   工厂名称（可空，空则按历史均值降级）
+     * @param orderQuantity 订单数量
+     */
+    @GetMapping("/delivery-date-suggestion")
+    public Result<DeliveryDateSuggestionResponse> deliveryDateSuggestion(
+            @RequestParam(value = "factoryName", required = false) String factoryName,
+            @RequestParam(value = "orderQuantity", required = false) Integer orderQuantity) {
+        return Result.success(deliveryDateSuggestionOrchestrator.suggest(factoryName, orderQuantity));
+    }
+
+    /**
+     * 工序模板AI补全 — 根据品类返回历史高频工序清单（含均价/均工时）
+     *
+     * @param category 款式品类（如 "男装衬衣"），可空表示全品类统计
+     */
+    @GetMapping("/process-template")
+    public Result<ProcessTemplateResponse> processTemplate(
+            @RequestParam(value = "category", required = false) String category) {
+        return Result.success(processTemplateOrchestrator.suggest(category));
     }
 
     /** AI 顾问状态检查 — 检查 AI API Key 是否已配置 */

@@ -6,7 +6,8 @@ import api, { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import { intelligenceApi, ProcessPriceHintResponse } from '@/services/production/productionApi';
+import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/production/productionApi';
+import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 
 import StyleStageControlBar from './StyleStageControlBar';
 
@@ -82,6 +83,11 @@ const StyleProcessTab: React.FC<Props> = ({
   const [priceHintLoading, setPriceHintLoading] = useState<Record<string | number, boolean>>({});
   const hintTimerRef = useRef<Record<string | number, ReturnType<typeof setTimeout>>>({});
 
+  // AI 工序补全状态
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiCategory, setAiCategory] = useState<string | undefined>(undefined);
+  const [aiLoading, setAiLoading] = useState(false);
+
   /** 防抖获取工序单价提示（延迟 600ms，避免每个字都请求） */
   const fetchPriceHint = useCallback((rowId: string | number, processName: string, standardTime?: number) => {
     if (hintTimerRef.current[rowId]) clearTimeout(hintTimerRef.current[rowId]);
@@ -105,6 +111,51 @@ const StyleProcessTab: React.FC<Props> = ({
       }
     }, 600);
   }, []);
+
+  /** AI 工序补全：按品类拉取高频工序并追加到表格 */
+  const handleAiTemplate = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const res = await intelligenceApi.getProcessTemplate(aiCategory) as any;
+      if (res?.code === 200 && Array.isArray(res.data?.processes) && res.data.processes.length > 0) {
+        const incoming: ProcessTemplateItem[] = res.data.processes;
+        let addedCount = 0;
+        setData(prev => {
+          const existingNames = new Set(prev.map(r => String(r.processName || '').trim()));
+          const base = prev.length;
+          const toAdd: StyleProcessWithSizePrice[] = incoming
+            .filter(p => !existingNames.has(String(p.processName || '').trim()))
+            .map((p, idx) => ({
+              id: -(Date.now() + idx) as unknown as number,
+              styleId: Number(styleId),
+              processCode: '',
+              processName: p.processName,
+              progressStage: p.progressStage ?? '',
+              price: p.suggestedPrice,
+              standardTime: p.avgStandardTime,
+              sortOrder: (base + idx + 1) * 10,
+            } as any));
+          addedCount = toAdd.length;
+          return [...prev, ...toAdd];
+        });
+        // 次帧提示（等 setData 完成）
+        setTimeout(() => {
+          if (addedCount > 0) {
+            message.success(`AI已补全 ${addedCount} 道工序（${res.data.category || aiCategory || '历史数据'} · ${res.data.sampleStyleCount ?? '?'} 个样本）`);
+          } else {
+            message.info('所有工序已存在，无需重复补全');
+          }
+        }, 0);
+        setAiOpen(false);
+      } else {
+        message.warning('暂无该品类的工序历史数据');
+      }
+    } catch {
+      message.error('AI补全失败，请稍后重试');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiCategory, styleId, message]);
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -896,6 +947,48 @@ const StyleProcessTab: React.FC<Props> = ({
           <Button onClick={handleAdd} disabled={Boolean(readOnly) || !processStartTime || loading || saving} type="primary">
             添加工序
           </Button>
+
+          {/* AI 工序补全按钮 */}
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            open={aiOpen}
+            onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
+            content={
+              <div style={{ width: 220 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>✨ AI工序补全</div>
+                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
+                  选择品类，AI 根据历史数据自动补全常见工序
+                </div>
+                <Select
+                  style={{ width: '100%', marginBottom: 8 }}
+                  placeholder="选择品类（可选）"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  value={aiCategory}
+                  onChange={setAiCategory}
+                  options={CATEGORY_CODE_OPTIONS}
+                />
+                <Button
+                  type="primary"
+                  block
+                  loading={aiLoading}
+                  disabled={aiLoading}
+                  onClick={handleAiTemplate}
+                >
+                  {aiLoading ? '补全中…' : '一键补全工序'}
+                </Button>
+              </div>
+            }
+          >
+            <Button
+              disabled={Boolean(readOnly) || !editMode || loading || saving}
+              icon={aiLoading ? <LoadingOutlined /> : <BulbOutlined />}
+            >
+              AI补全
+            </Button>
+          </Popover>
 
           {/* 添加码数按钮 */}
           <Popover
