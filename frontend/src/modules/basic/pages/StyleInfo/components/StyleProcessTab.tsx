@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Space, Select, Modal, App, Popover } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Input, InputNumber, Space, Select, Modal, App, Popover, Tag, Tooltip } from 'antd';
+import { DeleteOutlined, BulbOutlined, LoadingOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import { intelligenceApi, ProcessPriceHintResponse } from '@/services/production/productionApi';
 
 import StyleStageControlBar from './StyleStageControlBar';
 
@@ -75,6 +76,35 @@ const StyleProcessTab: React.FC<Props> = ({
   const [newSizeName, setNewSizeName] = useState('');
   const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
   const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+  // AI 工序单价提示状态
+  const [priceHints, setPriceHints] = useState<Record<string | number, ProcessPriceHintResponse | null>>({});
+  const [priceHintLoading, setPriceHintLoading] = useState<Record<string | number, boolean>>({});
+  const hintTimerRef = useRef<Record<string | number, ReturnType<typeof setTimeout>>>({});
+
+  /** 防抖获取工序单价提示（延迟 600ms，避免每个字都请求） */
+  const fetchPriceHint = useCallback((rowId: string | number, processName: string, standardTime?: number) => {
+    if (hintTimerRef.current[rowId]) clearTimeout(hintTimerRef.current[rowId]);
+    if (!processName || processName.trim().length < 1) {
+      setPriceHints(prev => ({ ...prev, [rowId]: null }));
+      return;
+    }
+    hintTimerRef.current[rowId] = setTimeout(async () => {
+      setPriceHintLoading(prev => ({ ...prev, [rowId]: true }));
+      try {
+        const res = await intelligenceApi.getProcessPriceHint(processName.trim(), standardTime) as any;
+        if (res?.code === 200 && res.data?.usageCount > 0) {
+          setPriceHints(prev => ({ ...prev, [rowId]: res.data as ProcessPriceHintResponse }));
+        } else {
+          setPriceHints(prev => ({ ...prev, [rowId]: null }));
+        }
+      } catch {
+        setPriceHints(prev => ({ ...prev, [rowId]: null }));
+      } finally {
+        setPriceHintLoading(prev => ({ ...prev, [rowId]: false }));
+      }
+    }, 600);
+  }, []);
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -256,6 +286,12 @@ const StyleProcessTab: React.FC<Props> = ({
 
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcess[];
     setEditMode(true);
+    // 进入编辑模式时，预加载所有已有工序名的 AI 单价提示
+    data.forEach((row, idx) => {
+      if (row.processName && row.id) {
+        setTimeout(() => fetchPriceHint(row.id!, row.processName, row.standardTime ?? undefined), idx * 150);
+      }
+    });
   };
 
   const exitEdit = () => {
@@ -412,6 +448,10 @@ const StyleProcessTab: React.FC<Props> = ({
     setData((prev) => prev.map((r) => {
       if (r.id !== id) return r;
       if (field !== 'price') {
+        // 工序名称变化时，联动触发 AI 单价提示
+        if (field === 'processName' && typeof value === 'string') {
+          fetchPriceHint(id, value, r.standardTime ?? undefined);
+        }
         return { ...r, [field]: value };
       }
       const nextPrice = toNumberSafe(value);
@@ -637,20 +677,58 @@ const StyleProcessTab: React.FC<Props> = ({
       ...(!hidePrice ? [{
         title: '工价(元)',
         dataIndex: 'price',
-        width: 130,
-        render: (text: number, record: StyleProcess) =>
-          editableMode ? (
-            <InputNumber
-              value={record.price}
-              min={0}
-              step={0.01}
-              prefix="¥"
-              style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'price', v)}
-            />
-          ) : (
-            `¥${toNumberSafe(text)}`
-          ),
+        width: 160,
+        render: (text: number, record: StyleProcess) => {
+          if (!editableMode) return `¥${toNumberSafe(text)}`;
+          const hint = priceHints[record.id!];
+          const loading = priceHintLoading[record.id!];
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <InputNumber
+                value={record.price}
+                min={0}
+                step={0.01}
+                prefix="¥"
+                style={{ width: '100%' }}
+                onChange={(v) => updateField(record.id!, 'price', v)}
+              />
+              {/* AI 单价提示卡片 */}
+              {loading && (
+                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <LoadingOutlined style={{ fontSize: 10 }} /> 查询历史...
+                </span>
+              )}
+              {!loading && hint && (
+                <Tooltip title={hint.reasoning}>
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      background: 'rgba(45,127,249,0.08)', borderRadius: 4,
+                      padding: '2px 6px', cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      updateField(record.id!, 'price', hint.suggestedPrice);
+                    }}
+                  >
+                    <BulbOutlined style={{ fontSize: 11, color: '#2D7FF9' }} />
+                    <span style={{ fontSize: 11, color: '#2D7FF9' }}>
+                      建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
+                    </span>
+                    <Tag
+                      color="blue"
+                      style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
+                    >
+                      采用
+                    </Tag>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                      均¥{Number(hint.avgPrice).toFixed(2)} · {hint.usageCount}款
+                    </span>
+                  </div>
+                </Tooltip>
+              )}
+            </div>
+          );
+        },
       }] : []),
       // 多码单价列（动态生成）
       ...(showSizePrices ? sizes.map((size) => ({

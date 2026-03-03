@@ -101,6 +101,9 @@ public class IntelligenceController {
     private MaterialShortageOrchestrator materialShortageOrchestrator;
 
     @Autowired
+    private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
+
+    @Autowired
     private AiAdvisorService aiAdvisorService;
 
     @Autowired
@@ -237,6 +240,20 @@ public class IntelligenceController {
     @GetMapping("/style-quote-suggestion")
     public Result<StyleQuoteSuggestionResponse> styleQuoteSuggestion(@RequestParam("styleNo") String styleNo) {
         return Result.success(styleQuoteSuggestionOrchestrator.suggest(styleNo));
+    }
+
+    /**
+     * 工序单价 AI 提示
+     * <p>输入工序名称，实时返回历史价格均值与智能建议定价，辅助工序表格填价。
+     *
+     * @param processName  工序名称（如"剪线"、"锁边"）
+     * @param standardTime 当前标准工时（秒），可选，用于工时差异智能提示
+     */
+    @GetMapping("/process-price-hint")
+    public Result<ProcessPriceHintResponse> processPriceHint(
+            @RequestParam("processName") String processName,
+            @RequestParam(value = "standardTime", required = false) Integer standardTime) {
+        return Result.success(processPriceHintOrchestrator.hint(processName, standardTime));
     }
 
     // ── 第五批：面料预测 + AI 顾问 ──

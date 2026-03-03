@@ -366,6 +366,27 @@ export interface FinanceAuditResponse {
   priceDeviations: PriceDeviation[];
 }
 
+/** 工序单价 AI 提示 — 历史记录 */
+export interface ProcessPriceHintRecord {
+  styleNo: string;
+  price: number;
+  machineType?: string;
+  standardTime?: number;
+}
+
+/** 工序单价 AI 提示响应 */
+export interface ProcessPriceHintResponse {
+  processName: string;
+  usageCount: number;
+  lastPrice: number;
+  avgPrice: number;
+  minPrice: number;
+  maxPrice: number;
+  suggestedPrice: number;
+  reasoning: string;
+  recentRecords: ProcessPriceHintRecord[];
+}
+
 export const intelligenceApi = {
   precheckScan: (payload: {
     orderId?: string;
@@ -529,6 +550,12 @@ export const intelligenceApi = {
   /** 款式报价建议（按款号聚合） */
   getStyleQuoteSuggestion: (styleNo: string) =>
     api.get<{ code: number; data: unknown }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
+
+  /** 工序单价 AI 提示 — 输入工序名称，返回历史均价与建议定价 */
+  getProcessPriceHint: (processName: string, standardTime?: number) =>
+    api.get<{ code: number; data: ProcessPriceHintResponse }>('/intelligence/process-price-hint', {
+      params: { processName, ...(standardTime != null ? { standardTime } : {}) },
+    }),
 
   /** 面料缺口预测 */
   getMaterialShortage: () =>
