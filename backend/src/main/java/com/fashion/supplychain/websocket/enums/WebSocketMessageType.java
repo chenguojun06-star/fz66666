@@ -44,6 +44,11 @@ public enum WebSocketMessageType {
     // 应用商店
     APP_ORDER_PENDING("app:order:pending", "应用商店新订单"),
 
+    // 智能预警
+    ORDER_OVERDUE("order:overdue", "订单逾期预警"),
+    QUALITY_ANOMALY("quality:anomaly", "质检异常AI预警"),
+    SCAN_REALTIME("scan:realtime", "实时扫码播报"),
+
     // 系统消息
     PING("ping", "心跳"),
     PONG("pong", "心跳响应"),

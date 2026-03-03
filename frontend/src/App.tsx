@@ -9,6 +9,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import WebSocketNotification from './components/common/WebSocketNotification';
+import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
@@ -158,6 +159,19 @@ const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
   const { modalWidth } = useViewport();
   const backgroundLocation = (location.state as any)?.backgroundLocation;
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
+
+  // ⌘K / Ctrl+K 全局搜索快捷键
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen(v => !v);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   React.useEffect(() => {
     const _w = window as any;
@@ -186,6 +200,7 @@ const AppRoutes: React.FC = () => {
   return (
     <>
       <WebSocketNotification />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
         <Route path={paths.login} element={<LoginGate />} />

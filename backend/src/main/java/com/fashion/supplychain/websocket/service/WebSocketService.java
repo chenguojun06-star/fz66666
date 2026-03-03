@@ -264,6 +264,45 @@ public class WebSocketService {
     }
 
     /**
+     * 广播 AI 质检异常预警（租户内广播）
+     */
+    public void broadcastQualityAnomaly(String orderNo, String processStageName,
+                                         double defectRate, String suggestion) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.QUALITY_ANOMALY,
+            Map.of(
+                "orderNo",       orderNo,
+                "stageName",     processStageName,
+                "defectRate",    defectRate,
+                "suggestion",    suggestion,
+                "timestamp",     System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.broadcast(message);
+        log.warn("[WebSocket] 质检异常预警: orderNo={}, stage={}, defectRate={}%",
+                orderNo, processStageName, defectRate);
+    }
+
+    /**
+     * 广播实时扫码播报（轻量级，用于 PC 端实时大屏）
+     */
+    public void broadcastScanRealtime(String orderNo, String styleNo,
+                                       String stageName, int quantity, String operatorName) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.SCAN_REALTIME,
+            Map.of(
+                "orderNo",      orderNo,
+                "styleNo",      styleNo,
+                "stageName",    stageName,
+                "quantity",     quantity,
+                "operatorName", operatorName != null ? operatorName : "",
+                "timestamp",    System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.broadcast(message);
+    }
+
+    /**
      * 广播刷新所有数据
      */
     public void broadcastRefreshAll(String reason) {

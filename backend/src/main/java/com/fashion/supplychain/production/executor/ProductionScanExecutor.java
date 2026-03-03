@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -80,6 +81,9 @@ public class ProductionScanExecutor {
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Autowired
+    private WebSocketService webSocketService;
 
     /**
      * 执行生产扫码（裁剪或生产工序）
@@ -300,6 +304,16 @@ public class ProductionScanExecutor {
                     sr.getQuantity(), sr.getOperatorId());
             scanRecordService.saveScanRecord(sr);
             log.info("[ScanSave] 扫码记录写入成功: recordId={}", sr.getId());
+            // 🔔 WebSocket实时播报：忽略失败，不阻断扫码流程
+            try {
+                webSocketService.broadcastScanRealtime(
+                    order.getOrderNo(),
+                    order.getStyleNo() != null ? order.getStyleNo() : "",
+                    progressStage != null ? progressStage : "",
+                    quantity,
+                    operatorName
+                );
+            } catch (Exception ignored) {}
 
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
             // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化

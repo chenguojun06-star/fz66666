@@ -83,6 +83,46 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe, user?.isSuperAdmin, notification, navigate]);
 
+  // 📦 实时扫码播报（所有已登录用户）
+  useEffect(() => {
+    return subscribe('scan:realtime', (msg) => {
+      const p = msg.payload as {
+        orderNo?: string;
+        styleNo?: string;
+        stageName?: string;
+        quantity?: number;
+        operatorName?: string;
+      };
+      notification.open({
+        message: '📦 实时扫码',
+        description: `订单 ${p.orderNo ?? '-'} · ${p.stageName ?? ''} · ${p.operatorName ?? '工人'} 完成 ${p.quantity ?? 0} 件`,
+        placement: 'bottomRight',
+        duration: 4,
+        style: { borderLeft: '4px solid #0ea5e9' },
+      });
+    });
+  }, [subscribe, notification]);
+
+  // ⚠️ AI质检异常预警（所有已登录用户）
+  useEffect(() => {
+    return subscribe('quality:anomaly', (msg) => {
+      const p = msg.payload as {
+        orderNo?: string;
+        stageName?: string;
+        defectRate?: number;
+        suggestion?: string;
+      };
+      const rateStr = p.defectRate != null ? `${(p.defectRate * 100).toFixed(1)}%` : '-';
+      notification.warning({
+        message: '⚠️ 质检异常预警',
+        description: `订单 ${p.orderNo ?? '-'} · ${p.stageName ?? ''} · 次品率 ${rateStr}${p.suggestion ? ` · ${p.suggestion}` : ''}`,
+        placement: 'topRight',
+        duration: 0,
+        style: { borderLeft: '4px solid #f97316' },
+      });
+    });
+  }, [subscribe, notification]);
+
   // 不渲染任何 DOM
   return null;
 };

@@ -620,6 +620,47 @@ export const intelligenceApi = {
     ),
 };
 
+// ─── ⌘K 全局搜索 ─────────────────────────────────────────────
+
+export interface GlobalSearchOrderItem {
+  id: number;
+  orderNo: string;
+  styleName: string;
+  styleNo: string;
+  factoryName: string;
+  status: string;
+  statusLabel: string;
+  progress: number;
+}
+
+export interface GlobalSearchStyleItem {
+  id: number;
+  styleNo: string;
+  styleName: string;
+  category: string;
+  coverUrl?: string;
+}
+
+export interface GlobalSearchWorkerItem {
+  id: string;
+  name: string;
+  phone: string;
+  role: string;
+  factoryName?: string;
+}
+
+export interface GlobalSearchResult {
+  query: string;
+  orders: GlobalSearchOrderItem[];
+  styles: GlobalSearchStyleItem[];
+  workers: GlobalSearchWorkerItem[];
+}
+
+export const globalSearchApi = {
+  search: (q: string) =>
+    api.get<{ code: number; data: GlobalSearchResult }>('/search/global', { params: { q } }),
+};
+
 export const materialPurchaseApi = {
   /**
    * 按订单查询采购记录，返回 arrivedQuantity / actualArrivalDate 等字段。
