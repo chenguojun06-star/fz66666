@@ -4,7 +4,7 @@
  * - 当天已显示过则不再重复弹出（localStorage 记录日期）
  * - 不点关闭不消失，必须手动确认
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Modal, Button, Spin, Badge } from 'antd';
 import {
   CheckCircleOutlined,
@@ -114,17 +114,21 @@ const DailyTodoModal: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [brief, setBrief] = useState<BriefData | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // 拉数据
   const fetchBrief = useCallback(async () => {
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     try {
-      const res = await api.get('/dashboard/daily-brief', { timeout: 6000 }) as ApiResult<BriefData>;
-      if (res.code === 200) setBrief(res.data ?? null);
+      const res = await api.get('/dashboard/daily-brief', { timeout: 6000, signal: ac.signal }) as ApiResult<BriefData>;
+      if (!ac.signal.aborted && res.code === 200) setBrief(res.data ?? null);
     } catch {
       // 网络失败时仍弹出，显示默认文案
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, []);
 
@@ -142,7 +146,10 @@ const DailyTodoModal: React.FC = () => {
 
     // 每分钟检查一次，精确捕捉 09:30
     const timer = setInterval(tryShow, 60 * 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      abortRef.current?.abort();
+    };
   }, [tryShow]);
 
   const handleClose = () => {

@@ -53,7 +53,7 @@ export default defineConfig({
       // CSP: unsafe-eval 供 ECharts v6 / Three.js (new Function) 使用
       // unsafe-inline 供 Ant Design 内联样式使用
       'Content-Security-Policy':
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob:;",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: https:;",
     },
     // HMR 配置：固定内网 IP，确保内网设备通过 192.168.2.248:5173 访问时热更新正常
     // ⚠️ 禁止修改 host 值：动态模块加载（React Router lazy）依赖此地址，修改会导致

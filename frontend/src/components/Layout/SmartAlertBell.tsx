@@ -99,15 +99,21 @@ const SmartAlertBell: React.FC = () => {
     events.length;
 
   // ── 拉取数据（每天只拉一次，展开时也重拉）──
+  const abortRef = useRef<AbortController | null>(null);
   const fetchData = useCallback(async () => {
     const today = new Date().toDateString();
     if (fetchedToday === today && brief) return; // 今天已拉过
+    // 取消前一个未完成请求，避免竞态
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     try {
       const [briefRes, eventsRes] = await Promise.allSettled([
-        api.get('/dashboard/daily-brief', { timeout: 5000 }) as Promise<ApiResult<BriefData>>,
-        api.get('/dashboard/urgent-events', { timeout: 3000 }) as Promise<ApiResult<UrgentEvent[]>>,
+        api.get('/dashboard/daily-brief', { timeout: 5000, signal: ac.signal }) as Promise<ApiResult<BriefData>>,
+        api.get('/dashboard/urgent-events', { timeout: 3000, signal: ac.signal }) as Promise<ApiResult<UrgentEvent[]>>,
       ]);
+      if (ac.signal.aborted) return;
       if (briefRes.status === 'fulfilled' && briefRes.value.code === 200) {
         setBrief(briefRes.value.data ?? null);
       }
@@ -116,7 +122,7 @@ const SmartAlertBell: React.FC = () => {
       }
       setFetchedToday(today);
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, [fetchedToday, brief]);
 
@@ -124,7 +130,10 @@ const SmartAlertBell: React.FC = () => {
   useEffect(() => {
     fetchData();
     const timer = setInterval(() => setFetchedToday(''), 10 * 60 * 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      abortRef.current?.abort();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

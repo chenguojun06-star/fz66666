@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -94,16 +96,43 @@ public class TenantFileController {
                             .contentLength(contentLength)
                             .body(resource);
                 } catch (Exception e) {
-                    log.warn("[COS] 流式获取失败，改用 302回退: tenantId={}, fileName={}, error={}",
+                    log.warn("[COS] 流式获取失败，改用预签名URL代理: tenantId={}, fileName={}, error={}",
                             tenantId, fileName, e.getMessage());
-                    // 回退：302 跳转预签名 URL
+                    // 回退：服务端代理下载预签名 URL 内容（避免 302 跳转后浏览器 ORB 拦截）
                     try {
                         String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
-                        return ResponseEntity.status(302)
-                                .header(HttpHeaders.LOCATION, presignedUrl)
-                                .build();
+                        URL cosUrl = new URL(presignedUrl);
+                        HttpURLConnection conn = (HttpURLConnection) cosUrl.openConnection();
+                        conn.setConnectTimeout(5000);
+                        conn.setReadTimeout(15000);
+                        conn.setRequestMethod("GET");
+                        int httpStatus = conn.getResponseCode();
+                        if (httpStatus != 200) {
+                            log.error("[COS] 预签名URL代理下载失败: status={}, url截断={}",
+                                    httpStatus, presignedUrl.substring(0, Math.min(80, presignedUrl.length())));
+                            conn.disconnect();
+                            return ResponseEntity.notFound().build();
+                        }
+                        // 从文件名推断 Content-Type（COS 可能返回 octet-stream）
+                        String proxyContentType = conn.getContentType();
+                        if (proxyContentType == null || proxyContentType.startsWith("application/octet-stream")) {
+                            String lowerName = fileName.toLowerCase();
+                            if (lowerName.endsWith(".png")) proxyContentType = "image/png";
+                            else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) proxyContentType = "image/jpeg";
+                            else if (lowerName.endsWith(".gif")) proxyContentType = "image/gif";
+                            else if (lowerName.endsWith(".webp")) proxyContentType = "image/webp";
+                            else if (lowerName.endsWith(".pdf")) proxyContentType = "application/pdf";
+                            else proxyContentType = "application/octet-stream";
+                        }
+                        long proxyLen = conn.getContentLengthLong();
+                        InputStreamResource proxyResource = new InputStreamResource(conn.getInputStream());
+                        var builder = ResponseEntity.ok()
+                                .header(HttpHeaders.CONTENT_TYPE, proxyContentType)
+                                .header(HttpHeaders.CACHE_CONTROL, "max-age=3600");
+                        if (proxyLen > 0) builder.contentLength(proxyLen);
+                        return builder.body(proxyResource);
                     } catch (Exception ex) {
-                        log.error("[COS] 预签名回退也失败: {}", ex.getMessage());
+                        log.error("[COS] 预签名URL代理也失败: {}", ex.getMessage());
                         return ResponseEntity.notFound().build();
                     }
                 }
