@@ -680,7 +680,7 @@ const IntelligenceCenter: React.FC = () => {
 
   return (
     <Layout>
-      <div className="cockpit-root">
+      <div className={`cockpit-root${isFullscreen ? ' cockpit-fullscreen' : ''}`} ref={rootRef}>
 
         {/* ╔══════════════════════════════════════════════╗
             ║   顶栏  标题 · 时钟 · 系统状态 · 刷新      ║
