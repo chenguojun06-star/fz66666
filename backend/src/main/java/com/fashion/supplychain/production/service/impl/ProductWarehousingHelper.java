@@ -587,20 +587,25 @@ public class ProductWarehousingHelper {
             return;
         }
         String styleNo = w.getStyleNo();
-        String color = null;
-        String size = null;
 
-        if (bundle != null) {
-            color = bundle.getColor();
-            size = bundle.getSize();
-        } else if (order != null) {
-            color = order.getColor();
-            size = order.getSize();
+        // ⚠️ 库存更新只允许从菲号（bundle）获取 color/size
+        // 禁止从 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
+        // 用于多码情景会写入错误的 SKU 条目（如：4码订单写出 S 码脏数据）
+        if (bundle == null) {
+            log.warn("[SKUStock] bundle 为 null，跳过 SKU 库存更新: warehousingId={}, styleNo={}, delta={}",
+                    w.getId(), styleNo, deltaQuantity);
+            return;
         }
+
+        String color = bundle.getColor();
+        String size = bundle.getSize();
 
         if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
             String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
             productSkuService.updateStock(skuCode, deltaQuantity);
+        } else {
+            log.warn("[SKUStock] bundle color/size 为空，跳过 SKU 库存更新: warehousingId={}, styleNo={}, color={}, size={}",
+                    w.getId(), styleNo, color, size);
         }
     }
 

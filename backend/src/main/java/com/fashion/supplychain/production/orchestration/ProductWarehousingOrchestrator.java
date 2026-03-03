@@ -973,38 +973,33 @@ public class ProductWarehousingOrchestrator {
         if (deltaQuantity == 0) {
             return;
         }
-        try {
-            String styleNo = w.getStyleNo();
-            String color = null;
-            String size = null;
+        String styleNo = w.getStyleNo();
+        String color = null;
+        String size = null;
 
-            if (bundle != null) {
-                color = bundle.getColor();
-                size = bundle.getSize();
-            } else if (order != null) {
-                color = order.getColor();
-                size = order.getSize();
-            }
-
-            // 如果bundle为null，尝试根据cuttingBundleId加载
-            if (color == null && StringUtils.hasText(w.getCuttingBundleId())) {
-                try {
-                    CuttingBundle b = cuttingBundleService.getById(w.getCuttingBundleId());
-                    if (b != null) {
-                        color = b.getColor();
-                        size = b.getSize();
-                    }
-                } catch (Exception ignored) {
+        if (bundle != null) {
+            color = bundle.getColor();
+            size = bundle.getSize();
+        } else if (StringUtils.hasText(w.getCuttingBundleId())) {
+            // bundle 对象未传入，通过 bundleId 加载
+            try {
+                CuttingBundle b = cuttingBundleService.getById(w.getCuttingBundleId());
+                if (b != null) {
+                    color = b.getColor();
+                    size = b.getSize();
                 }
+            } catch (Exception ignored) {
             }
+        }
+        // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
+        // 用于多码情景会写入错误的 SKU 条目
 
-            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
-                productSkuService.updateStock(skuCode, deltaQuantity);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to update SKU stock in orchestrator: warehousingId={}, delta={}, error={}", w.getId(),
-                    deltaQuantity, e.getMessage());
+        if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+            productSkuService.updateStock(skuCode, deltaQuantity);
+        } else {
+            log.warn("[SKUStock] 无法获取 color/size，跳过 SKU 库存更新: warehousingId={}, styleNo={}, delta={}",
+                    w.getId(), styleNo, deltaQuantity);
         }
     }
 
@@ -1032,7 +1027,19 @@ public class ProductWarehousingOrchestrator {
 
         // Decrement Stock
         if (current.getQualifiedQuantity() != null && current.getQualifiedQuantity() > 0) {
-            updateSkuStock(current, null, null, -current.getQualifiedQuantity());
+            // 必须加载菲号才能知道 color/size，否则无法回滚正确的 SKU 库存
+            CuttingBundle bundleForDelete = null;
+            if (StringUtils.hasText(current.getCuttingBundleId())) {
+                try {
+                    bundleForDelete = cuttingBundleService.getById(current.getCuttingBundleId());
+                } catch (Exception ignored) {}
+            }
+            if (bundleForDelete != null) {
+                updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());
+            } else {
+                log.warn("[SKUStock删除] 无法加载菲号，SKU库存不还原: warehousingId={}, bundleId={}",
+                        key, current.getCuttingBundleId());
+            }
         }
 
         if (StringUtils.hasText(orderId)) {
