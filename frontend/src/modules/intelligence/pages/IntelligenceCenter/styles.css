@@ -286,23 +286,23 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 130px;
-  padding: 16px 10px 12px;
+  min-height: 100px;
+  padding: 12px 10px 10px;
   cursor: pointer;
 }
 .c-kpi-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12px;
   color: #5a7890;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .c-kpi-val {
-  font-size: 52px;
-  font-weight: 800;
+  font-size: 36px;
+  font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -314,8 +314,8 @@
 .neon-cyan  { animation: neon-pulse-cyan  3s ease-in-out infinite; }
 .neon-green { animation: neon-pulse-green 3s ease-in-out infinite; }
 
-.c-kpi-unit { font-size: 14px; color: #3e637a; margin-top: 5px; }
-.c-kpi-sub  { font-size: 12px; color: #3e637a; margin-top: 6px; }
+.c-kpi-unit { font-size: 12px; color: #3e637a; margin-top: 4px; }
+.c-kpi-sub  { font-size: 11px; color: #3e637a; margin-top: 4px; }
 
 /* 危险 KPI 卡 */
 .c-kpi-danger { animation: danger-border-pulse 3s ease-in-out infinite; }
