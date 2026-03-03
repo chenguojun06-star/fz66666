@@ -30,6 +30,33 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class DefectHeatmapOrchestrator {
 
+    /** 标准父工序顺序 */
+    private static final List<String> STAGE_ORDER =
+            Arrays.asList("采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
+
+    /** 历史脏数据规范化映射：子工序名 / 旧写法 → 标准父工序 */
+    private static final Map<String, String> NORMALIZE;
+    static {
+        Map<String, String> m = new HashMap<>();
+        // 质检系列
+        m.put("质检领取", "质检"); m.put("质检验收", "质检");
+        m.put("质检确认", "质检"); m.put("质检", "质检");
+        // 入库系列
+        m.put("仓库入库", "入库"); m.put("入库", "入库");
+        // 二次工艺子工序 → 二次工艺
+        m.put("绣花", "二次工艺"); m.put("印花", "二次工艺");
+        m.put("烟洗", "二次工艺"); m.put("压花", "二次工艺");
+        m.put("洗水", "二次工艺");
+        NORMALIZE = Collections.unmodifiableMap(m);
+    }
+
+    /** 规范化：已知子工序/旧写法→父工序；不在 STAGE_ORDER 里的返回 null（过滤掉） */
+    private String normalizeStage(String raw) {
+        if (raw == null) return null;
+        String mapped = NORMALIZE.getOrDefault(raw, raw);
+        return STAGE_ORDER.contains(mapped) ? mapped : null;
+    }
+
     @Autowired
     private ScanRecordService scanRecordService;
 
@@ -70,13 +97,13 @@ public class DefectHeatmapOrchestrator {
                             o.getFactoryName() != null ? o.getFactoryName() : "未分配"));
         }
 
-        // 收集父工序（progressStage）和工厂名——按预定义顺序排序
-        List<String> stageOrder = Arrays.asList("采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
+        // 收集父工序（progressStage 规范化后）和工厂名——按预定义顺序排序
         List<String> processes = scans.stream()
-                .map(ScanRecord::getProgressStage).filter(Objects::nonNull)
+                .map(s -> normalizeStage(s.getProgressStage()))
+                .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.comparingInt(s -> {
-                    int idx = stageOrder.indexOf(s);
+                    int idx = STAGE_ORDER.indexOf(s);
                     return idx < 0 ? 999 : idx;
                 }))
                 .collect(Collectors.toList());
@@ -95,8 +122,8 @@ public class DefectHeatmapOrchestrator {
         int totalDefects = 0;
 
         for (ScanRecord s : scans) {
-            // 使用 progressStage(父工序)，不用 processName(子工序)
-            String pName = s.getProgressStage();
+            // 规范化后取父工序（过滤脏数据：质检领取/质检验收/绣花/下单等历史错误写入）
+            String pName = normalizeStage(s.getProgressStage());
             String fName = orderToFactory.getOrDefault(s.getOrderId(), "未分配");
             if (pName == null || !processIdx.containsKey(pName) || !factoryIdx.containsKey(fName)) continue;
 
@@ -132,7 +159,7 @@ public class DefectHeatmapOrchestrator {
         Map<String, int[]> byProcess = new HashMap<>();
         Map<String, int[]> byFactory = new HashMap<>();
         for (ScanRecord s : scans) {
-            String pName = s.getProgressStage(); // 用父工序
+            String pName = normalizeStage(s.getProgressStage()); // 规范化后用父工序
             String fName = orderToFactory.getOrDefault(s.getOrderId(), "未分配");
             if (pName != null) {
                 int[] ps = byProcess.computeIfAbsent(pName, k -> new int[]{0, 0});
