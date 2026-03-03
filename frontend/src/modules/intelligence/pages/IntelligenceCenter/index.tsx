@@ -34,11 +34,13 @@ const LiveDot: React.FC<{ color?: string; size?: number }> = ({ color = '#39ff14
 const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; height?: number }> = ({
   pts, color = '#00e5ff', width = 160, height = 44,
 }) => {
-  if (!pts.length) return null;
-  const max = Math.max(...pts, 1);
-  const xs = pts.map((_, i) => (i / Math.max(pts.length - 1, 1)) * width);
-  const ys = pts.map(v => height - (v / max) * (height - 4) - 2);
-  const poly = pts.map((_, i) => `${xs[i]},${ys[i]}`).join(' ');
+  const safePts = pts.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));
+  if (!safePts.length) return null;
+  const pts_ = safePts;
+  const max = Math.max(...pts_, 1);
+  const xs = pts_.map((_, i) => (i / Math.max(pts_.length - 1, 1)) * width);
+  const ys = pts_.map(v => height - (v / max) * (height - 4) - 2);
+  const poly = pts_.map((_, i) => `${xs[i]},${ys[i]}`).join(' ');
   const area = `${xs[0]},${height} ${poly} ${xs[xs.length - 1]},${height}`;
   return (
     <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
@@ -51,9 +53,9 @@ const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; heigh
       <polygon points={area} fill="url(#sg)" />
       <polyline points={poly} fill="none" stroke={color} strokeWidth={2}
         strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((v, i) => (
-        <circle key={i} cx={xs[i]} cy={ys[i]} r={i === pts.length - 1 ? 4 : 2.5}
-          fill={color} opacity={i === pts.length - 1 ? 1 : 0.6} />
+      {pts_.map((v, i) => (
+        <circle key={i} cx={xs[i]} cy={ys[i]} r={i === pts_.length - 1 ? 4 : 2.5}
+          fill={color} opacity={i === pts_.length - 1 ? 1 : 0.6} />
       ))}
     </svg>
   );
@@ -696,7 +698,7 @@ const IntelligenceCenter: React.FC = () => {
               <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
             </div>
             <div style={{ margin: '6px 0 4px' }}>
-              <Sparkline pts={(pulse?.timeline ?? []).map(p => p.count)} color="#00e5ff" width={340} height={52} />
+              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
               <div className="c-sparkline-label">
                 {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
               </div>
