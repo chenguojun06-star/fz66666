@@ -224,11 +224,28 @@ public class NlQuerySmartHandlers {
             sb.append(String.format("• 今日扫码：%d 件 | 活跃工人：%d | 活跃工厂：%d\n",
                     p.getTodayScanQty(), p.getActiveWorkers(), p.getActiveFactories()));
             sb.append(String.format("• 每小时速率：%.0f 件/h\n", p.getScanRatePerHour()));
-            List<LivePulseResponse.StagnantFactory> stagnant = p.getStagnantFactories();
-            if (stagnant != null && !stagnant.isEmpty()) {
-                sb.append("• ⏸ 停滞工厂：\n");
-                for (LivePulseResponse.StagnantFactory sf : stagnant) {
-                    sb.append(String.format("    %s — 已沉默 %d 分钟\n", sf.getFactoryName(), sf.getMinutesSilent()));
+
+            // 各工厂实时活跃状态
+            List<LivePulseResponse.FactoryActivity> activities = p.getFactoryActivity();
+            if (activities != null && !activities.isEmpty()) {
+                long stagnantCnt = activities.stream().filter(f -> !f.isActive()).count();
+                sb.append(String.format("• 工厂活跃情况（共 %d 家今日有生产，%d 家当前停滞）：\n",
+                        activities.size(), stagnantCnt));
+                for (LivePulseResponse.FactoryActivity fa : activities) {
+                    long mins = fa.getMinutesSinceLastScan();
+                    String timeDesc = mins < 1 ? "刚刚" : mins < 60
+                            ? mins + "分钟前" : (mins / 60) + "h" + (mins % 60) + "m前";
+                    String statusIcon = fa.isActive() ? "🟢" : mins < 90 ? "🟡" : "🔴";
+                    sb.append(String.format("  %s %-12s — 最近扫码：%s，今日 %d 件\n",
+                            statusIcon, fa.getFactoryName(), timeDesc, fa.getTodayQty()));
+                }
+            } else {
+                List<LivePulseResponse.StagnantFactory> stagnant = p.getStagnantFactories();
+                if (stagnant != null && !stagnant.isEmpty()) {
+                    sb.append("• ⏸ 停滞工厂：\n");
+                    for (LivePulseResponse.StagnantFactory sf : stagnant) {
+                        sb.append(String.format("    %s — 已沉默 %d 分钟\n", sf.getFactoryName(), sf.getMinutesSilent()));
+                    }
                 }
             }
             resp.setAnswer(sb.toString().trim());

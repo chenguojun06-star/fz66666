@@ -122,8 +122,9 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "工厂", "车间", "哪个厂", "哪家")) {
             return smartHandlers.handleFactoryRankingQuery();
         }
-        // 11) 产能/脉搏
-        if (containsAny(question, "产能", "负荷", "脉搏", "忙不忙", "实时")) {
+        // 11) 产能/脉搏/停工停滞
+        if (containsAny(question, "产能", "负荷", "脉搏", "忙不忙", "实时",
+                "停工", "停滞", "沉默", "没有扫码", "停产", "哪些工厂", "工厂状态")) {
             return smartHandlers.handlePulseQuery();
         }
         // 12) 员工效率（升级为多维评估）
