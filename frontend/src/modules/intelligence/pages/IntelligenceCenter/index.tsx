@@ -699,7 +699,7 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第二行：脉搏 + 排行 + 活跃订单滚动面板        ║
+            ║   第二行：脉搏(左) + 活跃订单(中) + 排行(右)    ║
             ╙════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-3">
 
@@ -735,7 +735,10 @@ const IntelligenceCenter: React.FC = () => {
             )}
           </div>
 
-          {/* 工厂绩效排行 */}
+          {/* 活跃订单实时滚动面板（中间） */}
+          <OrderScrollPanel orders={orders} />
+
+          {/* 工厂绩效排行（右侧） */}
           <div className="c-card">
             <div className="c-card-title">
               🏆 工厂绩效排行榜
@@ -756,9 +759,6 @@ const IntelligenceCenter: React.FC = () => {
               ))
             ) : <div className="c-empty">暂无排行数据</div>}
           </div>
-
-          {/* 活跃订单实时滚动面板 */}
-          <OrderScrollPanel orders={orders} />
 
         </div>
 
