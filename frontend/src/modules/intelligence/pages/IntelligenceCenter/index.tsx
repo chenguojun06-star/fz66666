@@ -307,6 +307,7 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
       content={<OrderPop order={order} />}
       mouseEnterDelay={0.1}
       mouseLeaveDelay={0.05}
+      getPopupContainer={() => (document.fullscreenElement as HTMLElement) || document.body}
     >
       <div className="c-order-row">
         <div className="c-order-row-main">
@@ -733,7 +734,7 @@ const IntelligenceCenter: React.FC = () => {
         <div className="cockpit-grid-6">
 
           {/* 今日生产扫码量 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />今日扫码量</div>
             <div className="c-kpi-val cyan neon-cyan"><AnimatedNum val={pulse?.todayScanQty?.toLocaleString() ?? '—'} /></div>
@@ -744,7 +745,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
           {/* 活跃工厂 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />活跃工厂</div>
             <div className="c-kpi-val green neon-green"><AnimatedNum val={pulse?.activeFactories ?? '—'} /></div>
@@ -755,7 +756,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
           {/* 供应链健康 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={healthPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={healthPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color={grade2color(health?.grade ?? '')} />供应链健康</div>
             <div className="c-kpi-val" style={{ color: grade2color(health?.grade ?? ''), textShadow: `0 0 18px ${grade2color(health?.grade ?? '')}88` }}>
@@ -768,7 +769,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
           {/* 停工预警 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={stagnantPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={stagnantPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
               <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14'} />
@@ -788,7 +789,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
           {/* 面料缺口 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={shortagePop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={shortagePop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${(shortage?.shortageItems?.length ?? 0) > 0 ? 'c-kpi-warn' : ''}`}>
             <div className="c-kpi-label">
               <LiveDot size={7} color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
@@ -808,7 +809,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
           {/* 待处理通知 */}
-          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={notifyPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
+          <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={notifyPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color="#7c4dff" />待处理通知</div>
             <div className="c-kpi-val purple"><AnimatedNum val={notify?.pendingCount ?? '—'} /></div>
