@@ -280,6 +280,8 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   );
 };
 
+const fmtD = (d?: string) => (d ? d.slice(5, 10) : '--');
+
 const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   const prog = Number(order.productionProgress) || 0;
   const daysLeft = order.plannedEndDate
@@ -298,19 +300,25 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
       mouseLeaveDelay={0.05}
     >
       <div className="c-order-row">
-        <span className="c-order-no">{order.orderNo}</span>
-        <span className="c-order-factory">{order.factoryName}</span>
-        <div className="c-order-bar-wrap">
-          <div className="c-order-bar" style={{ width: `${prog}%`, background: riskColor }} />
+        <div className="c-order-row-main">
+          <span className="c-order-no">{order.orderNo}</span>
+          <span className="c-order-factory">{order.factoryName}</span>
+          <div className="c-order-bar-wrap">
+            <div className="c-order-bar" style={{ width: `${prog}%`, background: riskColor }} />
+          </div>
+          <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
+          {daysLeft !== null && (
+            <span className="c-order-days" style={{
+              color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
+            }}>
+              {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
+            </span>
+          )}
         </div>
-        <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
-        {daysLeft !== null && (
-          <span className="c-order-days" style={{
-            color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
-          }}>
-            {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
-          </span>
-        )}
+        <div className="c-order-dates">
+          <span>下单 {fmtD(order.createTime)}</span>
+          <span>交期 {fmtD(order.plannedEndDate)}</span>
+        </div>
       </div>
     </Popover>
   );
@@ -390,7 +398,7 @@ function useCockpit() {
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
-      orders: orderResult, loading: false,
+      orders: orderResult.filter(o => o.status !== 'completed'), loading: false,
     });
   }, []);
   useEffect(() => { load(); }, [load]);

@@ -576,13 +576,26 @@
 /* 每行订单 */
 .c-order-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 4px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 4px;
   border-bottom: 1px solid rgba(0,229,255,0.05);
   cursor: pointer;
   transition: background 0.18s;
   border-radius: 4px;
+}
+.c-order-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.c-order-dates {
+  display: flex;
+  gap: 10px;
+  padding-left: 2px;
+  font-size: 9.5px;
+  color: #2d4a5a;
+  letter-spacing: 0.2px;
 }
 .c-order-row:hover {
   background: rgba(0,229,255,0.05);
