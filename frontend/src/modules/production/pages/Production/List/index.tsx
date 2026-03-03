@@ -1043,7 +1043,7 @@ const ProductionList: React.FC = () => {
               <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
               {smartHints.urgentCount > 0 && (
                 <span style={{ color: '#d46b08' }}>
-                  📅 今日有 <strong>{smartHints.urgentCount}</strong> 单陰3天内交货
+                  📅 今日有 <strong>{smartHints.urgentCount}</strong> 单需3天内交货
                 </span>
               )}
               {smartHints.urgentCount > 0 && smartHints.behindCount > 0 && <span style={{ color: '#d9d9d9' }}>·</span>}
