@@ -153,7 +153,7 @@
   margin-top: 2px;
 }
 
-/* 告警 / OK 徽标 */
+/* 告警呼吸徽标 */
 .cockpit-alert-badge {
   display: flex;
   align-items: center;
@@ -161,11 +161,11 @@
   font-size: 12px;
   font-weight: 700;
   color: #ff4136;
-  background: rgba(255,65,54,0.12);
-  border: 1px solid rgba(255,65,54,0.4);
+  background: rgba(255,65,54,0.1);
+  border: 1px solid rgba(255,65,54,0.35);
   padding: 4px 10px;
   border-radius: 6px;
-  animation: blink-alert 1.6s ease-in-out infinite;
+  animation: blink-alert 2.8s ease-in-out infinite;
 }
 .cockpit-ok-badge {
   display: flex;
@@ -219,8 +219,9 @@
    网格布局
 ─────────────────────────────────────────────────── */
 .cockpit-grid-6   { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 16px 24px 12px; }
-.cockpit-grid-2   { display: grid; grid-template-columns: 1fr 1fr;        gap: 12px; padding: 0  24px 12px; }
-.cockpit-grid-5-7 { display: grid; grid-template-columns: 5fr 7fr;        gap: 12px; padding: 0  24px 12px; }
+.cockpit-grid-3   { display: grid; grid-template-columns: 1fr 1fr 1fr;      gap: 12px; padding: 0  24px 12px; }
+.cockpit-grid-2   { display: grid; grid-template-columns: 1fr 1fr;          gap: 12px; padding: 0  24px 12px; }
+.cockpit-grid-5-7 { display: grid; grid-template-columns: 5fr 7fr;          gap: 12px; padding: 0  24px 12px; }
 
 /* ────────────────────────────────────────────────
    通用卡片
@@ -239,15 +240,15 @@
   border-color: rgba(0,229,255,0.22);
   box-shadow: 0 0 20px rgba(0,229,255,0.06);
 }
-/* 顶部扫描光线 */
+/* 卡片顶部恼光线（非常细轻，12s平滑） */
 .c-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, #00e5ff88 40%, #00e5ffcc 50%, #00e5ff88 60%, transparent 100%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #00e5ff33 40%, #00e5ff55 50%, #00e5ff33 60%, transparent 100%);
   background-size: 250% 100%;
-  animation: scan-top 4s linear infinite;
+  animation: scan-top 12s linear infinite;
 }
 
 .c-card-title {
@@ -317,28 +318,29 @@
 .c-kpi-sub  { font-size: 12px; color: #3e637a; margin-top: 6px; }
 
 /* 危险 KPI 卡 */
-.c-kpi-danger { animation: danger-border-pulse 2s ease-in-out infinite; }
+.c-kpi-danger { animation: danger-border-pulse 3s ease-in-out infinite; }
 .c-kpi-danger .c-card-title { color: rgba(255,65,54,0.6); }
-.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #ff413688, #ff4136cc, #ff413688, transparent); }
+.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #ff413644, #ff413666, #ff413644, transparent); }
 
 /* 预警 KPI 卡 */
-.c-kpi-warn { animation: warn-border-pulse 2.5s ease-in-out infinite; }
-.c-kpi-warn::before { background: linear-gradient(90deg, transparent, #f7a60088, #f7a600cc, #f7a60088, transparent); }
+.c-kpi-warn { animation: warn-border-pulse 3.5s ease-in-out infinite; }
+.c-kpi-warn::before { background: linear-gradient(90deg, transparent, #f7a60044, #f7a60066, #f7a60044, transparent); }
 
 /* 闪烁文字 */
-.blink-text { animation: blink-alert 1.4s ease-in-out infinite; color: #ff4136; }
+.blink-text { animation: blink-alert 2.8s ease-in-out infinite; color: #ff4136; }
 
 /* ────────────────────────────────────────────────
    实时生产脉搏 (扫描线卡片)
 ─────────────────────────────────────────────────── */
+/* 卡片扫描线 double 动画（更轻柔） */
 .c-scanline-card::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.25), transparent);
   top: -1px;
-  animation: scan-top 6s linear infinite;
+  animation: scan-top 10s linear infinite;
   pointer-events: none;
 }
 
@@ -364,12 +366,13 @@
   padding: 4px 0;
   font-size: 12px;
 }
+/* 唅岁工厂告警点（呼吸） */
 .c-stagnant-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
   background: #ff4136;
   flex-shrink: 0;
-  animation: dot-warn-blink 1.2s ease-in-out infinite;
+  animation: dot-warn-blink 2s ease-in-out infinite;
 }
 .c-stagnant-name { color: #e8d8d0; flex: 1; font-size: 13px; }
 .c-stagnant-time { color: #ff4136; font-size: 12px; }
@@ -484,7 +487,7 @@
 .c-heal-dot   { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .dot-ok    { background: #39ff14; box-shadow: 0 0 5px #39ff14; }
 .dot-fixed { background: #00e5ff; box-shadow: 0 0 5px #00e5ff; }
-.dot-warn  { background: #f7a600; animation: dot-warn-blink 1.5s ease-in-out infinite; }
+.dot-warn  { background: #f7a600; animation: dot-warn-blink 2s ease-in-out infinite; }
 .c-heal-name   { font-weight: 600; color: #b0c8d8; width: 125px; flex-shrink: 0; font-size: 13px; }
 .c-heal-detail { flex: 1; color: #4a6a7a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 
@@ -560,8 +563,193 @@
 .severity-normal   { color: #39ff14; }
 
 /* ────────────────────────────────────────────────
-   KPI 悬浮详情卡片（Popover 黑科技主题）
+   活跃订单滚动面板
 ──────────────────────────────────────────────── */
+
+/* 滚动容器：隐藏滚动条，高度固定 */
+.c-orders-scroll {
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 每行订单 */
+.c-order-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(0,229,255,0.05);
+  cursor: pointer;
+  transition: background 0.18s;
+  border-radius: 4px;
+}
+.c-order-row:hover {
+  background: rgba(0,229,255,0.05);
+}
+.c-order-no {
+  font-size: 11px;
+  color: #6a9aaa;
+  width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.c-order-factory {
+  font-size: 11px;
+  color: #3a5470;
+  width: 65px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.c-order-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.c-order-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+.c-order-pct {
+  font-size: 11px;
+  font-weight: 700;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.c-order-days {
+  font-size: 10px;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ────────────────────────────────────────────────
+   订单悬浮详情卡（cockpit-order-pop）
+──────────────────────────────────────────────── */
+
+.cockpit-order-pop .ant-popover-inner {
+  background: rgba(3, 9, 22, 0.97) !important;
+  border: 1px solid rgba(0,229,255,0.25) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(0,229,255,0.06) inset !important;
+  padding: 0 !important;
+}
+.cockpit-order-pop .ant-popover-arrow::before,
+.cockpit-order-pop .ant-popover-arrow::after {
+  background: rgba(3, 9, 22, 0.97) !important;
+  border-color: rgba(0,229,255,0.25) !important;
+}
+.cockpit-order-pop .ant-popover-inner-content { padding: 0 !important; }
+
+/* 订单弹出内容 */
+.order-pop-body {
+  min-width: 280px;
+  max-width: 340px;
+  padding: 16px 20px 14px;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace, 'PingFang SC', system-ui, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+.order-pop-body::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, #00e5ff66, transparent);
+  background-size: 200% 100%;
+  animation: scan-top 6s linear infinite;
+}
+.order-pop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(0,229,255,0.1);
+}
+.order-pop-no {
+  font-size: 13px;
+  font-weight: 800;
+  color: #b8d8e8;
+  letter-spacing: 0.5px;
+}
+.order-pop-days {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.order-pop-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #3a5470;
+  margin-bottom: 12px;
+}
+
+/* 工序进度条 */
+.order-pop-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.order-pop-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.order-pop-stage-label {
+  width: 28px;
+  color: #3a5470;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.order-pop-stage-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.order-pop-stage-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.order-pop-stage-pct {
+  width: 32px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* AI 预测区域 */
+.order-pop-ai {
+  font-size: 12px;
+  color: #b8a0f0;
+  background: rgba(124,77,255,0.08);
+  border: 1px solid rgba(124,77,255,0.2);
+  border-left: 3px solid #7c4dff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  line-height: 1.65;
+}
 
 /* Popover 内层黑科技风格 */
 .cockpit-kpi-pop .ant-popover-inner {

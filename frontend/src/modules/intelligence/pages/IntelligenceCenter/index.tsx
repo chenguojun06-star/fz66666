@@ -4,12 +4,13 @@ import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
 } from '@ant-design/icons';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi, productionOrderApi } from '@/services/production/productionApi';
 import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse,
 } from '@/services/production/productionApi';
+import type { ProductionOrder } from '@/types/production';
 import Layout from '@/components/Layout';
 import './styles.css';
 
@@ -78,6 +79,140 @@ const KpiPop: React.FC<{
   </div>
 );
 
+/* ─── 订单滚动面板相关 ─── */
+const STAGE_FIELDS = [
+  { key: 'procurementCompletionRate', label: '采购' },
+  { key: 'cuttingCompletionRate',     label: '裁剪' },
+  { key: 'sewingCompletionRate',      label: '车缝' },
+  { key: 'qualityCompletionRate',     label: '质检' },
+  { key: 'warehousingCompletionRate', label: '入库' },
+] as const;
+
+const getAiTip = (prog: number, daysLeft: number | null): string => {
+  if (prog >= 95) return '即将完成，建议提前安排入库验收';
+  if (daysLeft !== null && daysLeft < 0) return `已逾期 ${-daysLeft} 天，建议立即联系工厂加急处理`;
+  if (daysLeft !== null && daysLeft <= 3 && prog < 80) return `交期仅剩 ${daysLeft} 天，进度 ${prog}%，建议安排加班追单`;
+  if (daysLeft !== null && daysLeft <= 7 && prog < 50) return `本周内到期，进度 ${prog}% 甄1低，存在延交风险`;
+  if (prog < 20 && daysLeft !== null && daysLeft < 14) return '进度偏低，建议联系工厂确认是否有阔碍';
+  return `当前进度 ${prog}%，生产节奏正常，预计可按时交货`;
+};
+
+const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
+  const prog = Number(order.productionProgress) || 0;
+  const daysLeft = order.plannedEndDate
+    ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
+    : null;
+  const aiTip = getAiTip(prog, daysLeft);
+  return (
+    <div className="order-pop-body">
+      <div className="order-pop-header">
+        <span className="order-pop-no">{order.orderNo}</span>
+        {daysLeft !== null && (
+          <span className="order-pop-days" style={{
+            color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
+          }}>
+            {daysLeft < 0 ? `⚠ 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
+          </span>
+        )}
+      </div>
+      <div className="order-pop-meta">
+        <span>🏭 {order.factoryName}</span>
+        <span>👗 {order.styleName}</span>
+        <span>📦 {order.orderQuantity} 件</span>
+      </div>
+      <div className="order-pop-stages">
+        {STAGE_FIELDS.map(({ key, label }) => {
+          const pct = Math.min(100, Math.max(0, Number((order as any)[key]) || 0));
+          const c = pct >= 100 ? '#39ff14' : pct >= 60 ? '#00e5ff' : pct >= 30 ? '#f7a600' : '#2a4455';
+          return (
+            <div key={key} className="order-pop-stage-row">
+              <span className="order-pop-stage-label">{label}</span>
+              <div className="order-pop-stage-bar-wrap">
+                <div className="order-pop-stage-bar" style={{ width: `${pct}%`, background: c }} />
+              </div>
+              <span className="order-pop-stage-pct" style={{ color: c }}>{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="order-pop-ai">🤖 AI：{aiTip}</div>
+    </div>
+  );
+};
+
+const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
+  const prog = Number(order.productionProgress) || 0;
+  const daysLeft = order.plannedEndDate
+    ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
+    : null;
+  const riskColor = daysLeft !== null && daysLeft < 0 ? '#ff4136'
+    : daysLeft !== null && daysLeft <= 3 ? '#f7a600'
+    : prog < 20 ? '#f7a600'
+    : '#39ff14';
+  return (
+    <Popover
+      overlayClassName="cockpit-order-pop"
+      placement="left"
+      content={<OrderPop order={order} />}
+      mouseEnterDelay={0.1}
+      mouseLeaveDelay={0.05}
+    >
+      <div className="c-order-row">
+        <span className="c-order-no">{order.orderNo}</span>
+        <span className="c-order-factory">{order.factoryName}</span>
+        <div className="c-order-bar-wrap">
+          <div className="c-order-bar" style={{ width: `${prog}%`, background: riskColor }} />
+        </div>
+        <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
+        {daysLeft !== null && (
+          <span className="c-order-days" style={{
+            color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
+          }}>
+            {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
+          </span>
+        )}
+      </div>
+    </Popover>
+  );
+};
+
+const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || orders.length < 6) return;
+    const id = setInterval(() => {
+      if (pausedRef.current) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
+        el.scrollTop = 0;
+      } else {
+        el.scrollTop += 1;
+      }
+    }, 40);
+    return () => clearInterval(id);
+  }, [orders]);
+  return (
+    <div className="c-card">
+      <div className="c-card-title">
+        <LiveDot size={7} />
+        活跃订单实时滚动
+        <span className="c-card-badge cyan-badge">{orders.length} 单进行中</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停嵊示详情 →</span>
+      </div>
+      <div
+        ref={scrollRef}
+        className="c-orders-scroll"
+        onMouseEnter={() => { pausedRef.current = true; }}
+        onMouseLeave={() => { pausedRef.current = false; }}
+      >
+        {orders.map(o => <OrderRow key={String(o.id)} order={o} />)}
+        {!orders.length && <div className="c-empty">暂无进行中订单</div>}
+      </div>
+    </div>
+  );
+};
+
 /* ─── 数据 hook ─── */
 interface CockpitData {
   pulse:   LivePulseResponse | null;
@@ -88,29 +223,34 @@ interface CockpitData {
   ranking: FactoryLeaderboardResponse | null;
   shortage: MaterialShortageResult | null;
   healing: SelfHealingResponse | null;
+  orders: ProductionOrder[];
   loading: boolean;
 }
 
 function useCockpit() {
   const [data, setData] = useState<CockpitData>({
     pulse: null, health: null, notify: null, workers: null,
-    heatmap: null, ranking: null, shortage: null, healing: null, loading: true,
+    heatmap: null, ranking: null, shortage: null, healing: null, orders: [], loading: true,
   });
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rOrders] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
         intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
+        productionOrderApi.list({ pageSize: 50 } as any),
       ]);
     const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
       r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
+    const orderResult: ProductionOrder[] = rOrders.status === 'fulfilled'
+      ? ((rOrders.value as any)?.data?.records ?? (rOrders.value as any)?.records ?? [])
+      : [];
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
-      loading: false,
+      orders: orderResult, loading: false,
     });
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -151,7 +291,7 @@ const IntelligenceCenter: React.FC = () => {
     finally { setChatLoading(false); }
   };
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, orders } = data;
 
   /* 派生警报数量 */
   const alertCount = (pulse?.stagnantFactories?.length ?? 0) + (shortage?.shortageItems?.length ?? 0);
@@ -396,9 +536,9 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第二行：实时脉搏折线 + 工厂排行榜          ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div className="cockpit-grid-2">
+            ║   第二行：脉搏 + 排行 + 活跃订单滚动面板        ║
+            ╙════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-3">
 
           {/* 实时生产脉搏 */}
           <div className="c-card c-scanline-card">
@@ -453,6 +593,9 @@ const IntelligenceCenter: React.FC = () => {
               ))
             ) : <div className="c-empty">暂无排行数据</div>}
           </div>
+
+          {/* 活跃订单实时滚动面板 */}
+          <OrderScrollPanel orders={orders} />
 
         </div>
 
