@@ -573,54 +573,50 @@
   position: relative;
 }
 
-/* 每行订单 */
+/* 每行订单 ── 三列：工厂左 | 订单+进度条中 | %+天数右 */
 .c-order-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 5px 4px;
+  padding: 6px 4px;
   border-bottom: 1px solid rgba(0,229,255,0.05);
   cursor: pointer;
   transition: background 0.18s;
   border-radius: 4px;
+}
+.c-order-row:hover {
+  background: rgba(0,229,255,0.05);
 }
 .c-order-row-main {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.c-order-dates {
-  display: flex;
-  gap: 10px;
-  padding-left: 2px;
-  font-size: 9.5px;
-  color: #2d4a5a;
-  letter-spacing: 0.2px;
+/* 左：工厂名 */
+.c-order-factory {
+  font-size: 11px;
+  color: #5c9abf;
+  font-weight: 500;
+  width: 58px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.c-order-row:hover {
-  background: rgba(0,229,255,0.05);
+/* 中：订单号 + 进度条 + 日期 */
+.c-order-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .c-order-no {
   font-size: 11px;
   color: #6a9aaa;
-  width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
-.c-order-factory {
-  font-size: 11px;
-  color: #3a5470;
-  width: 65px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
 .c-order-bar-wrap {
-  flex: 1;
   height: 4px;
   background: rgba(255,255,255,0.05);
   border-radius: 2px;
@@ -631,19 +627,29 @@
   border-radius: 2px;
   transition: width 0.8s ease;
 }
+.c-order-dates {
+  display: flex;
+  gap: 8px;
+  font-size: 9px;
+  color: #2d4a5a;
+  letter-spacing: 0.2px;
+}
+/* 右：进度% + 天数 */
+.c-order-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+  width: 36px;
+}
 .c-order-pct {
   font-size: 11px;
   font-weight: 700;
-  width: 32px;
-  text-align: right;
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 .c-order-days {
   font-size: 10px;
-  width: 28px;
-  text-align: right;
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 

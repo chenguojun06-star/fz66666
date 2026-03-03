@@ -309,23 +309,30 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
     >
       <div className="c-order-row">
         <div className="c-order-row-main">
-          <span className="c-order-no">{order.orderNo}</span>
-          <span className="c-order-factory">{order.factoryName}</span>
-          <div className="c-order-bar-wrap">
-            <div className="c-order-bar" style={{ width: `${prog}%`, background: riskColor }} />
+          {/* 左：工厂名 */}
+          <span className="c-order-factory">{order.factoryName ?? '—'}</span>
+          {/* 中：订单号 + 进度条 + 日期 */}
+          <div className="c-order-center">
+            <span className="c-order-no">{order.orderNo}</span>
+            <div className="c-order-bar-wrap">
+              <div className="c-order-bar" style={{ width: `${prog}%`, background: riskColor }} />
+            </div>
+            <div className="c-order-dates">
+              <span>下单 {fmtD(order.createTime)}</span>
+              <span>交期 {fmtD(order.plannedEndDate)}</span>
+            </div>
           </div>
-          <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
-          {daysLeft !== null && (
-            <span className="c-order-days" style={{
-              color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
-            }}>
-              {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
-            </span>
-          )}
-        </div>
-        <div className="c-order-dates">
-          <span>下单 {fmtD(order.createTime)}</span>
-          <span>交期 {fmtD(order.plannedEndDate)}</span>
+          {/* 右：进度% + 天数 */}
+          <div className="c-order-right">
+            <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
+            {daysLeft !== null && (
+              <span className="c-order-days" style={{
+                color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
+              }}>
+                {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Popover>
