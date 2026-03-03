@@ -1558,6 +1558,7 @@ const OrderManagement: React.FC = () => {
                           factoryName={factories.find(
                             f => String(f.id) === String(watchedFactoryId)
                           )?.factoryName}
+                          capacityData={selectedFactoryStat}
                         />
                       )}
                     </div>
