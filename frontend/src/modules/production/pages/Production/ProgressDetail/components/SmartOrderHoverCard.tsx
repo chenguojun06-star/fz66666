@@ -187,7 +187,6 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: '#fa8c16', bg: '#fffbe6' };
     return null;
   }, [isCompleted, daysLeft, prog]);
-
   /* 速度：取单工序最大件数 / 开工天数
    * 不累加所有工序，避免同一批件在多工序中重复计算导致虚高 */
   const speed = useMemo(() => {
@@ -207,6 +206,22 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     const done = Math.max(maxStageQty, fromProg);
     return done > 0 ? done / elapsed : 0;
   }, [order, prog, total, boardStats, now]);
+  /* 今日任务：剩余件数 / 剩余天数 = 今天至少完成多少件 */
+  const todayTask = useMemo(() => {
+    if (isCompleted || daysLeft === null || daysLeft <= 0 || total <= 0) return null;
+    const completedQty = Math.round(prog / 100 * total);
+    const remainQty = Math.max(0, total - completedQty);
+    if (remainQty === 0) return null;
+    const target = Math.ceil(remainQty / daysLeft);
+    if (target <= 0) return null;
+    const overload = speed > 0 && target > speed * 1.5;
+    const tight    = speed > 0 && target > speed * 1.0;
+    return {
+      target,
+      color:  overload ? '#ff4d4f' : tight ? '#fa8c16' : '#52c41a',
+      label:  overload ? '超产能' : tight ? '需加速' : '正常',
+    };
+  }, [isCompleted, daysLeft, total, prog, speed]);
 
   /**
    * ★ 核心显示逻辑
@@ -324,6 +339,28 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
+      {/* 今日任务标签 */}
+      {todayTask && (
+        <div style={{
+          padding: '3px 10px', borderRadius: 6, marginBottom: 8,
+          background: todayTask.color + '14',
+          display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
+        }}>
+          <span>🎯</span>
+          <span style={{ fontWeight: 700, color: todayTask.color }}>
+            今日需≥{todayTask.target}件
+          </span>
+          <span style={{ color: '#8c8c8c' }}>才能按时交货</span>
+          <span style={{
+            background: todayTask.color + '28',
+            color: todayTask.color,
+            padding: '0 5px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+          }}>
+            {todayTask.label}
+          </span>
+        </div>
+      )}
+
       {/* ① 进行中工序（全部显示） */}
       {inProgressList.length > 0 && (
         <div style={{ marginBottom: 4 }}>
@@ -356,6 +393,13 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 12, flexShrink: 0, fontSize: 10, textAlign: 'center', color: '#1677ff' }}>▶</span>
                     <span style={{ minWidth: 40, maxWidth: 56, flexShrink: 0, fontWeight: 600, color: '#1677ff', fontSize: 11 }}>{s.label}</span>
+                    {/* 瓶颈标记：当前工序与 progressInsight 检测到的瓶颈匹配 */}
+                    {progressInsight?.bottleneck?.stage === s.label && (
+                      <span style={{
+                        background: '#fff2f0', color: '#ff4d4f',
+                        borderRadius: 8, padding: '0 5px', fontSize: 10, fontWeight: 700,
+                      }}>🔴瓶颈</span>
+                    )}
                     <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{
                         width: `${Math.min(100, s.pct)}%`, height: '100%',

@@ -838,10 +838,28 @@ const ProductionList: React.FC = () => {
       render: (value: unknown, record: ProductionOrder) => {
         const dateStr = value ? formatDateTime(value as string) : '-';
         const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate);
+        // 进度风险标签：综合 daysLeft + productionProgress 给出预警
+        const s = record.status;
+        const prog = Number(record.productionProgress) || 0;
+        const planEnd = value ? dayjs(value as string) : null;
+        const dLeft = planEnd ? planEnd.diff(dayjs(), 'day') : null;
+        let riskTag: { text: string; color: string } | null = null;
+        if (s !== 'completed' && dLeft !== null && prog < 100) {
+          if (dLeft < 0)                          riskTag = { text: '🔴 已逾期', color: '#ff4d4f' };
+          else if (dLeft <= 3  && prog < 80)      riskTag = { text: '🔴 严重偏慢', color: '#ff4d4f' };
+          else if (dLeft <= 7  && prog < 50)      riskTag = { text: '🟡 进度偏慢', color: '#fa8c16' };
+          else if (dLeft <= 14 && prog < 30)      riskTag = { text: '🟡 需关注', color: '#faad14' };
+          else if (prog >= 80 && dLeft >= 3)      riskTag = { text: '🟢 顺利', color: '#52c41a' };
+        }
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+            {riskTag && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
+                {riskTag.text}
+              </span>
+            )}
           </div>
         );
       },

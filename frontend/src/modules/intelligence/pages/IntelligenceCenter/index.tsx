@@ -11,6 +11,8 @@ import {
   HeartOutlined,
   BulbOutlined,
   AlertOutlined,
+  CalendarOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ProductionMonitorPanel from './panels/ProductionMonitorPanel';
@@ -22,6 +24,8 @@ import NlQueryPanel from './panels/NlQueryPanel';
 import HealthIndexPanel from './panels/HealthIndexPanel';
 import OrderSmartAnalysisPanel from './panels/OrderSmartAnalysisPanel';
 import MaterialShortagePanel from './panels/MaterialShortagePanel';
+import SchedulingSuggestionPanel from './panels/SchedulingSuggestionPanel';
+import LearningReportPanel from './panels/LearningReportPanel';
 import './styles.css';
 
 const { Title } = Typography;
@@ -74,6 +78,16 @@ const IntelligenceCenter: React.FC = () => {
       key: 'health-index',
       label: <span><HeartOutlined /> 健康指数</span>,
       children: <HealthIndexPanel />,
+    },
+    {
+      key: 'scheduling-suggestion',
+      label: <span><CalendarOutlined /> 智能排产</span>,
+      children: <SchedulingSuggestionPanel />,
+    },
+    {
+      key: 'learning-report',
+      label: <span><BarChartOutlined /> AI学习报告</span>,
+      children: <LearningReportPanel />,
     },
   ];
 

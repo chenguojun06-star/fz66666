@@ -25,6 +25,7 @@ import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem } from '@/services/production/productionApi';
 import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
+import SmartStyleInsightCard from './components/SmartStyleInsightCard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -1550,6 +1551,15 @@ const OrderManagement: React.FC = () => {
                           modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
                         />
                       </div>
+                      {/* 智能下单分析卡 — 下单频率、爆单风险、AI建议 */}
+                      {selectedStyle?.styleNo && (
+                        <SmartStyleInsightCard
+                          styleNo={selectedStyle.styleNo}
+                          factoryName={factories.find(
+                            f => String(f.id) === String(watchedFactoryId)
+                          )?.factoryName}
+                        />
+                      )}
                     </div>
 
                     <div style={{ minWidth: 0 }}>
