@@ -34,13 +34,19 @@ const LiveDot: React.FC<{ color?: string; size?: number }> = ({ color = '#39ff14
 const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; height?: number }> = ({
   pts, color = '#00e5ff', width = 160, height = 44,
 }) => {
-  const safePts = pts.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));
-  if (!safePts.length) return null;
-  const pts_ = safePts;
-  const max = Math.max(...pts_, 1);
-  const xs = pts_.map((_, i) => (i / Math.max(pts_.length - 1, 1)) * width);
-  const ys = pts_.map(v => height - (v / max) * (height - 4) - 2);
-  const poly = pts_.map((_, i) => `${xs[i]},${ys[i]}`).join(' ');
+  if (!pts || !pts.length) return null;
+  const safe = pts.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));
+  const max = Math.max(...safe, 1);
+  const n = safe.length;
+  const xs = safe.map((_, i) => {
+    const x = (i / Math.max(n - 1, 1)) * width;
+    return isFinite(x) ? x : 0;
+  });
+  const ys = safe.map(v => {
+    const y = height - (v / max) * (height - 4) - 2;
+    return isFinite(y) ? y : height - 2;
+  });
+  const poly = xs.map((x, i) => `${x},${ys[i]}`).join(' ');
   const area = `${xs[0]},${height} ${poly} ${xs[xs.length - 1]},${height}`;
   return (
     <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
@@ -53,9 +59,9 @@ const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; heigh
       <polygon points={area} fill="url(#sg)" />
       <polyline points={poly} fill="none" stroke={color} strokeWidth={2}
         strokeLinecap="round" strokeLinejoin="round" />
-      {pts_.map((v, i) => (
-        <circle key={i} cx={xs[i]} cy={ys[i]} r={i === pts_.length - 1 ? 4 : 2.5}
-          fill={color} opacity={i === pts_.length - 1 ? 1 : 0.6} />
+      {safe.map((_, i) => (
+        <circle key={i} cx={xs[i]} cy={ys[i]} r={i === n - 1 ? 4 : 2.5}
+          fill={color} opacity={i === n - 1 ? 1 : 0.6} />
       ))}
     </svg>
   );
