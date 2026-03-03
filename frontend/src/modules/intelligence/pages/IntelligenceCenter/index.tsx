@@ -3,6 +3,7 @@ import { Tag, Input, Button, Tooltip, Popover } from 'antd';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
+  FullscreenOutlined, FullscreenExitOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi, productionOrderApi } from '@/services/production/productionApi';
 import type {
@@ -425,6 +426,31 @@ const medalColor = ['#ffd700', '#c0c0c0', '#cd7f32'];
 /* ═══════════════════════════════════════════════════
    主页面组件
 ═══════════════════════════════════════════════════ */
+/* ─── 数字飞升动画组件 ─── */
+const AnimatedNum: React.FC<{ val: number | string; color?: string; className?: string }> = ({ val, color, className }) => {
+  const [display, setDisplay] = useState(val);
+  const [delta, setDelta]     = useState<'up' | 'down' | null>(null);
+  const prevRef = useRef(val);
+  useEffect(() => {
+    const prev = prevRef.current;
+    const pNum = typeof prev === 'number' ? prev : parseFloat(String(prev));
+    const cNum = typeof val  === 'number' ? val  : parseFloat(String(val));
+    if (!isNaN(pNum) && !isNaN(cNum) && cNum !== pNum) {
+      setDelta(cNum > pNum ? 'up' : 'down');
+      setTimeout(() => setDelta(null), 1800);
+    }
+    prevRef.current = val;
+    setDisplay(val);
+  }, [val]);
+  return (
+    <span className={className} style={color ? { color } : undefined}>
+      {display}
+      {delta === 'up'   && <span className="kpi-delta kpi-delta-up">↑</span>}
+      {delta === 'down' && <span className="kpi-delta kpi-delta-down">↓</span>}
+    </span>
+  );
+};
+
 const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
@@ -432,7 +458,39 @@ const IntelligenceCenter: React.FC = () => {
   const [chatQ, setChatQ]           = useState('');
   const [chatA, setChatA]           = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rootRef  = useRef<HTMLDivElement>(null);
+
+  /* 全屏：F 键切换 */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          rootRef.current?.requestFullscreen?.();
+          setIsFullscreen(true);
+        } else {
+          document.exitFullscreen?.();
+          setIsFullscreen(false);
+        }
+      }
+    };
+    const fsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    window.addEventListener('keydown', handler);
+    document.addEventListener('fullscreenchange', fsChange);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.removeEventListener('fullscreenchange', fsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      rootRef.current?.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
 
   /* 秒计时：倒计时 + 时钟 */
   useEffect(() => {
@@ -509,6 +567,20 @@ const IntelligenceCenter: React.FC = () => {
   /* 格式化时钟 */
   const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
+
+  /* ── 跑马灯：紧急订单 ── */
+  const tickerItems = useMemo(() => {
+    const items: string[] = [];
+    overdueRisk.overdue.forEach(o => {
+      const d = o.plannedEndDate ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)) : 0;
+      items.push(`⚠ ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`);
+    });
+    overdueRisk.highRisk.forEach(o => {
+      const d = o.plannedEndDate ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000) : 0;
+      items.push(`🔴 ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`);
+    });
+    return items;
+  }, [overdueRisk]);
 
   /* ── 各 KPI 卡片悬浮详情内容 ── */
   const hourNow = Math.max(now.getHours(), 1);
@@ -647,6 +719,11 @@ const IntelligenceCenter: React.FC = () => {
                 {data.loading ? '加载中' : `${countdown}s`}
               </button>
             </Tooltip>
+            <Tooltip title={isFullscreen ? '退出全屏 (F)' : '全屏投屏 (F)'}>
+              <button className="cockpit-fs-btn" onClick={toggleFullscreen}>
+                {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -659,9 +736,9 @@ const IntelligenceCenter: React.FC = () => {
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />今日扫码量</div>
-            <div className="c-kpi-val cyan neon-cyan">{pulse?.todayScanQty?.toLocaleString() ?? '—'}</div>
+            <div className="c-kpi-val cyan neon-cyan"><AnimatedNum val={pulse?.todayScanQty?.toLocaleString() ?? '—'} /></div>
             <div className="c-kpi-unit">件</div>
-            <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}>{pulse?.scanRatePerHour ?? '—'}</b>&nbsp;件/时</div>
+            <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}><AnimatedNum val={pulse?.scanRatePerHour ?? '—'} /></b>&nbsp;件/时</div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -670,9 +747,9 @@ const IntelligenceCenter: React.FC = () => {
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} />活跃工厂</div>
-            <div className="c-kpi-val green neon-green">{pulse?.activeFactories ?? '—'}</div>
+            <div className="c-kpi-val green neon-green"><AnimatedNum val={pulse?.activeFactories ?? '—'} /></div>
             <div className="c-kpi-unit">家</div>
-            <div className="c-kpi-sub">员工&nbsp;<b style={{ color: '#39ff14' }}>{pulse?.activeWorkers ?? '—'}</b>&nbsp;人在线</div>
+            <div className="c-kpi-sub">员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -682,7 +759,7 @@ const IntelligenceCenter: React.FC = () => {
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color={grade2color(health?.grade ?? '')} />供应链健康</div>
             <div className="c-kpi-val" style={{ color: grade2color(health?.grade ?? ''), textShadow: `0 0 18px ${grade2color(health?.grade ?? '')}88` }}>
-              {health?.healthIndex ?? '—'}
+              <AnimatedNum val={health?.healthIndex ?? '—'} />
             </div>
             <div className="c-kpi-unit">分</div>
             <div className="c-kpi-sub">等级&nbsp;<b style={{ color: grade2color(health?.grade ?? '') }}>{health?.grade ?? '—'}&nbsp;级</b></div>
@@ -698,7 +775,7 @@ const IntelligenceCenter: React.FC = () => {
               停工预警
             </div>
             <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' }}>
-              {pulse?.stagnantFactories?.length ?? 0}
+              <AnimatedNum val={pulse?.stagnantFactories?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">家停滞</div>
             <div className="c-kpi-sub">
@@ -718,7 +795,7 @@ const IntelligenceCenter: React.FC = () => {
               面料缺口
             </div>
             <div className="c-kpi-val" style={{ color: (shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14' }}>
-              {shortage?.shortageItems?.length ?? 0}
+              <AnimatedNum val={shortage?.shortageItems?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">项缺料</div>
             <div className="c-kpi-sub">
@@ -734,9 +811,9 @@ const IntelligenceCenter: React.FC = () => {
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={notifyPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1}>
           <div className="c-card c-kpi c-kpi-hoverable">
             <div className="c-kpi-label"><LiveDot size={7} color="#7c4dff" />待处理通知</div>
-            <div className="c-kpi-val purple">{notify?.pendingCount ?? '—'}</div>
+            <div className="c-kpi-val purple"><AnimatedNum val={notify?.pendingCount ?? '—'} /></div>
             <div className="c-kpi-unit">条待发</div>
-            <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: '#7c4dff' }}>{notify?.sentToday ?? 0}</b>&nbsp;条</div>
+            <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: '#7c4dff' }}><AnimatedNum val={notify?.sentToday ?? 0} /></b>&nbsp;条</div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>

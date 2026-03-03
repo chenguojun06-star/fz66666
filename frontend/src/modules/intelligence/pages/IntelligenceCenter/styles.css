@@ -697,27 +697,13 @@
   display: flex; align-items: center; gap: 8px; font-size: 11px;
 }
 .c-bottleneck-orders {
-  display: flex; flex-wrap: wrap; gap: 4px; padding-left: 2px;
+  display: flex; flex-wrap: wrap; gap: 4px; flex: 1;
 }
 .c-bottleneck-order-chip {
-  border: 1px solid; border-radius: 4px;
-  padding: 3px 6px; background: rgba(255,255,255,0.02);
-  display: flex; flex-direction: column; gap: 3px;
-  min-width: 108px; max-width: 160px;
+  font-size: 10px; border: 1px solid; border-radius: 3px;
+  padding: 1px 6px; font-variant-numeric: tabular-nums; white-space: nowrap;
+  background: rgba(255,255,255,0.03); line-height: 1.6;
 }
-.c-bottleneck-chip-no {
-  font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
-  letter-spacing: 0.02em;
-}
-.c-bottleneck-chip-row {
-  display: flex; align-items: center; gap: 4px;
-}
-.c-bottleneck-chip-bar-wrap {
-  flex: 1; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
-}
-.c-bottleneck-chip-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
-.c-bottleneck-chip-pct { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 10px; flex-shrink: 0; }
 .c-bottleneck-factory {
   color: #5c9abf; font-weight: 500; width: 70px; flex-shrink: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -954,3 +940,92 @@
 .c-kpi-hoverable:hover .c-kpi-hover-hint {
   color: rgba(0,229,255,0.55);
 }
+
+/* ══════════════════════════════════════════
+   紧急订单跑马灯
+══════════════════════════════════════════ */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.cockpit-ticker {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background: rgba(255,65,54,0.08);
+  border: 1px solid rgba(255,65,54,0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.cockpit-ticker-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff4136;
+  padding: 0 10px;
+  border-right: 1px solid rgba(255,65,54,0.2);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.cockpit-ticker-track {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.cockpit-ticker-inner {
+  display: flex;
+  gap: 48px;
+  white-space: nowrap;
+  animation: ticker-scroll 20s linear infinite;
+}
+.cockpit-ticker-item {
+  font-size: 11px;
+  color: #f7a600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   全屏投屏模式 (F 键)
+══════════════════════════════════════════ */
+.cockpit-fs-btn {
+  background: rgba(0,229,255,0.08);
+  border: 1px solid rgba(0,229,255,0.2);
+  color: #00e5ff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.cockpit-fs-btn:hover {
+  background: rgba(0,229,255,0.15);
+  border-color: rgba(0,229,255,0.4);
+}
+.cockpit-fullscreen {
+  position: fixed !important;
+  inset: 0;
+  z-index: 9999;
+  background: #030916 !important;
+  overflow-y: auto;
+}
+
+/* ══════════════════════════════════════════
+   KPI 数字变动动画 ↑↓
+══════════════════════════════════════════ */
+@keyframes delta-fade {
+  0%   { opacity: 1;   transform: translateY(0);    }
+  60%  { opacity: 0.8; transform: translateY(-4px); }
+  100% { opacity: 0;   transform: translateY(-8px); }
+}
+.kpi-delta {
+  font-size: 13px;
+  font-weight: 900;
+  margin-left: 3px;
+  animation: delta-fade 1.8s ease-out forwards;
+  display: inline-block;
+}
+.kpi-delta-up   { color: #39ff14; }
+.kpi-delta-down { color: #ff4136; }
