@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -369,6 +370,15 @@ public class ProductionOrderOrchestrator {
         String st = helper.safeText(existed.getStatus()).toLowerCase();
         if ("completed".equals(st)) {
             throw new IllegalStateException("订单已完成，无法报废");
+        }
+
+        // 仅允许无采购记录的订单报废（有采购数据说明生产已实质推进，禁止报废）
+        long purchaseCount = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getOrderId, oid)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .count();
+        if (purchaseCount > 0) {
+            throw new IllegalStateException("订单已有采购记录（" + purchaseCount + "条），无法报废。如需报废请先删除全部采购记录");
         }
 
         // 2026-02-01: 移除采购完成限制 - 允许在任何阶段报废订单

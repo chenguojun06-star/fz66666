@@ -316,6 +316,8 @@ export interface ProductionQueryParams {
   /** 跟单员筛选（模糊匹配） */
   merchandiser?: string;
   keyword?: string;
+  /** 我的订单页传 true，显示报废订单；其他页面不传，默认过滤掉报废订单 */
+  includeScrapped?: boolean;
   page: number;
   pageSize: number;
 }

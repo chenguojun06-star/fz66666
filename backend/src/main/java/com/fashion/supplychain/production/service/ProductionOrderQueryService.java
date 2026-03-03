@@ -82,6 +82,7 @@ public class ProductionOrderQueryService {
         String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
         String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
+        String includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -97,7 +98,9 @@ public class ProductionOrderQueryService {
                 .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
                 .eq(StringUtils.hasText(plateType), "plate_type", plateType)
                 .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
-                .eq("delete_flag", 0);
+                .eq("delete_flag", 0)
+                // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤
+                .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
         // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
         if ("true".equalsIgnoreCase(delayedOnly)) {

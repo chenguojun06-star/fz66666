@@ -839,11 +839,11 @@ public class MaterialPurchaseOrchestrator {
             return myPurchases;
         }
 
-        // 查询有效订单（排除已关闭/已完成/已取消/已归档）
+        // 查询有效订单（排除已关闭/已完成/已取消/已归档/已报废）
         List<ProductionOrder> validOrders = productionOrderService.lambdaQuery()
                 .in(ProductionOrder::getId, orderIds)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .list();
 
         // 构建 orderId -> orderNo 映射

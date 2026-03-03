@@ -77,7 +77,7 @@ const ProductionList: React.FC = () => {
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
 
   // ===== 查询参数 =====
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, includeScrapped: true });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [sortField, setSortField] = useState<string>('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');

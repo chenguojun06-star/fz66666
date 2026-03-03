@@ -117,10 +117,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public long countProductionOrders() {
         Number cached = getFromCache("productionOrders");
         if (cached != null) return cached.longValue();
-        // 统计生产中订单：排除已关闭、已完成、已取消、已归档的订单
+        // 统计生产中订单：排除已关闭、已完成、已取消、已归档、已报废的订单
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .count();
         putToCache("productionOrders", result);
         return result;
@@ -305,7 +305,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDateTime now = LocalDateTime.now();
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
@@ -328,7 +328,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .orderBy(true, true, ProductionOrder::getPlannedEndDate)
@@ -636,7 +636,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .lt(ProductionOrder::getPlannedEndDate, now)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)
                 .list();
     }
