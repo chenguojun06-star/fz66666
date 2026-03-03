@@ -28,7 +28,16 @@ export function analyzeQuality(orderRecs: WarehousingType[], isUrgent: boolean):
   const totalQ  = orderRecs.reduce((s, r) => s + (Number(r.qualifiedQuantity) || 0), 0);
   const totalUQ = orderRecs.reduce((s, r) => s + (Number(r.unqualifiedQuantity) || 0), 0);
   const totalW  = orderRecs.reduce((s, r) => s + (Number(r.warehousingQuantity) || 0), 0);
-  const totalCut = orderRecs.reduce((s, r) => s + (Number(r.cuttingQuantity) || 0), 0);
+  // 按 cuttingBundleId 去重后累加，避免同一菲号被多条质检记录重复计入
+  const seenBundles = new Set<string>();
+  const totalCut = orderRecs.reduce((s, r) => {
+    const bid = String(r.cuttingBundleId || '').trim();
+    if (bid) {
+      if (seenBundles.has(bid)) return s;
+      seenBundles.add(bid);
+    }
+    return s + (Number(r.cuttingQuantity) || 0);
+  }, 0);
   const processed = totalQ + totalUQ;
   const rate = processed > 0 ? Math.round(totalQ / processed * 100) : 0;
 
