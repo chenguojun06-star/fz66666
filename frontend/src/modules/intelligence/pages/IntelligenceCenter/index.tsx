@@ -475,24 +475,30 @@ const IntelligenceCenter: React.FC = () => {
 
   /* ── 工厂卡点分析（按工厂聚合，找最落后工序） ── */
   const factoryBottleneck = useMemo(() => {
-    const map = new Map<string, { name: string; sums: Record<string, number>; count: number }>();
+    // 按工厂分组，每单保留原始引用
+    const map = new Map<string, { name: string; orderList: typeof orders }>();
     for (const o of orders) {
       const name = o.factoryName ?? '未分配';
-      if (!map.has(name)) map.set(name, { name, sums: {}, count: 0 });
-      const f = map.get(name)!;
-      f.count++;
-      for (const { key, label } of STAGE_FIELDS) {
-        f.sums[label] = (f.sums[label] ?? 0) + (Number((o as any)[key]) || 0);
-      }
+      if (!map.has(name)) map.set(name, { name, orderList: [] });
+      map.get(name)!.orderList.push(o);
     }
-    return Array.from(map.values()).map(f => {
+    return Array.from(map.values()).map(({ name, orderList }) => {
+      // 找平均进度最低的工序
       let minStage = '—'; let minAvg = 101;
-      for (const { label } of STAGE_FIELDS) {
-        const avg = f.count > 0 ? f.sums[label] / f.count : 0;
+      for (const { key, label } of STAGE_FIELDS) {
+        const avg = orderList.reduce((s, o) => s + (Number((o as any)[key]) || 0), 0) / orderList.length;
         if (avg < minAvg) { minAvg = avg; minStage = label; }
       }
-      return { name: f.name, count: f.count, stuckStage: minStage, stuckPct: Math.round(minAvg) };
-    }).sort((a, b) => a.stuckPct - b.stuckPct).slice(0, 8);
+      // 找对应工序字段
+      const stuckKey = STAGE_FIELDS.find(f => f.label === minStage)?.key ?? '';
+      // 取该工序进度最低的前 3 单（带订单号）
+      const worstOrders = [...orderList]
+        .filter(o => (Number((o as any)[stuckKey]) || 0) < 80)
+        .sort((a, b) => (Number((a as any)[stuckKey]) || 0) - (Number((b as any)[stuckKey]) || 0))
+        .slice(0, 3)
+        .map(o => ({ no: o.orderNo ?? '', pct: Number((o as any)[stuckKey]) || 0 }));
+      return { name, count: orderList.length, stuckStage: minStage, stuckPct: Math.round(minAvg), worstOrders };
+    }).sort((a, b) => a.stuckPct - b.stuckPct).slice(0, 7);
   }, [orders]);
 
   /* 派生警报数量 */
@@ -876,14 +882,27 @@ const IntelligenceCenter: React.FC = () => {
                 {factoryBottleneck.map(f => {
                   const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
                   return (
-                    <div key={f.name} className="c-bottleneck-row">
-                      <span className="c-bottleneck-factory">{f.name}</span>
-                      <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
-                      <div className="c-bottleneck-bar-wrap">
-                        <div className="c-bottleneck-bar" style={{ width: `${f.stuckPct}%`, background: c }} />
+                    <div key={f.name} className="c-bottleneck-item">
+                      {/* 第一行：工厂 + 卡在x工序 + 进度条 + 均值% + N单 */}
+                      <div className="c-bottleneck-row">
+                        <span className="c-bottleneck-factory">{f.name}</span>
+                        <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
+                        <div className="c-bottleneck-bar-wrap">
+                          <div className="c-bottleneck-bar" style={{ width: `${f.stuckPct}%`, background: c }} />
+                        </div>
+                        <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
+                        <span className="c-bottleneck-cnt">{f.count}单</span>
                       </div>
-                      <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
-                      <span className="c-bottleneck-cnt">{f.count}单</span>
+                      {/* 第二行：具体卡点订单号 + 该工序各自进度 */}
+                      {f.worstOrders.length > 0 && (
+                        <div className="c-bottleneck-orders">
+                          {f.worstOrders.map(w => (
+                            <span key={w.no} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: c }}>
+                              {w.no.slice(-9)}&nbsp;<b>{w.pct}%</b>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

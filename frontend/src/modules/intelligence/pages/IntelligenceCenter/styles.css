@@ -684,9 +684,19 @@
 /* ────────────────────────────────────────────────
    工厂工序卡点分析列表
 ──────────────────────────────────────────────── */
-.c-bottleneck-list { display: flex; flex-direction: column; gap: 5px; }
+.c-bottleneck-list { display: flex; flex-direction: column; gap: 6px; }
+.c-bottleneck-item { display: flex; flex-direction: column; gap: 3px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.c-bottleneck-item:last-child { border-bottom: none; padding-bottom: 0; }
 .c-bottleneck-row {
   display: flex; align-items: center; gap: 8px; font-size: 11px;
+}
+.c-bottleneck-orders {
+  display: flex; flex-wrap: wrap; gap: 4px; padding-left: 2px;
+}
+.c-bottleneck-order-chip {
+  font-size: 10px; border: 1px solid; border-radius: 3px;
+  padding: 0 5px; font-variant-numeric: tabular-nums; white-space: nowrap;
+  background: rgba(255,255,255,0.02);
 }
 .c-bottleneck-factory {
   color: #5c9abf; font-weight: 500; width: 70px; flex-shrink: 0;
