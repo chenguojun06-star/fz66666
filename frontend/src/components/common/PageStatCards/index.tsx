@@ -43,15 +43,15 @@ interface PageStatCardsProps {
 }
 
 // ===== 样式常量（改这里，所有页面同步生效） =====
-const CARD_PADDING = '6px 12px';
+const CARD_PADDING = '4px 12px';
 const CARD_BORDER_RADIUS = '6px';
 const CARD_GAP = '8px';
 const CONTAINER_MARGIN_BOTTOM = '8px';
-const VALUE_FONT_SIZE = '16px';
+const VALUE_FONT_SIZE = '15px';
 const LABEL_FONT_SIZE = '11px';
 const UNIT_FONT_SIZE = '11px';
-const LABEL_MARGIN_BOTTOM = '2px';
-const DIVIDER_HEIGHT = '20px';
+const LABEL_MARGIN_BOTTOM = '1px';
+const DIVIDER_HEIGHT = '18px';
 const COMPOUND_GAP = '16px';
 const LABEL_COLOR = 'var(--text-secondary)';
 const BORDER_COLOR = 'var(--border-color)';
