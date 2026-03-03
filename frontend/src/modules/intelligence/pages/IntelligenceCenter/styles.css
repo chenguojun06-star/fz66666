@@ -1,359 +1,164 @@
-.intelligence-center {
-  padding: 24px;
-  background: #fff;
-  min-height: calc(100vh - 120px);
+/* ═══════════════════════════════════════════════════════
+   智能运营驾驶舱 — 暗色高科技主题
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 根容器 ── */
+.cockpit-root {
+  background: #070c18;
+  min-height: 100vh;
+  padding: 0 0 32px;
+  color: #c8d6e8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.intelligence-header {
+/* ── 顶部标题栏 ── */
+.cockpit-header {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 14px 24px;
+  background: linear-gradient(90deg, rgba(0,229,255,0.08) 0%, rgba(7,12,24,0) 60%);
+  border-bottom: 1px solid rgba(0,229,255,0.15);
+  margin-bottom: 16px;
 }
+.cockpit-title { font-size: 20px; font-weight: 700; color: #e8f4ff; letter-spacing: 1px; }
+.cockpit-subtitle { font-size: 12px; color: #4a6278; border-left: 1px solid rgba(0,229,255,0.2); padding-left: 14px; }
+.cockpit-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.c-countdown { font-size: 13px; color: #00e5ff; font-variant-numeric: tabular-nums; opacity: 0.7; }
+.cockpit-refresh-btn { background: rgba(0,229,255,0.1) !important; border-color: rgba(0,229,255,0.3) !important; color: #00e5ff !important; }
+.cockpit-refresh-btn:hover { background: rgba(0,229,255,0.2) !important; }
 
-.intelligence-subtitle {
+/* ── 网格布局 ── */
+.cockpit-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 0 24px 12px; }
+.cockpit-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px 12px; }
+.cockpit-grid-5-7 { display: grid; grid-template-columns: 5fr 7fr; gap: 12px; padding: 0 24px 12px; }
+
+/* ── 通用卡片 ── */
+.c-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.c-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00e5ff44, transparent);
+}
+.c-card-title { font-size: 13px; font-weight: 600; color: #8fb3cc; margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+
+/* ── 数字卡片 ── */
+.c-stat { text-align: center; }
+.c-stat-label { font-size: 11px; color: #4a6278; margin-bottom: 6px; letter-spacing: 0.5px; }
+.c-stat-val { font-size: 32px; font-weight: 800; line-height: 1.1; }
+.c-stat-sub { font-size: 11px; color: #4a6278; margin-top: 4px; }
+
+/* ── 实时脉搏 ── */
+.c-pulse-stats { display: flex; gap: 20px; font-size: 12px; color: #6b7a8d; margin-bottom: 6px; }
+.c-sparkline-label { font-size: 10px; color: #283848; margin-top: 2px; }
+.c-alert-row { margin-top: 8px; font-size: 12px; color: #faad14; }
+.c-ok-row { margin-top: 8px; font-size: 12px; color: #52c41a; }
+
+/* ── 工厂排行 ── */
+.c-rank-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.c-rank-row:last-child { border-bottom: none; }
+.c-rank-medal { width: 24px; font-size: 14px; text-align: center; flex-shrink: 0; }
+.c-rank-name { font-size: 13px; color: #c8d6e8; width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-rank-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.c-rank-bar { height: 100%; background: linear-gradient(90deg, #00e5ff, #00bcd4); border-radius: 3px; transition: width 0.8s ease; }
+.c-rank-score { font-size: 13px; font-weight: 700; width: 32px; text-align: right; flex-shrink: 0; }
+
+/* ── 工人效率表格 ── */
+.c-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.c-table th { color: #3d5a70; font-weight: 500; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: center; }
+.c-table td { padding: 5px 6px; color: #a0b4c4; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: center; }
+.c-table tr:last-child td { border-bottom: none; }
+.c-table tr:hover td { background: rgba(0,229,255,0.04); }
+.c-empty-td { color: #2d3d4d !important; }
+
+/* ── 缺陷热力图 ── */
+.c-heatmap-meta { font-size: 11px; color: #4a6278; margin-bottom: 8px; }
+.c-heatmap-grid { display: grid; gap: 3px; font-size: 11px; }
+.c-heat-head { text-align: center; color: #4a6278; padding: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.c-heat-row-label { color: #4a6278; font-size: 10px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-heat-cell { text-align: center; padding: 4px 2px; border-radius: 3px; background: rgba(255,255,255,0.03); font-size: 11px; min-width: 24px; }
+
+/* ── 面料缺口 ── */
+.c-shortage-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+.c-shortage-row:last-of-type { border-bottom: none; }
+.c-shortage-risk { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.c-shortage-name { color: #a0b4c4; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-summary { font-size: 11px; color: #3d5a70; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
+
+/* ── 异常自愈 ── */
+.c-heal-score { margin-left: 8px; }
+.c-heal-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+.c-heal-item:last-child { border-bottom: none; }
+.c-heal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-ok    { background: #52c41a; box-shadow: 0 0 4px #52c41a; }
+.dot-fixed { background: #1677ff; box-shadow: 0 0 4px #1677ff; }
+.dot-warn  { background: #faad14; box-shadow: 0 0 4px #faad14; animation: blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.c-heal-name   { font-weight: 500; color: #a0b4c4; width: 120px; flex-shrink: 0; }
+.c-heal-detail { flex: 1; color: #4a6278; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── AI 对话 ── */
+.c-chat-card { padding: 14px 20px; }
+.c-chat-card::before { background: linear-gradient(90deg, #7c4dff66, transparent); }
+.c-chat-hint { font-size: 11px; color: #3d5a70; font-weight: 400; margin-left: 4px; }
+.c-chat-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.c-chat-row .c-chat-input { flex: 1; }
+.c-chat-input .ant-input { background: rgba(255,255,255,0.05) !important; border-color: rgba(124,77,255,0.3) !important; color: #c8d6e8 !important; }
+.c-chat-input .ant-input::placeholder { color: #3d5a70 !important; }
+.c-chat-input .ant-input:focus { border-color: #7c4dff !important; box-shadow: 0 0 0 2px rgba(124,77,255,0.15) !important; }
+.c-chat-send { flex-shrink: 0; }
+.c-chat-thinking { color: #7c4dff; font-size: 12px; padding: 6px 0; }
+.c-chat-answer {
+  background: rgba(124,77,255,0.08);
+  border: 1px solid rgba(124,77,255,0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
   font-size: 13px;
-  color: #8c8c8c;
-  border-left: 1px solid #d9d9d9;
-  padding-left: 16px;
+  color: #c8d6e8;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+.c-chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.c-suggest-btn {
+  background: rgba(0,229,255,0.06);
+  border: 1px solid rgba(0,229,255,0.15);
+  border-radius: 14px;
+  color: #00b8cc;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.c-suggest-btn:hover {
+  background: rgba(0,229,255,0.15);
+  border-color: rgba(0,229,255,0.4);
+  color: #00e5ff;
 }
 
-/* severity 标签 */
+/* ── 通用空状态 ── */
+.c-empty { color: #2d3d4d; font-size: 12px; text-align: center; padding: 16px 0; }
+
+/* ── 旧面板语义类保留（供 panels/ 子组件使用）── */
 .severity-critical { color: #ff4d4f; font-weight: 600; }
 .severity-warning  { color: #faad14; font-weight: 600; }
 .severity-info     { color: #1677ff; }
 .severity-normal   { color: #52c41a; }
-
-/* 风险等级 */
 .risk-overdue { color: #ff4d4f; font-weight: 700; }
 .risk-danger  { color: #ff7a45; font-weight: 600; }
 .risk-warning { color: #faad14; font-weight: 600; }
 .risk-safe    { color: #52c41a; }
-
-/* 评分等级 */
 .level-excellent { color: #52c41a; font-weight: 600; }
 .level-good      { color: #1677ff; }
 .level-normal    { color: #8c8c8c; }
-
-/* 面板统一卡片 */
-.intelligence-panel {
-  margin-top: 16px;
-}
-
-.intelligence-panel .stat-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.intelligence-panel .stat-card {
-  flex: 1;
-  text-align: center;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-}
-
-.intelligence-panel .stat-card .stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.intelligence-panel .stat-card .stat-label {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 4px;
-}
-
-/* 异常检测 */
-.anomaly-card {
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-.anomaly-card.critical { border-left: 4px solid #ff4d4f; background: #fff1f0; }
-.anomaly-card.warning  { border-left: 4px solid #faad14; background: #fffbe6; }
-.anomaly-card.info     { border-left: 4px solid #1677ff; background: #e6f4ff; }
-
-/* 推荐卡片 */
-.worker-card {
-  padding: 12px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-.worker-card .rank {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  background: #f0f0f0;
-  color: #595959;
-}
-.worker-card .rank.top { background: #1677ff; color: #fff; }
-
-/* 学习报告环形 */
-.confidence-ring {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 8px;
-}
-
-/* ===== 实时脉搏 ===== */
-.pulse-panel .live-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 2px 10px; border-radius: 12px;
-  background: #f6ffed; color: #52c41a; font-size: 12px; font-weight: 600;
-}
-.pulse-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #52c41a;
-  animation: pulse-blink 1.2s infinite;
-}
-@keyframes pulse-blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .4; transform: scale(.7); }
-}
-.pulse-timeline { display: flex; gap: 2px; margin-top: 16px; }
-.pulse-bar {
-  flex: 1; height: 32px; border-radius: 4px; cursor: pointer;
-  transition: transform .15s;
-}
-.pulse-bar:hover { transform: scaleY(1.3); }
-.stagnant-section { margin-top: 16px; }
-.stagnant-section h4 { margin-bottom: 8px; }
-
-/* ===== 工人效率画像 ===== */
-.efficiency-panel .radar-wrap { text-align: center; margin-bottom: 16px; }
-.efficiency-podium {
-  display: flex; justify-content: center; align-items: flex-end;
-  gap: 12px; margin-bottom: 20px;
-}
-.podium-item { text-align: center; }
-.podium-bar { width: 60px; border-radius: 6px 6px 0 0; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; }
-.podium-name { font-size: 12px; margin-top: 4px; color: #595959; }
-.score-bar-bg {
-  width: 100%; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden;
-}
-.score-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
-
-/* ===== 完工预测 ===== */
-.prediction-panel .pred-dates { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
-.pred-date-card {
-  flex: 1; min-width: 140px; padding: 16px; border-radius: 8px;
-  text-align: center; border: 1px solid #f0f0f0;
-}
-.pred-date-card.optimistic { background: #f6ffed; border-color: #b7eb8f; }
-.pred-date-card.realistic  { background: #e6f4ff; border-color: #91caff; }
-.pred-date-card.pessimistic { background: #fff1f0; border-color: #ffa39e; }
-.pred-date-card .pred-label { font-size: 12px; color: #8c8c8c; }
-.pred-date-card .pred-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
-
-/* ===== 订单智能分析（合并面板） ===== */
-.osa-panel .osa-input-row {
-  display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;
-}
-.osa-section-title {
-  font-weight: 600; font-size: 15px; padding: 8px 0; margin: 20px 0 12px;
-  border-bottom: 1px solid #f0f0f0; color: #262626;
-}
-.osa-score-bar-wrap {
-  position: relative; height: 18px; background: #f0f0f0; border-radius: 3px; overflow: hidden;
-}
-.osa-score-bar { height: 100%; border-radius: 3px; transition: width .4s; }
-.osa-score-val {
-  position: absolute; top: 0; right: 4px; font-size: 11px; font-weight: 600;
-  line-height: 18px; color: #333;
-}
-.osa-pred-header {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
-}
-.osa-pred-dates { display: flex; gap: 16px; flex-wrap: wrap; }
-.osa-date-card {
-  flex: 1; min-width: 140px; padding: 16px; border-radius: 8px;
-  text-align: center; border: 1px solid #f0f0f0;
-}
-.osa-date-card.optimistic  { background: #f6ffed; border-color: #b7eb8f; }
-.osa-date-card.realistic   { background: #e6f4ff; border-color: #91caff; }
-.osa-date-card.pessimistic { background: #fff1f0; border-color: #ffa39e; }
-.osa-date-label { font-size: 12px; color: #8c8c8c; }
-.osa-date-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.osa-rationale {
-  margin-top: 12px; padding: 10px 12px; background: #fafafa;
-  border-radius: 6px; font-size: 13px; color: #595959; line-height: 1.6;
-}
-
-/* ===== 利润预估 ===== */
-.profit-panel .waterfall { display: flex; gap: 8px; align-items: flex-end; margin-top: 16px; height: 160px; }
-.waterfall-col {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-}
-.waterfall-bar { width: 36px; border-radius: 4px 4px 0 0; min-height: 4px; transition: height .4s; }
-.waterfall-label { font-size: 11px; color: #8c8c8c; margin-top: 4px; }
-.waterfall-val { font-size: 12px; font-weight: 600; }
-
-/* ===== 工厂排行（卡片网格 + 悬浮详情） ===== */
-.factory-card-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
-}
-@media (max-width: 1400px) { .factory-card-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 900px)  { .factory-card-grid { grid-template-columns: repeat(3, 1fr); } }
-
-.fg-card {
-  padding: 16px 12px;
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s;
-  background: #fafafa;
-}
-.fg-card:hover { border-color: #91caff; box-shadow: 0 4px 12px rgba(24,144,255,.12); transform: translateY(-2px); }
-.fg-top { background: linear-gradient(135deg, #fffbe6 0%, #fff7e6 100%); border-color: #ffe58f; }
-.fg-medal { font-size: 28px; line-height: 1.2; min-height: 36px; }
-.fg-rank-num { font-size: 16px; font-weight: 700; color: #8c8c8c; }
-.fg-name { font-size: 14px; font-weight: 600; margin: 6px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fg-score { font-size: 22px; font-weight: 700; color: #1890ff; }
-.fg-score small { font-size: 12px; font-weight: 400; color: #8c8c8c; margin-left: 2px; }
-.fg-tag { font-size: 12px; margin-top: 4px; }
-
-/* 悬浮弹窗内容 */
-.factory-hover-content { min-width: 260px; }
-.fh-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-.fh-dims { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.fh-current { font-size: 13px; color: #595959; margin-bottom: 8px; padding: 6px 0; border-top: 1px dashed #f0f0f0; }
-.fh-range-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
-.fh-range-table th { text-align: center; padding: 4px 8px; background: #fafafa; border-bottom: 1px solid #f0f0f0; font-weight: 600; color: #595959; }
-.fh-range-table td { text-align: center; padding: 4px 8px; border-bottom: 1px solid #f5f5f5; }
-.fh-suggestion { font-weight: 600; font-size: 13px; padding-top: 6px; border-top: 1px dashed #f0f0f0; }
-
-/* ===== 节奏DNA ===== */
-.dna-panel .dna-legend {
-  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px;
-}
-.dna-legend-item { display: flex; align-items: center; gap: 4px; }
-.dna-legend-dot { width: 12px; height: 12px; border-radius: 2px; }
-.dna-order { margin-bottom: 12px; }
-.dna-order-label { font-size: 12px; color: #595959; margin-bottom: 4px; font-weight: 600; }
-.dna-strip { display: flex; height: 22px; border-radius: 4px; overflow: hidden; cursor: pointer; }
-.dna-segment { height: 100%; position: relative; transition: opacity .15s; }
-.dna-segment:hover { opacity: .75; }
-.dna-segment.bottleneck::after {
-  content: '⚠'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-  font-size: 10px;
-}
-
-/* ===== 异常自愈 ===== */
-.healing-panel .healing-overview {
-  display: flex; gap: 16px; align-items: center; margin-bottom: 20px;
-}
-.healing-counters { display: flex; gap: 20px; flex: 1; }
-.healing-counter { text-align: center; }
-.healing-counter .hc-val { font-size: 24px; font-weight: 700; }
-.healing-counter .hc-label { font-size: 11px; color: #8c8c8c; }
-
-/* ===== 智能提醒 ===== */
-.notify-panel .notify-feed { max-height: 480px; overflow-y: auto; }
-.notify-card {
-  padding: 12px 16px; border-radius: 8px;
-  border: 1px solid #f0f0f0; margin-bottom: 8px;
-  display: flex; align-items: flex-start; gap: 12px;
-}
-.notify-card.urgent { border-left: 4px solid #ff4d4f; background: #fff1f0; }
-.notify-card.high   { border-left: 4px solid #fa8c16; background: #fff7e6; }
-.notify-card.normal  { border-left: 4px solid #1890ff; background: #e6f7ff; }
-.notify-card.low     { border-left: 4px solid #d9d9d9; background: #fafafa; }
-.notify-emoji { font-size: 20px; }
-.notify-body { flex: 1; }
-.notify-title { font-weight: 600; margin-bottom: 2px; }
-.notify-time { font-size: 11px; color: #8c8c8c; }
-
-/* ===== AI助手(聊天) ===== */
-.nl-panel .chat-container {
-  max-height: 440px; overflow-y: auto; padding: 12px;
-  background: #fafafa; border-radius: 8px; margin-bottom: 12px;
-}
-.chat-bubble { display: flex; gap: 10px; margin-bottom: 14px; }
-.chat-bubble.user { flex-direction: row-reverse; }
-.chat-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: #e6f4ff; color: #1890ff; font-size: 16px; flex-shrink: 0;
-}
-.chat-bubble.user .chat-avatar { background: #f6ffed; color: #52c41a; }
-.chat-body {
-  max-width: 70%; padding: 10px 14px; border-radius: 12px;
-  background: #fff; border: 1px solid #f0f0f0; font-size: 13px; line-height: 1.5;
-}
-.chat-bubble.user .chat-body { background: #e6f4ff; border-color: #91caff; }
-.chat-meta { margin-top: 6px; }
-.chat-data { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
-.chat-suggestions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-.chat-input-row { display: flex; gap: 8px; }
-
-/* ===== 健康指数 ===== */
-.health-panel .health-gauge { margin: 0 auto; }
-.health-dimensions { margin-top: 16px; }
-.health-dim-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.health-dim-label { width: 56px; font-size: 13px; text-align: right; }
-.health-dim-bar-bg { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-.health-dim-bar { height: 100%; border-radius: 4px; transition: width .5s; }
-.health-dim-val { width: 30px; font-size: 12px; font-weight: 600; text-align: right; }
-.health-trend-chart { display: flex; gap: 4px; align-items: flex-end; height: 80px; }
-.health-trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-.health-trend-bar { width: 16px; border-radius: 3px 3px 0 0; transition: height .4s; }
-.health-trend-date { font-size: 10px; color: #8c8c8c; margin-top: 2px; }
-
-/* ===== 排产建议 ===== */
-.scheduling-panel .scheduling-input-row {
-  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
-}
-.gantt-chart { margin-top: 8px; }
-.gantt-row { display: flex; align-items: center; margin-bottom: 4px; }
-.gantt-label { width: 56px; font-size: 11px; color: #595959; text-align: right; padding-right: 8px; }
-.gantt-track { flex: 1; height: 16px; background: #f5f5f5; border-radius: 3px; position: relative; overflow: hidden; }
-.gantt-bar { position: absolute; height: 100%; border-radius: 3px; opacity: .85; }
-.gantt-axis { display: flex; justify-content: space-between; font-size: 10px; color: #8c8c8c; margin-top: 2px; padding-left: 64px; }
-
-/* ===== 缺陷热力图 ===== */
-.heatmap-panel .heatmap-grid-wrapper, .pmo-panel .heatmap-grid-wrapper { overflow-x: auto; margin-top: 12px; }
-.heatmap-table { border-collapse: collapse; width: 100%; }
-.heatmap-table th, .heatmap-table td { text-align: center; padding: 6px 8px; font-size: 12px; }
-.heatmap-corner { background: #fafafa; font-weight: 600; }
-.heatmap-col-header { background: #fafafa; font-weight: 600; white-space: nowrap; }
-.heatmap-row-header { background: #fafafa; font-weight: 600; text-align: right !important; white-space: nowrap; }
-.heatmap-cell { padding: 3px !important; }
-.heatmap-cell-inner {
-  width: 36px; height: 36px; margin: 0 auto; border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600; color: #333; cursor: default;
-  transition: transform .15s;
-}
-.heatmap-cell-inner:hover { transform: scale(1.15); }
-.heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 12px; font-size: 11px; color: #8c8c8c; justify-content: center; }
-.heatmap-legend-cell { width: 20px; height: 14px; border-radius: 2px; }
-
-/* ===== 生产监控总览（合并面板） ===== */
-.pmo-panel .ant-collapse-header { font-weight: 600; font-size: 14px; }
-.pmo-panel .ant-collapse > .ant-collapse-item { border-bottom: 1px solid #f0f0f0; }
-.pmo-panel .ant-collapse-content-box { padding: 12px 0 !important; }
-.pmo-section-title {
-  font-weight: 600; font-size: 14px; padding: 6px 0; margin: 8px 0;
-  border-bottom: 1px solid #f0f0f0; color: #262626;
-}
 
 
