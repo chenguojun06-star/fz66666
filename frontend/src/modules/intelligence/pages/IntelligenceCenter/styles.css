@@ -442,11 +442,11 @@
 /* ────────────────────────────────────────────────
    质量缺陷热力图
 ─────────────────────────────────────────────────── */
-.c-heatmap-meta { font-size: 11px; color: #3a5470; margin-bottom: 8px; }
-.c-heatmap-grid { display: grid; gap: 3px; font-size: 11px; }
-.c-heat-head { text-align: center; color: #3a5470; padding: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-.c-heat-row-label { color: #3a5470; font-size: 10px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.c-heat-cell { text-align: center; padding: 4px 2px; border-radius: 3px; background: rgba(255,255,255,0.02); font-size: 11px; min-width: 24px; transition: background 0.3s; }
+.c-heatmap-meta { font-size: 12px; color: #3a5470; margin-bottom: 8px; }
+.c-heatmap-grid { display: grid; gap: 3px; font-size: 12px; }
+.c-heat-head { text-align: center; color: #3a5470; padding: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.c-heat-row-label { color: #3a5470; font-size: 12px; font-weight: 500; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-heat-cell { text-align: center; padding: 5px 2px; border-radius: 3px; background: rgba(255,255,255,0.02); font-size: 12px; font-weight: 600; min-width: 24px; transition: background 0.3s; }
 
 /* ────────────────────────────────────────────────
    面料缺口预警
