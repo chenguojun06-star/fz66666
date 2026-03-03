@@ -17,9 +17,18 @@ WHERE progress_stage IN ('仓库入库','成品入库');
 UPDATE t_scan_record SET progress_stage = '二次工艺'
 WHERE progress_stage IN ('绣花','印花','烟洗','压花','洗水');
 
--- 无效值（下单/裁剪退回等业务动作，quantity=0 的审计记录，置空）
+-- 尾部子工序（剪线/整烫/包装/辅料 → 尾部）
+UPDATE t_scan_record SET progress_stage = '尾部'
+WHERE progress_stage IN ('剪线','整烫','包装','辅料');
+
+-- 无效业务动作（下单/裁剪退回等，quantity=0，置空）
+UPDATE t_scan_record SET progress_stage = NULL
+WHERE progress_stage = '下单';
+
+-- 其余非标准值（数量=0 的审计记录，兜底置空）
 UPDATE t_scan_record SET progress_stage = NULL
 WHERE progress_stage NOT IN ('采购','裁剪','二次工艺','车缝','尾部','质检','入库')
+  AND progress_stage IS NOT NULL
   AND quantity = 0;
 
 -- 核查剩余非标准值（执行后应返回空结果）

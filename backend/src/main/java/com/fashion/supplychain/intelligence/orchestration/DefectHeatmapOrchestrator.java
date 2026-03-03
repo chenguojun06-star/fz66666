@@ -41,12 +41,17 @@ public class DefectHeatmapOrchestrator {
         // 质检系列
         m.put("质检领取", "质检"); m.put("质检验收", "质检");
         m.put("质检确认", "质检"); m.put("质检", "质检");
+        m.put("质检收货", "质检");
         // 入库系列
         m.put("仓库入库", "入库"); m.put("入库", "入库");
+        m.put("成品入库", "入库");
         // 二次工艺子工序 → 二次工艺
         m.put("绣花", "二次工艺"); m.put("印花", "二次工艺");
         m.put("烟洗", "二次工艺"); m.put("压花", "二次工艺");
         m.put("洗水", "二次工艺");
+        // 尾部子工序
+        m.put("剪线", "尾部"); m.put("整烫", "尾部");
+        m.put("包装", "尾部"); m.put("辅料", "尾部");
         NORMALIZE = Collections.unmodifiableMap(m);
     }
 
