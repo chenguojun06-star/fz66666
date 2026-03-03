@@ -715,11 +715,20 @@
 }
 
 /* ── 下滑面板 ── */
+.smart-alert-wrap {
+  position: relative;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
 .smart-alert-panel {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
   width: 360px;
+  max-width: calc(100vw - 24px);
+  min-width: 320px;
+  box-sizing: border-box;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(109, 40, 217, 0.13), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -961,11 +970,14 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  width: 100%;
+  min-width: 0;
 }
 .sap-ai-input-row .ant-input-affix-wrapper,
 .sap-ai-input-row .ant-input {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
 }
 .sap-ai-send {
   width: 28px; height: 28px;
