@@ -498,7 +498,7 @@ const IntelligenceCenter: React.FC = () => {
         .slice(0, 3)
         .map(o => ({ no: o.orderNo ?? '', pct: Number((o as any)[stuckKey]) || 0 }));
       return { name, count: orderList.length, stuckStage: minStage, stuckPct: Math.round(minAvg), worstOrders };
-    }).sort((a, b) => a.stuckPct - b.stuckPct).slice(0, 7);
+    }).sort((a, b) => a.stuckPct - b.stuckPct);
   }, [orders]);
 
   /* 派生警报数量 */
@@ -873,7 +873,7 @@ const IntelligenceCenter: React.FC = () => {
           <div className="c-card">
             <div className="c-card-title">
               🔍 工厂工序卡点
-              <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
+              <span className="c-card-badge cyan-badge">全部 {factoryBottleneck.length} 家工厂</span>
             </div>
             {factoryBottleneck.length === 0 ? (
               <div className="c-empty">暂无在制订单</div>
