@@ -1,10 +1,11 @@
 import React from 'react';
-import { Tag } from 'antd';
+import { Tag, Popover } from 'antd';
 
 import type { MenuProps } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import AttachmentThumb from '../components/AttachmentThumb';
+import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { formatDateTime } from '@/utils/datetime';
 import { useNavigate } from 'react-router-dom';
@@ -98,12 +99,20 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       key: 'styleNo',
       width: 120,
       render: (text: string, record: StyleInfo) => (
-        <a
-          onClick={() => navigate(`/style-info/${record.id}`)}
-          style={{ cursor: 'pointer' }}
+        <Popover
+          content={<SmartStyleHoverCard record={record} />}
+          trigger="hover"
+          placement="rightTop"
+          mouseEnterDelay={0.3}
+          overlayStyle={{ maxWidth: 280 }}
         >
-          {text}
-        </a>
+          <a
+            onClick={() => navigate(`/style-info/${record.id}`)}
+            style={{ cursor: 'pointer' }}
+          >
+            {text}
+          </a>
+        </Popover>
       ),
     },
     {

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import UniversalCardView from '@/components/common/UniversalCardView';
+import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -82,6 +83,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         },
         type: 'liquid', // 液体波浪进度条
       }}
+      hoverRender={(record) => <SmartStyleHoverCard record={record as StyleInfo} />}
       actions={(record) => [
         {
           key: 'view',
