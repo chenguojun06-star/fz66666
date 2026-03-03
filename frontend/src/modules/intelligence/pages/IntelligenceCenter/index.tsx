@@ -839,21 +839,26 @@ const IntelligenceCenter: React.FC = () => {
                 {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
               </div>
             </div>
-            {/* 停工工厂列表 */}
-            {(pulse?.stagnantFactories?.length ?? 0) > 0 ? (
-              <div className="c-stagnant-list">
-                {pulse!.stagnantFactories.map(f => (
-                  <div key={f.factoryName} className="c-stagnant-row">
-                    <span className="c-stagnant-dot" />
-                    <span className="c-stagnant-name">{f.factoryName}</span>
-                    <span className="c-stagnant-time">已停滞 {Math.round(f.minutesSilent / 60)}h{Math.round(f.minutesSilent % 60)}m</span>
-                  </div>
-                ))}
+            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
+            {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
+              <div className="c-factory-activity-list">
+                {pulse!.factoryActivity.map(f => {
+                  const mins = f.minutesSinceLastScan;
+                  const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
+                  return (
+                    <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
+                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
+                      <span className="c-fa-name">{f.factoryName}</span>
+                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
+                      <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="c-all-ok">
                 <CheckCircleOutlined style={{ marginRight: 6 }} />
-                所有工厂生产正常，系统稳定运转
+                今日暂无扫码记录
               </div>
             )}
           </div>

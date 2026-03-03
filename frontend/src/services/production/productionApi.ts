@@ -151,6 +151,14 @@ export interface LivePulseResponse {
   scanRatePerHour: number;
   timeline: PulsePoint[];
   stagnantFactories: StagnantFactory[];
+  factoryActivity: FactoryActivity[];
+}
+export interface FactoryActivity {
+  factoryName: string;
+  minutesSinceLastScan: number;
+  todayQty: number;
+  todayCount: number;
+  active: boolean;
 }
 
 export interface WorkerEfficiencyItem {

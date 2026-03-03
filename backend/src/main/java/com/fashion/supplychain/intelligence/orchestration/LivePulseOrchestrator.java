@@ -66,6 +66,7 @@ public class LivePulseOrchestrator {
         resp.setScanRatePerHour(windowQty * 60.0 / PULSE_WINDOW_MINUTES);
         resp.setTimeline(buildTimeline(windowScans, windowStart));
         resp.setStagnantFactories(detectStagnant(todayScans, now, orderFactoryMap));
+        resp.setFactoryActivity(buildFactoryActivity(todayScans, now, orderFactoryMap));
         } catch (Exception e) {
             log.error("[实时脉搏] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
         }
@@ -120,6 +121,34 @@ public class LivePulseOrchestrator {
             }
         }
         result.sort(Comparator.comparingLong(StagnantFactory::getMinutesSilent).reversed());
+        return result;
+    }
+
+    private List<LivePulseResponse.FactoryActivity> buildFactoryActivity(
+            List<ScanRecord> todayScans, LocalDateTime now, Map<String, String> orderFactoryMap) {
+        Map<String, List<ScanRecord>> byFactory = new HashMap<>();
+        for (ScanRecord r : todayScans) {
+            String factory = orderFactoryMap.getOrDefault(r.getOrderId(), "");
+            if (!factory.isEmpty()) {
+                byFactory.computeIfAbsent(factory, k -> new ArrayList<>()).add(r);
+            }
+        }
+        List<LivePulseResponse.FactoryActivity> result = new ArrayList<>();
+        for (Map.Entry<String, List<ScanRecord>> entry : byFactory.entrySet()) {
+            Optional<LocalDateTime> lastTime = entry.getValue().stream()
+                    .map(ScanRecord::getScanTime).filter(Objects::nonNull).max(Comparator.naturalOrder());
+            if (lastTime.isEmpty()) continue;
+            long minutesSince = Duration.between(lastTime.get(), now).toMinutes();
+            LivePulseResponse.FactoryActivity fa = new LivePulseResponse.FactoryActivity();
+            fa.setFactoryName(entry.getKey());
+            fa.setMinutesSinceLastScan(minutesSince);
+            fa.setTodayQty(entry.getValue().stream()
+                    .mapToLong(r -> r.getQuantity() != null ? r.getQuantity() : 0).sum());
+            fa.setTodayCount(entry.getValue().size());
+            fa.setActive(minutesSince < STAGNANT_THRESHOLD_MINUTES);
+            result.add(fa);
+        }
+        result.sort(Comparator.comparingLong(LivePulseResponse.FactoryActivity::getMinutesSinceLastScan));
         return result;
     }
 

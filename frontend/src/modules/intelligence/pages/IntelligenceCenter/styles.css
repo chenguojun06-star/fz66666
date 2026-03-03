@@ -377,6 +377,60 @@
 .c-stagnant-name { color: #e8d8d0; flex: 1; font-size: 13px; }
 .c-stagnant-time { color: #ff4136; font-size: 12px; }
 
+/* 工厂活跃状态列表 */
+.c-factory-activity-list {
+  margin-top: 8px;
+  border-top: 1px solid rgba(0,229,255,0.1);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.c-factory-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(0,229,255,0.04);
+  transition: background 0.2s;
+}
+.c-factory-activity-row.inactive {
+  background: rgba(255,65,54,0.04);
+}
+.c-factory-activity-row:hover { background: rgba(0,229,255,0.08); }
+.c-fa-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: dot-warn-blink 2s ease-in-out infinite;
+}
+.c-fa-name {
+  flex: 1;
+  font-size: 12px;
+  color: #c8d8e8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.c-fa-time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.c-fa-qty {
+  font-size: 12px;
+  color: #8ab4cc;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.c-fa-qty em {
+  font-style: normal;
+  font-size: 10px;
+  color: #5a7a8a;
+  margin-left: 1px;
+}
+
 /* 全部正常提示 */
 .c-all-ok {
   margin-top: 12px;

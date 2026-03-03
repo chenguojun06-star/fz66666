@@ -20,6 +20,8 @@ public class LivePulseResponse {
     private List<PulsePoint> timeline;
     /** 停滞工厂（>30分钟无扫码） */
     private List<StagnantFactory> stagnantFactories;
+    /** 各工厂活跃状态（今日有扫码的工厂，按最近扫码时间倒序） */
+    private List<FactoryActivity> factoryActivity;
 
     @Data
     public static class PulsePoint {
@@ -34,5 +36,18 @@ public class LivePulseResponse {
         private long minutesSilent;
         private long lastScanQty;
         private String lastScanTime;
+    }
+
+    @Data
+    public static class FactoryActivity {
+        private String factoryName;
+        /** 距上次扫码的分钟数 */
+        private long minutesSinceLastScan;
+        /** 今日扫码件数 */
+        private long todayQty;
+        /** 今日扫码次数 */
+        private int todayCount;
+        /** 是否活跃（<30分钟有扫码） */
+        private boolean active;
     }
 }
