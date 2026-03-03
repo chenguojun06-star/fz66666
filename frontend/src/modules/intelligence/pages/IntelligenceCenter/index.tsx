@@ -785,9 +785,13 @@ const IntelligenceCenter: React.FC = () => {
                   风险工序：<b style={{ color: '#ff4136' }}>{heatmap.worstProcess}</b>
                   &nbsp;·&nbsp;风险工厂：<b style={{ color: '#ff4136' }}>{heatmap.worstFactory}</b>
                 </div>
-                <div className="c-heatmap-grid" style={{ gridTemplateColumns: `72px repeat(${heatmap.factories.length}, 1fr)` }}>
+                <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${heatmap.factories.length}, 1fr)` }}>
                   <div />
-                  {heatmap.factories.map(f => <div key={f} className="c-heat-head">{f}</div>)}
+                  {heatmap.factories.map(f => (
+                    <Tooltip key={f} title={f} placement="top">
+                      <div className="c-heat-head">{f}</div>
+                    </Tooltip>
+                  ))}
                   {heatmap.processes.map(proc => (
                     <React.Fragment key={proc}>
                       <div className="c-heat-row-label">{proc}</div>

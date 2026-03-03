@@ -16,12 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 质量缺陷热力图编排器 — 工序 × 工厂 缺陷矩阵
+ * 质量缺陷热力图编排器 — 「父工序 × 工厂」 缺陷矩阵
  *
  * <p>算法：
  * <ol>
  *   <li>取最近 30 天所有扫码记录</li>
- *   <li>按 (processName, factoryName) 二维分组</li>
+ *   <li>按 (progressStage[父工序], factoryName) 二维分组，而非 processName[子工序]</li>
  *   <li>计算每个格子的 defectRate = failCount / totalCount</li>
  *   <li>热度等级：0=优秀(≤1%), 1=良好(≤5%), 2=警告(≤10%), 3=严重(>10%)</li>
  * </ol>
@@ -43,10 +43,11 @@ public class DefectHeatmapOrchestrator {
         LocalDateTime start = LocalDateTime.now().minusDays(30);
 
         // 获取最近30天扫码记录
+        // 过滤：progress_stage 不为空（父工序必须存在）
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .ge("scan_time", start)
-          .isNotNull("process_name");
+          .isNotNull("progress_stage");
         List<ScanRecord> scans = scanRecordService.list(qw);
 
         if (scans.isEmpty()) {
@@ -69,10 +70,16 @@ public class DefectHeatmapOrchestrator {
                             o.getFactoryName() != null ? o.getFactoryName() : "未分配"));
         }
 
-        // 收集所有工序名和工厂名
+        // 收集父工序（progressStage）和工厂名——按预定义顺序排序
+        List<String> stageOrder = Arrays.asList("采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
         List<String> processes = scans.stream()
-                .map(ScanRecord::getProcessName).filter(Objects::nonNull)
-                .distinct().sorted().collect(Collectors.toList());
+                .map(ScanRecord::getProgressStage).filter(Objects::nonNull)
+                .distinct()
+                .sorted(Comparator.comparingInt(s -> {
+                    int idx = stageOrder.indexOf(s);
+                    return idx < 0 ? 999 : idx;
+                }))
+                .collect(Collectors.toList());
         List<String> factories = scans.stream()
                 .map(s -> orderToFactory.getOrDefault(s.getOrderId(), "未分配"))
                 .distinct().sorted().collect(Collectors.toList());
@@ -83,12 +90,13 @@ public class DefectHeatmapOrchestrator {
         Map<String, Integer> factoryIdx = new HashMap<>();
         for (int i = 0; i < factories.size(); i++) factoryIdx.put(factories.get(i), i);
 
-        // 按 (工序, 工厂) 分组统计
+        // 按 (父工序, 工厂) 分组统计
         Map<String, int[]> cellStats = new HashMap<>(); // key="pIdx,fIdx" -> [total, fail]
         int totalDefects = 0;
 
         for (ScanRecord s : scans) {
-            String pName = s.getProcessName();
+            // 使用 progressStage(父工序)，不用 processName(子工序)
+            String pName = s.getProgressStage();
             String fName = orderToFactory.getOrDefault(s.getOrderId(), "未分配");
             if (pName == null || !processIdx.containsKey(pName) || !factoryIdx.containsKey(fName)) continue;
 
@@ -120,11 +128,11 @@ public class DefectHeatmapOrchestrator {
             cells.add(cell);
         }
 
-        // 找最差工序和工厂
+        // 找最差父工序和工厂
         Map<String, int[]> byProcess = new HashMap<>();
         Map<String, int[]> byFactory = new HashMap<>();
         for (ScanRecord s : scans) {
-            String pName = s.getProcessName();
+            String pName = s.getProgressStage(); // 用父工序
             String fName = orderToFactory.getOrDefault(s.getOrderId(), "未分配");
             if (pName != null) {
                 int[] ps = byProcess.computeIfAbsent(pName, k -> new int[]{0, 0});
