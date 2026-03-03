@@ -911,7 +911,7 @@ const IntelligenceCenter: React.FC = () => {
               <div className="c-all-ok"><CheckCircleOutlined style={{ marginRight: 6 }} />所有订单均在健康交期内</div>
             ) : (
               <div className="c-risk-list">
-                {overdueRisk.overdue.slice(0, 4).map(o => {
+                {overdueRisk.overdue.map(o => {
                   const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
                   return (
                     <div key={String(o.id)} className="c-risk-row">
@@ -922,7 +922,7 @@ const IntelligenceCenter: React.FC = () => {
                     </div>
                   );
                 })}
-                {overdueRisk.highRisk.slice(0, 3).map(o => {
+                {overdueRisk.highRisk.map(o => {
                   const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
                   return (
                     <div key={String(o.id)} className="c-risk-row">
@@ -933,7 +933,7 @@ const IntelligenceCenter: React.FC = () => {
                     </div>
                   );
                 })}
-                {overdueRisk.watch.slice(0, 2).map(o => {
+                {overdueRisk.watch.map(o => {
                   const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
                   return (
                     <div key={String(o.id)} className="c-risk-row">

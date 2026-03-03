@@ -656,7 +656,7 @@
 /* ────────────────────────────────────────────────
    逾期 & 延期风险订单列表
 ──────────────────────────────────────────────── */
-.c-risk-list { display: flex; flex-direction: column; gap: 4px; max-height: 210px; overflow-y: auto; }
+.c-risk-list { display: flex; flex-direction: column; gap: 4px; min-height: 120px; max-height: 280px; overflow-y: auto; }
 .c-risk-list::-webkit-scrollbar,
 .c-bottleneck-list::-webkit-scrollbar { width: 3px; }
 .c-risk-list::-webkit-scrollbar-track,
@@ -690,7 +690,7 @@
 /* ────────────────────────────────────────────────
    工厂工序卡点分析列表
 ──────────────────────────────────────────────── */
-.c-bottleneck-list { display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto; }
+.c-bottleneck-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; max-height: 280px; overflow-y: auto; }
 .c-bottleneck-item { display: flex; flex-direction: column; gap: 3px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .c-bottleneck-item:last-child { border-bottom: none; padding-bottom: 0; }
 .c-bottleneck-row {
