@@ -756,9 +756,32 @@ Page({
     // 再次点击同一仓库则取消选择
     if (this.data.warehouse === value) {
       this.setData({ warehouse: '' });
+      try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) {}
     } else {
       this.setData({ warehouse: value });
+      try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) {}
     }
+  },
+
+  /**
+   * 检查当前网络状态并给出明确提示
+   * @returns {void}
+   */
+  onCheckNetwork() {
+    wx.getNetworkType({
+      success(res) {
+        if (res.networkType === 'none') {
+          wx.showModal({
+            title: '无网络连接',
+            content: '当前设备没有网络连接，请开启 Wi-Fi 或移动数据后重试',
+            showCancel: false,
+            confirmText: '知道了',
+          });
+        } else {
+          wx.showToast({ title: `网络正常(${res.networkType})，请重新扫码`, icon: 'none', duration: 2500 });
+        }
+      },
+    });
   },
 
   /**

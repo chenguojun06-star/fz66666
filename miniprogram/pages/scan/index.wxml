@@ -110,6 +110,11 @@
       <text class="hint-icon">⚠️</text>
       <text class="hint-text">{{lastResult.unitPriceHint}}</text>
     </view>
+    <!-- 失败后明确下一步操作按鈕 -->
+    <view wx:if="{{!lastResult.success && lastResult.errorAction}}" class="res-actions">
+      <view wx:if="{{lastResult.errorAction === 'checkNetwork'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onCheckNetwork">📶 检查网络</view>
+      <view wx:if="{{lastResult.errorAction === 'retry'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onScan">🔄 重新扫码</view>
+    </view>
   </view>
 
   <!-- ④ 扫码区（一行：扫码主键） -->
@@ -119,7 +124,7 @@
         <text class="scan-btn-icon">📷</text>
         <view class="scan-btn-text-group">
           <text class="scan-btn-main">{{loading ? '识别中...' : '扫码识别'}}</text>
-          <text class="scan-btn-sub">自动匹配工序</text>
+          <text class="scan-btn-sub">{{lastUsedProcessName ? '上次：' + lastUsedProcessName : '自动匹配工序'}}</text>
         </view>
       </view>
     </view>

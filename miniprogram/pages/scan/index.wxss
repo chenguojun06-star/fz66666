@@ -673,6 +673,26 @@ page {
   line-height: 1.4;
 }
 
+/* 失败结果下一步操作按鈕 */
+.res-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.res-action-btn {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  background: var(--color-error);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.res-action-btn-hover {
+  opacity: 0.75;
+}
+
 /* ===== 区块通用 ===== */
 .section {
   background: var(--color-bg-card);

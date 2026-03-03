@@ -23,6 +23,7 @@ const scanPageData = {
   currentUser: null,
   quantity: '',
   warehouse: '',
+  lastUsedProcessName: '', // 上次拍码成功的工序名称，页面内显示提示
   lastResult: null,
   scanHistory: [],
 

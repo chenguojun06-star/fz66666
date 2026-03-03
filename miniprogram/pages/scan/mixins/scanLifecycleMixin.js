@@ -62,6 +62,15 @@ const scanLifecycleMixin = Behavior({
     }
 
     await this.checkLoginStatus();
+    // 恢复上次使用的工序/仓库偏好（零阻塞）
+    try {
+      const lastProcess = wx.getStorageSync('scan_pref_process');
+      const lastWarehouse = wx.getStorageSync('scan_pref_warehouse');
+      const updates = {};
+      if (lastProcess) updates.lastUsedProcessName = lastProcess;
+      if (lastWarehouse) updates.warehouse = lastWarehouse;
+      if (Object.keys(updates).length > 0) this.setData(updates);
+    } catch (_) { /* 静默忽略，storage 异常不阻断启动 */ }
     // 延迟加载本地历史缓存，不阻塞首屏渲染（历史记录是次要内容）
     setTimeout(() => this.loadLocalHistory(), 80);
     // 异步加载仓库选项（不阻塞页面显示）

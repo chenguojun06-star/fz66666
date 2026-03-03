@@ -464,6 +464,16 @@ const scanCoreMixin = Behavior({
       // 启动撤销倒计时
       this.startUndoTimer(formattedResult);
 
+      // 记忆本次工序/仓库，下次打开页面自动恢复
+      try {
+        if (processName) {
+          wx.setStorageSync('scan_pref_process', processName);
+          this.setData({ lastUsedProcessName: processName });
+        }
+        const curWarehouse = this.data.warehouse;
+        if (curWarehouse) wx.setStorageSync('scan_pref_warehouse', curWarehouse);
+      } catch (_) { /* storage 失败不影响扫码流程 */ }
+
       // 延迟 800ms 再刷新面板：
       // 1. 给后端事务足够时间落库，确保历史 API 能返回刚提交的扫码记录
       // 2. 避免立即调用 + eventBus 二次触发并发竞争 my.loadingHistory 锁
@@ -484,12 +494,24 @@ const scanCoreMixin = Behavior({
       // 播放失败音效/震动
       wx.vibrateLong();
 
+      const msg = error.errMsg || error.message || '扫码失败';
+
+      // 根据错误类型推断下一步操作按鈕类型
+      let errorAction = 'retry'; // 默认显示“重新扫码”
+      if (msg.includes('网络') || msg.includes('timeout') || msg.includes('超时') ||
+          msg.includes('连接') || msg.includes('errcode:-101') || msg.includes('errcode:-102')) {
+        errorAction = 'checkNetwork'; // 网络类错误 → 显示‘检查网络’
+      } else if (msg.includes('重复') || msg.includes('已扫') || msg.includes('间隔') || msg.includes('太快')) {
+        errorAction = null; // 重复类，文字提示就够，不需要操作按鈕
+      }
+
       const errorResult = {
         success: false,
-        message: error.errMsg || error.message || '扫码失败',
+        message: msg,
         displayTime: new Date().toLocaleTimeString(),
         statusText: '失败',
         statusClass: 'error',
+        errorAction,
       };
 
       this.setData({
