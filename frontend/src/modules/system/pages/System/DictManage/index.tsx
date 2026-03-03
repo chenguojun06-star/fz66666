@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Col, Form, Input, Row, Select, Space, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
@@ -82,6 +82,7 @@ const DictManage: React.FC = () => {
   const [dataSource, setDataSource] = useState<DictItem[]>([]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const showDictAutocollect = useMemo(() => isSmartFeatureEnabled('smart.dict.autocollect.enabled'), []);
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
@@ -486,6 +487,17 @@ const DictManage: React.FC = () => {
           <SmartErrorNotice error={smartError} onFix={() => { void fetchData(selectedType); }} />
         </Card>
       ) : null}
+      {showDictAutocollect && (
+        <Alert
+          style={{ marginBottom: 12 }}
+          type="info"
+          showIcon
+          icon={<span>🤖</span>}
+          message="词典自动收录已开启"
+          description="AI 正在监停业务中新出现的词汇，自动放入待审池。请结合此页定期审核并拣优字典条目，确保业务词汇准确。如需关闭，可在“智能功能设置”中关闭。"
+          banner={false}
+        />
+      )}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>
           <Space size="large">

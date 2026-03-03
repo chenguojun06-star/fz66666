@@ -12,13 +12,13 @@ export type SmartFeatureKey =
 const defaultFlags: Record<SmartFeatureKey, boolean> = {
   'smart.guide.enabled': false,
   'smart.dict.autocollect.enabled': false,
-  'smart.production.precheck.enabled': true,
+  'smart.production.precheck.enabled': false,
   'smart.finance.explain.enabled': false,
   'smart.system.guard.enabled': false,
-  'smart.worker-profile.enabled': true,
-  'smart.warehousing.audit.enabled': true,
-  'smart.material.inventory.ai.enabled': true,
-  'smart.material.purchase.ai.enabled': true,
+  'smart.worker-profile.enabled': false,
+  'smart.warehousing.audit.enabled': false,
+  'smart.material.inventory.ai.enabled': false,
+  'smart.material.purchase.ai.enabled': false,
 };
 
 const storageKey = 'smart-feature-flags';

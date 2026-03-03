@@ -41,6 +41,7 @@ import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import SmartReceiveModal from './components/SmartReceiveModal';
+import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -110,6 +111,7 @@ const MaterialPurchase: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const showPurchaseAI = useMemo(() => isSmartFeatureEnabled('smart.material.purchase.ai.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -1454,6 +1456,13 @@ const MaterialPurchase: React.FC = () => {
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />
+
+                    {showPurchaseAI && (
+                      <MaterialPurchaseAIBanner
+                        purchaseList={purchaseList}
+                        currentOrderNo={String(queryParams.orderNo || '').trim() || undefined}
+                      />
+                    )}
 
                     <MaterialTable
                       loading={loading}

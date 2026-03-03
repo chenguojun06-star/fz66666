@@ -25,6 +25,8 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { intelligenceApi } from '@/services/production/productionApi';
+import type { FinanceAuditResponse } from '@/services/production/productionApi';
 
 const { Option } = Select;
 
@@ -54,6 +56,22 @@ const MaterialReconciliation: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  // 财务AI审核面板
+  const [financeAudit, setFinanceAudit] = useState<FinanceAuditResponse | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const fetchFinanceAudit = React.useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const res = await intelligenceApi.getFinanceAudit();
+      const d = (res as any)?.data;
+      if (d) setFinanceAudit(d);
+    } catch {
+      /* 静默失败 */
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -694,6 +712,52 @@ const MaterialReconciliation: React.FC = () => {
               <SmartErrorNotice error={smartError} onFix={fetchReconciliationList} />
             </div>
           ) : null}
+
+          {/* 财务AI智能审核面板 */}
+          {showSmartErrorNotice && (
+            <Card
+              size="small"
+              style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }}
+              bodyStyle={{ padding: '8px 12px' }}
+              extra={
+                <Button
+                  size="small"
+                  type="link"
+                  loading={auditLoading}
+                  onClick={fetchFinanceAudit}
+                  style={{ padding: 0 }}
+                >
+                  {financeAudit ? '重新分析' : '🤖 AI分析'}
+                </Button>
+              }
+              title={<span style={{ fontSize: 13, color: '#1677ff' }}>🧾 智能财务审核助手</span>}
+            >
+              {!financeAudit ? (
+                <span style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  点击「AI分析」自动检测对账差异并给出审核建议
+                </span>
+              ) : (
+                <div style={{ fontSize: 12 }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Tag color={financeAudit.overallRisk === 'HIGH' ? 'red' : financeAudit.overallRisk === 'MEDIUM' ? 'orange' : 'green'}>
+                      整体风险：{financeAudit.overallRisk === 'HIGH' ? '高' : financeAudit.overallRisk === 'MEDIUM' ? '中' : '低'}
+                    </Tag>
+                    <span style={{ color: '#262626', marginLeft: 8 }}>{financeAudit.suggestion}</span>
+                  </div>
+                  {financeAudit.findings && financeAudit.findings.length > 0 && (
+                    <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: '#595959' }}>
+                      {financeAudit.findings.slice(0, 3).map((f: any, i: number) => (
+                        <li key={i}>{f.description || f.detail || String(f)}</li>
+                      ))}
+                      {financeAudit.findings.length > 3 && (
+                        <li style={{ color: '#8c8c8c' }}>...共 {financeAudit.findings.length} 条异常</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">

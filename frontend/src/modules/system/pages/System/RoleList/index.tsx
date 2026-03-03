@@ -34,6 +34,7 @@ const RoleList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const showSystemGuard = useMemo(() => isSmartFeatureEnabled('smart.system.guard.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -560,6 +561,29 @@ const RoleList: React.FC = () => {
               <SmartErrorNotice error={smartError} onFix={fetchRoles} />
             </Card>
           ) : null}
+          {showSystemGuard && roleList.length > 0 && (() => {
+            const broadRoles = roleList.filter(
+              (r) => String(r.status || 'active') === 'active' && String(r.dataScope || '') === 'all'
+            );
+            if (broadRoles.length === 0) return null;
+            return (
+              <Alert
+                style={{ marginBottom: 12 }}
+                type="warning"
+                showIcon
+                icon={<span>🛡️</span>}
+                message="权限防呆检测"
+                description={
+                  <span>
+                    当前有 <strong>{broadRoles.length}</strong> 个启用角色使用“全部数据”范围（
+                    {broadRoles.slice(0, 3).map((r) => String(r.roleName || r.roleCode)).join('、')}{broadRoles.length > 3 ? '等' : ''}
+                    ），建议审查是否需要半等权限范围，防止越权操作。
+                  </span>
+                }
+                banner={false}
+              />
+            );
+          })()}
           <div className="page-header">
             <h2 className="page-title">角色管理</h2>
             <Button type="primary" onClick={() => openDialog()}>
