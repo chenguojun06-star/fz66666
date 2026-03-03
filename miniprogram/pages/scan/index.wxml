@@ -131,10 +131,14 @@
           class="warehouse-chip {{warehouse === item ? 'warehouse-chip--active' : ''}}"
           bindtap="onWarehouseChipTap"
           data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
         >{{item}}</view>
         <view
           class="warehouse-chip warehouse-chip--clear {{warehouse ? '' : 'warehouse-chip--disabled'}}"
           bindtap="onWarehouseClear"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
         >清除</view>
       </view>
       <!-- 自定义仓库代码输入 -->
@@ -342,7 +346,9 @@
                 id="process-item-{{index}}"
                 class="inline-selector-item {{scanResultConfirm.processIndex === index ? 'active' : ''}}"
                 data-index="{{index}}"
-                bindtap="onProcessScrollSelect">
+                bindtap="onProcessScrollSelect"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
                 <view class="inline-selector-left">
                   <view class="inline-selector-radio {{scanResultConfirm.processIndex === index ? 'checked' : ''}}">
                     <view wx:if="{{scanResultConfirm.processIndex === index}}" class="inline-selector-radio-dot"></view>
@@ -364,10 +370,14 @@
                 class="warehouse-chip {{scanResultConfirm.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
                 bindtap="onResultWarehouseChipTap"
                 data-value="{{item}}"
+                hover-class="warehouse-chip-hover"
+                hover-stay-time="100"
               >{{item}}</view>
               <view
                 class="warehouse-chip warehouse-chip--clear {{scanResultConfirm.warehouseCode ? '' : 'warehouse-chip--disabled'}}"
                 bindtap="onResultWarehouseClear"
+                hover-class="warehouse-chip-hover"
+                hover-stay-time="100"
               >清除</view>
             </view>
             <input
@@ -768,11 +778,11 @@
       <view class="qm-section">
         <text class="qm-section-title">质检结果 <text style="color: #ef4444;">*</text></text>
         <view class="qm-radio-group">
-          <view class="qm-radio {{qualityModal.result === 'qualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="qualified">
+          <view class="qm-radio {{qualityModal.result === 'qualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="qualified" hover-class="qm-radio-hover" hover-stay-time="100">
             <view class="qm-radio-icon">{{qualityModal.result === 'qualified' ? '✓' : ''}}</view>
             <text>合格</text>
           </view>
-          <view class="qm-radio {{qualityModal.result === 'unqualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="unqualified">
+          <view class="qm-radio {{qualityModal.result === 'unqualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="unqualified" hover-class="qm-radio-hover" hover-stay-time="100">
             <view class="qm-radio-icon">{{qualityModal.result === 'unqualified' ? '✓' : ''}}</view>
             <text>不合格</text>
           </view>
@@ -798,7 +808,9 @@
                 class="inline-selector-item {{qualityModal.defectCategory == index ? 'active' : ''}}"
                 data-index="{{index}}"
                 data-field="defectCategory"
-                bindtap="onQmSelectorTap">
+                bindtap="onQmSelectorTap"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
                 <view class="inline-selector-left">
                   <view class="inline-selector-radio {{qualityModal.defectCategory == index ? 'checked' : ''}}">
                     <view wx:if="{{qualityModal.defectCategory == index}}" class="inline-selector-radio-dot"></view>
@@ -821,7 +833,9 @@
                 class="inline-selector-item {{qualityModal.handleMethod == index ? 'active' : ''}}"
                 data-index="{{index}}"
                 data-field="handleMethod"
-                bindtap="onQmSelectorTap">
+                bindtap="onQmSelectorTap"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
                 <view class="inline-selector-left">
                   <view class="inline-selector-radio {{qualityModal.handleMethod == index ? 'checked' : ''}}">
                     <view wx:if="{{qualityModal.handleMethod == index}}" class="inline-selector-radio-dot"></view>
@@ -847,7 +861,7 @@
               <image class="qm-image" src="{{item}}" mode="aspectFill" />
               <view class="qm-image-del" catchtap="onDeleteQualityImage" data-index="{{index}}">×</view>
             </view>
-            <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage">
+            <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage" hover-class="qm-image-upload-hover" hover-stay-time="100">
               <text class="qm-upload-icon">+</text>
               <text style="font-size: 12px; color: #999;">上传</text>
             </view>

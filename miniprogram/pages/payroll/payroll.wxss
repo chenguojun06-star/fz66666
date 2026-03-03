@@ -89,7 +89,10 @@
   font-size: 28rpx;
   color: var(--color-text-secondary);
   border-radius: var(--border-radius-md);
-  transition: all 0.3s;
+}
+
+.filter-tab-hover {
+  background: rgba(224, 242, 254, 0.5);
 }
 
 .filter-tab.active {
@@ -144,6 +147,10 @@
   background: var(--color-primary-light);
   border-radius: var(--border-radius-md);
   color: var(--color-primary);
+}
+
+.sort-btn-hover {
+  opacity: 0.7;
 }
 
 .sort-text {

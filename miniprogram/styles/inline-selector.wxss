@@ -51,11 +51,16 @@
   border-radius: 8px;
   background: var(--color-bg-card, #fff);
   border: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .inline-selector-item:last-child {
   margin-bottom: 0;
+}
+
+/* hover反馈 */
+.inline-selector-item-hover {
+  background: rgba(224, 242, 254, 0.6);
 }
 
 .inline-selector-item.active {
@@ -81,7 +86,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: background 0.15s, border-color 0.15s;
   flex-shrink: 0;
 }
 

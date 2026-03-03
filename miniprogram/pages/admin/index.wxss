@@ -340,7 +340,7 @@ page {
   background: var(--color-bg-card);
   text-align: center;
   box-shadow: var(--shadow-md);
-  transition: all 0.2s;
+  transition: background 0.15s;
 }
 
 .stat-card-hover {

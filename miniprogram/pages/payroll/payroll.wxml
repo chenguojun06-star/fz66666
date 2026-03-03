@@ -31,13 +31,13 @@
   <!-- 筛选器 -->
   <view class="filter-bar">
     <view class="filter-tabs">
-      <view class="filter-tab {{timeFilter === 'week' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="week">
+      <view class="filter-tab {{timeFilter === 'week' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="week">
         本周
       </view>
-      <view class="filter-tab {{timeFilter === 'month' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="month">
+      <view class="filter-tab {{timeFilter === 'month' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="month">
         本月
       </view>
-      <view class="filter-tab {{timeFilter === 'custom' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="custom">
+      <view class="filter-tab {{timeFilter === 'custom' ? 'active' : ''}}" hover-class="filter-tab-hover" hover-stay-time="100" bindtap="onFilterChange" data-filter="custom">
         自定义
       </view>
     </view>
@@ -59,7 +59,7 @@
   <view class="detail-section">
     <view class="section-header">
       <view class="section-title">【工序明细】</view>
-      <view class="sort-btn" bindtap="toggleSort">
+      <view class="sort-btn" hover-class="sort-btn-hover" hover-stay-time="100" bindtap="toggleSort">
         <text class="sort-text">按金额</text>
         <text class="sort-icon">{{sortOrder === 'desc' ? '▼' : '▲'}}</text>
       </view>

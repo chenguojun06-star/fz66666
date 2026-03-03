@@ -74,7 +74,7 @@ page {
   font-weight: 500;
   color: var(--color-text-secondary);
   border-radius: var(--radius-full);
-  transition: all 0.2s ease;
+  transition: background 0.15s, color 0.15s;
 }
 
 .tab-active {
