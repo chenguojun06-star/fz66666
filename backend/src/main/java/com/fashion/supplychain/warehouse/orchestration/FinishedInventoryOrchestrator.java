@@ -55,6 +55,16 @@ public class FinishedInventoryOrchestrator {
         wrapper.orderByDesc(ProductSku::getUpdateTime);
         IPage<ProductSku> skuPageResult = productSkuService.page(skuPage, wrapper);
 
+        // 统计每个 styleId 的当前库存总量（用于与入库汇总口径对齐）
+        Map<String, Integer> stockQtyByStyleId = new HashMap<>();
+        for (ProductSku sku : skuPageResult.getRecords()) {
+            if (sku == null || sku.getStyleId() == null) {
+                continue;
+            }
+            int qty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+            stockQtyByStyleId.merge(String.valueOf(sku.getStyleId()), qty, Integer::sum);
+        }
+
         // 收集 styleId 列表
         List<Long> styleIds = skuPageResult.getRecords().stream()
                 .map(ProductSku::getStyleId)
@@ -100,6 +110,8 @@ public class FinishedInventoryOrchestrator {
         // 批量查询入库记录（按 styleId 分组，取最新一条）
         // 注意：t_product_warehousing 没有 color/size 列，只能按 styleId 匹配
         Map<String, ProductWarehousing> warehousingMap = new HashMap<>();
+        Map<String, String> latestOperatorByStyleId = new HashMap<>();
+        Map<String, String> latestWarehouseByStyleId = new HashMap<>();
         if (!styleIds.isEmpty()) {
             List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
@@ -124,6 +136,30 @@ public class FinishedInventoryOrchestrator {
                                 return existing.getWarehousingEndTime() != null ? existing : replacement;
                             }
                     ));
+
+            // 提取每个 styleId 的“最新非空操作人/库位”用于兜底，避免页面显示 '-'
+            for (ProductWarehousing warehousing : warehousingList) {
+                if (warehousing == null || !StringUtils.hasText(warehousing.getStyleId())) {
+                    continue;
+                }
+                String styleId = warehousing.getStyleId();
+                if (!latestOperatorByStyleId.containsKey(styleId)) {
+                    String operatorName = StringUtils.hasText(warehousing.getWarehousingOperatorName())
+                            ? warehousing.getWarehousingOperatorName()
+                            : warehousing.getQualityOperatorName();
+                    if (StringUtils.hasText(operatorName)) {
+                        latestOperatorByStyleId.put(styleId, operatorName);
+                    }
+                }
+                if (!latestWarehouseByStyleId.containsKey(styleId)
+                        && StringUtils.hasText(warehousing.getWarehouse())) {
+                    latestWarehouseByStyleId.put(styleId, warehousing.getWarehouse());
+                }
+                if (latestOperatorByStyleId.containsKey(styleId)
+                        && latestWarehouseByStyleId.containsKey(styleId)) {
+                    continue;
+                }
+            }
         }
 
         // 统计每个 styleId 的总入库数量
@@ -192,12 +228,25 @@ public class FinishedInventoryOrchestrator {
                 dto.setWarehouseLocation(warehousing.getWarehouse());
                 dto.setLastInboundDate(warehousing.getWarehousingEndTime());
                 dto.setQualityInspectionNo(warehousing.getWarehousingNo());
-                dto.setLastInboundBy(warehousing.getWarehousingOperatorName());
+                String latestInboundBy = StringUtils.hasText(warehousing.getWarehousingOperatorName())
+                        ? warehousing.getWarehousingOperatorName()
+                        : warehousing.getQualityOperatorName();
+                dto.setLastInboundBy(latestInboundBy);
+            }
+
+            // 兜底：若最新记录缺少操作人/库位，回填“最新非空值”
+            if (!StringUtils.hasText(dto.getLastInboundBy())) {
+                dto.setLastInboundBy(latestOperatorByStyleId.get(styleIdStr));
+            }
+            if (!StringUtils.hasText(dto.getWarehouseLocation())) {
+                dto.setWarehouseLocation(latestWarehouseByStyleId.get(styleIdStr));
             }
 
             // 入库总量
             Integer totalInbound = totalInboundQtyMap.get(styleIdStr);
-            dto.setTotalInboundQty(totalInbound != null ? totalInbound : 0);
+            int inboundQty = totalInbound != null ? totalInbound : 0;
+            int stockQty = stockQtyByStyleId.getOrDefault(styleIdStr, 0);
+            dto.setTotalInboundQty(Math.max(inboundQty, stockQty));
 
             // 获取该款式的所有颜色和尺码
             List<ProductSku> styleSKUs = styleSkuMap.get(sku.getStyleNo());
