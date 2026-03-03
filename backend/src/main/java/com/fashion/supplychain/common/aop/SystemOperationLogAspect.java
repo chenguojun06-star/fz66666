@@ -5,6 +5,10 @@ import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.CuttingBundleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
@@ -34,11 +38,32 @@ public class SystemOperationLogAspect {
     @Autowired(required = false)
     private ProductionOrderService productionOrderService;
 
+    @Autowired(required = false)
+    private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired(required = false)
+    private MaterialPickingService materialPickingService;
+
+    @Autowired(required = false)
+    private CuttingTaskService cuttingTaskService;
+
+    @Autowired(required = false)
+    private CuttingBundleService cuttingBundleService;
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 只记录异常/重要操作，正常业务流转不记录 */
+    /**
+     * 记录所有重要业务操作：增删改、状态流转、审批、入出库等
+     * 覆盖全系统：生产、款式、采购、仓库、裁剪、财务等所有模块
+     */
     private static final Set<String> LOGGED_OPERATIONS = Set.of(
-        "报废", "修改", "转移", "删除", "关单", "驳回", "撤销", "删除扫码链"
+        // 数据变更
+        "新增", "修改", "删除", "报废", "转移", "删除扫码链",
+        // 状态流转
+        "关单", "驳回", "撤销", "审批通过", "审批", "提交审批",
+        "完成生产", "完工", "开始", "确认", "状态变更",
+        // 仓储
+        "入库", "物料入库", "出库", "领料", "结算"
     );
 
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
@@ -142,17 +167,40 @@ public class SystemOperationLogAspect {
         return false;
     }
 
-    /** 从返回值中提取 orderNo（对关单/报废最有效，结果包含完整订单对象） */
+    /**
+     * 从返回值提取目标名称。
+     * 支持：普通对象（getOrderNo等）+ Map类型返回（cancelReceive等返回 Map<String,Object>）
+     */
     private String extractTargetNameFromResult(Object result) {
         if (result == null) return null;
         try {
             java.lang.reflect.Method getDataMethod = result.getClass().getMethod("getData");
             Object data = getDataMethod.invoke(result);
             if (data == null) return null;
-            for (String g : new String[]{"getOrderNo","getCuttingBundleNo","getBundleNo","getPurchaseNo","getName","getStyleNo"}) {
+            // 处理 Map 类型返回（如 cancelReceive / cancelPicking 返回 LinkedHashMap）
+            if (data instanceof Map) {
+                Map<?,?> m = (Map<?,?>) data;
+                for (String key : new String[]{"purchaseNo","orderNo","cuttingBundleNo","bundleNo",
+                        "pickingNo","warehouseOrderNo","materialName","styleNo","name","code"}) {
+                    Object v = m.get(key);
+                    if (v != null) {
+                        String s = String.valueOf(v).trim();
+                        if (!s.isEmpty() && !"null".equals(s)) return s;
+                    }
+                }
+                return null;
+            }
+            // 普通实体对象 getter 提取
+            for (String g : new String[]{
+                    "getOrderNo","getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                    "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
+                    "getName","getStyleNo","getCode"}) {
                 try {
                     Object v = data.getClass().getMethod(g).invoke(data);
-                    if (v != null) return String.valueOf(v);
+                    if (v != null) {
+                        String s = String.valueOf(v).trim();
+                        if (!s.isEmpty() && !"null".equals(s)) return s;
+                    }
                 } catch (NoSuchMethodException ignored) {}
             }
         } catch (Exception ignored) {}
@@ -289,43 +337,40 @@ public class SystemOperationLogAspect {
     }
 
     /**
-     * 解析目标名称
+     * 从请求参数解析目标名称。
+     * 覆盖全业务类型：订单号、采购单号、出库单号、菲号、款号、物料名等。
      */
     private String resolveTargetName(Object[] args) {
-        if (args == null || args.length == 0) {
-            return null;
-        }
-
+        if (args == null || args.length == 0) return null;
         for (Object arg : args) {
             if (arg == null) continue;
-
             if (arg instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> map = (Map<String, Object>) arg;
-                Object name = map.get("name");
-                if (name != null) {
-                    return String.valueOf(name);
-                }
-                Object orderNo = map.get("orderNo");
-                if (orderNo != null) {
-                    return String.valueOf(orderNo);
-                }
-                Object styleNo = map.get("styleNo");
-                if (styleNo != null) {
-                    return String.valueOf(styleNo);
-                }
-            } else {
-                try {
-                    var method = arg.getClass().getMethod("getName");
-                    Object name = method.invoke(arg);
-                    if (name != null) {
-                        return String.valueOf(name);
+                for (String key : new String[]{
+                        "orderNo","purchaseNo","pickingNo","cuttingBundleNo","bundleNo",
+                        "warehouseOrderNo","cuttingNo","materialName","styleNo","name","code"}) {
+                    Object v = map.get(key);
+                    if (v != null) {
+                        String s = String.valueOf(v).trim();
+                        if (!s.isEmpty() && !"null".equals(s)) return s;
                     }
-                } catch (Exception ignored) {
+                }
+            } else if (!(arg instanceof String) && !(arg instanceof Number) && !(arg instanceof Boolean)) {
+                for (String getter : new String[]{
+                        "getOrderNo","getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                        "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
+                        "getName","getStyleNo","getCode"}) {
+                    try {
+                        Object v = arg.getClass().getMethod(getter).invoke(arg);
+                        if (v != null) {
+                            String s = String.valueOf(v).trim();
+                            if (!s.isEmpty() && !"null".equals(s)) return s;
+                        }
+                    } catch (Exception ignored) {}
                 }
             }
         }
-
         return null;
     }
 
@@ -380,14 +425,23 @@ public class SystemOperationLogAspect {
     private String resolveModule(String uri) {
         if (uri == null || uri.isEmpty()) return "其他";
         String u = uri.toLowerCase();
-        if (u.contains("/production"))        return "大货生产";
-        if (u.contains("/order-management"))  return "下单管理";
-        if (u.contains("/finance"))           return "财务管理";
-        if (u.contains("/warehouse"))         return "仓库管理";
+        // 样衣开发（优先于 /style）
+        if (u.contains("/pattern-revision") || u.contains("/pattern-production") || u.contains("/sample-production")) return "样衣开发";
         if (u.contains("/style"))             return "样衣开发";
-        if (u.contains("/material") || u.contains("/purchase")) return "物料采购";
-        if (u.contains("/pattern-revision"))  return "样衣开发";
-        if (u.contains("/system/factory"))    return "基础设置";
+        // 大货生产（含裁剪、扫码、面料）
+        if (u.contains("/production/order") || u.contains("/production/cutting") || u.contains("/production/scan") || u.contains("/production/warehousing")) return "大货生产";
+        if (u.contains("/material-purchase") || u.contains("/material-inbound") || u.contains("/material-picking") || u.contains("/material-roll")) return "大货生产";
+        if (u.contains("/production"))        return "大货生产";
+        // 仓库管理
+        if (u.contains("/warehouse/finished") || u.contains("/product-outstock") || u.contains("/product-warehousing")) return "仓库管理";
+        if (u.contains("/warehouse"))         return "仓库管理";
+        // 财务管理
+        if (u.contains("/finance"))           return "财务管理";
+        // 下单管理
+        if (u.contains("/order-management"))  return "下单管理";
+        // 基础数据
+        if (u.contains("/system/factory") || u.contains("/system/process")) return "基础设置";
+        // 模板库
         if (u.contains("/template"))          return "模板库";
         return "其他";
     }
@@ -395,18 +449,23 @@ public class SystemOperationLogAspect {
     private String resolveTargetType(String uri) {
         if (uri == null) return null;
         String u = uri.toLowerCase();
-        if (u.contains("/order"))     return "订单";
+        if (u.contains("/material-purchase") || u.contains("/cancel-receive")) return "采购单";
+        if (u.contains("/material-picking")  || u.contains("/cancel-picking") || u.contains("/picking")) return "领料单";
+        if (u.contains("/material-inbound")  || u.contains("/inbound"))       return "物料入库单";
+        if (u.contains("/cutting-bundle")    || u.contains("/bundle"))        return "菲号";
         if (u.contains("/cutting"))   return "裁剪单";
         if (u.contains("/scan"))      return "扫码记录";
+        if (u.contains("/warehousing")) return "入库单";
+        if (u.contains("/outstock"))  return "出货单";
+        if (u.contains("/order"))     return "订单";
         if (u.contains("/warehouse")) return "仓库单";
         if (u.contains("/style"))     return "款式";
         if (u.contains("/material"))  return "物料";
         if (u.contains("/purchase"))  return "采购单";
         if (u.contains("/factory"))   return "加工厂";
-        if (u.contains("/picking"))   return "领料单";
-        if (u.contains("/outstock"))  return "出货单";
         if (u.contains("/finance"))   return "财务单";
         if (u.contains("/template"))  return "模板";
+        if (u.contains("/pattern"))   return "纸样/样衣";
         return null;
     }
 
@@ -432,7 +491,10 @@ public class SystemOperationLogAspect {
 
     private Object pickIdFromMap(Map<?, ?> map) {
         if (map == null || map.isEmpty()) return null;
-        String[] keys = new String[]{"id","orderId","styleId","templateId","factoryId","userId"};
+        String[] keys = new String[]{
+            "id","orderId","styleId","templateId","factoryId","userId",
+            "purchaseId","pickingId","cuttingBundleId","cuttingTaskId","warehouseId","inboundId"
+        };
         for (String k : keys) {
             if (map.containsKey(k)) {
                 Object v = map.get(k);
@@ -443,7 +505,10 @@ public class SystemOperationLogAspect {
     }
 
     private Object pickIdByGetter(Object obj) throws Exception {
-        String[] keys = new String[]{"getId","getOrderId","getStyleId","getTemplateId","getFactoryId","getUserId"};
+        String[] keys = new String[]{
+            "getId","getOrderId","getStyleId","getTemplateId","getFactoryId","getUserId",
+            "getPurchaseId","getPickingId","getCuttingBundleId","getCuttingTaskId"
+        };
         Class<?> c = obj.getClass();
         for (String k : keys) {
             try {
@@ -456,35 +521,99 @@ public class SystemOperationLogAspect {
     }
 
     /**
-     * 当返回值无法提取名称时（如报废返回消息字符串），
-     * 根据 URI 路径判断实体类型，用 args 中的 id 查库获取订单号+款号。
-     * 支持 Long 和 String UUID 两种 ID 类型。
-     * 样衣开发 → 款号；生产订单 → 订单号(款号)
+     * fallback：当前两步均未取到名称时，用 ID 查库获取实体名称。
+     * 覆盖范围：款式开发、生产订单、裁剪任务、菲号、采购单、出库单
      */
     private String resolveEntityNameFromUri(String uri, Object[] args) {
         if (uri == null) return null;
+        // 优先从 body Map 的 ID 类字段反查
         String entityId = extractEntityId(args);
-        if (entityId == null) return null;
+        // 也尝试从 body Map 中专用ID字段查（purchaseId, pickingId 等）
+        String purchaseId = extractFieldFromArgs(args, "purchaseId");
+        String pickingId  = extractFieldFromArgs(args, "pickingId");
+        String bundleId   = extractFieldFromArgs(args, "cuttingBundleId");
         try {
-            if (uri.contains("/style/")) {
-                if (styleInfoService != null) {
+            // 款式开发
+            if (uri.contains("/style/") || uri.contains("/pattern")) {
+                if (styleInfoService != null && entityId != null) {
                     var style = styleInfoService.getById(entityId);
-                    return style != null ? style.getStyleNo() : null;
+                    if (style != null) return style.getStyleNo();
                 }
             }
-            if (uri.contains("/production/") || uri.contains("/cutting/")) {
+            // 生产订单
+            if ((uri.contains("/production/order") || uri.contains("/production/cutting-task")) && entityId != null) {
                 if (productionOrderService != null) {
                     var order = productionOrderService.getById(entityId);
                     if (order != null) {
-                        String orderNo = order.getOrderNo();
-                        String styleNo = order.getStyleNo();
-                        if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
-                        return orderNo != null ? orderNo : styleNo;
+                        String on = order.getOrderNo(), sn = order.getStyleNo();
+                        return (on != null && sn != null) ? on + " (" + sn + ")" : (on != null ? on : sn);
+                    }
+                }
+            }
+            // 采购单（优先 purchaseId，其次 entityId）
+            if (uri.contains("/material-purchase") || uri.contains("/purchase")) {
+                if (materialPurchaseService != null) {
+                    String id = purchaseId != null ? purchaseId : entityId;
+                    if (id != null) {
+                        var p = materialPurchaseService.getById(id);
+                        if (p != null) {
+                            String pno = p.getPurchaseNo();
+                            String mn  = p.getMaterialName();
+                            return pno != null ? pno + (mn != null ? " [" + mn + "]" : "") : mn;
+                        }
+                    }
+                }
+            }
+            // 出库领料单
+            if (uri.contains("/picking") || uri.contains("/cancel-picking")) {
+                if (materialPickingService != null) {
+                    String id = pickingId != null ? pickingId : entityId;
+                    if (id != null) {
+                        var pk = materialPickingService.getById(id);
+                        if (pk != null) {
+                            try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) {}
+                        }
+                    }
+                }
+            }
+            // 菲号
+            if (uri.contains("/cutting-bundle") || uri.contains("/bundle")) {
+                if (cuttingBundleService != null) {
+                    String id = bundleId != null ? bundleId : entityId;
+                    if (id != null) {
+                        var b = cuttingBundleService.getById(id);
+                        if (b != null) {
+                            try { return String.valueOf(b.getClass().getMethod("getBundleNo").invoke(b)); } catch (Exception ignr) {}
+                        }
+                    }
+                }
+            }
+            // 裁剪任务
+            if (uri.contains("/cutting") && entityId != null) {
+                if (cuttingTaskService != null) {
+                    var ct = cuttingTaskService.getById(entityId);
+                    if (ct != null) {
+                        try { return String.valueOf(ct.getClass().getMethod("getOrderNo").invoke(ct)); } catch (Exception ignr) {}
                     }
                 }
             }
         } catch (Exception ignored) {
             // 查询失败不影响主流程
+        }
+        return null;
+    }
+
+    /** 从 args 中的 Map 或 DTO 对象中提取指定字段值 */
+    private String extractFieldFromArgs(Object[] args, String fieldName) {
+        if (args == null) return null;
+        for (Object a : args) {
+            if (a instanceof Map) {
+                Object v = ((Map<?,?>) a).get(fieldName);
+                if (v != null) { String s = String.valueOf(v).trim(); if (!s.isEmpty() && !"null".equals(s)) return s; }
+            } else if (a != null && !(a instanceof String) && !(a instanceof Number)) {
+                String getter = "get" + fieldName.substring(0,1).toUpperCase() + fieldName.substring(1);
+                try { Object v = a.getClass().getMethod(getter).invoke(a); if (v != null) { String s = String.valueOf(v).trim(); if (!s.isEmpty() && !"null".equals(s)) return s; } } catch (Exception ig) {}
+            }
         }
         return null;
     }
