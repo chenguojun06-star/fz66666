@@ -11,12 +11,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -44,6 +46,15 @@ public class TenantFileController {
 
     @Autowired
     private CosService cosService;
+
+    /**
+     * 1×1 透明 PNG 占位图（文件在 COS/本地均不存在时返回）
+     * 浏览器收到 200+image/png 不会报告控制台错误，同时缓存 24h 防止重复轮询
+     * 注：前端 <img onError> 不会触发，图片区域呈现为透明（与 "无图" 占位效果等价）
+     */
+    private static final byte[] TRANSPARENT_PNG = Base64.getDecoder().decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    );
 
     /**
      * 租户隔离文件下载/预览
@@ -108,10 +119,10 @@ public class TenantFileController {
                         conn.setRequestMethod("GET");
                         int httpStatus = conn.getResponseCode();
                         if (httpStatus != 200) {
-                            log.error("[COS] 预签名URL代理下载失败: status={}, url截断={}",
-                                    httpStatus, presignedUrl.substring(0, Math.min(80, presignedUrl.length())));
+                            log.warn("[COS] 文件不存在于COS（{}）: tenantId={}, fileName={}",
+                                    httpStatus, tenantId, fileName);
                             conn.disconnect();
-                            return ResponseEntity.notFound().build();
+                            return missingFilePlaceholder(fileName);
                         }
                         // 从文件名推断 Content-Type（COS 可能返回 octet-stream）
                         String proxyContentType = conn.getContentType();
@@ -132,8 +143,9 @@ public class TenantFileController {
                         if (proxyLen > 0) builder.contentLength(proxyLen);
                         return builder.body(proxyResource);
                     } catch (Exception ex) {
-                        log.error("[COS] 预签名URL代理也失败: {}", ex.getMessage());
-                        return ResponseEntity.notFound().build();
+                        log.warn("[COS] 预签名URL代理也失败（文件可能不存在）: tenantId={}, fileName={}, err={}",
+                                tenantId, fileName, ex.getMessage());
+                        return missingFilePlaceholder(fileName);
                     }
                 }
             }
@@ -154,13 +166,29 @@ public class TenantFileController {
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists()) {
                 log.debug("[租户文件] 文件不存在（COS和本地均无）: tenantId={}, fileName={}", tenantId, fileName);
-                return ResponseEntity.notFound().build();
+                return missingFilePlaceholder(fileName);
             }
 
             return CommonController.buildFileResponse(resource, filePath, download);
         } catch (MalformedURLException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 文件缺失时的占位图响应（HTTP 200 + 1×1 透明 PNG）
+     * PDF 文件仍返回 404（无法用图片占位）
+     */
+    private ResponseEntity<Resource> missingFilePlaceholder(String fileName) {
+        if (fileName != null && fileName.toLowerCase().endsWith(".pdf")) {
+            return ResponseEntity.notFound().build();
+        }
+        InputStreamResource placeholder = new InputStreamResource(new ByteArrayInputStream(TRANSPARENT_PNG));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "image/png")
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .contentLength(TRANSPARENT_PNG.length)
+                .body(placeholder);
     }
 
     /**
