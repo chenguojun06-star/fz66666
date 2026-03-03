@@ -847,8 +847,8 @@ const IntelligenceCenter: React.FC = () => {
               </thead>
               <tbody>
                 {workers?.workers?.slice(0, 7).map(w => (
-                  <tr key={w.operatorName}>
-                    <td>{w.operatorName}</td>
+                  <tr key={w.workerName ?? w.workerId}>
+                    <td>{w.workerName}</td>
                     <td style={{ color: w.speedScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.speedScore}</td>
                     <td style={{ color: w.qualityScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.qualityScore}</td>
                     <td>{w.stabilityScore}</td>

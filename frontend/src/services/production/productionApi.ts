@@ -154,7 +154,8 @@ export interface LivePulseResponse {
 }
 
 export interface WorkerEfficiencyItem {
-  operatorName: string;
+  workerId: string;
+  workerName: string;
   speedScore: number;
   qualityScore: number;
   stabilityScore: number;
@@ -167,6 +168,8 @@ export interface WorkerEfficiencyItem {
 }
 export interface WorkerEfficiencyResponse {
   workers: WorkerEfficiencyItem[];
+  topWorkerName?: string;
+  totalEvaluated?: number;
 }
 
 export interface DeliveryPredictionResponse {
