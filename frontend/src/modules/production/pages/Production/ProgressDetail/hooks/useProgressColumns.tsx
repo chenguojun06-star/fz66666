@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import dayjs from 'dayjs';
 import { Badge, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
@@ -296,10 +297,28 @@ export const useProgressColumns = ({
       render: (_: any, record: ProductionOrder) => {
         const dateStr = formatTime(getOrderShipTime(record));
         const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate);
+        // 进度风险标签：综合 daysLeft + productionProgress 给出预警
+        const s = record.status;
+        const prog = Number(record.productionProgress) || 0;
+        const planEnd = record.plannedEndDate ? dayjs(record.plannedEndDate) : null;
+        const dLeft = planEnd ? planEnd.diff(dayjs(), 'day') : null;
+        let riskTag: { text: string; color: string } | null = null;
+        if (s !== 'completed' && dLeft !== null && prog < 100) {
+          if (dLeft < 0)                     riskTag = { text: '🔴 已逾期',    color: '#ff4d4f' };
+          else if (dLeft <= 3  && prog < 80) riskTag = { text: '🔴 严重偏慢', color: '#ff4d4f' };
+          else if (dLeft <= 7  && prog < 50) riskTag = { text: '🟡 进度偏慢', color: '#fa8c16' };
+          else if (dLeft <= 14 && prog < 30) riskTag = { text: '🟡 需关注',  color: '#faad14' };
+          else if (prog >= 80 && dLeft >= 3) riskTag = { text: '🟢 顺利',    color: '#52c41a' };
+        }
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+            {riskTag && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
+                {riskTag.text}
+              </span>
+            )}
           </div>
         );
       },
