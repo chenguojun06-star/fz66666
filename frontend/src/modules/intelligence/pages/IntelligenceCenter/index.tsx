@@ -9,6 +9,7 @@ import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse,
+  BottleneckDetectionResponse, DeliveryRiskResponse, DeliveryRiskItem, AnomalyItem,
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import Layout from '@/components/Layout';
@@ -97,29 +98,89 @@ const getAiTip = (prog: number, daysLeft: number | null): string => {
   return `当前进度 ${prog}%，生产节奏正常，预计可按时交货`;
 };
 
+/* 严重程度颜色 */
+const sev2c = (s: string) => ({ critical: '#ff4136', warning: '#f7a600', normal: '#39ff14' }[s] ?? '#39ff14');
+
+/* 交期风险强度展示 */
+const risk2badge = (r: string) => ({
+  overdue: { label: '已逾期', color: '#ff4136' },
+  danger:  { label: '高风险', color: '#ff4136' },
+  warning: { label: '预警',   color: '#f7a600' },
+  safe:    { label: '安全',   color: '#39ff14' },
+}[r] ?? { label: r, color: '#888' });
+
 const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   const prog = Number(order.productionProgress) || 0;
   const daysLeft = order.plannedEndDate
     ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
     : null;
   const aiTip = getAiTip(prog, daysLeft);
+
+  /* 按需懒加载：展开弹窗时发起三个带 orderId 的智能模型 */
+  const [intel, setIntel] = useState<{
+    bottleneck: BottleneckDetectionResponse | null;
+    riskItem:   DeliveryRiskItem | null;
+    anomalies:  AnomalyItem[];
+    loading:    boolean;
+  }>({ bottleneck: null, riskItem: null, anomalies: [], loading: true });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [rB, rD, rA] = await Promise.allSettled([
+        intelligenceApi.detectBottleneck({ orderNo: order.orderNo }),
+        intelligenceApi.assessDeliveryRisk({ orderId: String(order.id) }),
+        intelligenceApi.detectAnomalies(),
+      ]);
+      if (cancelled) return;
+      const bottleneck: BottleneckDetectionResponse | null =
+        rB.status === 'fulfilled' ? ((rB.value as any)?.data ?? null) : null;
+      const riskData: DeliveryRiskResponse | null =
+        rD.status === 'fulfilled' ? ((rD.value as any)?.data ?? null) : null;
+      const riskItem = riskData?.items?.find((i: DeliveryRiskItem) => i.orderNo === order.orderNo) ?? null;
+      const anomalyRaw = rA.status === 'fulfilled' ? ((rA.value as any)?.data?.items ?? []) : [];
+      const anomalies: AnomalyItem[] = (anomalyRaw as AnomalyItem[]).filter(a =>
+        a.targetName?.includes(order.factoryName ?? '') ||
+        a.targetName?.includes(order.orderNo ?? '')
+      ).slice(0, 2);
+      setIntel({ bottleneck, riskItem, anomalies, loading: false });
+    })();
+    return () => { cancelled = true; };
+  }, [order.id, order.orderNo, order.factoryName]);
+
   return (
     <div className="order-pop-body">
+      {/* ─ 头部：订单号 + 风险强度 + 剩余天数 ─ */}
       <div className="order-pop-header">
         <span className="order-pop-no">{order.orderNo}</span>
-        {daysLeft !== null && (
-          <span className="order-pop-days" style={{
-            color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
-          }}>
-            {daysLeft < 0 ? `⚠ 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {intel.riskItem && (() => {
+            const b = risk2badge(intel.riskItem.riskLevel);
+            return (
+              <span style={{ fontSize: 10, fontWeight: 700, color: b.color,
+                border: `1px solid ${b.color}55`, padding: '1px 6px', borderRadius: 3 }}>
+                {b.label}
+              </span>
+            );
+          })()}
+          {daysLeft !== null && (
+            <span className="order-pop-days" style={{
+              color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
+            }}>
+              {daysLeft < 0 ? `⚠ 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* ─ 概要：工厂、款式、件数 ─ */}
       <div className="order-pop-meta">
         <span>🏭 {order.factoryName}</span>
         <span>👗 {order.styleName}</span>
         <span>📦 {order.orderQuantity} 件</span>
       </div>
+
+      {/* ─ 5个工序进度条 ─ */}
       <div className="order-pop-stages">
         {STAGE_FIELDS.map(({ key, label }) => {
           const pct = Math.min(100, Math.max(0, Number((order as any)[key]) || 0));
@@ -135,6 +196,85 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           );
         })}
       </div>
+
+      {/* ─ 工序瓶颈检测（第一个需要 orderNo 的智能接口） ─ */}
+      {!intel.loading && intel.bottleneck?.hasBottleneck && (
+        <div style={{ margin: '8px 0 6px', padding: '6px 8px',
+          background: 'rgba(255,65,54,0.04)', borderRadius: 5,
+          border: '1px solid rgba(255,65,54,0.15)' }}>
+          <div style={{ fontSize: 10, color: '#ff4136', fontWeight: 700,
+            marginBottom: 5, letterSpacing: 0.5 }}>⚡ 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
+          {intel.bottleneck.items.slice(0, 2).map((b, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center',
+              gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 11 }}>
+              <span style={{ color: sev2c(b.severity), fontWeight: 700, minWidth: 34 }}>{b.stageName}</span>
+              <span style={{ color: '#3a5470', flex: 1 }}>积压 {b.backlog} 件</span>
+              <span style={{ color: sev2c(b.severity), fontSize: 10,
+                border: `1px solid ${sev2c(b.severity)}44`, padding: '0 4px', borderRadius: 3 }}>
+                {b.severity === 'critical' ? '严重' : b.severity === 'warning' ? '预警' : '正常'}
+              </span>
+            </div>
+          ))}
+          {intel.bottleneck.items[0]?.suggestion && (
+            <div style={{ fontSize: 10, color: '#4a6a7a', marginTop: 5, lineHeight: 1.5 }}>
+              💡 {intel.bottleneck.items[0].suggestion}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─ 交期风险评估（第二个需要 orderId 的智能接口） ─ */}
+      {!intel.loading && intel.riskItem && (
+        <div style={{ marginBottom: 6, padding: '6px 8px',
+          background: `${risk2badge(intel.riskItem.riskLevel).color}08`,
+          borderRadius: 5, border: `1px solid ${risk2badge(intel.riskItem.riskLevel).color}22` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, color: risk2badge(intel.riskItem.riskLevel).color,
+              fontWeight: 700 }}>📊 交期风险评估</span>
+            <span style={{ fontSize: 10, color: '#3a5470' }}>
+              预测: {intel.riskItem.predictedEndDate?.slice(0, 10) ?? '--'}
+            </span>
+          </div>
+          <div style={{ fontSize: 10, color: '#4a7a8a', lineHeight: 1.55 }}>
+            {intel.riskItem.riskDescription}
+          </div>
+          {(intel.riskItem.requiredDailyOutput || intel.riskItem.currentDailyOutput) ? (
+            <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 10 }}>
+              <span style={{ color: '#2a5a70' }}>日产需 <b style={{ color: '#f7a600' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
+              <span style={{ color: '#2a5a70' }}>当前 <b style={{ color: '#00e5ff' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ─ 异常行为检测（第三个智能接口，按工厂过滤） ─ */}
+      {!intel.loading && intel.anomalies.length > 0 && (
+        <div style={{ marginBottom: 6, padding: '6px 8px',
+          background: 'rgba(255,200,0,0.04)', borderRadius: 5,
+          border: '1px solid rgba(255,200,0,0.12)' }}>
+          <div style={{ fontSize: 10, color: '#f7a600', fontWeight: 700, marginBottom: 4 }}>
+            🔍 异常行为 ({intel.anomalies.length})
+          </div>
+          {intel.anomalies.map((a, i) => (
+            <div key={i} style={{
+              fontSize: 10, lineHeight: 1.5, marginBottom: i < intel.anomalies.length - 1 ? 3 : 0,
+              color: ({ critical: '#ff4136', warning: '#f7a600', info: '#00e5ff' } as Record<string, string>)[a.severity] ?? '#888',
+            }}>
+              · <b>{a.title}</b>: {a.description}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─ 加载中占位符 ─ */}
+      {intel.loading && (
+        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 10, color: '#1e3348' }}>
+          ⁙ 智能分析中...
+        </div>
+      )}
+
+      {/* ─ AI 整体建议 ─ */}
       <div className="order-pop-ai">🤖 AI：{aiTip}</div>
     </div>
   );
