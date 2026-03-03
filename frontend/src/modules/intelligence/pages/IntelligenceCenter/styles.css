@@ -700,10 +700,24 @@
   display: flex; flex-wrap: wrap; gap: 4px; padding-left: 2px;
 }
 .c-bottleneck-order-chip {
-  font-size: 10px; border: 1px solid; border-radius: 3px;
-  padding: 0 5px; font-variant-numeric: tabular-nums; white-space: nowrap;
-  background: rgba(255,255,255,0.02);
+  border: 1px solid; border-radius: 4px;
+  padding: 3px 6px; background: rgba(255,255,255,0.02);
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: 108px; max-width: 160px;
 }
+.c-bottleneck-chip-no {
+  font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+.c-bottleneck-chip-row {
+  display: flex; align-items: center; gap: 4px;
+}
+.c-bottleneck-chip-bar-wrap {
+  flex: 1; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
+}
+.c-bottleneck-chip-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.c-bottleneck-chip-pct { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 10px; flex-shrink: 0; }
 .c-bottleneck-factory {
   color: #5c9abf; font-weight: 500; width: 70px; flex-shrink: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

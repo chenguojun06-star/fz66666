@@ -895,13 +895,19 @@ const IntelligenceCenter: React.FC = () => {
                         <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
                         <span className="c-bottleneck-cnt">{f.count}单</span>
                       </div>
-                      {/* 第二行：具体卡点订单号 + 该工序各自进度 */}
+                      {/* 第二行：完整订单号 + 迷你进度条 + % */}
                       {f.worstOrders.length > 0 && (
                         <div className="c-bottleneck-orders">
                           {f.worstOrders.map(w => (
-                            <span key={w.no} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: c }}>
-                              {w.no.slice(-9)}&nbsp;<b>{w.pct}%</b>
-                            </span>
+                            <div key={w.no} className="c-bottleneck-order-chip" style={{ borderColor: c + '55' }}>
+                              <span className="c-bottleneck-chip-no" style={{ color: '#8ab4cc' }}>{w.no}</span>
+                              <div className="c-bottleneck-chip-row">
+                                <div className="c-bottleneck-chip-bar-wrap">
+                                  <div className="c-bottleneck-chip-bar" style={{ width: `${w.pct}%`, background: c }} />
+                                </div>
+                                <span className="c-bottleneck-chip-pct" style={{ color: c }}>{w.pct}%</span>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       )}
