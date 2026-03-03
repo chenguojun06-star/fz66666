@@ -1,10 +1,14 @@
 -- ======================================================================
--- V20260303: 修复成品结算视图 —— 入库数/次品数计算逻辑错误
--- 问题根因：旧视图用 quality_status 字段过滤后取 warehousing_quantity（整行总数），
+-- V20260303: 修复成品结算视图 —— 入库数/次品数计算逻辑错误 + 数据范围修复
+-- 问题1：旧视图用 quality_status 字段过滤后取 warehousing_quantity（整行总数），
 --   导致"有次品的混合批次"（如合格8+次品2=10件，quality_status='UNQUALIFIED'）
 --   的 10 件全部被计入次品，而非应有的 8 件合格入库 + 2 件次品。
--- 修复方案：直接使用 qualified_quantity 和 unqualified_quantity 字段（已由业务层按件分拆写入）。
--- 影响：订单汇总/成品结算页面的"入库数"和"次品数"恢复正确。
+-- 修复1：直接使用 qualified_quantity 和 unqualified_quantity 字段（已由业务层按件分拆写入）。
+-- 问题2：旧视图未过滤 delete_flag=1 的软删除订单，导致已删除订单仍出现在财务结算列表。
+-- 修复2：增加 WHERE po.delete_flag = 0 过滤条件。
+-- 问题3：CUT 开头的自定义裁剪任务（非正式生产订单）也出现在财务结算列表。
+-- 修复3：增加 AND po.order_no NOT LIKE 'CUT%' 排除条件。
+-- 影响：订单汇总/成品结算页面不再显示已删除订单和裁剪任务。
 -- ======================================================================
 
 DROP VIEW IF EXISTS `v_finished_product_settlement`;
@@ -116,6 +120,8 @@ LEFT JOIN (
     WHERE `scan_cost` IS NOT NULL
     GROUP BY `order_no`
 ) `scan` ON `po`.`order_no` = `scan`.`order_no`
--- 排除已取消/报废的订单
-WHERE `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','废弃','已取消')
+-- 排除已取消/报废/软删除的订单；排除 CUT 开头的自定义裁剪任务（不参与财务结算）
+WHERE `po`.`delete_flag` = 0
+  AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','废弃','已取消')
+  AND `po`.`order_no` NOT LIKE 'CUT%'
 ORDER BY `po`.`create_time` DESC;
