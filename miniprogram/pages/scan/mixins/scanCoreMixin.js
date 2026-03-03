@@ -434,12 +434,23 @@ const scanCoreMixin = Behavior({
       // ✅ 播放成功反馈 - 轻震动（15ms）
       wx.vibrateShort({ type: 'light' });
 
+      // 本次会话按工序累计扫码件数
+      const processName = result.processName || '';
+      const scanQty = Number(result.quantity) || 0;
+      const prevSessionQty = (this.data.sessionStats || {})[processName] || 0;
+      const newSessionQty = prevSessionQty + scanQty;
+      if (processName) {
+        this.setData({ [`sessionStats.${processName}`]: newSessionQty });
+      }
+
       // 格式化显示结果
       const formattedResult = {
         ...result,
         displayTime: new Date().toLocaleTimeString(),
         statusText: '扫码成功',
         statusClass: 'success',
+        sessionQty: newSessionQty,
+        sessionProcessName: processName,
       };
 
       this.setData({

@@ -371,6 +371,20 @@ const InspectionDetail: React.FC = () => {
         <Col span={4}><Statistic title="待入库" value={qcStats.pendingWarehouse} styles={{ content: { color: 'var(--color-warning)' } }} /></Col>
       </Row>
 
+      {/* 质检通过率异常警告 */}
+      {qcStats.total > 0 && qcRecords.length > 0 && (() => {
+        const passRate = Math.round(qcStats.qualified / qcStats.total * 100);
+        if (passRate >= 80) return null;
+        return (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message={`批次质检通过率偏低：当前通过率 ${passRate}%（合格 ${qcStats.qualified} / 总计 ${qcStats.total}），低于警戒线 80%，请复核不合格原因。`}
+          />
+        );
+      })()}
+
       {/* 质检记录明细 */}
       <Card size="small" title="质检记录明细" loading={recordsLoading}>
         <ResizableTable<WarehousingDetailRecord>

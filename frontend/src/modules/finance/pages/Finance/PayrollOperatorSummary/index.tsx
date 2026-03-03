@@ -514,7 +514,25 @@ const PayrollOperatorSummary: React.FC = () => {
                 </div>
             ),
         },
-        createSortableNumberColumn('总数量', 'totalQuantity', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
+        {
+            title: <SortableColumnTitle title="总数量" fieldName="totalQuantity" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'totalQuantity',
+            key: 'totalQuantity',
+            width: 140,
+            render: (v: unknown) => {
+                const qty = toNumberOrZero(v);
+                const avgQty = summaryRows.length > 0
+                    ? summaryRows.reduce((s, r) => s + toNumberOrZero((r as Record<string, unknown>).totalQuantity), 0) / summaryRows.length
+                    : 0;
+                const pct = avgQty > 0 ? Math.round((qty - avgQty) / avgQty * 100) : 0;
+                const trendEl = summaryRows.length > 1 && Math.abs(pct) > 5
+                    ? <span style={{ marginLeft: 6, fontSize: 11, color: pct > 0 ? '#52c41a' : '#ff4d4f' }}>
+                        {pct > 0 ? `↑${pct}%` : `↓${Math.abs(pct)}%`}
+                      </span>
+                    : null;
+                return <span>{qty.toLocaleString()}{trendEl}</span>;
+            },
+        },
         {
             title: <SortableColumnTitle title="总金额(元)" fieldName="totalAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
             dataIndex: 'totalAmount',

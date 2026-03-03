@@ -233,6 +233,31 @@ const OrderFlow: React.FC = () => {
       width: 120,
       render: (v: unknown) => String(v || '').trim() || '-',
     },
+    {
+      title: '耗时',
+      key: 'duration',
+      width: 120,
+      render: (_: unknown, record: FlowStage) => {
+        const start = record.startTime ? new Date(record.startTime).getTime() : 0;
+        if (!start) return <span style={{ color: '#bfbfbf' }}>-</span>;
+        const end = record.completeTime
+          ? new Date(record.completeTime).getTime()
+          : record.status === 'in_progress' ? Date.now() : 0;
+        if (!end) return <span style={{ color: '#bfbfbf' }}>-</span>;
+        const hours = Math.round((end - start) / 3600000);
+        if (hours <= 0) return <span style={{ color: '#bfbfbf' }}>-</span>;
+        const days = Math.floor(hours / 24);
+        const remainHours = hours % 24;
+        const label = days > 0 ? `${days}天${remainHours}小时` : `${hours}小时`;
+        // 超过7天标橙色，超过14天标红色
+        const color = hours > 336 ? '#cf1322' : hours > 168 ? '#fa8c16' : '#595959';
+        return (
+          <span style={{ color, fontSize: 12, fontWeight: hours > 168 ? 600 : 400 }}>
+            {record.status === 'in_progress' ? `⏳${label}` : label}
+          </span>
+        );
+      },
+    },
   ];
 
   const order = data?.order;

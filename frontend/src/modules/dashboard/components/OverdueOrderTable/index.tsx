@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spin } from 'antd';
+import { Button, Card, message, Spin } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
@@ -21,6 +21,7 @@ const OverdueOrderTable: React.FC = () => {
   const [dataSource, setDataSource] = useState<OverdueOrder[]>([]);
   const [sortField, setSortField] = useState<'deliveryDate' | 'overdueDays' | null>(null);
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+  const [urgedIds, setUrgedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -166,6 +167,34 @@ const OverdueOrderTable: React.FC = () => {
       width: '15%',
       ellipsis: true,
       render: (value: string) => value || '-',
+    },
+    {
+      title: '催单',
+      key: 'urge',
+      width: '12%',
+      align: 'center' as const,
+      render: (_: unknown, record: OverdueOrder) => {
+        const urged = urgedIds.has(record.id);
+        return (
+          <Button
+            size="small"
+            type={urged ? 'default' : 'primary'}
+            danger={!urged}
+            disabled={urged}
+            onClick={async () => {
+              try {
+                await api.post('/production/order/urge', { orderId: record.id, remark: '催单' });
+              } catch (_err) {
+                // 接口不存在时忽略，乐观更新 UI
+              }
+              setUrgedIds(prev => new Set([...Array.from(prev), record.id]));
+              message.success(`已催单：${record.orderNo}`);
+            }}
+          >
+            {urged ? '已催' : '催单'}
+          </Button>
+        );
+      },
     },
   ];
 

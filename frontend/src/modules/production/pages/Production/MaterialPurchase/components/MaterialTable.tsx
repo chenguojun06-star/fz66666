@@ -344,8 +344,20 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       ),
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
-      width: 120,
-      render: (v: any) => v ? formatDateTime(v) : '-',
+      width: 140,
+      render: (v: any, record: MaterialPurchaseType) => {
+        const dateStr = v ? formatDateTime(v) : '-';
+        if (!v || (['completed', 'received', 'cancelled'] as string[]).includes(record.status as string)) {
+          return <span>{dateStr}</span>;
+        }
+        const daysLeft = Math.ceil((new Date(v).getTime() - Date.now()) / 86400000);
+        const riskTag = isNaN(daysLeft) ? null
+          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 10, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
+          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 10, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
+          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 10, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
+          : null;
+        return <span>{dateStr}{riskTag}</span>;
+      },
     },
     {
       title: '采购时间',

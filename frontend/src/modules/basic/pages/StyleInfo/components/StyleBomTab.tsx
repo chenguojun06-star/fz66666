@@ -1080,7 +1080,7 @@ const StyleBomTab: React.FC<Props> = ({
     {
       title: '单件用量',
       dataIndex: 'usageAmount',
-      width: 100,
+      width: 120,
       editable: true,
       render: (text: number, record: StyleBom) => {
         if (!locked && (tableEditable || isEditing(record))) {
@@ -1090,7 +1090,23 @@ const StyleBomTab: React.FC<Props> = ({
             </Form.Item>
           );
         }
-        return text;
+        // 用量异常检测：与同类型面料的平均用量对比，偏差>20%时标警告
+        const sameTypeRows = data.filter(r => r.materialType === record.materialType && typeof r.usageAmount === 'number' && r.usageAmount > 0);
+        const anomalyEl = (() => {
+          if (sameTypeRows.length < 2 || !text || text <= 0) return null;
+          const avg = sameTypeRows.reduce((s, r) => s + r.usageAmount, 0) / sameTypeRows.length;
+          const deviation = Math.abs(text - avg) / avg;
+          if (deviation <= 0.2) return null;
+          const pct = Math.round(deviation * 100);
+          const isHigh = text > avg;
+          return (
+            <span title={`同类面料平均用量 ${avg.toFixed(2)}，偏差 ${pct}%`}
+              style={{ marginLeft: 6, color: '#fa8c16', cursor: 'help', fontSize: 12 }}>
+              ⚠️{isHigh ? `+${pct}%` : `-${pct}%`}
+            </span>
+          );
+        })();
+        return <span>{text}{anomalyEl}</span>;
       }
     },
     {

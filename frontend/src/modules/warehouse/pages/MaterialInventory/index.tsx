@@ -965,6 +965,19 @@ const _MaterialInventory: React.FC = () => {
               <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span> {record.warehouseLocation || '-'}
             </div>
+            {isLow && (
+              <div style={{
+                marginTop: 6,
+                background: '#fff7e6',
+                border: '1px solid #ffd591',
+                borderRadius: 4,
+                padding: '4px 8px',
+                fontSize: "var(--font-size-sm)",
+                color: '#fa8c16',
+              }}>
+                💡 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
+              </div>
+            )}
           </Space>
         );
       },

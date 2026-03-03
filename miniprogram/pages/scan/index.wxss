@@ -2254,3 +2254,16 @@ page {
   color: #dc2626;
   font-weight: 700;
 }
+
+/* ===== 今日工序累计统计条 ===== */
+.res-session-bar {
+  margin-top: 8rpx;
+  padding: 6rpx 12rpx;
+  background: rgba(22, 119, 255, 0.06);
+  border-radius: 8rpx;
+}
+.res-session-text {
+  font-size: 22rpx;
+  color: #1677ff;
+  font-weight: 500;
+}

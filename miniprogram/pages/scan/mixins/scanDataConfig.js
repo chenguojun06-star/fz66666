@@ -148,6 +148,9 @@ const scanPageData = {
 
   // 调试模式
   debug: DEBUG_MODE,
+
+  // 本次会话按工序累计扫码件数（key: processName → qty）
+  sessionStats: {},
 };
 
 module.exports = {

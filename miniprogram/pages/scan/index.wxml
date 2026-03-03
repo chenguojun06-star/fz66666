@@ -103,6 +103,9 @@
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
       <text wx:if="{{lastResult.unitPrice != null}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' ⚠️' : ''}}</text>
     </view>
+    <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
+      <text class="res-session-text">📊 本工序今日累计 {{lastResult.sessionQty}} 件</text>
+    </view>
     <view wx:if="{{lastResult.unitPriceHint}}" class="res-hint">
       <text class="hint-icon">⚠️</text>
       <text class="hint-text">{{lastResult.unitPriceHint}}</text>

@@ -790,6 +790,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ── 停滞订单检测（≥3天无新扫码）─────────────────────────────────────
   const stagnantOrderIds = useStagnantDetection(orders, boardTimesByOrder);
 
+  // ── 智能提示：催交+落后计数（仅当前页，快速提示）─────────────────────
+  const smartHints = useMemo(() => {
+    const active = orders.filter(o => o.status !== 'completed');
+    const urgentCount = active.filter(o => {
+      if (!o.plannedEndDate) return false;
+      return dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
+    }).length;
+    const behindCount = active.filter(o => {
+      if (!o.plannedEndDate) return false;
+      const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
+      return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
+    }).length;
+    return { urgentCount, behindCount };
+  }, [orders]);
+
   // ── 表格列定义 ─────────────────────────────────────────────────────
   const { columns } = useProgressColumns({
     orderSortField, orderSortOrder, handleOrderSort,
@@ -987,6 +1002,32 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               },
             ]}
           />
+
+          {/* 智能提示条 */}
+          {(smartHints.urgentCount > 0 || smartHints.behindCount > 0) && (
+            <div style={{
+              display: 'flex', gap: 12, flexWrap: 'wrap',
+              margin: '0 0 8px 0',
+              padding: '8px 14px',
+              background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
+              border: '1px solid #ffd591',
+              borderRadius: 8,
+              fontSize: 13,
+            }}>
+              <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
+              {smartHints.urgentCount > 0 && (
+                <span style={{ color: '#d46b08' }}>
+                  📅 今日有 <strong>{smartHints.urgentCount}</strong> 单需3天内交货
+                </span>
+              )}
+              {smartHints.urgentCount > 0 && smartHints.behindCount > 0 && <span style={{ color: '#d9d9d9' }}>·</span>}
+              {smartHints.behindCount > 0 && (
+                <span style={{ color: '#cf1322' }}>
+                  📉 <strong>{smartHints.behindCount}</strong> 单进度严重落后
+                </span>
+              )}
+            </div>
+          )}
 
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
