@@ -340,8 +340,15 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                           dataSource={fixedRows}
                           style={{ fontSize: 12 }}
                           columns={[
-                            { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
-                            { title: '内容', dataIndex: 'content', key: 'content' },
+                            { title: '序号', dataIndex: 'seq', key: 'seq', width: 48, align: 'center' as const },
+                            {
+                              title: '内容',
+                              dataIndex: 'content',
+                              key: 'content',
+                              align: 'left' as const,
+                              onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
+                              onCell: () => ({ style: { textAlign: 'left' as const } }),
+                            },
                           ]}
                         />
                       </>

@@ -156,8 +156,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           await api.delete(`/style/secondary-process/${record.id}`);
           message.success('删除成功');
           fetchData();
-        } catch (error) {
-          message.warning('后端API暂未实现，请等待开发完成');
+        } catch (error: any) {
+          message.error(error?.message || '删除失败，请重试');
         }
       }
     });
@@ -186,7 +186,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       if (error.errorFields) {
         message.error('请检查表单输入');
       } else {
-        message.warning('后端API暂未实现，请等待开发完成');
+        message.error((error as any)?.message || '保存失败，请重试');
       }
     }
   };

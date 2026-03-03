@@ -61,7 +61,8 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String factoryId
     ) {
         Page<FinishedProductSettlement> pageObj = new Page<>(page, pageSize);
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
@@ -92,6 +93,11 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(endDate)) {
             LocalDateTime endDateTime = LocalDate.parse(endDate).atTime(LocalTime.MAX);
             wrapper.le(FinishedProductSettlement::getCreateTime, endDateTime);
+        }
+
+        // 工厂筛选
+        if (StringUtils.isNotBlank(factoryId)) {
+            wrapper.eq(FinishedProductSettlement::getFactoryId, factoryId);
         }
 
         // 按创建时间倒序

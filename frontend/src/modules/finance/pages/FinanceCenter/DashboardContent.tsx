@@ -222,10 +222,6 @@ const DashboardContent: React.FC = () => {
       });
       let records: SettlementRow[] = response.data?.records || [];
 
-      // 前端按工厂筛选（因为后端Controller暂不支持factoryId参数）
-      if (selectedFactory) {
-        records = records.filter(r => r.factoryId === selectedFactory);
-      }
 
       // 获取上一周期数据
       const prevQueryParams: any = { page: 1, pageSize: 1000, startDate: prevStartDate, endDate: prevEndDate };
@@ -237,11 +233,6 @@ const DashboardContent: React.FC = () => {
         params: prevQueryParams
       });
       let prevRecords: SettlementRow[] = prevResponse.data?.records || [];
-
-      // 前端按工厂筛选
-      if (selectedFactory) {
-        prevRecords = prevRecords.filter(r => r.factoryId === selectedFactory);
-      }
 
       // 计算当前周期统计
       const totalAmount = records.reduce((sum, r) => sum + (r.totalAmount || 0), 0);

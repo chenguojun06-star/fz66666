@@ -129,8 +129,9 @@ const MaterialPurchase: React.FC = () => {
     partialCount: number;
     completedCount: number;
     cancelledCount: number;
-  }>({ totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0, partialCount: 0, completedCount: 0, cancelledCount: 0 });
-  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed'>('all');
+    overdueCount: number;
+  }>({ totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0, partialCount: 0, completedCount: 0, cancelledCount: 0, overdueCount: 0 });
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue'>('all');
 
   const returnConfirmModal = useModal<MaterialPurchaseType[]>();
   const [returnConfirmSubmitting, setReturnConfirmSubmitting] = useState(false);
@@ -1175,9 +1176,12 @@ const MaterialPurchase: React.FC = () => {
   };
 
   // 点击统计卡片筛选
-  const handleStatClick = (type: 'all' | 'pending' | 'received' | 'partial' | 'completed') => {
+  const handleStatClick = (type: 'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue') => {
     setActiveStatFilter(type);
     if (type === 'all') {
+      setQueryParams(prev => ({ ...prev, status: '', page: 1 }));
+    } else if (type === 'overdue') {
+      // 逾期未到货：显示非完成/取消的条目，由客户端序列标识
       setQueryParams(prev => ({ ...prev, status: '', page: 1 }));
     } else {
       setQueryParams(prev => ({ ...prev, status: type, page: 1 }));
@@ -1198,6 +1202,19 @@ const MaterialPurchase: React.FC = () => {
     });
     return sorted;
   }, [purchaseList, sortField, sortOrder]);
+
+  // 逐期未到货数（未完成且预期到货日已过期）
+  const overdueCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return sortedPurchaseList.filter((r: any) => {
+      const status = String(r.status || '').toLowerCase();
+      if (status === 'completed' || status === 'cancelled') return false;
+      const expected = r.expectedArrivalDate || r.expectedShipDate;
+      if (!expected) return false;
+      return new Date(expected) < today;
+    }).length;
+  }, [sortedPurchaseList]);
 
   const isSamplePurchaseView = useMemo(() => {
     const sourceType = String(currentPurchase?.sourceType || '').trim().toLowerCase();
@@ -1412,6 +1429,13 @@ const MaterialPurchase: React.FC = () => {
                           onClick: () => handleStatClick('completed'),
                           activeColor: 'var(--color-success)',
                           activeBg: 'rgba(34, 197, 94, 0.15)',
+                        },
+                        {
+                          key: 'overdue',
+                          items: [{ label: '逆期未到', value: overdueCount, unit: '条', color: 'var(--error-color, #ff4d4f)' }],
+                          onClick: () => handleStatClick('overdue'),
+                          activeColor: 'var(--error-color, #ff4d4f)',
+                          activeBg: '#fff1f0',
                         },
                       ]}
                     />

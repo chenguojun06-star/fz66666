@@ -209,7 +209,7 @@ const _FinishedInventory: React.FC = () => {
   };
 
   // 确认出库
-  const handleOutboundConfirm = () => {
+  const handleOutboundConfirm = async () => {
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
     if (selectedItems.length === 0) {
       message.warning('请至少输入一个SKU的出库数量');
@@ -224,7 +224,7 @@ const _FinishedInventory: React.FC = () => {
     }
 
     try {
-      // 调用后端API进行出库
+      // 调用后端接口进行出库操作
       const outboundItems = skuDetails
         .filter(item => (item.outboundQty ?? 0) > 0)
         .map(item => ({ sku: item.sku, quantity: item.outboundQty }));
@@ -232,12 +232,13 @@ const _FinishedInventory: React.FC = () => {
         message.warning('请至少填写一个SKU的出库数量');
         return;
       }
-      message.warning('出库功能后端接口开发中，当前仅记录操作');
+      await api.post('/warehouse/finished-inventory/outbound', { items: outboundItems });
+      message.success(`出库成功，共 ${outboundItems.length} 个SKU已出库`);
       outboundModal.close();
       setSkuDetails([]);
       loadData();
-    } catch (error) {
-      message.error('出库失败，请重试');
+    } catch (error: any) {
+      message.error(error?.message || '出库失败，请重试');
     }
   };
 

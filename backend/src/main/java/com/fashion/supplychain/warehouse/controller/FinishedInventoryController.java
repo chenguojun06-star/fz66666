@@ -41,4 +41,15 @@ public class FinishedInventoryController {
         IPage<FinishedInventoryDTO> page = finishedInventoryOrchestrator.getFinishedInventoryPage(params);
         return Result.success(page);
     }
+
+    /**
+     * 成品出库：扣减SKU库存
+     *
+     * @param params 包含 items（[{sku, quantity}]）
+     */
+    @PostMapping("/outbound")
+    public Result<Void> outbound(@RequestBody Map<String, Object> params) {
+        finishedInventoryOrchestrator.outbound(params);
+        return Result.success(null);
+    }
 }

@@ -14,6 +14,7 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -281,5 +282,42 @@ public class FinishedInventoryOrchestrator {
         Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, skuPageResult.getTotal());
         resultPage.setRecords(dtoList);
         return resultPage;
+    }
+
+    /**
+     * 成品出库：扣减对应SKU库存
+     *
+     * @param params 包含 items 列表，每项含 sku（skuCode）和 quantity
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void outbound(Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) params.get("items");
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("出库明细不能为空");
+        }
+        for (Map<String, Object> item : items) {
+            String skuCode = (String) item.get("sku");
+            if (!StringUtils.hasText(skuCode)) {
+                throw new IllegalArgumentException("SKU编码不能为空");
+            }
+            int quantity = Integer.parseInt(item.getOrDefault("quantity", "0").toString());
+            if (quantity <= 0) {
+                throw new IllegalArgumentException("出库数量必须大于0: " + skuCode);
+            }
+            LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<ProductSku>()
+                    .eq(ProductSku::getSkuCode, skuCode);
+            ProductSku sku = productSkuService.getOne(wrapper);
+            if (sku == null) {
+                throw new IllegalArgumentException("SKU不存在: " + skuCode);
+            }
+            int current = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+            if (current < quantity) {
+                throw new IllegalArgumentException(
+                        "库存不足: " + skuCode + "，可用库存:" + current + "件，申请出库:" + quantity + "件");
+            }
+            sku.setStockQuantity(current - quantity);
+            productSkuService.updateById(sku);
+        }
     }
 }

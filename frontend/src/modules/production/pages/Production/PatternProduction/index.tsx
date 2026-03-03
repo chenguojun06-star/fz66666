@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Button, Input, message, Modal, Form, InputNumber, Tag, Select } from 'antd';
+import { Card, Button, Input, message, Modal, Form, InputNumber, Tag, Select, Alert } from 'antd';
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -769,6 +769,12 @@ const PatternProduction: React.FC = () => {
     },
   ];
 
+  // 逾期样板预警
+  const overduePatterns = useMemo(() =>
+    dataSource.filter(r => r.status !== 'COMPLETED' && getDeliveryStatus(r.deliveryTime) === 'danger'),
+    [dataSource]
+  );
+
   return (
     <Layout>
       <div className="pattern-production-page">
@@ -816,6 +822,16 @@ const PatternProduction: React.FC = () => {
               )}
             />
           </Card>
+
+          {/* 逾期样板预警 */}
+          {overduePatterns.length > 0 && (
+            <Alert
+              type="error"
+              showIcon
+              message={`⚠️ 当前有 ${overduePatterns.length} 个样板已逾期未交付：${overduePatterns.slice(0, 3).map(r => r.styleNo).join('、')}${overduePatterns.length > 3 ? `…等` : ''}`}
+              style={{ marginBottom: 12 }}
+            />
+          )}
 
           {/* 表格/卡片视图 */}
           {viewMode === 'list' ? (

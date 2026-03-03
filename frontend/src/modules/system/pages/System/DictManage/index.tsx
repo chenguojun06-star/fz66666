@@ -332,8 +332,8 @@ const DictManage: React.FC = () => {
           await api.delete(`/system/dict/${record.id}`);
           message.success('删除成功');
           fetchData();
-        } catch (error) {
-          message.warning('当前使用本地数据模式，删除功能需要后端API支持');
+        } catch (error: any) {
+          message.error(error?.message || '删除失败，请重试');
         }
       }
     });
