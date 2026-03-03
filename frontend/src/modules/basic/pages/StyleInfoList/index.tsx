@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Modal } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
@@ -169,6 +169,18 @@ const StyleInfoListPage: React.FC = () => {
     }
   };
 
+  // 智能提示：样衣开发待办
+  const styleHints = useMemo(() => {
+    const active = data.filter(s => s.status !== 'archived');
+    // 样衣已出但纸样待完成（催纸样跟进）
+    const pendingPatternCount = active.filter(s =>
+      s.sampleStatus === 'COMPLETED' && s.patternStatus !== 'COMPLETED'
+    ).length;
+    // 还未开始（无进度节点记录）
+    const notStartedCount = active.filter(s => !s.progressNode).length;
+    return { pendingPatternCount, notStartedCount };
+  }, [data]);
+
   // 分页处理
   const handlePageChange = (page: number, pageSize: number) => {
     setQueryParams((prev) => ({
@@ -193,6 +205,27 @@ const StyleInfoListPage: React.FC = () => {
           rangeType={statsRangeType}
           onRangeChange={handleStatsRangeChange}
         />
+
+        {/* 智能提示条 */}
+        {(styleHints.pendingPatternCount > 0 || styleHints.notStartedCount > 0) && (
+          <div style={{
+            display: 'flex', gap: 12, flexWrap: 'wrap',
+            margin: '0 0 8px 0', padding: '8px 14px',
+            background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
+            border: '1px solid #ffd591', borderRadius: 8, fontSize: 13,
+          }}>
+            <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
+            {styleHints.pendingPatternCount > 0 && (
+              <span style={{ color: '#d46b08' }}>🎯 <strong>{styleHints.pendingPatternCount}</strong> 款样衣已出待跟进纸样</span>
+            )}
+            {styleHints.pendingPatternCount > 0 && styleHints.notStartedCount > 0 && (
+              <span style={{ color: '#d9d9d9' }}>·</span>
+            )}
+            {styleHints.notStartedCount > 0 && (
+              <span style={{ color: '#cf1322' }}>⏸ <strong>{styleHints.notStartedCount}</strong> 款尚未开始开发</span>
+            )}
+          </div>
+        )}
 
         {/* 筛选面板 */}
         <StyleFilterPanel
