@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电商订单管理 — 预览效果</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f5f6f7; color: #333; font-size: 13px; }
+
+  /* ── 顶部导航 ── */
+  .nav { background: #001529; height: 48px; display: flex; align-items: center; padding: 0 20px;
+    color: #fff; font-size: 14px; gap: 20px; }
+  .nav .logo { font-size: 16px; font-weight: 700; color: #fff; margin-right: 12px; }
+  .nav .nav-item { color: rgba(255,255,255,.65); cursor: pointer; padding: 0 8px; font-size: 13px; }
+  .nav .nav-item:hover { color: #fff; }
+  .nav .nav-active { color: #fff; border-bottom: 2px solid #1677ff; }
+
+  /* ── 布局 ── */
+  .layout { display: flex; min-height: calc(100vh - 48px); }
+  .sider { width: 200px; background: #001529; padding: 12px 0; flex-shrink: 0; }
+  .sider-item { padding: 8px 14px; color: rgba(255,255,255,.65); cursor: pointer;
+    font-size: 13px; display: flex; align-items: center; gap: 8px; transition: all .2s; }
+  .sider-item:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .sider-active { color: #fff !important; background: #1677ff !important; }
+  .sider-section { padding: 14px 14px 4px; color: rgba(255,255,255,.35); font-size: 11px; }
+
+  .main { flex: 1; padding: 20px; overflow: auto; }
+
+  /* ── 流程步骤条 ── */
+  .flow-banner { background: #e6f4ff; border: 1px solid #91caff; border-radius: 8px;
+    padding: 14px 18px; margin-bottom: 16px; }
+  .flow-banner .flow-title { font-size: 13px; color: #096dd9; display: flex; align-items: center;
+    gap: 6px; margin-bottom: 12px; font-weight: 600; }
+  .steps { display: flex; align-items: center; gap: 0; }
+  .step { display: flex; align-items: center; flex: 1; }
+  .step-dot { width: 28px; height: 28px; border-radius: 50%; background: #1677ff;
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .step-dot.done { background: #52c41a; }
+  .step-body { margin-left: 8px; }
+  .step-title { font-size: 12px; font-weight: 600; color: #333; }
+  .step-desc  { font-size: 11px; color: #888; margin-top: 1px; }
+  .step-line  { flex: 1; height: 2px; background: #91caff; min-width: 24px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; border-bottom: 1px solid #e8e8e8; margin-bottom: 12px; }
+  .tab { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #666;
+    border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0;
+    margin-right: 4px; margin-bottom: -1px; }
+  .tab:hover { color: #1677ff; }
+  .tab.active { color: #1677ff; border-color: #e8e8e8; background: #fff; border-bottom-color: #fff; }
+
+  /* ── 统计卡片 ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+    padding: 12px 16px; }
+  .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+
+  /* ── 收入条 ── */
+  .revenue-bar { background: rgba(235,47,150,.06); border: 1px solid rgba(235,47,150,.2);
+    border-radius: 6px; padding: 8px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px; }
+  .revenue-bar .label { font-size: 12px; color: #888; }
+  .revenue-bar .value { font-size: 22px; font-weight: 700; color: #eb2f96; }
+
+  /* ── 补货预警 ── */
+  .restock-alert { background: #fff7e6; border: 1px solid #ffd591; border-radius: 6px;
+    padding: 10px 16px; margin-bottom: 10px; }
+  .restock-alert .title { color: #d46b08; font-weight: 600; font-size: 13px;
+    display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+  .restock-items { display: flex; gap: 10px; flex-wrap: wrap; }
+  .restock-item { background: #fff3e0; border: 1px solid #ffb74d; border-radius: 4px;
+    padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .restock-item:hover { background: #ffe0b2; }
+  .restock-item .sku { color: #52c41a; font-size: 11px; }
+  .restock-item .qty { color: #d32f2f; font-weight: 600; }
+
+  /* ── 筛选栏 ── */
+  .filter-bar { background: #fff; border: 1px solid #e8e8e8; border-radius: 6px;
+    padding: 10px 12px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;
+    align-items: center; }
+  .filter-bar select, .filter-bar input { border: 1px solid #d9d9d9; border-radius: 4px;
+    padding: 4px 8px; font-size: 13px; background: #fff; color: #333;
+    outline: none; cursor: pointer; }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: #1677ff; }
+  .btn { padding: 4px 12px; border-radius: 4px; border: 1px solid #d9d9d9;
+    background: #fff; cursor: pointer; font-size: 12px; color: #333;
+    display: inline-flex; align-items: center; gap: 4px; transition: all .2s; }
+  .btn:hover { color: #1677ff; border-color: #1677ff; }
+  .btn-primary { background: #1677ff; color: #fff; border-color: #1677ff; }
+  .btn-primary:hover { background: #4096ff; border-color: #4096ff; color: #fff; }
+  .btn-sm { padding: 2px 8px; font-size: 11px; }
+
+  /* ── 表格 ── */
+  .table-wrap { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #fafafa; font-size: 12px; font-weight: 600; color: #333;
+    padding: 8px 10px; border-bottom: 1px solid #e8e8e8; text-align: left;
+    white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background .15s; }
+  tbody tr:hover { background: #f0f7ff; }
+  td { padding: 7px 10px; font-size: 12px; vertical-align: middle; }
+  .pagination { display: flex; justify-content: flex-end; align-items: center;
+    padding: 10px 16px; border-top: 1px solid #f0f0f0; gap: 6px; font-size: 12px;
+    color: #888; }
+  .page-btn { min-width: 28px; height: 26px; border: 1px solid #d9d9d9;
+    background: #fff; cursor: pointer; border-radius: 4px; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; }
+  .page-btn.active { background: #1677ff; color: #fff; border-color: #1677ff; }
+
+  /* ── Tag / Badge ── */
+  .tag { display: inline-flex; align-items: center; gap: 3px;
+    border-radius: 4px; padding: 1px 7px; font-size: 11px; font-weight: 500;
+    white-space: nowrap; border: 1px solid; }
+  .tag-orange  { background: #fff7e6; color: #d46b08; border-color: #ffd591; }
+  .tag-red     { background: #fff1f0; color: #cf1322; border-color: #ffa39e; }
+  .tag-blue    { background: #e6f4ff; color: #0958d9; border-color: #91caff; }
+  .tag-green   { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
+  .tag-gray    { background: #fafafa; color: #595959; border-color: #d9d9d9; }
+  .tag-magenta { background: #fff0f6; color: #c41d7f; border-color: #ffadd2; }
+  .tag-purple  { background: #f9f0ff; color: #531dab; border-color: #d3adf7; }
+  .tag-cyan    { background: #e6fffb; color: #08979c; border-color: #87e8de; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; margin-right: 3px; opacity: .8; }
+
+  /* ── 详情 Drawer ── */
+  .drawer-mask { display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 999; }
+  .drawer { position: fixed; top: 0; right: -520px; width: 480px; height: 100%;
+    background: #fff; z-index: 1000; box-shadow: -4px 0 16px rgba(0,0,0,.15);
+    transition: right .3s ease; display: flex; flex-direction: column; }
+  .drawer.open { right: 0; }
+  .drawer-mask.open { display: block; }
+  .drawer-header { padding: 16px 20px; border-bottom: 1px solid #e8e8e8;
+    display: flex; justify-content: space-between; align-items: center; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .close-btn { font-size: 18px; cursor: pointer; color: #888; line-height: 1; }
+  .close-btn:hover { color: #333; }
+  .desc-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .desc-table td { border: 1px solid #f0f0f0; padding: 6px 10px; font-size: 12px; }
+  .desc-table td:first-child { background: #fafafa; color: #888; width: 90px;
+    font-size: 11px; white-space: nowrap; }
+  .section-title { font-size: 12px; color: #888; border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 4px; margin: 12px 0 8px; display: flex; align-items: center; gap: 4px; }
+
+  /* ── 关联弹窗 ── */
+  .modal-mask { display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 1001; align-items: center; justify-content: center; }
+  .modal-mask.open { display: flex; }
+  .modal { background: #fff; border-radius: 8px; width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+  .modal-header { padding: 14px 20px; border-bottom: 1px solid #e8e8e8;
+    display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+  .modal-body { padding: 16px 20px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid #e8e8e8;
+    display: flex; justify-content: flex-end; gap: 8px; }
+  .info-box { background: #f6f8fa; border-radius: 6px; padding: 10px 12px;
+    margin-bottom: 12px; font-size: 12px; color: #444; line-height: 1.8; }
+  .form-item { margin-bottom: 14px; }
+  .form-item label { display: block; font-size: 12px; color: #333;
+    margin-bottom: 4px; font-weight: 500; }
+  .form-item label .req { color: #ff4d4f; margin-left: 2px; }
+  .form-item input { width: 100%; border: 1px solid #d9d9d9; border-radius: 4px;
+    padding: 6px 10px; font-size: 13px; outline: none; }
+  .form-item input:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.1); }
+  .alert-info { background: #e6f4ff; border: 1px solid #91caff; border-radius: 4px;
+    padding: 6px 12px; font-size: 12px; color: #0958d9; display: flex; gap: 6px;
+    align-items: flex-start; margin-bottom: 12px; }
+
+  /* ── SKU定价 Tab ── */
+  .pricing-alert { background: #e6f4ff; border: 1px solid #91caff; border-radius: 6px;
+    padding: 8px 14px; margin-bottom: 14px; font-size: 12px; color: #0958d9; }
+  .badge-stock { display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; border-radius: 11px; font-size: 11px; font-weight: 600;
+    padding: 0 6px; }
+  .badge-green { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+  .badge-gray  { background: #fafafa; color: #aaa; border: 1px solid #e8e8e8; }
+
+  .profit-green {background:#f6ffed;color:#389e0d;border-color:#b7eb8f}
+  .profit-orange{background:#fff7e6;color:#d46b08;border-color:#ffd591}
+  .profit-red   {background:#fff1f0;color:#cf1322;border-color:#ffa39e}
+
+  /* ── success toast ── */
+  .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+    background: #fff; border: 1px solid #b7eb8f; border-radius: 8px;
+    padding: 10px 20px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    display: flex; align-items: center; gap: 8px; font-size: 13px; z-index: 2000;
+    opacity: 0; transition: all .3s; pointer-events: none; color: #389e0d; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── 面包屑 ── */
+  .breadcrumb { font-size: 12px; color: #888; margin-bottom: 14px; }
+  .breadcrumb span { color: #333; }
+</style>
+</head>
+<body>
+
+<!-- ── 顶部导航 ── -->
+<div class="nav">
+  <div class="logo">🧵 服装供应链</div>
+  <div class="nav-item">仪表盘</div>
+  <div class="nav-item">生产进度</div>
+  <div class="nav-item nav-active">仓库管理</div>
+  <div class="nav-item">财务结算</div>
+  <div class="nav-item">款式管理</div>
+  <div style="flex:1"></div>
+  <div style="font-size:12px;color:rgba(255,255,255,.6)">admin（超级管理员）</div>
+</div>
+
+<!-- ── 布局 ── -->
+<div class="layout">
+
+  <!-- 侧边栏 -->
+  <div class="sider">
+    <div class="sider-section">仓库管理</div>
+    <div class="sider-item">📦 成品入库</div>
+    <div class="sider-item">🚚 发货管理</div>
+    <div class="sider-item">📋 库存总览</div>
+    <div class="sider-item sider-active">🛒 电商订单管理</div>
+    <div class="sider-section" style="margin-top:12px">基础设置</div>
+    <div class="sider-item">🏭 仓库列表</div>
+    <div class="sider-item">🗓️ 面料库存</div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="main">
+    <div class="breadcrumb">仓库管理 / <span>电商订单管理</span></div>
+
+    <!-- 流程步骤横幅 -->
+    <div class="flow-banner">
+      <div class="flow-title">ℹ️ 电商对接全链路流程</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-dot done">1</div>
+          <div class="step-body">
+            <div class="step-title">配置平台</div>
+            <div class="step-desc">应用商店填写密钥</div>
+          </div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-dot done">2</div>
+          <div class="step-body">
+            <div class="step-title">平台推单</div>
+            <div class="step-desc">Webhook 自动推入</div>
+          </div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-dot" style="background:#722ed1">3</div>
+          <div class="step-body">
+            <div class="step-title" style="color:#722ed1">← 你在这里</div>
+            <div class="step-desc">订单管理关联排产</div>
+          </div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-dot" style="background:#13c2c2">4</div>
+          <div class="step-body">
+            <div class="step-title">仓库出库</div>
+            <div class="step-desc">自动更新状态+快递</div>
+          </div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-dot" style="background:#eb2f96">5</div>
+          <div class="step-body">
+            <div class="step-title">财务核算</div>
+            <div class="step-desc">SKU定价看毛利</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ❗ 补货预警区 -->
+    <div class="restock-alert">
+      <div class="title">⚠️ 库存预警 — 以下 3 款 SKU 库存告急，建议尽快安排补货生产</div>
+      <div class="restock-items">
+        <div class="restock-item" onclick="showToast('已跳转至生产订单创建页')">
+          <div>FZ2024001 夏款T恤 <b>红色-M</b></div>
+          <div class="sku">SKU: FZ2024001-红色-M</div>
+          <div>当前库存 <span class="qty">2件</span>，待发货订单 <b>8单</b></div>
+          <div style="margin-top:4px"><span class="btn btn-primary btn-sm">+ 安排生产</span></div>
+        </div>
+        <div class="restock-item" onclick="showToast('已跳转至生产订单创建页')">
+          <div>FZ2024003 轻薄外套 <b>黑色-L</b></div>
+          <div class="sku">SKU: FZ2024003-黑色-L</div>
+          <div>当前库存 <span class="qty">0件</span>，待发货订单 <b>5单</b></div>
+          <div style="margin-top:4px"><span class="btn btn-primary btn-sm">+ 安排生产</span></div>
+        </div>
+        <div class="restock-item" onclick="showToast('已跳转至生产订单创建页')">
+          <div>FZ2024007 休闲裤 <b>深灰-XL</b></div>
+          <div class="sku">SKU: FZ2024007-深灰-XL</div>
+          <div>当前库存 <span class="qty">3件</span>，待发货订单 <b>11单</b></div>
+          <div style="margin-top:4px"><span class="btn btn-primary btn-sm">+ 安排生产</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="tab-orders" onclick="switchTab('orders')">🛍️ 订单管理</div>
+      <div class="tab" id="tab-pricing" onclick="switchTab('pricing')">💰 SKU 定价</div>
+    </div>
+
+    <!-- ████ 订单管理 Tab ████ -->
+    <div id="panel-orders">
+
+      <!-- 统计卡片 -->
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">今日新增订单</div>
+          <div class="stat-value" style="color:#1677ff">47</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">待发货</div>
+          <div class="stat-value" style="color:#fa8c16">23</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已出库</div>
+          <div class="stat-value" style="color:#52c41a">18</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已关联排产</div>
+          <div class="stat-value" style="color:#722ed1">31</div>
+        </div>
+      </div>
+
+      <!-- 实付合计 -->
+      <div class="revenue-bar">
+        <span class="label">今日实付合计：</span>
+        <span class="value">¥28,640.00</span>
+        <span style="margin-left:auto;font-size:11px;color:#888">更新于 2分钟前</span>
+      </div>
+
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <select id="sel-platform" onchange="applyFilter()">
+          <option value="">🛒 全部平台</option>
+          <option value="TAOBAO">🟠 淘宝</option>
+          <option value="TMALL">🐱 天猫</option>
+          <option value="JD">🔴 京东</option>
+          <option value="DOUYIN">🎵 抖音</option>
+          <option value="PINDUODUO">🛒 拼多多</option>
+          <option value="XIAOHONGSHU">📕 小红书</option>
+          <option value="WECHAT_SHOP">💚 视频号</option>
+        </select>
+        <select id="sel-status" onchange="applyFilter()">
+          <option value="">全部状态</option>
+          <option value="0">待付款</option>
+          <option value="1">待发货</option>
+          <option value="2">已发货</option>
+          <option value="3">已完成</option>
+          <option value="4">已取消</option>
+        </select>
+        <select id="sel-wh" onchange="applyFilter()">
+          <option value="">全部仓库状态</option>
+          <option value="0">待拣货</option>
+          <option value="1">备货中</option>
+          <option value="2">已出库</option>
+        </select>
+        <input id="inp-keyword" type="text" placeholder="🔍 订单号 / 买家 / 收件人"
+          style="width:210px" oninput="applyFilter()">
+        <button class="btn" onclick="applyFilter()">🔄 刷新</button>
+      </div>
+
+      <!-- 表格 -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>平台</th>
+              <th>订单号</th>
+              <th>商品 / 买家</th>
+              <th>金额</th>
+              <th>订单状态</th>
+              <th>仓库状态</th>
+              <th>关联生产单</th>
+              <th>快递</th>
+              <th>下单时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="order-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="pag-info">共 47 条</span>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <span>→</span>
+        </div>
+      </div>
+    </div><!-- end panel-orders -->
+
+    <!-- ████ SKU 定价 Tab ████ -->
+    <div id="panel-pricing" style="display:none">
+      <div class="pricing-alert">ℹ️ 此处的【售价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。</div>
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 按款式号筛选" style="width:180px">
+        <button class="btn">🔄 刷新</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>款式号</th>
+              <th>颜色</th>
+              <th>尺码</th>
+              <th>SKU 编码</th>
+              <th>库存</th>
+              <th>成本价 (¥)</th>
+              <th>售价 (¥)</th>
+              <th>毛利率</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="sku-tbody"></tbody>
+        </table>
+        <div class="pagination"><span>共 24 个 SKU</span></div>
+      </div>
+    </div>
+
+  </div><!-- end main -->
+</div><!-- end layout -->
+
+<!-- ── 详情 Drawer ── -->
+<div class="drawer-mask" id="drawer-mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="detail-drawer">
+  <div class="drawer-header">
+    <span style="font-weight:600">📋 订单详情</span>
+    <span class="close-btn" onclick="closeDrawer()">✕</span>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<!-- ── 关联弹窗 ── -->
+<div class="modal-mask" id="link-modal">
+  <div class="modal">
+    <div class="modal-header">
+      🔗 关联生产订单
+      <span class="close-btn" onclick="closeModal()">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="info-box" id="link-info-box"></div>
+      <div class="alert-info">ℹ️ 关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号</div>
+      <div class="form-item">
+        <label>生产订单号 <span class="req">*</span></label>
+        <input id="link-input" type="text" placeholder="如 PO20260301001，可在生产进度页查看">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="doLink()">✅ 确认关联</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ <span id="toast-msg"></span></div>
+
+<script>
+// ── Mock 数据 ──
+const PLATFORM_MAP = {
+  TAOBAO:      { name:'淘宝',   emoji:'🟠', cls:'tag-orange' },
+  TMALL:       { name:'天猫',   emoji:'🐱', cls:'tag-red' },
+  JD:          { name:'京东',   emoji:'🔴', cls:'tag-red' },
+  DOUYIN:      { name:'抖音',   emoji:'🎵', cls:'tag-gray' },
+  PINDUODUO:   { name:'拼多多', emoji:'🛒', cls:'tag-red' },
+  XIAOHONGSHU: { name:'小红书', emoji:'📕', cls:'tag-magenta' },
+  WECHAT_SHOP: { name:'视频号', emoji:'💚', cls:'tag-green' },
+};
+const STATUS_MAP = {
+  0: { label:'待付款', cls:'tag-gray' },
+  1: { label:'待发货', cls:'tag-orange' },
+  2: { label:'已发货', cls:'tag-blue' },
+  3: { label:'已完成', cls:'tag-green' },
+  4: { label:'已取消', cls:'tag-red' },
+};
+const WH_MAP = {
+  0: { label:'待拣货', cls:'tag-gray' },
+  1: { label:'备货中', cls:'tag-orange' },
+  2: { label:'已出库', cls:'tag-green' },
+};
+
+const ALL_ORDERS = [
+  { id:1, platform:'TAOBAO', platformOrderNo:'TB20260301-8812479', orderNo:'EC-20260301-0001',
+    shopName:'服装旗舰店', buyerNick:'买家小明', productName:'夏款T恤 (FZ2024001)',
+    skuCode:'FZ2024001-红色-M', quantity:3, unitPrice:89, payAmount:237, freight:0, discount:30,
+    receiverName:'张三', receiverPhone:'138****8888', receiverAddress:'广东省广州市天河区xxx路1号',
+    expressCompany:'', trackingNo:'', status:1, warehouseStatus:0,
+    productionOrderNo:'', createTime:'2026-03-01 09:12', payTime:'2026-03-01 09:15' },
+  { id:2, platform:'TMALL', platformOrderNo:'TM-2026030123456780', orderNo:'EC-20260301-0002',
+    shopName:'品牌旗舰店', buyerNick:'fashion_lover', productName:'轻薄外套 (FZ2024003)',
+    skuCode:'FZ2024003-黑色-L', quantity:1, unitPrice:359, payAmount:359, freight:18, discount:0,
+    receiverName:'李四', receiverPhone:'139****9999', receiverAddress:'上海市浦东新区xxx路888号',
+    expressCompany:'', trackingNo:'', status:1, warehouseStatus:1,
+    productionOrderNo:'PO20260228001', createTime:'2026-03-01 08:45', payTime:'2026-03-01 08:46' },
+  { id:3, platform:'JD', platformOrderNo:'JD-2026030155519903', orderNo:'EC-20260301-0003',
+    shopName:'京东自营店', buyerNick:'用户_WX98', productName:'休闲裤 (FZ2024007)',
+    skuCode:'FZ2024007-深灰-XL', quantity:2, unitPrice:189, payAmount:368, freight:0, discount:10,
+    receiverName:'王五', receiverPhone:'137****7777', receiverAddress:'北京市朝阳区xxx大厦B座',
+    expressCompany:'顺丰速运', trackingNo:'SF1234567890', status:2, warehouseStatus:2,
+    productionOrderNo:'PO20260226003', createTime:'2026-02-28 14:30', payTime:'2026-02-28 14:32', shipTime:'2026-03-01 10:00' },
+  { id:4, platform:'DOUYIN', platformOrderNo:'DY20260301XN1928374', orderNo:'EC-20260301-0004',
+    shopName:'抖音小店', buyerNick:'爱美丽的女孩', productName:'夏款T恤 (FZ2024001)',
+    skuCode:'FZ2024001-白色-S', quantity:5, unitPrice:89, payAmount:415, freight:0, discount:30,
+    receiverName:'赵六', receiverPhone:'135****5555', receiverAddress:'浙江省杭州市西湖区xxx街道',
+    expressCompany:'', trackingNo:'', status:1, warehouseStatus:0,
+    productionOrderNo:'', createTime:'2026-03-01 10:22', payTime:'2026-03-01 10:23' },
+  { id:5, platform:'PINDUODUO', platformOrderNo:'PDD2026030188812', orderNo:'EC-20260301-0005',
+    shopName:'工厂直营店', buyerNick:'省钱达人001', productName:'基础款衬衫 (FZ2024012)',
+    skuCode:'FZ2024012-蓝色-M', quantity:2, unitPrice:49, payAmount:88, freight:10, discount:10,
+    receiverName:'陈七', receiverPhone:'136****6666', receiverAddress:'江苏省南京市玄武区xxx路',
+    expressCompany:'圆通速递', trackingNo:'YT9988776655', status:3, warehouseStatus:2,
+    productionOrderNo:'PO20260225007', createTime:'2026-02-27 16:00', payTime:'2026-02-27 16:02',
+    shipTime:'2026-02-28 09:00', completeTime:'2026-03-01 11:00' },
+  { id:6, platform:'XIAOHONGSHU', platformOrderNo:'XHS20260301-29192', orderNo:'EC-20260301-0006',
+    shopName:'博主同款小店', buyerNick:'小红书用户Cyan', productName:'夏款T恤 (FZ2024001)',
+    skuCode:'FZ2024001-粉色-S', quantity:2, unitPrice:89, payAmount:148, freight:0, discount:30,
+    receiverName:'孙八', receiverPhone:'134****4444', receiverAddress:'四川省成都市高新区xxx路',
+    expressCompany:'', trackingNo:'', status:1, warehouseStatus:0,
+    productionOrderNo:'', createTime:'2026-03-01 11:05', payTime:'2026-03-01 11:07' },
+  { id:7, platform:'WECHAT_SHOP', platformOrderNo:'WCS2026030142200', orderNo:'EC-20260301-0007',
+    shopName:'品牌视频号', buyerNick:'微信用户3A9X', productName:'休闲裤 (FZ2024007)',
+    skuCode:'FZ2024007-卡其-M', quantity:1, unitPrice:189, payAmount:189, freight:0, discount:0,
+    receiverName:'周九', receiverPhone:'133****3333', receiverAddress:'湖北省武汉市江汉区xxx路',
+    expressCompany:'韵达速递', trackingNo:'YD1122334455', status:2, warehouseStatus:2,
+    productionOrderNo:'PO20260227002', createTime:'2026-02-28 20:00', payTime:'2026-02-28 20:01',
+    shipTime:'2026-03-01 08:30' },
+  { id:8, platform:'TAOBAO', platformOrderNo:'TB20260228-9901234', orderNo:'EC-20260228-0012',
+    shopName:'服装旗舰店', buyerNick:'时尚达人XX', productName:'轻薄外套 (FZ2024003)',
+    skuCode:'FZ2024003-米白-M', quantity:1, unitPrice:359, payAmount:0, freight:18, discount:0,
+    receiverName:'刘十', receiverPhone:'132****2222', receiverAddress:'湖南省长沙市芙蓉区xxx路',
+    expressCompany:'', trackingNo:'', status:4, warehouseStatus:0,
+    productionOrderNo:'', createTime:'2026-02-28 09:00', payTime:'' },
+];
+
+const SKU_DATA = [
+  { id:1, styleNo:'FZ2024001', color:'红色', size:'M', skuCode:'FZ2024001-红色-M', stockQuantity:2,  costPrice:35, salesPrice:89 },
+  { id:2, styleNo:'FZ2024001', color:'白色', size:'S', skuCode:'FZ2024001-白色-S', stockQuantity:8,  costPrice:35, salesPrice:89 },
+  { id:3, styleNo:'FZ2024001', color:'粉色', size:'S', skuCode:'FZ2024001-粉色-S', stockQuantity:4,  costPrice:35, salesPrice:89 },
+  { id:4, styleNo:'FZ2024003', color:'黑色', size:'L', skuCode:'FZ2024003-黑色-L', stockQuantity:0,  costPrice:150, salesPrice:359 },
+  { id:5, styleNo:'FZ2024003', color:'米白', size:'M', skuCode:'FZ2024003-米白-M', stockQuantity:5,  costPrice:150, salesPrice:359 },
+  { id:6, styleNo:'FZ2024007', color:'深灰', size:'XL',skuCode:'FZ2024007-深灰-XL',stockQuantity:3, costPrice:75, salesPrice:189 },
+  { id:7, styleNo:'FZ2024007', color:'卡其', size:'M', skuCode:'FZ2024007-卡其-M', stockQuantity:12, costPrice:75, salesPrice:189 },
+  { id:8, styleNo:'FZ2024012', color:'蓝色', size:'M', skuCode:'FZ2024012-蓝色-M', stockQuantity:20, costPrice:15, salesPrice:49 },
+];
+
+let currentLinkId = null;
+let filteredOrders = [...ALL_ORDERS];
+
+function renderOrders(list) {
+  const tb = document.getElementById('order-tbody');
+  tb.innerHTML = list.map(r => {
+    const p  = PLATFORM_MAP[r.platform] || { name:r.platform, emoji:'🛒', cls:'tag-gray' };
+    const st = STATUS_MAP[r.status]     || { label:r.status, cls:'tag-gray' };
+    const wh = WH_MAP[r.warehouseStatus]|| { label:r.warehouseStatus, cls:'tag-gray' };
+    const linked = r.productionOrderNo
+      ? `<span class="tag tag-blue">✅ ${r.productionOrderNo}</span>`
+      : `<span style="color:#bbb;font-size:11px">未关联</span>`;
+    const express = r.trackingNo
+      ? `<div style="font-size:11px;color:#888">${r.expressCompany}</div><div style="font-size:12px">${r.trackingNo}</div>`
+      : `<span style="color:#bbb">-</span>`;
+    return `<tr onclick="openDrawer(${r.id})">
+      <td><span class="tag ${p.cls}">${p.emoji} ${p.name}</span></td>
+      <td>
+        <div style="font-size:12px;font-weight:600">${r.platformOrderNo}</div>
+        <div style="font-size:10px;color:#aaa">内部 ${r.orderNo}</div>
+      </td>
+      <td>
+        <div style="font-size:12px">${r.productName} <span style="color:#888">×${r.quantity}</span></div>
+        <div style="font-size:11px;color:#52c41a">${r.skuCode}</div>
+        <div style="font-size:11px;color:#aaa">${r.buyerNick || r.receiverName}</div>
+      </td>
+      <td>
+        <div style="font-size:11px;color:#888">¥${r.unitPrice} × ${r.quantity}</div>
+        <div style="color:#fa8c16;font-weight:600">实付 ¥${r.payAmount}</div>
+        ${r.freight ? `<div style="font-size:10px;color:#bbb">运费 ¥${r.freight}</div>`:''}
+      </td>
+      <td><span class="tag ${st.cls}">${st.label}</span></td>
+      <td><span class="tag ${wh.cls}">${wh.label}</span></td>
+      <td>${linked}</td>
+      <td>${express}</td>
+      <td style="font-size:11px;color:#888">${r.createTime}</td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" title="查看详情" onclick="openDrawer(${r.id})">👁</button>
+          <button class="btn btn-sm" ${r.productionOrderNo?'disabled style="opacity:.4"':''} title="${r.productionOrderNo?'已关联':'关联排产'}" onclick="openLink(${r.id})">🔗</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('pag-info').textContent = `共 ${list.length} 条`;
+}
+
+function applyFilter() {
+  const pl = document.getElementById('sel-platform').value;
+  const st = document.getElementById('sel-status').value;
+  const wh = document.getElementById('sel-wh')?.value || '';
+  const kw = (document.getElementById('inp-keyword').value || '').toLowerCase();
+  filteredOrders = ALL_ORDERS.filter(r => {
+    if (pl && r.platform !== pl) return false;
+    if (st !== '' && r.status !== Number(st)) return false;
+    if (wh !== '' && r.warehouseStatus !== Number(wh)) return false;
+    if (kw && !r.platformOrderNo.toLowerCase().includes(kw)
+            && !r.orderNo.toLowerCase().includes(kw)
+            && !(r.buyerNick||'').toLowerCase().includes(kw)
+            && !(r.receiverName||'').toLowerCase().includes(kw)) return false;
+    return true;
+  });
+  renderOrders(filteredOrders);
+}
+
+function openDrawer(id) {
+  const r = ALL_ORDERS.find(o=>o.id===id);
+  if (!r) return;
+  const p  = PLATFORM_MAP[r.platform] || { name:r.platform, emoji:'🛒' };
+  const st = STATUS_MAP[r.status]     || { label:r.status, cls:'tag-gray' };
+  const wh = WH_MAP[r.warehouseStatus]|| { label:r.warehouseStatus, cls:'tag-gray' };
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="section-title">🏪 平台 &amp; 状态</div>
+    <table class="desc-table">
+      <tr><td>平台</td><td><span class="tag ${(PLATFORM_MAP[r.platform]||{}).cls||'tag-gray'}">${p.emoji} ${p.name}</span></td></tr>
+      <tr><td>平台订单号</td><td><b>${r.platformOrderNo}</b></td></tr>
+      <tr><td>内部单号</td><td>${r.orderNo}</td></tr>
+      <tr><td>订单状态</td><td><span class="tag ${st.cls}">${st.label}</span></td></tr>
+      <tr><td>仓库状态</td><td><span class="tag ${wh.cls}">${wh.label}</span></td></tr>
+      <tr><td>店铺</td><td>${r.shopName}</td></tr>
+    </table>
+    <div class="section-title">🛍️ 商品 &amp; 金额</div>
+    <table class="desc-table">
+      <tr><td>商品</td><td>${r.productName}</td></tr>
+      <tr><td>SKU</td><td style="color:#52c41a;font-weight:600">${r.skuCode}</td></tr>
+      <tr><td>数量</td><td>${r.quantity} 件</td></tr>
+      <tr><td>商品单价</td><td>¥${r.unitPrice}</td></tr>
+      <tr><td>实付金额</td><td><span style="color:#fa8c16;font-weight:700;font-size:16px">¥${r.payAmount}</span></td></tr>
+      <tr><td>运费</td><td>¥${r.freight || 0}</td></tr>
+      <tr><td>优惠</td><td>-¥${r.discount || 0}</td></tr>
+    </table>
+    <div class="section-title">📮 收件人</div>
+    <table class="desc-table">
+      <tr><td>姓名</td><td>${r.receiverName}</td></tr>
+      <tr><td>电话</td><td>${r.receiverPhone}</td></tr>
+      <tr><td>地址</td><td>${r.receiverAddress}</td></tr>
+    </table>
+    <div class="section-title">🚚 物流 &amp; 关联</div>
+    <table class="desc-table">
+      <tr><td>快递公司</td><td>${r.expressCompany || '-'}</td></tr>
+      <tr><td>快递单号</td><td>${r.trackingNo || '-'}</td></tr>
+      <tr><td>关联生产单</td><td>${r.productionOrderNo
+        ? `<span class="tag tag-blue">✅ ${r.productionOrderNo}</span>`
+        : `<span style="color:#bbb;font-size:12px">未关联（出库后自动回写快递信息）</span>`}</td></tr>
+    </table>
+    <div class="section-title">⏱️ 时间节点</div>
+    <table class="desc-table">
+      <tr><td>下单时间</td><td>${r.createTime || '-'}</td></tr>
+      <tr><td>付款时间</td><td>${r.payTime || '-'}</td></tr>
+      <tr><td>发货时间</td><td>${r.shipTime || '-'}</td></tr>
+      <tr><td>完成时间</td><td>${r.completeTime || '-'}</td></tr>
+    </table>
+    ${!r.productionOrderNo && r.status===1 ? `
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" style="width:100%" onclick="closeDrawer();openLink(${r.id})">
+        🔗 关联生产订单（确保出库自动更新状态）
+      </button>
+    </div>` : ''}
+  `;
+  document.getElementById('detail-drawer').classList.add('open');
+  document.getElementById('drawer-mask').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('detail-drawer').classList.remove('open');
+  document.getElementById('drawer-mask').classList.remove('open');
+}
+
+function openLink(id) {
+  const r = ALL_ORDERS.find(o=>o.id===id);
+  if (!r || r.productionOrderNo) return;
+  currentLinkId = id;
+  const p = PLATFORM_MAP[r.platform] || { emoji:'🛒', name:r.platform };
+  document.getElementById('link-info-box').innerHTML = `
+    <div>平台订单：<b>${r.platformOrderNo}</b></div>
+    <div>商品：${r.productName} × ${r.quantity}</div>
+    <div>实付：¥${r.payAmount} &nbsp;|&nbsp; 买家：${r.buyerNick || r.receiverName}</div>
+  `;
+  document.getElementById('link-input').value = '';
+  document.getElementById('link-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('link-modal').classList.remove('open');
+  currentLinkId = null;
+}
+function doLink() {
+  const val = document.getElementById('link-input').value.trim();
+  if (!val) { alert('请输入生产订单号'); return; }
+  const r = ALL_ORDERS.find(o=>o.id===currentLinkId);
+  if (r) r.productionOrderNo = val;
+  closeModal();
+  applyFilter();
+  showToast('关联成功，出库时将自动回写物流状态');
+}
+
+// ── SKU 定价表格渲染 ──
+function renderSku() {
+  const tb = document.getElementById('sku-tbody');
+  tb.innerHTML = SKU_DATA.map(r => {
+    const rate = r.costPrice && r.salesPrice
+      ? ((r.salesPrice - r.costPrice) / r.salesPrice * 100) : null;
+    const rateCls = rate === null ? '' : rate >= 40 ? 'tag-green profit-green' : rate >= 20 ? 'tag-orange profit-orange' : 'tag-red profit-red';
+    return `<tr>
+      <td><b>${r.styleNo}</b></td>
+      <td>${r.color}</td>
+      <td>${r.size}</td>
+      <td style="color:#52c41a;font-size:11px">${r.skuCode}</td>
+      <td><span class="badge-stock ${r.stockQuantity > 0 ? 'badge-green' : 'badge-gray'}">${r.stockQuantity}</span></td>
+      <td style="color:#888">¥${r.costPrice ?? '—'}</td>
+      <td style="color:#fa8c16;font-weight:600">¥${r.salesPrice ?? '—'}</td>
+      <td>${rate !== null ? `<span class="tag ${rateCls}">${rate.toFixed(1)}%</span>` : '<span style="color:#ccc">-</span>'}</td>
+      <td><button class="btn btn-sm" onclick="editSku(${r.id})">✏️ 定价</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function editSku(id) {
+  const r = SKU_DATA.find(s=>s.id===id);
+  if (!r) return;
+  const cost  = prompt(`设置 ${r.skuCode} 成本价：`, r.costPrice ?? '');
+  if (cost === null) return;
+  const sales = prompt(`设置 ${r.skuCode} 售价：`, r.salesPrice ?? '');
+  if (sales === null) return;
+  r.costPrice  = parseFloat(cost)  || r.costPrice;
+  r.salesPrice = parseFloat(sales) || r.salesPrice;
+  renderSku();
+  showToast(`${r.skuCode} 定价已保存`);
+}
+
+// ── Tab 切换 ──
+function switchTab(name) {
+  document.getElementById('panel-orders').style.display  = name==='orders'  ? '' : 'none';
+  document.getElementById('panel-pricing').style.display = name==='pricing' ? '' : 'none';
+  document.getElementById('tab-orders').className  = 'tab' + (name==='orders'  ? ' active':'');
+  document.getElementById('tab-pricing').className = 'tab' + (name==='pricing' ? ' active':'');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── 初始化 ──
+renderOrders(ALL_ORDERS);
+renderSku();
+</script>
+</body>
+</html>

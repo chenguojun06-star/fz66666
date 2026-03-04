@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>应用商店 - 预览效果</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #1a1a2e; }
+
+  /* Layout */
+  .sidebar { width: 220px; background: #fff; height: 100vh; position: fixed; left: 0; top: 0; border-right: 1px solid #eee; padding: 0; }
+  .sidebar-logo { padding: 18px 20px; font-size: 15px; font-weight: 700; color: #1677ff; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+  .sidebar-menu { padding: 8px 0; }
+  .menu-item { padding: 10px 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #595959; border-left: 3px solid transparent; }
+  .menu-item:hover { background: #f0f7ff; color: #1677ff; }
+  .menu-item.active { background: #e6f4ff; color: #1677ff; font-weight: 600; border-left-color: #1677ff; }
+  .menu-group { padding: 12px 20px 4px; font-size: 11px; color: #bfbfbf; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .main { margin-left: 220px; min-height: 100vh; padding: 24px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .page-title { font-size: 20px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .page-desc { font-size: 13px; color: #8c8c8c; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid #d9d9d9; background: #fff; color: #595959; transition: all .2s; }
+  .btn:hover { border-color: #1677ff; color: #1677ff; }
+  .btn-primary { background: #1677ff; color: #fff; border-color: #1677ff; }
+  .btn-primary:hover { background: #4096ff; border-color: #4096ff; color: #fff; }
+  .btn-sm { padding: 4px 12px; font-size: 12px; }
+  .btn-ghost { background: transparent; border-color: #1677ff; color: #1677ff; }
+  .btn-success { background: #52c41a; border-color: #52c41a; color: #fff; }
+  .btn-link { border: none; background: none; color: #1677ff; padding: 4px 8px; }
+  .btn-danger { background: #ff4d4f; border-color: #ff4d4f; color: #fff; }
+
+  /* Section label */
+  .section-label { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+
+  /* My Apps (已开通区域) */
+  .my-apps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 10px; }
+  .my-app-card { background: #fff; border-radius: 8px; padding: 14px; border: 1px solid #eee; border-top: 3px solid; cursor: pointer; transition: box-shadow .2s; }
+  .my-app-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+  .my-app-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .my-app-card-icon { font-size: 24px; }
+  .my-app-card-name { font-size: 14px; font-weight: 600; }
+  .my-app-card-key { font-size: 11px; color: #8c8c8c; font-family: monospace; margin-top: 4px; }
+  .my-app-card-calls { font-size: 11px; color: #595959; margin-top: 2px; }
+
+  /* Tags */
+  .tag { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-green { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+  .tag-orange { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
+  .tag-blue { background: #e6f4ff; color: #0958d9; border: 1px solid #91caff; }
+  .tag-cyan { background: #e6fffb; color: #08979c; border: 1px solid #87e8de; }
+
+  /* App grid */
+  .app-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
+  .app-card-wrap { position: relative; }
+  .ribbon { position: absolute; top: -1px; right: -1px; background: #52c41a; color: #fff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 0 8px 0 8px; z-index: 2; }
+  .ribbon-blue { background: #1677ff; }
+  .ribbon-green { background: #52c41a; }
+  .ribbon-red { background: #ff4d4f; }
+  .ribbon-orange { background: #fa8c16; }
+  .app-card { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8e8e8; cursor: pointer; transition: all .2s; }
+  .app-card:hover { box-shadow: 0 6px 24px rgba(22,119,255,.12); border-color: #91caff; transform: translateY(-2px); }
+  .app-card-cover { height: 100px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%); position: relative; }
+  .app-card-icon { font-size: 42px; }
+  .price-badge { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.45); color: #fff; font-size: 11px; padding: 1px 7px; border-radius: 4px; }
+  .app-card-body { padding: 12px; }
+  .app-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .app-card-desc { font-size: 12px; color: #8c8c8c; margin-bottom: 8px; line-height: 1.5; height: 36px; overflow: hidden; }
+  .trial-badge { font-size: 11px; color: #52c41a; margin-bottom: 4px; }
+  .price-row { font-size: 13px; }
+  .price-label { color: #8c8c8c; font-size: 11px; }
+  .price-value { color: #1677ff; font-weight: 700; font-size: 15px; }
+  .price-unit { color: #bfbfbf; font-size: 11px; }
+
+  /* Divider */
+  .divider { height: 1px; background: #f0f0f0; margin: 24px 0; }
+
+  /* Modal overlay */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 12px; width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .modal-close { font-size: 18px; cursor: pointer; color: #8c8c8c; background: none; border: none; line-height: 1; }
+  .modal-close:hover { color: #1a1a2e; }
+  .modal-body { padding: 16px 20px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 14px; display: flex; gap: 8px; align-items: flex-start; }
+  .alert-success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+  .alert-info { background: #e6f4ff; border: 1px solid #91caff; color: #0958d9; }
+  .alert-warning { background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; }
+
+  /* Detail Modal sections */
+  .section-title-sm { font-size: 13px; font-weight: 600; margin-bottom: 8px; border-left: 3px solid #1677ff; padding-left: 8px; }
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li { font-size: 12px; color: #595959; padding: 2px 0; display: flex; align-items: center; gap: 6px; }
+  .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .price-card { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 6px; border-radius: 10px; min-height: 88px; border: 1.5px solid #d9d9d9; background: #fafafa; }
+  .price-card.trial { border-color: #52c41a; background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%); }
+  .price-card.yearly { border-color: #faad14; background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%); position: relative; }
+  .price-card.perpetual { border-color: #adc6ff; background: linear-gradient(135deg, #f0f5ff 0%, #d6e4ff 100%); }
+  .price-card-label { font-size: 10px; font-weight: 600; margin-bottom: 4px; }
+  .price-card-value { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  .price-card-unit { font-size: 10px; margin-top: 3px; }
+  .recommended { position: absolute; top: -1px; right: -1px; background: #faad14; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 0 9px 0 8px; }
+
+  /* Wizard steps */
+  .steps { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 20px; position: relative; }
+  .steps::before { content: ''; position: absolute; top: 14px; left: 60px; right: 60px; height: 2px; background: #f0f0f0; z-index: 0; }
+  .step { display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 1; }
+  .step-dot { width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0; color: #8c8c8c; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #d9d9d9; }
+  .step-dot.active { background: #1677ff; color: #fff; border-color: #1677ff; }
+  .step-dot.done { background: #52c41a; color: #fff; border-color: #52c41a; }
+  .step-label { font-size: 12px; color: #8c8c8c; }
+  .step-label.active { color: #1677ff; font-weight: 600; }
+
+  /* Code block */
+  .code-block { background: #f6f8fa; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+  .code-row { margin-bottom: 10px; }
+  .code-label { font-size: 11px; color: #8c8c8c; margin-bottom: 3px; }
+  .code-value { font-family: monospace; font-size: 13px; font-weight: 700; background: #fff; border: 1px solid #e8e8e8; border-radius: 4px; padding: 4px 10px; display: flex; align-items: center; justify-content: space-between; }
+  .code-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+  .copy-btn { font-size: 13px; cursor: pointer; color: #1677ff; border: none; background: none; padding: 0 4px; }
+
+  /* Endpoint list */
+  .endpoint-list { background: #f0f5ff; border-radius: 6px; padding: 12px; }
+  .endpoint-row { display: flex; gap: 8px; padding: 3px 0; font-size: 12px; align-items: center; }
+  .method-tag { font-size: 11px; padding: 1px 7px; border-radius: 3px; min-width: 44px; text-align: center; font-weight: 600; }
+  .method-push { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+  .method-get { background: #e6f4ff; color: #0958d9; border: 1px solid #91caff; }
+  .endpoint-path { font-family: monospace; font-size: 11px; background: #fff; padding: 1px 6px; border-radius: 3px; border: 1px solid #e8e8e8; }
+  .endpoint-desc { color: #8c8c8c; font-size: 11px; }
+
+  /* Input */
+  .form-item { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: #595959; margin-bottom: 4px; display: block; }
+  .form-input { width: 100%; border: 1px solid #d9d9d9; border-radius: 6px; padding: 7px 12px; font-size: 13px; outline: none; transition: border .2s; }
+  .form-input:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.1); }
+  .input-hint { font-size: 11px; color: #52c41a; margin-left: 6px; font-weight: normal; }
+
+  /* Tips box */
+  .tips-box { background: #f6f8fa; border-radius: 6px; padding: 12px; font-size: 12px; color: #595959; line-height: 1.8; margin-top: 12px; }
+  .tips-title { font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+  .tips-box ul { padding-left: 18px; }
+
+  /* Success screen */
+  .success-screen { text-align: center; padding: 24px 0; }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .success-desc { font-size: 13px; color: #8c8c8c; margin-bottom: 24px; }
+  .success-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; margin-bottom: 24px; }
+  .success-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; padding: 12px; }
+  .success-card-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .success-card ul { font-size: 12px; color: #8c8c8c; padding-left: 16px; line-height: 1.8; }
+  .success-card.green { border-left: 3px solid #52c41a; }
+  .success-card.blue { border-left: 3px solid #1677ff; }
+
+  /* Obtain section */
+  .obtain-box { background: #f6f8fa; border-radius: 8px; padding: 12px; margin-top: 8px; }
+  .obtain-row { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; }
+
+  /* Tab switcher */
+  .tab-bar { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
+  .tab-item { padding: 10px 20px; font-size: 13px; cursor: pointer; color: #8c8c8c; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab-item:hover { color: #1677ff; }
+  .tab-item.active { color: #1677ff; font-weight: 600; border-bottom-color: #1677ff; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">🧵 服装供应链</div>
+  <div class="sidebar-menu">
+    <div class="menu-group">业务</div>
+    <div class="menu-item">📊 仪表盘</div>
+    <div class="menu-item">📦 生产管理</div>
+    <div class="menu-item">🏭 仓库管理</div>
+    <div class="menu-item">💰 财务结算</div>
+    <div class="menu-group">系统</div>
+    <div class="menu-item active">🛍️ 应用商店</div>
+    <div class="menu-item">🔌 API对接管理</div>
+    <div class="menu-item">👥 用户管理</div>
+    <div class="menu-item">⚙️ 系统设置</div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">应用商店</div>
+      <div class="page-desc">一键开通API对接，填写接口地址即可使用</div>
+    </div>
+    <button class="btn">📖 查看对接教程</button>
+  </div>
+
+  <!-- 我的已开通应用 -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div class="section-label" style="margin-bottom:0">
+      🔌 我的已开通应用
+      <span class="tag tag-orange" style="margin-left:8px">1 个待配置</span>
+    </div>
+    <button class="btn-link btn" style="font-size:12px">管理全部 →</button>
+  </div>
+  <div class="my-apps-grid" style="margin-bottom:24px">
+    <div class="my-app-card" style="border-top-color:#52c41a">
+      <div class="my-app-card-header">
+        <div class="my-app-card-icon">📦</div>
+        <div>
+          <div class="my-app-card-name">下单对接</div>
+          <span class="tag tag-green" style="font-size:11px">✓ 运行中</span>
+        </div>
+      </div>
+      <div class="my-app-card-key">Key: order_tb8a3f92c1d...</div>
+      <div class="my-app-card-calls">累计调用 1,284 次 · 今日 36/500</div>
+    </div>
+    <div class="my-app-card" style="border-top-color:#1677ff">
+      <div class="my-app-card-header">
+        <div class="my-app-card-icon">✅</div>
+        <div>
+          <div class="my-app-card-name">质检反馈</div>
+          <span class="tag tag-orange" style="font-size:11px">⚙ 待配置</span>
+        </div>
+      </div>
+      <div class="my-app-card-key">Key: qc_fe52a8d31b...</div>
+      <div class="my-app-card-calls">累计调用 0 次</div>
+    </div>
+    <div class="my-app-card" style="border-top-color:#FF6600">
+      <div class="my-app-card-header">
+        <div class="my-app-card-icon">🟠</div>
+        <div>
+          <div class="my-app-card-name">淘宝对接</div>
+          <span class="tag tag-green" style="font-size:11px">✓ 运行中</span>
+        </div>
+      </div>
+      <div class="my-app-card-key">Key: tb_9e1f3c72ab...</div>
+      <div class="my-app-card-calls">累计调用 328 次 · 今日 12/500</div>
+    </div>
+    <div class="my-app-card" style="border-top-color:#D40016">
+      <div class="my-app-card-header">
+        <div class="my-app-card-icon">🐱</div>
+        <div>
+          <div class="my-app-card-name">天猫对接</div>
+          <span class="tag tag-green" style="font-size:11px">✓ 运行中</span>
+        </div>
+      </div>
+      <div class="my-app-card-key">Key: tm_2c8a4f91de...</div>
+      <div class="my-app-card-calls">累计调用 571 次 · 今日 29/500</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 全部应用 -->
+  <div class="section-label" style="margin-bottom:14px">🛒 全部应用</div>
+
+  <!-- 第一行：基础对接类 -->
+  <div style="font-size:12px;color:#8c8c8c;margin-bottom:10px;padding-left:2px">基础对接</div>
+  <div class="app-grid">
+    <!-- ORDER_SYNC - 已开通 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-green">已开通</div>
+      <div class="app-card" onclick="showDetailModal('order')">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#e6f4ff,#bae0ff)">
+          <span class="app-card-icon">📦</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">下单对接</div>
+          <div class="app-card-desc">实时接收外部订单，自动转化为生产任务</div>
+          <div style="margin-top:4px">
+            <span class="tag tag-green">✓ 已配置</span>
+            <span class="tag tag-blue" style="margin-left:4px">1284次调用</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">API对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- QUALITY_FEEDBACK - 已开通未配置 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-green">已开通</div>
+      <div class="app-card" onclick="showDetailModal('quality')">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#f6ffed,#d9f7be)">
+          <span class="app-card-icon">✅</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">质检反馈</div>
+          <div class="app-card-desc">质检结果实时推送至您的系统或电商后台</div>
+          <div style="margin-top:4px">
+            <span class="tag tag-orange">⚙ 待配置URL</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">API对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- LOGISTICS - 未开通 -->
+    <div class="app-card-wrap">
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff7e6,#ffd591)">
+          <span class="app-card-icon">🚚</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">物流同步 🔥</div>
+          <div class="app-card-desc">出货后自动推送物流单号至买家和平台</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥299</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">API对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- PAYMENT - 未开通 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-blue">新应用</div>
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fffbe6,#fff1b8)">
+          <span class="app-card-icon">💰</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">货款同步</div>
+          <div class="app-card-desc">平台回款自动入账工厂财务系统</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥399</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">API对接</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第二行：电商平台（与普通应用完全统一展示） -->
+  <div style="font-size:12px;color:#8c8c8c;margin:16px 0 10px;padding-left:2px">电商平台对接（与普通应用统一开通流程）</div>
+  <div class="app-grid">
+    <!-- 淘宝 - 已开通 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-green">已开通</div>
+      <div class="app-card" onclick="showEcDetailModal('taobao')">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff2e8,#ffd8bf)">
+          <span class="app-card-icon">🟠</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">淘宝对接</div>
+          <div class="app-card-desc">淘宝店铺订单实时同步到生产系统</div>
+          <div style="margin-top:4px">
+            <span class="tag tag-green">✓ 已配置</span>
+            <span class="tag tag-blue" style="margin-left:4px">328次调用</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 天猫 - 已开通 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-green">已开通</div>
+      <div class="app-card" onclick="showEcDetailModal('tmall')">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff1f0,#ffa39e)">
+          <span class="app-card-icon">🐱</span>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">天猫对接</div>
+          <div class="app-card-desc">天猫旗舰店/专卖店订单自动同步</div>
+          <div style="margin-top:4px">
+            <span class="tag tag-green">✓ 已配置</span>
+            <span class="tag tag-blue" style="margin-left:4px">571次调用</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 京东 - 未开通 -->
+    <div class="app-card-wrap">
+      <div class="app-card" onclick="showTrialModal('jd')">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff1f0,#ffd8d8);opacity:.9">
+          <span class="app-card-icon">🔴</span>
+          <div class="price-badge">¥299/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">京东对接</div>
+          <div class="app-card-desc">京东商城订单一键同步，支持自营&POP</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥299</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 抖音 - 未开通 -->
+    <div class="app-card-wrap">
+      <div class="ribbon ribbon-red">热门</div>
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#e8e8e8,#d0d0d0);opacity:.9">
+          <span class="app-card-icon">🎵</span>
+          <div class="price-badge">¥349/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">抖音对接 🔥</div>
+          <div class="app-card-desc">抖店/抖音小店直播订单实时生产</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥349</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 拼多多 -->
+    <div class="app-card-wrap">
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff1f0,#ffccc7);opacity:.9">
+          <span class="app-card-icon">🛒</span>
+          <div class="price-badge">¥249/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">拼多多对接</div>
+          <div class="app-card-desc">多多商城订单自动同步生产排程</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥249</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 小红书 -->
+    <div class="app-card-wrap">
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#fff0f6,#ffadd2);opacity:.9">
+          <span class="app-card-icon">📕</span>
+          <div class="price-badge">¥299/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">小红书对接</div>
+          <div class="app-card-desc">小红书商城买手/品牌订单同步</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥299</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 微信小店 -->
+    <div class="app-card-wrap">
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#f6ffed,#d9f7be);opacity:.9">
+          <span class="app-card-icon">💚</span>
+          <div class="price-badge">¥199/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">微信小店对接</div>
+          <div class="app-card-desc">视频号/微信小店订单自动流转生产</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥199</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Shopify -->
+    <div class="app-card-wrap">
+      <div class="app-card">
+        <div class="app-card-cover" style="background:linear-gradient(135deg,#f0f5ff,#d6e4ff);opacity:.9">
+          <span class="app-card-icon">🟢</span>
+          <div class="price-badge">¥399/月</div>
+        </div>
+        <div class="app-card-body">
+          <div class="app-card-title">Shopify对接</div>
+          <div class="app-card-desc">海外独立站订单直连国内工厂生产</div>
+          <div class="trial-badge">🎁 免费试用 7 天</div>
+          <div class="price-row">
+            <span class="price-label">月付</span>
+            <span class="price-value" style="margin:0 2px 0 4px">¥399</span>
+            <span class="price-unit">/月</span>
+          </div>
+          <div style="margin-top:6px"><span class="tag tag-blue">电商对接</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL 1: 已开通应用详情（管理配置） ============ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="font-size:20px">📦</span>
+        <span>下单对接</span>
+        <span class="tag tag-green">已开通</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('detailModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-success">
+        <span>🚀</span>
+        <span><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">应用简介</div>
+        <p style="font-size:12px;color:#8c8c8c;line-height:1.6">实时接收来自外部电商平台或ERP的订单，自动解析SKU、数量、交期等信息，生成生产工单并分配到对应工厂</p>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">核心功能</div>
+        <ul class="feature-list">
+          <li>✅ 外部系统订单实时推送接收</li>
+          <li>✅ SKU自动映射本系统款式/颜色/尺码</li>
+          <li>✅ 重复订单自动去重</li>
+          <li>✅ 状态变更回推外部系统</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('detailModal');showApiMgmt()">⚙️ 管理配置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL 2: 电商应用详情（已开通） ============ -->
+<div class="modal-overlay" id="ecDetailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="font-size:20px">🟠</span>
+        <span id="ecDetailName">淘宝对接</span>
+        <span class="tag tag-green">已开通</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('ecDetailModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-success">
+        <span>🚀</span>
+        <span><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">应用简介</div>
+        <p style="font-size:12px;color:#8c8c8c;line-height:1.6" id="ecDetailDesc">淘宝店铺新订单实时同步到生产系统，支持一件代发和批量生产两种模式</p>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">开通后自动获得</div>
+        <div class="obtain-box">
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> API密钥对（appKey + appSecret）自动生成</div>
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> HMAC-SHA256 签名鉴权</div>
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> 内部API端点全部自动匹配就绪</div>
+          <div class="obtain-row"><span style="color:#1677ff">🔗</span> 只需填写您的接口地址即可开始使用</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('ecDetailModal');showApiMgmt()">⚙️ 管理配置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL 3: 未开通应用 → 试用弹窗 ============ -->
+<div class="modal-overlay" id="trialModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="trialModalTitle">
+        <span style="font-size:20px">🔴</span>
+        <span>京东对接</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('trialModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-success">
+        <span>🚀</span>
+        <span><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">应用简介</div>
+        <p style="font-size:12px;color:#8c8c8c;line-height:1.6">京东商城（自营/POP）订单实时同步到生产系统，支持多仓库自动分配</p>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">开通后自动获得</div>
+        <div class="obtain-box">
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> API密钥对（appKey + appSecret）自动生成</div>
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> HMAC-SHA256 签名鉴权</div>
+          <div class="obtain-row"><span style="color:#52c41a">✅</span> 内部API端点全部自动匹配就绪</div>
+          <div class="obtain-row"><span style="color:#1677ff">🔗</span> 只需填写您的接口地址即可开始使用</div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="section-title-sm">价格方案</div>
+        <div class="price-grid">
+          <div class="price-card trial">
+            <div class="price-card-label" style="color:#389e0d">免费试用</div>
+            <div class="price-card-value" style="color:#52c41a">¥0</div>
+            <div class="price-card-unit" style="color:#73d13d">7 天</div>
+          </div>
+          <div class="price-card">
+            <div class="price-card-label" style="color:#8c8c8c">月 付</div>
+            <div class="price-card-value" style="color:#1677ff">¥299</div>
+            <div class="price-card-unit" style="color:#bfbfbf">/ 月</div>
+          </div>
+          <div class="price-card yearly">
+            <div class="recommended">推荐</div>
+            <div class="price-card-label" style="color:#d48806">年 付</div>
+            <div class="price-card-value" style="color:#fa8c16">¥2,990</div>
+            <div class="price-card-unit" style="color:#ffc53d">/ 年 · 省2个月</div>
+          </div>
+          <div class="price-card perpetual">
+            <div class="price-card-label" style="color:#2f54eb">买 断</div>
+            <div class="price-card-value" style="color:#2f54eb">¥8,980</div>
+            <div class="price-card-unit" style="color:#85a5ff">永久使用</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('trialModal')">取消</button>
+      <button class="btn btn-success" onclick="closeModal('trialModal');showWizardModal()">🎁 一键开通试用 7 天</button>
+      <button class="btn btn-primary" onclick="closeModal('trialModal')">🛒 立即购买</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL 4: 向导弹窗 Step 0 ============ -->
+<div class="modal-overlay" id="wizardModal">
+  <div class="modal" style="width:600px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="color:#52c41a;font-size:16px">🚀</span>
+        <span>京东对接 - 智能配置向导</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('wizardModal')">×</button>
+    </div>
+    <div class="modal-body" id="wizardBodyStep0">
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step"><div class="step-dot active">1</div><div class="step-label active">API凭证</div></div>
+        <div class="step"><div class="step-dot">2</div><div class="step-label">配置地址</div></div>
+        <div class="step"><div class="step-dot">3</div><div class="step-label">完成</div></div>
+      </div>
+
+      <div class="alert alert-success">
+        <span>✅</span>
+        <div><strong>API凭证已自动生成！</strong><br><span style="font-size:11px">系统已为您自动创建API密钥并配置好所有内部接口端点。</span></div>
+      </div>
+      <div class="code-block">
+        <div class="code-row">
+          <div class="code-label">AppKey</div>
+          <div class="code-value">
+            <span style="color:#1a1a2e;font-weight:700">jd_7f3a9e21bc4d8f52a1e0</span>
+            <button class="copy-btn" onclick="showCopied(this)">📋</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="code-label">AppSecret</div>
+          <div class="alert alert-warning" style="padding:4px 10px;font-size:11px;margin-bottom:4px">⚠️ 密钥仅显示一次，请立即保存！</div>
+          <div class="code-value">
+            <span style="color:#cf1322;font-weight:700">sk_8X2kLm9nQp3rSt4uVw5xYz6aB7cDe8f...</span>
+            <button class="copy-btn" onclick="showCopied(this)">📋</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">✅ 已自动匹配的API端点：</div>
+        <div class="endpoint-list">
+          <div class="endpoint-row">
+            <span class="method-tag method-push">PUSH</span>
+            <span class="endpoint-path">/api/integration/order/receive</span>
+            <span class="endpoint-desc">接收京东新订单</span>
+          </div>
+          <div class="endpoint-row">
+            <span class="method-tag method-push">PUSH</span>
+            <span class="endpoint-path">/api/integration/order/status</span>
+            <span class="endpoint-desc">接收订单状态变更</span>
+          </div>
+          <div class="endpoint-row">
+            <span class="method-tag method-get">GET</span>
+            <span class="endpoint-path">/api/integration/production/progress</span>
+            <span class="endpoint-desc">查询生产进度</span>
+          </div>
+          <div class="endpoint-row">
+            <span class="method-tag method-push">PUSH</span>
+            <span class="endpoint-path">/api/integration/shipment/notify</span>
+            <span class="endpoint-desc">发货通知回调</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal('wizardModal')">稍后配置</button>
+        <button class="btn btn-primary" onclick="showWizardStep1()">下一步：填写您的接口地址 →</button>
+      </div>
+    </div>
+
+    <div class="modal-body" id="wizardBodyStep1" style="display:none">
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step"><div class="step-dot done">✓</div><div class="step-label">API凭证</div></div>
+        <div class="step"><div class="step-dot active">2</div><div class="step-label active">配置地址</div></div>
+        <div class="step"><div class="step-dot">3</div><div class="step-label">完成</div></div>
+      </div>
+      <div class="alert alert-info">
+        <span>ℹ️</span>
+        <div><strong>只需填写您的接口地址，内部API已全部自动配置好</strong><br><span style="font-size:11px">我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。</span></div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">回调地址（Webhook）<span class="input-hint" style="color:#8c8c8c">我们会向此地址推送数据</span></label>
+        <input class="form-input" placeholder="如: https://your-system.com/webhook/jd" id="callbackInput" />
+      </div>
+      <div class="form-item">
+        <label class="form-label">您的API地址<span class="input-hint" style="color:#8c8c8c">用于我们主动调用您的系统</span></label>
+        <input class="form-input" placeholder="https://your-system.com/api" />
+      </div>
+      <div class="tips-box">
+        <div class="tips-title">💡 不确定填什么？</div>
+        <ul>
+          <li><strong>回调地址</strong>：您系统中接收推送通知的URL（如质检结果、物流信息）</li>
+          <li><strong>您的API地址</strong>：我们主动调用您系统的地址（如查询订单状态）</li>
+          <li>两个地址都可以稍后再填，不影响试用开通</li>
+        </ul>
+      </div>
+      <div style="text-align:right;margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="showWizardStep0()">← 上一步</button>
+        <button class="btn" onclick="closeModal('wizardModal')">稍后配置</button>
+        <button class="btn btn-primary" onclick="showWizardStep2()">完成配置 ✓</button>
+      </div>
+    </div>
+
+    <div class="modal-body" id="wizardBodyStep2" style="display:none">
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step"><div class="step-dot done">✓</div><div class="step-label">API凭证</div></div>
+        <div class="step"><div class="step-dot done">✓</div><div class="step-label">配置地址</div></div>
+        <div class="step"><div class="step-dot active">3</div><div class="step-label active">完成</div></div>
+      </div>
+      <div class="success-screen">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">对接配置完成！</div>
+        <div class="success-desc">京东对接已开通 7 天试用，API端点已就绪。</div>
+        <div class="success-cards">
+          <div class="success-card green">
+            <div class="success-card-title">✅ 已完成</div>
+            <ul><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul>
+          </div>
+          <div class="success-card blue">
+            <div class="success-card-title">📖 下一步</div>
+            <ul><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px">
+          <button class="btn" onclick="closeModal('wizardModal')">关闭</button>
+          <button class="btn btn-primary" onclick="closeModal('wizardModal');showApiMgmt()">📖 查看API对接管理 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL 5: API对接管理页效果 ============ -->
+<div class="modal-overlay" id="apiMgmtModal">
+  <div class="modal" style="width:680px;max-height:85vh">
+    <div class="modal-header">
+      <div class="modal-title">🔌 API对接管理</div>
+      <button class="modal-close" onclick="closeModal('apiMgmtModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-bar">
+        <div class="tab-item active">我的应用</div>
+        <div class="tab-item">对接教程</div>
+        <div class="tab-item">调用日志</div>
+      </div>
+      <!-- App list in API management -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <!-- ORDER_SYNC -->
+        <div style="background:#fff;border:1px solid #e8e8e8;border-left:4px solid #1677ff;border-radius:8px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="font-size:24px">📦</span>
+              <div>
+                <div style="font-size:14px;font-weight:600">下单对接</div>
+                <div style="display:flex;gap:6px;margin-top:3px">
+                  <span class="tag tag-green">✓ 运行中</span>
+                  <span class="tag tag-blue">累计 1,284 次</span>
+                  <span style="font-size:11px;color:#8c8c8c">今日 36/500</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-sm">配置</button>
+          </div>
+          <div style="margin-top:10px;background:#f6f8fa;border-radius:6px;padding:10px;font-size:12px">
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+              <div><span style="color:#8c8c8c">AppKey：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">order_tb8a3f92c1d...</code></div>
+              <div><span style="color:#8c8c8c">回调地址：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">https://my-erp.com/webhook/order</code></div>
+            </div>
+          </div>
+        </div>
+        <!-- TAOBAO -->
+        <div style="background:#fff;border:1px solid #e8e8e8;border-left:4px solid #FF6600;border-radius:8px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="font-size:24px">🟠</span>
+              <div>
+                <div style="font-size:14px;font-weight:600">淘宝对接</div>
+                <div style="display:flex;gap:6px;margin-top:3px">
+                  <span class="tag tag-green">✓ 运行中</span>
+                  <span class="tag tag-blue">累计 328 次</span>
+                  <span style="font-size:11px;color:#8c8c8c">今日 12/500</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-sm">配置</button>
+          </div>
+          <div style="margin-top:10px;background:#f6f8fa;border-radius:6px;padding:10px;font-size:12px">
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+              <div><span style="color:#8c8c8c">AppKey：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">tb_9e1f3c72ab...</code></div>
+              <div><span style="color:#8c8c8c">回调地址：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">https://my-erp.com/webhook/taobao</code></div>
+            </div>
+          </div>
+        </div>
+        <!-- TMALL -->
+        <div style="background:#fff;border:1px solid #e8e8e8;border-left:4px solid #D40016;border-radius:8px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="font-size:24px">🐱</span>
+              <div>
+                <div style="font-size:14px;font-weight:600">天猫对接</div>
+                <div style="display:flex;gap:6px;margin-top:3px">
+                  <span class="tag tag-green">✓ 运行中</span>
+                  <span class="tag tag-blue">累计 571 次</span>
+                  <span style="font-size:11px;color:#8c8c8c">今日 29/500</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-sm">配置</button>
+          </div>
+          <div style="margin-top:10px;background:#f6f8fa;border-radius:6px;padding:10px;font-size:12px">
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+              <div><span style="color:#8c8c8c">AppKey：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">tm_2c8a4f91de...</code></div>
+              <div><span style="color:#8c8c8c">回调地址：</span><code style="background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #eee">https://my-erp.com/webhook/tmall</code></div>
+            </div>
+          </div>
+        </div>
+        <!-- QUALITY - 待配置 -->
+        <div style="background:#fffbe6;border:1px solid #ffe58f;border-left:4px solid #faad14;border-radius:8px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="font-size:24px">✅</span>
+              <div>
+                <div style="font-size:14px;font-weight:600">质检反馈</div>
+                <div style="display:flex;gap:6px;margin-top:3px">
+                  <span class="tag tag-orange">⚙ 待配置回调地址</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm">立即配置</button>
+          </div>
+          <div style="margin-top:10px;background:#fff7e6;border-radius:6px;padding:10px;font-size:12px;color:#d46b08">
+            ⚠️ 回调地址未配置，质检结果无法推送到您的系统。点击「立即配置」填写回调URL即可。
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('apiMgmtModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy toast -->
+<div id="copyToast" style="display:none;position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:9999">✅ 已复制到剪贴板</div>
+
+<script>
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+function showDetailModal(type) {
+  document.getElementById('detailModal').classList.add('show');
+}
+function showEcDetailModal(type) {
+  const names = { taobao: ['淘宝对接', '🟠', '淘宝店铺新订单实时同步到生产系统，支持一件代发和批量生产两种模式'], tmall: ['天猫对接', '🐱', '天猫旗舰店、专卖店订单实时同步，自动关联工厂产能排程'] };
+  const d = names[type];
+  document.querySelector('#ecDetailModal .modal-title span:nth-child(1)').textContent = d[1];
+  document.getElementById('ecDetailName').textContent = d[0];
+  document.getElementById('ecDetailDesc').textContent = d[2];
+  document.getElementById('ecDetailModal').classList.add('show');
+}
+function showTrialModal(type) {
+  document.getElementById('trialModal').classList.add('show');
+}
+function showWizardModal() {
+  showWizardStep0();
+  document.getElementById('wizardModal').classList.add('show');
+}
+function showWizardStep0() {
+  document.getElementById('wizardBodyStep0').style.display = '';
+  document.getElementById('wizardBodyStep1').style.display = 'none';
+  document.getElementById('wizardBodyStep2').style.display = 'none';
+}
+function showWizardStep1() {
+  document.getElementById('wizardBodyStep0').style.display = 'none';
+  document.getElementById('wizardBodyStep1').style.display = '';
+  document.getElementById('wizardBodyStep2').style.display = 'none';
+}
+function showWizardStep2() {
+  document.getElementById('wizardBodyStep0').style.display = 'none';
+  document.getElementById('wizardBodyStep1').style.display = 'none';
+  document.getElementById('wizardBodyStep2').style.display = '';
+}
+function showApiMgmt() {
+  document.getElementById('apiMgmtModal').classList.add('show');
+}
+function showCopied(btn) {
+  btn.textContent = '✅';
+  const t = document.getElementById('copyToast');
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; btn.textContent = '📋'; }, 1500);
+}
+// Click outside to close
+document.querySelectorAll('.modal-overlay').forEach(ol => {
+  ol.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+});
+</script>
+</body>
+</html>

@@ -60,30 +60,9 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import PaymentAuditPopover from '@/modules/finance/pages/FinanceCenter/PaymentAuditPopover';
+import { usePaymentColumns, methodIconMap, accountTypeIconMap, bizTypeIconMap } from './hooks/usePaymentColumns';
 
 const { RangePicker } = DatePicker;
-
-// ============================================================
-// 图标映射
-// ============================================================
-const methodIconMap: Record<string, React.ReactNode> = {
-  OFFLINE: <WalletOutlined />,
-  BANK: <BankOutlined />,
-  WECHAT: <WechatOutlined style={{ color: '#07C160' }} />,
-  ALIPAY: <AlipayCircleOutlined style={{ color: '#1677FF' }} />,
-};
-
-const accountTypeIconMap: Record<string, React.ReactNode> = {
-  BANK: <CreditCardOutlined />,
-  WECHAT: <WechatOutlined style={{ color: '#07C160' }} />,
-  ALIPAY: <AlipayCircleOutlined style={{ color: '#1677FF' }} />,
-};
-
-const bizTypeIconMap: Record<string, React.ReactNode> = {
-  PAYROLL: <TeamOutlined />,
-  RECONCILIATION: <ShopOutlined />,
-  REIMBURSEMENT: <AccountBookOutlined />,
-};
 
 // ============================================================
 // 主组件 — 统一付款中心
@@ -508,234 +487,18 @@ const PaymentCenterPage: React.FC = () => {
     });
   };
 
-  // ============================================================
-  //  表格列定义 — 待付款
-  // ============================================================
-  const payableColumns: ColumnsType<PayableItem> = useMemo(
-    () => [
-      {
-        title: '业务类型',
-        dataIndex: 'bizType',
-        key: 'bizType',
-        width: 120,
-        render: (v: string) => {
-          const t = BIZ_TYPE_MAP[v];
-          return t ? <Tag icon={bizTypeIconMap[v]} color={t.color}>{t.text}</Tag> : v;
-        },
-      },
-      {
-        title: '单据编号',
-        dataIndex: 'bizNo',
-        key: 'bizNo',
-        width: 180,
-        ellipsis: true,
-        render: (v: string, record: PayableItem) => (
-          <PaymentAuditPopover record={record}>
-            <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9' }}>{v || '-'}</span>
-          </PaymentAuditPopover>
-        ),
-      },
-      {
-        title: '收款方',
-        key: 'payee',
-        width: 160,
-        render: (_: unknown, r: PayableItem) => (
-          <Space orientation="vertical" size={0}>
-            <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
-            <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}</Tag>
-          </Space>
-        ),
-      },
-      {
-        title: '应付金额',
-        dataIndex: 'amount',
-        key: 'amount',
-        width: 130,
-        align: 'right',
-        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>,
-      },
-      {
-        title: '已付金额',
-        dataIndex: 'paidAmount',
-        key: 'paidAmount',
-        width: 120,
-        align: 'right',
-        render: (v: number) => <span style={{ color: '#389e0d' }}>¥{Number(v || 0).toFixed(2)}</span>,
-      },
-      {
-        title: '描述',
-        dataIndex: 'description',
-        key: 'description',
-        width: 200,
-        ellipsis: true,
-      },
-      {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        key: 'createTime',
-        width: 170,
-        render: (v: string) => formatDateTime(v),
-      },
-      {
-        title: '操作',
-        key: 'actions',
-        width: 160,
-        fixed: 'right',
-        render: (_: unknown, record: PayableItem) => {
-          const actions: RowAction[] = [
-            {
-              key: 'pay',
-              label: '去付款',
-              primary: true,
-              onClick: () => openPayModal(record),
-            },
-            {
-              key: 'reject',
-              label: '驳回',
-              danger: true,
-              onClick: () => handleRejectPayable(record),
-            },
-            {
-              key: 'accounts',
-              label: '收款账户',
-              onClick: () => openAccountModal(record.payeeType, record.payeeId, record.payeeName),
-            },
-          ];
-          return <RowActions actions={actions} />;
-        },
-      },
-    ],
-    [],
-  );
-
-  // ============================================================
-  //  表格列定义 — 支付记录
-  // ============================================================
-  const paymentColumns: ColumnsType<WagePayment> = useMemo(
-    () => [
-      {
-        title: '支付单号',
-        dataIndex: 'paymentNo',
-        key: 'paymentNo',
-        width: 180,
-        render: (v: string, record: WagePayment) => (
-          <a onClick={() => { setDetailRecord(record); setDetailOpen(true); }}>{v}</a>
-        ),
-      },
-      {
-        title: '业务类型',
-        dataIndex: 'bizType',
-        key: 'bizType',
-        width: 110,
-        render: (v: string) => {
-          const t = BIZ_TYPE_MAP[v];
-          return t ? <Tag color={t.color}>{t.text}</Tag> : v || '-';
-        },
-      },
-      {
-        title: '收款方',
-        key: 'payee',
-        width: 140,
-        render: (_: unknown, r: WagePayment) => (
-          <Space orientation="vertical" size={0}>
-            <span>{r.payeeName}</span>
-            <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
-          </Space>
-        ),
-      },
-      {
-        title: '支付方式',
-        dataIndex: 'paymentMethod',
-        key: 'paymentMethod',
-        width: 120,
-        render: (v: string) => (
-          <Space>{methodIconMap[v]}{PAYMENT_METHOD_OPTIONS.find(o => o.value === v)?.label ?? v}</Space>
-        ),
-      },
-      {
-        title: '金额',
-        dataIndex: 'amount',
-        key: 'amount',
-        width: 120,
-        align: 'right',
-        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>,
-      },
-      {
-        title: '状态',
-        dataIndex: 'status',
-        key: 'status',
-        width: 100,
-        render: (v: string) => {
-          const s = PAYMENT_STATUS_MAP[v];
-          return s ? <Tag color={s.color}>{s.text}</Tag> : v;
-        },
-      },
-      {
-        title: '业务单号',
-        dataIndex: 'bizNo',
-        key: 'bizNo',
-        width: 160,
-        ellipsis: true,
-      },
-      {
-        title: '操作人',
-        dataIndex: 'operatorName',
-        key: 'operatorName',
-        width: 100,
-      },
-      {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        key: 'createTime',
-        width: 170,
-        render: (v: string) => formatDateTime(v),
-      },
-      {
-        title: '操作',
-        key: 'actions',
-        width: 120,
-        fixed: 'right',
-        render: (_: unknown, record: WagePayment) => {
-          const actions: RowAction[] = [];
-          if (record.status === 'pending') {
-            actions.push({
-              key: 'confirm',
-              label: '确认支付',
-              primary: true,
-              onClick: () => openProofModal(record.id),
-            });
-            actions.push({
-              key: 'cancel',
-              label: '取消',
-              danger: true,
-              onClick: () => handleCancel(record),
-            });
-          }
-          if (record.status === 'success' && !record.confirmTime) {
-            actions.push({
-              key: 'received',
-              label: '确认收款',
-              primary: true,
-              onClick: async () => {
-                try {
-                  await wagePaymentApi.confirmReceived(record.id);
-                  msg.success('已确认收款');
-                  fetchPayments();
-                } catch (err: any) { msg.error(`确认收款失败: ${(err as any)?.message || '未知错误'}`); }
-              },
-            });
-          }
-          actions.push({
-            key: 'accounts',
-            label: '收款账户',
-            onClick: () => openAccountModal(record.payeeType, record.payeeId, record.payeeName),
-          });
-          return <RowActions actions={actions} />;
-        },
-      },
-    ],
-    [fetchPayments, msg],
-  );
+  // ---- 表格列定义（usePaymentColumns hook）----
+  const { payableColumns, paymentColumns } = usePaymentColumns({
+    openPayModal,
+    handleRejectPayable,
+    openAccountModal,
+    setDetailRecord,
+    setDetailOpen,
+    openProofModal,
+    handleCancel,
+    fetchPayments,
+    msg,
+  });
 
   // ============================================================
   //  统计
