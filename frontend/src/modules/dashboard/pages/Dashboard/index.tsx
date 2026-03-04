@@ -21,7 +21,6 @@ import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
 import { useDashboardStats, RecentActivity } from './useDashboardStats';
-import LiveScanFeed from '../../components/LiveScanFeed';
 import './styles.css';
 
 interface QuickEntryConfig {
@@ -346,9 +345,6 @@ const Dashboard: React.FC = () => {
 
         {/* 顶部4个统计看板 */}
         <TopStats />
-
-        {/* 实时扫码动态墙 */}
-        <LiveScanFeed />
 
         {/* 质检数据看板 */}
         <MiniDataDashboard />
