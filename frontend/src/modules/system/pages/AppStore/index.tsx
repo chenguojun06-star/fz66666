@@ -124,13 +124,7 @@ const AppStore: React.FC = () => {
   const [ecSaving, setEcSaving] = useState(false);
   const [ecShowAll, setEcShowAll] = useState(false);
 
-  const [ecPurchased, setEcPurchased] = useState<Record<string, boolean>>({});
-  const [ecPurchaseTarget, setEcPurchaseTarget] = useState<EcPlatform | null>(null);
-  const [ecBuyVisible, setEcBuyVisible] = useState(false);
-  const [ecBuySubmitting, setEcBuySubmitting] = useState(false);
-
   const ecStorageKey = `ec_platforms_${user?.id ?? 'default'}`;
-  const ecPurchasedKey = `ec_purchased_${user?.id ?? 'default'}`;
 
   useEffect(() => {
     try {
@@ -145,25 +139,39 @@ const AppStore: React.FC = () => {
     try { localStorage.setItem(ecStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem(ecPurchasedKey);
-      if (s) setEcPurchased(JSON.parse(s));
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ecPurchasedKey]);
-
-  const saveEcPurchased = (next: Record<string, boolean>) => {
-    setEcPurchased(next);
-    try { localStorage.setItem(ecPurchasedKey, JSON.stringify(next)); } catch { /* ignore */ }
-  };
+  /** 判断某个 EC 平台是否已被超管开通（走后端 myApps，与普通 App 一致） */
+  const isEcActivated = (platformCode: string) => isAppActivated('EC_' + platformCode);
 
   const handleEcConnect = (platform: EcPlatform) => {
-    if (!ecPurchased[platform.code]) {
-      setEcPurchaseTarget(platform);
-      setEcBuyVisible(true);
+    if (!isEcActivated(platform.code)) {
+      // 未开通：找到后端 app 条目，复用与普通 App 完全一样的购买弹窗
+      const backendApp = appList.find(a => a.appCode === 'EC_' + platform.code);
+      if (backendApp) {
+        // 用前端配置的 emoji 覆盖后端的短码图标，确保弹窗显示正确
+        setSelectedApp({ ...backendApp, appIcon: platform.emoji });
+      } else {
+        // 后端条目不存在时兜底（不应发生，本地 DB 已插入）
+        setSelectedApp({
+          id: 0, appCode: 'EC_' + platform.code, appName: platform.name,
+          appIcon: platform.emoji, appDesc: platform.desc, category: 'ECOMMERCE',
+          priceType: 'MONTHLY', priceMonthly: platform.priceMonthly, priceYearly: 0, priceOnce: 0,
+          isHot: false, isNew: false, features: [], trialDays: 0,
+        });
+      }
+      setOrderVisible(true);
+      form.resetFields();
+      form.setFieldsValue({
+        contactName: user?.name || '',
+        contactPhone: user?.phone || '',
+        contactEmail: user?.email || '',
+        companyName: user?.tenantName || '',
+        userCount: 1,
+        subscriptionType: 'MONTHLY',
+        invoiceRequired: false,
+      });
       return;
     }
+    // 已开通：进入凭证配置
     setEcSelectedPlatform(platform);
     const existing = ecConnected[platform.code];
     if (existing) {
@@ -171,19 +179,6 @@ const AppStore: React.FC = () => {
     } else {
       ecForm.resetFields();
     }
-    setEcConfigVisible(true);
-  };
-
-  const handleEcBuySubmit = async () => {
-    if (!ecPurchaseTarget) return;
-    setEcBuySubmitting(true);
-    await new Promise(r => setTimeout(r, 700));
-    saveEcPurchased({ ...ecPurchased, [ecPurchaseTarget.code]: true });
-    setEcBuyVisible(false);
-    setEcBuySubmitting(false);
-    message.success(`${ecPurchaseTarget.name} 对接已开通！请填写 API 凭证`);
-    setEcSelectedPlatform(ecPurchaseTarget);
-    ecForm.resetFields();
     setEcConfigVisible(true);
   };
 
@@ -454,7 +449,7 @@ const AppStore: React.FC = () => {
         <ShoppingCartOutlined style={{ marginRight: 6 }} />全部应用
       </div>
       <Spin spinning={loading}>
-        <Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).map(renderAppCard)}</Row>
+        <Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).filter(a => a.category !== 'ECOMMERCE').map(renderAppCard)}</Row>
       </Spin>
 
       {/* 电商平台对接 */}
@@ -469,7 +464,7 @@ const AppStore: React.FC = () => {
       </div>
       <Row gutter={[24, 24]}>
         {(ecShowAll ? ECOMMERCE_PLATFORMS : ECOMMERCE_PLATFORMS.slice(0, 4)).map(p => {
-          const purchased = !!ecPurchased[p.code];
+          const purchased = isEcActivated(p.code);
           const connected = !!(ecConnected[p.code]);
           const ribbonText = connected ? '已连接' : purchased ? '已开通' : (p.badge ?? '');
           const ribbonColor = connected ? 'green' : purchased ? 'cyan' : 'blue';
@@ -826,45 +821,6 @@ const AppStore: React.FC = () => {
           </Form>
         </div>
       </Modal>
-      {/* 电商平台开通确认弹窗 */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 22 }}>{ecPurchaseTarget?.emoji}</span>
-            <span>开通 {ecPurchaseTarget?.name} 电商对接</span>
-          </div>
-        }
-        open={ecBuyVisible}
-        onCancel={() => setEcBuyVisible(false)}
-        width={440}
-        okText="提交开通意向"
-        cancelText="暂不开通"
-        confirmLoading={ecBuySubmitting}
-        onOk={handleEcBuySubmit}
-        okButtonProps={{ style: { background: '#fa8c16', borderColor: '#fa8c16' } }}
-      >
-        {ecPurchaseTarget && (
-          <div style={{ padding: '8px 0' }}>
-            <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#d46b08' }}>
-                ¥{ecPurchaseTarget.priceMonthly} <span style={{ fontSize: 13, fontWeight: 400, color: '#8c5800' }}>元/月</span>
-              </div>
-              <div style={{ fontSize: 12, color: '#8c5800', marginTop: 4 }}>{ecPurchaseTarget.desc}</div>
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 2.2 }}>
-              <div>✅ 开通后填写 API 凭证，订单自动同步到生产系统</div>
-              <div>✅ 智能下发生产任务，告别手工录入</div>
-              <div>✅ 支持多店铺批量管理，数据一键可视</div>
-            </div>
-            <Alert
-              style={{ marginTop: 14, fontSize: 12 }}
-              type="warning" showIcon
-              message="提交后商务团队将在 1–3 个工作日内联系您，协助完成 API 凭证申请与系统对接。"
-            />
-          </div>
-        )}
-      </Modal>
-
       {/* 电商平台配置弹窗 */}
       <Modal
         title={
