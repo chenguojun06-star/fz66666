@@ -569,7 +569,7 @@ const IntelligenceCenter: React.FC = () => {
   /* ai-advisor 状态预检 */
   useEffect(() => {
     intelligenceApi.getAiAdvisorStatus()
-      .then(r => setAiAdvisorReady(!!(r as any)?.data?.enabled ?? true))
+      .then(r => setAiAdvisorReady((r as any)?.data?.enabled ?? true))
       .catch(() => setAiAdvisorReady(false));
   }, []);
 
@@ -652,8 +652,8 @@ const IntelligenceCenter: React.FC = () => {
   const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
-  /* ── 跑马灯：紧急订单 ── */
-  const tickerItems = useMemo(() => {
+  /* ── 跑马灯：紧急订单（预留，暂未渲染）── */
+  const _tickerItems = useMemo(() => {
     const items: string[] = [];
     overdueRisk.overdue.forEach(o => {
       const d = o.plannedEndDate ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)) : 0;
