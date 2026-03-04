@@ -16,6 +16,7 @@ const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   PENDING: { label: '待处理', color: 'orange' },
   PAID: { label: '已激活', color: 'green' },
   ACTIVATED: { label: '已激活', color: 'green' },
+  TRIAL: { label: '免费试用', color: 'cyan' },   // startTrial 自动开通
   CANCELED: { label: '已取消', color: 'default' },
   REFUNDED: { label: '已退款', color: 'red' },
 };
@@ -229,6 +230,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
           options={[
             { value: '', label: '全部状态' },
             { value: 'PENDING', label: `待处理${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
+            { value: 'TRIAL', label: '免费试用（自动激活）' },
             { value: 'PAID', label: '已激活' },
             { value: 'CANCELED', label: '已取消' },
           ]}
