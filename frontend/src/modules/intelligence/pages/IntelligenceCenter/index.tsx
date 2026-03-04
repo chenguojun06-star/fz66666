@@ -116,6 +116,18 @@ const getAiTip = (prog: number, daysLeft: number | null): string => {
 /* 严重程度颜色 */
 const sev2c = (s: string) => ({ critical: '#ff4136', warning: '#f7a600', normal: '#39ff14' }[s] ?? '#39ff14');
 
+/* 工厂卡点 AI 建议 */
+const STAGE_HINTS: Record<string, string> = {
+  '裁剪': '建议优先排裁床工序，加快备料节奏',
+  '车缝': '车缝产能不足，可安排加班追单',
+  '尾部': '尾部整理积压，建议增调辅助工人',
+  '质检': '质检积压，建议核查验收人数配置',
+  '入库': '入库缓慢，检查仓库收货装箱流程',
+  '采购': '采购进度滞后，建议立即催促供应商',
+};
+const getFactoryAiHint = (stage: string, pct: number): string =>
+  pct >= 70 ? '整体健康，持续跟进' : (STAGE_HINTS[stage] ?? '建议深入排查该工序产能瓶颈');
+
 /* 交期风险强度展示 */
 const risk2badge = (r: string) => ({
   overdue: { label: '已逾期', color: '#ff4136' },
@@ -860,6 +872,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#ff4136' }}>{Number(o.productionProgress)||0}%</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#ff4136', flexShrink: 0, fontWeight: 600 }}>📞 立即联系</span>
                     </div>
                   );
                 })}
@@ -871,6 +884,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#f7a600' }}>{Number(o.productionProgress)||0}%</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#f7a600', flexShrink: 0, fontWeight: 600 }}>⚡ 加急协调</span>
                     </div>
                   );
                 })}
@@ -882,6 +896,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#3a8aff' }}>{Number(o.productionProgress)||0}%</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#3a8aff', flexShrink: 0 }}>👁 持续关注</span>
                     </div>
                   );
                 })}
@@ -916,6 +931,9 @@ const IntelligenceCenter: React.FC = () => {
                         </div>
                         <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
                         <span className="c-bottleneck-cnt">{f.count}单</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4 }}>
+                        💡 AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}
                       </div>
                     </div>
                   );
@@ -1015,6 +1033,12 @@ const IntelligenceCenter: React.FC = () => {
                   </span>
                   <span className="c-shortage-name">{item.materialName}</span>
                   <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
+                  <span style={{
+                    marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
+                    color: item.riskLevel === 'HIGH' ? '#ff4136' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
+                  }}>
+                    {item.riskLevel === 'HIGH' ? '⚠ 3天内断货' : item.riskLevel === 'MEDIUM' ? '1周内需补' : '2周内补单'}
+                  </span>
                 </div>
               ))
             ) : (
@@ -1085,7 +1109,7 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <table className="c-table">
               <thead>
-                <tr><th>姓名</th><th>速度</th><th>质量</th><th>稳定</th><th>多能</th><th>出勤</th><th>综合</th><th></th></tr>
+                <tr><th>姓名</th><th>速度</th><th>质量</th><th>稳定</th><th>多能</th><th>出勤</th><th>综合</th><th>评级</th></tr>
               </thead>
               <tbody>
                 {workers?.workers?.slice(0, 7).map(w => (
@@ -1097,7 +1121,20 @@ const IntelligenceCenter: React.FC = () => {
                     <td>{w.versatilityScore}</td>
                     <td>{w.attendanceScore}</td>
                     <td><b style={{ color: '#00e5ff' }}>{w.overallScore}</b></td>
-                    <td>{w.trend === 'UP' ? '📈' : w.trend === 'DOWN' ? '📉' : '➡️'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
+                          : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
+                          : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
+                          : { g: 'D', c: '#ff4136' };
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
+                            {w.trend === 'UP' ? '📈' : w.trend === 'DOWN' ? '📉' : '➡️'}
+                          </span>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 )) ?? <tr><td colSpan={8} className="c-empty-td">暂无数据</td></tr>}
               </tbody>
