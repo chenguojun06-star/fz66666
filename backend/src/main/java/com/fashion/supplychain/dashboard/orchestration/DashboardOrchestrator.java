@@ -496,43 +496,4 @@ public class DashboardOrchestrator {
     // 实时扫码动态流（太空舱模块）
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * 最近N条成功扫码记录，用于实时动态墙轮询。
-     * 返回字段：id, orderNo, operatorName, progressStage, processName, quantity, scanTime
-     */
-    public List<Map<String, Object>> getLiveScanFeed(int limit) {
-        int safeLimit = Math.max(5, Math.min(50, limit));
-        List<ScanRecord> scans = dashboardQueryService.listRecentScans(safeLimit);
-        List<Map<String, Object>> result = new ArrayList<>();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm:ss");
-        for (ScanRecord sr : scans) {
-            Map<String, Object> row = new java.util.HashMap<>();
-            row.put("id", sr.getId());
-            row.put("orderNo", sr.getOrderNo());
-            row.put("operatorName", sr.getActualOperatorName() != null ? sr.getActualOperatorName() : sr.getOperatorName());
-            row.put("progressStage", sr.getProgressStage());
-            row.put("processName", sr.getProcessName());
-            row.put("quantity", sr.getQuantity());
-            row.put("scanResult", sr.getScanResult());
-            row.put("scanTime", sr.getScanTime() != null ? sr.getScanTime().format(fmt) : "");
-            row.put("scanTs", sr.getScanTime() != null ? sr.getScanTime().toString() : "");
-            result.add(row);
-        }
-        return result;
-    }
-
-    /**
-     * 今日扫码件数和次数实时统计。
-     */
-    public Map<String, Object> getTodayScanStats() {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime now = LocalDateTime.now();
-        long todayCount = dashboardQueryService.countScansBetween(todayStart, now);
-        long todayQuantity = dashboardQueryService.sumTodayScanQuantity();
-        Map<String, Object> result = new java.util.HashMap<>();
-        result.put("todayCount", todayCount);
-        result.put("todayQuantity", todayQuantity);
-        result.put("ts", now.toString());
-        return result;
-    }
 }

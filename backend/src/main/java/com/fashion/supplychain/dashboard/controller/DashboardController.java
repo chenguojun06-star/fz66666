@@ -98,20 +98,4 @@ public class DashboardController {
     public Result<?> overdueOrders() {
         return Result.success(dashboardOrchestrator.getOverdueOrders());
     }
-
-    /**
-     * 实时扫码动态流（太空舱：最近15条成功扫码记录，每20s轮询）
-     */
-    @GetMapping("/live-scan-feed")
-    public Result<?> liveScanFeed(@RequestParam(defaultValue = "15") int limit) {
-        return Result.success(dashboardOrchestrator.getLiveScanFeed(limit));
-    }
-
-    /**
-     * 今日实时扫码统计（件数+次数，太空舱数字跳动用）
-     */
-    @GetMapping("/today-scan-stats")
-    public Result<?> todayScanStats() {
-        return Result.success(dashboardOrchestrator.getTodayScanStats());
-    }
 }
