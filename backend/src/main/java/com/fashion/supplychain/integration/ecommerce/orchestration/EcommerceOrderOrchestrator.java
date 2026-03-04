@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.finance.orchestration.EcSalesRevenueOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,9 @@ public class EcommerceOrderOrchestrator {
 
     @Autowired
     private EcommerceOrderService ecOrderService;
+
+    @Autowired
+    private EcSalesRevenueOrchestrator ecSalesRevenueOrchestrator;
 
     // ─────────────────────────────────────────────────────────────────────────
     // 1. 接收平台订单（Webhook 入口，幂等）
@@ -166,6 +170,13 @@ public class EcommerceOrderOrchestrator {
         order.setShipTime(LocalDateTime.now());
         ecOrderService.updateById(order);
         log.info("[EC出库回写] 生产单={} 快递单号={} EC订单={}", productionOrderNo, trackingNo, order.getOrderNo());
+        // 自动生成销售收入流水（失败不阻断出库主流程）
+        try {
+            ecSalesRevenueOrchestrator.recordOnOutbound(order);
+        } catch (Exception e) {
+            log.warn("[EC收入] 生成销售收入流水失败，不影响出库，ecOrderId={} err={}",
+                    order.getId(), e.getMessage());
+        }
         // TODO: 调用各平台 API 将物流信息回传给买家（需申请各平台开发者资质后扩展）
     }
 
