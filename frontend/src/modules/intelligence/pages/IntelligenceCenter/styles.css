@@ -63,21 +63,21 @@
 ─────────────────────────────────────────────────── */
 .cockpit-root {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,229,255,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 120%, rgba(124,77,255,0.04) 0%, transparent 60%),
-    #040810;
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,229,255,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 120%, rgba(124,77,255,0.06) 0%, transparent 60%),
+    #080f1e;
   min-height: 100vh;
   padding: 0 0 40px;
   color: #c8d8ea;
   font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace, 'PingFang SC', system-ui, sans-serif;
-  /* 细网格背景提升科技感 */
+  /* 细网格背景提升科技感（偏蓝调，更护眼） */
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,229,255,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 120%, rgba(124,77,255,0.04) 0%, transparent 60%),
-    linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,229,255,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 120%, rgba(124,77,255,0.06) 0%, transparent 60%),
+    linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
-  background-color: #040810;
+  background-color: #080f1e;
 }
 
 /* ────────────────────────────────────────────────
@@ -562,15 +562,48 @@
 
 .c-chat-row { display: flex; gap: 10px; margin: 8px 0 10px; }
 .c-chat-row .c-chat-input { flex: 1; }
-.c-chat-input .ant-input {
-  background: rgba(124,77,255,0.06) !important;
-  border-color: rgba(124,77,255,0.25) !important;
+
+/* ── AntD v5/v6: 无 prefix 时 className 直接挂在 <input> 上 → 用 AND 选择器 ── */
+.c-chat-input.ant-input {
+  background: rgba(18,10,48,0.8) !important;
+  border-color: rgba(124,77,255,0.3) !important;
   color: #c8d8ea !important;
 }
-.c-chat-input .ant-input::placeholder { color: #2e4d66 !important; }
-.c-chat-input .ant-input:focus {
+.c-chat-input.ant-input::placeholder { color: rgba(90,130,165,0.5) !important; }
+.c-chat-input.ant-input:hover {
+  border-color: rgba(124,77,255,0.55) !important;
+}
+.c-chat-input.ant-input:focus {
   border-color: #7c4dff !important;
   box-shadow: 0 0 0 2px rgba(124,77,255,0.18) !important;
+}
+/* fallback: 万一渲染为 affix-wrapper（含 prefix 变体）*/
+.ant-input-affix-wrapper.c-chat-input {
+  background: rgba(18,10,48,0.8) !important;
+  border-color: rgba(124,77,255,0.3) !important;
+}
+.ant-input-affix-wrapper.c-chat-input .ant-input {
+  background: transparent !important;
+  color: #c8d8ea !important;
+}
+.ant-input-affix-wrapper.c-chat-input .ant-input::placeholder { color: rgba(90,130,165,0.5) !important; }
+
+/* ── AntD v5/v6 默认 color: rgba(0,0,0,0.88) 在深色背景不可见 —— 全舱覆盖 ── */
+.cockpit-root .ant-input {
+  color: #c8d8ea !important;
+}
+.cockpit-root .ant-input::placeholder {
+  color: rgba(85,125,160,0.55) !important;
+}
+/* affix-wrapper 内层 input 背景透明，继承 wrapper 的深色 */
+.cockpit-root .ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  color: #c8d8ea !important;
+}
+/* 取消 AntD focus 时的白底光晕 */
+.cockpit-root .ant-input-affix-wrapper-focused,
+.cockpit-root .ant-input-affix-wrapper:focus-within {
+  box-shadow: none !important;
 }
 .c-chat-send { flex-shrink: 0; background: linear-gradient(135deg, #7c4dff, #0098aa) !important; border: none !important; }
 .c-chat-send:hover { opacity: 0.85; }
