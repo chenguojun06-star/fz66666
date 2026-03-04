@@ -45,6 +45,15 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
   QUALITY_FEEDBACK: { icon: '✅', color: 'var(--color-success)', urlHint: '如: https://your-system.com/webhook/quality' },
   LOGISTICS_SYNC: { icon: '🚚', color: 'var(--color-info)', urlHint: '如: https://your-system.com/webhook/logistics' },
   PAYMENT_SYNC: { icon: '💰', color: 'var(--color-warning)', urlHint: '如: https://your-finance.com/api/payment' },
+  // 电商平台 — 所有 EC_* 均展示「开通后自动获得」区块
+  EC_TAOBAO:      { icon: '🟠', color: '#FF6600', urlHint: '如: https://your-system.com/webhook/taobao' },
+  EC_TMALL:       { icon: '🐱', color: '#D40016', urlHint: '如: https://your-system.com/webhook/tmall' },
+  EC_JD:          { icon: '🔴', color: '#CC0000', urlHint: '如: https://your-system.com/webhook/jd' },
+  EC_DOUYIN:      { icon: '🎵', color: '#161823', urlHint: '如: https://your-system.com/webhook/douyin' },
+  EC_PINDUODUO:   { icon: '🛒', color: '#CC2B2B', urlHint: '如: https://your-system.com/webhook/pdd' },
+  EC_XIAOHONGSHU: { icon: '📕', color: '#FF2442', urlHint: '如: https://your-system.com/webhook/xiaohongshu' },
+  EC_WECHAT_SHOP: { icon: '💚', color: '#07C160', urlHint: '如: https://your-system.com/webhook/wechat-shop' },
+  EC_SHOPIFY:     { icon: '🟢', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
 };
 
 // 电商平台配置（前端静态数据，无需后端表支持）
@@ -237,6 +246,15 @@ const AppStore: React.FC = () => {
   };
 
   const handleAppClick = (app: AppStoreItem) => { setSelectedApp(app); setDetailVisible(true); };
+
+  // EC 平台详情弹窗点击「立即开通」→关闭详情弹窗，再调用 EC 购买/配置流程
+  const handleEcConnectFromDetail = () => {
+    setDetailVisible(false);
+    const platformCode = selectedApp?.appCode?.replace('EC_', '') || '';
+    const platform = ECOMMERCE_PLATFORMS.find(p => p.code === platformCode);
+    if (platform) setTimeout(() => handleEcConnect(platform), 150);
+  };
+
   const handleBuyClick = () => {
     setDetailVisible(false);
     setOrderVisible(true);
@@ -476,9 +494,13 @@ const AppStore: React.FC = () => {
                 style={{ display: connected || purchased || p.badge ? 'block' : 'none' }}
               >
                 <Card
-                  hoverable={purchased}
+                  hoverable
                   className="app-store-card"
                   style={!purchased ? { opacity: 0.88 } : undefined}
+                  onClick={() => {
+                    const backendApp = appList.find(a => a.appCode === 'EC_' + p.code);
+                    if (backendApp) { setSelectedApp({ ...backendApp, appIcon: p.emoji }); setDetailVisible(true); }
+                  }}
                   cover={
                     <div className="app-icon-container" style={{ position: 'relative' }}>
                       <span className="app-icon">{p.emoji}</span>
@@ -565,6 +587,17 @@ const AppStore: React.FC = () => {
           isAppActivated(selectedApp?.appCode || '') ? [
             <Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate('/system/tenant?tab=apps'); }}>
               管理配置
+            </Button>,
+          ] : selectedApp?.appCode?.startsWith('EC_') ? [
+            <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
+            selectedApp?.trialDays ? (
+              <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick}
+                style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>
+                一键开通试用 {selectedApp.trialDays} 天
+              </Button>
+            ) : null,
+            <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />} onClick={handleEcConnectFromDetail}>
+              立即开通
             </Button>,
           ] : [
             <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
