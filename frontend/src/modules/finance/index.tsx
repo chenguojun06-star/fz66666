@@ -6,3 +6,4 @@ export const FinanceDashboard = React.lazy(() => import('./pages/FinanceDashboar
 export const FinanceCenter = React.lazy(() => import('./pages/FinanceCenter'));
 export const ExpenseReimbursement = React.lazy(() => import('./pages/Finance/ExpenseReimbursement'));
 export const WagePayment = React.lazy(() => import('./pages/Finance/WagePayment'));
+export const EcSalesRevenue = React.lazy(() => import('./pages/EcSalesRevenue'));

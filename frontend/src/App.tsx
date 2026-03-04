@@ -19,6 +19,7 @@ import {
   FinanceCenter,
   ExpenseReimbursement,
   WagePayment,
+  EcSalesRevenue,
 } from './modules/finance';
 import {
   WarehouseDashboard,
@@ -238,6 +239,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
           <Route path={paths.expenseReimbursement} element={<Suspense fallback={<Spin />}><ExpenseReimbursement /></Suspense>} />
           <Route path={paths.wagePayment} element={<Suspense fallback={<Spin />}><WagePayment /></Suspense>} />
+          <Route path={paths.ecSalesRevenue} element={<Suspense fallback={<Spin />}><EcSalesRevenue /></Suspense>} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
           <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />

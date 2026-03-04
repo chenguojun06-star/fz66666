@@ -7,6 +7,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.EcSalesRevenueOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
+import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +45,12 @@ public class EcommerceOrderOrchestrator {
 
     @Autowired
     private EcSalesRevenueOrchestrator ecSalesRevenueOrchestrator;
+
+    @Autowired
+    private PlatformNotifyService platformNotifyService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // 1. 接收平台订单（Webhook 入口，幂等）
@@ -104,6 +113,37 @@ public class EcommerceOrderOrchestrator {
         order.setPayType((String) body.get("payType"));
         ecOrderService.save(order);
         log.info("[EC接入] 平台={} 平台单号={} 内部单号={}", platformCode, platformOrderNo, order.getOrderNo());
+
+        // ── SKU 自动匹配生产订单（静默，不阻断接单）─────────────
+        try {
+            if (StringUtils.hasText(order.getSkuCode())) {
+                // skuCode 格式: "styleNo-颜色-尺码"，取首个"-"前为款号
+                String styleNo = order.getSkuCode().split("-")[0];
+                if (StringUtils.hasText(styleNo)) {
+                    ProductionOrder matched = productionOrderService.getOne(
+                            new LambdaQueryWrapper<ProductionOrder>()
+                                    .eq(ProductionOrder::getStyleNo, styleNo)
+                                    .ne(ProductionOrder::getStatus, "completed")
+                                    .eq(ProductionOrder::getDeleteFlag, 0)
+                                    .orderByAsc(ProductionOrder::getCreateTime)
+                                    .last("LIMIT 1"), false);
+                    if (matched != null) {
+                        order.setProductionOrderNo(matched.getOrderNo());
+                        order.setWarehouseStatus(1); // 备货中
+                        ecOrderService.updateById(order);
+                        log.info("[EC自动匹配] EC单={} 关联生产单={} styleNo={}",
+                                order.getOrderNo(), matched.getOrderNo(), styleNo);
+                    } else {
+                        log.info("[EC自动匹配] 未找到可匹配生产单 skuCode={} styleNo={}",
+                                order.getSkuCode(), styleNo);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[EC自动匹配] SKU匹配异常，不阻断接单: {}", e.getMessage());
+        }
+        // ────────────────────────────────────────────────────────
+
         return Map.of("id", order.getId(), "orderNo", order.getOrderNo(), "duplicate", false);
     }
 
@@ -175,7 +215,12 @@ public class EcommerceOrderOrchestrator {
         } catch (Exception e) {
             log.warn("[EC现货出库] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
-        // TODO: 调用各平台 API 将物流信息回传给买家
+        // 回传平台物流信息（失败不阻断出库）
+        try {
+            platformNotifyService.notifyShipped(order);
+        } catch (Exception e) {
+            log.warn("[EC现货出库] 物流回传失败: {}", e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -203,7 +248,12 @@ public class EcommerceOrderOrchestrator {
         } catch (Exception e) {
             log.warn("[EC出库回写] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
-        // TODO: 调用各平台 API 将物流信息回传给买家（需申请各平台开发者资质后扩展）
+        // 回传平台物流信息（失败不阻断出库）
+        try {
+            platformNotifyService.notifyShipped(order);
+        } catch (Exception e) {
+            log.warn("[EC出库回写] 物流回传失败: {}", e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
