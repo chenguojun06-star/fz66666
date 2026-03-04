@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - **云端适配**：修复了前端 Vite 配置中硬编码内网 IP 的问题，现在支持云端容器化部署。
 
 ### ✨ Backend (后端)
-- **架构升级**：采用 Orchestrator 模式（37个编排器）完全分离 Controller 与 Service。
+- **架构升级**：采用 Orchestrator 模式（**86个编排器**跨11个领域模块，100.2k行代码）完全分离 Controller 与 Service。
 - **数据一致性**：新增 `ProductionDataConsistencyJob` 定时任务，每 30 分钟自动修复订单进度。
 - **安全增强**：移除了部分未使用的 PDF 依赖，优化了日志降级策略。
 

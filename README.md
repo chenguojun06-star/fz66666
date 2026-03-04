@@ -51,7 +51,7 @@ WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
 Controller → Orchestrator → Service → Mapper
 ```
 
-- 复杂业务逻辑必须在 **Orchestrator** 层编排（37 个编排器）
+- 复杂业务逻辑必须在 **Orchestrator** 层编排（**86 个编排器** 跨 11 个领域模块，代码行数 100.2k）
 - Service 禁止互相调用
 - Controller 禁止直接调用多个 Service
 - 事务 `@Transactional` 仅在 Orchestrator 层
