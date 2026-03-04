@@ -11,6 +11,7 @@ import type {
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse,
   BottleneckDetectionResponse, DeliveryRiskResponse, DeliveryRiskItem, AnomalyItem,
+  NlQueryResponse, DefectTraceResponse,
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import Layout from '@/components/Layout';
@@ -143,21 +144,23 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
     : null;
   const aiTip = getAiTip(prog, daysLeft);
 
-  /* 按需懒加载：展开弹窗时发起三个带 orderId 的智能模型 */
+  /* 按需懒加载：展开弹窗时发起四个带 orderId 的智能模型 */
   const [intel, setIntel] = useState<{
-    bottleneck: BottleneckDetectionResponse | null;
-    riskItem:   DeliveryRiskItem | null;
-    anomalies:  AnomalyItem[];
-    loading:    boolean;
-  }>({ bottleneck: null, riskItem: null, anomalies: [], loading: true });
+    bottleneck:   BottleneckDetectionResponse | null;
+    riskItem:     DeliveryRiskItem | null;
+    anomalies:    AnomalyItem[];
+    defectTrace:  DefectTraceResponse | null;
+    loading:      boolean;
+  }>({ bottleneck: null, riskItem: null, anomalies: [], defectTrace: null, loading: true });
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [rB, rD, rA] = await Promise.allSettled([
+      const [rB, rD, rA, rDT] = await Promise.allSettled([
         intelligenceApi.detectBottleneck({ orderNo: order.orderNo }),
         intelligenceApi.assessDeliveryRisk({ orderId: String(order.id) }),
         intelligenceApi.detectAnomalies(),
+        intelligenceApi.getDefectTrace(String(order.id)),
       ]);
       if (cancelled) return;
       const bottleneck: BottleneckDetectionResponse | null =
@@ -170,7 +173,9 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         a.targetName?.includes(order.factoryName ?? '') ||
         a.targetName?.includes(order.orderNo ?? '')
       ).slice(0, 2);
-      setIntel({ bottleneck, riskItem, anomalies, loading: false });
+      const defectTrace: DefectTraceResponse | null =
+        rDT.status === 'fulfilled' ? ((rDT.value as any)?.data ?? null) : null;
+      setIntel({ bottleneck, riskItem, anomalies, defectTrace, loading: false });
     })();
     return () => { cancelled = true; };
   }, [order.id, order.orderNo, order.factoryName]);
@@ -298,6 +303,29 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
       {intel.loading && (
         <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 10, color: '#1e3348' }}>
           ⁙ 智能分析中...
+        </div>
+      )}
+
+      {/* ─ 缺陷溯源分析（第四个智能接口） ─ */}
+      {!intel.loading && intel.defectTrace && (
+        <div style={{ marginBottom: 6, padding: '6px 8px',
+          background: 'rgba(180,80,255,0.05)', borderRadius: 5,
+          border: '1px solid rgba(180,80,255,0.18)' }}>
+          <div style={{ fontSize: 10, color: '#c084fc', fontWeight: 700, marginBottom: 4 }}>🔬 缺陷溯源</div>
+          {intel.defectTrace.workers?.slice(0, 2).map((w, i) => (
+            <div key={i} style={{ fontSize: 10, color: '#a78bfa', marginBottom: 2 }}>
+              👷 {w.operatorName}：缺陷率 <b style={{ color: '#f472b6' }}>{(w.defectRate * 100).toFixed(1)}%</b>
+              {w.worstProcess ? ` · ${w.worstProcess}` : ''}
+            </div>
+          ))}
+          {intel.defectTrace.hotProcesses?.slice(0, 1).map((p, i) => (
+            <div key={i} style={{ fontSize: 10, color: '#818cf8', marginTop: 2 }}>
+              ⚙ 高发工序：{p.processName}（{p.defectCount} 件）
+            </div>
+          ))}
+          {intel.defectTrace.overallDefectRate !== undefined && (
+            <div style={{ fontSize: 10, color: '#4a3a60', marginTop: 4 }}>💡 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
+          )}
         </div>
       )}
 
@@ -488,6 +516,10 @@ const IntelligenceCenter: React.FC = () => {
   const [chatQ, setChatQ]           = useState('');
   const [chatA, setChatA]           = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
+  const [nlQ, setNlQ]               = useState('');
+  const [nlResult, setNlResult]     = useState<NlQueryResponse | null>(null);
+  const [nlLoading, setNlLoading]   = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
@@ -532,14 +564,35 @@ const IntelligenceCenter: React.FC = () => {
   }, [reload]);
 
   const handleReload = () => { reload(); setCountdown(30); };
+
+  /* ai-advisor 状态预检 */
+  useEffect(() => {
+    intelligenceApi.getAiAdvisorStatus()
+      .then(r => setAiAdvisorReady(!!(r as any)?.data?.enabled ?? true))
+      .catch(() => setAiAdvisorReady(false));
+  }, []);
+
   const handleChat = async () => {
     if (!chatQ.trim()) return;
+    if (!aiAdvisorReady) { setChatA('AI 顾问服务当前不可用，请稍后再试。'); return; }
     setChatLoading(true); setChatA('');
     try {
       const res = await intelligenceApi.aiAdvisorChat(chatQ) as any;
       setChatA(res?.data?.answer || res?.answer || '暂无回复');
     } catch { setChatA('AI 服务暂不可用，请稍后重试。'); }
     finally { setChatLoading(false); }
+  };
+
+  const handleNlQuery = async (q?: string) => {
+    const query = (q ?? nlQ).trim();
+    if (!query) return;
+    if (q) setNlQ(q);
+    setNlLoading(true); setNlResult(null);
+    try {
+      const res = await intelligenceApi.nlQuery({ question: query }) as any;
+      setNlResult(res?.data ?? res);
+    } catch { setNlResult(null); }
+    finally { setNlLoading(false); }
   };
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, orders } = data;
@@ -1237,7 +1290,59 @@ const IntelligenceCenter: React.FC = () => {
                 <span style={{ fontSize: 14, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
                 <LiveDot size={7} color="#a78bfa" />
               </div>
-              <div style={{ fontSize: 11, color: '#4a6d8a', marginBottom: 10 }}>直接问询生产、订单、库存、财务任何问题</div>
+
+              {/* ai-advisor 服务状态警告 */}
+              {!aiAdvisorReady && (
+                <div style={{ fontSize: 10, color: '#f7a600', background: 'rgba(247,166,0,0.08)',
+                  border: '1px solid rgba(247,166,0,0.25)', borderRadius: 4,
+                  padding: '4px 8px', marginBottom: 8 }}>
+                  ⚠ AI 顾问服务当前不可用，数据查询功能正常
+                </div>
+              )}
+
+              {/* 自然语言数据查询区 */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 5 }}>📊 数据快查（自然语言）</div>
+                <div className="c-chat-row" style={{ marginBottom: 4 }}>
+                  <Input
+                    size="small"
+                    className="c-chat-input"
+                    placeholder="查本周逾期 / 哪个工厂效率最低？"
+                    value={nlQ}
+                    onChange={e => setNlQ(e.target.value)}
+                    onPressEnter={() => handleNlQuery()}
+                  />
+                  <Button size="small" type="default" loading={nlLoading}
+                    onClick={() => handleNlQuery()} className="c-chat-send"
+                    style={{ borderColor: '#4a5a8a', color: '#a0b0d0' }}>查</Button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {['本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常'].map(q => (
+                    <button key={q} className="c-suggest-btn"
+                      style={{ fontSize: 9, padding: '1px 5px' }}
+                      onClick={() => handleNlQuery(q)}>{q}</button>
+                  ))}
+                </div>
+                {nlLoading && <div style={{ fontSize: 10, color: '#4a6d8a', paddingTop: 4 }}>⌛ 查询中...</div>}
+                {nlResult && (
+                  <div style={{ fontSize: 11, color: '#c4b5fd', marginTop: 5,
+                    padding: '5px 8px', background: 'rgba(100,80,200,0.08)',
+                    borderRadius: 4, border: '1px solid rgba(100,80,200,0.2)', lineHeight: 1.6 }}>
+                    {nlResult.answer}
+                    {nlResult.confidence !== undefined && (
+                      <span style={{ fontSize: 9, color: '#4a5a7a', marginLeft: 6 }}>
+                        置信度 {Math.round(nlResult.confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 5 }}>💬 AI 对话（深度分析）</div>
+                <div style={{ fontSize: 11, color: '#3a5060', marginBottom: 6 }}
+                  >直接问询生产、订单、库存、财务任何问题</div>
+              </div>
               <div className="c-chat-row" style={{ marginBottom: 8 }}>
                 <Input
                   className="c-chat-input"

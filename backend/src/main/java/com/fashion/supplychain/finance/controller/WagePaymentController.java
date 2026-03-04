@@ -57,9 +57,19 @@ public class WagePaymentController {
     }
 
     /**
-     * 添加/更新收款账户
-     * POST /api/finance/payment-accounts/save
+     * 添加/更新收款账户 — RESTful 入口（POST /api/finance/payment-accounts）
      */
+    @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
+    @PostMapping("/payment-accounts")
+    public Result<PaymentAccount> createAccount(@RequestBody PaymentAccount account) {
+        return saveAccount(account);
+    }
+
+    /**
+     * 添加/更新收款账户
+     * @deprecated 请使用 POST /api/finance/payment-accounts（无 /save 后缀）
+     */
+    @Deprecated
     @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
     @PostMapping("/payment-accounts/save")
     public Result<PaymentAccount> saveAccount(@RequestBody PaymentAccount account) {

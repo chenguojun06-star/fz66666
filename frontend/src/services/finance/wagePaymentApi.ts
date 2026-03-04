@@ -155,7 +155,7 @@ export const wagePaymentApi = {
     api.post('/finance/payment-accounts/list', { ownerType, ownerId }),
 
   saveAccount: (account: PaymentAccount) =>
-    api.post('/finance/payment-accounts/save', account),
+    api.post('/finance/payment-accounts', account),
 
   removeAccount: (id: string) =>
     api.delete(`/finance/payment-accounts/${id}`),

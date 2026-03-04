@@ -211,7 +211,7 @@ export interface EcConfigSaveRequest {
 export const ecPlatformConfigService = {
   /** 保存（新增或更新）某平台凭证 */
   save: (data: EcConfigSaveRequest): Promise<EcConfigVO> =>
-    request.post('/ec-config/save', data),
+    request.post('/ec-config', data),
 
   /** 获取单个平台凭证（AppSecret 已脱敏） */
   getOne: (platformCode: string): Promise<EcConfigVO | null> =>

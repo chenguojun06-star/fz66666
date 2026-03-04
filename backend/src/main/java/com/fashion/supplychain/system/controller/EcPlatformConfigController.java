@@ -67,6 +67,14 @@ public class EcPlatformConfigController {
     // 保存凭证（新增 or 更新）
     // ——————————————————————————————————————————
 
+    /** RESTful 风格入口（POST /api/ec-config），与 /save 行为完全一致 */
+    @PostMapping
+    public Result<ConfigVO> create(@RequestBody SaveRequest req) {
+        return save(req);
+    }
+
+    /** @deprecated 请使用 POST /api/ec-config（无 /save 后缀） */
+    @Deprecated
     @PostMapping("/save")
     public Result<ConfigVO> save(@RequestBody SaveRequest req) {
         Long tenantId = UserContext.tenantId();
