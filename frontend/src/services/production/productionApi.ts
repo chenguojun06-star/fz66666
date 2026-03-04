@@ -418,6 +418,38 @@ export interface ProcessPriceHintResponse {
   recentRecords: ProcessPriceHintRecord[];
 }
 
+// ─── 工序知识库 ────────────────────────────────────────────────────────────────
+export interface ProcessKnowledgeStyleRecord {
+  styleNo: string;
+  price: number;
+  machineType?: string;
+  standardTime?: number;
+  createTime?: string;
+}
+
+export interface ProcessKnowledgeItem {
+  processName: string;
+  progressStage?: string;
+  machineType?: string;
+  usageCount: number;
+  minPrice?: number;
+  maxPrice?: number;
+  avgPrice?: number;
+  suggestedPrice?: number;
+  avgStandardTime?: number;
+  lastUsedTime?: string;
+  /** UP | DOWN | STABLE */
+  priceTrend?: string;
+  recentStyles: ProcessKnowledgeStyleRecord[];
+}
+
+export interface ProcessKnowledgeResponse {
+  items: ProcessKnowledgeItem[];
+  totalProcessTypes: number;
+  totalStyles: number;
+  totalRecords: number;
+}
+
 export const intelligenceApi = {
   precheckScan: (payload: {
     orderId?: string;
@@ -590,6 +622,12 @@ export const intelligenceApi = {
   getProcessPriceHint: (processName: string, standardTime?: number) =>
     api.get<{ code: number; data: ProcessPriceHintResponse }>('/intelligence/process-price-hint', {
       params: { processName, ...(standardTime != null ? { standardTime } : {}) },
+    }),
+
+  /** 工序知识库 — 跨款聚合所有历史工序定价，供 AI 训练与价格参考 */
+  getProcessKnowledge: (keyword?: string) =>
+    api.get<{ code: number; data: ProcessKnowledgeResponse }>('/intelligence/process-knowledge', {
+      params: keyword ? { keyword } : {},
     }),
 
   /** 面料缺口预测 */

@@ -105,6 +105,9 @@ public class IntelligenceController {
     private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
 
     @Autowired
+    private ProcessKnowledgeOrchestrator processKnowledgeOrchestrator;
+
+    @Autowired
     private DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
 
     @Autowired
@@ -279,6 +282,17 @@ public class IntelligenceController {
             @RequestParam("processName") String processName,
             @RequestParam(value = "standardTime", required = false) Integer standardTime) {
         return Result.success(processPriceHintOrchestrator.hint(processName, standardTime));
+    }
+
+    /**
+     * 工序知识库 — 按工序名聚合当前租户所有款式的历史定价，供 AI 学习与前端展示
+     *
+     * @param keyword 可选工序名关键字（模糊搜索）
+     */
+    @GetMapping("/process-knowledge")
+    public Result<ProcessKnowledgeResponse> processKnowledge(
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return Result.success(processKnowledgeOrchestrator.list(keyword));
     }
 
     // ── 第五批：面料预测 + AI 顾问 ──

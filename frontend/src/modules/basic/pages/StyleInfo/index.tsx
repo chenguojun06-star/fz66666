@@ -18,6 +18,7 @@ import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
 import StyleSizePriceTab from './components/StyleSizePriceTab';
+import StyleProcessKnowledgeTab from './components/StyleProcessKnowledgeTab';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -535,6 +536,11 @@ const StyleInfoDetailPage: React.FC = () => {
                 label: '附件文件',
                 disabled: !currentStyle?.id,
                 children: <StyleAttachmentTab styleId={currentStyle?.id} />
+              },
+              {
+                key: '11',
+                label: '工序数据库',
+                children: <StyleProcessKnowledgeTab />
               }
             ]}
           />
