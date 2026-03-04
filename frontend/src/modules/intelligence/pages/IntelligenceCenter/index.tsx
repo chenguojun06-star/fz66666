@@ -14,6 +14,12 @@ import type {
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import Layout from '@/components/Layout';
+import WorkerProfilePanel from './WorkerProfilePanel';
+import SmartAssignmentPanel from './SmartAssignmentPanel';
+import ProfitDeliveryPanel from './ProfitDeliveryPanel';
+import LearningReportPanel from './LearningReportPanel';
+import RhythmDnaPanel from './RhythmDnaPanel';
+import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import './styles.css';
 
 /* ═══════════════════════════════════════════════════
@@ -1136,7 +1142,39 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第五行：AI 智能顾问（全宽）                ║
+            ║   第六行：AI 深度功能扩展（6大隐藏能力）     ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div style={{ margin: '4px 24px 0', padding: '6px 14px 6px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#ffd700', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>⚡ AI 深度功能</span>
+          <span style={{ fontSize: 11, color: '#4a6d8a' }}>
+            工人画像 · 智能派工 · 利润估算 · 完工预测 · 节奏DNA · 排程建议 · AI进化报告
+          </span>
+        </div>
+
+        {/* 工人画像 + 智能派工 */}
+        <div className="cockpit-grid-2">
+          <WorkerProfilePanel />
+          <SmartAssignmentPanel />
+        </div>
+
+        {/* 利润/完工双引擎（全宽） */}
+        <div style={{ padding: '0 24px 12px' }}>
+          <ProfitDeliveryPanel />
+        </div>
+
+        {/* 节奏DNA + 排程建议 */}
+        <div className="cockpit-grid-2">
+          <RhythmDnaPanel />
+          <SchedulingSuggestionPanel />
+        </div>
+
+        {/* 学习报告（全宽） */}
+        <div style={{ padding: '0 24px 12px' }}>
+          <LearningReportPanel />
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   第七行：AI 智能顾问（全宽）                ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="c-card c-chat-card">
           <div className="c-card-title">

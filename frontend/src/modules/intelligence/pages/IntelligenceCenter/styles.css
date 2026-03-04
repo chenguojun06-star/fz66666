@@ -157,6 +157,7 @@
 .cockpit-alert-badge {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   font-size: 12px;
   font-weight: 700;
@@ -165,11 +166,13 @@
   border: 1px solid rgba(255,65,54,0.35);
   padding: 4px 10px;
   border-radius: 6px;
+  min-width: 88px;  /* 固定宽，防止告警数字变化时右侧元素位移 */
   animation: blink-alert 2.8s ease-in-out infinite;
 }
 .cockpit-ok-badge {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   font-size: 12px;
   font-weight: 600;
@@ -178,12 +181,14 @@
   border: 1px solid rgba(57,255,20,0.25);
   padding: 4px 10px;
   border-radius: 6px;
+  min-width: 88px;  /* 与 alert-badge 等宽，两态切换不抖 */
 }
 
 /* 刷新按钮 */
 .cockpit-refresh-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   background: rgba(0,229,255,0.08);
   border: 1px solid rgba(0,229,255,0.25);
@@ -194,6 +199,7 @@
   cursor: pointer;
   transition: all 0.2s;
   font-variant-numeric: tabular-nums;
+  min-width: 68px; /* 覆盖"加载中"最宽态到"9s"最窄态，倒计时每秒不抖 */
 }
 .cockpit-refresh-btn:hover:not(:disabled) {
   background: rgba(0,229,255,0.18);
@@ -305,6 +311,7 @@
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  min-height: 36px;  /* 数据未到前预占高度，防止 KPI 卡片撑高导致网格重排 */
 }
 .c-kpi-val.cyan   { color: #00e5ff; }
 .c-kpi-val.green  { color: #39ff14; }
@@ -315,7 +322,7 @@
 .neon-green { animation: neon-pulse-green 3s ease-in-out infinite; }
 
 .c-kpi-unit { font-size: 12px; color: #3e637a; margin-top: 4px; }
-.c-kpi-sub  { font-size: 11px; color: #3e637a; margin-top: 4px; }
+.c-kpi-sub  { font-size: 11px; color: #3e637a; margin-top: 4px; min-height: 14px; } /* 预占行高，副文本出现时下方元素不位移 */
 
 /* 危险 KPI 卡 */
 .c-kpi-danger { animation: danger-border-pulse 3s ease-in-out infinite; }
@@ -883,6 +890,7 @@
   border-radius: 6px;
   padding: 8px 12px;
   line-height: 1.65;
+  min-height: 36px; /* AI 文字异步返回，预占高度防 Popover 显示后二次位移 */
 }
 
 /* Popover 内层黑科技风格 */
@@ -907,6 +915,7 @@
 .kpi-pop-body {
   min-width: 240px;
   max-width: 320px;
+  min-height: 120px; /* Popover 打开时预占高度，条件行出现不触发二次定位 */
   padding: 18px 22px 16px;
   font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace, 'PingFang SC', system-ui, sans-serif;
   position: relative;
@@ -990,6 +999,7 @@
   margin-top: 8px;
   letter-spacing: 0.5px;
   transition: color 0.2s;
+  min-height: 12px; /* 固定存在，hover 时仅改 color(opacity)，不产生高度跳变 */
 }
 .c-kpi-hoverable:hover .c-kpi-hover-hint {
   color: rgba(0,229,255,0.55);
