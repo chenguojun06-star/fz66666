@@ -48,6 +48,8 @@ interface FinishedInventory {
   qualityInspectionNo?: string;  // 质检入库号
   lastInboundBy?: string;         // 最后入库操作人
   totalInboundQty?: number;        // 累计入库总量
+  costPrice?: number;              // 成本价
+  salesPrice?: number;             // 销售价
   colors?: string[];               // 多颜色列表
   sizes?: string[];                // 多尺码列表
 }
@@ -409,6 +411,37 @@ const _FinishedInventory: React.FC = () => {
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
           </div>
+        </div>
+      ),
+    },
+    {
+      title: '单价',
+      width: 130,
+      render: (_, record) => (
+        <div style={{ lineHeight: '22px' }}>
+          {record.salesPrice != null ? (
+            <div>
+              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>售价 </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-danger)' }}>¥{Number(record.salesPrice).toFixed(2)}</span>
+            </div>
+          ) : null}
+          {record.costPrice != null ? (
+            <div>
+              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>成本 </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>¥{Number(record.costPrice).toFixed(2)}</span>
+            </div>
+          ) : null}
+          {record.salesPrice != null && record.costPrice != null ? (
+            <div style={{ marginTop: 2 }}>
+              <span style={{ fontSize: 10, color: 'var(--neutral-text-disabled)' }}>毛利 </span>
+              <span style={{ fontSize: 11, color: Number(record.salesPrice) > Number(record.costPrice) ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                ¥{(Number(record.salesPrice) - Number(record.costPrice)).toFixed(2)}
+              </span>
+            </div>
+          ) : null}
+          {record.salesPrice == null && record.costPrice == null ? (
+            <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>-</span>
+          ) : null}
         </div>
       ),
     },

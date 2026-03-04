@@ -207,6 +207,8 @@ public class FinishedInventoryOrchestrator {
             dto.setAvailableQty(sku.getStockQuantity() != null ? sku.getStockQuantity() : 0);
             dto.setLockedQty(0);
             dto.setDefectQty(0);
+            dto.setCostPrice(sku.getCostPrice());     // 成本价
+            dto.setSalesPrice(sku.getSalesPrice());   // 销售价
 
             // 从款式信息补充 styleName, styleImage
             if (sku.getStyleId() != null) {

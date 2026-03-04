@@ -110,4 +110,14 @@ public class FinishedInventoryDTO {
      * 累计入库总数量
      */
     private Integer totalInboundQty;
+
+    /**
+     * 成本价（来源：t_product_sku.cost_price）
+     */
+    private java.math.BigDecimal costPrice;
+
+    /**
+     * 销售价（来源：t_product_sku.sales_price）
+     */
+    private java.math.BigDecimal salesPrice;
 }
