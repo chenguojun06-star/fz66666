@@ -518,6 +518,10 @@ export const intelligenceApi = {
   getLearningReport: () =>
     api.get<{ code: number; data: LearningReportResponse }>('/intelligence/learning-report'),
 
+  /** 手动触发 AI 学习（重算工序统计、清理脏数据行） */
+  triggerLearning: () =>
+    api.post<{ code: number; data: { message: string; updatedCount: number } }>('/intelligence/learning/trigger', {}),
+
   // ── 第三批：12大黑科技 API ──
 
   /** ① 实时生产脉搏 */

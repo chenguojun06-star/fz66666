@@ -89,6 +89,28 @@ public class ProcessStatsEngine {
         }
 
         log.info("[智能学习] 租户 {} 完成，共更新/新增 {} 条工序统计", tenantId, upserted);
+
+        // ── 清理孤儿行：删除本次计算名单之外的历史 stageName
+        // 场景："质检领取" 等子工序名被错存为 progress_stage，在加了 alias 之后
+        // 规范化会把样本合并到父阶段，但老行不会被上面的 upsert 覆盖，需主动删除。
+        java.util.Set<String> validStageNames = computed.stream()
+                .map(IntelligenceProcessStats::getStageName)
+                .collect(java.util.stream.Collectors.toSet());
+        List<IntelligenceProcessStats> allExisting = statsMapper.selectList(
+                new LambdaQueryWrapper<IntelligenceProcessStats>()
+                        .eq(IntelligenceProcessStats::getTenantId, tenantId));
+        int deleted = 0;
+        for (IntelligenceProcessStats old : allExisting) {
+            if (!validStageNames.contains(old.getStageName())) {
+                statsMapper.deleteById(old.getId());
+                deleted++;
+                log.info("[智能学习] 租户 {} 删除孤儿工序行: stage='{}'", tenantId, old.getStageName());
+            }
+        }
+        if (deleted > 0) {
+            log.info("[智能学习] 租户 {} 共清理孤儿行 {} 条", tenantId, deleted);
+        }
+
         return upserted;
     }
 
@@ -165,17 +187,31 @@ public class ProcessStatsEngine {
         return STAGE_ALIASES.getOrDefault(key, key);
     }
 
-    /** 工序名映射表：字鞝尾缀/别名 → 标准名 */
+    /** 工序名映射表：子工序名/别名/变体 → 父阶段标准名
+     *  注意：progress_stage 本应存父阶段名，但偶尔小程序会把 process_name（子工序名）
+     *  错误写入 progress_stage，导致统计表出现细碎的子工序行。
+     *  在此统一归并到父阶段，防止样本稀释和展示混乱。
+     */
     private static final java.util.Map<String, String> STAGE_ALIASES;
     static {
         java.util.Map<String, String> m = new java.util.HashMap<>();
-        m.put("裁剪工序", "裁剪");   m.put("裁剪分菲", "裁剪");
+        // 裁剪类
+        m.put("裁剪工序", "裁剪");   m.put("裁剪分菲", "裁剪");  m.put("裁床", "裁剪");
+        // 车缝类
         m.put("輵剥工序", "车缝");   m.put("缝制工序", "车缝");   m.put("缝制", "车缝");   m.put("整件", "车缝");
-        m.put("尾部工序", "尾部");   m.put("尾部处理", "尾部");
+        // 尾部类
+        m.put("尾部工序", "尾部");   m.put("尾部处理", "尾部");   m.put("剪线", "尾部");   m.put("锁边", "尾部");
+        // 质检类（含子工序名错存为进度阶段的情况）
         m.put("质检工序", "质检");   m.put("质检验收", "质检");   m.put("验收", "质检");
-        m.put("入库工序", "入库");   m.put("成品入库", "入库");
-        m.put("包装工序", "包装");   m.put("包装处理", "包装");
+        m.put("质检领取", "质检");   m.put("领取验收", "质检");   m.put("质检扫码", "质检");
+        m.put("QC", "质检");         m.put("质量检验", "质检");
+        // 入库类
+        m.put("入库工序", "入库");   m.put("成品入库", "入库");   m.put("仓库入库", "入库");
+        // 包装类
+        m.put("包装工序", "包装");   m.put("包装处理", "包装");   m.put("折叠包装", "包装");
+        // 二次工艺类
         m.put("二次工艺工序", "二次工艺");  m.put("后处理", "二次工艺");  m.put("印花水洗", "二次工艺");
+        m.put("印花", "二次工艺");    m.put("水洗", "二次工艺");    m.put("绣花", "二次工艺");
         STAGE_ALIASES = java.util.Collections.unmodifiableMap(m);
     }
 }

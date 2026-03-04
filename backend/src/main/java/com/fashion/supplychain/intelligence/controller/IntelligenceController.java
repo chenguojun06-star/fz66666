@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
+import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -115,6 +116,9 @@ public class IntelligenceController {
     @Autowired
     private AiContextBuilderService aiContextBuilderService;
 
+    @Autowired
+    private ProcessStatsEngine processStatsEngine;
+
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
         return Result.success(smartPrecheckOrchestrator.precheckScan(request));
@@ -165,6 +169,21 @@ public class IntelligenceController {
     @GetMapping("/learning-report")
     public Result<?> getLearningReport() {
         return Result.success(learningReportOrchestrator.getReport());
+    }
+
+    /**
+     * 手动触发 AI 学习任务（不待凌晨定时）
+     * <p>重新计算当前租户的工序统计，并自动删除平匠名字层
+     * （如 "质检领取" 等被错存为父阶段的子工序脱形行）。
+     */
+    @PostMapping("/learning/trigger")
+    public Result<?> triggerLearning() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) return Result.fail("无法获取租户ID");
+        int updated = processStatsEngine.recomputeForTenant(tenantId);
+        return Result.success(java.util.Map.of(
+                "message", String.format("学习完成，更新/新增 %d 条工序统计", updated),
+                "updatedCount", updated));
     }
 
     // ── 第三批：12大黑科技端点 ──

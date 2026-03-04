@@ -8,8 +8,7 @@ import type { LearningReportResponse, StageLearningStat } from '@/services/produ
 const LearningReportPanel: React.FC = () => {
   const [data, setData] = useState<LearningReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
+  const [error, setError] = useState('');  const [triggering, setTriggering] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -22,6 +21,19 @@ const LearningReportPanel: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // 手动触发学习任务（删除脂儿行，重新计算工序统计）
+  const handleTrigger = useCallback(async () => {
+    setTriggering(true);
+    try {
+      await intelligenceApi.triggerLearning();
+      await load(); // 触发完后自动刷新报告
+    } catch {
+      setError('学习任务触发失败');
+    } finally {
+      setTriggering(false);
+    }
+  }, [load]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -58,6 +70,15 @@ const LearningReportPanel: React.FC = () => {
           disabled={loading}
         >
           {loading ? '加载中…' : '刷新'}
+        </button>
+        <button
+          className="c-suggest-btn"
+          style={{ borderColor: 'rgba(0,229,255,0.3)', color: '#00e5ff' }}
+          onClick={handleTrigger}
+          disabled={triggering || loading}
+          title="重新计算工序统计，并删除名称异常的历史行（如质检领取）"
+        >
+          {triggering ? '学习中…' : '重新学习'}
         </button>
       </div>
 
