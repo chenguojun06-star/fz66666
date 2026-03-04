@@ -479,7 +479,7 @@ const UserList: React.FC = () => {
   const handleGenerateInvite = async () => {
     setInviteQr({ open: true, loading: true });
     try {
-      const resp = await api.post('/api/wechat/mini-program/invite/generate', {});
+      const resp = await api.post('/wechat/mini-program/invite/generate', {});
       const result = resp?.data;
       if (result?.code === 200 && result?.data) {
         setInviteQr({ open: true, loading: false, qrBase64: result.data.qrCodeBase64, expiresAt: result.data.expiresAt });

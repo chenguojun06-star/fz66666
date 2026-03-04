@@ -87,7 +87,7 @@ const OrdersTab: React.FC = () => {
     if (styleNos.length === 0) return;
     const results = await Promise.allSettled(
       styleNos.map(sn =>
-        api.get('/api/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
+        api.get('/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
       )
     );
     const map: Record<string, string> = {};
@@ -458,7 +458,7 @@ const PricingTab: React.FC = () => {
     try {
       const params: Record<string, unknown> = { page, pageSize: 20 };
       if (styleNo) params.styleNo = styleNo;
-      const res = await api.get('/api/style/sku/list', { params });
+      const res = await api.get('/style/sku/list', { params });
       const d = (res as any)?.data ?? {};
       setData(d.records ?? []);
       setTotal(d.total ?? 0);
@@ -472,7 +472,7 @@ const PricingTab: React.FC = () => {
     if (!editRow) return;
     setSaving(true);
     try {
-      await api.put(`/api/style/sku/${row.id}`, {
+      await api.put(`/style/sku/${row.id}`, {
         costPrice: editRow.costPrice,
         salesPrice: editRow.salesPrice,
       });
