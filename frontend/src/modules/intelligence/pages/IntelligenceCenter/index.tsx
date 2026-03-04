@@ -21,6 +21,7 @@ import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LearningReportPanel from './LearningReportPanel';
 import RhythmDnaPanel from './RhythmDnaPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
+import LiveScanFeed from './LiveScanFeed';
 import './styles.css';
 
 /* ═══════════════════════════════════════════════════
@@ -1048,6 +1049,8 @@ const IntelligenceCenter: React.FC = () => {
                 今日暂无扫码记录
               </div>
             )}
+            {/* WebSocket 驱动的实时扫码事件流，有扫码时自动出现 */}
+            <LiveScanFeed />
           </div>
 
           {/* 活跃订单实时滚动面板（中间） */}

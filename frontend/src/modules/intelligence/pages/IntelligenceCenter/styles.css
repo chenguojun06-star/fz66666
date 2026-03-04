@@ -1194,3 +1194,127 @@
   animation-play-state: paused;
   border-color: rgba(0,229,255,0.5);
 }
+
+/* ═══════════════════════════════════════════════
+   LiveScanFeed — 实时扫码事件流（WebSocket驱动）
+   ═══════════════════════════════════════════════ */
+
+.lsf-root {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 229, 255, 0.12);
+}
+
+/* 标题行 */
+.lsf-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.lsf-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #39ff14;
+  flex-shrink: 0;
+  animation: lsf-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes lsf-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px #39ff14; }
+  50%       { opacity: 0.25; box-shadow: none; }
+}
+
+.lsf-live-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #39ff14;
+  background: rgba(57, 255, 20, 0.1);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+}
+
+.lsf-title {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.04em;
+}
+
+/* 事件列表 */
+.lsf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* 单条事件行 */
+.lsf-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  line-height: 1.4;
+  /* 滑入动画（仅第一条，靠外层 opacity 实现渐隐） */
+  animation: lsf-slide-in 0.28s ease both;
+}
+.lsf-item:first-child {
+  background: rgba(57, 255, 20, 0.06);
+  border: 1px solid rgba(57, 255, 20, 0.15);
+}
+
+@keyframes lsf-slide-in {
+  from { opacity: 0; transform: translateY(-7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 数量气泡 */
+.lsf-qty {
+  font-weight: 700;
+  font-size: 13px;
+  color: #39ff14;
+  min-width: 34px;
+  flex-shrink: 0;
+}
+
+/* 工序名 */
+.lsf-stage {
+  color: #00e5ff;
+  flex-shrink: 0;
+  max-width: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 员工名 */
+.lsf-worker {
+  color: rgba(255, 255, 255, 0.75);
+  flex-shrink: 0;
+  max-width: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 订单 / 款号 */
+.lsf-order {
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+.lsf-order em {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.35);
+}
