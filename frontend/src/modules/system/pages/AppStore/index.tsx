@@ -50,25 +50,25 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
 // 电商平台配置（前端静态数据，无需后端表支持）
 interface EcPlatform {
   code: string; name: string; emoji: string; color: string;
-  desc: string; badge?: string;
+  desc: string; badge?: string; priceMonthly: number;
   fields: { name: string; label: string; placeholder: string }[];
 }
 const ECOMMERCE_PLATFORMS: EcPlatform[] = [
-  { code: 'TAOBAO',      name: '淘宝',    emoji: '🟠', color: '#FF6600', desc: '淘宝店铺订单自动同步，下发生产任务',   badge: '主流',
+  { code: 'TAOBAO',      name: '淘宝',    emoji: '🟠', color: '#FF6600', desc: '淘宝店铺订单自动同步，下发生产任务',   badge: '主流', priceMonthly: 199,
     fields: [{ name: 'appKey', label: 'App Key', placeholder: '请输入淘宝开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '如：XX旗舰店（仅备注用）' }] },
-  { code: 'TMALL',       name: '天猫',    emoji: '🐱', color: '#D40016', desc: '天猫旗舰店/专卖店订单管理，智能排产',  badge: '主流',
+  { code: 'TMALL',       name: '天猫',    emoji: '🐱', color: '#D40016', desc: '天猫旗舰店/专卖店订单管理，智能排产',  badge: '主流', priceMonthly: 299,
     fields: [{ name: 'appKey', label: 'App Key', placeholder: '天猫开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '天猫店铺备注名' }] },
-  { code: 'JD',          name: '京东',    emoji: '🔴', color: '#CC0000', desc: '京东POP/自营店铺订单同步到生产系统',
+  { code: 'JD',          name: '京东',    emoji: '🔴', color: '#CC0000', desc: '京东POP/自营店铺订单同步到生产系统', priceMonthly: 199,
     fields: [{ name: 'appKey', label: 'App Key', placeholder: '京东开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '京东店铺备注名' }] },
-  { code: 'DOUYIN',      name: '抖音小店', emoji: '🎵', color: '#161823', desc: '抖音直播带货 & 短视频订单，快速响应',   badge: '热门',
+  { code: 'DOUYIN',      name: '抖音小店', emoji: '🎵', color: '#161823', desc: '抖音直播带货 & 短视频订单，快速响应',   badge: '热门', priceMonthly: 249,
     fields: [{ name: 'appKey', label: 'App ID',  placeholder: '抖音开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '抖音小店备注名' }] },
-  { code: 'PINDUODUO',   name: '拼多多',  emoji: '🛒', color: '#CC2B2B', desc: '拼多多商家版，批量订单管理',
+  { code: 'PINDUODUO',   name: '拼多多',  emoji: '🛒', color: '#CC2B2B', desc: '拼多多商家版，批量订单管理', priceMonthly: 149,
     fields: [{ name: 'appKey', label: 'Client ID',     placeholder: '拼多多开放平台 Client ID' }, { name: 'appSecret', label: 'Client Secret', placeholder: '请输入 Client Secret' }, { name: 'shopName', label: '店铺名称', placeholder: '拼多多店铺备注名' }] },
-  { code: 'XIAOHONGSHU', name: '小红书',  emoji: '📕', color: '#FF2442', desc: '小红书买手 / 直播间选品订单管理',       badge: '新品',
+  { code: 'XIAOHONGSHU', name: '小红书',  emoji: '📕', color: '#FF2442', desc: '小红书买手 / 直播间选品订单管理',       badge: '新品', priceMonthly: 199,
     fields: [{ name: 'appKey', label: 'App Key', placeholder: '小红书开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '小红书店铺备注名' }] },
-  { code: 'WECHAT_SHOP', name: '视频号店铺', emoji: '💚', color: '#07C160', desc: '微信视频号小商店 & 小程序商城订单',
+  { code: 'WECHAT_SHOP', name: '视频号店铺', emoji: '💚', color: '#07C160', desc: '微信视频号小商店 & 小程序商城订单', priceMonthly: 149,
     fields: [{ name: 'appKey', label: 'App ID',   placeholder: '微信开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '视频号店铺备注名' }] },
-  { code: 'SHOPIFY',     name: 'Shopify', emoji: '🟢', color: '#5C6AC4', desc: '跨境独立站 & 海外电商订单，工厂直达',  badge: '跨境',
+  { code: 'SHOPIFY',     name: 'Shopify', emoji: '🟢', color: '#5C6AC4', desc: '跨境独立站 & 海外电商订单，工厂直达',  badge: '跨境', priceMonthly: 299,
     fields: [{ name: 'appKey', label: '店铺域名',      placeholder: '如：your-store.myshopify.com' }, { name: 'appSecret', label: 'Access Token', placeholder: 'Shopify Private App Access Token' }, { name: 'shopName', label: '备注名称', placeholder: '站点备注，如：北美独立站' }] },
 ];
 
@@ -124,7 +124,13 @@ const AppStore: React.FC = () => {
   const [ecSaving, setEcSaving] = useState(false);
   const [ecShowAll, setEcShowAll] = useState(false);
 
+  const [ecPurchased, setEcPurchased] = useState<Record<string, boolean>>({});
+  const [ecPurchaseTarget, setEcPurchaseTarget] = useState<EcPlatform | null>(null);
+  const [ecBuyVisible, setEcBuyVisible] = useState(false);
+  const [ecBuySubmitting, setEcBuySubmitting] = useState(false);
+
   const ecStorageKey = `ec_platforms_${user?.id ?? 'default'}`;
+  const ecPurchasedKey = `ec_purchased_${user?.id ?? 'default'}`;
 
   useEffect(() => {
     try {
@@ -139,7 +145,25 @@ const AppStore: React.FC = () => {
     try { localStorage.setItem(ecStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(ecPurchasedKey);
+      if (s) setEcPurchased(JSON.parse(s));
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ecPurchasedKey]);
+
+  const saveEcPurchased = (next: Record<string, boolean>) => {
+    setEcPurchased(next);
+    try { localStorage.setItem(ecPurchasedKey, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
   const handleEcConnect = (platform: EcPlatform) => {
+    if (!ecPurchased[platform.code]) {
+      setEcPurchaseTarget(platform);
+      setEcBuyVisible(true);
+      return;
+    }
     setEcSelectedPlatform(platform);
     const existing = ecConnected[platform.code];
     if (existing) {
@@ -147,6 +171,19 @@ const AppStore: React.FC = () => {
     } else {
       ecForm.resetFields();
     }
+    setEcConfigVisible(true);
+  };
+
+  const handleEcBuySubmit = async () => {
+    if (!ecPurchaseTarget) return;
+    setEcBuySubmitting(true);
+    await new Promise(r => setTimeout(r, 700));
+    saveEcPurchased({ ...ecPurchased, [ecPurchaseTarget.code]: true });
+    setEcBuyVisible(false);
+    setEcBuySubmitting(false);
+    message.success(`${ecPurchaseTarget.name} 对接已开速！请填写 API 凭证`);
+    setEcSelectedPlatform(ecPurchaseTarget);
+    ecForm.resetFields();
     setEcConfigVisible(true);
   };
 
@@ -432,16 +469,35 @@ const AppStore: React.FC = () => {
       </div>
       <Row gutter={[24, 24]}>
         {(ecShowAll ? ECOMMERCE_PLATFORMS : ECOMMERCE_PLATFORMS.slice(0, 4)).map(p => {
+          const purchased = !!ecPurchased[p.code];
           const connected = !!(ecConnected[p.code]);
+          const ribbonText = connected ? '已连接' : purchased ? '已开速' : (p.badge ?? '');
+          const ribbonColor = connected ? 'green' : purchased ? 'cyan' : 'blue';
           return (
             <Col xs={24} sm={12} md={8} lg={6} xl={6} key={p.code}>
               <Badge.Ribbon
-                text={connected ? '已连接' : (p.badge ?? '')}
-                color={connected ? 'green' : 'blue'}
-                style={{ display: connected || p.badge ? 'block' : 'none' }}
+                text={ribbonText}
+                color={ribbonColor}
+                style={{ display: connected || purchased || p.badge ? 'block' : 'none' }}
               >
-                <Card hoverable className="app-store-card" onClick={() => handleEcConnect(p)}
-                  cover={<div className="app-icon-container"><span className="app-icon">{p.emoji}</span></div>}
+                <Card
+                  hoverable={purchased}
+                  className="app-store-card"
+                  style={!purchased ? { opacity: 0.88 } : undefined}
+                  cover={
+                    <div className="app-icon-container" style={{ position: 'relative' }}>
+                      <span className="app-icon">{p.emoji}</span>
+                      {!purchased && (
+                        <div style={{
+                          position: 'absolute', top: 4, right: 4,
+                          background: 'rgba(0,0,0,0.4)', borderRadius: 4,
+                          padding: '1px 6px', fontSize: 11, color: '#fff',
+                        }}>
+                          ¥{p.priceMonthly}/月
+                        </div>
+                      )}
+                    </div>
+                  }
                 >
                   <Card.Meta
                     title={<div className="app-title">{p.name}</div>}
@@ -453,13 +509,46 @@ const AppStore: React.FC = () => {
                             <Tag color="green" style={{ fontSize: 11 }}>✓ 已连接</Tag>
                             {ecConnected[p.code]?.shopName && <Tag style={{ fontSize: 11 }}>{ecConnected[p.code]!.shopName}</Tag>}
                           </div>
+                        ) : purchased ? (
+                          <div style={{ marginTop: 6 }}>
+                            <Tag color="cyan" style={{ fontSize: 11 }}>已开速</Tag>
+                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>待配置凭证</span>
+                          </div>
                         ) : (
-                          <div className="trial-badge">点击配置连接</div>
+                          <div style={{ marginTop: 6 }}>
+                            <span style={{ fontSize: 13, color: '#fa8c16', fontWeight: 600 }}>¥{p.priceMonthly}/月</span>
+                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginLeft: 6 }}>需购买才可对接</span>
+                          </div>
                         )}
-                        <Tag color="blue">电商对接</Tag>
+                        <Tag color="blue" style={{ marginTop: 4 }}>电商对接</Tag>
                       </div>
                     }
                   />
+                  <div style={{ marginTop: 10, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    {connected ? (
+                      <>
+                        <Button size="small" type="primary" ghost
+                          onClick={(e) => { e.stopPropagation(); navigate('/warehouse/ecommerce'); }}>
+                          查看订单 →
+                        </Button>
+                        <Button size="small" type="text"
+                          onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}>
+                          配置
+                        </Button>
+                      </>
+                    ) : purchased ? (
+                      <Button size="small" type="primary" ghost
+                        onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}>
+                        填写凭证
+                      </Button>
+                    ) : (
+                      <Button size="small" type="primary"
+                        onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}
+                        style={{ background: '#fa8c16', borderColor: '#fa8c16' }}>
+                        立即开速
+                      </Button>
+                    )}
+                  </div>
                 </Card>
               </Badge.Ribbon>
             </Col>
@@ -737,6 +826,45 @@ const AppStore: React.FC = () => {
           </Form>
         </div>
       </Modal>
+      {/* 电商平台开速确认弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 22 }}>{ecPurchaseTarget?.emoji}</span>
+            <span>开速 {ecPurchaseTarget?.name} 电商对接</span>
+          </div>
+        }
+        open={ecBuyVisible}
+        onCancel={() => setEcBuyVisible(false)}
+        width={440}
+        okText="提交开速意向"
+        cancelText="暂不开速"
+        confirmLoading={ecBuySubmitting}
+        onOk={handleEcBuySubmit}
+        okButtonProps={{ style: { background: '#fa8c16', borderColor: '#fa8c16' } }}
+      >
+        {ecPurchaseTarget && (
+          <div style={{ padding: '8px 0' }}>
+            <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#d46b08' }}>
+                ¥{ecPurchaseTarget.priceMonthly} <span style={{ fontSize: 13, fontWeight: 400, color: '#8c5800' }}>元/月</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#8c5800', marginTop: 4 }}>{ecPurchaseTarget.desc}</div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 2.2 }}>
+              <div>✅ 开速后填写 API 凭证，订单自动同步到生产系统</div>
+              <div>✅ 智能下发生产任务，告别手工录入</div>
+              <div>✅ 支持多店铺批量管理，数据一键可视</div>
+            </div>
+            <Alert
+              style={{ marginTop: 14, fontSize: 12 }}
+              type="info" showIcon
+              message="演示模式：提交后立即开速。正式环境商务团队将在1–3个工作日内完成对接指导。"
+            />
+          </div>
+        )}
+      </Modal>
+
       {/* 电商平台配置弹窗 */}
       <Modal
         title={
