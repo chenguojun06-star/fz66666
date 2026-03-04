@@ -963,13 +963,6 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║ TOP 3：利润估算 + 完工预测 — 核心业务决策   ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 12px' }}>
-          <ProfitDeliveryPanel />
-        </div>
-
-        {/* ╔══════════════════════════════════════════════╗
             ║   实时监控：脉搏(左) + 活跃订单(中) + 排行(右) ║
             ╙════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-3">
@@ -1212,8 +1205,52 @@ const IntelligenceCenter: React.FC = () => {
           <span style={{ color: '#39ff14', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>📊 AI 自学报告</span>
           <span style={{ fontSize: 11, color: '#4a6d8a' }}>模型进化 · 预测准确率 — 技术指标参考</span>
         </div>
-        <div style={{ padding: '0 24px 24px' }}>
+        <div style={{ padding: '0 24px 12px' }}>
           <LearningReportPanel />
+        </div>
+
+        {/* ╔════════════════════════════════════════════╗
+            ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
+            ╚════════════════════════════════════════════╝ */}
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 0, padding: '0 24px 28px', alignItems: 'stretch' }}>
+          {/* 左：利润估算&完工预测 */}
+          <div style={{ paddingRight: 6 }}>
+            <ProfitDeliveryPanel />
+          </div>
+          {/* 右：AI 智能顾问 */}
+          <div style={{ paddingLeft: 6 }}>
+            <div className="c-card c-chat-card" style={{ height: '100%' }}>
+              <div className="c-card-title" style={{ marginBottom: 10 }}>
+                <RobotOutlined style={{ marginRight: 7, color: '#a78bfa', fontSize: 16 }} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
+                <LiveDot size={7} color="#a78bfa" />
+              </div>
+              <div style={{ fontSize: 11, color: '#4a6d8a', marginBottom: 10 }}>直接问询生产、订单、库存、财务任何问题</div>
+              <div className="c-chat-row" style={{ marginBottom: 8 }}>
+                <Input
+                  className="c-chat-input"
+                  placeholder="例如：今天哪个工厂效率最高？面料缺口怎么处理？"
+                  value={chatQ}
+                  onChange={e => setChatQ(e.target.value)}
+                  onPressEnter={handleChat}
+                />
+                <Button type="primary" icon={<SendOutlined />} loading={chatLoading}
+                  onClick={handleChat} className="c-chat-send">发送</Button>
+              </div>
+              {chatLoading && (
+                <div className="c-chat-thinking">
+                  <DashboardOutlined spin style={{ marginRight: 6 }} />
+                  AI 正在分析...
+                </div>
+              )}
+              {chatA && <div className="c-chat-answer" style={{ fontSize: 12 }}>{chatA}</div>}
+              <div className="c-chat-suggestions" style={{ marginTop: 'auto', paddingTop: 8 }}>
+                {['今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？', '异常订单处理吗？'].map(q => (
+                  <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
