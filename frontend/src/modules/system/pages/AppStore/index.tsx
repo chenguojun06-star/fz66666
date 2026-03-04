@@ -181,7 +181,7 @@ const AppStore: React.FC = () => {
     saveEcPurchased({ ...ecPurchased, [ecPurchaseTarget.code]: true });
     setEcBuyVisible(false);
     setEcBuySubmitting(false);
-    message.success(`${ecPurchaseTarget.name} 对接已开速！请填写 API 凭证`);
+    message.success(`${ecPurchaseTarget.name} 对接已开通！请填写 API 凭证`);
     setEcSelectedPlatform(ecPurchaseTarget);
     ecForm.resetFields();
     setEcConfigVisible(true);
@@ -471,7 +471,7 @@ const AppStore: React.FC = () => {
         {(ecShowAll ? ECOMMERCE_PLATFORMS : ECOMMERCE_PLATFORMS.slice(0, 4)).map(p => {
           const purchased = !!ecPurchased[p.code];
           const connected = !!(ecConnected[p.code]);
-          const ribbonText = connected ? '已连接' : purchased ? '已开速' : (p.badge ?? '');
+          const ribbonText = connected ? '已连接' : purchased ? '已开通' : (p.badge ?? '');
           const ribbonColor = connected ? 'green' : purchased ? 'cyan' : 'blue';
           return (
             <Col xs={24} sm={12} md={8} lg={6} xl={6} key={p.code}>
@@ -511,7 +511,7 @@ const AppStore: React.FC = () => {
                           </div>
                         ) : purchased ? (
                           <div style={{ marginTop: 6 }}>
-                            <Tag color="cyan" style={{ fontSize: 11 }}>已开速</Tag>
+                            <Tag color="cyan" style={{ fontSize: 11 }}>已开通</Tag>
                             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>待配置凭证</span>
                           </div>
                         ) : (
@@ -545,7 +545,7 @@ const AppStore: React.FC = () => {
                       <Button size="small" type="primary"
                         onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}
                         style={{ background: '#fa8c16', borderColor: '#fa8c16' }}>
-                        立即开速
+                        立即开通
                       </Button>
                     )}
                   </div>
@@ -826,19 +826,19 @@ const AppStore: React.FC = () => {
           </Form>
         </div>
       </Modal>
-      {/* 电商平台开速确认弹窗 */}
+      {/* 电商平台开通确认弹窗 */}
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 22 }}>{ecPurchaseTarget?.emoji}</span>
-            <span>开速 {ecPurchaseTarget?.name} 电商对接</span>
+            <span>开通 {ecPurchaseTarget?.name} 电商对接</span>
           </div>
         }
         open={ecBuyVisible}
         onCancel={() => setEcBuyVisible(false)}
         width={440}
-        okText="提交开速意向"
-        cancelText="暂不开速"
+        okText="提交开通意向"
+        cancelText="暂不开通"
         confirmLoading={ecBuySubmitting}
         onOk={handleEcBuySubmit}
         okButtonProps={{ style: { background: '#fa8c16', borderColor: '#fa8c16' } }}
@@ -852,14 +852,14 @@ const AppStore: React.FC = () => {
               <div style={{ fontSize: 12, color: '#8c5800', marginTop: 4 }}>{ecPurchaseTarget.desc}</div>
             </div>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 2.2 }}>
-              <div>✅ 开速后填写 API 凭证，订单自动同步到生产系统</div>
+              <div>✅ 开通后填写 API 凭证，订单自动同步到生产系统</div>
               <div>✅ 智能下发生产任务，告别手工录入</div>
               <div>✅ 支持多店铺批量管理，数据一键可视</div>
             </div>
             <Alert
               style={{ marginTop: 14, fontSize: 12 }}
-              type="info" showIcon
-              message="演示模式：提交后立即开速。正式环境商务团队将在1–3个工作日内完成对接指导。"
+              type="warning" showIcon
+              message="提交后商务团队将在 1–3 个工作日内联系您，协助完成 API 凭证申请与系统对接。"
             />
           </div>
         )}
