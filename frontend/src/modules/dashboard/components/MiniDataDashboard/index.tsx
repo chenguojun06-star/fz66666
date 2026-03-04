@@ -95,7 +95,7 @@ const MiniDataDashboard: React.FC = () => {
             </div>
             <div className="mini-stat-content">
               <div className="mini-stat-value">{stats.totalWarehousing}</div>
-              <div className="mini-stat-label">入库数</div>
+              <div className="mini-stat-label">入库件数</div>
             </div>
           </div>
 

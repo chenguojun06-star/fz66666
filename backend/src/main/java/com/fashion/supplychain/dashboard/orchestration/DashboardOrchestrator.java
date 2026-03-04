@@ -310,17 +310,14 @@ public class DashboardOrchestrator {
         LocalDateTime startTime = calculateStartTime(range);
         LocalDateTime endTime = LocalDateTime.now();
 
-        // 获取入库总数（指定时间范围内）
-        long totalWarehousing = dashboardQueryService.countWarehousingBetween(startTime, endTime);
-        response.setTotalWarehousing(totalWarehousing);
-
         // 获取合格品和次品数量（指定时间范围内）
         long qualifiedCount = dashboardQueryService.sumQualifiedQuantityBetween(startTime, endTime);
         long defectiveCount = dashboardQueryService.sumUnqualifiedQuantityBetween(startTime, endTime);
         response.setDefectiveCount(defectiveCount);
 
-        // 计算次品率和合格率
+        // 入库总件数 = 合格件数 + 次品件数（与次品率/合格率口径一致）
         long totalQuantity = qualifiedCount + defectiveCount;
+        response.setTotalWarehousing(totalQuantity);
         if (totalQuantity > 0) {
             double defectRate = (defectiveCount * 100.0) / totalQuantity;
             double qualifiedRate = (qualifiedCount * 100.0) / totalQuantity;
