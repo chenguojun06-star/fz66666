@@ -3,8 +3,8 @@ import { useAuth } from '@/utils/AuthContext';
 import { Card, Row, Col, Tag, Button, Modal, Form, Input, Select, InputNumber, App, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { appStoreService, ecPlatformConfigService } from '@/services/system/appStore';
-import type { MyAppInfo, EcConfigVO } from '@/services/system/appStore';
+import { appStoreService } from '@/services/system/appStore';
+import type { MyAppInfo } from '@/services/system/appStore';
 import Layout from '@/components/Layout';
 import './index.css';
 
@@ -56,30 +56,7 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
   EC_SHOPIFY:     { icon: '🟢', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
 };
 
-// 电商平台配置（前端静态数据，无需后端表支持）
-interface EcPlatform {
-  code: string; name: string; emoji: string; color: string;
-  desc: string; badge?: string; priceMonthly: number;
-  fields: { name: string; label: string; placeholder: string }[];
-}
-const ECOMMERCE_PLATFORMS: EcPlatform[] = [
-  { code: 'TAOBAO',      name: '淘宝',    emoji: '🟠', color: '#FF6600', desc: '淘宝店铺订单自动同步，下发生产任务',   badge: '主流', priceMonthly: 199,
-    fields: [{ name: 'appKey', label: 'App Key', placeholder: '请输入淘宝开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '如：XX旗舰店（仅备注用）' }] },
-  { code: 'TMALL',       name: '天猫',    emoji: '🐱', color: '#D40016', desc: '天猫旗舰店/专卖店订单管理，智能排产',  badge: '主流', priceMonthly: 299,
-    fields: [{ name: 'appKey', label: 'App Key', placeholder: '天猫开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '天猫店铺备注名' }] },
-  { code: 'JD',          name: '京东',    emoji: '🔴', color: '#CC0000', desc: '京东POP/自营店铺订单同步到生产系统', priceMonthly: 199,
-    fields: [{ name: 'appKey', label: 'App Key', placeholder: '京东开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '京东店铺备注名' }] },
-  { code: 'DOUYIN',      name: '抖音小店', emoji: '🎵', color: '#161823', desc: '抖音直播带货 & 短视频订单，快速响应',   badge: '热门', priceMonthly: 249,
-    fields: [{ name: 'appKey', label: 'App ID',  placeholder: '抖音开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '抖音小店备注名' }] },
-  { code: 'PINDUODUO',   name: '拼多多',  emoji: '🛒', color: '#CC2B2B', desc: '拼多多商家版，批量订单管理', priceMonthly: 149,
-    fields: [{ name: 'appKey', label: 'Client ID',     placeholder: '拼多多开放平台 Client ID' }, { name: 'appSecret', label: 'Client Secret', placeholder: '请输入 Client Secret' }, { name: 'shopName', label: '店铺名称', placeholder: '拼多多店铺备注名' }] },
-  { code: 'XIAOHONGSHU', name: '小红书',  emoji: '📕', color: '#FF2442', desc: '小红书买手 / 直播间选品订单管理',       badge: '新品', priceMonthly: 199,
-    fields: [{ name: 'appKey', label: 'App Key', placeholder: '小红书开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '小红书店铺备注名' }] },
-  { code: 'WECHAT_SHOP', name: '视频号店铺', emoji: '💚', color: '#07C160', desc: '微信视频号小商店 & 小程序商城订单', priceMonthly: 149,
-    fields: [{ name: 'appKey', label: 'App ID',   placeholder: '微信开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '视频号店铺备注名' }] },
-  { code: 'SHOPIFY',     name: 'Shopify', emoji: '🟢', color: '#5C6AC4', desc: '跨境独立站 & 海外电商订单，工厂直达',  badge: '跨境', priceMonthly: 299,
-    fields: [{ name: 'appKey', label: '店铺域名',      placeholder: '如：your-store.myshopify.com' }, { name: 'appSecret', label: 'Access Token', placeholder: 'Shopify Private App Access Token' }, { name: 'shopName', label: '备注名称', placeholder: '站点备注，如：北美独立站' }] },
-];
+
 
 // 安全解析 features 字段（后端可能返回字符串、JSON字符串或数组）
 const parseFeatures = (features: any): string[] => {
@@ -124,113 +101,7 @@ const AppStore: React.FC = () => {
   const [myApps, setMyApps] = useState<MyAppInfo[]>([]);
   const [myAppsLoading, setMyAppsLoading] = useState(false);
 
-  // 电商平台对接凭证（存储在后端，按租户隔离）
-  const [ecConnected, setEcConnected] = useState<Record<string, EcConfigVO>>({});
-  const [ecConfigVisible, setEcConfigVisible] = useState(false);
-  const [ecSelectedPlatform, setEcSelectedPlatform] = useState<EcPlatform | null>(null);
-  const [ecForm] = Form.useForm();
-  const [ecSaving, setEcSaving] = useState(false);
-  const [ecShowAll, setEcShowAll] = useState(false);
-
-  /** 从后端加载当前租户所有已配置的电商凭证 */
-  const fetchEcConfigs = async () => {
-    try {
-      const result = await ecPlatformConfigService.getAll();
-      setEcConnected(result || {});
-    } catch {
-      // 加载失败不影响页面显示
-    }
-  };
-
-  /** 判断某个 EC 平台是否已被超管开通（走后端 myApps，与普通 App 一致） */
-  const isEcActivated = (platformCode: string) => isAppActivated('EC_' + platformCode);
-
-  // EC 平台：一键开通试用（自动激活，无需填购买意向）→ 直接打开凭证填写弹窗
-  const handleEcTrialAndConnect = async (platform?: EcPlatform) => {
-    const targetPlatform = platform ||
-      ECOMMERCE_PLATFORMS.find(p => p.code === selectedApp?.appCode?.replace('EC_', ''));
-    if (!targetPlatform) { message.error('未找到平台配置，请刷新重试'); return; }
-    const backendApp = appList.find(a => a.appCode === 'EC_' + targetPlatform.code);
-    if (!backendApp?.id) { message.error('应用未就绪，请刷新页面重试'); return; }
-    setTrialLoading(true);
-    try {
-      await appStoreService.startTrial(backendApp.id);
-      await fetchMyApps();
-      setDetailVisible(false);
-      message.success(`${targetPlatform.name} 已开通试用 7 天，请填写您的平台凭证`);
-      setTimeout(() => {
-        setEcSelectedPlatform(targetPlatform);
-        ecForm.resetFields();
-        setEcConfigVisible(true);
-      }, 200);
-    } catch (err: any) {
-      message.error(err?.message || '开通失败，请稍后重试');
-    } finally {
-      setTrialLoading(false);
-    }
-  };
-
-  const handleEcConnect = (platform: EcPlatform) => {
-    if (!isEcActivated(platform.code)) {
-      // 未开通：直接一键试用激活，不再走购买意向表单
-      handleEcTrialAndConnect(platform);
-      return;
-    }
-    // 已开通：进入凭证配置，从已加载的后端数据填充（AppSecret脱敏，不回填）
-    setEcSelectedPlatform(platform);
-    ecForm.resetFields();
-    const existing = ecConnected[platform.code];
-    if (existing) {
-      ecForm.setFieldsValue({ appKey: existing.appKey, shopName: existing.shopName });
-    }
-    setEcConfigVisible(true);
-  };
-
-  const handleEcSave = async () => {
-    if (!ecSelectedPlatform) return;
-    try {
-      const vals = await ecForm.validateFields();
-      setEcSaving(true);
-      const saved = await ecPlatformConfigService.save({
-        platformCode: ecSelectedPlatform.code,
-        shopName: vals.shopName,
-        appKey: vals.appKey,
-        appSecret: vals.appSecret,
-        extraField: vals.extraField,
-      });
-      setEcConnected(prev => ({ ...prev, [ecSelectedPlatform.code]: saved }));
-      setEcConfigVisible(false);
-      message.success(`${ecSelectedPlatform.name} 凭证已保存，订单将自动同步`);
-    } catch (err: any) {
-      if (err?.errorFields) return; // 表单校验失败，正常
-      message.error(err?.message || '保存失败，请稍后重试');
-    } finally {
-      setEcSaving(false);
-    }
-  };
-
-  const handleEcDisconnect = (code: string, name: string) => {
-    Modal.confirm({
-      title: `断开 ${name} 对接`,
-      content: '断开后不会删除已同步的订单，但后续订单不再自动同步。确认断开？',
-      okText: '确认断开', okType: 'danger', cancelText: '取消',
-      onOk: async () => {
-        try {
-          await ecPlatformConfigService.disconnect(code);
-          setEcConnected(prev => {
-            const next = { ...prev };
-            delete next[code];
-            return next;
-          });
-          message.success(`已断开 ${name} 对接`);
-        } catch {
-          message.error('断开失败，请稍后重试');
-        }
-      },
-    });
-  };
-
-  useEffect(() => { fetchAppList(); fetchMyApps(); fetchEcConfigs(); }, []);
+  useEffect(() => { fetchAppList(); fetchMyApps(); }, []);
 
   const fetchAppList = async () => {
     setLoading(true);
@@ -469,111 +340,8 @@ const AppStore: React.FC = () => {
         <ShoppingCartOutlined style={{ marginRight: 6 }} />全部应用
       </div>
       <Spin spinning={loading}>
-        <Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).filter(a => a.category !== 'ECOMMERCE').map(renderAppCard)}</Row>
+        <Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).map(renderAppCard)}</Row>
       </Spin>
-
-      {/* 电商平台对接 */}
-      <div style={{ marginTop: 32, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: 15 }}>
-          <ApiOutlined style={{ marginRight: 6 }} />电商平台对接
-          <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>连接您的销售平台，订单自动同步到生产系统</span>
-        </div>
-        <Button size="small" type="link" onClick={() => setEcShowAll(v => !v)}>
-          {ecShowAll ? '收起' : `展开全部 ${ECOMMERCE_PLATFORMS.length} 个平台 ↓`}
-        </Button>
-      </div>
-      <Row gutter={[24, 24]}>
-        {(ecShowAll ? ECOMMERCE_PLATFORMS : ECOMMERCE_PLATFORMS.slice(0, 4)).map(p => {
-          const purchased = isEcActivated(p.code);
-          const connected = !!(ecConnected[p.code]);
-          const ribbonText = connected ? '已连接' : purchased ? '已开通' : (p.badge ?? '');
-          const ribbonColor = connected ? 'green' : purchased ? 'cyan' : 'blue';
-          return (
-            <Col xs={24} sm={12} md={8} lg={6} xl={6} key={p.code}>
-              <Badge.Ribbon
-                text={ribbonText}
-                color={ribbonColor}
-                style={{ display: connected || purchased || p.badge ? 'block' : 'none' }}
-              >
-                <Card
-                  hoverable
-                  className="app-store-card"
-                  style={!purchased ? { opacity: 0.88 } : undefined}
-                  onClick={() => {
-                    const backendApp = appList.find(a => a.appCode === 'EC_' + p.code);
-                    if (backendApp) { setSelectedApp({ ...backendApp, appIcon: p.emoji }); setDetailVisible(true); }
-                  }}
-                  cover={
-                    <div className="app-icon-container" style={{ position: 'relative' }}>
-                      <span className="app-icon">{p.emoji}</span>
-                      {!purchased && (
-                        <div style={{
-                          position: 'absolute', top: 4, right: 4,
-                          background: 'rgba(0,0,0,0.4)', borderRadius: 4,
-                          padding: '1px 6px', fontSize: 11, color: '#fff',
-                        }}>
-                          ¥{p.priceMonthly}/月
-                        </div>
-                      )}
-                    </div>
-                  }
-                >
-                  <Card.Meta
-                    title={<div className="app-title">{p.name}</div>}
-                    description={
-                      <div className="app-desc">
-                        <div className="desc-text">{p.desc}</div>
-                        {connected ? (
-                          <div style={{ marginTop: 6 }}>
-                            <Tag color="green" style={{ fontSize: 11 }}>✓ 已连接</Tag>
-                            {ecConnected[p.code]?.shopName && <Tag style={{ fontSize: 11 }}>{ecConnected[p.code]!.shopName}</Tag>}
-                          </div>
-                        ) : purchased ? (
-                          <div style={{ marginTop: 6 }}>
-                            <Tag color="cyan" style={{ fontSize: 11 }}>已开通</Tag>
-                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>待配置凭证</span>
-                          </div>
-                        ) : (
-                          <div style={{ marginTop: 6 }}>
-                            <span style={{ fontSize: 13, color: '#fa8c16', fontWeight: 600 }}>¥{p.priceMonthly}/月</span>
-                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginLeft: 6 }}>需购买才可对接</span>
-                          </div>
-                        )}
-                        <Tag color="blue" style={{ marginTop: 4 }}>电商对接</Tag>
-                      </div>
-                    }
-                  />
-                  <div style={{ marginTop: 10, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    {connected ? (
-                      <>
-                        <Button size="small" type="primary" ghost
-                          onClick={(e) => { e.stopPropagation(); navigate('/warehouse/ecommerce'); }}>
-                          查看订单 →
-                        </Button>
-                        <Button size="small" type="text"
-                          onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}>
-                          配置
-                        </Button>
-                      </>
-                    ) : purchased ? (
-                      <Button size="small" type="primary" ghost
-                        onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}>
-                        填写凭证
-                      </Button>
-                    ) : (
-                      <Button size="small" type="primary"
-                        onClick={(e) => { e.stopPropagation(); handleEcConnect(p); }}
-                        style={{ background: '#fa8c16', borderColor: '#fa8c16' }}>
-                        立即开通
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              </Badge.Ribbon>
-            </Col>
-          );
-        })}
-      </Row>
 
       {/* 应用详情弹窗 */}
       <Modal
@@ -590,17 +358,6 @@ const AppStore: React.FC = () => {
             <Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate('/system/tenant?tab=apps'); }}>
               管理配置
             </Button>,
-          ] : selectedApp?.appCode?.startsWith('EC_') ? [
-            <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
-            <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading}
-              onClick={() => handleEcTrialAndConnect()}
-              style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>
-              一键开通试用 7 天（免费）
-            </Button>,
-            <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />}
-              onClick={() => handleEcTrialAndConnect()}>
-              立即开通
-            </Button>,
           ] : [
             <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
             selectedApp?.trialDays ? (
@@ -616,20 +373,9 @@ const AppStore: React.FC = () => {
         }
       >
         <div style={{ padding: '8px 0' }}>
-          {selectedApp?.appCode?.startsWith('EC_') ? (
-            <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
-              message={
-                <span style={{ fontSize: 12 }}>
-                  <strong>极简对接：</strong>开通后只需填写您在该平台申请的
-                  <strong> 店铺名称 + AppKey + AppSecret</strong>，系统自动完成全部配置，无需任何技术操作
-                </span>
-              }
-            />
-          ) : (
-            <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
-              message={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
-            />
-          )}
+          <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
+            message={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
+          />
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>应用简介</div>
             <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>{selectedApp?.appDesc}</p>
@@ -867,61 +613,7 @@ const AppStore: React.FC = () => {
           </Form>
         </div>
       </Modal>
-      {/* 电商平台配置弹窗 */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>{ecSelectedPlatform?.emoji}</span>
-            <span>{ecSelectedPlatform?.name} 对接配置</span>
-            {ecSelectedPlatform && ecConnected[ecSelectedPlatform.code] && <Tag color="green">已连接</Tag>}
-          </div>
-        }
-        open={ecConfigVisible}
-        onCancel={() => setEcConfigVisible(false)}
-        width={460}
-        okText={ecSaving ? '保存中…' : '保存配置'}
-        cancelText="取消"
-        onOk={handleEcSave}
-        confirmLoading={ecSaving}
-        footer={[
-          ecSelectedPlatform && ecConnected[ecSelectedPlatform.code] ? (
-            <Button key="disconnect" danger size="small"
-              onClick={() => { setEcConfigVisible(false); handleEcDisconnect(ecSelectedPlatform!.code, ecSelectedPlatform!.name); }}>
-              断开连接
-            </Button>
-          ) : null,
-          <Button key="cancel" onClick={() => setEcConfigVisible(false)}>取消</Button>,
-          <Button key="save" type="primary" loading={ecSaving} onClick={handleEcSave}>保存配置</Button>,
-        ]}
-      >
-        {ecSelectedPlatform && (
-          <div style={{ padding: '8px 0' }}>
-            <Alert
-              type="info" showIcon style={{ marginBottom: 16, fontSize: 12 }}
-              message="填写您在该平台申请的开放平台凭证，保存后即可自动同步订单到生产系统"
-            />
-            <Form form={ecForm} layout="vertical" size="small">
-              {ecSelectedPlatform.fields.map(f => (
-                <Form.Item key={f.name} name={f.name} label={f.label}
-                  rules={[{ required: true, message: `请输入 ${f.label}` }]}>
-                  <Input placeholder={f.placeholder} />
-                </Form.Item>
-              ))}
-            </Form>
-            <div style={{ background: '#f6f8fa', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>💡 如何获取凭证？</div>
-              {ecSelectedPlatform.code === 'TAOBAO' && <div>登录 <a href="https://open.taobao.com" target="_blank" rel="noreferrer">淘宝开放平台</a> → 控制台 → 我的应用 → 创建应用后获取 AppKey / AppSecret</div>}
-              {ecSelectedPlatform.code === 'TMALL' && <div>登录 <a href="https://open.taobao.com" target="_blank" rel="noreferrer">天猫开放平台</a>（与淘宝同一平台）→ 我的应用 → 获取凭证</div>}
-              {ecSelectedPlatform.code === 'JD' && <div>登录 <a href="https://seller.jd.com" target="_blank" rel="noreferrer">京东商家中心</a> → 开放平台 → 我的应用 → 创建应用获取凭证</div>}
-              {ecSelectedPlatform.code === 'DOUYIN' && <div>登录 <a href="https://op.jinritemai.com" target="_blank" rel="noreferrer">抖店开放平台</a> → 开发者中心 → 创建应用获取 AppID</div>}
-              {ecSelectedPlatform.code === 'PINDUODUO' && <div>登录 <a href="https://open.pinduoduo.com" target="_blank" rel="noreferrer">拼多多开放平台</a> → 我的应用 → 获取 Client ID / Secret</div>}
-              {ecSelectedPlatform.code === 'XIAOHONGSHU' && <div>登录 <a href="https://ark.xiaohongshu.com" target="_blank" rel="noreferrer">小红书开放平台</a> → 应用管理 → 获取凭证</div>}
-              {ecSelectedPlatform.code === 'WECHAT_SHOP' && <div>登录 <a href="https://channels.weixin.qq.com" target="_blank" rel="noreferrer">微信视频号官方平台</a> → 开发者设置 → 获取 AppID / AppSecret</div>}
-              {ecSelectedPlatform.code === 'SHOPIFY' && <div>在 Shopify 后台 → 应用 → 开发API → 创建自定义应用 → 生成 Access Token</div>}
-            </div>
-          </div>
-        )}
-      </Modal>
+
     </div>
     </Layout>
   );
