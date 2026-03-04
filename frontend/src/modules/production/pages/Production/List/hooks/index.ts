@@ -5,3 +5,5 @@ export { useProductionActions } from './useProductionActions';
 export { useProgressTracking } from './useProgressTracking';
 export { useProductionStats } from './useProductionStats';
 export type { GlobalStats } from './useProductionStats';
+export { useProductionColumns } from './useProductionColumns';
+export type { UseProductionColumnsProps } from './useProductionColumns';
