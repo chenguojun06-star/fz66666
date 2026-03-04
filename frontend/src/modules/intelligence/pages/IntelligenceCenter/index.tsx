@@ -1144,13 +1144,13 @@ const IntelligenceCenter: React.FC = () => {
           {/* 异常自愈诊断 */}
           <div className="c-card">
             <div className="c-card-title">
-              <LiveDot size={7} color={healing && healing.healthScore < 80 ? '#f7a600' : '#39ff14'} />
+              <LiveDot size={7} color={healing && healing.healthScore < 80 ? '#d48806' : '#73d13d'} />
               系统异常自愈诊断
               {healing && (
                 <span className="c-card-badge" style={{
-                  background: healing.healthScore >= 80 ? 'rgba(57,255,20,0.15)' : 'rgba(247,166,0,0.15)',
-                  color: healing.healthScore >= 80 ? '#39ff14' : '#f7a600',
-                  borderColor: healing.healthScore >= 80 ? '#39ff14' : '#f7a600',
+                  background: healing.healthScore >= 80 ? 'rgba(82,196,26,0.12)' : 'rgba(212,137,6,0.12)',
+                  color: healing.healthScore >= 80 ? '#73d13d' : '#d48806',
+                  borderColor: healing.healthScore >= 80 ? '#73d13d55' : '#d4880655',
                 }}>
                   健康 {healing.healthScore} 分 · 发现 {healing.issuesFound} 项
                 </span>
@@ -1164,10 +1164,10 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-heal-detail">{item.detail}</span>
                   <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
                     {item.autoFixed
-                      ? <Tag color="success" style={{ fontSize: 11 }}>已自修</Tag>
+                      ? <Tag style={{ fontSize: 11, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
                       : item.status !== 'OK'
-                        ? <Tag color="warning" style={{ fontSize: 11 }}>需处理</Tag>
-                        : <Tag style={{ fontSize: 11, background: 'rgba(57,255,20,0.1)', color: '#39ff14', borderColor: '#39ff14' }}>正常</Tag>
+                        ? <Tag style={{ fontSize: 11, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
+                        : <Tag style={{ fontSize: 11, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
                     }
                   </span>
                 </div>
