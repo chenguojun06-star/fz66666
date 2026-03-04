@@ -62,11 +62,9 @@ public class ProcessKnowledgeOrchestrator {
                 return resp;
             }
 
-            // 2. 查询所有有效工序记录（有单价）
+            // 2. 查询所有工序记录（含未定价，process_name 非空即可）
             QueryWrapper<StyleProcess> qw = new QueryWrapper<>();
             qw.in("style_id", styleIdToNo.keySet())
-              .isNotNull("price")
-              .gt("price", BigDecimal.ZERO)
               .isNotNull("process_name")
               .ne("process_name", "")
               .orderByDesc("id");
@@ -145,10 +143,10 @@ public class ProcessKnowledgeOrchestrator {
         long usageCount = records.stream().map(StyleProcess::getStyleId).distinct().count();
         item.setUsageCount((int) usageCount);
 
-        // 价格统计
+        // 价格统计（仅统计 price > 0 的记录，0/null 视为未定价不参与计算）
         List<BigDecimal> prices = records.stream()
                 .map(StyleProcess::getPrice)
-                .filter(Objects::nonNull)
+                .filter(p -> p != null && p.compareTo(BigDecimal.ZERO) > 0)
                 .collect(Collectors.toList());
 
         if (!prices.isEmpty()) {
@@ -164,15 +162,20 @@ public class ProcessKnowledgeOrchestrator {
             item.setSuggestedPrice(calcWeightedSuggestion(records)
                     .setScale(2, RoundingMode.HALF_UP));
 
-            // 价格趋势：比较最新记录与最旧记录
-            BigDecimal first = records.get(records.size() - 1).getPrice();
-            BigDecimal last  = records.get(0).getPrice();
-            if (last.compareTo(first) > 0) {
-                item.setPriceTrend("UP");
-            } else if (last.compareTo(first) < 0) {
-                item.setPriceTrend("DOWN");
-            } else {
-                item.setPriceTrend("STABLE");
+            // 价格趋势：取有价格的最新与最旧记录比较
+            List<StyleProcess> pricedRecords = records.stream()
+                    .filter(r -> r.getPrice() != null && r.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                    .collect(Collectors.toList());
+            if (pricedRecords.size() >= 2) {
+                BigDecimal first = pricedRecords.get(pricedRecords.size() - 1).getPrice();
+                BigDecimal last  = pricedRecords.get(0).getPrice();
+                if (last.compareTo(first) > 0) {
+                    item.setPriceTrend("UP");
+                } else if (last.compareTo(first) < 0) {
+                    item.setPriceTrend("DOWN");
+                } else {
+                    item.setPriceTrend("STABLE");
+                }
             }
         }
 
@@ -214,16 +217,18 @@ public class ProcessKnowledgeOrchestrator {
         return item;
     }
 
-    /** 加权建议价：最近 3 条权重 ×2，其余 ×1 */
+    /** 加权建议价：最近 3 条（price > 0）权重 ×2，其余 ×1 */
     private BigDecimal calcWeightedSuggestion(List<StyleProcess> records) {
         BigDecimal weightedSum = BigDecimal.ZERO;
         int totalWeight = 0;
-        for (int i = 0; i < records.size(); i++) {
-            BigDecimal p = records.get(i).getPrice();
-            if (p == null) continue;
-            int w = (i < 3) ? 2 : 1;
+        int pricedIdx = 0;
+        for (StyleProcess sp : records) {
+            BigDecimal p = sp.getPrice();
+            if (p == null || p.compareTo(BigDecimal.ZERO) <= 0) continue;
+            int w = (pricedIdx < 3) ? 2 : 1;
             weightedSum = weightedSum.add(p.multiply(BigDecimal.valueOf(w)));
             totalWeight += w;
+            pricedIdx++;
         }
         if (totalWeight == 0) return BigDecimal.ZERO;
         return weightedSum.divide(BigDecimal.valueOf(totalWeight), 4, RoundingMode.HALF_UP);
