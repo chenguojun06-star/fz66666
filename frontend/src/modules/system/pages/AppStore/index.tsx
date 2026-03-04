@@ -151,33 +151,35 @@ const AppStore: React.FC = () => {
   /** 判断某个 EC 平台是否已被超管开通（走后端 myApps，与普通 App 一致） */
   const isEcActivated = (platformCode: string) => isAppActivated('EC_' + platformCode);
 
+  // EC 平台：一键开通试用（自动激活，无需填购买意向）→ 直接打开凭证填写弹窗
+  const handleEcTrialAndConnect = async (platform?: EcPlatform) => {
+    const targetPlatform = platform ||
+      ECOMMERCE_PLATFORMS.find(p => p.code === selectedApp?.appCode?.replace('EC_', ''));
+    if (!targetPlatform) { message.error('未找到平台配置，请刷新重试'); return; }
+    const backendApp = appList.find(a => a.appCode === 'EC_' + targetPlatform.code);
+    if (!backendApp?.id) { message.error('应用未就绪，请刷新页面重试'); return; }
+    setTrialLoading(true);
+    try {
+      await appStoreService.startTrial(backendApp.id);
+      await fetchMyApps();
+      setDetailVisible(false);
+      message.success(`${targetPlatform.name} 已开通试用 7 天，请填写您的平台凭证`);
+      setTimeout(() => {
+        setEcSelectedPlatform(targetPlatform);
+        ecForm.resetFields();
+        setEcConfigVisible(true);
+      }, 200);
+    } catch (err: any) {
+      message.error(err?.message || '开通失败，请稍后重试');
+    } finally {
+      setTrialLoading(false);
+    }
+  };
+
   const handleEcConnect = (platform: EcPlatform) => {
     if (!isEcActivated(platform.code)) {
-      // 未开通：找到后端 app 条目，复用与普通 App 完全一样的购买弹窗
-      const backendApp = appList.find(a => a.appCode === 'EC_' + platform.code);
-      if (backendApp) {
-        // 用前端配置的 emoji 覆盖后端的短码图标，确保弹窗显示正确
-        setSelectedApp({ ...backendApp, appIcon: platform.emoji });
-      } else {
-        // 后端条目不存在时兜底（不应发生，本地 DB 已插入）
-        setSelectedApp({
-          id: 0, appCode: 'EC_' + platform.code, appName: platform.name,
-          appIcon: platform.emoji, appDesc: platform.desc, category: 'ECOMMERCE',
-          priceType: 'MONTHLY', priceMonthly: platform.priceMonthly, priceYearly: 0, priceOnce: 0,
-          isHot: false, isNew: false, features: [], trialDays: 0,
-        });
-      }
-      setOrderVisible(true);
-      form.resetFields();
-      form.setFieldsValue({
-        contactName: user?.name || '',
-        contactPhone: user?.phone || '',
-        contactEmail: user?.email || '',
-        companyName: user?.tenantName || '',
-        userCount: 1,
-        subscriptionType: 'MONTHLY',
-        invoiceRequired: false,
-      });
+      // 未开通：直接一键试用激活，不再走购买意向表单
+      handleEcTrialAndConnect(platform);
       return;
     }
     // 已开通：进入凭证配置
@@ -246,14 +248,6 @@ const AppStore: React.FC = () => {
   };
 
   const handleAppClick = (app: AppStoreItem) => { setSelectedApp(app); setDetailVisible(true); };
-
-  // EC 平台详情弹窗点击「立即开通」→关闭详情弹窗，再调用 EC 购买/配置流程
-  const handleEcConnectFromDetail = () => {
-    setDetailVisible(false);
-    const platformCode = selectedApp?.appCode?.replace('EC_', '') || '';
-    const platform = ECOMMERCE_PLATFORMS.find(p => p.code === platformCode);
-    if (platform) setTimeout(() => handleEcConnect(platform), 150);
-  };
 
   const handleBuyClick = () => {
     setDetailVisible(false);
@@ -590,13 +584,13 @@ const AppStore: React.FC = () => {
             </Button>,
           ] : selectedApp?.appCode?.startsWith('EC_') ? [
             <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
-            selectedApp?.trialDays ? (
-              <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick}
-                style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>
-                一键开通试用 {selectedApp.trialDays} 天
-              </Button>
-            ) : null,
-            <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />} onClick={handleEcConnectFromDetail}>
+            <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading}
+              onClick={() => handleEcTrialAndConnect()}
+              style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>
+              一键开通试用 7 天（免费）
+            </Button>,
+            <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />}
+              onClick={() => handleEcTrialAndConnect()}>
               立即开通
             </Button>,
           ] : [
@@ -614,9 +608,20 @@ const AppStore: React.FC = () => {
         }
       >
         <div style={{ padding: '8px 0' }}>
-          <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
-            message={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
-          />
+          {selectedApp?.appCode?.startsWith('EC_') ? (
+            <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
+              message={
+                <span style={{ fontSize: 12 }}>
+                  <strong>极简对接：</strong>开通后只需填写您在该平台申请的
+                  <strong> 店铺名称 + AppKey + AppSecret</strong>，系统自动完成全部配置，无需任何技术操作
+                </span>
+              }
+            />
+          ) : (
+            <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
+              message={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
+            />
+          )}
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>应用简介</div>
             <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>{selectedApp?.appDesc}</p>
