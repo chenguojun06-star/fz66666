@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Layout from '@/components/Layout';
 import {
   Tabs, Table, Tag, Button, Input, Select, Card, Space, Modal, Form,
   message, Row, Col, Statistic, Drawer, Descriptions, Divider,
@@ -454,6 +455,7 @@ const PricingTab: React.FC = () => {
 
 // ─── 主页面 ───────────────────────────────────────────────
 const EcommerceOrders: React.FC = () => (
+  <Layout>
   <div style={{ padding: 20 }}>
     <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
       message="电商对接全流程"
@@ -484,6 +486,7 @@ const EcommerceOrders: React.FC = () => (
       ]}
     />
   </div>
+  </Layout>
 );
 
 export default EcommerceOrders;
