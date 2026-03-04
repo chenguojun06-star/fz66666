@@ -1,14 +1,20 @@
 /**
  * 我的账单 Tab — 租户用户查看自己的套餐概览、账单记录、申请发票
+ * + 我的应用订阅（App Store 开通记录 + 续费到期提醒）
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card, Row, Col, Statistic, Table, Tag, Button, Form, Input, Modal,
-  Descriptions, Progress, Empty, Typography, App,
+  Descriptions, Progress, Empty, Typography, App, Alert, Space, Tooltip,
 } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
+import {
+  FileTextOutlined, BellOutlined, AppstoreOutlined, SyncOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
 import tenantService from '@/services/tenantService';
+import { appStoreService } from '@/services/system/appStore';
+import type { MyAppInfo } from '@/services/system/appStore';
 
 const { Text } = Typography;
 
@@ -31,11 +37,39 @@ const BILL_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   WAIVED: { label: '已减免', color: 'default' },
 };
 
+const SUB_TYPE_LABELS: Record<string, string> = {
+  TRIAL: '免费试用', MONTHLY: '月付', YEARLY: '年付', PERPETUAL: '买断', FREE: '免费',
+};
+
+const SUB_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  ACTIVE: { label: '使用中', color: 'success' },
+  EXPIRED: { label: '已过期', color: 'error' },
+  SUSPENDED: { label: '已暂停', color: 'default' },
+  TRIAL: { label: '试用中', color: 'processing' },
+};
+
+/** 计算距到期天数（返回 null 表示永久有效） */
+function daysUntilExpiry(endTime?: string): number | null {
+  if (!endTime) return null;
+  return dayjs(endTime).diff(dayjs(), 'day');
+}
+
+/** 到期天数对应颜色 */
+function expiryColor(days: number | null): string {
+  if (days === null) return 'success';
+  if (days < 0) return 'error';
+  if (days <= 7) return 'error';
+  if (days <= 14) return 'orange';
+  if (days <= 30) return 'gold';
+  return 'success';
+}
+
 // ========== 组件 ==========
 const MyBillingTab: React.FC = () => {
   const { message } = App.useApp();
   const [overview, setOverview] = useState<any>(null);
   const [bills, setBills] = useState<any[]>([]);
+  const [myApps, setMyApps] = useState<MyAppInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
   const [invoiceInfoModalVisible, setInvoiceInfoModalVisible] = useState(false);
@@ -43,16 +77,28 @@ const MyBillingTab: React.FC = () => {
   const [invoiceForm] = Form.useForm();
   const [invoiceInfoForm] = Form.useForm();
 
+  /** 30天内即将到期（含已过期）的应用，用于顶部提醒 */
+  const expiringApps = useMemo(() =>
+    myApps.filter(app => {
+      if (!app.endTime) return false;          // 永久有效，无需提醒
+      const days = daysUntilExpiry(app.endTime);
+      return days !== null && days <= 30;
+    }),
+    [myApps],
+  );
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [overviewRes, billsRes]: any[] = await Promise.all([
+      const [overviewRes, billsRes, appsRes]: any[] = await Promise.all([
         tenantService.getMyBilling(),
         tenantService.listMyBills({ page: 1, pageSize: 50 }),
+        appStoreService.getMyApps().catch(() => []),   // 失败不影响主账单
       ]);
       setOverview(overviewRes?.data || overviewRes);
       const billData = billsRes?.data || billsRes;
       setBills(billData?.records || billData || []);
+      setMyApps(appsRes || []);
     } catch {
       message.error('加载账单数据失败');
     } finally {
@@ -110,7 +156,7 @@ const MyBillingTab: React.FC = () => {
     }
   };
 
-  // ---------- 表格列定义 ----------
+  // ---------- 表格列定义（月账单） ----------
   const billColumns = [
     { title: '账单编号', dataIndex: 'billingNo', width: 160 },
     { title: '账期', dataIndex: 'billingMonth', width: 100 },
@@ -150,10 +196,83 @@ const MyBillingTab: React.FC = () => {
       },
     },
   ];
-
+  // ---------- 表格列定义（App 订阅） ----------
+  const appColumns = [
+    {
+      title: '应用名称', dataIndex: 'appName', width: 140,
+      render: (v: string) => <Text strong>{v}</Text>,
+    },
+    {
+      title: '订阅类型', dataIndex: 'subscriptionType', width: 90,
+      render: (v: string) => <Tag color="blue">{SUB_TYPE_LABELS[v] || v}</Tag>,
+    },
+    {
+      title: '开始时间', dataIndex: 'startTime', width: 120,
+      render: (v: string) => v ? v.slice(0, 10) : '—',
+    },
+    {
+      title: '到期时间', dataIndex: 'endTime', width: 120,
+      render: (v: string) => {
+        if (!v) return <Tag color="success">永久有效</Tag>;
+        const days = daysUntilExpiry(v);
+        const color = expiryColor(days);
+        if (days !== null && days < 0) return <Tag color="error">已过期</Tag>;
+        return (
+          <Tooltip title={`${days} 天后到期`}>
+            <Tag color={color}>{v.slice(0, 10)}</Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: '剩余天数', key: 'daysLeft', width: 90,
+      render: (_: any, record: MyAppInfo) => {
+        if (!record.endTime) return <Tag color="success">永久</Tag>;
+        const days = daysUntilExpiry(record.endTime);
+        if (days === null) return <Tag color="success">永久</Tag>;
+        if (days < 0) return <Tag color="error">已过期</Tag>;
+        const color = expiryColor(days);
+        return <Tag color={color}>{days} 天</Tag>;
+      },
+    },
+    {
+      title: '状态', dataIndex: 'status', width: 80,
+      render: (v: string, record: MyAppInfo) => {
+        const key = record.isExpired ? 'EXPIRED' : (v || 'ACTIVE');
+        const cfg = SUB_STATUS_CONFIG[key] || { label: key, color: 'default' };
+        return <Tag color={cfg.color}>{cfg.label}</Tag>;
+      },
+    },
+  ];
   // ---------- 渲染 ----------
   return (
     <div>
+      {/* ===== 续费到期提醒（30天内到期） ===== */}
+      {expiringApps.length > 0 && (
+        <Alert
+          type={expiringApps.some(a => daysUntilExpiry(a.endTime) !== null && daysUntilExpiry(a.endTime)! <= 7) ? 'error' : 'warning'}
+          icon={<BellOutlined />}
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={
+            <Space size={4} wrap>
+              <Text strong>续费提醒：</Text>
+              {expiringApps.map(app => {
+                const days = daysUntilExpiry(app.endTime);
+                const expired = days !== null && days < 0;
+                return (
+                  <Tag key={app.subscriptionId} color={expired ? 'error' : expiryColor(days)}>
+                    {app.appName}
+                    {expired ? ' 已过期' : `（${days}天后到期）`}
+                  </Tag>
+                );
+              })}
+            </Space>
+          }
+          description="请及时续费，过期后相关功能将暂停使用，数据保留30天。"
+          closable
+        />
+      )}
       {/* 套餐概览卡片 */}
       {overview && (
         <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -206,9 +325,42 @@ const MyBillingTab: React.FC = () => {
         </Row>
       )}
 
-      {/* 账单列表 */}
-      <Card title="账单记录" size="small"
-        extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}>
+      {/* ===== 我的应用订阅 ===== */}
+      {myApps.length > 0 && (
+        <Card
+          title={<Space><AppstoreOutlined />我的应用订阅</Space>}
+          size="small"
+          style={{ marginBottom: 24 }}
+          extra={
+            <Button
+              type="link"
+              size="small"
+              icon={<SyncOutlined />}
+              onClick={fetchData}
+              loading={loading}
+            >
+              刷新
+            </Button>
+          }
+        >
+          <Table
+            rowKey="subscriptionId"
+            dataSource={myApps}
+            columns={appColumns}
+            loading={loading}
+            pagination={myApps.length > 10 ? { pageSize: 10, size: 'small' } : false}
+            size="small"
+            locale={{ emptyText: <Empty description="暂无已开通应用" /> }}
+          />
+        </Card>
+      )}
+
+      {/* ===== 账单记录（平台订阅月账单） ===== */}
+      <Card
+        title={<Space><AppstoreOutlined />账单记录</Space>}
+        size="small"
+        extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}
+      >
         <Table
           rowKey="id"
           dataSource={bills}
