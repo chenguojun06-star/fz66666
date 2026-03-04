@@ -185,3 +185,43 @@ export const appStoreService = {
     return request.post('/system/app-store/admin/activate-order', data);
   },
 };
+
+// =============================================
+// EC 电商平台凭证配置 API
+// =============================================
+
+export interface EcConfigVO {
+  platformCode: string;
+  shopName: string;
+  appKey: string;
+  appSecretMasked: string;  // 脱敏显示，如 "abcd****"
+  extraField?: string;
+  status: string;
+  updatedAt?: string;
+}
+
+export interface EcConfigSaveRequest {
+  platformCode: string;
+  shopName?: string;
+  appKey: string;
+  appSecret: string;
+  extraField?: string;
+}
+
+export const ecPlatformConfigService = {
+  /** 保存（新增或更新）某平台凭证 */
+  save: (data: EcConfigSaveRequest): Promise<EcConfigVO> =>
+    request.post('/ec-config/save', data),
+
+  /** 获取单个平台凭证（AppSecret 已脱敏） */
+  getOne: (platformCode: string): Promise<EcConfigVO | null> =>
+    request.get(`/ec-config/${platformCode}`),
+
+  /** 获取当前租户所有已配置平台（Map: platformCode → EcConfigVO） */
+  getAll: (): Promise<Record<string, EcConfigVO>> =>
+    request.get('/ec-config/all'),
+
+  /** 断开某平台连接 */
+  disconnect: (platformCode: string): Promise<void> =>
+    request.post(`/ec-config/${platformCode}/disconnect`),
+};

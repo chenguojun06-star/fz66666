@@ -3,8 +3,8 @@ import { useAuth } from '@/utils/AuthContext';
 import { Card, Row, Col, Tag, Button, Modal, Form, Input, Select, InputNumber, App, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { appStoreService } from '@/services/system/appStore';
-import type { MyAppInfo } from '@/services/system/appStore';
+import { appStoreService, ecPlatformConfigService } from '@/services/system/appStore';
+import type { MyAppInfo, EcConfigVO } from '@/services/system/appStore';
 import Layout from '@/components/Layout';
 import './index.css';
 
@@ -124,28 +124,22 @@ const AppStore: React.FC = () => {
   const [myApps, setMyApps] = useState<MyAppInfo[]>([]);
   const [myAppsLoading, setMyAppsLoading] = useState(false);
 
-  // 电商平台对接状态（localStorage 持久化，按租户隔离）
-  type EcConfig = { appKey: string; appSecret: string; shopName: string; connectedAt: string };
-  const [ecConnected, setEcConnected] = useState<Record<string, EcConfig | null>>({});
+  // 电商平台对接凭证（存储在后端，按租户隔离）
+  const [ecConnected, setEcConnected] = useState<Record<string, EcConfigVO>>({});
   const [ecConfigVisible, setEcConfigVisible] = useState(false);
   const [ecSelectedPlatform, setEcSelectedPlatform] = useState<EcPlatform | null>(null);
   const [ecForm] = Form.useForm();
   const [ecSaving, setEcSaving] = useState(false);
   const [ecShowAll, setEcShowAll] = useState(false);
 
-  const ecStorageKey = `ec_platforms_${user?.id ?? 'default'}`;
-
-  useEffect(() => {
+  /** 从后端加载当前租户所有已配置的电商凭证 */
+  const fetchEcConfigs = async () => {
     try {
-      const saved = localStorage.getItem(ecStorageKey);
-      if (saved) setEcConnected(JSON.parse(saved));
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ecStorageKey]);
-
-  const saveEcConnected = (next: Record<string, EcConfig | null>) => {
-    setEcConnected(next);
-    try { localStorage.setItem(ecStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      const result = await ecPlatformConfigService.getAll();
+      setEcConnected(result || {});
+    } catch {
+      // 加载失败不影响页面显示
+    }
   };
 
   /** 判断某个 EC 平台是否已被超管开通（走后端 myApps，与普通 App 一致） */
@@ -182,13 +176,12 @@ const AppStore: React.FC = () => {
       handleEcTrialAndConnect(platform);
       return;
     }
-    // 已开通：进入凭证配置
+    // 已开通：进入凭证配置，从已加载的后端数据填充（AppSecret脱敏，不回填）
     setEcSelectedPlatform(platform);
+    ecForm.resetFields();
     const existing = ecConnected[platform.code];
     if (existing) {
-      ecForm.setFieldsValue({ appKey: existing.appKey, appSecret: existing.appSecret, shopName: existing.shopName });
-    } else {
-      ecForm.resetFields();
+      ecForm.setFieldsValue({ appKey: existing.appKey, shopName: existing.shopName });
     }
     setEcConfigVisible(true);
   };
@@ -198,16 +191,22 @@ const AppStore: React.FC = () => {
     try {
       const vals = await ecForm.validateFields();
       setEcSaving(true);
-      // 模拟保存延迟，后续可替换为真实 API 调用
-      await new Promise(r => setTimeout(r, 600));
-      saveEcConnected({
-        ...ecConnected,
-        [ecSelectedPlatform.code]: { ...vals, connectedAt: new Date().toLocaleString('zh-CN') },
+      const saved = await ecPlatformConfigService.save({
+        platformCode: ecSelectedPlatform.code,
+        shopName: vals.shopName,
+        appKey: vals.appKey,
+        appSecret: vals.appSecret,
+        extraField: vals.extraField,
       });
+      setEcConnected(prev => ({ ...prev, [ecSelectedPlatform.code]: saved }));
       setEcConfigVisible(false);
-      message.success(`${ecSelectedPlatform.name} 对接配置已保存`);
-    } catch { /* validation failed */ }
-    finally { setEcSaving(false); }
+      message.success(`${ecSelectedPlatform.name} 凭证已保存，订单将自动同步`);
+    } catch (err: any) {
+      if (err?.errorFields) return; // 表单校验失败，正常
+      message.error(err?.message || '保存失败，请稍后重试');
+    } finally {
+      setEcSaving(false);
+    }
   };
 
   const handleEcDisconnect = (code: string, name: string) => {
@@ -215,14 +214,23 @@ const AppStore: React.FC = () => {
       title: `断开 ${name} 对接`,
       content: '断开后不会删除已同步的订单，但后续订单不再自动同步。确认断开？',
       okText: '确认断开', okType: 'danger', cancelText: '取消',
-      onOk: () => {
-        saveEcConnected({ ...ecConnected, [code]: null });
-        message.success(`已断开 ${name} 对接`);
+      onOk: async () => {
+        try {
+          await ecPlatformConfigService.disconnect(code);
+          setEcConnected(prev => {
+            const next = { ...prev };
+            delete next[code];
+            return next;
+          });
+          message.success(`已断开 ${name} 对接`);
+        } catch {
+          message.error('断开失败，请稍后重试');
+        }
       },
     });
   };
 
-  useEffect(() => { fetchAppList(); fetchMyApps(); }, []);
+  useEffect(() => { fetchAppList(); fetchMyApps(); fetchEcConfigs(); }, []);
 
   const fetchAppList = async () => {
     setLoading(true);
