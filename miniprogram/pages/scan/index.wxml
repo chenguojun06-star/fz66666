@@ -790,8 +790,8 @@
       <view wx:if="{{qualityModal.aiSuggestion}}" class="qm-ai-section">
         <view class="qm-ai-header">
           <text class="qm-ai-title">🤖 AI质检助手</text>
-          <view wx:if="{{qualityModal.aiSuggestion.historicalVerdict === 'critical'}}" class="qm-ai-badge qm-ai-badge-red">历史严重 {{qualityModal.aiSuggestion.historicalDefectRate !== undefined ? ('(' + (qualityModal.aiSuggestion.historicalDefectRate * 100).toFixed(0) + '%)') : ''}}</view>
-          <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'warn'}}" class="qm-ai-badge qm-ai-badge-orange">历史偏高 {{qualityModal.aiSuggestion.historicalDefectRate !== undefined ? ('(' + (qualityModal.aiSuggestion.historicalDefectRate * 100).toFixed(0) + '%)') : ''}}</view>
+          <view wx:if="{{qualityModal.aiSuggestion.historicalVerdict === 'critical'}}" class="qm-ai-badge qm-ai-badge-red">历史严重 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
+          <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'warn'}}" class="qm-ai-badge qm-ai-badge-orange">历史偏高 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
           <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'good'}}" class="qm-ai-badge qm-ai-badge-green">历史良好</view>
           <view wx:if="{{qualityModal.aiSuggestion.isUrgent}}" class="qm-ai-badge qm-ai-badge-orange">加急</view>
         </view>

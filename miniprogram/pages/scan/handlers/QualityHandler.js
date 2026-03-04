@@ -26,7 +26,13 @@ function showQualityModal(page, detail) {
     api.production.getQualityAiSuggestion(detail.orderId)
       .then(res => {
         if (res && res.code === 200 && res.data) {
-          page.setData({ 'qualityModal.aiSuggestion': res.data });
+          const suggestion = res.data;
+          // 预格式化百分比文字，WXML 不支持 .toFixed() 等方法调用
+          suggestion.historicalDefectRateText =
+            suggestion.historicalDefectRate !== undefined
+              ? '(' + Math.round(suggestion.historicalDefectRate * 100) + '%)'
+              : '';
+          page.setData({ 'qualityModal.aiSuggestion': suggestion });
         }
       })
       .catch(() => {});
