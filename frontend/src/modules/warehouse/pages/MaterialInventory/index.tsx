@@ -48,6 +48,8 @@ import QRCode from 'qrcode';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import type { MaterialInventory } from './types';
+import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 
 const { Option } = Select;
 
@@ -63,37 +65,6 @@ interface MaterialBatchDetail {
   outboundQty?: number;         // 出库数量
 }
 
-// 面辅料库存
-interface MaterialInventory {
-  id: string;
-  materialCode: string;
-  materialName: string;
-  materialImage?: string;
-  materialType: string;
-  specification: string;
-  color?: string;
-  supplierName: string;
-  quantity: number; // 统一用 quantity
-  availableQty: number; // 暂时映射 quantity
-  inTransitQty: number;
-  lockedQty: number;
-  safetyStock: number;
-  unit: string;
-  unitPrice: number;
-  totalValue: number;
-  warehouseLocation: string;
-  lastInboundDate: string;
-  lastOutboundDate: string;
-  lastInboundBy?: string;     // 最后入库操作人
-  lastOutboundBy?: string;    // 最后出库操作人
-  remark?: string;            // 备注
-  // 面料属性
-  fabricWidth?: string;       // 门幅（仅面料）
-  fabricWeight?: string;      // 克重（仅面料）
-  fabricComposition?: string; // 成分（仅面料）
-  size?: string;              // 尺码（兼容筛选/展示）
-  updateTime?: string;
-}
 
 const _MaterialInventory: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -826,281 +797,17 @@ const _MaterialInventory: React.FC = () => {
     }
   };
 
-  const columns: ColumnsType<MaterialInventory> = [
-    {
-      title: '图片',
-      key: 'image',
-      width: 72,
-      fixed: 'left',
-      align: 'center',
-      render: (_, record) => (
-        <div style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {record.materialImage ? (
-            <Image
-              src={getFullAuthedFileUrl(record.materialImage)}
-              alt="物料"
-              width={48}
-              height={48}
-              style={{ objectFit: 'cover' }}
-              preview={false}
-            />
-          ) : (
-            <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: '物料信息',
-      key: 'materialInfo',
-      width: 280,
-      fixed: 'left',
-      render: (_, record) => (
-        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>编号：</span>
-            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialCode || '-'}</span>
-          </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>名称：</span>
-            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialName || '-'}</span>
-          </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px', alignItems: 'center' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
-            <Tag
-              color={getMaterialTypeCategory(record.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(record.materialType) === 'lining' ? 'cyan' : 'green'}
-              style={{ fontSize: 'var(--font-size-xs)', margin: '0 0 0 8px' }}
-            >
-              {getMaterialTypeLabel(record.materialType)}
-            </Tag>
-          </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
-            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.color || '-'}</span>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '面料属性',
-      key: 'fabricProperties',
-      width: 200,
-      render: (_, record) => {
-        if (record.materialType !== '面料') {
-          return (
-            <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)' }}>
-              -
-            </div>
-          );
-        }
-
-        return (
-          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>幅宽：</span>
-              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWidth || '-'}</span>
-            </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>克重：</span>
-              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWeight || '-'}</span>
-            </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>成分：</span>
-              <span style={{ fontWeight: 600, marginLeft: '8px' }} title={record.fabricComposition || '-'}>
-                {record.fabricComposition || '-'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>单位：</span>
-              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.unit || '-'}</span>
-            </div>
-          </Space>
-        );
-      },
-    },
-    {
-      title: '库存状态',
-      key: 'stock',
-      width: 300,
-      render: (_, record) => {
-        const availableQty = record.availableQty ?? 0;
-        const inTransitQty = record.inTransitQty ?? 0;
-        const lockedQty = record.lockedQty ?? 0;
-        const safetyStock = record.safetyStock ?? 0;
-        const isLow = availableQty < safetyStock;
-        return (
-          <Space orientation="vertical" size={10} style={{ width: '100%' }}>
-            <div className="stock-grid">
-              <div>
-                <div className="stock-label">可用库存</div>
-                <div className={`stock-value ${isLow ? 'stock-value--warn' : 'stock-value--ok'}`}>
-                  {availableQty.toLocaleString()}
-                  {isLow && <WarningOutlined style={{ marginLeft: 4, fontSize: "var(--font-size-base)" }} />}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
-              <div>
-                <div className="stock-label">在途</div>
-                <div className="stock-value stock-value--info">
-                  {inTransitQty.toLocaleString()}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
-              <div>
-                <div className="stock-label">锁定</div>
-                <div className="stock-value stock-value--lock">
-                  {lockedQty.toLocaleString()}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
-            </div>
-            <div style={{
-              fontSize: "var(--font-size-sm)",
-              color: 'var(--neutral-text-secondary)',
-              paddingTop: 8,
-              borderTop: '1px solid #f0f0f0',
-              fontWeight: 500
-            }}>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>安全库存:</span> {safetyStock} {record.unit}
-              <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span> {record.warehouseLocation || '-'}
-            </div>
-            {isLow && (
-              <div style={{
-                marginTop: 6,
-                background: '#fff7e6',
-                border: '1px solid #ffd591',
-                borderRadius: 4,
-                padding: '4px 8px',
-                fontSize: "var(--font-size-sm)",
-                color: '#fa8c16',
-              }}>
-                💡 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
-              </div>
-            )}
-          </Space>
-        );
-      },
-    },
-    {
-      title: '金额信息',
-      key: 'price',
-      width: 180,
-      render: (_, record) => (
-        <Space orientation="vertical" size={10} style={{ width: '100%' }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>单价</div>
-            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>
-              {canViewPrice(user) ? `¥${(record.unitPrice ?? 0).toFixed(2)}` : '***'}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>/{record.unit}</div>
-          </div>
-          <div style={{
-            paddingTop: 8,
-            borderTop: '1px solid #f0f0f0'
-          }}>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
-            <div style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, color: 'var(--primary-color)' }}>
-              {canViewPrice(user) ? `¥${Number(record.totalValue ?? 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}` : '***'}
-            </div>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '供应商',
-      key: 'supplier',
-      width: 150,
-      render: (_, record) => (
-        <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
-          {record.supplierName || '-'}
-        </div>
-      ),
-    },
-    {
-      title: '出入库记录',
-      key: 'records',
-      width: 200,
-      render: (_, record) => (
-        <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ padding: '4px 8px', background: '#f0f9ff' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', marginBottom: 2 }}>📥 最后入库</div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
-            {record.lastInboundBy && (
-              <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
-            )}
-          </div>
-          <div style={{ padding: '4px 8px', background: 'rgba(250, 140, 22, 0.1)' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
-            {record.lastOutboundBy && (
-              <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastOutboundBy}</div>
-            )}
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '备注',
-      key: 'remark',
-      width: 200,
-      render: (_, record) => (
-        <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', lineHeight: 1.5 }}>
-          {record.remark || '-'}
-        </div>
-      ),
-    },
-    {
-      title: '操作',
-      width: 180,
-      fixed: 'right',
-      render: (_, record) => (
-        <RowActions
-          actions={[
-            {
-              key: 'instruction',
-              label: '采购指令',
-              onClick: () => openInstructionFromRecord(record)
-            },
-            {
-              key: 'inbound',
-              label: '入库',
-              primary: true,
-              onClick: () => handleInbound(record)
-            },
-            {
-              key: 'rollLabel',
-              label: '料卷标签',
-              onClick: () => {
-                rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
-                rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
-              }
-            },
-            {
-              key: 'outbound',
-              label: '出库',
-              onClick: () => handleOutbound(record)
-            },
-            {
-              key: 'print',
-              label: '打印出库单',
-              onClick: () => handlePrintOutbound(record)
-            },
-            {
-              key: 'detail',
-              label: '详情',
-              onClick: () => handleViewDetail(record)
-            },
-            {
-              key: 'safetyStock',
-              label: '安全库存',
-              onClick: () => handleEditSafetyStock(record)
-            }
-          ]}
-        />
-      ),
-    },
-  ];
+  const columns = useMaterialInventoryColumns({
+    user,
+    openInstructionFromRecord,
+    handleInbound,
+    rollForm,
+    rollModal,
+    handleOutbound,
+    handlePrintOutbound,
+    handleViewDetail,
+    handleEditSafetyStock,
+  });
 
   return (
     <Layout>
