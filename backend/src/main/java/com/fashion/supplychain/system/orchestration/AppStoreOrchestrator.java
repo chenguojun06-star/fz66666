@@ -16,8 +16,6 @@ import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import com.fashion.supplychain.system.service.UserService;
 import com.fashion.supplychain.system.entity.TenantSubscription;
-import com.fashion.supplychain.system.service.EcPlatformConfigService;
-import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.websocket.service.WebSocketService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -69,8 +67,6 @@ public class AppStoreOrchestrator {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private EcPlatformConfigService ecPlatformConfigService;
 
     /** Server酱 SendKey，优先从数据库读取（t_param_config），其次用环境变量 */
     @Value("${notify.serverchan.key:}")
@@ -341,32 +337,26 @@ public class AppStoreOrchestrator {
         }
 
         // 7. 自动创建 TenantApp（API对接凭证）
-        //    ⚠️ ECOMMERCE 类别（EC_TAOBAO / EC_TMALL / EC_JD 等）不使用我们的 AppKey/AppSecret 体系
-        //       其凭证由租户填写电商平台自己的 API Key，存 t_ec_platform_config，此处跳过
-        TenantAppResponse appCredentials = null;
-        boolean isEcommerce = "ECOMMERCE".equals(app.getCategory());
-        if (!isEcommerce) {
-            try {
-                TenantAppRequest appRequest = new TenantAppRequest();
-                appRequest.setAppName(app.getAppName() + "(试用)");
-                appRequest.setAppType(app.getAppCode());
-                appRequest.setDailyQuota(100);
-                appRequest.setRemark("试用自动创建 - 订阅号: " + subscription.getSubscriptionNo());
-                appRequest.setExpireTime(subscription.getEndTime().toString());
-                if (callbackUrl != null && !callbackUrl.isEmpty()) {
-                    appRequest.setCallbackUrl(callbackUrl);
-                }
-                if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
-                    appRequest.setExternalApiUrl(externalApiUrl);
-                }
-                appCredentials = tenantAppOrchestrator.createApp(tenantId, appRequest);
-                log.info("[试用] 自动创建API凭证: appKey={}", appCredentials.getAppKey());
-            } catch (Exception ex) {
-                // 凭证创建失败时回滚整个事务，不允许出现有订阅但无凭证的情况
-                throw new RuntimeException("开通试用失败：API凭证创建失败 - " + ex.getMessage(), ex);
+        //    所有应用类型（含 EC_TAOBAO / EC_TMALL 等电商平台）统一走此流程，获得 AppKey/AppSecret
+        TenantAppResponse appCredentials;
+        try {
+            TenantAppRequest appRequest = new TenantAppRequest();
+            appRequest.setAppName(app.getAppName() + "(试用)");
+            appRequest.setAppType(app.getAppCode());
+            appRequest.setDailyQuota(100);
+            appRequest.setRemark("试用自动创建 - 订阅号: " + subscription.getSubscriptionNo());
+            appRequest.setExpireTime(subscription.getEndTime().toString());
+            if (callbackUrl != null && !callbackUrl.isEmpty()) {
+                appRequest.setCallbackUrl(callbackUrl);
             }
-        } else {
-            log.info("[试用] EC平台跳过TenantApp创建，凭证由租户在「应用商店-电商平台」独立配置: {}", app.getAppCode());
+            if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
+                appRequest.setExternalApiUrl(externalApiUrl);
+            }
+            appCredentials = tenantAppOrchestrator.createApp(tenantId, appRequest);
+            log.info("[试用] 自动创建API凭证: appKey={}", appCredentials.getAppKey());
+        } catch (Exception ex) {
+            // 凭证创建失败时回滚整个事务，不允许出现有订阅但无凭证的情况
+            throw new RuntimeException("开通试用失败：API凭证创建失败 - " + ex.getMessage(), ex);
         }
 
         log.info("应用试用开通成功：{} - 租户 {} - 到期 {}",
@@ -381,18 +371,12 @@ public class AppStoreOrchestrator {
         responseData.put("apiEndpoints", apiEndpoints);
         responseData.put("appCode", app.getAppCode());
         responseData.put("appName", app.getAppName());
-        if (appCredentials != null) {
-            responseData.put("apiCredentials", Map.of(
-                    "appKey", appCredentials.getAppKey(),
-                    "appSecret", appCredentials.getAppSecret(),
-                    "appId", appCredentials.getId(),
-                    "message", "⚠️ 请保存以下API密钥，仅显示一次！"
-            ));
-        } else if (isEcommerce) {
-            responseData.put("apiCredentials", Map.of(
-                    "message", "EC平台已开通试用，请在「应用商店 → 我的应用」中配置电商平台凭证"
-            ));
-        }
+        responseData.put("apiCredentials", Map.of(
+                "appKey", appCredentials.getAppKey(),
+                "appSecret", appCredentials.getAppSecret(),
+                "appId", appCredentials.getId(),
+                "message", "⚠️ 请保存以下API密钥，仅显示一次！"
+        ));
         return responseData;
     }
 
@@ -483,24 +467,19 @@ public class AppStoreOrchestrator {
         tenantSubscriptionService.save(subscription);
 
         // 6. 自动创建 API 凭证 - 在同一事务中
-        //    ECOMMERCE 类别（淘宝/天猫/京东等）跳过，使用 t_ec_platform_config 独立管理凭证
-        boolean isEcommerceActivate = "ECOMMERCE".equals(app.getCategory());
-        TenantAppResponse appCredentials = null;
-        if (!isEcommerceActivate) {
-            try {
-                TenantAppRequest appRequest = new TenantAppRequest();
-                appRequest.setAppName(app.getAppName());
-                appRequest.setAppType(app.getAppCode());
-                appRequest.setDailyQuota(10000);
-                appRequest.setRemark("人工开通 - 订单: " + order.getOrderNo());
-                appRequest.setExpireTime(endTime.toString());
-                appCredentials = tenantAppOrchestrator.createApp(order.getTenantId(), appRequest);
-                log.info("[人工开通] 自动创建API凭证成功: appKey={}", appCredentials.getAppKey());
-            } catch (Exception ex) {
-                throw new RuntimeException("激活失败：API凭证创建失败 - " + ex.getMessage(), ex);
-            }
-        } else {
-            log.info("[人工开通] EC平台跳过TenantApp，凭证由租户独立配置: {}", app.getAppCode());
+        //    所有应用类型（含电商平台）统一走此流程，获得 AppKey/AppSecret，在 API对接管理页可见
+        TenantAppResponse appCredentials;
+        try {
+            TenantAppRequest appRequest = new TenantAppRequest();
+            appRequest.setAppName(app.getAppName());
+            appRequest.setAppType(app.getAppCode());
+            appRequest.setDailyQuota(10000);
+            appRequest.setRemark("人工开通 - 订单: " + order.getOrderNo());
+            appRequest.setExpireTime(endTime.toString());
+            appCredentials = tenantAppOrchestrator.createApp(order.getTenantId(), appRequest);
+            log.info("[人工开通] 自动创建API凭证成功: appKey={}", appCredentials.getAppKey());
+        } catch (Exception ex) {
+            throw new RuntimeException("激活失败：API凭证创建失败 - " + ex.getMessage(), ex);
         }
 
         log.info("[人工开通] 订单激活成功: {} - 租户{} - 应用{} - 到期{}",
@@ -514,16 +493,10 @@ public class AppStoreOrchestrator {
         responseData.put("orderNo", order.getOrderNo() != null ? order.getOrderNo() : "");
         responseData.put("activatedAt", startTime != null ? startTime.format(dtf) : "");
         responseData.put("expireAt", endTime != null ? endTime.format(dtf) : "");
-        if (appCredentials != null) {
-            responseData.put("apiCredentials", Map.of(
-                    "appKey", appCredentials.getAppKey(),
-                    "appSecret", appCredentials.getAppSecret()
-            ));
-        } else if (isEcommerceActivate) {
-            responseData.put("apiCredentials", Map.of(
-                    "message", "EC电商平台已激活，请通知租户在「应用商店」中配置平台凭证"
-            ));
-        }
+        responseData.put("apiCredentials", Map.of(
+                "appKey", appCredentials.getAppKey(),
+                "appSecret", appCredentials.getAppSecret()
+        ));
         return responseData;
     }
 
@@ -597,24 +570,6 @@ public class AppStoreOrchestrator {
                 appInfo.put("configured", hasCallbackUrl || hasExternalUrl);
                 appInfo.put("hasCallbackUrl", hasCallbackUrl);
                 appInfo.put("hasExternalUrl", hasExternalUrl);
-            } else if (sub.getAppCode() != null && sub.getAppCode().startsWith("EC_")) {
-                // EC平台应用：凭证存储于 t_ec_platform_config，检查是否已配置
-                try {
-                    EcPlatformConfig ecConfig = ecPlatformConfigService.getByTenantAndPlatform(tenantId, sub.getAppCode());
-                    boolean configured = ecConfig != null;
-                    appInfo.put("configured", configured);
-                    appInfo.put("ecConfigured", configured);   // 前端专用标记，区分普通app
-                    if (ecConfig != null) {
-                        appInfo.put("platformCode", ecConfig.getPlatformCode());
-                        appInfo.put("shopName", ecConfig.getShopName());
-                    }
-                } catch (Exception e) {
-                    log.warn("查询EC配置状态失败: appCode={}, err={}", sub.getAppCode(), e.getMessage());
-                    appInfo.put("configured", false);
-                    appInfo.put("ecConfigured", false);
-                }
-                appInfo.put("hasCallbackUrl", false);
-                appInfo.put("hasExternalUrl", false);
             } else {
                 appInfo.put("configured", false);
                 appInfo.put("hasCallbackUrl", false);

@@ -29,14 +29,23 @@ import java.util.stream.Collectors;
 @Service
 public class TenantAppOrchestrator {
 
-    private static final Map<String, String> APP_TYPE_NAMES = Map.of(
-        "ORDER_SYNC", "下单对接",
-        "QUALITY_FEEDBACK", "质检反馈",
-        "LOGISTICS_SYNC", "物流对接",
-        "PAYMENT_SYNC", "付款对接",
-        "MATERIAL_SUPPLY", "面辅料供应对接",
-        "DATA_IMPORT", "数据导入（开通即用）"
-    );
+    private static final Map<String, String> APP_TYPE_NAMES = new java.util.HashMap<String, String>() {{
+        put("ORDER_SYNC", "下单对接");
+        put("QUALITY_FEEDBACK", "质检反馈");
+        put("LOGISTICS_SYNC", "物流对接");
+        put("PAYMENT_SYNC", "付款对接");
+        put("MATERIAL_SUPPLY", "面辅料供应对接");
+        put("DATA_IMPORT", "数据导入（开通即用）");
+        // 电商平台对接（与普通API应用完全相同的逻辑）
+        put("EC_TAOBAO", "淘宝对接");
+        put("EC_TMALL", "天猫对接");
+        put("EC_JD", "京东对接");
+        put("EC_DOUYIN", "抖音对接");
+        put("EC_PINDUODUO", "拼多多对接");
+        put("EC_XIAOHONGSHU", "小红书对接");
+        put("EC_WECHAT_SHOP", "微信小店对接");
+        put("EC_SHOPIFY", "Shopify对接");
+    }};
 
     private static final Map<String, String> STATUS_NAMES = Map.of(
         "active", "启用",
@@ -533,6 +542,15 @@ public class TenantAppOrchestrator {
             case "LOGISTICS_SYNC": prefix = "lgs"; break;
             case "PAYMENT_SYNC": prefix = "pay"; break;
             case "MATERIAL_SUPPLY": prefix = "mat"; break;
+            case "DATA_IMPORT": prefix = "di"; break;
+            case "EC_TAOBAO": prefix = "tb"; break;
+            case "EC_TMALL": prefix = "tm"; break;
+            case "EC_JD": prefix = "jd"; break;
+            case "EC_DOUYIN": prefix = "dy"; break;
+            case "EC_PINDUODUO": prefix = "pdd"; break;
+            case "EC_XIAOHONGSHU": prefix = "xhs"; break;
+            case "EC_WECHAT_SHOP": prefix = "wcs"; break;
+            case "EC_SHOPIFY": prefix = "sfy"; break;
             default: prefix = "app"; break;
         }
         return prefix + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
