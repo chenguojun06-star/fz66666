@@ -79,4 +79,23 @@ public class EcommerceOrderController {
             return Result.fail("关联失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 现货直接出库（无需生产订单，已有库存直接发货）
+     * body: { trackingNo, expressCompany }
+     */
+    @PostMapping("/orders/{id}/direct-outbound")
+    public Result<Void> directOutbound(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            String trackingNo = (String) body.get("trackingNo");
+            String expressCompany = (String) body.get("expressCompany");
+            orchestrator.directOutbound(id, trackingNo, expressCompany);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[EC直接出库失败] id={} err={}", id, e.getMessage());
+            return Result.fail("出库失败: " + e.getMessage());
+        }
+    }
 }

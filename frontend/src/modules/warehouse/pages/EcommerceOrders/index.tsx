@@ -75,6 +75,9 @@ const OrdersTab: React.FC = () => {
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
   const [linkForm] = Form.useForm();
   const [linking, setLinking] = useState(false);
+  const [outboundTarget, setOutboundTarget] = useState<EcOrder | null>(null);
+  const [outboundForm] = Form.useForm();
+  const [outbounding, setOutbounding] = useState(false);
   const [styleImageMap, setStyleImageMap] = useState<Record<string, string>>({});
 
   const fetchStyleImages = useCallback(async (orders: EcOrder[]) => {
@@ -132,6 +135,22 @@ const OrdersTab: React.FC = () => {
       fetchData();
     } catch { message.error('关联失败'); }
     finally { setLinking(false); }
+  };
+
+  const handleDirectOutbound = async () => {
+    if (!outboundTarget) return;
+    try {
+      const v = await outboundForm.validateFields();
+      setOutbounding(true);
+      await api.post(`/api/ecommerce/orders/${outboundTarget.id}/direct-outbound`, {
+        trackingNo: v.trackingNo,
+        expressCompany: v.expressCompany,
+      });
+      message.success('现货出库成功，收入流水已自动记录');
+      setOutboundTarget(null);
+      fetchData();
+    } catch { message.error('出库失败'); }
+    finally { setOutbounding(false); }
   };
 
   const pendingShip  = data.filter(d => d.status === 1).length;
@@ -232,7 +251,7 @@ const OrdersTab: React.FC = () => {
       render: v => <span style={{ fontSize: 11 }}>{v?.slice(0, 16)}</span>,
     },
     {
-      title: '操作', width: 100, fixed: 'right',
+      title: '操作', width: 130, fixed: 'right',
       render: (_: unknown, r: EcOrder) => (
         <Space size={4}>
           <Tooltip title="查看详情">
@@ -243,6 +262,12 @@ const OrdersTab: React.FC = () => {
               disabled={!!r.productionOrderNo}
               onClick={() => { setLinkTarget(r); linkForm.resetFields(); }} />
           </Tooltip>
+          {(r.warehouseStatus ?? 0) < 2 && (
+            <Tooltip title="现货直接出库">
+              <Button size="small" type="text" icon={<CarOutlined />}
+                onClick={() => { setOutboundTarget(r); outboundForm.resetFields(); }} />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -383,6 +408,34 @@ const OrdersTab: React.FC = () => {
           <Form.Item name="productionOrderNo" label="生产订单号"
             rules={[{ required: true, message: '请输入生产订单号' }]}>
             <Input placeholder="如 PO20260301001，可在生产进度页查看" prefix={<SearchOutlined />} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title={<><CarOutlined /> 现货直接出库</>}
+        open={!!outboundTarget} onCancel={() => setOutboundTarget(null)}
+        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width={440}>
+        {outboundTarget && (
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
+            <div>平台订单: <b>{outboundTarget.platformOrderNo || outboundTarget.orderNo}</b></div>
+            <div>商品: {outboundTarget.productName} × {outboundTarget.quantity}</div>
+            <div>收件人: {outboundTarget.receiverName} &nbsp;{outboundTarget.receiverPhone}</div>
+          </div>
+        )}
+        <Alert style={{ marginBottom: 12, fontSize: 12 }} type="success" showIcon
+          message="现货直接出库——出库后订单状态自动更新为【已出库】，并自动生成销售收入流水" />
+        <Form form={outboundForm} layout="vertical" size="small">
+          <Form.Item name="expressCompany" label="快递公司"
+            rules={[{ required: true, message: '请输入快递公司' }]}>
+            <Select placeholder="请选择快递公司" showSearch allowClear>
+              {['顺丰','中通','圆通','韵达','路定','极写','百世汇','丬京快递','吉日物流','丬丰物流','其他'].map(c => (
+                <Select.Option key={c} value={c}>{c}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item name="trackingNo" label="快递单号"
+            rules={[{ required: true, message: '请输入快递单号' }]}>
+            <Input placeholder="输入快递单号" />
           </Form.Item>
         </Form>
       </Modal>

@@ -152,7 +152,34 @@ public class EcommerceOrderOrchestrator {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 4. 仓库出库后回写物流信息（由 FinishedInventoryOrchestrator 调用）
+    // 4. 现货直接出库（无需生产订单，由前端操作触发）
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Transactional(rollbackFor = Exception.class)
+    public void directOutbound(Long ecOrderId, String trackingNo, String expressCompany) {
+        EcommerceOrder order = ecOrderService.getById(ecOrderId);
+        if (order == null) throw new IllegalArgumentException("电商订单不存在: " + ecOrderId);
+        if (order.getWarehouseStatus() != null && order.getWarehouseStatus() >= 2) {
+            throw new IllegalStateException("订单已出库，无需重复操作");
+        }
+        order.setStatus(2); // 已发货
+        order.setWarehouseStatus(2); // 已出库
+        order.setTrackingNo(trackingNo);
+        order.setExpressCompany(expressCompany);
+        order.setShipTime(LocalDateTime.now());
+        ecOrderService.updateById(order);
+        log.info("[EC现货出库] EC单号={} 快递公司={} 快递单号={}", order.getOrderNo(), expressCompany, trackingNo);
+        // 自动生成销售收入流水（失败不阻断出库）
+        try {
+            ecSalesRevenueOrchestrator.recordOnOutbound(order);
+        } catch (Exception e) {
+            log.warn("[EC现货出库] 收入流水记录失败，不阻断出库: {}", e.getMessage());
+        }
+        // TODO: 调用各平台 API 将物流信息回传给买家
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. 仓库出库后回写物流信息（由 FinishedInventoryOrchestrator 调用）
     // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(rollbackFor = Exception.class)
@@ -170,12 +197,11 @@ public class EcommerceOrderOrchestrator {
         order.setShipTime(LocalDateTime.now());
         ecOrderService.updateById(order);
         log.info("[EC出库回写] 生产单={} 快递单号={} EC订单={}", productionOrderNo, trackingNo, order.getOrderNo());
-        // 自动生成销售收入流水（失败不阻断出库主流程）
+        // 自动生成销售收入流水（失败不阻断出库）
         try {
             ecSalesRevenueOrchestrator.recordOnOutbound(order);
         } catch (Exception e) {
-            log.warn("[EC收入] 生成销售收入流水失败，不影响出库，ecOrderId={} err={}",
-                    order.getId(), e.getMessage());
+            log.warn("[EC出库回写] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
         // TODO: 调用各平台 API 将物流信息回传给买家（需申请各平台开发者资质后扩展）
     }
