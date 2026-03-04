@@ -943,8 +943,8 @@ const IntelligenceCenter: React.FC = () => {
                         <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
                         <span className="c-bottleneck-cnt">{f.count}单</span>
                       </div>
-                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4 }}>
-                        💡 AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}
+                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <LiveDot size={5} color="#f7c948" /><span style={{ color: '#6a9ab4' }}>AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}</span>
                       </div>
                     </div>
                   );
