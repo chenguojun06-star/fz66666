@@ -109,7 +109,7 @@ const OrdersTab: React.FC = () => {
       if (filterPlatform) params.platform = filterPlatform;
       if (filterStatus !== undefined) params.status = filterStatus;
       if (keyword) params.keyword = keyword;
-      const res = await api.post('/api/ecommerce/orders/list', params);
+      const res = await api.post('/ecommerce/orders/list', params);
       const d = (res as any)?.data ?? {};
       const records: EcOrder[] = d.records ?? [];
       setData(records);
@@ -127,7 +127,7 @@ const OrdersTab: React.FC = () => {
     try {
       const v = await linkForm.validateFields();
       setLinking(true);
-      await api.post(`/api/ecommerce/orders/${linkTarget.id}/link`, {
+      await api.post(`/ecommerce/orders/${linkTarget.id}/link`, {
         productionOrderNo: v.productionOrderNo,
       });
       message.success('关联成功，出库时自动回写物流状态');
@@ -142,7 +142,7 @@ const OrdersTab: React.FC = () => {
     try {
       const v = await outboundForm.validateFields();
       setOutbounding(true);
-      await api.post(`/api/ecommerce/orders/${outboundTarget.id}/direct-outbound`, {
+      await api.post(`/ecommerce/orders/${outboundTarget.id}/direct-outbound`, {
         trackingNo: v.trackingNo,
         expressCompany: v.expressCompany,
       });
