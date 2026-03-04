@@ -47,6 +47,31 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
   PAYMENT_SYNC: { icon: '💰', color: 'var(--color-warning)', urlHint: '如: https://your-finance.com/api/payment' },
 };
 
+// 电商平台配置（前端静态数据，无需后端表支持）
+interface EcPlatform {
+  code: string; name: string; emoji: string; color: string;
+  desc: string; badge?: string;
+  fields: { name: string; label: string; placeholder: string }[];
+}
+const ECOMMERCE_PLATFORMS: EcPlatform[] = [
+  { code: 'TAOBAO',      name: '淘宝',    emoji: '🟠', color: '#FF6600', desc: '淘宝店铺订单自动同步，下发生产任务',   badge: '主流',
+    fields: [{ name: 'appKey', label: 'App Key', placeholder: '请输入淘宝开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '如：XX旗舰店（仅备注用）' }] },
+  { code: 'TMALL',       name: '天猫',    emoji: '🐱', color: '#D40016', desc: '天猫旗舰店/专卖店订单管理，智能排产',  badge: '主流',
+    fields: [{ name: 'appKey', label: 'App Key', placeholder: '天猫开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '天猫店铺备注名' }] },
+  { code: 'JD',          name: '京东',    emoji: '🔴', color: '#CC0000', desc: '京东POP/自营店铺订单同步到生产系统',
+    fields: [{ name: 'appKey', label: 'App Key', placeholder: '京东开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '京东店铺备注名' }] },
+  { code: 'DOUYIN',      name: '抖音小店', emoji: '🎵', color: '#161823', desc: '抖音直播带货 & 短视频订单，快速响应',   badge: '热门',
+    fields: [{ name: 'appKey', label: 'App ID',  placeholder: '抖音开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '抖音小店备注名' }] },
+  { code: 'PINDUODUO',   name: '拼多多',  emoji: '🛒', color: '#CC2B2B', desc: '拼多多商家版，批量订单管理',
+    fields: [{ name: 'appKey', label: 'Client ID',     placeholder: '拼多多开放平台 Client ID' }, { name: 'appSecret', label: 'Client Secret', placeholder: '请输入 Client Secret' }, { name: 'shopName', label: '店铺名称', placeholder: '拼多多店铺备注名' }] },
+  { code: 'XIAOHONGSHU', name: '小红书',  emoji: '📕', color: '#FF2442', desc: '小红书买手 / 直播间选品订单管理',       badge: '新品',
+    fields: [{ name: 'appKey', label: 'App Key', placeholder: '小红书开放平台 AppKey' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '小红书店铺备注名' }] },
+  { code: 'WECHAT_SHOP', name: '视频号店铺', emoji: '💚', color: '#07C160', desc: '微信视频号小商店 & 小程序商城订单',
+    fields: [{ name: 'appKey', label: 'App ID',   placeholder: '微信开放平台 AppID' }, { name: 'appSecret', label: 'App Secret', placeholder: '请输入 AppSecret' }, { name: 'shopName', label: '店铺名称', placeholder: '视频号店铺备注名' }] },
+  { code: 'SHOPIFY',     name: 'Shopify', emoji: '🟢', color: '#5C6AC4', desc: '跨境独立站 & 海外电商订单，工厂直达',  badge: '跨境',
+    fields: [{ name: 'appKey', label: '店铺域名',      placeholder: '如：your-store.myshopify.com' }, { name: 'appSecret', label: 'Access Token', placeholder: 'Shopify Private App Access Token' }, { name: 'shopName', label: '备注名称', placeholder: '站点备注，如：北美独立站' }] },
+];
+
 // 安全解析 features 字段（后端可能返回字符串、JSON字符串或数组）
 const parseFeatures = (features: any): string[] => {
   if (Array.isArray(features)) return features;
@@ -89,6 +114,70 @@ const AppStore: React.FC = () => {
   // 我的已开通应用
   const [myApps, setMyApps] = useState<MyAppInfo[]>([]);
   const [myAppsLoading, setMyAppsLoading] = useState(false);
+
+  // 电商平台对接状态（localStorage 持久化，按租户隔离）
+  type EcConfig = { appKey: string; appSecret: string; shopName: string; connectedAt: string };
+  const [ecConnected, setEcConnected] = useState<Record<string, EcConfig | null>>({});
+  const [ecConfigVisible, setEcConfigVisible] = useState(false);
+  const [ecSelectedPlatform, setEcSelectedPlatform] = useState<EcPlatform | null>(null);
+  const [ecForm] = Form.useForm();
+  const [ecSaving, setEcSaving] = useState(false);
+  const [ecShowAll, setEcShowAll] = useState(false);
+
+  const ecStorageKey = `ec_platforms_${user?.id ?? 'default'}`;
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ecStorageKey);
+      if (saved) setEcConnected(JSON.parse(saved));
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ecStorageKey]);
+
+  const saveEcConnected = (next: Record<string, EcConfig | null>) => {
+    setEcConnected(next);
+    try { localStorage.setItem(ecStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  const handleEcConnect = (platform: EcPlatform) => {
+    setEcSelectedPlatform(platform);
+    const existing = ecConnected[platform.code];
+    if (existing) {
+      ecForm.setFieldsValue({ appKey: existing.appKey, appSecret: existing.appSecret, shopName: existing.shopName });
+    } else {
+      ecForm.resetFields();
+    }
+    setEcConfigVisible(true);
+  };
+
+  const handleEcSave = async () => {
+    if (!ecSelectedPlatform) return;
+    try {
+      const vals = await ecForm.validateFields();
+      setEcSaving(true);
+      // 模拟保存延迟，后续可替换为真实 API 调用
+      await new Promise(r => setTimeout(r, 600));
+      saveEcConnected({
+        ...ecConnected,
+        [ecSelectedPlatform.code]: { ...vals, connectedAt: new Date().toLocaleString('zh-CN') },
+      });
+      setEcConfigVisible(false);
+      message.success(`${ecSelectedPlatform.name} 对接配置已保存`);
+    } catch { /* validation failed */ }
+    finally { setEcSaving(false); }
+  };
+
+  const handleEcDisconnect = (code: string, name: string) => {
+    Modal.confirm({
+      title: `断开 ${name} 对接`,
+      content: '断开后不会删除已同步的订单，但后续订单不再自动同步。确认断开？',
+      okText: '确认断开', okType: 'danger', cancelText: '取消',
+      onOk: () => {
+        saveEcConnected({ ...ecConnected, [code]: null });
+        message.success(`已断开 ${name} 对接`);
+      },
+    });
+  };
 
   useEffect(() => { fetchAppList(); fetchMyApps(); }, []);
 
@@ -330,6 +419,53 @@ const AppStore: React.FC = () => {
       <Spin spinning={loading}>
         <Row gutter={[24, 24]}>{(Array.isArray(appList) ? appList : []).map(renderAppCard)}</Row>
       </Spin>
+
+      {/* 电商平台对接 */}
+      <div style={{ marginTop: 32, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>
+          <ApiOutlined style={{ marginRight: 6 }} />电商平台对接
+          <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>连接您的销售平台，订单自动同步到生产系统</span>
+        </div>
+        <Button size="small" type="link" onClick={() => setEcShowAll(v => !v)}>
+          {ecShowAll ? '收起' : `展开全部 ${ECOMMERCE_PLATFORMS.length} 个平台 ↓`}
+        </Button>
+      </div>
+      <Row gutter={[24, 24]}>
+        {(ecShowAll ? ECOMMERCE_PLATFORMS : ECOMMERCE_PLATFORMS.slice(0, 4)).map(p => {
+          const connected = !!(ecConnected[p.code]);
+          return (
+            <Col xs={24} sm={12} md={8} lg={6} xl={6} key={p.code}>
+              <Badge.Ribbon
+                text={connected ? '已连接' : (p.badge ?? '')}
+                color={connected ? 'green' : 'blue'}
+                style={{ display: connected || p.badge ? 'block' : 'none' }}
+              >
+                <Card hoverable className="app-store-card" onClick={() => handleEcConnect(p)}
+                  cover={<div className="app-icon-container"><span className="app-icon">{p.emoji}</span></div>}
+                >
+                  <Card.Meta
+                    title={<div className="app-title">{p.name}</div>}
+                    description={
+                      <div className="app-desc">
+                        <div className="desc-text">{p.desc}</div>
+                        {connected ? (
+                          <div style={{ marginTop: 6 }}>
+                            <Tag color="green" style={{ fontSize: 11 }}>✓ 已连接</Tag>
+                            {ecConnected[p.code]?.shopName && <Tag style={{ fontSize: 11 }}>{ecConnected[p.code]!.shopName}</Tag>}
+                          </div>
+                        ) : (
+                          <div className="trial-badge">点击配置连接</div>
+                        )}
+                        <Tag color="blue">电商对接</Tag>
+                      </div>
+                    }
+                  />
+                </Card>
+              </Badge.Ribbon>
+            </Col>
+          );
+        })}
+      </Row>
 
       {/* 应用详情弹窗 */}
       <Modal
@@ -600,6 +736,61 @@ const AppStore: React.FC = () => {
             </Form.Item>
           </Form>
         </div>
+      </Modal>
+      {/* 电商平台配置弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20 }}>{ecSelectedPlatform?.emoji}</span>
+            <span>{ecSelectedPlatform?.name} 对接配置</span>
+            {ecSelectedPlatform && ecConnected[ecSelectedPlatform.code] && <Tag color="green">已连接</Tag>}
+          </div>
+        }
+        open={ecConfigVisible}
+        onCancel={() => setEcConfigVisible(false)}
+        width={460}
+        okText={ecSaving ? '保存中…' : '保存配置'}
+        cancelText="取消"
+        onOk={handleEcSave}
+        confirmLoading={ecSaving}
+        footer={[
+          ecSelectedPlatform && ecConnected[ecSelectedPlatform.code] ? (
+            <Button key="disconnect" danger size="small"
+              onClick={() => { setEcConfigVisible(false); handleEcDisconnect(ecSelectedPlatform!.code, ecSelectedPlatform!.name); }}>
+              断开连接
+            </Button>
+          ) : null,
+          <Button key="cancel" onClick={() => setEcConfigVisible(false)}>取消</Button>,
+          <Button key="save" type="primary" loading={ecSaving} onClick={handleEcSave}>保存配置</Button>,
+        ]}
+      >
+        {ecSelectedPlatform && (
+          <div style={{ padding: '8px 0' }}>
+            <Alert
+              type="info" showIcon style={{ marginBottom: 16, fontSize: 12 }}
+              message="填写您在该平台申请的开放平台凭证，保存后即可自动同步订单到生产系统"
+            />
+            <Form form={ecForm} layout="vertical" size="small">
+              {ecSelectedPlatform.fields.map(f => (
+                <Form.Item key={f.name} name={f.name} label={f.label}
+                  rules={[{ required: true, message: `请输入 ${f.label}` }]}>
+                  <Input placeholder={f.placeholder} />
+                </Form.Item>
+              ))}
+            </Form>
+            <div style={{ background: '#f6f8fa', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>💡 如何获取凭证？</div>
+              {ecSelectedPlatform.code === 'TAOBAO' && <div>登录 <a href="https://open.taobao.com" target="_blank" rel="noreferrer">淘宝开放平台</a> → 控制台 → 我的应用 → 创建应用后获取 AppKey / AppSecret</div>}
+              {ecSelectedPlatform.code === 'TMALL' && <div>登录 <a href="https://open.taobao.com" target="_blank" rel="noreferrer">天猫开放平台</a>（与淘宝同一平台）→ 我的应用 → 获取凭证</div>}
+              {ecSelectedPlatform.code === 'JD' && <div>登录 <a href="https://seller.jd.com" target="_blank" rel="noreferrer">京东商家中心</a> → 开放平台 → 我的应用 → 创建应用获取凭证</div>}
+              {ecSelectedPlatform.code === 'DOUYIN' && <div>登录 <a href="https://op.jinritemai.com" target="_blank" rel="noreferrer">抖店开放平台</a> → 开发者中心 → 创建应用获取 AppID</div>}
+              {ecSelectedPlatform.code === 'PINDUODUO' && <div>登录 <a href="https://open.pinduoduo.com" target="_blank" rel="noreferrer">拼多多开放平台</a> → 我的应用 → 获取 Client ID / Secret</div>}
+              {ecSelectedPlatform.code === 'XIAOHONGSHU' && <div>登录 <a href="https://ark.xiaohongshu.com" target="_blank" rel="noreferrer">小红书开放平台</a> → 应用管理 → 获取凭证</div>}
+              {ecSelectedPlatform.code === 'WECHAT_SHOP' && <div>登录 <a href="https://channels.weixin.qq.com" target="_blank" rel="noreferrer">微信视频号官方平台</a> → 开发者设置 → 获取 AppID / AppSecret</div>}
+              {ecSelectedPlatform.code === 'SHOPIFY' && <div>在 Shopify 后台 → 应用 → 开发API → 创建自定义应用 → 生成 Access Token</div>}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
     </Layout>
