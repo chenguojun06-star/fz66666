@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Input, Button, Tag } from 'antd';
+import { Input, Tag } from 'antd';
 import { UserOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 
@@ -85,15 +85,14 @@ const WorkerProfilePanel: React.FC = () => {
             color: '#e2f0ff',
           }}
         />
-        <Button
-          type="primary"
-          loading={loading}
+        <button
+          disabled={loading}
           onClick={handleSearch}
-          icon={<SearchOutlined />}
-          style={{ background: 'rgba(0,229,255,0.15)', borderColor: 'rgba(0,229,255,0.4)', color: '#00e5ff' }}
+          className="c-panel-btn c-panel-btn--cyan"
         >
-          查询
-        </Button>
+          <SearchOutlined />
+          {loading ? '查询中…' : '查询'}
+        </button>
       </div>
 
       {/* 摘要信息 */}

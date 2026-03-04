@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Input, Button, Tag } from 'antd';
+import { Input, Tag } from 'antd';
 import { DollarOutlined, SearchOutlined, CalendarOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { ProfitEstimationResponse, DeliveryPredictionResponse } from '@/services/production/productionApi';
@@ -80,15 +80,14 @@ const ProfitDeliveryPanel: React.FC = () => {
             color: '#e2f0ff',
           }}
         />
-        <Button
-          type="primary"
-          loading={loading}
+        <button
+          disabled={loading}
           onClick={handleSearch}
-          style={{ background: 'rgba(255,215,0,0.15)', borderColor: 'rgba(255,215,0,0.4)', color: '#ffd700' }}
-          icon={<DollarOutlined />}
+          className="c-panel-btn c-panel-btn--gold"
         >
-          分析
-        </Button>
+          <DollarOutlined />
+          {loading ? '分析中…' : '分析'}
+        </button>
       </div>
 
       {error && <div className="c-empty" style={{ color: '#f7a600' }}>{error}</div>}

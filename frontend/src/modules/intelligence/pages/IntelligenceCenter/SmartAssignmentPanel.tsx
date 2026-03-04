@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Input, Button, Tag } from 'antd';
+import { Input, Tag } from 'antd';
 import { TeamOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { WorkerRecommendation } from '@/services/production/productionApi';
@@ -82,14 +82,13 @@ const SmartAssignmentPanel: React.FC = () => {
             color: '#e2f0ff',
           }}
         />
-        <Button
-          type="primary"
-          loading={loading}
+        <button
+          disabled={loading}
           onClick={handleSearch}
-          style={{ background: 'rgba(167,139,250,0.2)', borderColor: 'rgba(167,139,250,0.5)', color: '#a78bfa' }}
+          className="c-panel-btn c-panel-btn--purple"
         >
-          推荐
-        </Button>
+          {loading ? '分析中…' : 'AI 推荐'}
+        </button>
       </div>
 
       {/* 快捷工序 */}

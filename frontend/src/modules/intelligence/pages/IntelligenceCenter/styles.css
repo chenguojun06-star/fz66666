@@ -612,6 +612,35 @@
   box-shadow: 0 0 8px rgba(0,229,255,0.2);
 }
 
+/* ── 驾驶舱面板操作按钮（替代 Ant Design Button，hover 态不反弹 AntD 样式） ── */
+.c-panel-btn {
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  height: 32px;
+}
+.c-panel-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.c-panel-btn--cyan  { background: rgba(0,229,255,0.08);   border: 1px solid rgba(0,229,255,0.35);   color: #00e5ff; }
+.c-panel-btn--cyan:hover:not(:disabled) { background: rgba(0,229,255,0.18);  border-color: #00e5ff;   box-shadow: 0 0 10px rgba(0,229,255,0.3); }
+
+.c-panel-btn--purple{ background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.35); color: #a78bfa; }
+.c-panel-btn--purple:hover:not(:disabled){ background: rgba(167,139,250,0.18); border-color: #a78bfa; box-shadow: 0 0 10px rgba(167,139,250,0.3); }
+
+.c-panel-btn--orange{ background: rgba(247,166,0,0.08);   border: 1px solid rgba(247,166,0,0.35);   color: #f7a600; }
+.c-panel-btn--orange:hover:not(:disabled){ background: rgba(247,166,0,0.18); border-color: #f7a600; box-shadow: 0 0 10px rgba(247,166,0,0.3); }
+
+.c-panel-btn--gold  { background: rgba(255,215,0,0.08);   border: 1px solid rgba(255,215,0,0.35);   color: #ffd700; }
+.c-panel-btn--gold:hover:not(:disabled)  { background: rgba(255,215,0,0.18);  border-color: #ffd700;  box-shadow: 0 0 10px rgba(255,215,0,0.3); }
+
 /* ────────────────────────────────────────────────
    通用空状态 & 旧兼容类
 ─────────────────────────────────────────────────── */

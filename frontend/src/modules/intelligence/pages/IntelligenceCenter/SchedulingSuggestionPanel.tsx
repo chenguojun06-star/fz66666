@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Input, Button, Tag } from 'antd';
+import { Input, Tag } from 'antd';
 import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { SchedulingSuggestionResponse, SchedulePlan, GanttItem } from '@/services/production/productionApi';
@@ -93,15 +93,14 @@ const SchedulingSuggestionPanel: React.FC = () => {
             border: '1px solid rgba(247,166,0,0.2)', color: '#e2f0ff',
           }}
         />
-        <Button
-          type="primary"
-          loading={loading}
+        <button
+          disabled={loading}
           onClick={handleSearch}
-          style={{ background: 'rgba(247,166,0,0.2)', borderColor: 'rgba(247,166,0,0.5)', color: '#f7a600' }}
-          icon={<CalendarOutlined />}
+          className="c-panel-btn c-panel-btn--orange"
         >
-          生成排程
-        </Button>
+          <CalendarOutlined />
+          {loading ? '生成中…' : '生成排程'}
+        </button>
       </div>
 
       {error && <div className="c-empty" style={{ color: '#f7a600' }}>{error}</div>}
