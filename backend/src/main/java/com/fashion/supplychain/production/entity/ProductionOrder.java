@@ -505,6 +505,20 @@ public class ProductionOrder {
     private List<Object> progressNodeUnitPrices;
 
     /**
+     * 关联电商单号（虚拟字段，来自 t_ecommerce_order.order_no，出库后回写 or 批量关联）
+     * 仅在列表查询时由 Orchestrator 批量填充
+     */
+    @TableField(exist = false)
+    private String ecOrderNo;
+
+    /**
+     * 关联电商平台（虚拟字段，与 ecOrderNo 同批次填充）
+     * 如 TB/JD/PDD/DY
+     */
+    @TableField(exist = false)
+    private String ecPlatform;
+
+    /**
      * 乐观锁版本号（并发状态更新防覆盖）
      */
     @Version

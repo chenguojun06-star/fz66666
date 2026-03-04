@@ -132,8 +132,48 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private com.fashion.supplychain.finance.service.PayrollSettlementItemService payrollSettlementItemService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService ecOrderService;
+
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
-        return productionOrderQueryService.queryPage(params);
+        IPage<ProductionOrder> page = productionOrderQueryService.queryPage(params);
+        // 批量关联 EC 单号（出库打通后回填，失败不影响主流程）
+        if (page != null && !page.getRecords().isEmpty() && ecOrderService != null) {
+            try {
+                List<String> orderNos = page.getRecords().stream()
+                        .map(ProductionOrder::getOrderNo)
+                        .filter(StringUtils::hasText)
+                        .distinct()
+                        .collect(java.util.stream.Collectors.toList());
+                if (!orderNos.isEmpty()) {
+                    List<com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecOrders =
+                            ecOrderService.list(
+                                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                                            com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder>()
+                                            .in(com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo, orderNos)
+                            );
+                    if (!ecOrders.isEmpty()) {
+                        Map<String, com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecMap =
+                                ecOrders.stream().collect(java.util.stream.Collectors.toMap(
+                                        com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo,
+                                        o -> o,
+                                        (a, b) -> a  // 同生产单对应多EC单时取首条
+                                ));
+                        page.getRecords().forEach(o -> {
+                            com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder ec =
+                                    ecMap.get(o.getOrderNo());
+                            if (ec != null) {
+                                o.setEcOrderNo(ec.getOrderNo());
+                                o.setEcPlatform(ec.getPlatform());
+                            }
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[EC关联] 批量关联EC单号失败，不影响主流程: {}", e.getMessage());
+            }
+        }
+        return page;
     }
 
     /**

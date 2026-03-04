@@ -9,35 +9,68 @@
 -- ============================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 块 1：V33 — 电商订单表补充字段（tenant_id / production_order_no 等）
---        对应文件：V33__add_ecommerce_order_fields.sql
+-- 块 1+2：V33+V34 — 电商订单表补充字段
+--   ⚠️ 云端 MySQL 不支持 ADD COLUMN IF NOT EXISTS 语法
+--   ✅ 2026-03-04 已用 CREATE TABLE IF NOT EXISTS 一次性建表（含全部字段），此块可跳过
+--   若表是旧版（缺少以下列）才需要执行，报 1060 Duplicate column 则忽略
 -- ─────────────────────────────────────────────────────────────────────────────
-ALTER TABLE t_ecommerce_order
-    ADD COLUMN IF NOT EXISTS tenant_id          BIGINT       COMMENT '租户ID',
-    ADD COLUMN IF NOT EXISTS production_order_id VARCHAR(64)  COMMENT '关联生产订单ID',
-    ADD COLUMN IF NOT EXISTS production_order_no VARCHAR(100) COMMENT '关联生产订单号',
-    ADD COLUMN IF NOT EXISTS source_platform_code VARCHAR(20) COMMENT '来源平台代码(与AppStore code一致)',
-    ADD COLUMN IF NOT EXISTS sku_code           VARCHAR(100) COMMENT '下单SKU编码',
-    ADD COLUMN IF NOT EXISTS product_name       VARCHAR(200) COMMENT '商品名称',
-    ADD COLUMN IF NOT EXISTS quantity           INT DEFAULT 1 COMMENT '购买件数',
-    ADD COLUMN IF NOT EXISTS warehouse_status   TINYINT DEFAULT 0
-                                                COMMENT '仓库状态: 0-待拣货 1-备货中 2-已出库';
-
-ALTER TABLE t_ecommerce_order
-    ADD INDEX IF NOT EXISTS idx_tenant_id         (tenant_id),
-    ADD INDEX IF NOT EXISTS idx_production_order_id (production_order_id),
-    ADD INDEX IF NOT EXISTS idx_source_platform   (source_platform_code);
-
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 块 2：V34 — 电商订单单价字段
---        对应文件：V34__add_ecommerce_unit_price.sql
---        注意：云端 MySQL 不支持 ADD COLUMN IF NOT EXISTS，执行前先检查列是否存在
---             若已执行则会报 Duplicate column 错误，忽略即可
--- ─────────────────────────────────────────────────────────────────────────────
-ALTER TABLE t_ecommerce_order
-    ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2) DEFAULT NULL
-    COMMENT '商品单价（元/件）';
+-- ALTER TABLE t_ecommerce_order
+--     ADD COLUMN tenant_id          BIGINT       COMMENT '租户ID',
+--     ADD COLUMN production_order_id VARCHAR(64)  COMMENT '关联生产订单ID',
+--     ADD COLUMN production_order_no VARCHAR(100) COMMENT '关联生产订单号',
+--     ADD COLUMN source_platform_code VARCHAR(20) COMMENT '来源平台代码',
+--     ADD COLUMN sku_code           VARCHAR(100)  COMMENT '下单SKU编码',
+--     ADD COLUMN product_name       VARCHAR(200)  COMMENT '商品名称',
+--     ADD COLUMN quantity           INT DEFAULT 1 COMMENT '购买件数',
+--     ADD COLUMN warehouse_status   TINYINT DEFAULT 0 COMMENT '仓库状态',
+--     ADD COLUMN unit_price         DECIMAL(10,2) DEFAULT NULL COMMENT '商品单价';
+-- ALTER TABLE t_ecommerce_order
+--     ADD INDEX idx_tenant_id (tenant_id),
+--     ADD INDEX idx_production_order_id (production_order_id),
+--     ADD INDEX idx_source_platform (source_platform_code);
+-- ✅ 已由下方建表语句覆盖，无需执行上方 ALTER
+CREATE TABLE IF NOT EXISTS t_ecommerce_order (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_no VARCHAR(100) NOT NULL,
+  platform VARCHAR(20),
+  platform_order_no VARCHAR(100),
+  shop_name VARCHAR(200),
+  buyer_nick VARCHAR(100),
+  status TINYINT DEFAULT 0,
+  unit_price DECIMAL(10,2),
+  total_amount DECIMAL(12,2),
+  pay_amount DECIMAL(12,2),
+  freight DECIMAL(10,2),
+  discount DECIMAL(10,2),
+  pay_type VARCHAR(50),
+  pay_time DATETIME,
+  ship_time DATETIME,
+  complete_time DATETIME,
+  receiver_name VARCHAR(100),
+  receiver_phone VARCHAR(50),
+  receiver_address TEXT,
+  tracking_no VARCHAR(100),
+  express_company VARCHAR(100),
+  buyer_remark TEXT,
+  seller_remark TEXT,
+  product_name VARCHAR(200),
+  sku_code VARCHAR(100),
+  quantity INT DEFAULT 1,
+  source_platform_code VARCHAR(20),
+  warehouse_status TINYINT DEFAULT 0,
+  production_order_id VARCHAR(64),
+  production_order_no VARCHAR(100),
+  tenant_id BIGINT,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_order_no (order_no),
+  INDEX idx_platform (platform),
+  INDEX idx_status (status),
+  INDEX idx_tenant_id (tenant_id),
+  INDEX idx_production_order (production_order_id),
+  INDEX idx_source_platform (source_platform_code),
+  INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='电商订单表';
 
 
 -- ─────────────────────────────────────────────────────────────────────────────

@@ -292,7 +292,37 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   return (
     <div style={{ width: 270, fontSize: 12, lineHeight: 1.5 }}>
 
-      {/* 顶部：工厂 + 交期 */}
+      {/* 顶部：款号 + 款名 + EC单号 */}
+      {(order.styleNo || order.ecOrderNo) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          marginBottom: 6, flexWrap: 'wrap',
+        }}>
+          {order.styleNo && (
+            <span style={{
+              fontSize: 11, color: '#555', background: '#f5f5f5',
+              padding: '1px 7px', borderRadius: 10, fontWeight: 600,
+            }}>
+              款号 {order.styleNo}
+            </span>
+          )}
+          {order.styleName && (
+            <span style={{ fontSize: 11, color: '#888', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {order.styleName}
+            </span>
+          )}
+          {order.ecOrderNo && (
+            <span style={{
+              fontSize: 11, color: '#1677ff', background: '#e6f4ff',
+              padding: '1px 7px', borderRadius: 10, fontWeight: 600,
+            }}>
+              {order.ecPlatform ? `${order.ecPlatform} ` : ''}{order.ecOrderNo}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 工厂 + 交期 */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: 8,
