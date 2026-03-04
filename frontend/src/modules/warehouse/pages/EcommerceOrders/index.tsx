@@ -3,8 +3,9 @@ import Layout from '@/components/Layout';
 import {
   Tabs, Table, Tag, Button, Input, Select, Card, Space, Modal, Form,
   message, Row, Col, Statistic, Drawer, Descriptions, Divider,
-  InputNumber, Typography, Badge, Tooltip, Steps, Alert,
+  InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image,
 } from 'antd';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
   LinkOutlined, ReloadOutlined, RiseOutlined, SaveOutlined,
@@ -74,6 +75,29 @@ const OrdersTab: React.FC = () => {
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
   const [linkForm] = Form.useForm();
   const [linking, setLinking] = useState(false);
+  const [styleImageMap, setStyleImageMap] = useState<Record<string, string>>({});
+
+  const fetchStyleImages = useCallback(async (orders: EcOrder[]) => {
+    const styleNos = [...new Set(
+      orders.map(o => (o.skuCode || '').split('-')[0]).filter(Boolean)
+    )];
+    if (styleNos.length === 0) return;
+    const results = await Promise.allSettled(
+      styleNos.map(sn =>
+        axios.get('/api/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
+      )
+    );
+    const map: Record<string, string> = {};
+    results.forEach((res, i) => {
+      if (res.status === 'fulfilled') {
+        const records: Array<{ styleNo: string; cover?: string }> =
+          res.value.data?.data?.records ?? [];
+        const exact = records.find(s => s.styleNo === styleNos[i]);
+        if (exact?.cover) map[styleNos[i]] = exact.cover;
+      }
+    });
+    setStyleImageMap(prev => ({ ...prev, ...map }));
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -84,11 +108,14 @@ const OrdersTab: React.FC = () => {
       if (keyword) params.keyword = keyword;
       const res = await axios.post('/api/ecommerce/orders/list', params);
       const d = res.data?.data ?? {};
-      setData(d.records ?? []);
+      const records: EcOrder[] = d.records ?? [];
+      setData(records);
       setTotal(d.total ?? 0);
+      // 异步加载款式图片，不阻塞主流程
+      fetchStyleImages(records);
     } catch { message.error('加载失败'); }
     finally { setLoading(false); }
-  }, [page, pageSize, filterPlatform, filterStatus, keyword]);
+  }, [page, pageSize, filterPlatform, filterStatus, keyword, fetchStyleImages]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -128,6 +155,34 @@ const OrdersTab: React.FC = () => {
           {v && <div style={{ fontSize: 11, color: '#888' }}>内部 {r.orderNo}</div>}
         </div>
       ),
+    },
+    {
+      title: '款号', width: 110,
+      render: (_: unknown, r: EcOrder) => {
+        const styleNo = (r.skuCode || '').split('-')[0];
+        return styleNo
+          ? <Text strong style={{ fontSize: 12, fontFamily: 'monospace' }}>{styleNo}</Text>
+          : <Text type="secondary">-</Text>;
+      },
+    },
+    {
+      title: '款式图', width: 68, align: 'center' as const,
+      render: (_: unknown, r: EcOrder) => {
+        const styleNo = (r.skuCode || '').split('-')[0];
+        const imgUrl = styleNo ? styleImageMap[styleNo] : undefined;
+        return imgUrl
+          ? <Image
+              src={getFullAuthedFileUrl(imgUrl)}
+              width={44} height={44}
+              style={{ objectFit: 'cover', borderRadius: 4 }}
+              preview={{ mask: <EyeOutlined style={{ fontSize: 12 }} /> }}
+            />
+          : <div style={{
+              width: 44, height: 44, background: '#f5f5f5', borderRadius: 4,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22, color: '#bbb',
+            }}>👗</div>;
+      },
     },
     {
       title: '商品 / 买家', width: 190,
@@ -239,7 +294,7 @@ const OrdersTab: React.FC = () => {
       </Card>
 
       <Table rowKey="id" dataSource={data} columns={columns} loading={loading}
-        scroll={{ x: 1150 }} size="small"
+        scroll={{ x: 1350 }} size="small"
         pagination={{ current: page, pageSize, total, showSizeChanger: true,
           showTotal: t => `共 ${t} 条`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
