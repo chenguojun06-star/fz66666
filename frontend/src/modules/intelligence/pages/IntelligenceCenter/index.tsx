@@ -828,42 +828,6 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║ ★ TOP 1：AI 智能顾问 — 最核心交互，置顶大显  ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div className="c-card c-chat-card" style={{ margin: '0 24px 12px', minHeight: 140 }}>
-          <div className="c-card-title" style={{ fontSize: 15, marginBottom: 10 }}>
-            <RobotOutlined style={{ marginRight: 8, color: '#a78bfa', fontSize: 18 }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
-            <LiveDot size={8} color="#a78bfa" />
-            <span className="c-chat-hint" style={{ fontSize: 12 }}>— 直接问询生产、订单、库存、财务任何问题，即时获得 AI 建议</span>
-          </div>
-          <div className="c-chat-row">
-            <Input
-              className="c-chat-input"
-              style={{ fontSize: 14 }}
-              placeholder="例如：今天哪个工厂效率最高？本月有哪些订单有交期风险？面料缺口怎么处理？"
-              value={chatQ}
-              onChange={e => setChatQ(e.target.value)}
-              onPressEnter={handleChat}
-            />
-            <Button type="primary" icon={<SendOutlined />} loading={chatLoading}
-              onClick={handleChat} className="c-chat-send" style={{ height: 40, fontSize: 15, paddingLeft: 20, paddingRight: 20 }}>发送</Button>
-          </div>
-          {chatLoading && (
-            <div className="c-chat-thinking">
-              <DashboardOutlined spin style={{ marginRight: 6 }} />
-              AI 正在扫描全链路数据，生成分析报告...
-            </div>
-          )}
-          {chatA && <div className="c-chat-answer">{chatA}</div>}
-          <div className="c-chat-suggestions">
-            {['今日生产进度如何？', '有哪些订单停工超过2小时？', '面料库存是否充足？', '本月哪个工厂绩效最佳？', '异常订单需要处理吗？'].map(q => (
-              <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* ╔══════════════════════════════════════════════╗
             ║ TOP 2：逾期风险 + 工厂卡点 — 关键告警优先   ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
