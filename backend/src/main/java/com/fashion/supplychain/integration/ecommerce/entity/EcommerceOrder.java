@@ -29,6 +29,7 @@ public class EcommerceOrder {
     /** 仓库状态: 0-待拣货 1-备货中 2-已出库 */
     private Integer warehouseStatus;
 
+    private BigDecimal unitPrice;     // 商品单价（元/件），区别于 totalAmount
     private BigDecimal totalAmount;
     private BigDecimal payAmount;
     private BigDecimal freight;

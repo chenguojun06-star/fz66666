@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Table, Button, Space, Tag, Row, Col, InputNumber, App } from 'antd';
+import { Card, Table, Button, Space, Tag, Row, Col, InputNumber, Input, Select, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -68,6 +68,10 @@ const _FinishedInventory: React.FC = () => {
 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
+  // 出库发货信息（用于关联电商订单自动回写状态）
+  const [outboundProductionOrderNo, setOutboundProductionOrderNo] = useState('');
+  const [outboundTrackingNo, setOutboundTrackingNo] = useState('');
+  const [outboundExpressCompany, setOutboundExpressCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
@@ -198,6 +202,9 @@ const _FinishedInventory: React.FC = () => {
       defectQty: record.defectQty ?? 0,
       warehouseLocation: record.warehouseLocation || '-',
     }]);
+    setOutboundProductionOrderNo('');
+    setOutboundTrackingNo('');
+    setOutboundExpressCompany('');
     outboundModal.open(record);
   };
 
@@ -232,9 +239,17 @@ const _FinishedInventory: React.FC = () => {
         message.warning('请至少填写一个SKU的出库数量');
         return;
       }
-      await api.post('/warehouse/finished-inventory/outbound', { items: outboundItems });
+      await api.post('/warehouse/finished-inventory/outbound', {
+        items: outboundItems,
+        ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
+        ...(outboundTrackingNo ? { trackingNo: outboundTrackingNo } : {}),
+        ...(outboundExpressCompany ? { expressCompany: outboundExpressCompany } : {}),
+      });
       message.success(`出库成功，共 ${outboundItems.length} 个SKU已出库`);
       outboundModal.close();
+      setOutboundProductionOrderNo('');
+      setOutboundTrackingNo('');
+      setOutboundExpressCompany('');
       setSkuDetails([]);
       loadData();
     } catch (error: any) {
@@ -629,6 +644,9 @@ const _FinishedInventory: React.FC = () => {
           onCancel={() => {
             outboundModal.close();
             setSkuDetails([]);
+            setOutboundProductionOrderNo('');
+            setOutboundTrackingNo('');
+            setOutboundExpressCompany('');
           }}
           onOk={handleOutboundConfirm}
           size="lg"
@@ -704,6 +722,53 @@ const _FinishedInventory: React.FC = () => {
                   }}
                 />
               </div>
+
+              {/* 发货信息 — 填写后自动回写关联电商订单 */}
+              <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#d46b08' }}>
+                  📦 发货信息（选填）—— 填写后将自动回写关联电商订单的发货状态和快递单号
+                </div>
+                <Row gutter={12}>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>关联生产订单号</div>
+                    <Input
+                      size="small"
+                      placeholder="如 PO20260301001"
+                      value={outboundProductionOrderNo}
+                      onChange={(e) => setOutboundProductionOrderNo(e.target.value)}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>快递单号</div>
+                    <Input
+                      size="small"
+                      placeholder="输入快递单号"
+                      value={outboundTrackingNo}
+                      onChange={(e) => setOutboundTrackingNo(e.target.value)}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>快递公司</div>
+                    <Select
+                      size="small"
+                      style={{ width: '100%' }}
+                      allowClear
+                      placeholder="选择快递公司"
+                      value={outboundExpressCompany || undefined}
+                      onChange={(v) => setOutboundExpressCompany(v ?? '')}
+                    >
+                      <Select.Option value="顺丰">顺丰速运</Select.Option>
+                      <Select.Option value="中通">中通快递</Select.Option>
+                      <Select.Option value="圆通">圆通速递</Select.Option>
+                      <Select.Option value="韵达">韵达快递</Select.Option>
+                      <Select.Option value="申通">申通快递</Select.Option>
+                      <Select.Option value="极兔">极兔速递</Select.Option>
+                      <Select.Option value="菜鸟">菜鸟速递</Select.Option>
+                      <Select.Option value="EMS">EMS</Select.Option>
+                    </Select>
+                  </Col>
+                </Row>
+              </Card>
 
               {/* 提示信息 */}
               <div style={{

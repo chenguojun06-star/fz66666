@@ -81,10 +81,23 @@ public class EcommerceOrderOrchestrator {
         order.setTenantId(tenantId);
         order.setOrderNo(genOrderNo(platformCode));
 
-        // 金额字段
+        // 金额字段（完整解析所有平台可能推送的金额字段）
+        if (body.get("unitPrice") != null) {
+            order.setUnitPrice(new java.math.BigDecimal(body.get("unitPrice").toString()));
+        }
+        if (body.get("totalAmount") != null) {
+            order.setTotalAmount(new java.math.BigDecimal(body.get("totalAmount").toString()));
+        }
         if (body.get("payAmount") != null) {
             order.setPayAmount(new java.math.BigDecimal(body.get("payAmount").toString()));
         }
+        if (body.get("freight") != null) {
+            order.setFreight(new java.math.BigDecimal(body.get("freight").toString()));
+        }
+        if (body.get("discount") != null) {
+            order.setDiscount(new java.math.BigDecimal(body.get("discount").toString()));
+        }
+        order.setPayType((String) body.get("payType"));
         ecOrderService.save(order);
         log.info("[EC接入] 平台={} 平台单号={} 内部单号={}", platformCode, platformOrderNo, order.getOrderNo());
         return Map.of("id", order.getId(), "orderNo", order.getOrderNo(), "duplicate", false);

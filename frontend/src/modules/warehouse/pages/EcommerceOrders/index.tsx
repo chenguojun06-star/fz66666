@@ -22,8 +22,13 @@ interface EcOrder {
   shopName: string;
   buyerNick: string;
   productName: string;
+  skuCode: string;
   quantity: number;
-  payAmount: number;
+  unitPrice: number;   // 件单价
+  totalAmount: number; // 订单总额
+  payAmount: number;   // 实付金额
+  freight: number;     // 运费
+  discount: number;    // 优惠
   status: number;           // 0待付 1待发货 2已发货 3完成 4取消
   warehouseStatus: number;  // 0待拣货 1备货中 2已出库
   productionOrderNo: string;
@@ -133,17 +138,26 @@ const EcommerceOrders: React.FC = () => {
       ),
     },
     {
-      title: '商品/买家', dataIndex: 'productName', ellipsis: true, width: 160,
+      title: '商品/买家', dataIndex: 'productName', ellipsis: true, width: 180,
       render: (v, r) => (
         <div>
           <div style={{ fontSize: 12 }}>{v || '-'} × {r.quantity}</div>
+          {r.skuCode && <div style={{ fontSize: 11, color: '#52c41a' }}>SKU: {r.skuCode}</div>}
           <div style={{ fontSize: 11, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
     {
-      title: '金额', dataIndex: 'payAmount', width: 80,
-      render: (v) => <Text strong style={{ color: '#fa8c16' }}>¥{v ?? '-'}</Text>,
+      title: '金额', width: 120,
+      render: (_: unknown, r: EcOrder) => (
+        <div>
+          {r.unitPrice ? (
+            <div style={{ fontSize: 11, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div>
+          ) : null}
+          <div><Text strong style={{ color: '#fa8c16' }}>实付 ¥{r.payAmount ?? '-'}</Text></div>
+          {r.freight ? <div style={{ fontSize: 10, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+        </div>
+      ),
     },
     {
       title: '订单状态', dataIndex: 'status', width: 80,
