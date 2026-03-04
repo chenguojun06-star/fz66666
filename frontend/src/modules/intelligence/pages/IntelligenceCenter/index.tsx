@@ -828,77 +828,43 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第二行：脉搏(左) + 活跃订单(中) + 排行(右)    ║
-            ╙════════════════════════════════════════════╝ */}
-        <div className="cockpit-grid-3">
-
-          {/* 实时生产脉搏 */}
-          <div className="c-card c-scanline-card">
-            <div className="c-card-title">
-              <LiveDot />
-              实时生产脉搏
-              <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
-            </div>
-            <div style={{ margin: '6px 0 4px' }}>
-              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
-              <div className="c-sparkline-label">
-                {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
-              </div>
-            </div>
-            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
-            {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
-              <div className="c-factory-activity-list">
-                {pulse!.factoryActivity.map(f => {
-                  const mins = f.minutesSinceLastScan;
-                  const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
-                  return (
-                    <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
-                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
-                      <span className="c-fa-name">{f.factoryName}</span>
-                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
-                      <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="c-all-ok">
-                <CheckCircleOutlined style={{ marginRight: 6 }} />
-                今日暂无扫码记录
-              </div>
-            )}
+            ║ ★ TOP 1：AI 智能顾问 — 最核心交互，置顶大显  ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="c-card c-chat-card" style={{ margin: '0 24px 12px', minHeight: 140 }}>
+          <div className="c-card-title" style={{ fontSize: 15, marginBottom: 10 }}>
+            <RobotOutlined style={{ marginRight: 8, color: '#a78bfa', fontSize: 18 }} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
+            <LiveDot size={8} color="#a78bfa" />
+            <span className="c-chat-hint" style={{ fontSize: 12 }}>— 直接问询生产、订单、库存、财务任何问题，即时获得 AI 建议</span>
           </div>
-
-          {/* 活跃订单实时滚动面板（中间） */}
-          <OrderScrollPanel orders={orders} />
-
-          {/* 工厂绩效排行（右侧） */}
-          <div className="c-card">
-            <div className="c-card-title">
-              <LiveDot size={7} color="#ffd700" />
-              工厂绩效排行榜
-              <span className="c-card-badge purple-badge">实时评分</span>
-            </div>
-            {ranking?.rankings?.length ? (
-              ranking.rankings.slice(0, 5).map((r, i) => (
-                <div key={r.factoryId} className="c-rank-row">
-                  <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
-                    {i < 3 ? ['🥇','🥈','🥉'][i] : `#${r.rank}`}
-                  </span>
-                  <span className="c-rank-name">{r.factoryName}</span>
-                  <div className="c-rank-bar-wrap">
-                    <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#00e5ff,#0098aa)' }} />
-                  </div>
-                  <span className="c-rank-score">{r.totalScore}</span>
-                </div>
-              ))
-            ) : <div className="c-empty">暂无排行数据</div>}
+          <div className="c-chat-row">
+            <Input
+              className="c-chat-input"
+              style={{ fontSize: 14 }}
+              placeholder="例如：今天哪个工厂效率最高？本月有哪些订单有交期风险？面料缺口怎么处理？"
+              value={chatQ}
+              onChange={e => setChatQ(e.target.value)}
+              onPressEnter={handleChat}
+            />
+            <Button type="primary" icon={<SendOutlined />} loading={chatLoading}
+              onClick={handleChat} className="c-chat-send" style={{ height: 40, fontSize: 15, paddingLeft: 20, paddingRight: 20 }}>发送</Button>
           </div>
-
+          {chatLoading && (
+            <div className="c-chat-thinking">
+              <DashboardOutlined spin style={{ marginRight: 6 }} />
+              AI 正在扫描全链路数据，生成分析报告...
+            </div>
+          )}
+          {chatA && <div className="c-chat-answer">{chatA}</div>}
+          <div className="c-chat-suggestions">
+            {['今日生产进度如何？', '有哪些订单停工超过2小时？', '面料库存是否充足？', '本月哪个工厂绩效最佳？', '异常订单需要处理吗？'].map(q => (
+              <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
+            ))}
+          </div>
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第2.5行：逾期风险订单 + 工厂卡点分析       ║
+            ║ TOP 2：逾期风险 + 工厂卡点 — 关键告警优先   ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
 
@@ -977,7 +943,6 @@ const IntelligenceCenter: React.FC = () => {
                       <div className="c-bottleneck-row">
                         <span className="c-bottleneck-factory">{f.name}</span>
                         <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
-                        {/* 订单小卡替代长条进度条 */}
                         <div className="c-bottleneck-orders">
                           {f.worstOrders.map(w => (
                             <span key={w.no} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
@@ -998,7 +963,84 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第三行：面料缺口 + 缺陷热力图              ║
+            ║ TOP 3：利润估算 + 完工预测 — 核心业务决策   ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 12px' }}>
+          <ProfitDeliveryPanel />
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   实时监控：脉搏(左) + 活跃订单(中) + 排行(右) ║
+            ╙════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-3">
+
+          {/* 实时生产脉搏 */}
+          <div className="c-card c-scanline-card">
+            <div className="c-card-title">
+              <LiveDot />
+              实时生产脉搏
+              <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
+            </div>
+            <div style={{ margin: '6px 0 4px' }}>
+              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
+              <div className="c-sparkline-label">
+                {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
+              </div>
+            </div>
+            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
+            {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
+              <div className="c-factory-activity-list">
+                {pulse!.factoryActivity.map(f => {
+                  const mins = f.minutesSinceLastScan;
+                  const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
+                  return (
+                    <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
+                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
+                      <span className="c-fa-name">{f.factoryName}</span>
+                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
+                      <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="c-all-ok">
+                <CheckCircleOutlined style={{ marginRight: 6 }} />
+                今日暂无扫码记录
+              </div>
+            )}
+          </div>
+
+          {/* 活跃订单实时滚动面板（中间） */}
+          <OrderScrollPanel orders={orders} />
+
+          {/* 工厂绩效排行（右侧） */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <LiveDot size={7} color="#ffd700" />
+              工厂绩效排行榜
+              <span className="c-card-badge purple-badge">实时评分</span>
+            </div>
+            {ranking?.rankings?.length ? (
+              ranking.rankings.slice(0, 5).map((r, i) => (
+                <div key={r.factoryId} className="c-rank-row">
+                  <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
+                    {i < 3 ? ['🥇','🥈','🥉'][i] : `#${r.rank}`}
+                  </span>
+                  <span className="c-rank-name">{r.factoryName}</span>
+                  <div className="c-rank-bar-wrap">
+                    <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#00e5ff,#0098aa)' }} />
+                  </div>
+                  <span className="c-rank-score">{r.totalScore}</span>
+                </div>
+              ))
+            ) : <div className="c-empty">暂无排行数据</div>}
+          </div>
+
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   监控：面料缺口 + 缺陷热力图                ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-5-7">
 
@@ -1142,70 +1184,36 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第六行：AI 深度功能扩展（6大隐藏能力）     ║
+            ║   运营工具：智能派工 + AI 排程建议           ║
             ╚══════════════════════════════════════════════╝ */}
-        <div style={{ margin: '4px 24px 0', padding: '6px 14px 6px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#ffd700', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>⚡ AI 深度功能</span>
-          <span style={{ fontSize: 11, color: '#4a6d8a' }}>
-            工人画像 · 智能派工 · 利润估算 · 完工预测 · 节奏DNA · 排程建议 · AI进化报告
-          </span>
+        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#ffd700', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>⚡ AI 运营工具</span>
+          <span style={{ fontSize: 11, color: '#4a6d8a' }}>智能派工 · AI排程 — 日常高频使用</span>
         </div>
-
-        {/* 工人画像 + 智能派工 */}
         <div className="cockpit-grid-2">
-          <WorkerProfilePanel />
           <SmartAssignmentPanel />
-        </div>
-
-        {/* 利润/完工双引擎（全宽） */}
-        <div style={{ padding: '0 24px 12px' }}>
-          <ProfitDeliveryPanel />
-        </div>
-
-        {/* 节奏DNA + 排程建议 */}
-        <div className="cockpit-grid-2">
-          <RhythmDnaPanel />
           <SchedulingSuggestionPanel />
         </div>
 
-        {/* 学习报告（全宽） */}
-        <div style={{ padding: '0 24px 12px' }}>
-          <LearningReportPanel />
+        {/* ╔══════════════════════════════════════════════╗
+            ║   深度分析：工人画像 + 生产节奏DNA           ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#00e5ff', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>🔬 深度分析</span>
+          <span style={{ fontSize: 11, color: '#4a6d8a' }}>工人能力画像 · 节奏DNA可视化 — 按需查阅</span>
+        </div>
+        <div className="cockpit-grid-2">
+          <WorkerProfilePanel />
+          <RhythmDnaPanel />
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   第七行：AI 智能顾问（全宽）                ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div className="c-card c-chat-card">
-          <div className="c-card-title">
-            <RobotOutlined style={{ marginRight: 6, color: '#a78bfa' }} />
-            AI 智能顾问
-            <LiveDot size={6} color="#a78bfa" />
-            <span className="c-chat-hint">— 实时问询生产、订单、库存、财务任何问题</span>
-          </div>
-          <div className="c-chat-row">
-            <Input
-              className="c-chat-input"
-              placeholder="例如：今天哪个工厂效率最高？本月有哪些订单有交期风险？面料缺口怎么处理？"
-              value={chatQ}
-              onChange={e => setChatQ(e.target.value)}
-              onPressEnter={handleChat}
-            />
-            <Button type="primary" icon={<SendOutlined />} loading={chatLoading}
-              onClick={handleChat} className="c-chat-send">发送</Button>
-          </div>
-          {chatLoading && (
-            <div className="c-chat-thinking">
-              <DashboardOutlined spin style={{ marginRight: 6 }} />
-              AI 正在扫描全链路数据，生成分析报告...
-            </div>
-          )}
-          {chatA && <div className="c-chat-answer">{chatA}</div>}
-          <div className="c-chat-suggestions">
-            {['今日生产进度如何？', '有哪些订单停工超过2小时？', '面料库存是否充足？', '本月哪个工厂绩效最佳？', '异常订单需要处理吗？'].map(q => (
-              <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
-            ))}
-          </div>
+        {/* AI学习进化报告（最底部，技术性指标） */}
+        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(57,255,20,0.02)', border: '1px solid rgba(57,255,20,0.08)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#39ff14', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>📊 AI 自学报告</span>
+          <span style={{ fontSize: 11, color: '#4a6d8a' }}>模型进化 · 预测准确率 — 技术指标参考</span>
+        </div>
+        <div style={{ padding: '0 24px 24px' }}>
+          <LearningReportPanel />
         </div>
 
       </div>
