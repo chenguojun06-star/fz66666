@@ -779,9 +779,9 @@
 /* ────────────────────────────────────────────────
    逾期 & 延期风险订单列表
 ──────────────────────────────────────────────── */
-.c-risk-list { display: flex; flex-direction: column; gap: 4px; min-height: 120px; max-height: 280px; overflow-y: auto; }
+.c-risk-list { display: flex; flex-direction: column; gap: 4px; min-height: 120px; max-height: 280px; overflow-y: scroll; scrollbar-width: none; }
 .c-risk-list::-webkit-scrollbar,
-.c-bottleneck-list::-webkit-scrollbar { width: 3px; }
+.c-bottleneck-list::-webkit-scrollbar { display: none; }
 .c-risk-list::-webkit-scrollbar-track,
 .c-bottleneck-list::-webkit-scrollbar-track { background: transparent; }
 .c-risk-list::-webkit-scrollbar-thumb,
@@ -813,7 +813,7 @@
 /* ────────────────────────────────────────────────
    工厂工序卡点分析列表
 ──────────────────────────────────────────────── */
-.c-bottleneck-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; max-height: 280px; overflow-y: auto; }
+.c-bottleneck-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; max-height: 280px; overflow-y: scroll; scrollbar-width: none; }
 .c-bottleneck-item { display: flex; flex-direction: column; gap: 3px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .c-bottleneck-item:last-child { border-bottom: none; padding-bottom: 0; }
 .c-bottleneck-row {
@@ -1155,3 +1155,42 @@
 }
 .kpi-delta-up   { color: #39ff14; }
 .kpi-delta-down { color: #ff4136; }
+
+/* ═══════════════════════════════════════════════
+   通用自动滚动容器（AutoScrollBox 渲染 DOM 层）
+   — JS 控制 scrollTop，隐藏滚动条
+   ═══════════════════════════════════════════════ */
+.c-auto-scroll {
+  overflow-y: scroll;
+  scrollbar-width: none;
+  position: relative;
+}
+.c-auto-scroll::-webkit-scrollbar { display: none; }
+
+/* ═══════════════════════════════════════════════
+   卡片呼吸边框动画（Breathing Border）
+   ═══════════════════════════════════════════════ */
+@keyframes breathe-cyan {
+  0%, 100% { border-color: rgba(0,229,255,0.12); box-shadow: 0 0 0   0 rgba(0,229,255,0);    }
+  50%      { border-color: rgba(0,229,255,0.65); box-shadow: 0 0 22px 4px rgba(0,229,255,0.22); }
+}
+@keyframes breathe-red {
+  0%, 100% { border-color: rgba(255,65,54,0.18); box-shadow: 0 0 0   0 rgba(255,65,54,0);    }
+  50%      { border-color: rgba(255,65,54,0.70); box-shadow: 0 0 22px 4px rgba(255,65,54,0.24); }
+}
+@keyframes breathe-green {
+  0%, 100% { border-color: rgba(57,255,20,0.15); box-shadow: 0 0 0   0 rgba(57,255,20,0);    }
+  50%      { border-color: rgba(57,255,20,0.60); box-shadow: 0 0 22px 4px rgba(57,255,20,0.20); }
+}
+
+.c-breathe-cyan  { animation: breathe-cyan  3s   ease-in-out infinite; }
+.c-breathe-red   { animation: breathe-red   2.4s ease-in-out infinite; }
+.c-breathe-green { animation: breathe-green 3.6s ease-in-out infinite; }
+
+/* 悬停时立刻冻结呼吸动画（hover 高亮边框） */
+.c-breathe-cyan:hover,
+.c-breathe-red:hover,
+.c-breathe-green:hover {
+  animation-play-state: paused;
+  border-color: rgba(0,229,255,0.5);
+}

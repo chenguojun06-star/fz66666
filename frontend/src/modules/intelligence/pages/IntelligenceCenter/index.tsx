@@ -359,12 +359,17 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   );
 };
 
-const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) => {
+/* ─── 通用自动滚动容器：悬停暂停，离开续滚 ─── */
+const AutoScrollBox: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+  speed?: number;
+}> = ({ children, className = '', speed = 35 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || orders.length < 6) return;
+    if (!el) return;
     const id = setInterval(() => {
       if (pausedRef.current) return;
       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
@@ -372,29 +377,35 @@ const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) =
       } else {
         el.scrollTop += 1;
       }
-    }, 40);
+    }, speed);
     return () => clearInterval(id);
-  }, [orders]);
+  }, [speed]);
   return (
-    <div className="c-card">
-      <div className="c-card-title">
-        <LiveDot size={7} />
-        活跃订单实时滚动
-        <span className="c-card-badge cyan-badge">{orders.length} 单进行中</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停嵊示详情 →</span>
-      </div>
-      <div
-        ref={scrollRef}
-        className="c-orders-scroll"
-        onMouseEnter={() => { pausedRef.current = true; }}
-        onMouseLeave={() => { pausedRef.current = false; }}
-      >
-        {orders.map(o => <OrderRow key={String(o.id)} order={o} />)}
-        {!orders.length && <div className="c-empty">暂无进行中订单</div>}
-      </div>
+    <div
+      ref={scrollRef}
+      className={`c-auto-scroll ${className}`}
+      onMouseEnter={() => { pausedRef.current = true; }}
+      onMouseLeave={() => { pausedRef.current = false; }}
+    >
+      {children}
     </div>
   );
 };
+
+const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) => (
+  <div className="c-card c-breathe-green">
+    <div className="c-card-title">
+      <LiveDot size={7} />
+      活跃订单实时滚动
+      <span className="c-card-badge cyan-badge">{orders.length} 单进行中</span>
+      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
+    </div>
+    <AutoScrollBox className="c-orders-scroll">
+      {orders.map(o => <OrderRow key={String(o.id)} order={o} />)}
+      {!orders.length && <div className="c-empty">暂无进行中订单</div>}
+    </AutoScrollBox>
+  </div>
+);
 
 /* ─── 数据 hook ─── */
 interface CockpitData {
@@ -845,7 +856,7 @@ const IntelligenceCenter: React.FC = () => {
         <div className="cockpit-grid-2">
 
           {/* 逾期 & 预计延期订单 */}
-          <div className="c-card">
+          <div className="c-card c-breathe-red">
             <div className="c-card-title">
               <LiveDot color={overdueRisk.overdue.length > 0 ? '#ff4136' : '#f7a600'} />
               逾期 &amp; 延期风险订单
@@ -863,7 +874,7 @@ const IntelligenceCenter: React.FC = () => {
             {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
               <div className="c-all-ok"><CheckCircleOutlined style={{ marginRight: 6 }} />所有订单均在健康交期内</div>
             ) : (
-              <div className="c-risk-list">
+              <AutoScrollBox className="c-risk-list">
                 {overdueRisk.overdue.map(o => {
                   const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
                   return (
@@ -900,12 +911,12 @@ const IntelligenceCenter: React.FC = () => {
                     </div>
                   );
                 })}
-              </div>
+              </AutoScrollBox>
             )}
           </div>
 
           {/* 工厂卡点分析 */}
-          <div className="c-card">
+          <div className="c-card c-breathe-cyan">
             <div className="c-card-title">
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
@@ -914,7 +925,7 @@ const IntelligenceCenter: React.FC = () => {
             {factoryBottleneck.length === 0 ? (
               <div className="c-empty">暂无在制订单</div>
             ) : (
-              <div className="c-bottleneck-list">
+              <AutoScrollBox className="c-bottleneck-list">
                 {factoryBottleneck.map(f => {
                   const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
                   return (
@@ -938,7 +949,7 @@ const IntelligenceCenter: React.FC = () => {
                     </div>
                   );
                 })}
-              </div>
+              </AutoScrollBox>
             )}
           </div>
 
