@@ -573,6 +573,13 @@ Page({
     await QualityHandler.submitQualityResult(this);
   },
 
+  /**
+   * 采纳AI质检建议到备注
+   */
+  onAdoptAiSuggestion() {
+    QualityHandler.onAdoptAiSuggestion(this);
+  },
+
   // ==================== 撤销功能（委托 UndoHandler）====================
 
   /**

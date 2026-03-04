@@ -688,6 +688,27 @@ export const processParentMappingApi = {
     api.get<{ code: number; data: Record<string, string> }>('/production/process-mapping/list'),
 };
 
+// ─── AI质检建议 ─────────────────────────────────────────────
+export interface QualityAiSuggestionResult {
+  orderNo?: string;
+  styleNo?: string;
+  styleName?: string;
+  productCategory?: string;
+  isUrgent?: boolean;
+  historicalDefectRate?: number;
+  historicalVerdict?: 'good' | 'warn' | 'critical';
+  checkpoints: string[];
+  defectSuggestions: Record<string, string>;
+  urgentTip?: string;
+}
+
+export const qualityAiApi = {
+  getSuggestion: (orderId: string) =>
+    api.get<{ code: number; data: QualityAiSuggestionResult }>('/quality/ai-suggestion', {
+      params: { orderId },
+    }),
+};
+
 export default {
   productionOrderApi,
   productionCuttingApi,
@@ -697,5 +718,6 @@ export default {
   patternProductionApi,
   materialPurchaseApi,
   processParentMappingApi,
+  qualityAiApi,
 };
 

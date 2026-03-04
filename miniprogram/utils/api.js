@@ -197,6 +197,10 @@ const production = {
       remark,
     });
   },
+  // AI质检助手——获取质检要点与异常建议
+  getQualityAiSuggestion(orderId) {
+    return ok(`/api/quality/ai-suggestion?orderId=${encodeURIComponent(orderId)}`, 'GET', {});
+  },
 };
 
 const stock = {

@@ -19,7 +19,18 @@ function showQualityModal(page, detail) {
     'qualityModal.handleMethod': 0,
     'qualityModal.remark': '',
     'qualityModal.images': [],
+    'qualityModal.aiSuggestion': null,
   });
+  // 非阻塞加载AI质检建议
+  if (detail && detail.orderId) {
+    api.production.getQualityAiSuggestion(detail.orderId)
+      .then(res => {
+        if (res && res.code === 200 && res.data) {
+          page.setData({ 'qualityModal.aiSuggestion': res.data });
+        }
+      })
+      .catch(() => {});
+  }
 }
 
 function closeQualityModal(page) {
@@ -192,6 +203,29 @@ async function submitQualityResult(page) {
   }
 }
 
+/**
+ * AI建议采纳：将当前次品类别对应的建议写入备注
+ * @param {Object} page
+ */
+function onAdoptAiSuggestion(page) {
+  const { qualityModal } = page.data;
+  const aiSuggestion = qualityModal.aiSuggestion;
+  if (!aiSuggestion) return;
+  const categoryKeys = [
+    'appearance_integrity',
+    'size_accuracy',
+    'process_compliance',
+    'functional_effectiveness',
+    'other',
+  ];
+  const catIndex = parseInt(qualityModal.defectCategory, 10) || 0;
+  const catKey = categoryKeys[catIndex] || 'other';
+  const text = (aiSuggestion.defectSuggestions || {})[catKey] || '';
+  if (text) {
+    page.setData({ 'qualityModal.remark': text });
+  }
+}
+
 module.exports = {
   showQualityModal,
   closeQualityModal,
@@ -202,4 +236,5 @@ module.exports = {
   onUploadQualityImage,
   onDeleteQualityImage,
   submitQualityResult,
+  onAdoptAiSuggestion,
 };

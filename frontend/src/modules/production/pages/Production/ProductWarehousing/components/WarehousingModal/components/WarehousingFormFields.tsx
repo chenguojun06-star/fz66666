@@ -4,6 +4,7 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { COVER_SIZE, DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../../constants';
 import BatchSelectionPanel from './BatchSelectionPanel';
 import UnqualifiedUpload from './UnqualifiedUpload';
+import AiQualityHelper from './AiQualityHelper';
 import { useWarehousingForm } from '../hooks/useWarehousingForm';
 
 const { Option: _Option } = Select;
@@ -15,6 +16,9 @@ interface WarehousingFormFieldsProps {
 }
 
 const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, openPreview, onCancel }) => {
+  const watchedOrderIdForAi = Form.useWatch('orderId', hook.form);
+  const watchedDefectCategoryForAi = Form.useWatch('defectCategory', hook.form);
+
   const {
     form,
     submitLoading,
@@ -297,6 +301,11 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           <div className="wh-line wh-line-bottom">
             <div className="wh-label" style={{ width: 72 }}>返修备注</div>
             <div className="wh-control" style={{ flex: 1, minWidth: 240 }}>
+              <AiQualityHelper
+                orderId={watchedOrderIdForAi}
+                defectCategory={watchedDefectCategoryForAi}
+                onAdopt={(text) => hook.form.setFieldsValue({ repairRemark: text })}
+              />
               <Form.Item
                 name="repairRemark"
                 style={{ marginBottom: 0 }}
