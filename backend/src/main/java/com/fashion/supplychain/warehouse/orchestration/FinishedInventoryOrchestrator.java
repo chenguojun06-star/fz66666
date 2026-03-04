@@ -12,7 +12,11 @@ import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,6 +28,7 @@ import java.util.stream.Collectors;
  * 成品库存编排层
  * 负责聚合SKU库存、入库记录、款式信息
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FinishedInventoryOrchestrator {
@@ -32,6 +37,11 @@ public class FinishedInventoryOrchestrator {
     private final ProductWarehousingMapper productWarehousingMapper;
     private final StyleInfoService styleInfoService;
     private final StyleAttachmentService styleAttachmentService;
+
+    /** 电商订单回写（出库后自动更新平台物流状态） */
+    @Lazy
+    @Autowired
+    private EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
 
     /**
      * 分页查询成品库存
@@ -318,6 +328,17 @@ public class FinishedInventoryOrchestrator {
             }
             sku.setStockQuantity(current - quantity);
             productSkuService.updateById(sku);
+        }
+        // 出库后回写电商订单状态（如果同一批出库挺带了关联的生产单号 + 快递单号）
+        String productionOrderNo = (String) params.get("productionOrderNo");
+        String trackingNo = (String) params.get("trackingNo");
+        String expressCompany = (String) params.getOrDefault("expressCompany", "");
+        if (StringUtils.hasText(productionOrderNo)) {
+            try {
+                ecommerceOrderOrchestrator.onWarehouseOutbound(productionOrderNo, trackingNo, expressCompany);
+            } catch (Exception ex) {
+                log.warn("[EC回写失败不阻塞主流程] productionOrderNo={} err={}", productionOrderNo, ex.getMessage());
+            }
         }
     }
 }

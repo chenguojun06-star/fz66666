@@ -64,6 +64,7 @@ export const paths = {
   materialDatabase: '/warehouse/material-database',
   finishedInventory: '/warehouse/finished',
   sampleInventory: '/warehouse/sample',
+  ecommerceOrders: '/warehouse/ecommerce',
 
   profile: '/system/profile',
   user: '/system/user',
@@ -110,6 +111,7 @@ export const permissionCodes = {
   materialDatabase: 'MENU_MATERIAL_DATABASE',
   finishedInventory: 'MENU_FINISHED_INVENTORY',
   sampleInventory: 'MENU_SAMPLE_INVENTORY',
+  ecommerceOrders: 'MENU_FINISHED_INVENTORY', // 复用成品库权限，平台订单均可查看
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
@@ -184,8 +186,7 @@ export const menuConfig: MenuSection[] = [
       { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '面辅料数据库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
-      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
-    ],
+      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },    ],
   },
   {
     title: '财务管理',
@@ -260,6 +261,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialDatabase]: permissionCodes.materialDatabase,
   [paths.finishedInventory]: permissionCodes.finishedInventory,
   [paths.sampleInventory]: permissionCodes.sampleInventory,
+  [paths.ecommerceOrders]: permissionCodes.ecommerceOrders,
 
 
   [paths.productionList]: permissionCodes.productionList,
