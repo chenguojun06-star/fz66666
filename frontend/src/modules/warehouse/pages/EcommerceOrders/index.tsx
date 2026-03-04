@@ -12,7 +12,7 @@ import {
   SearchOutlined, ShoppingCartOutlined, ApiOutlined, ShopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import axios from 'axios';
+import api from '@/utils/api';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -84,14 +84,14 @@ const OrdersTab: React.FC = () => {
     if (styleNos.length === 0) return;
     const results = await Promise.allSettled(
       styleNos.map(sn =>
-        axios.get('/api/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
+        api.get('/api/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
       )
     );
     const map: Record<string, string> = {};
     results.forEach((res, i) => {
       if (res.status === 'fulfilled') {
         const records: Array<{ styleNo: string; cover?: string }> =
-          res.value.data?.data?.records ?? [];
+          (res.value as any)?.data?.records ?? [];
         const exact = records.find(s => s.styleNo === styleNos[i]);
         if (exact?.cover) map[styleNos[i]] = exact.cover;
       }
@@ -106,8 +106,8 @@ const OrdersTab: React.FC = () => {
       if (filterPlatform) params.platform = filterPlatform;
       if (filterStatus !== undefined) params.status = filterStatus;
       if (keyword) params.keyword = keyword;
-      const res = await axios.post('/api/ecommerce/orders/list', params);
-      const d = res.data?.data ?? {};
+      const res = await api.post('/api/ecommerce/orders/list', params);
+      const d = (res as any)?.data ?? {};
       const records: EcOrder[] = d.records ?? [];
       setData(records);
       setTotal(d.total ?? 0);
@@ -124,7 +124,7 @@ const OrdersTab: React.FC = () => {
     try {
       const v = await linkForm.validateFields();
       setLinking(true);
-      await axios.post(`/api/ecommerce/orders/${linkTarget.id}/link`, {
+      await api.post(`/api/ecommerce/orders/${linkTarget.id}/link`, {
         productionOrderNo: v.productionOrderNo,
       });
       message.success('关联成功，出库时自动回写物流状态');
@@ -405,8 +405,8 @@ const PricingTab: React.FC = () => {
     try {
       const params: Record<string, unknown> = { page, pageSize: 20 };
       if (styleNo) params.styleNo = styleNo;
-      const res = await axios.get('/api/style/sku/list', { params });
-      const d = res.data?.data ?? {};
+      const res = await api.get('/api/style/sku/list', { params });
+      const d = (res as any)?.data ?? {};
       setData(d.records ?? []);
       setTotal(d.total ?? 0);
     } catch { message.error('加载SKU失败'); }
@@ -419,7 +419,7 @@ const PricingTab: React.FC = () => {
     if (!editRow) return;
     setSaving(true);
     try {
-      await axios.put(`/api/style/sku/${row.id}`, {
+      await api.put(`/api/style/sku/${row.id}`, {
         costPrice: editRow.costPrice,
         salesPrice: editRow.salesPrice,
       });
