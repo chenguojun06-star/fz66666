@@ -16,6 +16,7 @@ import SyncProcessPriceModal from './components/SyncProcessPriceModal';
 import CreateFromStyleModal from './components/CreateFromStyleModal';
 import ApplyToStyleModal from './components/ApplyToStyleModal';
 import EditTemplateModal from './components/EditTemplateModal';
+import StyleProcessKnowledgeTab from '../StyleInfo/components/StyleProcessKnowledgeTab';
 import type { EditTemplateModalRef } from './components/EditTemplateModal';
 import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
 import type { TemplateLibraryRecord } from './utils/templateUtils';
@@ -70,6 +71,7 @@ const TemplateCenter: React.FC = () => {
   const [activeRow, _setActiveRow] = useState<TemplateLibrary | null>(null);
   const [viewContent, _setViewContent] = useState<string>('');
   const [viewObj, _setViewObj] = useState<unknown>(null);
+  const [cardTab, setCardTab] = useState<'list' | 'knowledge'>('list');
 
   // 多码单价相关状态
 
@@ -762,12 +764,22 @@ const TemplateCenter: React.FC = () => {
       <Card
         className="page-card"
         title="单价维护"
+        tabList={[
+          { key: 'list', tab: '模板列表' },
+          { key: 'knowledge', tab: '工序数据库' },
+        ]}
+        activeTabKey={cardTab}
+        onTabChange={(key) => setCardTab(key as 'list' | 'knowledge')}
       >
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} />
           </Card>
         ) : null}
+        {cardTab === 'knowledge' ? (
+          <StyleProcessKnowledgeTab />
+        ) : (
+          <>
         <Card size="small" className="filter-card mb-sm">
           <Form form={queryForm}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
@@ -849,6 +861,8 @@ const TemplateCenter: React.FC = () => {
             onChange: (p, ps) => fetchList({ page: p, pageSize: ps }),
           }}
         />
+          </>
+        )}
       </Card>
 
       <CreateFromStyleModal
