@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Row, Col, Button, Radio, DatePicker, Space, Tag, Typography, message, Divider, Alert,
+  Card, Row, Col, Button, DatePicker, Space, Tag, Typography, message, Divider, Alert, Modal,
 } from 'antd';
 import {
-  DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined,
+  DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined, UnlockOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
-import api from '@/utils/api';
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -18,9 +17,9 @@ const { RangePicker } = DatePicker;
 type ExportFormat = 'STANDARD' | 'KINGDEE' | 'UFIDA';
 
 const FORMAT_OPTIONS = [
-  { label: '通用标准格式', value: 'STANDARD' as ExportFormat, desc: '基础 Excel，适合所有财务软件手工导入' },
-  { label: '金蝶 KIS 格式', value: 'KINGDEE' as ExportFormat, desc: '金蝶KIS凭证导入格式，直接粘贴无需调整' },
-  { label: '用友 T3 格式', value: 'UFIDA' as ExportFormat, desc: '用友T3凭证导入格式，直接粘贴无需调整' },
+  { label: '通用标准格式', value: 'STANDARD' as ExportFormat, desc: '基础 Excel，适合所有财务软件手工导入', free: true },
+  { label: '金蝶 KIS 格式', value: 'KINGDEE' as ExportFormat, desc: '金蝶KIS凭证导入格式，直接粘贴无需调整', free: false },
+  { label: '用友 T3 格式', value: 'UFIDA' as ExportFormat, desc: '用友T3凭证导入格式，直接粘贴无需调整', free: false },
 ];
 
 const EXPORT_TYPES = [
@@ -52,20 +51,44 @@ const TaxExport: React.FC = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    appStoreService.getMyApps().then(apps => {
-      const active = apps.some(a => a.appCode === 'FINANCE_TAX' && !a.isExpired);
-      setSubscribed(active);
+    appStoreService.getMyApps().then((apps: any) => {
+      const list = Array.isArray(apps) ? apps : (apps?.records || apps?.data || []);
+      setSubscribed(list.some((a: any) => a.appCode === 'FINANCE_TAX' && !a.isExpired));
     }).catch(() => { }).finally(() => setChecking(false));
   }, []);
 
+  const handleFormatClick = (opt: typeof FORMAT_OPTIONS[0]) => {
+    if (!opt.free && !subscribed) {
+      Modal.confirm({
+        title: '专业格式 — 付费功能',
+        icon: <LockOutlined style={{ color: '#f59e0b' }} />,
+        content: (
+          <div>
+            <p style={{ marginBottom: 8 }}>金蝶/用友专用格式需要开通<strong>财税对接模块</strong>（¥499/月）。</p>
+            <p style={{ color: '#888', fontSize: 13 }}>通用标准格式永久免费，适合手工导入任意财务软件。</p>
+          </div>
+        ),
+        okText: '前往开通',
+        cancelText: '继续用免费版',
+        onOk: () => navigate(paths.appStore),
+      });
+      return;
+    }
+    setFormat(opt.value);
+  };
+
   const handleExport = async (type: string) => {
+    const selectedOpt = FORMAT_OPTIONS.find(f => f.value === format);
+    if (selectedOpt && !selectedOpt.free && !subscribed) {
+      message.warning('当前格式需要开通财税对接模块，已自动切换为通用标准格式');
+      setFormat('STANDARD');
+      return;
+    }
     setLoading(prev => ({ ...prev, [type]: true }));
     try {
       const startDate = dateRange[0].format('YYYY-MM-DD');
       const endDate = dateRange[1].format('YYYY-MM-DD');
       const url = `/api/finance/tax-export/${type}?startDate=${startDate}&endDate=${endDate}&format=${format}`;
-
-      // 直接触发浏览器下载
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
       });
@@ -92,101 +115,92 @@ const TaxExport: React.FC = () => {
     }
   };
 
-  const selectedFormatInfo = FORMAT_OPTIONS.find(f => f.value === format);
-
   if (checking) {
     return <Layout><div style={{ textAlign: 'center', padding: '80px 0' }}><span>加载中…</span></div></Layout>;
   }
 
-  if (!subscribed) {
-    return (
-      <Layout>
-        <div style={{ padding: '24px', maxWidth: 900 }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            borderRadius: 12, padding: '40px', marginBottom: 24,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <LockOutlined style={{ fontSize: 24, color: '#fff' }} />
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>财税导出 — 付费模块 · ¥499/月</span>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0 0 20px', fontSize: 14 }}>
-              一键导出金蝶/用友格式财务凭证，告别手工录入。工资结算 + 物料对账，完整的财务数据闭环。
-            </p>
-            <button
-              onClick={() => navigate(paths.appStore)}
-              style={{
-                background: '#fff', color: '#d97706', border: 'none', borderRadius: 8,
-                padding: '10px 28px', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-              }}
-            >
-              <RocketOutlined style={{ marginRight: 6 }} />前往应用商店开通
-            </button>
-          </div>
-          <div style={{ color: '#888', fontSize: 13 }}>开通后即可使用工资结算汇总、物料对账单导出功能，支持金蝶 KIS / 用友 T3 格式。</div>
-        </div>
-      </Layout>
-    );
-  }
+  const selectedFormatInfo = FORMAT_OPTIONS.find(f => f.value === format);
 
   return (
     <Layout>
-      <div style={{ padding: '24px', maxWidth: 900 }}>
-        <Title level={4} style={{ marginBottom: 4 }}>财税对接导出</Title>
-        <Text type="secondary">一键导出财务数据，无缝对接金蝶、用友等主流财务软件</Text>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
+        <Title level={4} style={{ marginBottom: 4 }}>
+          <FileExcelOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+          财税数据导出
+        </Title>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 20 }}>
+          将工资结算、物料对账数据导出为 Excel，可直接导入财务软件
+        </Text>
 
-        <Alert
-          style={{ marginTop: 16, marginBottom: 24 }}
-          type="info"
-          showIcon
-          message="如何使用"
-          description="① 选择导出格式（推荐直接选您正在使用的财务软件）→ ② 选择日期范围 → ③ 点击导出按钮，自动下载 Excel 文件"
-        />
+        {!subscribed && (
+          <Alert
+            type="info"
+            showIcon
+            icon={<UnlockOutlined />}
+            style={{ marginBottom: 16 }}
+            message="通用标准格式永久免费"
+            description={
+              <span>
+                适合手工导入任意财务软件。如需金蝶/用友专用格式（直接粘贴，无需调整列），可开通
+                <Button type="link" size="small" style={{ padding: '0 4px' }} onClick={() => navigate(paths.appStore)}>
+                  财税对接模块（¥499/月）
+                </Button>
+              </span>
+            }
+          />
+        )}
+        {subscribed && (
+          <Alert
+            type="success"
+            showIcon
+            icon={<RocketOutlined />}
+            style={{ marginBottom: 16 }}
+            message="已开通财税对接模块"
+            description="金蝶 KIS / 用友 T3 专用格式均已解锁，导出后可直接粘贴导入凭证。"
+          />
+        )}
 
         {/* 格式选择 */}
         <Card title="第一步：选择导出格式" style={{ marginBottom: 16 }}>
-          <Radio.Group
-            value={format}
-            onChange={e => setFormat(e.target.value)}
-            style={{ width: '100%' }}
-          >
-            <Row gutter={[12, 12]}>
-              {FORMAT_OPTIONS.map(opt => (
+          <Row gutter={[12, 12]}>
+            {FORMAT_OPTIONS.map(opt => {
+              const locked = !opt.free && !subscribed;
+              const selected = format === opt.value;
+              return (
                 <Col span={8} key={opt.value}>
                   <div
-                    onClick={() => setFormat(opt.value)}
+                    onClick={() => handleFormatClick(opt)}
                     style={{
-                      border: `2px solid ${format === opt.value ? '#1890ff' : '#d9d9d9'}`,
+                      border: `2px solid ${selected ? '#1890ff' : locked ? '#f0f0f0' : '#d9d9d9'}`,
                       borderRadius: 8,
                       padding: '12px 16px',
-                      cursor: 'pointer',
-                      background: format === opt.value ? '#e6f7ff' : '#fff',
+                      cursor: locked ? 'not-allowed' : 'pointer',
+                      background: selected ? '#e6f7ff' : locked ? '#fafafa' : '#fff',
                       transition: 'all 0.2s',
+                      position: 'relative',
                     }}
                   >
-                    <Radio value={opt.value}>
-                      <Text strong>{opt.label}</Text>
-                    </Radio>
-                    <Paragraph type="secondary" style={{ margin: '4px 0 0 24px', fontSize: 12 }}>
-                      {opt.desc}
-                    </Paragraph>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Text strong style={{ color: locked ? '#bbb' : undefined }}>{opt.label}</Text>
+                      {opt.free
+                        ? <Tag color="green" style={{ fontSize: 11, lineHeight: '18px', padding: '0 6px' }}>免费</Tag>
+                        : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 11, lineHeight: '18px', padding: '0 6px' }}>
+                            {subscribed ? '已解锁' : '付费'}
+                          </Tag>
+                      }
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{opt.desc}</Text>
+                    {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: '#1890ff' }} />}
                   </div>
                 </Col>
-              ))}
-            </Row>
-          </Radio.Group>
-          {selectedFormatInfo && (
-            <div style={{ marginTop: 12 }}>
-              <Tag color="blue" icon={<CheckCircleOutlined />}>
-                已选：{selectedFormatInfo.label}
-              </Tag>
-            </div>
-          )}
+              );
+            })}
+          </Row>
         </Card>
 
         {/* 日期范围 */}
         <Card title="第二步：选择日期范围" style={{ marginBottom: 16 }}>
-          <Space>
+          <Space wrap>
             <RangePicker
               value={dateRange}
               onChange={val => val && setDateRange(val as [Dayjs, Dayjs])}
@@ -205,14 +219,14 @@ const TaxExport: React.FC = () => {
           </Space>
         </Card>
 
-        {/* 导出类型 */}
-        <Card title="第三步：选择导出内容">
+        {/* 导出内容 */}
+        <Card title={<span>第三步：选择导出内容 <Tag color="blue" style={{ marginLeft: 8 }}>{selectedFormatInfo?.label}</Tag></span>}>
           <Row gutter={[16, 16]}>
             {EXPORT_TYPES.map(type => (
               <Col span={12} key={type.key}>
                 <Card
                   size="small"
-                  style={{ border: `1px solid ${type.color}20`, background: `${type.color}08` }}
+                  style={{ border: `1px solid ${type.color}30`, background: `${type.color}06` }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
@@ -238,10 +252,10 @@ const TaxExport: React.FC = () => {
           </Row>
 
           <Divider style={{ margin: '20px 0 12px' }} />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <FileExcelOutlined style={{ color: '#52c41a', fontSize: 16 }} />
             <Text type="secondary" style={{ fontSize: 12 }}>
-              导出文件为 .xlsx 格式 · 金蝶/用友格式支持直接在凭证录入界面粘贴导入 · 如遇问题请联系客服
+              导出文件为 .xlsx 格式 · 金蝶/用友格式支持直接在凭证录入界面粘贴导入
             </Text>
           </div>
         </Card>
