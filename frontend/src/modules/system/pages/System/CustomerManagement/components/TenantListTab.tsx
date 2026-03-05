@@ -199,8 +199,21 @@ const TenantListTab: React.FC = () => {
     });
   };
 
+  const TENANT_TYPE_MAP: Record<string, { color: string; label: string }> = {
+    SELF_FACTORY: { color: 'blue', label: '自建工厂' },
+    HYBRID:       { color: 'green', label: '混合型' },
+    BRAND:        { color: 'purple', label: '纯品牌' },
+  };
+
   const columns: ColumnsType<TenantInfo> = [
     { title: '工厂名称', dataIndex: 'tenantName', width: 160 },
+    {
+      title: '类型', dataIndex: 'tenantType', width: 80, align: 'center',
+      render: (v: string) => {
+        const cfg = TENANT_TYPE_MAP[v] || { color: 'default', label: v || '混合型' };
+        return <Tag color={cfg.color}>{cfg.label}</Tag>;
+      },
+    },
     { title: '租户编码', dataIndex: 'tenantCode', width: 110, render: (v: string) => v || <span style={{color:'#bbb'}}>待分配</span> },
     { title: '主账号', dataIndex: 'ownerUsername', width: 110, render: (v: string, r: TenantInfo) => v || r.applyUsername || '-' },
     { title: '联系人', dataIndex: 'contactName', width: 90 },
@@ -399,6 +412,30 @@ const TenantListTab: React.FC = () => {
         }
       >
         <Form form={form} layout="vertical">
+          <Form.Item
+            label="租户类型"
+            name="tenantType"
+            initialValue="HYBRID"
+            rules={[{ required: true }]}
+            style={{ marginBottom: 16 }}
+          >
+            <Radio.Group style={{ width: '100%' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Radio value="SELF_FACTORY" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
+                  <span style={{ fontWeight: 600 }}>🏭 自建工厂</span>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>拥有自有车间与产线，含裁剪管理，不含外发工厂管理</div>
+                </Radio>
+                <Radio value="HYBRID" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
+                  <span style={{ fontWeight: 600 }}>🔄 混合型（推荐）</span>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>既有自有产线，也有外发合作，全部功能开放</div>
+                </Radio>
+                <Radio value="BRAND" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
+                  <span style={{ fontWeight: 600 }}>🎯 纯品牌 / 贸易</span>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>全部外发生产，含外发工厂管理，不含裁剪管理</div>
+                </Radio>
+              </Space>
+            </Radio.Group>
+          </Form.Item>
           <Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]}><Input placeholder="唯一编码，工人注册用" /></Form.Item>
           <Form.Item label="联系人" name="contactName" rules={[{ required: true }]}><Input /></Form.Item>

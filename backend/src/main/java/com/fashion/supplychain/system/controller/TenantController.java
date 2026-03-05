@@ -68,10 +68,11 @@ public class TenantController {
         String ownerPassword = (String) params.get("ownerPassword");
         String ownerName = (String) params.get("ownerName");
         Integer maxUsers = params.get("maxUsers") != null ? Integer.valueOf(params.get("maxUsers").toString()) : null;
+        String tenantType = (String) params.getOrDefault("tenantType", "HYBRID");
 
         Map<String, Object> result = tenantOrchestrator.createTenant(
                 tenantName, tenantCode, contactName, contactPhone,
-                ownerUsername, ownerPassword, ownerName, maxUsers);
+                ownerUsername, ownerPassword, ownerName, maxUsers, tenantType);
         return Result.success(result);
     }
 

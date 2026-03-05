@@ -331,15 +331,24 @@ public class UserOrchestrator {
         result.put("tenantId", user.getTenantId());
         result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
         result.put("isSuperAdmin", Boolean.TRUE.equals(user.getIsSuperAdmin()));
-        // 补充 tenantName，从数据库实时查询（保证修改租户名后立即生效）
+        // 外发工厂联系人：返回 factoryId，前端据此进入工厂端视图
+        if (user.getFactoryId() != null && !user.getFactoryId().isBlank()) {
+            result.put("factoryId", user.getFactoryId());
+        }
+        // 补充 tenantName 和 tenantType，从数据库实时查询（保证修改后立即生效）
         if (user.getTenantId() != null && tenantService != null) {
             try {
                 Tenant currentTenant = tenantService.getById(user.getTenantId());
-                if (currentTenant != null && StringUtils.hasText(currentTenant.getTenantName())) {
-                    result.put("tenantName", currentTenant.getTenantName());
+                if (currentTenant != null) {
+                    if (StringUtils.hasText(currentTenant.getTenantName())) {
+                        result.put("tenantName", currentTenant.getTenantName());
+                    }
+                    if (StringUtils.hasText(currentTenant.getTenantType())) {
+                        result.put("tenantType", currentTenant.getTenantType());
+                    }
                 }
             } catch (Exception ignored) {
-                // 查询租户名失败不影响主流程
+                // 查询租户信息失败不影响主流程
             }
         }
 

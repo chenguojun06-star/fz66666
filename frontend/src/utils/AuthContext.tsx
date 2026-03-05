@@ -22,6 +22,16 @@ export interface UserInfo extends Record<string, unknown> {
   isTenantOwner?: boolean;
   /** 是否为平台超级管理员 */
   isSuperAdmin?: boolean;
+  /**
+   * 外发工厂联系人账号的工厂 ID（普通品牌账号为 undefined）。
+   * 不为空时表示该用户是某外发工厂的联系人，应显示工厂端视图。
+   */
+  factoryId?: string;
+  /**
+   * 所属租户类型：SELF_FACTORY | HYBRID | BRAND
+   * 用于前端菜单裁剪提示（已由后端权限控制实际访问）
+   */
+  tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
 }
 
 /**
@@ -174,6 +184,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
               isTenantOwner: u.isTenantOwner === true,
               isSuperAdmin: u.isSuperAdmin === true,
+              factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
+              tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
             };
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
@@ -260,6 +272,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
           isTenantOwner: u.isTenantOwner === true,
           isSuperAdmin: u.isSuperAdmin === true,
+          factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
+          tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
         };
 
         localStorage.setItem(tokenStorageKey, token);

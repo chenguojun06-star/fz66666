@@ -99,6 +99,14 @@ public class Tenant {
     /** 备注 */
     private String remark;
 
+    /**
+     * 租户类型：
+     * SELF_FACTORY = 自建工厂（仅自有产线，无外发工厂管理）
+     * HYBRID       = 混合型（自有 + 外发，默认值）
+     * BRAND        = 纯品牌（纯外发，无裁剪管理）
+     */
+    private String tenantType = "HYBRID";
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

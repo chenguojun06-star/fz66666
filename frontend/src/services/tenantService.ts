@@ -32,6 +32,8 @@ export interface TenantInfo {
   applyUsername?: string;
   expireTime?: string;
   remark?: string;
+  /** 租户类型: SELF_FACTORY=自建工厂 HYBRID=混合型 BRAND=纯品牌/贸易 */
+  tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
   createTime: string;
 }
 

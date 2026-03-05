@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu } from 'antd';
+import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu, Tag } from 'antd';
 import { CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
@@ -413,6 +413,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
   const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
 
+  // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
+  const isFactoryAccount = !!(user as any)?.factoryId;
+
+  // 工厂账号登录后跳转到生产列表（避免停留在仔表盘）
+  useEffect(() => {
+    if (isFactoryAccount && effectivePathname === '/dashboard') {
+      navigate('/production/list');
+    }
+  }, [isFactoryAccount, effectivePathname, navigate]);
+
   // 实时更新浏览器标题
   useEffect(() => {
     document.title = brandName;
@@ -464,6 +474,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-user">
             <SmartAlertBell />
 
+            {isFactoryAccount && (
+              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 12 }}>
+                🏭 外发工厂端
+              </Tag>
+            )}
             <Dropdown
               placement="bottomRight"
               trigger={['click']}

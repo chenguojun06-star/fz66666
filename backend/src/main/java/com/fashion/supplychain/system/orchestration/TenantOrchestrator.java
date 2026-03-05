@@ -93,17 +93,19 @@ public class TenantOrchestrator {
     public Map<String, Object> createTenant(String tenantName, String tenantCode,
                                              String contactName, String contactPhone,
                                              String ownerUsername, String ownerPassword,
-                                             String ownerName, Integer maxUsers) {
+                                             String ownerName, Integer maxUsers,
+                                             String tenantType) {
         assertSuperAdmin();
         // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
         return doCreateTenant(tenantName, tenantCode, contactName, contactPhone,
-                              ownerUsername, ownerPassword, ownerName, maxUsers);
+                              ownerUsername, ownerPassword, ownerName, maxUsers, tenantType);
     }
 
     private Map<String, Object> doCreateTenant(String tenantName, String tenantCode,
                                                 String contactName, String contactPhone,
                                                 String ownerUsername, String ownerPassword,
-                                                String ownerName, Integer maxUsers) {
+                                                String ownerName, Integer maxUsers,
+                                                String tenantType) {
         // 验证租户编码唯一
         if (tenantService.findByTenantCode(tenantCode) != null) {
             throw new IllegalArgumentException("租户编码已存在: " + tenantCode);
@@ -124,18 +126,20 @@ public class TenantOrchestrator {
         tenant.setContactPhone(contactPhone);
         tenant.setStatus("active");
         tenant.setMaxUsers(maxUsers != null ? maxUsers : 50);
+        // 租户类型：决定初始权限包范围
+        tenant.setTenantType(tenantType != null && !tenantType.isBlank() ? tenantType : "HYBRID");
         tenant.setCreateTime(LocalDateTime.now());
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.save(tenant);
 
         // 2. 为新租户创建管理员角色（克隆模板）—— 必须成功，失败则整体回滚
-        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenantName);
+        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenantName, tenant.getTenantType());
         // 强制校验：管理员角色必须存在且有效
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("[数据完整性] 租户管理员角色创建失败，无法继续创建租户: " + tenantCode);
         }
-        log.info("租户 {} 管理员角色已就绪: roleId={}, roleName={}",
-                 tenantCode, tenantAdminRole.getId(), tenantAdminRole.getRoleName());
+        log.info("租户 {} 管理员角色已就绪: roleId={}, roleName={}, tenantType={}",
+                 tenantCode, tenantAdminRole.getId(), tenantAdminRole.getRoleName(), tenant.getTenantType());
 
         // 3. 创建租户主账号（超级管理员）
         User owner = new User();
@@ -351,7 +355,8 @@ public class TenantOrchestrator {
         String tenantCode = "T" + String.format("%04d", tenantId);
 
         // 为新租户创建管理员角色
-        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenant.getTenantName());
+        // 申请时未指定类型，默认 HYBRID（全量权限）
+        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenant.getTenantName(), "HYBRID");
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("租户管理员角色创建失败，请检查 full_admin 角色模板是否存在");
         }
@@ -1201,7 +1206,7 @@ public class TenantOrchestrator {
      *
      * @throws IllegalStateException 模板不存在、克隆失败等情况，触发事务回滚
      */
-    private Role createTenantAdminRole(Long tenantId, String tenantName) {
+    private Role createTenantAdminRole(Long tenantId, String tenantName, String tenantType) {
         // 1. 查找 full_admin 模板（全局唯一，is_template=true）
         LambdaQueryWrapper<Role> query = new LambdaQueryWrapper<>();
         query.eq(Role::getIsTemplate, true)
@@ -1260,8 +1265,8 @@ public class TenantOrchestrator {
                         .filter(ceilingSet::contains)
                         .collect(Collectors.toList());
             } else {
-                // 无天花板限制 → 继承模板全部权限
-                effectivePermIds = templatePermIds;
+                // 无天花板限制 → 按租户类型过滤权限包，再继承剩余权限
+                effectivePermIds = applyTenantTypePermissionFilter(templatePermIds, tenantType);
             }
             rolePermissionService.replaceRolePermissions(cloned.getId(), effectivePermIds);
             permCount = effectivePermIds.size();
@@ -1282,6 +1287,44 @@ public class TenantOrchestrator {
                  tenantId, cloned.getId(), cloned.getRoleName(), verifiedPermCount,
                  templatePermIds != null ? templatePermIds.size() : 0);
         return cloned;
+    }
+
+    /**
+     * 按租户类型过滤权限 ID 列表：去除该类型不需要的菜单权限。
+     * <ul>
+     *   <li>SELF_FACTORY：去除 MENU_FACTORY（无外发工厂管理）</li>
+     *   <li>BRAND：去除 MENU_CUTTING（无自有裁剪产线）</li>
+     *   <li>HYBRID / null / 其他：不过滤，继承全部</li>
+     * </ul>
+     */
+    private List<Long> applyTenantTypePermissionFilter(List<Long> permIds, String tenantType) {
+        if (tenantType == null || "HYBRID".equalsIgnoreCase(tenantType)) {
+            return permIds;
+        }
+        Set<String> excludedCodes = new HashSet<>();
+        if ("SELF_FACTORY".equalsIgnoreCase(tenantType)) {
+            // 自建工厂：不开放外发工厂管理菜单
+            excludedCodes.add("MENU_FACTORY");
+        } else if ("BRAND".equalsIgnoreCase(tenantType)) {
+            // 纯品牌：不开放裁剪管理菜单（无自有产线）
+            excludedCodes.add("MENU_CUTTING");
+        }
+        if (excludedCodes.isEmpty()) return permIds;
+
+        // 查询需要排除的权限 ID
+        List<Permission> excludedPerms = permissionService.list(
+                new QueryWrapper<Permission>().in("permission_code", excludedCodes));
+        if (excludedPerms == null || excludedPerms.isEmpty()) return permIds;
+
+        Set<Long> excludedIds = excludedPerms.stream()
+                .map(Permission::getId)
+                .collect(Collectors.toSet());
+        List<Long> filtered = permIds.stream()
+                .filter(id -> !excludedIds.contains(id))
+                .collect(Collectors.toList());
+        log.info("[租户类型权限过滤] type={}, 排除权限码={}, 排除ID数={}, 最终权限数={}",
+                 tenantType, excludedCodes, excludedIds.size(), filtered.size());
+        return filtered;
     }
 
     private User sanitizeUser(User user) {
