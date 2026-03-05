@@ -72,9 +72,9 @@ const ProfitDeliveryPanel: React.FC = () => {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <Input
           prefix={<SearchOutlined style={{ color: '#4a6d8a' }} />}
-          placeholder="输入订单 ID（数字）"
+          placeholder="输入订单号（如 PO20260303002）"
           value={orderId}
-          onChange={e => setOrderId(e.target.value.replace(/[^\d]/g, ''))}
+          onChange={e => setOrderId(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
           onPressEnter={handleSearch}
           style={{
             width: 220,
