@@ -43,7 +43,7 @@ public class FinanceTaxExportOrchestrator {
         Long tenantId = UserContext.tenantId();
         QueryWrapper<PayrollSettlement> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
-        qw.eq("delete_flag", 0);
+        // t_payroll_settlement 表无 delete_flag 列，不加此过滤
         if (startDate != null && !startDate.isBlank()) {
             qw.ge("create_time", startDate + " 00:00:00");
         }
