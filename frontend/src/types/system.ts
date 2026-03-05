@@ -69,6 +69,7 @@ export interface Factory extends Record<string, unknown> {
   contactPhone?: string;
   address?: string;
   status: 'active' | 'inactive';
+  supplierType?: 'MATERIAL' | 'OUTSOURCE';
   operationRemark?: string;
   createTime?: string;
   updateTime?: string;
@@ -104,6 +105,7 @@ export interface FactoryQueryParams extends Record<string, unknown> {
   factoryCode?: string;
   factoryName?: string;
   status?: string;
+  supplierType?: string;
   page: number;
   pageSize: number;
 }

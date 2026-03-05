@@ -1,0 +1,91 @@
+package com.fashion.supplychain.finance.controller;
+
+import com.fashion.supplychain.finance.orchestration.FinanceTaxExportOrchestrator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.time.LocalDate;
+
+/**
+ * 财税导出 Controller
+ * 订阅 FINANCE_TAX 应用后解锁此接口组
+ */
+@RestController
+@RequestMapping("/api/finance/tax-export")
+@PreAuthorize("isAuthenticated()")
+public class FinanceTaxExportController {
+
+    @Autowired
+    private FinanceTaxExportOrchestrator taxExportOrchestrator;
+
+    /**
+     * 导出工资结算 Excel
+     *
+     * @param startDate 开始日期，格式 yyyy-MM-dd，默认当月1日
+     * @param endDate   结束日期，格式 yyyy-MM-dd，默认今日
+     * @param format    导出格式：STANDARD（默认）/ KINGDEE（金蝶KIS）/ UFIDA（用友T3）
+     */
+    @GetMapping("/payroll")
+    public ResponseEntity<byte[]> exportPayroll(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+
+        String start = (startDate != null && !startDate.isBlank()) ? startDate
+                : LocalDate.now().withDayOfMonth(1).toString();
+        String end = (endDate != null && !endDate.isBlank()) ? endDate
+                : LocalDate.now().toString();
+
+        byte[] data = taxExportOrchestrator.exportPayrollExcel(start, end, format);
+        String filename = buildFilename("工资结算", format, start, end);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodeFilename(filename))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(data);
+    }
+
+    /**
+     * 导出物料对账 Excel
+     */
+    @GetMapping("/material")
+    public ResponseEntity<byte[]> exportMaterial(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+
+        String start = (startDate != null && !startDate.isBlank()) ? startDate
+                : LocalDate.now().withDayOfMonth(1).toString();
+        String end = (endDate != null && !endDate.isBlank()) ? endDate
+                : LocalDate.now().toString();
+
+        byte[] data = taxExportOrchestrator.exportMaterialExcel(start, end, format);
+        String filename = buildFilename("物料对账", format, start, end);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodeFilename(filename))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(data);
+    }
+
+    private String buildFilename(String prefix, String format, String start, String end) {
+        String suffix = "KINGDEE".equalsIgnoreCase(format) ? "_金蝶KIS"
+                : "UFIDA".equalsIgnoreCase(format) ? "_用友T3" : "";
+        return prefix + suffix + "_" + start + "_" + end + ".xlsx";
+    }
+
+    private String encodeFilename(String name) {
+        try {
+            return java.net.URLEncoder.encode(name, "UTF-8").replace("+", "%20");
+        } catch (Exception e) {
+            return name;
+        }
+    }
+}

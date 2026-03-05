@@ -8,12 +8,12 @@ import { Factory as FactoryType, FactoryQueryParams } from '@/types/system';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
-import { App, Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Tabs, Tag, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -25,13 +25,18 @@ const FactoryList: React.FC = () => {
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
   const location = useLocation();
-  const navigate = useNavigate();
 
   // ===== 使用 useModal 管理弹窗 =====
   const factoryModal = useModal<FactoryType>();
   const logModal = useModal();
 
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('ALL');
+  const handleTabChange = (tab: string) => {
+    const t = tab as 'ALL' | 'MATERIAL' | 'OUTSOURCE';
+    setActiveTab(t);
+    setQueryParams((prev) => ({ ...prev, page: 1, supplierType: t === 'ALL' ? undefined : t }));
+  };
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
     page: 1,
     pageSize: 10
@@ -144,6 +149,7 @@ const FactoryList: React.FC = () => {
         contactPhone: '',
         address: '',
         status: 'active',
+        supplierType: activeTab === 'ALL' ? 'MATERIAL' : activeTab,
         businessLicense: undefined,
       });
       setLicenseFileList([]);
@@ -155,6 +161,7 @@ const FactoryList: React.FC = () => {
         contactPhone: factory?.contactPhone,
         address: factory?.address,
         status: factory?.status || 'inactive',
+        supplierType: factory?.supplierType || 'MATERIAL',
         businessLicense: (factory as any)?.businessLicense,
       });
       setLicenseFileList(buildImageFileList((factory as any)?.businessLicense));
@@ -322,6 +329,17 @@ const FactoryList: React.FC = () => {
   const columns = [
     { title: '供应商编码', dataIndex: 'factoryCode', key: 'factoryCode', width: 140 },
     { title: '供应商名称', dataIndex: 'factoryName', key: 'factoryName', width: 180, ellipsis: true },
+    {
+      title: '类型',
+      dataIndex: 'supplierType',
+      key: 'supplierType',
+      width: 110,
+      render: (v: string) => {
+        if (v === 'MATERIAL') return <Tag color="blue">面辅料</Tag>;
+        if (v === 'OUTSOURCE') return <Tag color="orange">外发厂</Tag>;
+        return <Tag>未分类</Tag>;
+      },
+    },
     { title: '联系人', dataIndex: 'contactPerson', key: 'contactPerson', width: 120 },
     { title: '联系电话', dataIndex: 'contactPhone', key: 'contactPhone', width: 140 },
     { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
@@ -368,15 +386,7 @@ const FactoryList: React.FC = () => {
               onClick: () => openDialog('edit', factory),
               primary: true,
             },
-            {
-              key: 'workers',
-              label: '查看工人',
-              title: '查看工人名册',
-              onClick: () =>
-                navigate(
-                  `/system/factory-workers?factoryId=${factory.id}&factoryName=${encodeURIComponent(factory.factoryName || '')}`
-                ),
-            },
+
             {
               key: 'account',
               label: '收款账户',
@@ -417,6 +427,17 @@ const FactoryList: React.FC = () => {
           <h2 className="page-title">供应商管理</h2>
         </div>
 
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          style={{ marginBottom: 8 }}
+          items={[
+            { key: 'ALL', label: '全部' },
+            { key: 'MATERIAL', label: '面辅料供应商' },
+            { key: 'OUTSOURCE', label: '外发供应商' },
+          ]}
+        />
+
         <Card size="small" className="filter-card mb-sm">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
             <Space wrap size={12}>
@@ -451,7 +472,7 @@ const FactoryList: React.FC = () => {
               <Button onClick={() => setQueryParams({ page: 1, pageSize: queryParams.pageSize })}>重置</Button>
             </Space>
             <Button type="primary" onClick={() => openDialog('create')}>
-              新增加工厂
+              {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
             </Button>
           </div>
         </Card>
@@ -497,6 +518,14 @@ const FactoryList: React.FC = () => {
         scaleWithViewport
       >
         <Form form={form} layout="vertical" disabled={dialogMode === 'view'}>
+          <Form.Item name="supplierType" label="供应商类型" rules={[{ required: true, message: '请选择供应商类型' }]}>
+            <Select
+              options={[
+                { value: 'MATERIAL', label: '面辅料供应商' },
+                { value: 'OUTSOURCE', label: '外发供应商' },
+              ]}
+            />
+          </Form.Item>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
               <Input placeholder="请输入供应商编码" />

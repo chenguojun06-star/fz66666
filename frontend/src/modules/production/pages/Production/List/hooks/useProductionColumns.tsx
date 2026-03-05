@@ -98,6 +98,11 @@ export function useProductionColumns({
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
               <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
             )}
+            {(record as any).orderBizType && (() => {
+              const bizType = String((record as any).orderBizType);
+              const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
+            })()}
           </div>
         );
       },
@@ -147,6 +152,18 @@ export function useProductionColumns({
       dataIndex: 'factoryName',
       key: 'factoryName',
       width: 120,
+      render: (v: any, record: any) => {
+        const bizType = record.orderBizType as string | undefined;
+        const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span>{v || '-'}</span>
+            {bizType && (
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16, width: 'fit-content' }}>{bizType}</Tag>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: '跟单员',

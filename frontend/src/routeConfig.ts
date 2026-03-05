@@ -59,6 +59,7 @@ export const paths = {
   expenseReimbursement: '/finance/expense-reimbursement',
   wagePayment: '/finance/wage-payment',
   ecSalesRevenue: '/finance/ec-revenue',
+  financeTaxExport: '/finance/tax-export',
 
   warehouseDashboard: '/warehouse/dashboard',
   materialInventory: '/warehouse/material',
@@ -84,6 +85,8 @@ export const paths = {
   systemIssues: '/system/issues',
   integrationCenter: '/integration/center',
   intelligenceCenter: '/intelligence/center',
+  crm: '/crm',
+  procurement: '/procurement',
 } as const;
 
 export const permissionCodes = {
@@ -131,6 +134,9 @@ export const permissionCodes = {
   integrationCenter: 'MENU_INTEGRATION',
   intelligenceCenter: 'MENU_DASHBOARD', // 智能中心复用仪表盘权限码
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
+  financeTaxExport: 'MENU_FINANCE_EXPORT',
+  crm: 'MENU_CRM',
+  procurement: 'MENU_PROCUREMENT',
 } as const;
 
 export type MenuItem = {
@@ -202,7 +208,20 @@ export const menuConfig: MenuSection[] = [
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
       { label: '付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
+      { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
+  },
+  {
+    title: 'CRM客户管理',
+    key: 'crm',
+    icon: React.createElement(TeamOutlined),
+    path: paths.crm,
+  },
+  {
+    title: '供应商采购',
+    key: 'procurement',
+    icon: React.createElement(ShoppingCartOutlined),
+    path: paths.procurement,
   },
   {
     title: '系统设置',
@@ -213,7 +232,6 @@ export const menuConfig: MenuSection[] = [
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
-      { label: '工人名册', path: paths.factoryWorkers, icon: React.createElement(TeamOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
@@ -296,6 +314,9 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.integrationCenter]: permissionCodes.integrationCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
+  [paths.financeTaxExport]: permissionCodes.financeTaxExport,
+  [paths.crm]: permissionCodes.crm,
+  [paths.procurement]: permissionCodes.procurement,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */

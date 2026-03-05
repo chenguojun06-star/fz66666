@@ -412,6 +412,7 @@ const TenantListTab: React.FC = () => {
         }
       >
         <Form form={form} layout="vertical">
+          {/* 租户类型 — 3 个卡片一行 */}
           <Form.Item
             label="租户类型"
             name="tenantType"
@@ -420,27 +421,45 @@ const TenantListTab: React.FC = () => {
             style={{ marginBottom: 16 }}
           >
             <Radio.Group style={{ width: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Radio value="SELF_FACTORY" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
-                  <span style={{ fontWeight: 600 }}>🏭 自建工厂</span>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>拥有自有车间与产线，含裁剪管理，不含外发工厂管理</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Radio value="SELF_FACTORY" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🏭 自建工厂</span>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>含裁剪管理，不含外发工厂</div>
                 </Radio>
-                <Radio value="HYBRID" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
-                  <span style={{ fontWeight: 600 }}>🔄 混合型（推荐）</span>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>既有自有产线，也有外发合作，全部功能开放</div>
+                <Radio value="HYBRID" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🔄 混合型（推荐）</span>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>自有产线 + 外发合作，全功能</div>
                 </Radio>
-                <Radio value="BRAND" style={{ alignItems: 'flex-start', padding: '8px 12px', border: '1px solid #f0f0f0', borderRadius: 6, width: '100%' }}>
-                  <span style={{ fontWeight: 600 }}>🎯 纯品牌 / 贸易</span>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>全部外发生产，含外发工厂管理，不含裁剪管理</div>
+                <Radio value="BRAND" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🎯 纯品牌 / 贸易</span>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>全部外发，不含裁剪管理</div>
                 </Radio>
-              </Space>
+              </div>
             </Radio.Group>
           </Form.Item>
-          <Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]}><Input placeholder="唯一编码，工人注册用" /></Form.Item>
-          <Form.Item label="联系人" name="contactName" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="联系电话" name="contactPhone"><Input /></Form.Item>
-          <Form.Item label="最大用户数" name="maxUsers"><InputNumber min={1} max={9999} defaultValue={50} style={{ width: '100%' }} /></Form.Item>
+
+          {/* 租户名称 + 租户编码 — 一行 */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}>
+              <Input placeholder="唯一编码，工人注册用" />
+            </Form.Item>
+          </div>
+
+          {/* 联系人 + 联系电话 + 最大用户数 — 一行 */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Form.Item label="联系人" name="contactName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="联系电话" name="contactPhone" style={{ flex: 1, marginBottom: 12 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="最大用户数" name="maxUsers" style={{ flex: '0 0 120px', marginBottom: 12 }}>
+              <InputNumber min={1} max={9999} defaultValue={50} style={{ width: '100%' }} />
+            </Form.Item>
+          </div>
           <div style={{ background: 'rgba(45, 127, 249, 0.08)', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>主账号信息</div>
             <Form.Item label="用户名" name="ownerUsername" rules={[{ required: true }]}><Input /></Form.Item>

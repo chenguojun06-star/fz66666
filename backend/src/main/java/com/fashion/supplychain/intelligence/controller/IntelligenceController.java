@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import java.util.List;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -100,6 +101,9 @@ public class IntelligenceController {
 
     @Autowired
     private MaterialShortageOrchestrator materialShortageOrchestrator;
+
+    @Autowired
+    private FactoryBottleneckOrchestrator factoryBottleneckOrchestrator;
 
     @Autowired
     private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
@@ -301,6 +305,12 @@ public class IntelligenceController {
     @GetMapping("/material-shortage")
     public Result<MaterialShortageResponse> materialShortage() {
         return Result.success(materialShortageOrchestrator.predict());
+    }
+
+    /** 工厂工序瓶颈分析 — 基于真实扫码记录计算各工厂卡点工序与完成率 */
+    @GetMapping("/factory-bottleneck")
+    public Result<List<FactoryBottleneckOrchestrator.FactoryBottleneckItem>> factoryBottleneck() {
+        return Result.success(factoryBottleneckOrchestrator.compute());
     }
 
     /**

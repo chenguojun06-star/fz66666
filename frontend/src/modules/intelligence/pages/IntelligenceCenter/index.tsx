@@ -10,6 +10,7 @@ import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse,
+  FactoryBottleneckItem,
   BottleneckDetectionResponse, DeliveryRiskResponse, DeliveryRiskItem, AnomalyItem,
   NlQueryResponse, DefectTraceResponse,
 } from '@/services/production/productionApi';
@@ -476,6 +477,7 @@ interface CockpitData {
   ranking: FactoryLeaderboardResponse | null;
   shortage: MaterialShortageResult | null;
   healing: SelfHealingResponse | null;
+  bottleneck: FactoryBottleneckItem[] | null;
   orders: ProductionOrder[];
   loading: boolean;
 }
@@ -483,16 +485,17 @@ interface CockpitData {
 function useCockpit() {
   const [data, setData] = useState<CockpitData>({
     pulse: null, health: null, notify: null, workers: null,
-    heatmap: null, ranking: null, shortage: null, healing: null, orders: [], loading: true,
+    heatmap: null, ranking: null, shortage: null, healing: null, bottleneck: null, orders: [], loading: true,
   });
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rOrders] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
         intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
+        intelligenceApi.getFactoryBottleneck(),
         productionOrderApi.list({ pageSize: 50 } as any),
       ]);
     const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
@@ -503,6 +506,7 @@ function useCockpit() {
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
+      bottleneck: v(rBottleneck),
       orders: orderResult.filter(o => o.status !== 'completed'), loading: false,
     });
   }, []);
@@ -626,7 +630,7 @@ const IntelligenceCenter: React.FC = () => {
     finally { setNlLoading(false); }
   };
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, orders } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders } = data;
 
   /* ── 逾期 & 延期风险订单（纯前端推导，无需额外接口） ── */
   const overdueRisk = useMemo(() => {
@@ -645,33 +649,8 @@ const IntelligenceCenter: React.FC = () => {
     return { overdue, highRisk, watch };
   }, [orders]);
 
-  /* ── 工厂卡点分析（按工厂聚合，找最落后工序） ── */
-  const factoryBottleneck = useMemo(() => {
-    // 按工厂分组，每单保留原始引用
-    const map = new Map<string, { name: string; orderList: typeof orders }>();
-    for (const o of orders) {
-      const name = o.factoryName ?? '未分配';
-      if (!map.has(name)) map.set(name, { name, orderList: [] });
-      map.get(name)!.orderList.push(o);
-    }
-    return Array.from(map.values()).map(({ name, orderList }) => {
-      // 找平均进度最低的工序
-      let minStage = '—'; let minAvg = 101;
-      for (const { key, label } of STAGE_FIELDS) {
-        const avg = orderList.reduce((s, o) => s + (Number((o as any)[key]) || 0), 0) / orderList.length;
-        if (avg < minAvg) { minAvg = avg; minStage = label; }
-      }
-      // 找对应工序字段
-      const stuckKey = STAGE_FIELDS.find(f => f.label === minStage)?.key ?? '';
-      // 取该工序进度最低的前 3 单（带订单号）
-      const worstOrders = [...orderList]
-        .filter(o => (Number((o as any)[stuckKey]) || 0) < 80)
-        .sort((a, b) => (Number((a as any)[stuckKey]) || 0) - (Number((b as any)[stuckKey]) || 0))
-        .slice(0, 3)
-        .map(o => ({ no: o.orderNo ?? '', pct: Number((o as any)[stuckKey]) || 0 }));
-      return { name, count: orderList.length, stuckStage: minStage, stuckPct: Math.round(minAvg), worstOrders };
-    }).sort((a, b) => a.stuckPct - b.stuckPct);
-  }, [orders]);
+  /* ── 工厂卡点分析：来自后端真实扫码统计（替代旧的从未写入的 *CompletionRate 字段） ── */
+  const factoryBottleneck = bottleneck ?? [];
 
   /* 派生警报数量 */
   const alertCount = (pulse?.stagnantFactories?.length ?? 0) + (shortage?.shortageItems?.length ?? 0);
@@ -1013,19 +992,19 @@ const IntelligenceCenter: React.FC = () => {
                 {factoryBottleneck.map(f => {
                   const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
                   return (
-                    <div key={f.name} className="c-bottleneck-item">
+                    <div key={f.factoryName} className="c-bottleneck-item">
                       <div className="c-bottleneck-row">
-                        <span className="c-bottleneck-factory">{f.name}</span>
+                        <span className="c-bottleneck-factory">{f.factoryName}</span>
                         <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
                         <div className="c-bottleneck-orders">
                           {f.worstOrders.map(w => (
-                            <span key={w.no} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
-                              {w.no}&nbsp;<b style={{ color: c }}>{w.pct}%</b>
+                            <span key={w.orderNo} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
+                              {w.orderNo}&nbsp;<b style={{ color: c }}>{w.pct}%</b>
                             </span>
                           ))}
                         </div>
                         <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
-                        <span className="c-bottleneck-cnt">{f.count}单</span>
+                        <span className="c-bottleneck-cnt">{f.orderCount}单</span>
                       </div>
                       <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <LiveDot size={5} color="#f7c948" /><span style={{ color: '#6a9ab4' }}>AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}</span>
@@ -1134,7 +1113,7 @@ const IntelligenceCenter: React.FC = () => {
                     marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
                     color: item.riskLevel === 'HIGH' ? '#ff4136' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
-                    {item.riskLevel === 'HIGH' ? '⚠ 3天内断货' : item.riskLevel === 'MEDIUM' ? '1周内需补' : '2周内补单'}
+                    {item.riskLevel === 'HIGH' ? '⚠ 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
                   </span>
                 </div>
               ))

@@ -1745,6 +1745,20 @@ const OrderManagement: React.FC = () => {
                           </Form.Item>
                         </Col>
                         <Col xs={24} sm={8}>
+                          <Form.Item name="orderBizType" label="下单类型">
+                            <Select
+                              placeholder="选填（FOB/ODM/OEM/CMT）"
+                              allowClear
+                              options={[
+                                { label: 'FOB — 离岸价交货', value: 'FOB' },
+                                { label: 'ODM — 原创设计制造', value: 'ODM' },
+                                { label: 'OEM — 代工贴牌', value: 'OEM' },
+                                { label: 'CMT — 纯加工', value: 'CMT' },
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
                           <Form.Item name="productCategory" label="品类">
                             <Select
                               placeholder="请选择品类（选填）"

@@ -156,4 +156,11 @@ public class ProductionProcessTracking {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /**
+     * 虚拟字段：后续扫码环节（质检）是否已完成扫码
+     * 如为 true，前端应隐藏撤回按钮（后端 undo() 同样会拒绝）
+     */
+    @TableField(exist = false)
+    private Boolean hasNextStageScanned;
 }

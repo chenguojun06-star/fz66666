@@ -240,6 +240,18 @@ export interface MaterialShortageResult {
   summary: string;
 }
 
+export interface FactoryBottleneckWorstOrder {
+  orderNo: string;
+  pct: number;
+}
+export interface FactoryBottleneckItem {
+  factoryName: string;
+  orderCount: number;
+  stuckStage: string;
+  stuckPct: number;
+  worstOrders: FactoryBottleneckWorstOrder[];
+}
+
 export interface DailyIndex { date: string; index: number; }
 export interface HealthIndexResponse {
   healthIndex: number;
@@ -615,6 +627,10 @@ export const intelligenceApi = {
   /** 面料缺口预测 */
   getMaterialShortage: () =>
     api.get<{ code: number; data: MaterialShortageResult }>('/intelligence/material-shortage'),
+
+  /** 工厂工序瓶颈分析 — 基于真实扫码数据 */
+  getFactoryBottleneck: () =>
+    api.get<{ code: number; data: FactoryBottleneckItem[] }>('/intelligence/factory-bottleneck'),
 
   /** AI顾问状态（是否已配置 DEEPSEEK_API_KEY） */
   getAiAdvisorStatus: () =>

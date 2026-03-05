@@ -629,6 +629,11 @@ public class AppStoreOrchestrator {
                 endpoints.add(Map.of("method", "PUSH", "path", "/openapi/v1/webhook/material/price-update", "desc", "供应商价格更新回调"));
                 endpoints.add(Map.of("method", "PUSH", "path", "/openapi/v1/webhook/material/shipping-update", "desc", "供应商发货物流回调"));
                 break;
+            case "CRM_MODULE":
+            case "FINANCE_TAX":
+            case "PROCUREMENT":
+                // UI功能模块 — 订阅后解锁系统内功能页面，无外部API端点
+                break;
             default:
                 break;
         }

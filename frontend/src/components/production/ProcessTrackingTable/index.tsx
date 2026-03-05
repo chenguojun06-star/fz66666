@@ -6,6 +6,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
 import { productionScanApi } from '@/services/production/productionApi';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
+import { useAuth, isAdminUser } from '@/utils/AuthContext';
 
 interface ProcessTrackingRecord {
   id: string;
@@ -26,6 +27,8 @@ interface ProcessTrackingRecord {
   scanRecordId?: string;
   /** 是否已工资结算（已结算不可撤回） */
   isSettled?: boolean;
+  /** 后续质检环节是否已完成扫码（true=后端会拒绝撤回，前端主动隐藏按钮） */
+  hasNextStageScanned?: boolean;
 }
 
 /** 工序单价项（从模板/节点传入，用于动态过滤） */
@@ -58,16 +61,25 @@ interface ProcessTrackingTableProps {
   processList?: ProcessListItem[];
 }
 
-/** 判断工序跟踪记录是否可在 PC 端撤回 */
-function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string): boolean {
+/** 判断工序跟踪记录是否可在 PC 端撤回
+ *  isAdmin=true 时与后端一致：5小时窗口；普通用户 30分钟。
+ *  终结状态（completed/cancelled/closed）与后端 isTerminalOrderStatus 完全对齐。
+ */
+function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string, isAdmin?: boolean): boolean {
   if (record.scanStatus !== 'scanned') return false;
   if (record.isSettled) return false;
+  if (record.hasNextStageScanned) return false;
   if (!record.scanRecordId) return false;
-  if (orderStatus && orderStatus.toLowerCase() === 'completed') return false;
+  // 与后端 isTerminalOrderStatus 对齐：completed / cancelled / closed 均禁止撤回
+  if (orderStatus) {
+    const s = orderStatus.toLowerCase();
+    if (s === 'completed' || s === 'cancelled' || s === 'closed') return false;
+  }
   const scanTime = record.scanTime;
   if (scanTime) {
     const scanMs = new Date(String(scanTime).replace(' ', 'T')).getTime();
-    if (!isNaN(scanMs) && Date.now() - scanMs >= 3600 * 1000) return false;
+    const limitMs = isAdmin ? 5 * 3600 * 1000 : 30 * 60 * 1000; // 管理员 5h，普通用户 30min
+    if (!isNaN(scanMs) && Date.now() - scanMs >= limitMs) return false;
   }
   return true;
 }
@@ -165,6 +177,8 @@ const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeNa
 
 const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType, orderStatus, processList, onUndoSuccess }) => {
   const { message, modal } = App.useApp();
+  const { user } = useAuth();
+  const _isAdmin = isAdminUser(user);
   const safeRecords = Array.isArray(records) ? records : [];
 
   const handleUndo = useCallback(async (record: ProcessTrackingRecord) => {
@@ -321,7 +335,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
       key: 'actions',
       width: 80,
       render: (_: any, record: ProcessTrackingRecord) => {
-        if (!canUndoTracking(record, orderStatus)) return null;
+        if (!canUndoTracking(record, orderStatus, _isAdmin)) return null;
         const actions: RowAction[] = [
           {
             key: 'undo',

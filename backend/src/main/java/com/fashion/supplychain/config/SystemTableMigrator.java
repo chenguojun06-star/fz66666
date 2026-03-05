@@ -358,7 +358,11 @@ public class SystemTableMigrator {
             ensurePermission("审批付款", "MENU_PAYMENT_APPROVAL", financeId, "财务管理", "menu", "/finance/payment-approval", null, 34);
             ensurePermission("人员工序统计", "MENU_PAYROLL_OPERATOR_SUMMARY", financeId, "财务管理", "menu", "/finance/payroll-operator-summary", null, 35);
             ensurePermission("费用报销", "MENU_EXPENSE_REIMBURSEMENT", financeId, "财务管理", "menu", "/finance/expense-reimbursement", null, 36);
+            ensurePermission("财税导出", "MENU_FINANCE_EXPORT", financeId, "财务管理", "menu", "/finance/tax-export", null, 37);
         }
+        // 独立售卖模块菜单权限（CRM客户管理、供应商采购）
+        ensurePermission("CRM客户管理", "MENU_CRM", 0L, null, "menu", "/crm", null, 50);
+        ensurePermission("供应商采购", "MENU_PROCUREMENT", 0L, null, "menu", "/procurement", null, 60);
         if (systemId != null) {
             ensurePermission("人员管理", "MENU_USER", systemId, "系统设置", "menu", "/system/user", null, 41);
             ensurePermission("角色管理", "MENU_ROLE", systemId, "系统设置", "menu", "/system/role", null, 42);

@@ -136,6 +136,11 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     const keyword = String(stageKeyword || '').trim();
     if (!keyword) return '';
 
+    // ★ 采购特殊处理：模板无采购节点时，到货时间由 useBoardStats 写入 __procurement__ 哨兵键
+    if (/采购|物料|备料|辅料|面料/.test(keyword) && timeMap['__procurement__']) {
+      return timeMap['__procurement__'];
+    }
+
     // ★ 核心：从 progressWorkflowJson 获取父→子映射
     // byParent 示例: { "车缝": [{name:"上领"}, {name:"埋夹"}], "尾部": [{name:"大烫"}, {name:"剪线"}, {name:"包装"}] }
     const byParent = getProcessesByNodeFromOrder(record);

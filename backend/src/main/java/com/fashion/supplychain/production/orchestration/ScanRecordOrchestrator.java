@@ -319,18 +319,20 @@ public class ScanRecordOrchestrator {
             }
         }
 
-        // 时间限制：管理员8小时，普通用户1小时
+        // 时间限制：管理员5小时，普通用户30分钟
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null) {
             UserContext timeCtx = UserContext.get();
             String timeRole = timeCtx == null ? null : timeCtx.getRole();
             boolean isAdmin = timeRole != null && (timeRole.contains("admin") || timeRole.contains("manager")
                     || timeRole.contains("supervisor") || timeRole.contains("主管") || timeRole.contains("管理员"));
-            int limitHours = isAdmin ? 8 : 1;
-            if (scanTime.plusHours(limitHours).isBefore(LocalDateTime.now())) {
+            boolean undoExpired = isAdmin
+                    ? scanTime.plusHours(5).isBefore(LocalDateTime.now())
+                    : scanTime.plusMinutes(30).isBefore(LocalDateTime.now());
+            if (undoExpired) {
                 throw new IllegalStateException(isAdmin
-                        ? "只能撤回8小时内的扫码记录（管理员权限）"
-                        : "只能撤回1小时内的扫码记录，如需撤回请联系管理员");
+                        ? "只能撤回5小时内的扫码记录（管理员权限）"
+                        : "只能撤回30分钟内的扫码记录，如需撤回请联系管理员");
             }
         }
 
@@ -459,10 +461,10 @@ public class ScanRecordOrchestrator {
             }
         }
 
-        // 校验1小时时间限制
+        // 校验30分钟时间限制
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
-        if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("只能退回1小时内的扫码记录");
+        if (scanTime != null && scanTime.plusMinutes(30).isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("只能退回30分钟内的扫码记录");
         }
 
         // 已完成订单禁止退回重扫

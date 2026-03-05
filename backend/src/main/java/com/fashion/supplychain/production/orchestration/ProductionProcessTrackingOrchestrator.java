@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.exception.BusinessException;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -7,12 +8,14 @@ import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.util.LinkedHashMap;
@@ -30,8 +33,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -66,6 +71,9 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private ProcessParentMappingService processParentMappingService;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     /**
      * 初始化工序跟踪记录（裁剪完成时调用）
@@ -545,6 +553,34 @@ public class ProductionProcessTrackingOrchestrator {
             }
         } catch (Exception e) {
             log.warn("获取模板价格失败，使用DB中存储的价格 orderNo={}: {}", order.getOrderNo(), e.getMessage());
+        }
+
+        // 填充虚拟字段 hasNextStageScanned：检查质检环节是否已扫码（适用于生产工序记录）
+        // 若某菲号已完成质检扫码，对应生产工序记录不允许再撤回（后端 undo() 同样会拒绝，此处仅供前端提前隐藏按钮）
+        try {
+            boolean anyScanned = records.stream()
+                    .anyMatch(r -> "scanned".equals(r.getScanStatus()) && r.getCuttingBundleId() != null);
+            if (anyScanned) {
+                Set<String> bundlesWithQualityScan = new HashSet<>();
+                List<ScanRecord> qualityScans = scanRecordService.list(
+                        new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderId, productionOrderId)
+                                .eq(ScanRecord::getScanType, "quality")
+                                .eq(ScanRecord::getScanResult, "success")
+                                .isNotNull(ScanRecord::getCuttingBundleId));
+                for (ScanRecord qs : qualityScans) {
+                    if (qs.getCuttingBundleId() != null) {
+                        bundlesWithQualityScan.add(qs.getCuttingBundleId());
+                    }
+                }
+                for (ProductionProcessTracking r : records) {
+                    if ("scanned".equals(r.getScanStatus()) && r.getCuttingBundleId() != null) {
+                        r.setHasNextStageScanned(bundlesWithQualityScan.contains(r.getCuttingBundleId()));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("填充hasNextStageScanned失败，忽略 orderId={}: {}", productionOrderId, e.getMessage());
         }
 
         return records;

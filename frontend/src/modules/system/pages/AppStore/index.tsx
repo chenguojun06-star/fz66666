@@ -54,6 +54,10 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
   EC_XIAOHONGSHU: { icon: '📕', color: '#FF2442', urlHint: '如: https://your-system.com/webhook/xiaohongshu' },
   EC_WECHAT_SHOP: { icon: '💚', color: '#07C160', urlHint: '如: https://your-system.com/webhook/wechat-shop' },
   EC_SHOPIFY:     { icon: '🟢', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
+  // UI功能模块 — 订阅后直接解锁系统内功能页面，无需配置外部API地址
+  CRM_MODULE:  { icon: '👥', color: 'var(--color-primary)', urlHint: '' },
+  FINANCE_TAX: { icon: '📊', color: 'var(--color-success)', urlHint: '' },
+  PROCUREMENT: { icon: '🏭', color: 'var(--color-warning)', urlHint: '' },
 };
 
 
@@ -259,7 +263,15 @@ const AppStore: React.FC = () => {
                       </div>
                     </>
                   )}
-                  <Tag color="blue">{app.category}</Tag>
+                  <Tag color="blue">{{
+                    ECOMMERCE: '电商对接',
+                    CRM: '客户管理',
+                    FINANCE: '财务',
+                    SUPPLY_CHAIN: '供应链',
+                    CORE: '核心对接',
+                    PRODUCTION: '生产管理',
+                    WAREHOUSE: '仓库管理',
+                  }[app.category] ?? app.category}</Tag>
                 </div>
               }
             />

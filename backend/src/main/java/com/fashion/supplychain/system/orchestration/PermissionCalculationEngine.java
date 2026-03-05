@@ -80,17 +80,21 @@ public class PermissionCalculationEngine {
      * @return 权限代码列表
      */
     public List<String> calculatePermissions(Long userId, Long roleId, Long tenantId, boolean isTenantOwner) {
+        // 超级管理员（tenantId=null）：跳过天花板和角色限制，直接返回系统全部权限
+        // 以后新增任何权限，超管自动获得，无需手动配置
+        if (tenantId == null) {
+            if (roleId != null) {
+                return getRolePermissionCodes(roleId);
+            }
+            return getAllPermissionCodes();
+        }
+
         // 租户主账号且无角色：获取租户天花板内的所有权限
         if (roleId == null && isTenantOwner && tenantId != null) {
             return calculateTenantOwnerPermissions(userId, tenantId);
         }
         if (roleId == null) {
             return List.of();
-        }
-
-        // 超级管理员：直接返回角色权限（无天花板限制）
-        if (tenantId == null) {
-            return getRolePermissionCodes(roleId);
         }
 
         // 尝试从缓存获取最终权限
@@ -160,6 +164,30 @@ public class PermissionCalculationEngine {
     public List<String> getRolePermissionCodes(Long roleId) {
         List<Long> ids = getRolePermissionIds(roleId);
         return convertToPermissionCodes(new HashSet<>(ids));
+    }
+
+    /**
+     * 获取系统全部权限代码列表（超管专用）
+     * 带缓存，新增权限后TTL内自动生效
+     */
+    private List<String> getAllPermissionCodes() {
+        String cacheKey = "super:all:perms";
+        try {
+            List<String> cached = redisService.get(cacheKey);
+            if (cached != null) return cached;
+        } catch (Exception ignored) {}
+
+        List<String> codes = permissionService.list().stream()
+                .map(Permission::getPermissionCode)
+                .filter(c -> c != null && !c.isBlank())
+                .sorted()
+                .collect(Collectors.toList());
+
+        try {
+            redisService.set(cacheKey, codes, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        } catch (Exception ignored) {}
+
+        return codes;
     }
 
     /**
