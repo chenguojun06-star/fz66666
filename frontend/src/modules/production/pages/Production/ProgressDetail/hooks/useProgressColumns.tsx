@@ -381,7 +381,36 @@ export const useProgressColumns = ({
           );
         }
 
+        // ★ 模板无采购节点但有采购到货时间 → 在进度球上方显示到货 Badge
+        const procurementTime = nodeTimeMap?.['__procurement__'] || '';
+        const hasProcureNodeInTemplate = ns.some((n: ProgressNode) =>
+          /采购|物料|备料|辅料|面料/.test(n.name || '')
+        );
+
         return (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            alignItems: 'stretch',
+            width: '100%',
+          }}>
+            {procurementTime && !hasProcureNodeInTemplate && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                fontSize: 11,
+                color: '#10b981',
+                background: 'rgba(16,185,129,0.08)',
+                borderRadius: 4,
+                whiteSpace: 'nowrap',
+              }}>
+                <span>📦</span>
+                <span>采购到货 {formatCompletionTime(procurementTime)}</span>
+              </div>
+            )}
           <div style={{
             display: 'flex',
             gap: 0,
@@ -487,6 +516,7 @@ export const useProgressColumns = ({
                 </div>
               );
             })}
+          </div>
           </div>
         );
       },

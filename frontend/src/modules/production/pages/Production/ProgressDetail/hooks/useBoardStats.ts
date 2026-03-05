@@ -170,12 +170,18 @@ export const ensureBoardStatsForOrder = async ({
     }
 
     // === 采购节点：从采购模块获取真实到货数据 ===
+    // 宽松匹配：精确名称 + 含「采购/物料/备料/辅料/面料」关键词（覆盖自定义节点名）
     const PROCUREMENT_NODE_NAMES = new Set(['采购', '物料', '备料']);
-    const hasProcureNode = (nodes || []).some((n) => PROCUREMENT_NODE_NAMES.has(String((n as any)?.name || '').trim()));
+    const isProcureNodeName = (name: string) =>
+      PROCUREMENT_NODE_NAMES.has(name)
+      || /采购|物料|备料|辅料|面料/.test(name);
+    const hasProcureNode = (nodes || []).some((n) => isProcureNodeName(String((n as any)?.name || '').trim()));
     let procureArrived = 0;
     let procureArrivalTime = '';
     const orderNo = String((order as any)?.orderNo || '').trim();
-    if (hasProcureNode && orderNo) {
+    // ★ 无论模板是否配了采购节点，只要有 orderNo 就查采购接口
+    // 这样即使模板用不同名称（如"面料到货"）或根本没配采购节点，也能拿到到货时间
+    if (orderNo) {
       try {
         const purchaseRes = await materialPurchaseApi.listByOrderNo(orderNo);
         const purchaseRecords: unknown[] = (purchaseRes as any)?.code === 200
@@ -189,13 +195,17 @@ export const ensureBoardStatsForOrder = async ({
         }
       } catch { /* 采购接口失败，保持扫码数据不变 */ }
     }
-    // 将采购到货数写入 stats（扫码记录有数据优先）
+    // 将采购到货数写入 stats（扫码记录有数据优先，宽松匹配节点名）
     for (const n of nodes || []) {
       const nodeName = String((n as any)?.name || '').trim();
-      if (!PROCUREMENT_NODE_NAMES.has(nodeName)) continue;
+      if (!isProcureNodeName(nodeName)) continue;
       if (!hasScanByNode[nodeName] && procureArrived > 0) {
         stats[nodeName] = procureArrived;
       }
+    }
+    // ★ 模板无采购节点但有到货数据 → 写入哨兵键，供悬停卡/弹窗消费
+    if (!hasProcureNode && procureArrived > 0) {
+      stats['__procurement__'] = procureArrived;
     }
 
     mergeBoardStatsForOrder(oid, stats);
@@ -215,11 +225,15 @@ export const ensureBoardStatsForOrder = async ({
           const t = String((r as any)?.scanTime || (r as any)?.createTime || '');
           if (t && (!maxTime || t > maxTime)) maxTime = t;
         }
-        // 采购节点时间：无扫码时用 actualArrivalDate
-        if (!maxTime && PROCUREMENT_NODE_NAMES.has(nodeName) && procureArrivalTime) {
+        // 采购节点时间：无扫码时用 actualArrivalDate（宽松匹配节点名）
+        if (!maxTime && isProcureNodeName(nodeName) && procureArrivalTime) {
           maxTime = procureArrivalTime;
         }
         if (maxTime) timeStats[nodeName] = maxTime;
+      }
+      // ★ 模板无采购节点但有到货时间 → 写入哨兵键，供悬停卡/详情弹窗消费
+      if (!hasProcureNode && procureArrivalTime) {
+        timeStats['__procurement__'] = procureArrivalTime;
       }
       mergeBoardTimesForOrder(oid, timeStats);
     }

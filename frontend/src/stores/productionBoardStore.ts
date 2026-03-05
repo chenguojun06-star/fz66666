@@ -78,14 +78,15 @@ export const useProductionBoardStore = create<ProductionBoardState>()((set) => (
     }));
   },
   clearAllBoardCache: () => {
-    set({
+    set((state) => ({
       boardStatsByOrder: {},
-      boardTimesByOrder: {},
+      // ★ 保留 boardTimesByOrder：刷新时时间不瞬间消失，新数据回来后自动覆盖
+      boardTimesByOrder: state.boardTimesByOrder,
       boardStatsLoadingByOrder: {},
       processStatsByOrder: {},
       processGroupsByOrder: {},
       processTimesByOrder: {},
       processWorkerCountsByOrder: {},
-    });
+    }));
   },
 }));
