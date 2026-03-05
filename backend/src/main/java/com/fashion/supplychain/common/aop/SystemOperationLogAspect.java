@@ -53,17 +53,25 @@ public class SystemOperationLogAspect {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 记录所有重要业务操作：增删改、状态流转、审批、入出库等
-     * 覆盖全系统：生产、款式、采购、仓库、裁剪、财务等所有模块
+     * 只记录「有溯源价值」的操作：修改/删除/报废/关单/驳回/撤销/审批等异常/破坏性事件。
+     *
+     * ★ 刻意排除：
+     *   - 新增（正常创建流程，无溯源必要）
+     *   - 开始 / 完成生产 / 完工（正常工序推进）
+     *   - 提交审批（正常流转，审批结果才重要）
+     *   - 确认（正常收货/验收动作）
+     *   - 状态变更（太泛化，已被具体动作覆盖）
+     *   - 领料（正常出库动作，频率高、噪音大）
+     *
+     * 保留的入库/出库/结算 = 有财务意义，需可追溯。
      */
     private static final Set<String> LOGGED_OPERATIONS = Set.of(
-        // 数据变更
-        "新增", "修改", "删除", "报废", "转移", "删除扫码链",
-        // 状态流转
-        "关单", "驳回", "撤销", "审批通过", "审批", "提交审批",
-        "完成生产", "完工", "开始", "确认", "状态变更",
-        // 仓储
-        "入库", "物料入库", "出库", "领料", "结算"
+        // 数据变更（真正的破坏性/不可逆操作）
+        "修改", "删除", "报废", "转移", "删除扫码链",
+        // 异常状态流转（非正常路径）
+        "关单", "驳回", "撤销", "审批通过", "审批",
+        // 财务/仓储重要动作
+        "入库", "物料入库", "出库", "结算"
     );
 
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
@@ -175,6 +183,7 @@ public class SystemOperationLogAspect {
 
     /**
      * 从返回值提取目标名称。
+     * ★ 当同时存在订单号和款号时，合并显示：订单号 (款号)
      * 支持：普通对象（getOrderNo等）+ Map类型返回（cancelReceive等返回 Map<String,Object>）
      */
     private String extractTargetNameFromResult(Object result) {
@@ -183,36 +192,44 @@ public class SystemOperationLogAspect {
             java.lang.reflect.Method getDataMethod = result.getClass().getMethod("getData");
             Object data = getDataMethod.invoke(result);
             if (data == null) return null;
-            // 处理 Map 类型返回（如 cancelReceive / cancelPicking 返回 LinkedHashMap）
+            // 处理 Map 类型返回
             if (data instanceof Map) {
                 Map<?,?> m = (Map<?,?>) data;
-                for (String key : new String[]{"purchaseNo","orderNo","cuttingBundleNo","bundleNo",
-                        "pickingNo","warehouseOrderNo","materialName","styleNo","name","code"}) {
-                    Object v = m.get(key);
-                    if (v != null) {
-                        String s = String.valueOf(v).trim();
-                        if (!s.isEmpty() && !"null".equals(s)) return s;
-                    }
+                String orderNo = mapStrObj(m, "orderNo");
+                String styleNo = mapStrObj(m, "styleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
+                for (String key : new String[]{"purchaseNo","cuttingBundleNo","bundleNo",
+                        "pickingNo","warehouseOrderNo","materialName","name","code"}) {
+                    String v = mapStrObj(m, key);
+                    if (v != null) return v;
                 }
-                return null;
+                return styleNo;
             }
-            // 普通实体对象 getter 提取
+            // 普通实体对象：订单号 + 款号 合并
+            String orderNo = reflStr(data, "getOrderNo");
+            String styleNo = reflStr(data, "getStyleNo");
+            if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+            if (orderNo != null) return orderNo;
             for (String g : new String[]{
-                    "getOrderNo","getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                    "getPurchaseNo","getPickingNo","getCuttingBundleNo",
                     "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
-                    "getName","getStyleNo","getCode"}) {
-                try {
-                    Object v = data.getClass().getMethod(g).invoke(data);
-                    if (v != null) {
-                        String s = String.valueOf(v).trim();
-                        if (!s.isEmpty() && !"null".equals(s)) return s;
-                    }
-                } catch (NoSuchMethodException ignored) {}
+                    "getName","getCode"}) {
+                String v = reflStr(data, g);
+                if (v != null) return v;
             }
+            return styleNo;
         } catch (Exception ignored) {}
         return null;
     }
 
+    /** Map 取非空字符串（Object 版本，遍历用） */
+    private static String mapStrObj(Map<?,?> map, String key) {
+        Object v = map.get(key);
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        return (s.isEmpty() || "null".equals(s)) ? null : s;
+    }
     /** 从请求 body 的 remark / reason 字段提取操作原因 */
     private String extractReason(Object[] args) {
         if (args == null) return null;
@@ -344,6 +361,7 @@ public class SystemOperationLogAspect {
 
     /**
      * 从请求参数解析目标名称。
+     * ★ 当同时存在订单号和款号时，合并显示：订单号 (款号)
      * 覆盖全业务类型：订单号、采购单号、出库单号、菲号、款号、物料名等。
      */
     private String resolveTargetName(Object[] args) {
@@ -353,31 +371,55 @@ public class SystemOperationLogAspect {
             if (arg instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> map = (Map<String, Object>) arg;
+                // 订单号 + 款号 合并显示
+                String orderNo  = mapStr(map, "orderNo");
+                String styleNo  = mapStr(map, "styleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
+                // 其余业务单号
                 for (String key : new String[]{
-                        "orderNo","purchaseNo","pickingNo","cuttingBundleNo","bundleNo",
-                        "warehouseOrderNo","cuttingNo","materialName","styleNo","name","code"}) {
-                    Object v = map.get(key);
-                    if (v != null) {
-                        String s = String.valueOf(v).trim();
-                        if (!s.isEmpty() && !"null".equals(s)) return s;
-                    }
+                        "purchaseNo","pickingNo","cuttingBundleNo","bundleNo",
+                        "warehouseOrderNo","cuttingNo","materialName","name","code"}) {
+                    String v = mapStr(map, key);
+                    if (v != null) return v;
                 }
+                // 款号兜底（单独的款式操作）
+                if (styleNo != null) return styleNo;
             } else if (!(arg instanceof String) && !(arg instanceof Number) && !(arg instanceof Boolean)) {
+                // 订单号 + 款号 合并显示
+                String orderNo = reflStr(arg, "getOrderNo");
+                String styleNo = reflStr(arg, "getStyleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
                 for (String getter : new String[]{
-                        "getOrderNo","getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                        "getPurchaseNo","getPickingNo","getCuttingBundleNo",
                         "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
-                        "getName","getStyleNo","getCode"}) {
-                    try {
-                        Object v = arg.getClass().getMethod(getter).invoke(arg);
-                        if (v != null) {
-                            String s = String.valueOf(v).trim();
-                            if (!s.isEmpty() && !"null".equals(s)) return s;
-                        }
-                    } catch (Exception ignored) {}
+                        "getName","getCode"}) {
+                    String v = reflStr(arg, getter);
+                    if (v != null) return v;
                 }
+                if (styleNo != null) return styleNo;
             }
         }
         return null;
+    }
+
+    /** 从 Map 取非空字符串；null 表示不存在或空 */
+    private static String mapStr(Map<?, ?> map, String key) {
+        Object v = map.get(key);
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        return (s.isEmpty() || "null".equals(s)) ? null : s;
+    }
+
+    /** 反射调用 getter 取非空字符串；null 表示不存在或空 */
+    private static String reflStr(Object obj, String getter) {
+        try {
+            Object v = obj.getClass().getMethod(getter).invoke(obj);
+            if (v == null) return null;
+            String s = String.valueOf(v).trim();
+            return (s.isEmpty() || "null".equals(s)) ? null : s;
+        } catch (Exception ignored) { return null; }
     }
 
     private String resolveOperator() {
