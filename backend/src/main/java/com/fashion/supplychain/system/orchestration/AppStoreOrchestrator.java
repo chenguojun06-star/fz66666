@@ -503,8 +503,26 @@ public class AppStoreOrchestrator {
     /**
      * 获取"我的已开通应用"列表
      * 修复了去重逻辑：优先保留有效订阅（ACTIVE/未过期的TRIAL），而非简单按时间取最新
+     * 超级管理员：直接返回所有 t_app_store 应用，全部视为永久激活
      */
     public List<Map<String, Object>> getMyApps(Long tenantId) {
+        // 超管特权：拥有所有应用，永不过期
+        if (UserContext.isSuperAdmin()) {
+            List<AppStore> allApps = appStoreService.list();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (AppStore app : allApps) {
+                Map<String, Object> appInfo = new LinkedHashMap<>();
+                appInfo.put("appCode", app.getAppCode());
+                appInfo.put("appName", app.getAppName());
+                appInfo.put("subscriptionType", "PERMANENT");
+                appInfo.put("status", "ACTIVE");
+                appInfo.put("isExpired", false);
+                appInfo.put("configured", true);
+                result.add(appInfo);
+            }
+            return result;
+        }
+
         // 获取所有订阅
         QueryWrapper<TenantSubscription> subWrapper = new QueryWrapper<>();
         subWrapper.eq("tenant_id", tenantId);
