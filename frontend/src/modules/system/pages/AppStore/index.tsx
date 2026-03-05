@@ -155,10 +155,16 @@ const AppStore: React.FC = () => {
     try {
       const result = await appStoreService.startTrial(selectedApp.id);
       setDetailVisible(false);
+      // UI 功能模块（采购/CRM/财税）无 API 凭证，直接刷新并提示成功
+      if (!result?.apiCredentials) {
+        message.success(`🎉 ${result?.appName || selectedApp.appName} 试用已开通！`);
+        fetchMyApps();
+        return;
+      }
       setWizardData({
-        appKey: result?.apiCredentials?.appKey,
-        appSecret: result?.apiCredentials?.appSecret,
-        tenantAppId: result?.apiCredentials?.appId,
+        appKey: result.apiCredentials.appKey,
+        appSecret: result.apiCredentials.appSecret,
+        tenantAppId: result.apiCredentials.appId,
         apiEndpoints: result?.apiEndpoints || [],
         appCode: result?.appCode || selectedApp.appCode,
         appName: result?.appName || selectedApp.appName,

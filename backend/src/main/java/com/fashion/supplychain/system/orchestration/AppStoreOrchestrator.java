@@ -337,26 +337,33 @@ public class AppStoreOrchestrator {
         }
 
         // 7. 自动创建 TenantApp（API对接凭证）
-        //    所有应用类型（含 EC_TAOBAO / EC_TMALL 等电商平台）统一走此流程，获得 AppKey/AppSecret
-        TenantAppResponse appCredentials;
-        try {
-            TenantAppRequest appRequest = new TenantAppRequest();
-            appRequest.setAppName(app.getAppName() + "(试用)");
-            appRequest.setAppType(app.getAppCode());
-            appRequest.setDailyQuota(100);
-            appRequest.setRemark("试用自动创建 - 订阅号: " + subscription.getSubscriptionNo());
-            appRequest.setExpireTime(subscription.getEndTime().toString());
-            if (callbackUrl != null && !callbackUrl.isEmpty()) {
-                appRequest.setCallbackUrl(callbackUrl);
+        //    CRM_MODULE / FINANCE_TAX / PROCUREMENT 为纯 UI 功能模块，开通后直接解锁页面，无需 API 凭证
+        java.util.Set<String> UI_MODULE_TYPES = java.util.Set.of("CRM_MODULE", "FINANCE_TAX", "PROCUREMENT");
+        boolean needsApiCredential = !UI_MODULE_TYPES.contains(app.getAppCode());
+
+        TenantAppResponse appCredentials = null;
+        if (needsApiCredential) {
+            try {
+                TenantAppRequest appRequest = new TenantAppRequest();
+                appRequest.setAppName(app.getAppName() + "(试用)");
+                appRequest.setAppType(app.getAppCode());
+                appRequest.setDailyQuota(100);
+                appRequest.setRemark("试用自动创建 - 订阅号: " + subscription.getSubscriptionNo());
+                appRequest.setExpireTime(subscription.getEndTime().toString());
+                if (callbackUrl != null && !callbackUrl.isEmpty()) {
+                    appRequest.setCallbackUrl(callbackUrl);
+                }
+                if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
+                    appRequest.setExternalApiUrl(externalApiUrl);
+                }
+                appCredentials = tenantAppOrchestrator.createApp(tenantId, appRequest);
+                log.info("[试用] 自动创建API凭证: appKey={}", appCredentials.getAppKey());
+            } catch (Exception ex) {
+                // 凭证创建失败时回滚整个事务，不允许出现有订阅但无凭证的情况
+                throw new RuntimeException("开通试用失败：API凭证创建失败 - " + ex.getMessage(), ex);
             }
-            if (externalApiUrl != null && !externalApiUrl.isEmpty()) {
-                appRequest.setExternalApiUrl(externalApiUrl);
-            }
-            appCredentials = tenantAppOrchestrator.createApp(tenantId, appRequest);
-            log.info("[试用] 自动创建API凭证: appKey={}", appCredentials.getAppKey());
-        } catch (Exception ex) {
-            // 凭证创建失败时回滚整个事务，不允许出现有订阅但无凭证的情况
-            throw new RuntimeException("开通试用失败：API凭证创建失败 - " + ex.getMessage(), ex);
+        } else {
+            log.info("[试用] UI功能模块({})无需API凭证，跳过创建", app.getAppCode());
         }
 
         log.info("应用试用开通成功：{} - 租户 {} - 到期 {}",
@@ -371,12 +378,14 @@ public class AppStoreOrchestrator {
         responseData.put("apiEndpoints", apiEndpoints);
         responseData.put("appCode", app.getAppCode());
         responseData.put("appName", app.getAppName());
-        responseData.put("apiCredentials", Map.of(
-                "appKey", appCredentials.getAppKey(),
-                "appSecret", appCredentials.getAppSecret(),
-                "appId", appCredentials.getId(),
-                "message", "⚠️ 请保存以下API密钥，仅显示一次！"
-        ));
+        if (appCredentials != null) {
+            responseData.put("apiCredentials", Map.of(
+                    "appKey", appCredentials.getAppKey(),
+                    "appSecret", appCredentials.getAppSecret(),
+                    "appId", appCredentials.getId(),
+                    "message", "⚠️ 请保存以下API密钥，仅显示一次！"
+            ));
+        }
         return responseData;
     }
 

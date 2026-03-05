@@ -314,7 +314,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.integrationCenter]: permissionCodes.integrationCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
-  [paths.financeTaxExport]: permissionCodes.financeTaxExport,
+  // financeTaxExport: 标准格式免费开放，所有有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
   [paths.crm]: permissionCodes.crm,
   [paths.procurement]: permissionCodes.procurement,
 };
