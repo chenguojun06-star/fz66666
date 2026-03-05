@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-05
+
+### 🚀 T0 新功能：工序数据库
+- **ProcessKnowledgeOrchestrator**（新编排器 #87）：实时聚合全租户所有款式的工序信息，自动同步历史数据到单价维护。
+- **工序数据库Tab**：单价维护新增"工序数据库"标签页，展示工序种类/涉及款式/历史记录统计。
+- **智能建议价**：基于最近3条=2权重的加权均价算法，自动识别未定价工序。
+- **UI完整性**：搜索框、展开详情（最近5款使用记录）、价格趋势标签提示。
+- **过滤放宽**：工序名存在即收录（不再要求price>0），未定价显示'-'待补录。
+
+### 🐛 Bugs Fixed
+- **工序数据库空数据**（03-04）：放宽QueryWrapper过滤条件，price统计和priceTrend仅用price>0记录防NPE。
+- **API双重路径**（03-05）：全局修复4处`/api/style/...`和`/api/ecommerce/...`多余前缀导致/api/api 404。
+  - EcommerceOrders: `/ecommerce/orders/list` + `/style/sku/list` + `/style/info/list` + `/style/sku/{id}`
+  - UserList: `/wechat/mini-program/invite/generate`
+- **登录同步**（03-01）：UserOrchestrator成功分支补充UPDATE t_user.last_login_time/last_login_ip。
+- **样板进度显示**（03-01）：COMPLETED卡片改用Object.keys全量设为100%，不依赖硬编码列表。
+- **纸样师傅显示**（03-01）：patternMaker为空时fallback到receiver（业务规则：领取人=纸样师傅）。n
+### ✨ Others
+- **编排器总数**：86 → **87个**（新增ProcessKnowledgeOrchestrator）
+- **代码行数**：244.5k → **244.8k行**
+
 ## [1.0.0] - 2026-02-26
 
 ### 🚀 Major Release
