@@ -466,20 +466,29 @@ public class AppStoreOrchestrator {
         subscription.setRemark("人工开通 - " + (remark != null ? remark : order.getOrderNo()));
         tenantSubscriptionService.save(subscription);
 
-        // 6. 自动创建 API 凭证 - 在同一事务中
-        //    所有应用类型（含电商平台）统一走此流程，获得 AppKey/AppSecret，在 API对接管理页可见
-        TenantAppResponse appCredentials;
-        try {
-            TenantAppRequest appRequest = new TenantAppRequest();
-            appRequest.setAppName(app.getAppName());
-            appRequest.setAppType(app.getAppCode());
-            appRequest.setDailyQuota(10000);
-            appRequest.setRemark("人工开通 - 订单: " + order.getOrderNo());
-            appRequest.setExpireTime(endTime.toString());
-            appCredentials = tenantAppOrchestrator.createApp(order.getTenantId(), appRequest);
-            log.info("[人工开通] 自动创建API凭证成功: appKey={}", appCredentials.getAppKey());
-        } catch (Exception ex) {
-            throw new RuntimeException("激活失败：API凭证创建失败 - " + ex.getMessage(), ex);
+        // 6. 自动创建 API 凭证（仅限需要外部对接的应用类型）
+        //    CRM_MODULE / FINANCE_TAX / PROCUREMENT 为纯 UI 功能模块，开通后直接解锁页面，无需 API 凭证
+        java.util.Set<String> UI_MODULE_TYPES = java.util.Set.of("CRM_MODULE", "FINANCE_TAX", "PROCUREMENT");
+        boolean needsApiCredential = !UI_MODULE_TYPES.contains(app.getAppCode());
+
+        Map<String, Object> apiCredentialsResult = new java.util.LinkedHashMap<>();
+        if (needsApiCredential) {
+            try {
+                TenantAppRequest appRequest = new TenantAppRequest();
+                appRequest.setAppName(app.getAppName());
+                appRequest.setAppType(app.getAppCode());
+                appRequest.setDailyQuota(10000);
+                appRequest.setRemark("人工开通 - 订单: " + order.getOrderNo());
+                appRequest.setExpireTime(endTime.toString());
+                TenantAppResponse appCredentials = tenantAppOrchestrator.createApp(order.getTenantId(), appRequest);
+                log.info("[人工开通] 自动创建API凭证成功: appKey={}", appCredentials.getAppKey());
+                apiCredentialsResult.put("appKey", appCredentials.getAppKey());
+                apiCredentialsResult.put("appSecret", appCredentials.getAppSecret());
+            } catch (Exception ex) {
+                throw new RuntimeException("激活失败：API凭证创建失败 - " + ex.getMessage(), ex);
+            }
+        } else {
+            log.info("[人工开通] UI功能模块({})无需API凭证，跳过创建", app.getAppCode());
         }
 
         log.info("[人工开通] 订单激活成功: {} - 租户{} - 应用{} - 到期{}",
@@ -487,16 +496,13 @@ public class AppStoreOrchestrator {
 
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Map<String, Object> responseData = new HashMap<>();
-        // 不再放入整个 subscription 实体（含 LocalDateTime 字段），避免潜在的序列化问题
-        // 前端只需要以下扁平化字段
         responseData.put("subscriptionNo", subscription.getSubscriptionNo());
         responseData.put("orderNo", order.getOrderNo() != null ? order.getOrderNo() : "");
         responseData.put("activatedAt", startTime != null ? startTime.format(dtf) : "");
         responseData.put("expireAt", endTime != null ? endTime.format(dtf) : "");
-        responseData.put("apiCredentials", Map.of(
-                "appKey", appCredentials.getAppKey(),
-                "appSecret", appCredentials.getAppSecret()
-        ));
+        if (!apiCredentialsResult.isEmpty()) {
+            responseData.put("apiCredentials", apiCredentialsResult);
+        }
         return responseData;
     }
 
