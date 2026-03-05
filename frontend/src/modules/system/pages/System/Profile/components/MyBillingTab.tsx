@@ -79,7 +79,7 @@ const MyBillingTab: React.FC = () => {
 
   /** 30天内即将到期（含已过期）的应用，用于顶部提醒 */
   const expiringApps = useMemo(() =>
-    myApps.filter(app => {
+    (Array.isArray(myApps) ? myApps : []).filter(app => {
       if (!app.endTime) return false;          // 永久有效，无需提醒
       const days = daysUntilExpiry(app.endTime);
       return days !== null && days <= 30;
@@ -97,8 +97,9 @@ const MyBillingTab: React.FC = () => {
       ]);
       setOverview(overviewRes?.data || overviewRes);
       const billData = billsRes?.data || billsRes;
-      setBills(billData?.records || billData || []);
-      setMyApps(appsRes || []);
+      setBills(Array.isArray(billData) ? billData : (billData?.records || []));
+      const appsData = Array.isArray(appsRes) ? appsRes : (appsRes?.records || appsRes?.data || []);
+      setMyApps(appsData);
     } catch {
       message.error('加载账单数据失败');
     } finally {
