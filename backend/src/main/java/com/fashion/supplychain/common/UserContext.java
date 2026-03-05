@@ -21,6 +21,9 @@ public class UserContext {
     /** 是否为平台超级管理员（显式标记，跨租户全局权限） */
     private boolean superAdmin;
 
+    /** 外发工厂ID，NULL=普通租户账号，非NULL=该用户是外发工厂账号 */
+    private String factoryId;
+
     public static void set(UserContext ctx) {
         HOLDER.set(ctx);
     }
@@ -251,5 +254,22 @@ public class UserContext {
 
     public void setSuperAdmin(boolean superAdmin) {
         this.superAdmin = superAdmin;
+    }
+
+    /**
+     * 获取当前登录用户绑定的外发工厂ID
+     * 普通租户账号返回 null
+     */
+    public static String factoryId() {
+        UserContext ctx = get();
+        return ctx == null ? null : ctx.getFactoryId();
+    }
+
+    public String getFactoryId() {
+        return factoryId;
+    }
+
+    public void setFactoryId(String factoryId) {
+        this.factoryId = factoryId;
     }
 }

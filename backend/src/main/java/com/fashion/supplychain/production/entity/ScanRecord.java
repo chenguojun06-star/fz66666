@@ -205,4 +205,7 @@ public class ScanRecord {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /** 扫码时归属的外发工厂ID，NULL=非外发工厂账号扫码 */
+    private String factoryId;
 }

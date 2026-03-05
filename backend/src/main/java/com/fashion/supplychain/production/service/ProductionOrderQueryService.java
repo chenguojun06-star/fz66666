@@ -119,6 +119,12 @@ public class ProductionOrderQueryService {
         // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
 
+        // 外发工厂账号：只能看自己工厂承接的订单
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
+            wrapper.eq("factory_id", ctxFactoryId);
+        }
+
         wrapper.orderByDesc("create_time");
 
         IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
@@ -335,6 +341,12 @@ public class ProductionOrderQueryService {
 
         // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
+
+        // 外发工厂账号：只能看自己工厂承接的订单
+        String ctxFactoryId2 = com.fashion.supplychain.common.UserContext.factoryId();
+        if (org.springframework.util.StringUtils.hasText(ctxFactoryId2)) {
+            wrapper.eq("factory_id", ctxFactoryId2);
+        }
 
         // 查询所有订单（只查询需要的字段以提高性能，含 status 字段用于延期判断）
         wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time", "status");

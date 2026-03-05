@@ -301,17 +301,18 @@ public class SecurityConfig implements WebMvcConfigurer {
             // 修复：无论走 TokenAuth 还是 HeaderAuth，都需要补全 tenantId、isTenantOwner 和 isSuperAdmin
             if (ctx.getUserId() != null && jdbcTemplate != null && ctx.getTenantId() == null && !ctx.getSuperAdmin()) {
                 String cacheKey = ctx.getUserId();
-                // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin
+                // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin + "|" + factoryId
                 String cached = tenantInfoCache.get(cacheKey);
                 if (cached == null) {
                     try {
                         List<String> rows = jdbcTemplate.query(
-                            "SELECT tenant_id, is_tenant_owner, is_super_admin FROM t_user WHERE id = ? LIMIT 1",
+                            "SELECT tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user WHERE id = ? LIMIT 1",
                             (rs, i) -> {
                                 Long tid = rs.getObject(1, Long.class);
                                 Boolean owner = rs.getObject(2) != null && rs.getInt(2) == 1;
                                 Boolean superAdm = rs.getObject(3) != null && rs.getInt(3) == 1;
-                                return (tid == null ? "" : tid.toString()) + "|" + owner + "|" + superAdm;
+                                String fid = rs.getString(4);
+                                return (tid == null ? "" : tid.toString()) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "" : fid);
                             },
                             Long.parseLong(ctx.getUserId())
                         );
@@ -324,7 +325,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                     }
                 }
                 if (cached != null) {
-                    String[] parts = cached.split("\\|", 3);
+                    String[] parts = cached.split("\\|", 4);
                     if (ctx.getTenantId() == null && !parts[0].isEmpty()) {
                         ctx.setTenantId(Long.parseLong(parts[0]));
                     }
@@ -334,8 +335,11 @@ public class SecurityConfig implements WebMvcConfigurer {
                     if (parts.length > 2) {
                         ctx.setSuperAdmin(Boolean.parseBoolean(parts[2]));
                     }
-                    log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}",
-                            ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin());
+                    if (parts.length > 3 && !parts[3].isEmpty()) {
+                        ctx.setFactoryId(parts[3]);
+                    }
+                    log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
+                            ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
                 }
             }
 

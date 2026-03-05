@@ -22,6 +22,9 @@ public class TokenSubject {
     /** 密码版本号：改密后旧 token 自动失效（与 Redis pwd:ver:{userId} 对比） */
     private Long pwdVersion;
 
+    /** 外发工厂ID，NULL=普通租户账号，非NULL=外发工厂账号 */
+    private String factoryId;
+
     public String getUserId() {
         return userId;
     }
@@ -100,5 +103,13 @@ public class TokenSubject {
 
     public void setPwdVersion(Long pwdVersion) {
         this.pwdVersion = pwdVersion;
+    }
+
+    public String getFactoryId() {
+        return factoryId;
+    }
+
+    public void setFactoryId(String factoryId) {
+        this.factoryId = factoryId;
     }
 }

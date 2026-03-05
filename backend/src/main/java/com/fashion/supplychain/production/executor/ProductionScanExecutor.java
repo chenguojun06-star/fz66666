@@ -772,6 +772,8 @@ public class ProductionScanExecutor {
         sr.setProcessName(processCode);           // 子工序名（如"上领"），用于显示和识别
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
+        // 记录扫码时归属的外发工厂（普通租户账号此值为null）
+        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
 
         // 优先使用客户端传入的扫码时间（离线/延迟上传场景），若无效则使用服务器时间
         // 有效范围：[now-7天, now+5分钟]，防止1970年等极旧时间写入数据库

@@ -21,6 +21,9 @@ const scanPageData = {
   loading: false,
   currentFactory: null,
   currentUser: null,
+  // 外发工厂工人选择（仅当 currentUser.factoryId 非空时启用）
+  workerList: [],
+  selectedWorker: null,
   quantity: '',
   warehouse: '',
   lastUsedProcessName: '', // 上次拍码成功的工序名称，页面内显示提示

@@ -33,7 +33,8 @@ const scanLifecycleMixin = Behavior({
         onSuccess: this.handleScanSuccess.bind(this),
         onError: this.handleScanError.bind(this),
         getCurrentFactory: () => this.data.currentFactory,
-        getCurrentWorker: () => this.data.currentUser,
+        // 外发工厂账号：优先使用手动选择的工人；否则退回登录账号本身
+        getCurrentWorker: () => this.data.selectedWorker || this.data.currentUser,
       });
     } catch (e) {
       console.error('[scanLifecycleMixin] ScanHandler 初始化失败:', e);

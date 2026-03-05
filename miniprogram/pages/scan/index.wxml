@@ -161,6 +161,16 @@
         bindinput="onWarehouseCodeInput"
       />
     </view>
+    <!-- 外发工厂账号：工人选择器（currentUser.factoryId 非空时显示） -->
+    <view wx:if="{{currentUser && currentUser.factoryId}}" class="warehouse-input-row">
+      <view class="warehouse-label">当前操作工人：</view>
+      <picker mode="selector" range="{{workerList}}" range-key="workerName" bindchange="onWorkerSelect">
+        <view class="warehouse-input-field" style="line-height:44rpx;min-height:44rpx;">
+          <text wx:if="{{selectedWorker}}">{{selectedWorker.workerName}}{{selectedWorker.workerNo ? '（' + selectedWorker.workerNo + '）' : ''}}</text>
+          <text wx:else style="color:#bbb;">点击选择工人（可选，默认为本账号）</text>
+        </view>
+      </picker>
+    </view>
     <view class="scan-mode-tip">
       <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>
     </view>

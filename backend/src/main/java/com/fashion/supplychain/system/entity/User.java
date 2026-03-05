@@ -83,4 +83,7 @@ public class User {
 
     /** 用户头像URL（COS存储路径或本地路径） */
     private String avatarUrl;
+
+    /** 外发工厂ID，NULL=普通租户账号，非NULL=该账号属于外发工厂 */
+    private String factoryId;
 }

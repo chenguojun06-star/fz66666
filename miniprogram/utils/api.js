@@ -285,6 +285,25 @@ const factory = {
   },
 };
 
+/** 外发工厂工人名册（工厂账号扫码时选择实际操作工人） */
+const factoryWorker = {
+  /** 查询工人列表（factoryId: 可选，留空则取当前账号绑定的工厂） */
+  list(factoryId, status) {
+    const params = {};
+    if (factoryId) params.factoryId = factoryId;
+    if (status) params.status = status;
+    return ok('/api/factory-worker/list', 'GET', params);
+  },
+  /** 新增/更新工人 */
+  save(worker) {
+    return ok('/api/factory-worker/save', 'POST', worker || {});
+  },
+  /** 软删除工人 */
+  remove(id) {
+    return ok(`/api/factory-worker/${id}`, 'DELETE', {});
+  },
+};
+
 const style = {
   listStyles(params) {
     return ok('/api/style/info/list', 'GET', params || {});
@@ -415,6 +434,7 @@ const api = {
   wechat,
   intelligence,
   common,
+  factoryWorker,
 };
 
 module.exports = api;
@@ -433,4 +453,5 @@ module.exports.tenant = tenant;
 module.exports.wechat = wechat;
 module.exports.intelligence = intelligence;
 module.exports.common = common;
+module.exports.factoryWorker = factoryWorker;
 
