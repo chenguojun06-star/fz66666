@@ -7,6 +7,6 @@ import lombok.Data;
  */
 @Data
 public class DeliveryPredictionRequest {
-    /** 订单ID */
-    private Long orderId;
+    /** 订单号或订单ID，均可，如 PO20260228001 或 20260228001 */
+    private String orderId;
 }

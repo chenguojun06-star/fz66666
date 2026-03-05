@@ -46,17 +46,24 @@ public class ProfitEstimationOrchestrator {
         }
 
         try {
-        ProductionOrder order = productionOrderService.getById(request.getOrderId());
+        String idStr = request.getOrderId().trim();
+        ProductionOrder order = null;
+        // 纯数字时先按主键查（兼容按DB主键调用的场景）
+        if (idStr.matches("\\d+")) {
+            try { order = productionOrderService.getById(Long.parseLong(idStr)); } catch (Exception ignored) {}
+        }
+        // 主键未命中或含字母（如 PO20260228001），改按订单号查，支持带/不带 PO 前缀
         if (order == null) {
-            // 尝试按订单号查询（用户可能输入的是 20260303002 格式的订单号）
-            String noStr = String.valueOf(request.getOrderId());
+            final String noStr = idStr;
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.eq("tenant_id", UserContext.tenantId())
-              .and(w -> w.eq("order_no", noStr).or().eq("order_no", "PO" + noStr));
+              .and(w -> w.eq("order_no", noStr)
+                         .or().eq("order_no", "PO" + noStr)
+                         .or().eq("order_no", noStr.replaceFirst("^(?i)PO", "")));
             order = productionOrderService.getOne(qw);
         }
         if (order == null) {
-            resp.setCostWarning("订单不存在");
+            resp.setCostWarning("订单不存在，请确认订单号");
             return resp;
         }
 
