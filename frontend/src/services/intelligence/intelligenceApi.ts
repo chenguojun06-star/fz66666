@@ -137,25 +137,26 @@ export interface DeliveryPredictionResponse {
   orderId: string;
   orderNo: string;
   optimisticDate: string;
-  realisticDate: string;
+  mostLikelyDate: string;   // 后端字段名，原 realisticDate 已修正
   pessimisticDate: string;
   dailyVelocity: number;
   remainingQty: number;
-  confidence: number;
+  confidence: number;        // 后端返回 0-100 整数，无需再 ×100
   rationale: string;
 }
 
 export interface ProfitEstimationResponse {
   orderId: string;
   orderNo: string;
-  revenue: number;
+  quotationTotal: number;   // 后端字段名，原 revenue 已修正
   materialCost: number;
-  laborCost: number;
-  overheadCost: number;
+  wageCost: number;          // 后端字段名，原 laborCost 已修正
+  otherCost: number;         // 后端字段名，原 overheadCost 已修正
   totalCost: number;
-  grossProfit: number;
+  estimatedProfit: number;   // 后端字段名，原 grossProfit 已修正
   grossMarginPct: number;
-  profitStatus: string;
+  profitStatus: string;      // 后端返回中文：盈利 / 微利 / 亏损
+  costWarning?: string;      // 异常信息，如订单不存在
 }
 
 export interface FactoryRank {

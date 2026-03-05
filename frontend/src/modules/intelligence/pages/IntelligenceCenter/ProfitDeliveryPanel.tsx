@@ -5,14 +5,13 @@ import { intelligenceApi } from '@/services/production/productionApi';
 import type { ProfitEstimationResponse, DeliveryPredictionResponse } from '@/services/production/productionApi';
 
 const profitStatusColor: Record<string, string> = {
-  EXCELLENT: '#39ff14',
-  GOOD: '#00e5ff',
-  NORMAL: '#f7a600',
-  LOW: '#ff8c00',
-  LOSS: '#ff4136',
+  // 后端返回中文字段
+  '盈利': '#39ff14',
+  '微利': '#f7a600',
+  '亏损': '#ff4136',
 };
 const profitStatusLabel: Record<string, string> = {
-  EXCELLENT: '优盈', GOOD: '良好', NORMAL: '一般', LOW: '偏低', LOSS: '亏损',
+  '盈利': '盈利', '微利': '微利', '亏损': '亏损',
 };
 
 /** 利润估算 + 交期预测面板（合二为一，同一订单ID查询） */
@@ -35,13 +34,17 @@ const ProfitDeliveryPanel: React.FC = () => {
         intelligenceApi.estimateProfit({ orderId: id }),
         intelligenceApi.predictDelivery({ orderId: id }),
       ]);
-      const p: ProfitEstimationResponse | null = rProfit.status === 'fulfilled'
+      const raw: ProfitEstimationResponse | null = rProfit.status === 'fulfilled'
         ? ((rProfit.value as any)?.data ?? null) : null;
+      // 后端如果订单不存在会返回 { costWarning: '订单不存在' }，需过滤这种无效响应
+      const p: ProfitEstimationResponse | null =
+        raw && raw.quotationTotal != null ? raw : null;
       const d: DeliveryPredictionResponse | null = rDelivery.status === 'fulfilled'
         ? ((rDelivery.value as any)?.data ?? null) : null;
       setProfit(p);
       setDelivery(d);
-      if (!p && !d) setError('暂无该订单的估算数据（需要有扫码及结算历史）');
+      const errMsg = raw?.costWarning || (d?.rationale?.includes('不存在') ? d.rationale : '');
+      if (!p && !d) setError(errMsg || '暂无该订单的估算数据（需要有扫码及结算历史）');
     } catch {
       setError('查询失败，请稍后重试');
     } finally {
@@ -126,12 +129,12 @@ const ProfitDeliveryPanel: React.FC = () => {
 
             {/* 成本拆解 */}
             {[
-              { label: '营业收入', val: profit.revenue,      color: '#39ff14' },
-              { label: '物料成本', val: profit.materialCost, color: '#ff4136' },
-              { label: '人工成本', val: profit.laborCost,    color: '#f7a600' },
-              { label: '管理成本', val: profit.overheadCost, color: '#a78bfa' },
-              { label: '总成本',   val: profit.totalCost,    color: '#4a6d8a' },
-              { label: '毛利润',   val: profit.grossProfit,  color: pColor },
+              { label: '营业收入', val: profit.quotationTotal,   color: '#39ff14' },
+              { label: '物料成本', val: profit.materialCost,    color: '#ff4136' },
+              { label: '人工成本', val: profit.wageCost,         color: '#f7a600' },
+              { label: '管理成本', val: profit.otherCost,        color: '#a78bfa' },
+              { label: '总成本',   val: profit.totalCost,        color: '#4a6d8a' },
+              { label: '毛利润',   val: profit.estimatedProfit, color: pColor },
             ].map(({ label, val, color }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
                 <span style={{ color: '#4a6d8a' }}>{label}</span>
@@ -151,8 +154,8 @@ const ProfitDeliveryPanel: React.FC = () => {
 
             {/* 三场景日期 */}
             {[
-              { label: '乐观完工', date: delivery.optimisticDate, color: '#39ff14' },
-              { label: '预计完工', date: delivery.realisticDate,  color: '#00e5ff' },
+              { label: '乐观完工', date: delivery.optimisticDate,  color: '#39ff14' },
+              { label: '预计完工', date: delivery.mostLikelyDate, color: '#00e5ff' },
               { label: '悲观完工', date: delivery.pessimisticDate, color: '#ff4136' },
             ].map(({ label, date, color }) => (
               <div key={label} style={{
@@ -177,8 +180,8 @@ const ProfitDeliveryPanel: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 <span style={{ color: '#4a6d8a' }}>AI 置信度</span>
-                <b style={{ color: delivery.confidence >= 0.7 ? '#39ff14' : '#f7a600' }}>
-                  {(delivery.confidence * 100).toFixed(0)}%
+                <b style={{ color: delivery.confidence >= 70 ? '#39ff14' : '#f7a600' }}>
+                  {delivery.confidence}%
                 </b>
               </div>
             </div>

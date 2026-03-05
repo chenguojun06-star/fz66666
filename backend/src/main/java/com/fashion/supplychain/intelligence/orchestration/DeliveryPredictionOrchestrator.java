@@ -53,6 +53,14 @@ public class DeliveryPredictionOrchestrator {
         try {
         ProductionOrder order = productionOrderService.getById(request.getOrderId());
         if (order == null) {
+            // 尝试按订单号查询（用户可能输入的是 20260303002 格式的订单号）
+            String noStr = String.valueOf(request.getOrderId());
+            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", UserContext.tenantId())
+              .and(w -> w.eq("order_no", noStr).or().eq("order_no", "PO" + noStr));
+            order = productionOrderService.getOne(qw);
+        }
+        if (order == null) {
             resp.setRationale("订单不存在");
             return resp;
         }
