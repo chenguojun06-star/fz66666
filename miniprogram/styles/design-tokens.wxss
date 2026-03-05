@@ -13,6 +13,7 @@ page {
 
   /* 主色调 - 宝蓝（比之前更饱和，禁止使用紫色渐变）*/
   --color-primary: #2563eb;
+  --color-primary-light: #3b82f6;
 
   /* 浅色渐变 —— 用于卡片背景、tag填充（蓝-靛，更可见）*/
   --gradient-primary: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
