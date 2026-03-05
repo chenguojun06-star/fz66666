@@ -1161,7 +1161,7 @@
    — JS 控制 scrollTop，隐藏滚动条
    ═══════════════════════════════════════════════ */
 .c-auto-scroll {
-  overflow-y: scroll;
+  overflow-y: hidden;   /* 内容已双份，靠 scrollTop 控制，不显示滚动条 */
   scrollbar-width: none;
   position: relative;
 }

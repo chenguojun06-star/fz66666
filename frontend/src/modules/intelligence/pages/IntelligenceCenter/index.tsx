@@ -388,35 +388,57 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   );
 };
 
-/* ─── 通用自动滚动容器：悬停暂停，离开续滚 ─── */
+/* ─── 通用自动滚动容器：悬停暂停，离开续滚（无缝循环版）─── */
+// 原理：内容渲染两遍，rAF 逐帧推进；到达半高时无声重置到 0，视觉零抖动
 const AutoScrollBox: React.FC<{
   children: React.ReactNode;
   className?: string;
-  speed?: number;
-}> = ({ children, className = '', speed = 35 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  speed?: number;  // px/s，默认 28
+}> = ({ children, className = '', speed = 28 }) => {
+  const outerRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
+  const rafRef    = useRef<number>(0);
+  const lastTsRef = useRef<number>(0);
+
   useEffect(() => {
-    const el = scrollRef.current;
+    const el = outerRef.current;
     if (!el) return;
-    const id = setInterval(() => {
-      if (pausedRef.current) return;
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
-        el.scrollTop = 0;
-      } else {
-        el.scrollTop += 1;
+
+    const tick = (ts: number) => {
+      if (lastTsRef.current === 0) lastTsRef.current = ts;
+      const delta = ts - lastTsRef.current;
+      lastTsRef.current = ts;
+
+      if (!pausedRef.current) {
+        const halfH = el.scrollHeight / 2;
+        if (halfH > el.clientHeight) {
+          el.scrollTop += speed * delta / 1000;  // px/s → px/frame
+          if (el.scrollTop >= halfH) {
+            el.scrollTop -= halfH;               // 无声跳回，内容连续
+          }
+        }
       }
-    }, speed);
-    return () => clearInterval(id);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      lastTsRef.current = 0;
+    };
   }, [speed]);
+
   return (
     <div
-      ref={scrollRef}
+      ref={outerRef}
       className={`c-auto-scroll ${className}`}
       onMouseEnter={() => { pausedRef.current = true; }}
-      onMouseLeave={() => { pausedRef.current = false; }}
+      onMouseLeave={() => { pausedRef.current = false; lastTsRef.current = 0; }}
     >
-      {children}
+      {/* 正本 */}
+      <div>{children}</div>
+      {/* 复本：让滚动在「两份之间」无缝循环，不再有跳顶抖动 */}
+      <div aria-hidden="true">{children}</div>
     </div>
   );
 };
