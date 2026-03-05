@@ -556,12 +556,13 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         String orderId = task.getProductionOrderId();
+        String orderNo = task.getProductionOrderNo();
         if (StringUtils.hasText(orderId)) {
-            // 1. 先清工序跟踪记录（依赖菲号ID，须在删菲号前执行）
+            // 1. 先清工序跟踪记录（依赖菲号ID，须在删菲号前执行；用 orderNo 匹配 VARCHAR 列，避免 BIGINT 转换问题）
             try {
-                processTrackingOrchestrator.clearTrackingForRollback(orderId);
+                processTrackingOrchestrator.clearTrackingForRollback(orderNo);
             } catch (Exception e) {
-                log.warn("Failed to delete process tracking on rollback: orderId={}", orderId, e);
+                log.warn("Failed to delete process tracking on rollback: orderId={}, orderNo={}", orderId, orderNo, e);
             }
 
             // 2. 删菲号

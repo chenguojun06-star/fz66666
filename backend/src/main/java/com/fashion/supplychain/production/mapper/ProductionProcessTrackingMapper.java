@@ -72,12 +72,12 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
     List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds);
 
     /**
-    /**
      * 删除订单的所有跟踪记录（裁剪撤回/重新初始化时使用）
+     * 使用 production_order_no（VARCHAR列）而非 production_order_id（BIGINT列），避免类型隐式转换丢失精度
      *
-     * @param productionOrderId 订单ID
+     * @param productionOrderNo 订单号（如 PO20260304001）
      * @return 删除数量
      */
-    @Delete("DELETE FROM t_production_process_tracking WHERE production_order_id = #{productionOrderId}")
-    int deleteByOrderId(@Param("productionOrderId") String productionOrderId);
+    @Delete("DELETE FROM t_production_process_tracking WHERE production_order_no = #{productionOrderNo}")
+    int deleteByOrderNo(@Param("productionOrderNo") String productionOrderNo);
 }

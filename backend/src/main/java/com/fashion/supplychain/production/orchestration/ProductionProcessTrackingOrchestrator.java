@@ -129,8 +129,8 @@ public class ProductionProcessTrackingOrchestrator {
             log.info("订单 {} 自动添加裁剪节点到工序跟踪（单价={}）", order.getOrderNo(), cuttingUnitPrice);
         }
 
-        // ✅ 删除该订单的老记录（允许重新初始化，避免重复）
-        int deletedCount = trackingService.deleteByOrderId(productionOrderId);
+        // ✅ 删除该订单的老记录（允许重新初始化，避免重复；用 orderNo VARCHAR 列避免 BIGINT 类型转换问题）
+        int deletedCount = trackingService.deleteByOrderNo(order.getOrderNo());
         if (deletedCount > 0) {
             log.info("订单 {} 删除老的跟踪记录 {} 条", order.getOrderNo(), deletedCount);
         }
@@ -1019,11 +1019,13 @@ public class ProductionProcessTrackingOrchestrator {
 
     /**
      * 裁剪任务撤回时清空该订单所有工序跟踪记录（供 CuttingTaskServiceImpl.rollbackTask 调用）
+     *
+     * @param productionOrderNo 订单号（如 PO20260304001），使用 VARCHAR 列查询，避免 BIGINT 类型转换问题
      */
-    public int clearTrackingForRollback(String productionOrderId) {
-        if (!org.springframework.util.StringUtils.hasText(productionOrderId)) return 0;
-        int count = trackingService.deleteByOrderId(productionOrderId);
-        log.info("[CuttingRollback] 删除工序跟踪记录 {} 条，订单ID={}", count, productionOrderId);
+    public int clearTrackingForRollback(String productionOrderNo) {
+        if (!org.springframework.util.StringUtils.hasText(productionOrderNo)) return 0;
+        int count = trackingService.deleteByOrderNo(productionOrderNo);
+        log.info("[CuttingRollback] 删除工序跟踪记录 {} 条，订单号={}", count, productionOrderNo);
         return count;
     }
 }

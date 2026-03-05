@@ -69,12 +69,13 @@ public class ProductionProcessTrackingService extends ServiceImpl<ProductionProc
     }
 
     /**
-     * 删除订单的所有跟踪记录（重新初始化时使用）
+     * 删除订单的所有跟踪记录（裁剪撤回/重新初始化时使用）
+     * 使用订单号（VARCHAR列 production_order_no），避免 BIGINT 类型转换问题
      *
-     * @param productionOrderId 订单ID
+     * @param productionOrderNo 订单号（如 PO20260304001）
      * @return 删除数量
      */
-    public int deleteByOrderId(String productionOrderId) {
-        return baseMapper.deleteByOrderId(productionOrderId);
+    public int deleteByOrderNo(String productionOrderNo) {
+        return baseMapper.deleteByOrderNo(productionOrderNo);
     }
 }
