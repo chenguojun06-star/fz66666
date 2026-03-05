@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -71,10 +72,12 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
     List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds);
 
     /**
-     * 删除订单的所有跟踪记录（重新初始化时使用）
+    /**
+     * 删除订单的所有跟踪记录（裁剪撤回/重新初始化时使用）
      *
      * @param productionOrderId 订单ID
      * @return 删除数量
      */
+    @Delete("DELETE FROM t_production_process_tracking WHERE production_order_id = #{productionOrderId}")
     int deleteByOrderId(@Param("productionOrderId") String productionOrderId);
 }
