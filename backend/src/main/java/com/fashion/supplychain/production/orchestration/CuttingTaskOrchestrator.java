@@ -12,8 +12,7 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.system.entity.User;
-import com.fashion.supplychain.system.service.UserService;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -44,9 +43,6 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private UserService userService;
 
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
@@ -409,31 +405,21 @@ public class CuttingTaskOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public CuttingTask rollback(Map<String, Object> body) {
         String taskId = getTrimmedText(body, "taskId");
-        String operatorIdStr = getTrimmedText(body, "operatorId");
         String reason = getTrimmedText(body, "reason");
 
         if (!StringUtils.hasText(taskId)) {
             throw new IllegalArgumentException("参数错误");
         }
 
-        if (!StringUtils.hasText(operatorIdStr)) {
-            throw new IllegalArgumentException("缺少操作人");
-        }
-
         if (!StringUtils.hasText(reason)) {
             throw new IllegalArgumentException("退回原因不能为空");
         }
 
-        Long operatorId;
-        try {
-            operatorId = Long.parseLong(operatorIdStr.trim());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("操作人参数错误");
-        }
-
-        User operator = userService.getById(operatorId);
-        if (operator == null || !isAdmin(operator)) {
-            throw new AccessDeniedException("无权限退回");
+        // 从 JWT 获取当前登录用户（不信任客户端传入的 operatorId）
+        String currentUserId = com.fashion.supplychain.common.UserContext.userId();
+        String currentUsername = com.fashion.supplychain.common.UserContext.username();
+        if (!StringUtils.hasText(currentUserId)) {
+            throw new AccessDeniedException("未登录或登录已过期");
         }
 
         CuttingTask task = cuttingTaskService.getById(taskId);
@@ -447,33 +433,13 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("退回失败");
         }
 
-        cuttingTaskService.insertRollbackLog(task, operatorIdStr.trim(), operator.getName(), reason);
+        cuttingTaskService.insertRollbackLog(task, currentUserId, currentUsername, reason);
 
         CuttingTask updated = cuttingTaskService.getById(taskId);
         if (updated == null) {
             throw new IllegalStateException("退回失败");
         }
         return updated;
-    }
-
-    private boolean isAdmin(User user) {
-        if (user == null) {
-            return false;
-        }
-        Long roleId = user.getRoleId();
-        if (roleId != null && roleId == 1L) {
-            return true;
-        }
-        String roleName = user.getRoleName();
-        if (roleName == null) {
-            return false;
-        }
-        String r = roleName.trim();
-        if (r.isEmpty()) {
-            return false;
-        }
-        String lower = r.toLowerCase();
-        return lower.contains("admin") || lower.contains("manager") || r.contains("管理员") || r.contains("主管");
     }
 
     private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo) {

@@ -79,8 +79,9 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       const sizeDisplay = sizes.length > 0 ? sizes.join(', ') : '-';
       const totalQuantity = orderBundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
 
-      // 生成表格行（格式：款号、码数、菲号、颜色、数量）
-      const tableRows = orderBundles.map((bundle) => `
+      // 生成表格行（格式：款号、码数、菲号、颜色、数量）按菲号数字升序排列
+      const sortedBundles = [...orderBundles].sort((a, b) => Number(a.bundleNo) - Number(b.bundleNo));
+      const tableRows = sortedBundles.map((bundle) => `
         <tr>
           <td style="text-align: center;">${bundle.styleNo || '-'}</td>
           <td style="text-align: center; font-weight: 600;">${bundle.size || '-'}</td>

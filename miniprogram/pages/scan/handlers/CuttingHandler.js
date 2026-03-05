@@ -324,12 +324,33 @@ function _validateCuttingData(cuttingTasks, orderId) {
 }
 
 /**
- * 构建菲号生成参数
+ * 将数量按每菲件数拆分为数组
+ * 例：qty=100, perBundle=20 → [20,20,20,20,20]
+ * @param {number} qty - 总件数
+ * @param {number} perBundle - 每菲件数（默认20）
+ * @returns {number[]}
+ * @private
+ */
+function _splitIntoChunks(qty, perBundle) {
+  const per = Math.max(1, perBundle || 20);
+  const chunks = [];
+  let remain = Math.max(0, qty);
+  while (remain > 0) {
+    chunks.push(Math.min(per, remain));
+    remain -= per;
+  }
+  return chunks;
+}
+
+/**
+ * 构建菲号生成参数（每菲最多 PER_BUNDLE 件，与PC端 splitQuantity 逻辑对齐）
  * @param {Array} cuttingTasks - 裁剪任务列表
  * @returns {Array} 菲号生成参数列表
  * @throws {Error} 没有有效的任务数据
  * @private
  */
+const PER_BUNDLE = 20; // 每菲件数，与 PC 端保持一致
+
 function _buildBundleParams(cuttingTasks) {
   const bundleParams = [];
 
@@ -342,11 +363,13 @@ function _buildBundleParams(cuttingTasks) {
     if (task.sizeDetails && task.sizeDetails.length > 0) {
       for (const size of task.sizeDetails) {
         if (size.quantity > 0) {
-          bundleParams.push({
-            color: task.color,
-            size: size.size,
-            quantity: size.quantity,
-          });
+          for (const qty of _splitIntoChunks(size.quantity, PER_BUNDLE)) {
+            bundleParams.push({
+              color: task.color,
+              size: size.size,
+              quantity: qty,
+            });
+          }
         }
       }
     } else {
@@ -365,11 +388,13 @@ function _buildBundleParams(cuttingTasks) {
         );
       }
 
-      bundleParams.push({
-        color: task.color,
-        size: sizeStr,
-        quantity: inputQty,
-      });
+      for (const qty of _splitIntoChunks(inputQty, PER_BUNDLE)) {
+        bundleParams.push({
+          color: task.color,
+          size: sizeStr,
+          quantity: qty,
+        });
+      }
     }
   }
 
