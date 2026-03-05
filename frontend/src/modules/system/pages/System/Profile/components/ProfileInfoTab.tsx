@@ -500,7 +500,7 @@ const ProfileInfoTab: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 员工招募 + 智能开关（同一行左右布局） */}
+                    {/* 员工招募 + 问题反馈（左）+ 智能开关（右） */}
                     <div
                         style={{
                             marginTop: 32,
@@ -554,6 +554,40 @@ const ProfileInfoTab: React.FC = () => {
                                             </div>
                                         </div>
                                     </Card>
+
+                                    {/* 问题反馈 */}
+                                    <div style={{ marginTop: 16 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                            <MessageOutlined style={{ color: 'var(--primary-color)' }} />
+                                            <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
+                                        </div>
+                                        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+                                            <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
+                                                遇到问题或有改进建议？提交反馈帮助我们优化系统
+                                            </Typography.Text>
+                                            <Space>
+                                                <Button type="primary" icon={<MessageOutlined />} onClick={() => setFeedbackVisible(true)}>提交反馈</Button>
+                                                <Button onClick={() => { loadMyFeedbacks(); }}>我的反馈</Button>
+                                            </Space>
+                                            {myFeedbacks.length > 0 && (
+                                                <div style={{ marginTop: 16 }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
+                                                    {myFeedbacks.slice(0, 5).map(fb => (
+                                                        <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                                                            <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
+                                                                {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
+                                                            </Tag>
+                                                            <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
+                                                            <Tag color={FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.color || 'default'} style={{ margin: 0 }}>
+                                                                {FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.label}
+                                                            </Tag>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>加载中...</div>}
+                                        </Card>
+                                    </div>
                                 </div>
                             );
                         })()}
@@ -607,40 +641,6 @@ const ProfileInfoTab: React.FC = () => {
                                 })}
                             </Card>
                         </div>
-                    </div>
-
-                    {/* 问题反馈 */}
-                    <div style={{ marginTop: 32 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                            <MessageOutlined style={{ color: 'var(--primary-color)' }} />
-                            <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
-                        </div>
-                        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                            <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
-                                遇到问题或有改进建议？提交反馈帮助我们优化系统
-                            </Typography.Text>
-                            <Space>
-                                <Button type="primary" icon={<MessageOutlined />} onClick={() => setFeedbackVisible(true)}>提交反馈</Button>
-                                <Button onClick={() => { loadMyFeedbacks(); }}>我的反馈</Button>
-                            </Space>
-                            {myFeedbacks.length > 0 && (
-                                <div style={{ marginTop: 16 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
-                                    {myFeedbacks.slice(0, 5).map(fb => (
-                                        <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
-                                            <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
-                                                {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
-                                            </Tag>
-                                            <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
-                                            <Tag color={FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.color || 'default'} style={{ margin: 0 }}>
-                                                {FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.label}
-                                            </Tag>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>加载中...</div>}
-                        </Card>
                     </div>
 
                     {/* 提交反馈弹窗 */}
