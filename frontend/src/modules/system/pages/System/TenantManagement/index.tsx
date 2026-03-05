@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Tag, Space, message, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
-import { SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import { SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
 import IntegrationGuideTab from './IntegrationGuideTab';
@@ -265,9 +265,7 @@ const AppManagementTab: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
 
-  // 超管专属：一键开通
-  const [quickActivating, setQuickActivating] = useState<string | null>(null);
-  const [quickCreds, setQuickCreds] = useState<TenantAppInfo | null>(null);
+
 
   // 行内编辑URL状态（列表行）
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
@@ -280,11 +278,10 @@ const AppManagementTab: React.FC = () => {
   const [detailEditExternalApiUrl, setDetailEditExternalApiUrl] = useState('');
   const [savingDetailUrl, setSavingDetailUrl] = useState(false);
 
-  const fetchApps = useCallback(async () => {
+  const fetchApps = useCallback(async (autoActivate = false) => {
     setLoading(true);
     try {
       const res: any = await tenantAppService.listApps(queryParams);
-      // 拦截器返回完整 JSON body {code, data, message}，需检查业务状态码
       if (res?.code !== undefined && res.code !== 200) {
         message.error(res.message || '加载应用列表失败');
         setApps([]);
@@ -292,14 +289,31 @@ const AppManagementTab: React.FC = () => {
         return;
       }
       const d = res?.data ?? res;
-      setApps(d?.records || []);
+      const records: TenantAppInfo[] = d?.records || [];
+      setApps(records);
       setTotal(d?.total || 0);
+
+      // 超管：自动开通所有未开通的对接类型
+      if (autoActivate && isSuperAdmin) {
+        const activated = new Set(records.map((a: TenantAppInfo) => a.appType));
+        const missing = Object.entries(APP_TYPE_CONFIG).filter(([k]) => !activated.has(k));
+        if (missing.length > 0) {
+          await Promise.all(missing.map(([type, cfg]) =>
+            tenantAppService.createApp({ appName: `${cfg.label}对接`, appType: type }).catch(() => null)
+          ));
+          // 重新加载列表（不再触发autoActivate）
+          const res2: any = await tenantAppService.listApps(queryParams);
+          const d2 = res2?.data ?? res2;
+          setApps(d2?.records || []);
+          setTotal(d2?.total || 0);
+        }
+      }
     } catch {
       message.error('加载应用列表失败');
     } finally {
       setLoading(false);
     }
-  }, [queryParams]);
+  }, [queryParams, isSuperAdmin]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -308,7 +322,7 @@ const AppManagementTab: React.FC = () => {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchApps(); fetchStats(); }, [fetchApps, fetchStats]);
+  useEffect(() => { fetchApps(true); fetchStats(); }, [fetchApps, fetchStats]);
 
   // 行内保存URL
   const handleSaveUrl = async () => {
@@ -446,26 +460,7 @@ const AppManagementTab: React.FC = () => {
     message.success('已复制到剪贴板');
   };
 
-  const handleQuickActivate = async (type: string) => {
-    setQuickActivating(type);
-    try {
-      const cfg = APP_TYPE_CONFIG[type];
-      const res: any = await tenantAppService.createApp({ appName: `${cfg.label}对接`, appType: type });
-      if (res?.code !== undefined && res.code !== 200) {
-        message.error(res.message || '开通失败');
-        return;
-      }
-      const app = res?.data || res;
-      if (!app?.appKey) { message.error('开通失败，请重试'); return; }
-      setQuickCreds(app);
-      fetchApps();
-      fetchStats();
-    } catch {
-      message.error('开通失败');
-    } finally {
-      setQuickActivating(null);
-    }
-  };
+
 
   const columns: ColumnsType<TenantAppInfo> = [
     {
@@ -615,37 +610,7 @@ const AppManagementTab: React.FC = () => {
           </Button>
       </div>
 
-      {/* 超管：未开通的对接类型一键开通 */}
-      {isSuperAdmin && (() => {
-        const activated = new Set(apps.map((a: TenantAppInfo) => a.appType));
-        const unactivated = Object.entries(APP_TYPE_CONFIG).filter(([k]) => !activated.has(k));
-        if (!unactivated.length) return null;
-        return (
-          <div style={{ marginBottom: 16 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>以下对接类型尚未开通，点击立即开通：</Typography.Text>
-            <Row gutter={12}>
-              {unactivated.map(([type, cfg]) => (
-                <Col key={type} span={6}>
-                  <Card size="small" style={{ borderStyle: 'dashed' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Space size={6}>
-                        <span style={{ fontSize: 22 }}>{cfg.icon}</span>
-                        <Typography.Text strong style={{ fontSize: 13 }}>{cfg.label}</Typography.Text>
-                      </Space>
-                      <Button type="primary" size="small" icon={<PlusOutlined />}
-                        loading={quickActivating === type}
-                        onClick={() => handleQuickActivate(type)}>
-                        开通
-                      </Button>
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 6 }}>{cfg.description}</div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-          </div>
-        );
-      })()}
+
 
       {/* 应用列表 */}
       <ResizableTable
@@ -772,42 +737,6 @@ const AppManagementTab: React.FC = () => {
         />
       </ResizableModal>
 
-      {/* 开通成功 — 凭据展示（AppSecret 仅此一次） */}
-      <Modal
-        open={!!quickCreds}
-        title="✅ 开通成功 — 请立即保存凭据"
-        onCancel={() => setQuickCreds(null)}
-        footer={<Button type="primary" onClick={() => setQuickCreds(null)}>已保存，关闭</Button>}
-        width={520}
-      >
-        <div style={{ background: 'var(--color-bg-secondary, #f8f9fa)', borderRadius: 8, padding: '16px 20px', marginTop: 8 }}>
-          <div style={{ color: 'var(--color-danger, #ff4d4f)', fontSize: 13, marginBottom: 16, fontWeight: 500 }}>
-            ⚠️ AppSecret 仅在开通时显示一次，关闭后无法找回，请立即复制保存！
-          </div>
-          <Space direction="vertical" style={{ width: '100%' }} size={12}>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>AppKey（应用ID）</div>
-              <Typography.Text code copyable>{quickCreds?.appKey || ''}</Typography.Text>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>AppSecret（应用密钥）</div>
-              <Typography.Text code copyable style={{ color: 'var(--color-danger, #ff4d4f)' }}>
-                {quickCreds?.appSecret || '（密钥未返回，请联系管理员）'}
-              </Typography.Text>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>应用名称</div>
-              <Typography.Text>{quickCreds?.appName}</Typography.Text>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>对接类型</div>
-              <Tag color={APP_TYPE_CONFIG[quickCreds?.appType || '']?.color}>
-                {APP_TYPE_CONFIG[quickCreds?.appType || '']?.icon} {quickCreds?.appTypeName || quickCreds?.appType}
-              </Tag>
-            </div>
-          </Space>
-        </div>
-      </Modal>
     </div>
   );
 };
