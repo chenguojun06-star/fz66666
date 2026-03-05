@@ -557,15 +557,35 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
         String orderId = task.getProductionOrderId();
         if (StringUtils.hasText(orderId)) {
+            // 1. 先清工序跟踪记录（依赖菲号ID，须在删菲号前执行）
+            try {
+                processTrackingOrchestrator.clearTrackingForRollback(orderId);
+            } catch (Exception e) {
+                log.warn("Failed to delete process tracking on rollback: orderId={}", orderId, e);
+            }
+
+            // 2. 删菲号
             cuttingBundleMapper.delete(new LambdaQueryWrapper<CuttingBundle>()
                     .eq(CuttingBundle::getProductionOrderId, orderId));
 
+            // 3. 删 sentinel 扫码记录（CUTTING_BUNDLED 标记）
             try {
                 String requestId = "CUTTING_BUNDLED:" + orderId.trim();
                 scanRecordMapper.delete(new LambdaQueryWrapper<ScanRecord>()
                         .eq(ScanRecord::getRequestId, requestId));
             } catch (Exception e) {
                 log.warn("Failed to delete cutting bundled scan record on rollback: orderId={}", orderId, e);
+            }
+
+            // 4. 删各菲号的裁剪扫码记录（未结算的）
+            try {
+                scanRecordMapper.delete(new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderId, orderId)
+                        .eq(ScanRecord::getScanType, "cutting")
+                        .and(w -> w.isNull(ScanRecord::getSettlementStatus)
+                                .or().ne(ScanRecord::getSettlementStatus, "payroll_settled")));
+            } catch (Exception e) {
+                log.warn("Failed to delete cutting scan records on rollback: orderId={}", orderId, e);
             }
         }
 

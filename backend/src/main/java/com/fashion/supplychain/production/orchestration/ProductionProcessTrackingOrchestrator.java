@@ -1016,4 +1016,14 @@ public class ProductionProcessTrackingOrchestrator {
                 oid, repaired, skipped, warehousingList.size());
         return summary;
     }
+
+    /**
+     * 裁剪任务撤回时清空该订单所有工序跟踪记录（供 CuttingTaskServiceImpl.rollbackTask 调用）
+     */
+    public int clearTrackingForRollback(String productionOrderId) {
+        if (!org.springframework.util.StringUtils.hasText(productionOrderId)) return 0;
+        int count = trackingService.deleteByOrderId(productionOrderId);
+        log.info("[CuttingRollback] 删除工序跟踪记录 {} 条，订单ID={}", count, productionOrderId);
+        return count;
+    }
 }
