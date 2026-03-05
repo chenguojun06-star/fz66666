@@ -82,6 +82,13 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                         cuttingBundleQrCode)
                 .orderByDesc(ProductWarehousing::getCreateTime);
 
+        // 工厂账号隔离（由 ProductWarehousingOrchestrator 注入 _factoryOrderIds）
+        @SuppressWarnings("unchecked")
+        List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
+        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
+            wrapper.in(ProductWarehousing::getOrderId, factoryOrderIds);
+        }
+
         return baseMapper.selectPage(pageInfo, wrapper);
     }
 

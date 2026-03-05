@@ -24,7 +24,7 @@ public class MaterialConstants {
     // ==================== 业务规则常量 ====================
     public static final int DATE_LENGTH_FULL = 19;
     public static final int DATE_LENGTH_MINUTE = 16;
-    
+
     /**
      * 到货率阈值（百分比），低于此值需要填写备注
      */
@@ -34,7 +34,7 @@ public class MaterialConstants {
      * 到货率自动完成阈值（百分比），达到此值自动将状态设为已完成，无需 PC 端手动点击
      */
     public static final int AUTO_COMPLETE_RATE = 95;
-    
+
     // ==================== 编号前缀 ====================
     public static final String PURCHASE_NO_PREFIX = "PUR";
 

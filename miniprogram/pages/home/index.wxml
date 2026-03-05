@@ -18,6 +18,7 @@
 
     <view wx:if="{{loading}}" class="hint">加载中...</view>
     <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
+    <view wx:if="{{!isFactory}}">
     <view class="home-section-title">数据概览</view>
     <view class="home-stats-grid">
       <view class="home-stat-card stat-sample">
@@ -72,6 +73,7 @@
           <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.warehousing.year}}</text></view>
         </view>
       </view>
+    </view>
     </view>
 
     <view class="home-section-title">快捷入口</view>

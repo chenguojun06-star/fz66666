@@ -81,6 +81,12 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 "SELECT id FROM t_production_order WHERE status IN ('closed', 'cancelled', 'completed', 'archived') OR delete_flag = 1");
                 }
 
+                // 工厂账号隔离：限制只能查看本工厂的扫码记录
+                String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "factoryId"));
+                if (StringUtils.hasText(factoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, factoryId);
+                }
+
                 // 如果没有指定operatorId，根据数据权限添加过滤条件
                 if (!StringUtils.hasText(operatorId)) {
                         applyDataPermissionFilter(wrapper);

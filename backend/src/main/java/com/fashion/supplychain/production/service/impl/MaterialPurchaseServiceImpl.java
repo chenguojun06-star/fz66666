@@ -132,6 +132,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         // 排除已报废订单（delete_flag=1）关联的采购记录，报废后不应再显示
         wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1))");
 
+        // 工厂账号隔离（由 MaterialPurchaseOrchestratorHelper 注入 _factoryOrderIds）
+        @SuppressWarnings("unchecked")
+        List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
+        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
+            wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+        }
+
         IPage<MaterialPurchase> pageResult = baseMapper.selectPage(pageInfo, wrapper);
 
         List<MaterialPurchase> records = pageResult == null ? null : pageResult.getRecords();

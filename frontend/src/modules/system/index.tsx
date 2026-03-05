@@ -4,6 +4,7 @@ export const UserList = React.lazy(() => import('./pages/System/UserList'));
 export const UserApproval = React.lazy(() => import('./pages/System/UserApproval'));
 export const RoleList = React.lazy(() => import('./pages/System/RoleList'));
 export const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
+export const FactoryWorkerList = React.lazy(() => import('./pages/System/FactoryWorkerList'));
 export const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
 export const SystemLogs = React.lazy(() => import('./pages/System/SystemLogs'));
 export const Profile = React.lazy(() => import('./pages/System/Profile'));

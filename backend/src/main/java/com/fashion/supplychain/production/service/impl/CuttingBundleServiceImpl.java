@@ -63,14 +63,23 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         String size = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "size"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
 
-        return baseMapper.selectPage(pageInfo,
-                new LambdaQueryWrapper<CuttingBundle>()
-                        .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
-                        .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
-                        .eq(StringUtils.hasText(color), CuttingBundle::getColor, color)
-                        .eq(StringUtils.hasText(size), CuttingBundle::getSize, size)
-                        .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
-                        .orderByAsc(CuttingBundle::getBundleNo));
+        // 工厂账号隔离：通过 CuttingBundleOrchestrator 注入
+        @SuppressWarnings("unchecked")
+        List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
+
+        LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<CuttingBundle>()
+                .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
+                .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(color), CuttingBundle::getColor, color)
+                .eq(StringUtils.hasText(size), CuttingBundle::getSize, size)
+                .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
+                .orderByAsc(CuttingBundle::getBundleNo);
+
+        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
+            wrapper.in(CuttingBundle::getProductionOrderId, factoryOrderIds);
+        }
+
+        return baseMapper.selectPage(pageInfo, wrapper);
     }
 
     @Override

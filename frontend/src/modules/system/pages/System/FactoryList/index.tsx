@@ -13,7 +13,7 @@ import type { UploadFile } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -25,6 +25,7 @@ const FactoryList: React.FC = () => {
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // ===== 使用 useModal 管理弹窗 =====
   const factoryModal = useModal<FactoryType>();
@@ -366,6 +367,15 @@ const FactoryList: React.FC = () => {
               title: '编辑',
               onClick: () => openDialog('edit', factory),
               primary: true,
+            },
+            {
+              key: 'workers',
+              label: '查看工人',
+              title: '查看工人名册',
+              onClick: () =>
+                navigate(
+                  `/system/factory-workers?factoryId=${factory.id}&factoryName=${encodeURIComponent(factory.factoryName || '')}`
+                ),
             },
             {
               key: 'account',

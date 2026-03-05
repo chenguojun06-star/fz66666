@@ -46,6 +46,13 @@ public class ScanRecordQueryHelper {
     private ProductWarehousingService productWarehousingService;
 
     public IPage<ScanRecord> list(Map<String, Object> params) {
+        // 工厂账号隔离：只能查看本工厂的扫码记录
+        String ctxFactoryId = UserContext.factoryId();
+        if (ctxFactoryId != null && !ctxFactoryId.isEmpty()) {
+            Map<String, Object> mutableParams = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
+            mutableParams.put("factoryId", ctxFactoryId);
+            return scanRecordService.queryPage(mutableParams);
+        }
         return scanRecordService.queryPage(params);
     }
 

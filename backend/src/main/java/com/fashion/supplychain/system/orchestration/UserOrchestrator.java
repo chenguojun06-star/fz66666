@@ -239,12 +239,17 @@ public class UserOrchestrator {
         subject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));
         subject.setRoleName(user.getRoleName());
         // 设置数据权限范围
-        // 安全修复：未设置时管理员/租户主默认"all"，普通员工默认"own"（防止旧账户越权）
+        // 规则：租户主/管理角色/无工厂绑定的办公账号 → "all"（可查看全局生产数据）
+        //       绑定了 factory_id 的工厂工人 → "own"（只看自己的扫码记录）
         String permRange = user.getPermissionRange();
         if (!StringUtils.hasText(permRange)) {
-            if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())) {
+            if (Boolean.TRUE.equals(user.getIsTenantOwner())
+                    || isAdminRole(user.getRoleName())
+                    || !StringUtils.hasText(user.getFactoryId())) {
+                // 未绑定工厂的 PC 端账号（跟单员、财务、采购等）默认看全部
                 permRange = "all";
             } else {
+                // 绑定工厂的工人账号默认只看自己
                 permRange = "own";
             }
         }

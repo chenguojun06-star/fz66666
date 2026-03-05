@@ -72,6 +72,7 @@ export const paths = {
   userApproval: '/system/user-approval',
   role: '/system/role',
   factory: '/system/factory',
+  factoryWorkers: '/system/factory-workers',
   loginLog: '/system/login-log',
   systemLogs: '/system/logs',
   dict: '/system/dict',
@@ -118,6 +119,7 @@ export const permissionCodes = {
   userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
   factory: 'MENU_FACTORY',
+  factoryWorkers: 'MENU_FACTORY', // 复用供应商管理权限，无需新增 DB 迁移
   loginLog: 'MENU_LOGIN_LOG',
   systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
   dict: 'MENU_DICT',
@@ -211,6 +213,7 @@ export const menuConfig: MenuSection[] = [
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
+      { label: '工人名册', path: paths.factoryWorkers, icon: React.createElement(TeamOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
@@ -281,6 +284,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,
   [paths.factory]: permissionCodes.factory,
+  [paths.factoryWorkers]: permissionCodes.factoryWorkers,
   [paths.loginLog]: permissionCodes.loginLog,
   [paths.systemLogs]: permissionCodes.systemLogs,
   [paths.dict]: permissionCodes.dict,

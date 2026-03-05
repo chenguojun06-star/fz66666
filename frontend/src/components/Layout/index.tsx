@@ -224,10 +224,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(code));
   };
 
+  // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
+  const isFactoryAccount = !!(user as any)?.factoryId;
+
+  // 工厂账号可见的菜单分组键（其余整组隐藏）
+  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system']);
+  // 工厂账号可见的具体路径白名单
+  const FACTORY_VISIBLE_PATHS = new Set<string>([
+    paths.productionList,   // /production（我的订单）
+    paths.progressDetail,   // /production/progress-detail（生产进度）
+    paths.cutting,          // /production/cutting（裁剪管理）
+    paths.warehousing,      // /production/warehousing（成品入库）
+    paths.materialPurchase, // /production/material（面辅料采购）
+    paths.financeCenter,    // /finance/center（订单结算(外)）
+    paths.profile,          // /system/profile（个人中心）
+    paths.factoryWorkers,   // /system/factory-workers（工人名册）
+  ]);
+
   // 构建 Menu items
   const menuItems = useMemo(() => {
     return localizedMenuConfig
       .filter((section) => {
+        // 外发工厂账号：只显示指定分组，其余整组隐藏
+        if (isFactoryAccount && !FACTORY_VISIBLE_SECTIONS.has(section.key)) return false;
         // 超管专属菜单：非超管不可见
         if (section.superAdminOnly && !isSuperAdmin) return false;
         if (section.items) {
@@ -240,6 +259,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const children = section.items
             .filter((item) => {
               if ((item as any).superAdminOnly && !isSuperAdmin) return false;
+              // 外发工厂账号：只显示白名单内的页面
+              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(item.path)) return false;
               return hasPermissionForPath(item.path);
             })
             .map((item) => ({
@@ -262,7 +283,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           };
         }
       });
-  }, [localizedMenuConfig, user, isSuperAdmin]);
+  }, [localizedMenuConfig, user, isSuperAdmin, isFactoryAccount]);
 
   // 获取当前选中的菜单项
   const selectedKeys = useMemo(() => {
@@ -412,9 +433,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
   const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
-
-  // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
-  const isFactoryAccount = !!(user as any)?.factoryId;
 
   // 工厂账号登录后跳转到生产列表（避免停留在仔表盘）
   useEffect(() => {

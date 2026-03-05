@@ -3,6 +3,7 @@ const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
 const { onDataRefresh, eventBus } = require('../../utils/eventBus');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { getCurrentFactoryId } = require('../../utils/permission');
 
 
 // ==================== 提取的工具模块 ====================
@@ -14,6 +15,7 @@ const RollbackHandler = require('./handlers/RollbackHandler');
 
 Page({
   data: {
+    isFactory: false, // 是否为外发工厂账号（隐藏非工厂相关模块）
     globalSearch: {
       keyword: '',
       hasSearched: false,
@@ -66,6 +68,8 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
+    // 工厂账号隐藏仓库卡片
+    this.setData({ isFactory: !!getCurrentFactoryId() });
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {

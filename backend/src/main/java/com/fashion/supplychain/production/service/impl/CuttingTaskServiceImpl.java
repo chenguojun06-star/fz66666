@@ -88,12 +88,25 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .eq(StringUtils.hasText(status), CuttingTask::getStatus, status)
                 .orderByDesc(CuttingTask::getCreateTime);
 
+        // 处理工厂账号隔离（由 CuttingTaskOrchestrator 注入 _factoryOrderIds）
+        @SuppressWarnings("unchecked")
+        List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
+
         // 只查询有效订单的任务（或者没有关联订单的任务）
-        if (!validOrderIds.isEmpty()) {
-            queryWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
-                    .or().isNull(CuttingTask::getProductionOrderId));
+        if (factoryOrderIds != null) {
+            // 工厂上下文：只查该工厂订单的裁剪任务，不显示无关联订单的任务
+            if (factoryOrderIds.isEmpty()) {
+                return new Page<>(page, pageSize);
+            }
+            queryWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
         } else {
-            queryWrapper.isNull(CuttingTask::getProductionOrderId);
+            // 普通上下文：过滤已删除订单的任务，保留无关联订单的任务
+            if (!validOrderIds.isEmpty()) {
+                queryWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
+                        .or().isNull(CuttingTask::getProductionOrderId));
+            } else {
+                queryWrapper.isNull(CuttingTask::getProductionOrderId);
+            }
         }
 
         IPage<CuttingTask> pageResult = baseMapper.selectPage(pageInfo, queryWrapper);

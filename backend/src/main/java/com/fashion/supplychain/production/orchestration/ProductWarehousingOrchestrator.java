@@ -75,6 +75,21 @@ public class ProductWarehousingOrchestrator {
     private StyleBomService styleBomService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
+        // 工厂账号隔离：只查询该工厂的入库记录
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            List<String> factoryOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).collect(java.util.stream.Collectors.toList());
+            if (factoryOrderIds.isEmpty()) {
+                return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+            }
+            params = new HashMap<>(params != null ? params : new HashMap<>());
+            params.put("_factoryOrderIds", factoryOrderIds);
+        }
         IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);
         // 填充缺失的显示字段（兼容旧数据）
         if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {

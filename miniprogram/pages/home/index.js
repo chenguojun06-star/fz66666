@@ -8,6 +8,7 @@ const {
 } = require('../../utils/orderStatusHelper');
 const { normalizeStats, normalizeActivities } = require('../../utils/dataTransform');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { getCurrentFactoryId } = require('../../utils/permission');
 
 function toNumber(value) {
   const n = Number(value);
@@ -71,6 +72,7 @@ Page({
       warehousing: { day: 0, week: 0, month: 0, year: 0, total: 0 },
     },
     activities: [],
+    isFactory: false, // 是否为外发工厂账号（隐藏全公司统计数据）
   },
 
   onShow() {
@@ -81,6 +83,8 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
+    // 工厂账号隐藏全公司数据概览
+    this.setData({ isFactory: !!getCurrentFactoryId() });
     this.loadStats();
 
     // 加载提醒列表（延迟执行，不阻塞首屏渲染）

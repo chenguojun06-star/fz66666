@@ -2,8 +2,8 @@
   <!-- 通用悬浮铃铛组件 -->
   <floating-bell />
 
-  <!-- 仓库管理卡片 -->
-  <view class="card">
+  <!-- 仓库管理卡片（工厂账号隐藏） -->
+  <view class="card" wx:if="{{!isFactory}}">
     <view class="title">仓库</view>
     <view class="grid-menu">
       <view class="grid-item" hover-class="grid-item-hover" hover-stay-time="100" bindtap="navTo" data-url="/pages/warehouse/sample/list/index">

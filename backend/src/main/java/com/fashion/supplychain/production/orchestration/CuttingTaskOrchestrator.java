@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -51,6 +52,22 @@ public class CuttingTaskOrchestrator {
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
+        // 工厂账号隔离：只能查看本工厂订单的裁剪任务
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            List<String> factoryOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+            if (factoryOrderIds.isEmpty()) {
+                return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+            }
+            Map<String, Object> mutableParams = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
+            mutableParams.put("_factoryOrderIds", factoryOrderIds);
+            return cuttingTaskService.queryPage(mutableParams);
+        }
         return cuttingTaskService.queryPage(params);
     }
 

@@ -173,7 +173,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       setConfirmLoading(true);
 
       await api.post('/production/order/confirm-procurement', {
-        styleNo: styleNo,
+        id: order?.id,
         remark: values.remark.trim(),
       });
 
@@ -336,11 +336,11 @@ const MaterialPurchaseDetail: React.FC = () => {
             >
               打印
             </Button>
-            {order && (
+            {order && materialArrivalRate < 95 && order.procurementManuallyCompleted !== 1 && (
               <Button
                 type="primary"
                 onClick={handleOpenConfirm}
-                disabled={materialArrivalRate < 50 || order.procurementManuallyCompleted === 1}
+                disabled={materialArrivalRate < MATERIAL_ARRIVAL_RATE_THRESHOLD}
               >
                 确认回料完成
               </Button>
@@ -416,6 +416,8 @@ const MaterialPurchaseDetail: React.FC = () => {
                 <div>
                   {order?.procurementManuallyCompleted === 1 ? (
                     <Tag color="success">已确认</Tag>
+                  ) : materialArrivalRate >= 95 ? (
+                    <Tag color="success">已自动完成</Tag>
                   ) : order ? (
                     <Tag color="default">未确认</Tag>
                   ) : (

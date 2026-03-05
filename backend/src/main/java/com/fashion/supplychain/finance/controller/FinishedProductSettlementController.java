@@ -95,8 +95,11 @@ public class FinishedProductSettlementController {
             wrapper.le(FinishedProductSettlement::getCreateTime, endDateTime);
         }
 
-        // 工厂筛选
-        if (StringUtils.isNotBlank(factoryId)) {
+        // 外发工厂账号强制只看自己工厂数据；租户管理员可按 factoryId 筛选
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.isNotBlank(ctxFactoryId)) {
+            wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryId);
+        } else if (StringUtils.isNotBlank(factoryId)) {
             wrapper.eq(FinishedProductSettlement::getFactoryId, factoryId);
         }
 
@@ -115,6 +118,11 @@ public class FinishedProductSettlementController {
         FinishedProductSettlement settlement = settlementService.getOne(wrapper);
 
         if (settlement == null) {
+            return Result.fail("未找到该订单的结算数据");
+        }
+        // 外发工厂账号只能查看自己工厂的结算单
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.isNotBlank(ctxFactoryId) && !ctxFactoryId.equals(settlement.getFactoryId())) {
             return Result.fail("未找到该订单的结算数据");
         }
 
@@ -151,6 +159,12 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(endDate)) {
             LocalDateTime endDateTime = LocalDate.parse(endDate).atTime(LocalTime.MAX);
             wrapper.le(FinishedProductSettlement::getCreateTime, endDateTime);
+        }
+
+        // 外发工厂账号强制只导出自己工厂数据
+        String ctxFactoryIdExport = UserContext.factoryId();
+        if (StringUtils.isNotBlank(ctxFactoryIdExport)) {
+            wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryIdExport);
         }
 
         wrapper.orderByDesc(FinishedProductSettlement::getCreateTime);
@@ -246,6 +260,12 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(endDate)) {
             wrapper.le(FinishedProductSettlement::getCreateTime,
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
+        }
+
+        // 外发工厂账号只能查看自己工厂的汇总数据
+        String ctxFactoryIdSummary = UserContext.factoryId();
+        if (StringUtils.isNotBlank(ctxFactoryIdSummary)) {
+            wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryIdSummary);
         }
 
         wrapper.orderByDesc(FinishedProductSettlement::getCreateTime);
