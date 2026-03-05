@@ -389,20 +389,35 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
 };
 
 /* ─── 通用自动滚动容器：悬停暂停，离开续滚（无缝循环版）─── */
-// 原理：内容渲染两遍，rAF 逐帧推进；到达半高时无声重置到 0，视觉零抖动
+// 只有内容高度 > 容器高度时才渲染复本并启动滚动，避免短列表重复显示
 const AutoScrollBox: React.FC<{
   children: React.ReactNode;
   className?: string;
   speed?: number;  // px/s，默认 28
 }> = ({ children, className = '', speed = 28 }) => {
-  const outerRef = useRef<HTMLDivElement>(null);
-  const pausedRef = useRef(false);
-  const rafRef    = useRef<number>(0);
-  const lastTsRef = useRef<number>(0);
+  const outerRef    = useRef<HTMLDivElement>(null);
+  const pausedRef   = useRef(false);
+  const rafRef      = useRef<number>(0);
+  const lastTsRef   = useRef<number>(0);
+  const lastSHRef   = useRef(0);
+  const [showClone, setShowClone] = useState(false);
 
-  useEffect(() => {
+  // 每次渲染后测量：单份内容高度是否超出容器
+  useLayoutEffect(() => {
     const el = outerRef.current;
     if (!el) return;
+    // showClone 时 scrollHeight = 2x，除以 2 得单份高度
+    const singleH = el.scrollHeight / (showClone ? 2 : 1);
+    if (el.scrollHeight === lastSHRef.current) return; // 未变化，跳过防抖
+    lastSHRef.current = el.scrollHeight;
+    const needed = singleH > el.clientHeight;
+    if (needed !== showClone) setShowClone(needed);
+  });
+
+  // 只在需要滚动时才启动 rAF
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el || !showClone) return;
 
     const tick = (ts: number) => {
       if (lastTsRef.current === 0) lastTsRef.current = ts;
@@ -412,21 +427,16 @@ const AutoScrollBox: React.FC<{
       if (!pausedRef.current) {
         const halfH = el.scrollHeight / 2;
         if (halfH > el.clientHeight) {
-          el.scrollTop += speed * delta / 1000;  // px/s → px/frame
-          if (el.scrollTop >= halfH) {
-            el.scrollTop -= halfH;               // 无声跳回，内容连续
-          }
+          el.scrollTop += speed * delta / 1000;
+          if (el.scrollTop >= halfH) el.scrollTop -= halfH;
         }
       }
       rafRef.current = requestAnimationFrame(tick);
     };
 
     rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      lastTsRef.current = 0;
-    };
-  }, [speed]);
+    return () => { cancelAnimationFrame(rafRef.current); lastTsRef.current = 0; };
+  }, [speed, showClone]);
 
   return (
     <div
@@ -435,10 +445,8 @@ const AutoScrollBox: React.FC<{
       onMouseEnter={() => { pausedRef.current = true; }}
       onMouseLeave={() => { pausedRef.current = false; lastTsRef.current = 0; }}
     >
-      {/* 正本 */}
       <div>{children}</div>
-      {/* 复本：让滚动在「两份之间」无缝循环，不再有跳顶抖动 */}
-      <div aria-hidden="true">{children}</div>
+      {showClone && <div aria-hidden="true">{children}</div>}
     </div>
   );
 };
