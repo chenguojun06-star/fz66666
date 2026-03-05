@@ -204,7 +204,9 @@ public class MaterialPurchaseHelper {
         if (purchaseQty <= 0) {
             return 0;
         }
-        return purchaseQty;
+        // 到货率 >= AUTO_COMPLETE_RATE% 即自动完成，取上限整数
+        // 例：100件 → threshold=95；20件 → threshold=19；10件 → threshold=10（无法凑出0.5件）
+        return (int) Math.ceil(purchaseQty * MaterialConstants.AUTO_COMPLETE_RATE / 100.0);
     }
 
     public static String resolveStatusByArrived(String previousStatus, int arrivedQty, int purchaseQty) {
