@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Tag, Space, message, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty, Form, InputNumber } from 'antd';
+import { Tabs, Button, Tag, Space, message, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
 import { SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -265,11 +265,9 @@ const AppManagementTab: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
 
-  // 超管专属：新建对接应用
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createdApp, setCreatedApp] = useState<TenantAppInfo | null>(null);
-  const [createForm] = Form.useForm();
+  // 超管专属：一键开通
+  const [quickActivating, setQuickActivating] = useState<string | null>(null);
+  const [quickCreds, setQuickCreds] = useState<TenantAppInfo | null>(null);
 
   // 行内编辑URL状态（列表行）
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
@@ -448,22 +446,24 @@ const AppManagementTab: React.FC = () => {
     message.success('已复制到剪贴板');
   };
 
-  const handleCreateApp = async () => {
+  const handleQuickActivate = async (type: string) => {
+    setQuickActivating(type);
     try {
-      const values = await createForm.validateFields();
-      setCreating(true);
-      const res: any = await tenantAppService.createApp(values);
+      const cfg = APP_TYPE_CONFIG[type];
+      const res: any = await tenantAppService.createApp({ appName: `${cfg.label}对接`, appType: type });
+      if (res?.code !== undefined && res.code !== 200) {
+        message.error(res.message || '开通失败');
+        return;
+      }
       const app = res?.data || res;
-      setCreatedApp(app);
-      setCreateModalOpen(false);
-      createForm.resetFields();
+      if (!app?.appKey) { message.error('开通失败，请重试'); return; }
+      setQuickCreds(app);
       fetchApps();
       fetchStats();
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error('创建失败');
+    } catch {
+      message.error('开通失败');
     } finally {
-      setCreating(false);
+      setQuickActivating(null);
     }
   };
 
@@ -610,17 +610,42 @@ const AppManagementTab: React.FC = () => {
             options={[{ value: 'active', label: '启用' }, { value: 'disabled', label: '停用' }]}
           />
         </Space>
-        <Space>
-          {isSuperAdmin && (
-            <Button icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateModalOpen(true); }}>
-              新建对接应用
-            </Button>
-          )}
-          <Button type="primary" icon={<ShopOutlined />} onClick={() => navigate('/system/app-store')}>
+        <Button type="primary" icon={<ShopOutlined />} onClick={() => navigate('/system/app-store')}>
             去应用商店开通
           </Button>
-        </Space>
       </div>
+
+      {/* 超管：未开通的对接类型一键开通 */}
+      {isSuperAdmin && (() => {
+        const activated = new Set(apps.map((a: TenantAppInfo) => a.appType));
+        const unactivated = Object.entries(APP_TYPE_CONFIG).filter(([k]) => !activated.has(k));
+        if (!unactivated.length) return null;
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>以下对接类型尚未开通，点击立即开通：</Typography.Text>
+            <Row gutter={12}>
+              {unactivated.map(([type, cfg]) => (
+                <Col key={type} span={6}>
+                  <Card size="small" style={{ borderStyle: 'dashed' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Space size={6}>
+                        <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                        <Typography.Text strong style={{ fontSize: 13 }}>{cfg.label}</Typography.Text>
+                      </Space>
+                      <Button type="primary" size="small" icon={<PlusOutlined />}
+                        loading={quickActivating === type}
+                        onClick={() => handleQuickActivate(type)}>
+                        开通
+                      </Button>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 6 }}>{cfg.description}</div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </div>
+        );
+      })()}
 
       {/* 应用列表 */}
       <ResizableTable
@@ -747,80 +772,37 @@ const AppManagementTab: React.FC = () => {
         />
       </ResizableModal>
 
-      {/* 超管新建对接应用弹窗 */}
-      {isSuperAdmin && (
-        <ResizableModal
-          open={createModalOpen}
-          title="新建对接应用"
-          onCancel={() => setCreateModalOpen(false)}
-          width="40vw"
-          footer={
-            <Space>
-              <Button onClick={() => setCreateModalOpen(false)}>取消</Button>
-              <Button type="primary" loading={creating} onClick={handleCreateApp}>创建应用</Button>
-            </Space>
-          }
-        >
-          <Form form={createForm} layout="vertical" style={{ padding: '8px 0' }}>
-            <Form.Item name="appName" label="应用名称" rules={[{ required: true, message: '请输入应用名称' }]}>
-              <Input placeholder="如：客户A ERP对接" maxLength={100} />
-            </Form.Item>
-            <Form.Item name="appType" label="对接类型" rules={[{ required: true, message: '请选择对接类型' }]}>
-              <Select
-                placeholder="选择对接类型"
-                options={Object.entries(APP_TYPE_CONFIG).map(([k, v]) => ({
-                  value: k,
-                  label: `${v.icon} ${v.label} — ${v.description}`,
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="externalApiUrl" label="外部接口地址（可选）" tooltip="对方系统接收推送的地址">
-              <Input placeholder="https://client.example.com/api/webhook" />
-            </Form.Item>
-            <Form.Item name="callbackUrl" label="回调地址（可选）" tooltip="本系统接收对方回调的地址">
-              <Input placeholder="https://your-domain.com/openapi/callback" />
-            </Form.Item>
-            <Form.Item name="dailyQuota" label="日调用限额（可选）" tooltip="留空表示不限">
-              <InputNumber min={1} max={1000000} placeholder="如：10000" style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="remark" label="备注（可选）">
-              <Input.TextArea rows={2} maxLength={200} showCount placeholder="描述此应用的用途或对接方信息" />
-            </Form.Item>
-          </Form>
-        </ResizableModal>
-      )}
-
-      {/* 创建成功 — 凭据展示（AppSecret 仅此一次） */}
+      {/* 开通成功 — 凭据展示（AppSecret 仅此一次） */}
       <Modal
-        open={!!createdApp}
-        title="✅ 应用已创建 — 请立即保存凭据"
-        onCancel={() => setCreatedApp(null)}
-        footer={<Button type="primary" onClick={() => setCreatedApp(null)}>已保存，关闭</Button>}
+        open={!!quickCreds}
+        title="✅ 开通成功 — 请立即保存凭据"
+        onCancel={() => setQuickCreds(null)}
+        footer={<Button type="primary" onClick={() => setQuickCreds(null)}>已保存，关闭</Button>}
         width={520}
       >
         <div style={{ background: 'var(--color-bg-secondary, #f8f9fa)', borderRadius: 8, padding: '16px 20px', marginTop: 8 }}>
           <div style={{ color: 'var(--color-danger, #ff4d4f)', fontSize: 13, marginBottom: 16, fontWeight: 500 }}>
-            ⚠️ AppSecret 仅在创建时显示一次，关闭后无法找回，请立即复制保存！
+            ⚠️ AppSecret 仅在开通时显示一次，关闭后无法找回，请立即复制保存！
           </div>
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>AppKey（应用ID）</div>
-              <Typography.Text code copyable>{createdApp?.appKey || ''}</Typography.Text>
+              <Typography.Text code copyable>{quickCreds?.appKey || ''}</Typography.Text>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>AppSecret（应用密钥）</div>
               <Typography.Text code copyable style={{ color: 'var(--color-danger, #ff4d4f)' }}>
-                {createdApp?.appSecret || '（密钥未返回，请联系管理员）'}
+                {quickCreds?.appSecret || '（密钥未返回，请联系管理员）'}
               </Typography.Text>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>应用名称</div>
-              <Typography.Text>{createdApp?.appName}</Typography.Text>
+              <Typography.Text>{quickCreds?.appName}</Typography.Text>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>对接类型</div>
-              <Tag color={APP_TYPE_CONFIG[createdApp?.appType || '']?.color}>
-                {APP_TYPE_CONFIG[createdApp?.appType || '']?.icon} {createdApp?.appTypeName || createdApp?.appType}
+              <Tag color={APP_TYPE_CONFIG[quickCreds?.appType || '']?.color}>
+                {APP_TYPE_CONFIG[quickCreds?.appType || '']?.icon} {quickCreds?.appTypeName || quickCreds?.appType}
               </Tag>
             </div>
           </Space>
