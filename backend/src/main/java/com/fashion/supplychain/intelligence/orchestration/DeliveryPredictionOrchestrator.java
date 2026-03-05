@@ -72,7 +72,7 @@ public class DeliveryPredictionOrchestrator {
             return resp;
         }
 
-        resp.setOrderId(order.getId() != null ? Long.parseLong(order.getId()) : null);
+        resp.setOrderId(order.getId());
         resp.setOrderNo(order.getOrderNo());
 
         int totalQty = resolveTotal(order);

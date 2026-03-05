@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class DeliveryPredictionResponse {
-    private Long orderId;
+    private String orderId;
     private String orderNo;
     /** 乐观预测日期 yyyy-MM-dd */
     private String optimisticDate;

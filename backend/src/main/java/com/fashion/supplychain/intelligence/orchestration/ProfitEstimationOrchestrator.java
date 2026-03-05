@@ -67,7 +67,7 @@ public class ProfitEstimationOrchestrator {
             return resp;
         }
 
-        resp.setOrderId(Long.parseLong(order.getId()));
+        resp.setOrderId(order.getId());
         resp.setOrderNo(order.getOrderNo());
         int qty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
 

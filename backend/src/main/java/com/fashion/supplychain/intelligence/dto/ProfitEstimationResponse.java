@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 public class ProfitEstimationResponse {
-    private Long orderId;
+    private String orderId;
     private String orderNo;
     /** 客户报价总额 */
     private BigDecimal quotationTotal;
