@@ -10,6 +10,7 @@ import {
 } from 'antd';
 import {
   FileTextOutlined, BellOutlined, AppstoreOutlined, SyncOutlined,
+  CreditCardOutlined, CopyOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import tenantService from '@/services/tenantService';
@@ -76,6 +77,8 @@ const MyBillingTab: React.FC = () => {
   const [currentBill, setCurrentBill] = useState<any>(null);
   const [invoiceForm] = Form.useForm();
   const [invoiceInfoForm] = Form.useForm();
+  const [payModalVisible, setPayModalVisible] = useState(false);
+  const [payingBill, setPayingBill] = useState<any>(null);
 
   /** 30天内即将到期（含已过期）的应用，用于顶部提醒 */
   const expiringApps = useMemo(() =>
@@ -137,6 +140,20 @@ const MyBillingTab: React.FC = () => {
     }
   };
 
+  // ---------- 快捷付款 ----------
+  const handlePay = (record: any) => {
+    setPayingBill(record);
+    setPayModalVisible(true);
+  };
+
+  const copyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      message.success(`${label}已复制到剪贴板`);
+    }).catch(() => {
+      message.error('复制失败，请手动复制');
+    });
+  };
+
   // ---------- 默认开票信息 ----------
   const handleOpenInvoiceInfo = () => {
     const defaults = overview?.invoiceDefaults || {};
@@ -184,16 +201,28 @@ const MyBillingTab: React.FC = () => {
     },
     { title: '发票号', dataIndex: 'invoiceNo', width: 140,
       render: (v: string) => v || '—' },
-    { title: '操作', key: 'actions', width: 120,
+    { title: '操作', key: 'actions', width: 200,
       render: (_: any, record: any) => {
+        const canPay = record.status === 'PENDING' || record.status === 'OVERDUE';
         const canRequest = (record.status === 'PAID' || record.status === 'PENDING')
           && (!record.invoiceStatus || record.invoiceStatus === 'NOT_REQUIRED');
-        return canRequest ? (
-          <Button type="link" size="small" icon={<FileTextOutlined />}
-            onClick={() => handleRequestInvoice(record)}>
-            申请开票
-          </Button>
-        ) : null;
+        return (
+          <Space size={0}>
+            {canPay && (
+              <Button type="link" size="small" icon={<CreditCardOutlined />}
+                style={{ color: 'var(--color-primary)' }}
+                onClick={() => handlePay(record)}>
+                立即付款
+              </Button>
+            )}
+            {canRequest && (
+              <Button type="link" size="small" icon={<FileTextOutlined />}
+                onClick={() => handleRequestInvoice(record)}>
+                申请开票
+              </Button>
+            )}
+          </Space>
+        );
       },
     },
   ];
@@ -372,6 +401,72 @@ const MyBillingTab: React.FC = () => {
           locale={{ emptyText: <Empty description="暂无账单记录" /> }}
         />
       </Card>
+
+      {/* 快捷付款弹窗 */}
+      <Modal
+        title={<Space><CreditCardOutlined />立即付款</Space>}
+        open={payModalVisible}
+        onCancel={() => setPayModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setPayModalVisible(false)}>关闭</Button>,
+        ]}
+        width={480}
+      >
+        {payingBill && (
+          <div>
+            <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="账单编号" span={2}>
+                <Space>
+                  <Text code>{payingBill.billingNo}</Text>
+                  <Button type="text" size="small" icon={<CopyOutlined />}
+                    onClick={() => copyText(payingBill.billingNo, '账单编号')} />
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="账期">{payingBill.billingMonth}</Descriptions.Item>
+              <Descriptions.Item label="套餐">{PLAN_LABELS[payingBill.planType] || payingBill.planType}</Descriptions.Item>
+              <Descriptions.Item label="应付金额" span={2}>
+                <Space align="center">
+                  <Text strong style={{ color: '#f5222d', fontSize: 22 }}>
+                    ¥{payingBill.totalAmount?.toFixed(2)}
+                  </Text>
+                  <Button type="text" size="small" icon={<CopyOutlined />}
+                    onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
+                </Space>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="付款方式"
+              description="请通过银行转账或扫码向管理员付款。付款时请在备注中注明账单编号，付款完成后联系管理员确认，确认后账单状态将更新为「已支付」。"
+            />
+
+            <Card size="small" title="付款信息" style={{ marginBottom: 12 }}>
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="付款备注（必填）">
+                  <Space>
+                    <Text code>{payingBill.billingNo}</Text>
+                    <Button type="text" size="small" icon={<CopyOutlined />}
+                      onClick={() => copyText(payingBill.billingNo, '付款备注')} />
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label="付款金额">
+                  <Space>
+                    <Text strong style={{ color: '#f5222d' }}>¥{payingBill.totalAmount?.toFixed(2)}</Text>
+                    <Button type="text" size="small" icon={<CopyOutlined />}
+                      onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
+                  </Space>
+                </Descriptions.Item>
+              </Descriptions>
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbe6', borderRadius: 6, fontSize: 13, color: '#ad6800' }}>
+                ⚠️ 请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
+              </div>
+            </Card>
+          </div>
+        )}
+      </Modal>
 
       {/* 申请开票弹窗 */}
       <Modal
