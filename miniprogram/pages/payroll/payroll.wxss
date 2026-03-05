@@ -208,7 +208,7 @@
   display: inline-block;
   padding: 4rpx 12rpx;
   background: var(--color-primary-light);
-  color: var(--color-primary);
+  color: #ffffff;
   border-radius: var(--border-radius-sm);
   font-size: 24rpx;
   font-weight: 600;
