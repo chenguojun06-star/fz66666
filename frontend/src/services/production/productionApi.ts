@@ -36,6 +36,12 @@ export const productionOrderApi = {
   saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
   // 工厂产能雷达
   getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
+  // 客户分享链接：生成分享令牌（30天有效）
+  generateShareToken: (orderId: string) =>
+    api.post<{ code: number; data: { token: string; shareUrl: string } }>(
+      `/production/orders/${encodeURIComponent(orderId)}/share-token`,
+      {}
+    ),
 };
 
 export const productionCuttingApi = {

@@ -49,6 +49,8 @@ import {
 
 // 懒加载组件
 const NotFound = React.lazy(() => import('./pages/NotFound'));
+// 公开页面（无需登录）
+const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage'));
 
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -270,6 +272,8 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
           <Route path={paths.patternRevision} element={<Suspense fallback={<Spin />}><PatternRevisionManagement /></Suspense>} />
         </Route>
+        {/* 客户订单分享页（无需登录） */}
+        <Route path="/share/:token" element={<Suspense fallback={<Spin />}><ShareOrderPage /></Suspense>} />
         <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
       </Routes>
 

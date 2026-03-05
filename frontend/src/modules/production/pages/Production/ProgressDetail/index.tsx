@@ -56,6 +56,8 @@ import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
+import { useDeliveryRiskMap } from './hooks/useDeliveryRiskMap';
+import MaterialShortageAlert from './components/MaterialShortageAlert';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -790,6 +792,45 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ── 停滞订单检测（≥3天无新扫码）─────────────────────────────────────
   const stagnantOrderIds = useStagnantDetection(orders, boardTimesByOrder);
 
+  // ── AI 交期风险地图（后台静默加载，5分钟缓存）────────────────────────
+  const hasActiveOrders = orders.some(o => o.status !== 'completed');
+  const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
+
+  // ── 分享订单给客户追踪链接（30天JWT）─────────────────────────────────
+  const handleShareOrder = useCallback(async (order: ProductionOrder) => {
+    if (!order.id) return;
+    try {
+      const res = await productionOrderApi.generateShareToken(String(order.id));
+      const token = (res as any)?.token || (res as any)?.data?.token;
+      const shareUrl = token ? `${window.location.origin}/share/${token}` : '';
+      if (!shareUrl) { message.error('生成分享链接失败'); return; }
+      Modal.info({
+        title: '👤 客户订单追踪链接',
+        content: (
+          <div>
+            <p style={{ marginBottom: 8, color: '#555', fontSize: 13 }}>
+              发送以下链接给客户，客户无需登录即可实时查看订单生产进度（30天有效）：
+            </p>
+            <Input.TextArea value={shareUrl} autoSize={{ minRows: 2 }} readOnly
+              style={{ fontSize: 12, background: '#f5f5f5', cursor: 'text' }}
+            />
+            <Button
+              type="primary"
+              size="small"
+              style={{ marginTop: 8 }}
+              onClick={() => { navigator.clipboard.writeText(shareUrl); message.success('链接已复制到剪贴板'); }}
+            >
+              复制链接
+            </Button>
+          </div>
+        ),
+        width: 540,
+      });
+    } catch {
+      message.error('生成分享链接失败，请重试');
+    }
+  }, [message]);
+
   // ── 智能提示：催交+落后计数（仅当前页，快速提示）─────────────────────
   const smartHints = useMemo(() => {
     const active = orders.filter(o => o.status !== 'completed');
@@ -814,6 +855,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setRemarkPopoverId, setRemarkText,
     openScan,
     stagnantOrderIds,
+    deliveryRiskMap,
+    onShareOrder: handleShareOrder,
   });
 
 
@@ -894,6 +937,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               />
             </Card>
           ) : null}
+
+          <MaterialShortageAlert />
 
           {viewMode === 'list' ? (
             <ResizableTable

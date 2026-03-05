@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Popover, Tag, Tooltip } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
+import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import RowActions from '@/components/common/RowActions';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
@@ -83,6 +84,10 @@ interface UseProgressColumnsParams {
   openScan: (order: ProductionOrder) => void;
   /** 停滞订单 Map（orderId → 停滞天数） */
   stagnantOrderIds?: Map<string, number>;
+  /** AI 交期风险 Map（orderNo → DeliveryRiskItem） */
+  deliveryRiskMap?: Map<string, DeliveryRiskItem>;
+  /** 分享订单给客户的回调 */
+  onShareOrder?: (order: ProductionOrder) => void;
 }
 
 /**
@@ -105,6 +110,8 @@ export const useProgressColumns = ({
   setRemarkText,
   openScan,
   stagnantOrderIds,
+  deliveryRiskMap,
+  onShareOrder,
 }: UseProgressColumnsParams) => {
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
@@ -310,6 +317,16 @@ export const useProgressColumns = ({
           else if (dLeft <= 14 && prog < 30) riskTag = { text: '🟡 需关注',  color: '#faad14' };
           else if (prog >= 80 && dLeft >= 3) riskTag = { text: '🟢 顺利',    color: '#52c41a' };
         }
+        // AI 交期风险 badge
+        const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
+        let aiRiskTag: { text: string; color: string; tip: string } | null = null;
+        if (aiRisk && record.status !== 'completed') {
+          const tip = [aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ');
+          if (aiRisk.riskLevel === 'overdue')        aiRiskTag = { text: '🤖 AI预测逾期', color: '#cf1322', tip };
+          else if (aiRisk.riskLevel === 'danger')    aiRiskTag = { text: '🤖 AI预测偏慢', color: '#d46b08', tip };
+          else if (aiRisk.riskLevel === 'warning')   aiRiskTag = { text: '🤖 需关注',     color: '#d48806', tip };
+          else if (aiRisk.riskLevel === 'safe')      aiRiskTag = { text: '🤖 AI按时',      color: '#389e0d', tip };
+        }
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
@@ -318,6 +335,13 @@ export const useProgressColumns = ({
               <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
                 {riskTag.text}
               </span>
+            )}
+            {aiRiskTag && (
+              <Tooltip title={aiRiskTag.tip}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: aiRiskTag.color, cursor: 'help' }}>
+                  {aiRiskTag.text}
+                </span>
+              </Tooltip>
             )}
           </div>
         );
@@ -556,6 +580,13 @@ export const useProgressColumns = ({
               ...(isSupervisorOrAbove
                 ? [{ key: 'close', label: '关单', disabled: frozen, onClick: () => handleCloseOrder(record) }]
                 : []),
+              {
+                key: 'share',
+                label: (
+                  <span><ShareAltOutlined style={{ marginRight: 4 }} />分享客户</span>
+                ),
+                onClick: () => onShareOrder?.(record),
+              },
             ]}
           />
         );
@@ -569,6 +600,7 @@ export const useProgressColumns = ({
     setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText, openScan,
     getPredictHint, triggerPredict,
+    deliveryRiskMap, onShareOrder,
   ]);
 
   return { columns };

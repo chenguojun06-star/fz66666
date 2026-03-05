@@ -111,6 +111,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/file/tenant-download/**").authenticated()
                         .antMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
                         .antMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT
+                        .antMatchers("/api/public/**").permitAll()   // 客户分享页等无需登录的公开查询接口
                         .antMatchers(HttpMethod.GET, "/api/production/warehousing/list").authenticated()
                         .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
                         .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()

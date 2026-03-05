@@ -75,6 +75,12 @@
       </view>
     </view>
 
+    <!-- 工资查询入口 -->
+    <view class="action-row" bindtap="onNavigateToPayroll">
+      <text class="action-row-label">💰 工资查询</text>
+      <text class="action-row-arrow">›</text>
+    </view>
+
     <!-- 问题反馈入口 -->
     <view class="action-row" bindtap="onShowFeedbackForm">
       <text class="action-row-label">📝 问题反馈</text>

@@ -97,6 +97,10 @@ Page({
     });
   },
 
+  onNavigateToPayroll() {
+    wx.navigateTo({ url: '/pages/payroll/payroll' });
+  },
+
   onLanguageSwitchTap() {
     const { languageNameMap } = this.data;
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
