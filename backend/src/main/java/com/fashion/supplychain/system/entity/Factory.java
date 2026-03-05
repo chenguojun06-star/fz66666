@@ -45,6 +45,11 @@ public class Factory {
      */
     private String factoryType;
 
+    /**
+     * 供应商类型: MATERIAL=面辅料供应商, OUTSOURCE=外发厂
+     */
+    private String supplierType;
+
     @TableField(exist = false)
     private String operationRemark;
 

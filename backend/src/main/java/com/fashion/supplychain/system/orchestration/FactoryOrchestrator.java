@@ -24,12 +24,13 @@ public class FactoryOrchestrator {
     @Autowired
     private LoginLogService loginLogService;
 
-    public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status) {
+    public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status, String supplierType) {
         int p = parsePositiveIntOrDefault(page, 1, "page");
         int ps = parsePositiveIntOrDefault(pageSize, 10, "pageSize");
         String code = TextUtils.safeText(factoryCode);
         String name = TextUtils.safeText(factoryName);
         String st = TextUtils.safeText(status);
+        String sType = TextUtils.safeText(supplierType);
 
         Page<Factory> pageInfo = new Page<>(p, ps);
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
@@ -37,6 +38,7 @@ public class FactoryOrchestrator {
                 .like(StringUtils.hasText(code), Factory::getFactoryCode, code)
                 .like(StringUtils.hasText(name), Factory::getFactoryName, name)
                 .eq(StringUtils.hasText(st), Factory::getStatus, st)
+                .eq(StringUtils.hasText(sType), Factory::getSupplierType, sType)
                 .orderByDesc(Factory::getCreateTime);
         return factoryService.page(pageInfo, wrapper);
     }
