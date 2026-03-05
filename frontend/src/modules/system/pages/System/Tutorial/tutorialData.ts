@@ -960,7 +960,7 @@ export const tutorials: Tutorial[] = [
           description: '在浏览器地址栏输入系统地址（如 http://localhost:5173），进入登录页面。',
           tips: [
             '推荐使用 Chrome / Edge 浏览器，兼容性最佳',
-            '内网访问地址：http://192.168.2.248:5173',
+            '内网访问地址：http://192.168.2.215:5173',
             '首次访问加载较慢属正常现象（约3-5秒）',
           ],
         },
