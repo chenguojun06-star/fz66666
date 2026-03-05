@@ -90,7 +90,7 @@ const TaxExport: React.FC = () => {
       const endDate = dateRange[1].format('YYYY-MM-DD');
       const url = `/api/finance/tax-export/${type}?startDate=${startDate}&endDate=${endDate}&format=${format}`;
       const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
       });
       if (!response.ok) {
         const json = await response.json().catch(() => null);
