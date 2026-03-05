@@ -185,7 +185,8 @@ public class OrderShareOrchestrator {
         resp.setLatestScanTime(latestScanTime);
         resp.setLatestScanStage(latestScanStage);
 
-        long expMs = ((Date) jwt.getPayload("exp")).getTime();
+        Object expObj = jwt.getPayload("exp");
+        long expMs = expObj instanceof Date ? ((Date) expObj).getTime() : ((Number) expObj).longValue();
         resp.setExpiresAt(expMs);
 
         if (order.getPlannedEndDate() != null) {
