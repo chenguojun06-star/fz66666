@@ -68,7 +68,6 @@ import {
   fetchPricingProcesses as fetchPricingProcessesHelper,
 } from './helpers/fetchers';
 import { fetchNodeOperations } from './helpers/nodeOperations';
-import LiveCostTrackerPanel from '@/modules/intelligence/pages/IntelligenceCenter/LiveCostTrackerPanel';
 
 type ProgressDetailProps = {
   embedded?: boolean;
@@ -1303,11 +1302,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }}
         sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
       />
-
-      {/* 实时成本追踪：输入订单号，实时查看该订单的工序成本进展与利润分析 */}
-      <div style={{ padding: '16px 0 8px' }}>
-        <LiveCostTrackerPanel />
-      </div>
 
       {/* 节点详情弹窗 - 水晶球生产节点看板 */}
       <NodeDetailModal

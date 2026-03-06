@@ -55,7 +55,6 @@ import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import SupplierScorecardPanel from '@/modules/intelligence/pages/IntelligenceCenter/SupplierScorecardPanel';
 
 const { Option } = Select;
 
@@ -118,7 +117,7 @@ const ProductionList: React.FC = () => {
   const [aiRiskFilter, setAiRiskFilter] = useState<'all' | 'overdue' | 'danger' | 'warning'>('all');
 
   // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
-  const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed' && o.status !== 'COMPLETED'), [productionList]);
+  const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed'), [productionList]);
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
 
   // AI 风险各级别计数
@@ -1224,10 +1223,6 @@ const ProductionList: React.FC = () => {
           sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
         />
 
-        {/* 工厂实力评分卡：订单列表页底部，接单/选巧工厂时参考各巧工厂历史评分 */}
-        <div style={{ padding: '16px 0 0' }}>
-          <SupplierScorecardPanel />
-        </div>
     </Layout>
   );
 };

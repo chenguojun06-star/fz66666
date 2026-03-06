@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -8,7 +8,7 @@ import { Factory as FactoryType, FactoryQueryParams } from '@/types/system';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
-import { App, Button, Card, Form, Input, Select, Space, Tabs, Tag, Upload } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
@@ -17,6 +17,8 @@ import { useLocation } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -60,6 +62,28 @@ const FactoryList: React.FC = () => {
   // 收款账户管理
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountFactory, setAccountFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
+
+  // 工厂评分卡（悬停懒加载，按工厂名索引）
+  const [scorecardMap, setScorecardMap] = useState<Record<string, SupplierScore>>({});
+  const [scorecardLoaded, setScorecardLoaded] = useState(false);
+  const [scorecardLoading, setScorecardLoading] = useState(false);
+
+  const loadScorecardOnce = useCallback(async () => {
+    if (scorecardLoaded || scorecardLoading) return;
+    setScorecardLoading(true);
+    try {
+      const res = await intelligenceApi.getSupplierScorecard();
+      const scores: SupplierScore[] = (res as any)?.data?.scores ?? [];
+      const m: Record<string, SupplierScore> = {};
+      scores.forEach((s) => { m[s.factoryName] = s; });
+      setScorecardMap(m);
+      setScorecardLoaded(true);
+    } catch { /* 静默失败，悬停时显示暂无数据 */ } finally {
+      setScorecardLoading(false);
+    }
+  }, [scorecardLoaded, scorecardLoading]);
+
+  const tierColorMap: Record<string, string> = { S: '#f7a600', A: '#39ff14', B: '#4fc3f7', C: '#ff4136' };
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -328,7 +352,48 @@ const FactoryList: React.FC = () => {
 
   const columns = [
     { title: '供应商编码', dataIndex: 'factoryCode', key: 'factoryCode', width: 140 },
-    { title: '供应商名称', dataIndex: 'factoryName', key: 'factoryName', width: 180, ellipsis: true },
+    {
+      title: '供应商名称',
+      dataIndex: 'factoryName',
+      key: 'factoryName',
+      width: 200,
+      ellipsis: true,
+      render: (name: string) => {
+        const score = scorecardMap[name];
+        const tooltipContent = scorecardLoading ? (
+          <span style={{ color: 'rgba(255,255,255,0.6)' }}>加载中...</span>
+        ) : score ? (
+          <div style={{ fontSize: 12, lineHeight: 1.8, minWidth: 160 }}>
+            <div style={{ marginBottom: 4 }}>
+              <Tag color={tierColorMap[score.tier] ?? '#888'} style={{ fontWeight: 700, fontSize: 12 }}>
+                {score.tier}级
+              </Tag>
+              <span style={{ color: tierColorMap[score.tier] ?? '#ccc', fontWeight: 600 }}>
+                综合分 {score.overallScore?.toFixed(1)}
+              </span>
+            </div>
+            <div>准时率：<span style={{ color: score.onTimeRate >= 0.9 ? '#39ff14' : score.onTimeRate >= 0.75 ? '#f7a600' : '#ff4136' }}>{(score.onTimeRate * 100).toFixed(0)}%</span></div>
+            <div>质量分：<span style={{ color: score.qualityScore >= 90 ? '#39ff14' : score.qualityScore >= 75 ? '#f7a600' : '#ff4136' }}>{score.qualityScore?.toFixed(1)}</span></div>
+            <div>已完成 / 总接单：{score.completedOrders} / {score.totalOrders} 单</div>
+            <div>逾期：{score.overdueOrders} 单</div>
+          </div>
+        ) : (
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>暂无评分数据</span>
+        );
+        return (
+          <Tooltip
+            title={tooltipContent}
+            onOpenChange={(open) => { if (open) void loadScorecardOnce(); }}
+            mouseEnterDelay={0.3}
+            overlayInnerStyle={{ minWidth: 180 }}
+          >
+            <span style={{ cursor: 'default', borderBottom: '1px dashed rgba(0,0,0,0.25)', paddingBottom: 1 }}>
+              {name}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
     {
       title: '类型',
       dataIndex: 'supplierType',
