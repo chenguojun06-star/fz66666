@@ -47,9 +47,7 @@ public class Factory {
 
     /**
      * 供应商类型: MATERIAL=面辅料供应商, OUTSOURCE=外发厂
-     * 注：DB 表暂无此列，仅 DTO/前端透传用
      */
-    @TableField(exist = false)
     private String supplierType;
 
     @TableField(exist = false)
