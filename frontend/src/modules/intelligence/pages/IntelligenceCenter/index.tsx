@@ -914,9 +914,136 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║ TOP 2：逾期风险 + 工厂卡点 — 关键告警优先   ║
+            ║   第二行：实时生产脉搏(左) + 人效实时动态(右) ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
+
+          {/* 实时生产脉搏 */}
+          <div className="c-card c-scanline-card">
+            <div className="c-card-title">
+              <LiveDot />
+              实时生产脉搏
+              <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
+            </div>
+            <div style={{ margin: '6px 0 4px' }}>
+              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
+              <div className="c-sparkline-label">
+                {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
+              </div>
+            </div>
+            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
+            {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
+              <div className="c-factory-activity-list">
+                {pulse!.factoryActivity.map(f => {
+                  const mins = f.minutesSinceLastScan;
+                  const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
+                  return (
+                    <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
+                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
+                      <span className="c-fa-name">{f.factoryName}</span>
+                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
+                      <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="c-all-ok">
+                <CheckCircleOutlined style={{ marginRight: 6 }} />
+                今日暂无扫码记录
+              </div>
+            )}
+            {/* WebSocket 驱动的实时扫码事件流，有扫码时自动出现 */}
+            <LiveScanFeed />
+          </div>
+
+          {/* 人效实时动态 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <LiveDot size={7} />
+              人效实时动态
+            </div>
+            <table className="c-table">
+              <thead>
+                <tr><th>姓名</th><th>速度</th><th>质量</th><th>稳定</th><th>多能</th><th>出勤</th><th>综合</th><th>评级</th></tr>
+              </thead>
+              <tbody>
+                {workers?.workers?.slice(0, 7).map(w => (
+                  <tr key={w.workerName ?? w.workerId}>
+                    <td>{w.workerName}</td>
+                    <td style={{ color: w.speedScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.speedScore}</td>
+                    <td style={{ color: w.qualityScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.qualityScore}</td>
+                    <td>{w.stabilityScore}</td>
+                    <td>{w.versatilityScore}</td>
+                    <td>{w.attendanceScore}</td>
+                    <td><b style={{ color: '#00e5ff' }}>{w.overallScore}</b></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
+                          : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
+                          : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
+                          : { g: 'D', c: '#ff4136' };
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
+                            {w.trend === 'UP' ? '📈' : w.trend === 'DOWN' ? '📉' : '➡️'}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                  </tr>
+                )) ?? <tr><td colSpan={8} className="c-empty-td">暂无数据</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   第三行：活跃订单实时滚动 + 工厂工序卡点 + 逾期&延期风险订单 ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-3">
+
+          {/* 活跃订单实时滚动面板（左侧） */}
+          <OrderScrollPanel orders={orders} />
+
+          {/* 工厂卡点分析 */}
+          <div className="c-card c-breathe-cyan">
+            <div className="c-card-title">
+              <LiveDot size={7} color="#00e5ff" />
+              工厂工序卡点
+              <span className="c-card-badge cyan-badge">全部 {factoryBottleneck.length} 家工厂</span>
+            </div>
+            {factoryBottleneck.length === 0 ? (
+              <div className="c-empty">暂无在制订单</div>
+            ) : (
+              <AutoScrollBox className="c-bottleneck-list">
+                {factoryBottleneck.map(f => {
+                  const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
+                  return (
+                    <div key={f.factoryName} className="c-bottleneck-item">
+                      <div className="c-bottleneck-row">
+                        <span className="c-bottleneck-factory">{f.factoryName}</span>
+                        <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
+                        <div className="c-bottleneck-orders">
+                          {f.worstOrders.map(w => (
+                            <span key={w.orderNo} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
+                              {w.orderNo}&nbsp;<b style={{ color: c }}>{w.pct}%</b>
+                            </span>
+                          ))}
+                        </div>
+                        <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
+                        <span className="c-bottleneck-cnt">{f.orderCount}单</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <LiveDot size={5} color="#f7c948" /><span style={{ color: '#6a9ab4' }}>AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </AutoScrollBox>
+            )}
+          </div>
 
           {/* 逾期 & 预计延期订单 */}
           <div className="c-card c-breathe-red">
@@ -976,116 +1103,6 @@ const IntelligenceCenter: React.FC = () => {
                 })}
               </AutoScrollBox>
             )}
-          </div>
-
-          {/* 工厂卡点分析 */}
-          <div className="c-card c-breathe-cyan">
-            <div className="c-card-title">
-              <LiveDot size={7} color="#00e5ff" />
-              工厂工序卡点
-              <span className="c-card-badge cyan-badge">全部 {factoryBottleneck.length} 家工厂</span>
-            </div>
-            {factoryBottleneck.length === 0 ? (
-              <div className="c-empty">暂无在制订单</div>
-            ) : (
-              <AutoScrollBox className="c-bottleneck-list">
-                {factoryBottleneck.map(f => {
-                  const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
-                  return (
-                    <div key={f.factoryName} className="c-bottleneck-item">
-                      <div className="c-bottleneck-row">
-                        <span className="c-bottleneck-factory">{f.factoryName}</span>
-                        <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
-                        <div className="c-bottleneck-orders">
-                          {f.worstOrders.map(w => (
-                            <span key={w.orderNo} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
-                              {w.orderNo}&nbsp;<b style={{ color: c }}>{w.pct}%</b>
-                            </span>
-                          ))}
-                        </div>
-                        <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
-                        <span className="c-bottleneck-cnt">{f.orderCount}单</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <LiveDot size={5} color="#f7c948" /><span style={{ color: '#6a9ab4' }}>AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </AutoScrollBox>
-            )}
-          </div>
-
-        </div>
-
-        {/* ╔══════════════════════════════════════════════╗
-            ║   实时监控：脉搏(左) + 活跃订单(中) + 排行(右) ║
-            ╙════════════════════════════════════════════╝ */}
-        <div className="cockpit-grid-3">
-
-          {/* 实时生产脉搏 */}
-          <div className="c-card c-scanline-card">
-            <div className="c-card-title">
-              <LiveDot />
-              实时生产脉搏
-              <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
-            </div>
-            <div style={{ margin: '6px 0 4px' }}>
-              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
-              <div className="c-sparkline-label">
-                {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
-              </div>
-            </div>
-            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
-            {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
-              <div className="c-factory-activity-list">
-                {pulse!.factoryActivity.map(f => {
-                  const mins = f.minutesSinceLastScan;
-                  const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
-                  return (
-                    <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
-                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
-                      <span className="c-fa-name">{f.factoryName}</span>
-                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
-                      <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="c-all-ok">
-                <CheckCircleOutlined style={{ marginRight: 6 }} />
-                今日暂无扫码记录
-              </div>
-            )}
-            {/* WebSocket 驱动的实时扫码事件流，有扫码时自动出现 */}
-            <LiveScanFeed />
-          </div>
-
-          {/* 活跃订单实时滚动面板（中间） */}
-          <OrderScrollPanel orders={orders} />
-
-          {/* 工厂绩效排行（右侧） */}
-          <div className="c-card">
-            <div className="c-card-title">
-              <LiveDot size={7} color="#ffd700" />
-              工厂绩效排行榜
-              <span className="c-card-badge purple-badge">实时评分</span>
-            </div>
-            {ranking?.rankings?.length ? (
-              ranking.rankings.slice(0, 5).map((r, i) => (
-                <div key={r.factoryId} className="c-rank-row">
-                  <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
-                    {i < 3 ? ['🥇','🥈','🥉'][i] : `#${r.rank}`}
-                  </span>
-                  <span className="c-rank-name">{r.factoryName}</span>
-                  <div className="c-rank-bar-wrap">
-                    <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#00e5ff,#0098aa)' }} />
-                  </div>
-                  <span className="c-rank-score">{r.totalScore}</span>
-                </div>
-              ))
-            ) : <div className="c-empty">暂无排行数据</div>}
           </div>
 
         </div>
@@ -1173,49 +1190,9 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   第四行：工人效率表 + 异常自愈诊断          ║
+            ║   系统异常自愈诊断(左) + 工厂绩效排行榜(右)  ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
-
-          {/* 工人技能效率 */}
-          <div className="c-card">
-            <div className="c-card-title">
-              <LiveDot size={7} />
-              工人效率实时监控
-            </div>
-            <table className="c-table">
-              <thead>
-                <tr><th>姓名</th><th>速度</th><th>质量</th><th>稳定</th><th>多能</th><th>出勤</th><th>综合</th><th>评级</th></tr>
-              </thead>
-              <tbody>
-                {workers?.workers?.slice(0, 7).map(w => (
-                  <tr key={w.workerName ?? w.workerId}>
-                    <td>{w.workerName}</td>
-                    <td style={{ color: w.speedScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.speedScore}</td>
-                    <td style={{ color: w.qualityScore >= 80 ? '#39ff14' : '#f7a600' }}>{w.qualityScore}</td>
-                    <td>{w.stabilityScore}</td>
-                    <td>{w.versatilityScore}</td>
-                    <td>{w.attendanceScore}</td>
-                    <td><b style={{ color: '#00e5ff' }}>{w.overallScore}</b></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {(() => {
-                        const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
-                          : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
-                          : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
-                          : { g: 'D', c: '#ff4136' };
-                        return (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
-                            {w.trend === 'UP' ? '📈' : w.trend === 'DOWN' ? '📉' : '➡️'}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                  </tr>
-                )) ?? <tr><td colSpan={8} className="c-empty-td">暂无数据</td></tr>}
-              </tbody>
-            </table>
-          </div>
 
           {/* 异常自愈诊断 */}
           <div className="c-card">
@@ -1249,6 +1226,29 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无诊断数据</div>}
+          </div>
+
+          {/* 工厂绩效排行 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <LiveDot size={7} color="#ffd700" />
+              工厂绩效排行榜
+              <span className="c-card-badge purple-badge">实时评分</span>
+            </div>
+            {ranking?.rankings?.length ? (
+              ranking.rankings.slice(0, 5).map((r, i) => (
+                <div key={r.factoryId} className="c-rank-row">
+                  <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
+                    {i < 3 ? ['🥇','🥈','🥉'][i] : `#${r.rank}`}
+                  </span>
+                  <span className="c-rank-name">{r.factoryName}</span>
+                  <div className="c-rank-bar-wrap">
+                    <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#00e5ff,#0098aa)' }} />
+                  </div>
+                  <span className="c-rank-score">{r.totalScore}</span>
+                </div>
+              ))
+            ) : <div className="c-empty">暂无排行数据</div>}
           </div>
 
         </div>

@@ -18,6 +18,23 @@ const FEATURES = [
   { icon: '📋', title: '报价单生成', desc: '一键生成带款式图、价格、工艺描述的PDF报价单' },
 ];
 
+const CRM_APP_CODE_ALIASES = ['CRM_MODULE', 'CRM'];
+
+const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
+  const code = String(item?.appCode || '').trim().toUpperCase();
+  const match = appCodeAliases.includes(code);
+  if (!match) return false;
+
+  const status = String(item?.status || '').trim().toUpperCase();
+  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
+
+  if (item?.isExpired === true) return false;
+  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
+  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
+
+  return isStatusActive && notExpired;
+};
+
 const CrmDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -27,10 +44,32 @@ const CrmDashboard: React.FC = () => {
 
   useEffect(() => {
     if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
-    appStoreService.getMyApps().then(apps => {
-      const active = apps.some((a: any) => a.appCode === 'CRM_MODULE' && !a.isExpired);
-      setSubscribed(active);
-    }).catch(() => { }).finally(() => setChecking(false));
+    const checkSubscribed = async () => {
+      try {
+        // 优先使用 my-apps（包含开通信息 + 兼容字段）
+        const apps = await appStoreService.getMyApps();
+        const activeFromApps = (Array.isArray(apps) ? apps : []).some((a: any) =>
+          hasActiveSubscription(a, CRM_APP_CODE_ALIASES)
+        );
+        if (activeFromApps) {
+          setSubscribed(true);
+          return;
+        }
+
+        // 回退到 my-subscriptions，避免 my-apps 某些环境下误判
+        const subscriptions = await appStoreService.getMySubscriptions();
+        const activeFromSubs = (Array.isArray(subscriptions) ? subscriptions : []).some((s: any) =>
+          hasActiveSubscription(s, CRM_APP_CODE_ALIASES)
+        );
+        setSubscribed(activeFromSubs);
+      } catch {
+        setSubscribed(false);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkSubscribed();
   }, [isSuperAdmin]);
 
   return (
