@@ -1813,7 +1813,7 @@ const OrderManagement: React.FC = () => {
                                         </div>
                                         {/* 甘特条 */}
                                         {plan.ganttItems?.length > 0 && (
-                                          <div style={{ display: 'flex', height: 18, borderRadius: 4, overflow: 'hidden', gap: 1 }}>
+                                          <div style={{ display: 'flex', height: 13, borderRadius: 4, overflow: 'hidden', gap: 1 }}>
                                             {plan.ganttItems.map((g, gi) => {
                                               const pct = Math.round((g.days / totalGanttDays) * 100);
                                               const colors = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#faad14'];
@@ -1823,7 +1823,7 @@ const OrderManagement: React.FC = () => {
                                                     width: `${pct}%`, background: colors[gi % colors.length],
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 10, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap',
-                                                    minWidth: 20,
+                                                    minWidth: 20, fontWeight: 600,
                                                   }}>
                                                     {pct > 8 ? g.stage : ''}
                                                   </div>

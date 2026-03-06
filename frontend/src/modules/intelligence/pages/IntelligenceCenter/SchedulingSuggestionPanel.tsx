@@ -138,30 +138,33 @@ const SchedulingSuggestionPanel: React.FC = () => {
               </div>
 
               {/* 甘特图 */}
-              {plan.gantt && plan.gantt.length > 0 && (
+              {plan.ganttItems && plan.ganttItems.length > 0 && (
                 <>
-                  <div style={{ fontSize: 11, color: '#4a6d8a', marginBottom: 6 }}>工序排期（横向甘特图）</div>
-                  {plan.gantt.map((item: GanttItem, gi: number) => (
-                    <div key={item.stage} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ color: '#4a6d8a', fontSize: 11, minWidth: 56, textAlign: 'right' }}>{item.stage}</span>
-                      <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{
-                          width: ganttBarWidth(item.days, plan.totalDays),
-                          height: '100%',
-                          background: GANTT_COLORS[gi % GANTT_COLORS.length],
-                          borderRadius: 3,
-                          display: 'flex', alignItems: 'center', paddingLeft: 6,
-                          minWidth: 28,
-                          opacity: 0.9,
-                        }}>
-                          <span style={{ fontSize: 10, color: '#000', fontWeight: 600 }}>{item.days}天</span>
+                  <div style={{ fontSize: 11, color: '#7fa8c4', marginBottom: 6 }}>工序排期（横向甘特图）</div>
+                  {(() => {
+                    const totalDays = plan.ganttItems.reduce((s, g) => s + g.days, 0) || plan.estimatedDays || 1;
+                    return plan.ganttItems.map((item: GanttItem, gi: number) => (
+                      <div key={item.stage} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <span style={{ color: '#9dc4db', fontSize: 11, minWidth: 56, textAlign: 'right' }}>{item.stage}</span>
+                        <div style={{ flex: 1, height: 13, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+                          <div style={{
+                            width: ganttBarWidth(item.days, totalDays),
+                            height: '100%',
+                            background: GANTT_COLORS[gi % GANTT_COLORS.length],
+                            borderRadius: 3,
+                            display: 'flex', alignItems: 'center', paddingLeft: 5,
+                            minWidth: 24,
+                            opacity: 0.88,
+                          }}>
+                            <span style={{ fontSize: 10, color: '#000', fontWeight: 700 }}>{item.days}天</span>
+                          </div>
                         </div>
+                        <span style={{ fontSize: 11, color: '#9dc4db', minWidth: 90, textAlign: 'right' }}>
+                          {item.startDate?.slice(5)} ~ {item.endDate?.slice(5)}
+                        </span>
                       </div>
-                      <span style={{ fontSize: 11, color: '#4a6d8a', minWidth: 90, textAlign: 'right' }}>
-                        {item.startDate?.slice(5)} ~ {item.endDate?.slice(5)}
-                      </span>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </>
               )}
             </div>

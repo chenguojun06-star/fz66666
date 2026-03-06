@@ -69,7 +69,7 @@ public class SchedulingSuggestionOrchestrator {
         QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
         oqw.eq(tenantId != null, "tenant_id", tenantId)
            .eq("delete_flag", 0)
-           .eq("status", "IN_PROGRESS");
+           .in("status", "pending", "production", "delayed");  // 实际状态值（全小写）
         List<ProductionOrder> inProgress = productionOrderService.list(oqw);
 
         // 按工厂名分组统计负载
