@@ -19,7 +19,7 @@ import {
   CalendarOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import api from '@/utils/api';
+import axios from 'axios';
 
 interface ShareOrderData {
   orderNo: string;
@@ -61,7 +61,8 @@ const ShareOrderPage: React.FC = () => {
       setLoading(false);
       return;
     }
-    api
+    // 分享页是公开接口，使用不带 auth 头的裸 axios，避免过期 token 触发后端 400
+    axios
       .get<{ code: number; data: ShareOrderData; message: string }>(
         `/api/public/share/order/${encodeURIComponent(token)}`
       )

@@ -87,8 +87,8 @@ public class OrderShareOrchestrator {
                 .setPayload("type", "share")
                 .setPayload("orderId", orderId)
                 .setPayload("tenantId", String.valueOf(tenantId))
-                .setPayload("iat", new Date(now))
-                .setPayload("exp", new Date(now + SHARE_TTL_MS))
+                .setIssuedAt(new Date(now))
+                .setExpiresAt(new Date(now + SHARE_TTL_MS))
                 .setKey(jwtSecret)
                 .sign();
 
