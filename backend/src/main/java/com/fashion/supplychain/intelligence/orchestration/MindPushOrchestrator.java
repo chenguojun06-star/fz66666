@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -79,11 +80,12 @@ public class MindPushOrchestrator {
                 .last("LIMIT 20")
         );
         List<LogItem> logItems = logs.stream().map(l -> LogItem.builder()
+            .id(l.getId())
             .ruleCode(l.getRuleCode())
             .orderNo(l.getOrderNo())
-            .title(l.getTitle())
-            .content(l.getContent())
-            .pushedAt(l.getPushedAt())
+            .pushMessage(l.getTitle() != null ? l.getTitle() : l.getContent())
+            .channel(l.getChannel())
+            .createdAt(l.getPushedAt())
             .build()
         ).collect(Collectors.toList());
 
@@ -174,11 +176,11 @@ public class MindPushOrchestrator {
                 .in("status", "IN_PROGRESS", "PENDING")
                 .isNotNull("expected_ship_date")
         );
-        LocalDateTime deadline = LocalDateTime.now().plusDays(thresholdDays);
         int count = 0;
         for (ProductionOrder o : orders) {
             if (o.getExpectedShipDate() == null) continue;
-            long daysLeft = ChronoUnit.DAYS.between(LocalDateTime.now(), o.getExpectedShipDate());
+            // 使用 LocalDate.now() 与 LocalDate 类型的 expectedShipDate 比较，避免 DateTimeException
+            long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate());
             int progress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
             if (daysLeft <= thresholdDays && progress < thresholdProgress) {
                 String title = "⚠️ 交期风险：" + o.getOrderNo();

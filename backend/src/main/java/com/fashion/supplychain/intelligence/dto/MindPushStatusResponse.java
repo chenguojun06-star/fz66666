@@ -31,11 +31,15 @@ public class MindPushStatusResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LogItem {
+        /** DB 主键，供前端 key 使用 */
+        private Long id;
         private String ruleCode;
         private String orderNo;
-        private String title;
-        private String content;
-        private LocalDateTime pushedAt;
+        /** 推送摘要文本（对应前端 pushMessage 字段）*/
+        private String pushMessage;
+        private String channel;
+        /** 推送时间（对应前端 createdAt 字段）*/
+        private LocalDateTime createdAt;
     }
 
     @Data
