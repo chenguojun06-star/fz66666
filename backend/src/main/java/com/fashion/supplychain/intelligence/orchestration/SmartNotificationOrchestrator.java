@@ -62,11 +62,15 @@ public class SmartNotificationOrchestrator {
         notifications.sort(Comparator.comparingInt(n -> prioOrder.getOrDefault(n.getPriority(), 9)));
 
         int sentToday = notifications.size();
+        int highPriorityCount = (int) notifications.stream()
+                .filter(n -> "high".equals(n.getPriority())).count();
         resp.setNotifications(notifications);
-        resp.setPendingCount((int) notifications.stream()
-                .filter(n -> "high".equals(n.getPriority())).count());
+        resp.setPendingCount(highPriorityCount);
         resp.setSentToday(sentToday);
-        resp.setSuccessRate(sentToday > 0 ? 95.0 : 100.0); // 模拟推送成功率
+        // 非紧急通知占比：高优先级越少，系统越健康（100% = 全为中低优先级/无通知）
+        double successRate = sentToday == 0 ? 100.0
+                : Math.round((double)(sentToday - highPriorityCount) / sentToday * 1000) / 10.0;
+        resp.setSuccessRate(successRate);
         } catch (Exception e) {
             log.error("[智能通知] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
         }

@@ -101,9 +101,8 @@ public class FactoryBottleneckOrchestrator {
         for (Map.Entry<String, List<ProductionOrder>> entry : byFactory.entrySet()) {
             List<ProductionOrder> group = entry.getValue();
 
-            String minStage = STAGE_LABELS[0];
-            int minAvg = Integer.MAX_VALUE;
-
+            // 计算各工序平均完成率
+            int[] stageAvgs = new int[STAGE_LABELS.length];
             for (int si = 0; si < STAGE_LABELS.length; si++) {
                 String stage = STAGE_LABELS[si];
                 int sumPct = 0;
@@ -115,9 +114,7 @@ public class FactoryBottleneckOrchestrator {
                     int scanned = orderScans.getOrDefault(stage, 0);
                     int pct = Math.min(100, scanned * 100 / total);
 
-                    // 关键修复：后续工序有扫码记录 → 当前工序必然已完成
-                    // 例：裁剪有扫码 → 采购已完成；车缝有扫码 → 采购+裁剪均已完成
-                    // 避免"采购"因从不扫码而永远被误判为卡点
+                    // 后续工序有扫码 → 当前工序必然已完成（避免"采购"因从不扫码而误判为卡点）
                     if (pct < 100) {
                         for (int j = si + 1; j < STAGE_LABELS.length; j++) {
                             if (orderScans.getOrDefault(STAGE_LABELS[j], 0) > 0) {
@@ -129,10 +126,39 @@ public class FactoryBottleneckOrchestrator {
 
                     sumPct += pct;
                 }
-                int avg = sumPct / group.size();
-                if (avg < minAvg) {
-                    minAvg = avg;
-                    minStage = stage;
+                stageAvgs[si] = sumPct / group.size();
+            }
+
+            // 找"当前活跃工序"：从后往前找最后一个进度在 (0%, 100%) 之间的工序。
+            // 这才是工厂正在推进的真实瓶颈，避免把"尚未启动的质检/入库"误判为卡点。
+            // 例：车缝50% → stuckStage=车缝（而不是质检0%）
+            int activeIdx = -1;
+            for (int si = STAGE_LABELS.length - 1; si >= 0; si--) {
+                if (stageAvgs[si] > 0 && stageAvgs[si] < 100) {
+                    activeIdx = si;
+                    break;
+                }
+            }
+
+            String minStage;
+            int minAvg;
+            if (activeIdx >= 0) {
+                // 有部分完成工序 → 该工序为实际瓶颈
+                minStage = STAGE_LABELS[activeIdx];
+                minAvg = stageAvgs[activeIdx];
+            } else {
+                // 所有工序要么 0% 要么 100%：找最后已完成工序的下一工序（即当前待启动阶段）
+                int lastDone = -1;
+                for (int si = 0; si < STAGE_LABELS.length; si++) {
+                    if (stageAvgs[si] >= 100) lastDone = si;
+                }
+                int nextIdx = lastDone + 1;
+                if (nextIdx < STAGE_LABELS.length) {
+                    minStage = STAGE_LABELS[nextIdx];
+                    minAvg = stageAvgs[nextIdx];
+                } else {
+                    minStage = STAGE_LABELS[STAGE_LABELS.length - 1];
+                    minAvg = 100;
                 }
             }
 

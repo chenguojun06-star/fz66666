@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse.DailyIndex;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
@@ -40,6 +42,9 @@ public class HealthIndexOrchestrator {
     private ScanRecordService scanRecordService;
 
     @Autowired
+    private MaterialStockService materialStockService;
+
+    @Autowired
     private DashboardQueryService dashboardQueryService;
 
     public HealthIndexResponse calculate() {
@@ -56,9 +61,11 @@ public class HealthIndexOrchestrator {
         // ── 维度3: 质量合格 ──
         int qualityScore = calcQualityScore(tenantId);
 
-        // ── 维度4 & 5: 库存 / 财务（暂用默认值） ──
-        int inventoryScore = 16;  // 后续接入 MaterialStockService
-        int financeScore = 15;    // 后续接入 ReconciliationService
+        // ── 维度4: 库存健康 ──
+        int inventoryScore = calcInventoryScore(tenantId);
+
+        // ── 维度5: 结算进度 ──
+        int financeScore = calcFinanceScore(tenantId);
 
         int healthIndex = productionScore + deliveryScore + qualityScore + inventoryScore + financeScore;
         healthIndex = Math.min(100, Math.max(0, healthIndex));
@@ -76,13 +83,20 @@ public class HealthIndexOrchestrator {
         resp.setTrend(buildTrend(tenantId));
 
         // ── 首要风险 + 建议 ──
-        int minScore = Math.min(productionScore, Math.min(deliveryScore, qualityScore));
+        int minScore = Math.min(productionScore, Math.min(deliveryScore,
+                Math.min(qualityScore, Math.min(inventoryScore, financeScore))));
         if (minScore == deliveryScore) {
             resp.setTopRisk("交期达成率偏低");
             resp.setSuggestion("建议优先推进即将到期的订单，调配更多产能");
         } else if (minScore == qualityScore) {
             resp.setTopRisk("质量合格率偏低");
             resp.setSuggestion("建议排查扫码失败率高的工序和工厂");
+        } else if (minScore == inventoryScore) {
+            resp.setTopRisk("库存低于安全库存");
+            resp.setSuggestion("建议及时补货，避免因缺料影响生产");
+        } else if (minScore == financeScore) {
+            resp.setTopRisk("订单结算完成率偏低");
+            resp.setSuggestion("建议推进存量订单尽快完工入库，加快资金回流");
         } else {
             resp.setTopRisk("整体生产进度偏慢");
             resp.setSuggestion("建议关注进度落后的订单，增加扫码频次");
@@ -139,6 +153,46 @@ public class HealthIndexOrchestrator {
 
         double successRate = (double) successScans / totalScans;
         return (int) Math.round(successRate * 20);
+    }
+
+    // ── 库存健康分 (0~20) ──
+    // 计算逻辑：quantity >= safetyStock 的物料SKU数 / 总在库SKU数 × 20
+    // 无库存数据则给满分（未录入库存不扣分）
+    private int calcInventoryScore(Long tenantId) {
+        QueryWrapper<MaterialStock> all = new QueryWrapper<>();
+        all.eq(tenantId != null, "tenant_id", tenantId)
+           .eq("delete_flag", 0);
+        long totalStocks = materialStockService.count(all);
+        if (totalStocks == 0) return 20;
+
+        // quantity >= COALESCE(safety_stock, 0) — 高于安全库存视为健康
+        QueryWrapper<MaterialStock> sufficient = new QueryWrapper<>();
+        sufficient.eq(tenantId != null, "tenant_id", tenantId)
+                  .eq("delete_flag", 0)
+                  .apply("quantity >= COALESCE(safety_stock, 0)");
+        long sufficientCount = materialStockService.count(sufficient);
+
+        return (int) Math.round((double) sufficientCount / totalStocks * 20);
+    }
+
+    // ── 结算进度分 (0~20) ──
+    // 计算逻辑：COMPLETED 订单 / 全部非取消订单 × 20
+    // 无订单则给满分，体现业务完工交付能力
+    private int calcFinanceScore(Long tenantId) {
+        QueryWrapper<ProductionOrder> total = new QueryWrapper<>();
+        total.eq(tenantId != null, "tenant_id", tenantId)
+             .eq("delete_flag", 0)
+             .ne("status", "CANCELLED");
+        long totalOrders = productionOrderService.count(total);
+        if (totalOrders == 0) return 20;
+
+        QueryWrapper<ProductionOrder> completed = new QueryWrapper<>();
+        completed.eq(tenantId != null, "tenant_id", tenantId)
+                 .eq("delete_flag", 0)
+                 .eq("status", "COMPLETED");
+        long completedCount = productionOrderService.count(completed);
+
+        return (int) Math.round((double) completedCount / totalOrders * 20);
     }
 
     // ── 7日趋势 ──

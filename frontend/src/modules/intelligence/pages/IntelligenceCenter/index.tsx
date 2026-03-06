@@ -23,6 +23,9 @@ import LearningReportPanel from './LearningReportPanel';
 import RhythmDnaPanel from './RhythmDnaPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
+import { useAuth } from '@/utils/AuthContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import type { WsMessage } from '@/hooks/useWebSocket';
 import './styles.css';
 
 /* ═══════════════════════════════════════════════════
@@ -377,7 +380,7 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
             {daysLeft !== null && (
               <span className="c-order-days" style={{
-                color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#2a5a40',
+                color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#3ab870',
               }}>
                 {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
               </span>
@@ -514,12 +517,14 @@ interface CockpitData {
   bottleneck: FactoryBottleneckItem[] | null;
   orders: ProductionOrder[];
   loading: boolean;
+  ts: number;
 }
 
 function useCockpit() {
+  const { user, isAuthenticated } = useAuth();
   const [data, setData] = useState<CockpitData>({
     pulse: null, health: null, notify: null, workers: null,
-    heatmap: null, ranking: null, shortage: null, healing: null, bottleneck: null, orders: [], loading: true,
+    heatmap: null, ranking: null, shortage: null, healing: null, bottleneck: null, orders: [], loading: true, ts: 0,
   });
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
@@ -541,10 +546,71 @@ function useCockpit() {
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
       bottleneck: v(rBottleneck),
-      orders: orderResult.filter(o => o.status !== 'completed'), loading: false,
+      orders: orderResult.filter(o => o.status !== 'completed'), loading: false, ts: Date.now(),
     });
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  /* ── 10 秒快刷：仅更新实时脉搏（今日扫码/速率/在线数），比全量 30s 刷新更有实时感 ── */
+  const fetchPulseOnly = useCallback(async () => {
+    try {
+      const res = await intelligenceApi.getLivePulse();
+      const newPulse = (res as any)?.data ?? res;
+      if (newPulse) setData(prev => ({ ...prev, pulse: newPulse }));
+    } catch { /* silent */ }
+  }, []);
+  useEffect(() => {
+    const t = setInterval(fetchPulseOnly, 10_000);
+    return () => clearInterval(t);
+  }, [fetchPulseOnly]);
+
+  /* ── WebSocket: 扫码事件 → todayScanQty 立刻跳 + 2s 防抖刷新工厂心跳 ── */
+  const { subscribe } = useWebSocket({
+    userId: user?.id,
+    enabled: isAuthenticated && !!user?.id,
+  });
+  const wsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return subscribe('scan:realtime', (msg: WsMessage) => {
+      const qty: number = (msg.payload as any)?.quantity ?? 0;
+      // 立即把扫码件数累加到大字 KPI → AnimatedNum ↑ 跳
+      if (qty > 0) {
+        setData(prev => {
+          if (!prev.pulse) return prev;
+          return { ...prev, pulse: { ...prev.pulse, todayScanQty: prev.pulse.todayScanQty + qty } };
+        });
+      }
+      // 防抖 2s：等连续扫码平息后，一次拉取最新 factoryActivity（工厂圆点变绿）
+      if (wsDebounceRef.current) clearTimeout(wsDebounceRef.current);
+      wsDebounceRef.current = setTimeout(() => fetchPulseOnly(), 2000);
+    });
+  }, [subscribe, fetchPulseOnly]);
+
+  /* ── 每分钟本地递增 minutesSinceLastScan / minutesSilent，让时间在轮询间隙自然流逝 ── */
+  useEffect(() => {
+    const t = setInterval(() => {
+      setData(prev => {
+        if (!prev.pulse) return prev;
+        return {
+          ...prev,
+          pulse: {
+            ...prev.pulse,
+            factoryActivity: (prev.pulse.factoryActivity ?? []).map(f => ({
+              ...f,
+              minutesSinceLastScan: f.minutesSinceLastScan + 1,
+              active: (f.minutesSinceLastScan + 1) < 30,
+            })),
+            stagnantFactories: (prev.pulse.stagnantFactories ?? []).map(sf => ({
+              ...sf,
+              minutesSilent: sf.minutesSilent + 1,
+            })),
+          },
+        };
+      });
+    }, 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   return { data, reload: load };
 }
 
@@ -590,8 +656,17 @@ const IntelligenceCenter: React.FC = () => {
   const [nlResult, setNlResult]     = useState<NlQueryResponse | null>(null);
   const [nlLoading, setNlLoading]   = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [kpiFlash, setKpiFlash] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
+
+  /* KPI 刷新闪光：data.ts 每次全量刷新完成后更新，触发各 KPI 卡短暂氖灯闪光 */
+  useEffect(() => {
+    if (!data.ts) return;
+    setKpiFlash(true);
+    const t = setTimeout(() => setKpiFlash(false), 900);
+    return () => clearTimeout(t);
+  }, [data.ts]);
 
   /* 全屏：F 键切换 */
   useEffect(() => {
@@ -854,10 +929,30 @@ const IntelligenceCenter: React.FC = () => {
           </div>
         </div>
 
+        {/* 刷新倒计时进度条：从 100% 线性消耗到 0%，reload 后复位 */}
+        <div className="cockpit-refresh-bar">
+          <div className="cockpit-refresh-bar-fill" style={{ width: `${(countdown / 30) * 100}%` }} />
+        </div>
+
+        {/* 紧急预警跑马灯：逾期 & 高风险订单滚动提示（有数据时才渲染） */}
+        {_tickerItems.length > 0 && (
+          <div className="cockpit-ticker">
+            <span className="cockpit-ticker-label">⚠ 紧急预警</span>
+            <div className="cockpit-ticker-track">
+              <div className="cockpit-ticker-inner"
+                style={{ animationDuration: `${Math.max(12, _tickerItems.length * 5)}s` }}>
+                {[..._tickerItems, ..._tickerItems].map((item, i) => (
+                  <span key={i} className="cockpit-ticker-item">{item}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ╔══════════════════════════════════════════════╗
             ║   第一行：6 大核心 KPI 闪光数字卡            ║
             ╚══════════════════════════════════════════════╝ */}
-        <div className="cockpit-grid-6">
+        <div className={`cockpit-grid-6${kpiFlash ? ' kpi-flash' : ''}`}>
 
           {/* 今日生产扫码量 */}
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
@@ -1215,7 +1310,7 @@ const IntelligenceCenter: React.FC = () => {
                   color: healing.healthScore >= 80 ? '#73d13d' : '#d48806',
                   borderColor: healing.healthScore >= 80 ? '#73d13d55' : '#d4880655',
                 }}>
-                  健康 {healing.healthScore} 分 · 发现 {healing.issuesFound} 项
+                  健康 <AnimatedNum val={healing.healthScore} /> 分 · 发现 <AnimatedNum val={healing.issuesFound} /> 项
                 </span>
               )}
             </div>
@@ -1255,7 +1350,7 @@ const IntelligenceCenter: React.FC = () => {
                   <div className="c-rank-bar-wrap">
                     <div className="c-rank-bar" style={{ width: `${r.totalScore}%`, background: i === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#00e5ff,#0098aa)' }} />
                   </div>
-                  <span className="c-rank-score">{r.totalScore}</span>
+                  <span className="c-rank-score"><AnimatedNum val={r.totalScore} /></span>
                 </div>
               ))
             ) : <div className="c-empty">暂无排行数据</div>}

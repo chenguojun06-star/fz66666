@@ -715,7 +715,7 @@
 /* 左：工厂名 */
 .c-order-factory {
   font-size: 11px;
-  color: #5c9abf;
+  color: #7ab8d8;
   font-weight: 500;
   width: 80px;
   flex-shrink: 0;
@@ -733,7 +733,7 @@
 }
 .c-order-no {
   font-size: 11px;
-  color: #6a9aaa;
+  color: #90c0d4;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -753,8 +753,8 @@
 .c-order-dates {
   display: flex;
   gap: 8px;
-  font-size: 9px;
-  color: #2d4a5a;
+  font-size: 10px;
+  color: #6e9ab0;
   letter-spacing: 0.2px;
 }
 /* 右：进度% + 天数 */
@@ -1317,4 +1317,37 @@
 .lsf-order em {
   font-style: normal;
   color: rgba(255, 255, 255, 0.35);
+}
+
+/* ══════════════════════════════════════════
+   刷新倒计时进度条（header 下方 2px 细线）
+   width 由 React inline style 驱动（countdown/30*100%）
+══════════════════════════════════════════ */
+.cockpit-refresh-bar {
+  height: 2px;
+  background: rgba(0, 229, 255, 0.05);
+  width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cockpit-refresh-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, #00e5ff88 40%, #39ff1466 100%);
+  transition: width 1s linear;
+  border-radius: 0 1px 1px 0;
+  box-shadow: 0 0 6px #00e5ff44;
+}
+
+/* ══════════════════════════════════════════
+   KPI 卡片数据刷新闪光（每次 30s 全量刷新触发）
+   parent cockpit-grid-6 加 .kpi-flash 类后触发
+══════════════════════════════════════════ */
+@keyframes kpi-update-flash {
+  0%   { box-shadow: 0 2px 0 0 rgba(0, 229, 255, 0), inset 0 0 0 1px rgba(0, 229, 255, 0.08); }
+  20%  { box-shadow: 0 2px 12px 0 rgba(0, 229, 255, 0.35), inset 0 0 0 1px rgba(0, 229, 255, 0.5); }
+  60%  { box-shadow: 0 2px 8px 0 rgba(0, 229, 255, 0.15), inset 0 0 0 1px rgba(0, 229, 255, 0.2); }
+  100% { box-shadow: 0 2px 0 0 rgba(0, 229, 255, 0), inset 0 0 0 1px rgba(0, 229, 255, 0.08); }
+}
+.cockpit-grid-6.kpi-flash .c-kpi {
+  animation: kpi-update-flash 0.9s ease-out;
 }
