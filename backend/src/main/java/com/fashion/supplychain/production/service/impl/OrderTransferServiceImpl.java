@@ -172,14 +172,15 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         // ✅ 备注自动植入时间戳
         String timedMessage = buildTimedMessage(message);
 
-        // 创建转移记录（工厂类型）
+        // 工厂转单：直接生效（工厂没有系统账号，无法点"接受"，故由发起人确认即视为生效）
         OrderTransfer transfer = new OrderTransfer();
         transfer.setOrderId(orderId);
         transfer.setFromUserId(currentUserId);
         transfer.setTransferType("factory");
         transfer.setToFactoryId(toFactoryId);
         transfer.setToFactoryName(toFactory.getFactoryName());
-        transfer.setStatus("pending");
+        transfer.setStatus("accepted");   // ✅ 工厂转单直接生效
+        transfer.setHandledTime(LocalDateTime.now());
         transfer.setMessage(timedMessage);
         transfer.setBundleIds(bundleIds);
         transfer.setProcessCodes(processCodes);
@@ -188,10 +189,13 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
 
         this.save(transfer);
 
+        // ✅ 立即将订单工厂数据更新到 t_production_order
+        applyTransferToOrder(transfer);
+
         // 填充附加信息
         fillTransferInfo(transfer);
 
-        log.info("创建订单转工厂请求: orderId={}, fromUserId={}, toFactoryId={}, toFactoryName={}",
+        log.info("订单转工厂(直接生效): orderId={}, fromUserId={}, toFactoryId={}, toFactoryName={}",
                 orderId, currentUserId, toFactoryId, toFactory.getFactoryName());
 
         return transfer;
@@ -262,13 +266,54 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         boolean updated = this.updateById(transfer);
 
         if (updated) {
-            // 待完善：可在此补充订单责任人变更逻辑
-            // 例如：更新订单的负责人字段
+            // ✅ 人员转单：将订单责任人更新为接收人
+            applyTransferToOrder(transfer);
             log.info("接受订单转移: transferId={}, orderId={}, toUserId={}",
                     transferId, transfer.getOrderId(), currentUserId);
         }
 
         return updated;
+    }
+
+    /**
+     * 将转单结果应用到生产订单（核心数据迁移）
+     * - 人员转单：更新 created_by_id / created_by_name
+     * - 工厂转单：更新 factory_id / factory_name / factory_contact_person / factory_contact_phone
+     */
+    private void applyTransferToOrder(OrderTransfer transfer) {
+        ProductionOrder order = productionOrderService.getById(transfer.getOrderId());
+        if (order == null) {
+            log.warn("applyTransferToOrder: 订单不存在, orderId={}", transfer.getOrderId());
+            return;
+        }
+
+        if ("factory".equals(transfer.getTransferType())) {
+            // 工厂转单：更新加工厂信息
+            if (StringUtils.hasText(transfer.getToFactoryId())) {
+                Factory factory = factoryService.getById(transfer.getToFactoryId());
+                if (factory != null) {
+                    order.setFactoryId(transfer.getToFactoryId());
+                    order.setFactoryName(factory.getFactoryName());
+                    order.setFactoryContactPerson(factory.getContactPerson());
+                    order.setFactoryContactPhone(factory.getContactPhone());
+                    productionOrderService.updateById(order);
+                    log.info("[转单生效] 工厂更新: orderId={}, factoryId={}, factoryName={}",
+                            order.getId(), factory.getId(), factory.getFactoryName());
+                }
+            }
+        } else {
+            // 人员转单：更新订单责任人
+            if (transfer.getToUserId() != null) {
+                User toUser = userService.getById(transfer.getToUserId());
+                if (toUser != null) {
+                    order.setCreatedById(String.valueOf(toUser.getId()));
+                    order.setCreatedByName(toUser.getName());
+                    productionOrderService.updateById(order);
+                    log.info("[转单生效] 责任人更新: orderId={}, newUserId={}, newUserName={}",
+                            order.getId(), toUser.getId(), toUser.getName());
+                }
+            }
+        }
     }
 
     @Override
