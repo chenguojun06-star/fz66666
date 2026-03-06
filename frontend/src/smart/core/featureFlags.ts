@@ -9,7 +9,9 @@ export type SmartFeatureKey =
   | 'smart.material.inventory.ai.enabled'
   | 'smart.material.purchase.ai.enabled';
 
-const defaultFlags: Record<SmartFeatureKey, boolean> = {
+export type SmartFeatureFlags = Record<SmartFeatureKey, boolean>;
+
+const defaultFlags: SmartFeatureFlags = {
   'smart.guide.enabled': false,
   'smart.dict.autocollect.enabled': false,
   'smart.production.precheck.enabled': false,
@@ -48,6 +50,19 @@ export const getSmartFeatureFlags = (): Record<SmartFeatureKey, boolean> => ({
   ...readStored(),
 });
 
+export const replaceSmartFeatureFlags = (
+  nextFlags: Partial<Record<SmartFeatureKey, boolean>>,
+): SmartFeatureFlags => {
+  const next: SmartFeatureFlags = {
+    ...defaultFlags,
+    ...nextFlags,
+  };
+  if (isBrowser) {
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  }
+  return next;
+};
+
 export const isSmartFeatureEnabled = (key: SmartFeatureKey): boolean => {
   const flags = getSmartFeatureFlags();
   return Boolean(flags[key]);
@@ -68,3 +83,7 @@ export const resetSmartFeatureFlags = (): Record<SmartFeatureKey, boolean> => {
   }
   return { ...defaultFlags };
 };
+
+export const getDefaultSmartFeatureFlags = (): SmartFeatureFlags => ({
+  ...defaultFlags,
+});

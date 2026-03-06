@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import api from './api';
+import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
+import { replaceSmartFeatureFlags, resetSmartFeatureFlags } from '@/smart/core/featureFlags';
 
 // 定义用户信息类型
 export interface UserInfo extends Record<string, unknown> {
@@ -118,12 +120,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const tokenStorageKey = 'authToken';
   const userStorageKey = 'userInfo';
 
+  const loadTenantSmartFlags = async () => {
+    try {
+      const flags = await tenantSmartFeatureService.list();
+      replaceSmartFeatureFlags(flags);
+    } catch {
+      // Ignore smart feature bootstrap failures and keep local fallback.
+    }
+  };
+
   // 从本地缓存加载用户信息
   useEffect(() => {
     const boot = async () => {
       try {
         const token = String(localStorage.getItem(tokenStorageKey) || '').trim();
         if (!token) {
+          resetSmartFeatureFlags();
           setUser(null);
           setIsAuthenticated(false);
           setLoading(false);
@@ -190,6 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
 
+            await loadTenantSmartFlags();
+
             // 恢复用户主题
             restoreUserTheme(next.id);
             // 触发用户登录事件
@@ -197,6 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           } else {
             localStorage.removeItem(tokenStorageKey);
             localStorage.removeItem(userStorageKey);
+            resetSmartFeatureFlags();
             setUser(null);
             setIsAuthenticated(false);
           }
@@ -205,6 +220,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // 忽略错误
           localStorage.removeItem(tokenStorageKey);
           localStorage.removeItem(userStorageKey);
+          resetSmartFeatureFlags();
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -281,6 +297,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(baseUser);
         setIsAuthenticated(true);
 
+        await loadTenantSmartFlags();
+
         // 恢复用户主题设置
         try {
           const userThemeKey = `app.theme.user.${baseUser.id}`;
@@ -356,6 +374,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     keysToRemove.forEach(k => {
       try { localStorage.removeItem(k); } catch { /* ignore */ }
     });
+    resetSmartFeatureFlags();
 
     // 更新状态
     setUser(null);

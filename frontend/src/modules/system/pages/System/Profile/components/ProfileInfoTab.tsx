@@ -9,9 +9,10 @@ import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
+import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
 import {
     getSmartFeatureFlags,
-    setSmartFeatureFlag,
+    replaceSmartFeatureFlags,
     resetSmartFeatureFlags,
     type SmartFeatureKey,
 } from '@/smart/core/featureFlags';
@@ -94,7 +95,7 @@ const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
 ];
 
 const ProfileInfoTab: React.FC = () => {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, isAdmin, isTenantOwner, isSuperAdmin } = useAuth();
     const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -113,6 +114,8 @@ const ProfileInfoTab: React.FC = () => {
     const [myFeedbacks, setMyFeedbacks] = useState<UserFeedback[]>([]);
     const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
     const [smartFlags, setSmartFlags] = useState(() => getSmartFeatureFlags());
+    const [savingSmartFlags, setSavingSmartFlags] = useState(false);
+    const canManageSmartFlags = isAdmin || isTenantOwner || isSuperAdmin;
 
     // 主题
     const getUserThemeKey = () => {
@@ -188,6 +191,9 @@ const ProfileInfoTab: React.FC = () => {
             avatarUrl: (user as any)?.avatarUrl,
         });
         loadProfile();
+        tenantSmartFeatureService.list().then((flags) => {
+            setSmartFlags(replaceSmartFeatureFlags(flags));
+        }).catch(() => {});
 
         // 加载租户信息
         const tid = (user as any)?.tenantId;
@@ -358,25 +364,39 @@ const ProfileInfoTab: React.FC = () => {
         }
     };
 
+    const saveSmartFlags = async (nextFlags: Record<SmartFeatureKey, boolean>, successText: string) => {
+        if (!canManageSmartFlags) {
+            message.error('仅租户管理员可修改智能开关');
+            return;
+        }
+        try {
+            setSavingSmartFlags(true);
+            const saved = await tenantSmartFeatureService.save(nextFlags);
+            setSmartFlags(replaceSmartFeatureFlags(saved));
+            message.success(successText);
+        } catch (e: any) {
+            message.error(e?.message || '保存智能开关失败');
+        } finally {
+            setSavingSmartFlags(false);
+        }
+    };
+
     const updateSmartFlag = (key: SmartFeatureKey, enabled: boolean) => {
-        const next = setSmartFeatureFlag(key, enabled);
-        setSmartFlags(next);
-        message.success(`${SMART_FEATURE_LABELS[key].title}已${enabled ? '开启' : '关闭'}`);
+        const next = { ...smartFlags, [key]: enabled } as Record<SmartFeatureKey, boolean>;
+        void saveSmartFlags(next, `${SMART_FEATURE_LABELS[key].title}已${enabled ? '开启' : '关闭'}`);
     };
 
     const setAllSmartFlags = (enabled: boolean) => {
-        let nextFlags = { ...getSmartFeatureFlags() };
+        let nextFlags = { ...smartFlags } as Record<SmartFeatureKey, boolean>;
         SMART_FEATURE_KEYS.forEach((featureKey) => {
-            nextFlags = setSmartFeatureFlag(featureKey, enabled);
+            nextFlags = { ...nextFlags, [featureKey]: enabled };
         });
-        setSmartFlags(nextFlags);
-        message.success(`智能开关已${enabled ? '全部开启' : '全部关闭'}`);
+        void saveSmartFlags(nextFlags, `智能开关已${enabled ? '全部开启' : '全部关闭'}`);
     };
 
     const resetSmartFlags = () => {
         const next = resetSmartFeatureFlags();
-        setSmartFlags(next);
-        message.success('已恢复智能开关默认值');
+        void saveSmartFlags(next as Record<SmartFeatureKey, boolean>, '已恢复智能开关默认值');
     };
 
     const enabledCount = SMART_FEATURE_KEYS.filter((key) => smartFlags[key]).length;
@@ -603,12 +623,12 @@ const ProfileInfoTab: React.FC = () => {
                             <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
                                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
                                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                                        开关仅对当前浏览器生效，可自行体验开启效果。
+                                        开关已升级为按租户持久化保存，同租户成员读取同一套配置。
                                     </Typography.Text>
                                     <Space>
-                                        <Button size="small" onClick={() => setAllSmartFlags(true)}>全部开启</Button>
-                                        <Button size="small" onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
-                                        <Button size="small" onClick={resetSmartFlags}>恢复默认</Button>
+                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={() => setAllSmartFlags(true)}>全部开启</Button>
+                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
+                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={resetSmartFlags}>恢复默认</Button>
                                     </Space>
                                 </Space>
 
@@ -634,11 +654,17 @@ const ProfileInfoTab: React.FC = () => {
                                             </div>
                                             <Switch
                                                 checked={Boolean(smartFlags[featureKey])}
+                                                disabled={!canManageSmartFlags || savingSmartFlags}
                                                 onChange={(checked) => updateSmartFlag(featureKey, checked)}
                                             />
                                         </div>
                                     );
                                 })}
+                                {!canManageSmartFlags && (
+                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                        当前账号仅可查看租户智能开关，修改需使用租户管理员账号。
+                                    </Typography.Text>
+                                )}
                             </Card>
                         </div>
                     </div>
