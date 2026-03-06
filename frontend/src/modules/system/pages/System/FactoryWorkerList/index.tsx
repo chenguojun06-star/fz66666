@@ -49,7 +49,7 @@ const FactoryWorkerList: React.FC = () => {
       const params: Record<string, string> = {};
       if (effectiveFactoryId) params.factoryId = effectiveFactoryId;
       if (statusFilter) params.status = statusFilter;
-      const data = await api.get('/api/factory-worker/list', { params });
+      const data = await api.get('/factory-worker/list', { params });
       setWorkers(Array.isArray(data) ? data : []);
     } catch {
       message.error('加载工人列表失败');
@@ -83,7 +83,7 @@ const FactoryWorkerList: React.FC = () => {
     setSaving(true);
     try {
       const payload = workerModal.data?.id ? { ...values, id: workerModal.data.id } : values;
-      await api.post('/api/factory-worker/save', payload);
+      await api.post('/factory-worker/save', payload);
       message.success(workerModal.data?.id ? '修改成功' : '添加成功');
       handleClose();
       fetchWorkers();
@@ -96,7 +96,7 @@ const FactoryWorkerList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/api/factory-worker/${id}`);
+      await api.delete(`/factory-worker/${id}`);
       message.success('删除成功');
       fetchWorkers();
     } catch {

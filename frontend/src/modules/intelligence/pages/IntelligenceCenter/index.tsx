@@ -13,7 +13,6 @@ import SmartAssignmentPanel from './SmartAssignmentPanel';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
-import TenantPainPointPanel from './components/TenantPainPointPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -630,9 +629,6 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
         </div>
-
-        <TenantPainPointPanel />
-
         {/* ╔══════════════════════════════════════════════╗
             ║   第二行：实时生产脉搏(左) + 人效实时动态(右) ║
             ╚══════════════════════════════════════════════╝ */}

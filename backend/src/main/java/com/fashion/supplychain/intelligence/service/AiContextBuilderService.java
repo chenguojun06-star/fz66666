@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import com.fashion.supplychain.dashboard.orchestration.DailyBriefOrchestrator;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
+import com.fashion.supplychain.intelligence.orchestration.AiChatContextOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.HealthIndexOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.MaterialShortageOrchestrator;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class AiContextBuilderService {
     private final DailyBriefOrchestrator dailyBriefOrchestrator;
     private final HealthIndexOrchestrator healthIndexOrchestrator;
     private final MaterialShortageOrchestrator materialShortageOrchestrator;
+    private final AiChatContextOrchestrator aiChatContextOrchestrator;
 
     /**
      * 构建完整系统上下文，作为 System Prompt 传给 AI
@@ -132,11 +134,29 @@ public class AiContextBuilderService {
             log.warn("[AiContext] 获取面料缺口失败: {}", e.getMessage());
         }
 
+        // ── 租户智能沉淀上下文（仅供 AI 聊天使用） ──
+        try {
+            String tenantIntelligenceContext = aiChatContextOrchestrator.buildTenantIntelligenceContext();
+            if (tenantIntelligenceContext != null && !tenantIntelligenceContext.isBlank()) {
+                sb.append(tenantIntelligenceContext);
+            }
+        } catch (Exception e) {
+            log.warn("[AiContext] 获取租户智能沉淀上下文失败: {}", e.getMessage());
+        }
+
         sb.append("【回答要求】\n");
-        sb.append("1. 直接引用上方具体数字，不说废话\n");
-        sb.append("2. 建议要具体可执行（谁去做什么）\n");
-        sb.append("3. 用中文简洁回答，通常3~8句话\n");
-        sb.append("4. 若问到系统没有的数据，如实说明\n");
+        sb.append("1. 不要空话，不要讲概念，不要泛泛而谈，优先回答怎么解决问题\n");
+        sb.append("2. 必须优先引用上方真实数据、真实表里已有结论，不允许脱离数据瞎推测\n");
+        sb.append("3. 遇到诊断类、建议类、经营分析类问题时，尽量按以下结构输出：\n");
+        sb.append("   【结论】先直接说最关键判断\n");
+        sb.append("   【依据】列2~4条数据依据，必须带数字/对象/风险点\n");
+        sb.append("   【动作】明确谁去做什么，最多3条\n");
+        sb.append("   【预期效果】说明处理后预计改善什么\n");
+        sb.append("4. 遇到纯查询类问题，先直接给答案，再补一小段依据，不要强行长篇展开\n");
+        sb.append("5. 若问到系统没有的数据，如实说明缺什么数据，不要编造\n");
+        sb.append("6. 优先结合租户经营目标、最近反馈原因、痛点、方案库、工厂能力和历史效果回流给建议\n");
+        sb.append("7. 建议必须可落地，责任对象优先用：老板/跟单/生产主管/工厂/采购/财务 这些真实角色\n");
+        sb.append("8. 回答语言保持中文、直接、克制，通常控制在 4~10 句内，除非用户明确要求展开\n");
 
         String result = sb.toString();
         log.debug("[AiContext] 构建完毕，prompt长度={}", result.length());

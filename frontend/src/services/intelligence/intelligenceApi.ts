@@ -631,20 +631,6 @@ export interface LiveCostResponse {
   suggestion: string;
 }
 
-export interface PainPointResponse {
-  id: number;
-  painCode: string;
-  painName: string;
-  painLevel: 'HIGH' | 'MEDIUM' | 'LOW' | string;
-  businessDomain: string;
-  triggerCount: number;
-  affectedOrderCount: number;
-  affectedAmount?: number | null;
-  latestTriggerTime?: string;
-  rootReasonSummary?: string;
-  currentStatus?: string;
-}
-
 export interface FeedbackReasonRecord {
   id: number;
   predictionId?: string;
@@ -857,16 +843,6 @@ export const intelligenceApi = {
   /** 工厂工序瓶颈分析 — 基于真实扫码数据 */
   getFactoryBottleneck: () =>
     api.get<{ code: number; data: FactoryBottleneckItem[] }>('/intelligence/factory-bottleneck'),
-
-  /** 租户痛点列表 */
-  listPainPoints: (limit = 20) =>
-    api.get<{ code: number; data: PainPointResponse[] }>('/intelligence/pain-point/list', {
-      params: { limit },
-    }),
-
-  /** 手动刷新租户痛点聚合 */
-  refreshPainPoints: () =>
-    api.post<{ code: number; data: number }>('/intelligence/pain-point/refresh', {}),
 
   /** 最近智能建议反馈原因 */
   listFeedbackReasons: (limit = 20) =>
