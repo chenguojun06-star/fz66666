@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -62,6 +62,8 @@ import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { BottleneckItem } from '@/services/intelligence/intelligenceApi';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -134,6 +136,31 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  // ─────── 工序瓶颈检测 ───────
+  const [bottleneckItems, setBottleneckItems] = useState<BottleneckItem[]>([]);
+  const [bottleneckBannerVisible, setBottleneckBannerVisible] = useState(false);
+  const bottleneckFetched = useRef(false);
+
+  const fetchBottleneck = useCallback(async () => {
+    if (bottleneckFetched.current) return;
+    bottleneckFetched.current = true;
+    try {
+      const res = await intelligenceApi.detectBottleneck() as any;
+      const detection = res?.data ?? res;
+      const items: BottleneckItem[] = detection?.items ?? [];
+      const significant = items.filter((i: BottleneckItem) => i.severity === 'critical' || i.severity === 'warning');
+      if (significant.length > 0) {
+        setBottleneckItems(significant);
+        setBottleneckBannerVisible(true);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    if (orders.length > 0) void fetchBottleneck();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders.length]);
 
   /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
   const [boardRefreshTick, setBoardRefreshTick] = useState(0);
@@ -946,6 +973,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Card>
           ) : null}
 
+          {bottleneckBannerVisible && bottleneckItems.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <Alert
+                type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
+                showIcon
+                closable
+                onClose={() => setBottleneckBannerVisible(false)}
+                message={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                description={
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {bottleneckItems.slice(0, 4).map((it, idx) => (
+                      <li key={idx}>
+                        <b>{it.stageName}</b>
+                        {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
+                        {it.suggestion && <span style={{ marginLeft: 6, color: '#666' }}>{it.suggestion}</span>}
+                      </li>
+                    ))}
+                    {bottleneckItems.length > 4 && <li style={{ color: '#999' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
+                  </ul>
+                }
+              />
+            </div>
+          )}
+
           <MaterialShortageAlert />
 
           {viewMode === 'list' ? (
@@ -1160,6 +1211,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               />
             </Card>
           ) : null}
+
+          {bottleneckBannerVisible && bottleneckItems.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <Alert
+                type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
+                showIcon
+                closable
+                onClose={() => setBottleneckBannerVisible(false)}
+                message={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                description={
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {bottleneckItems.slice(0, 4).map((it, idx) => (
+                      <li key={idx}>
+                        <b>{it.stageName}</b>
+                        {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
+                        {it.suggestion && <span style={{ marginLeft: 6, color: '#666' }}>{it.suggestion}</span>}
+                      </li>
+                    ))}
+                    {bottleneckItems.length > 4 && <li style={{ color: '#999' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
+                  </ul>
+                }
+              />
+            </div>
+          )}
 
           {viewMode === 'list' ? (
             <ResizableTable
