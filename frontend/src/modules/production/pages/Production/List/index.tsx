@@ -864,6 +864,7 @@ const ProductionList: React.FC = () => {
                 { key: 'close', label: '关单', onClick: () => { handleCloseOrder(record); } },
                 { key: 'divider1', type: 'divider' as const, label: '' },
                 { key: 'edit', label: '编辑', onClick: () => { quickEditModal.open(record); } },
+                { key: 'share', label: '分享', onClick: () => { void handleShareOrder(record); } },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
               titleTags={(record) => (
@@ -1325,7 +1326,7 @@ const ProductionList: React.FC = () => {
               <Alert
                 type="info"
                 showIcon
-                message="链接已生成，1小时后自动失效"
+                message="链接已生成，1天后自动失效"
                 description="客户打开链接可查看完整进度与AI预测，不展示单价，不支持下载。"
                 style={{ fontSize: 12 }}
               />
