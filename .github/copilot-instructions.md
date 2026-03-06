@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（92个编排器）| **规模**：244.8k行代码
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（107个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-06 | **AI指令版本**：v3.10
+> **最后更新**：2026-03-21 | **AI指令版本**：v3.11
 
 ---
 
@@ -195,9 +195,8 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 **关键约束**（代码审查必查项）：
-- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（92个编排器）
-  - **分布**：production(20) + finance(13) + style(8) + system(11) + integration(6) + warehouse(3) + intelligence(17) + template(2) + wechat(1) + dashboard(2) 
-+ datacenter(1) + crm(1) + other(6) = **92个**（+6 vs v3.9）
+- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（107个编排器）
+  - **分布**：intelligence(41) + production(20) + system(12) + finance(12) + style(6) + crm(3) + warehouse(2) + template(2) + openapi(2) + dashboard(2) + wechat(1) + search(1) + procurement(1) + ecommerce(1) + datacenter(1) = **107个**（+15 vs v3.10）
   - **核心编排器**：ScanRecordOrchestrator、ProductionOrderOrchestrator、PayrollSettlementOrchestrator、MaterialStockOrchestrator、ReconciliationStatusOrchestrator 等
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
@@ -267,17 +266,21 @@ backend/src/main/java/com/fashion/supplychain/
 │   ├── dto/               # 数据传输对象
 │   ├── helper/            # 辅助类
 │   └── util/              # 工具类
-├── style/                 # 款式管理（8个编排器）
-├── finance/               # 财务结算（13个编排器）
-├── warehouse/             # 仓库管理（3个编排器）
-├── system/                # 系统管理（11个编排器）
+├── style/                 # 款式管理（6个编排器）
+├── finance/               # 财务结算（12个编排器）
+├── warehouse/             # 仓库管理（2个编排器）
+├── system/                # 系统管理（12个编排器）
 ├── template/              # 模板库（2个编排器）
 ├── wechat/                # 微信集成（1个编排器）
 ├── dashboard/             # 仪表板（2个编排器）
 ├── datacenter/            # 数据中心（1个编排器）
+├── crm/                   # CRM客户管理（3个编排器）
+├── procurement/           # 采购管理（1个编排器）
+├── openapi/               # 开放API对接（2个编排器）
+├── search/                # 全局搜索（1个编排器）
 ├── payroll/               # ⚠️ 空包（历史遗留，工资管理已全部迁移至 finance/ 模块，此包仅有1个空文件，禁止再往此包新增代码）
-├── integration/           # 第三方集成（6个编排器）
-├── intelligence/          # 智能运营（15个编排器）
+├── integration/           # 第三方集成（已并入各领域模块）
+├── intelligence/          # 智能运营（41个编排器）
 ├── common/                # 公共组件（Result, UserContext, CosService）
 └── config/                # 配置类
 ```
@@ -300,11 +303,16 @@ backend/src/main/java/com/fashion/supplychain/
 >   - ② 样板生产 COMPLETED 卡片进度显示非100%：progressNodes 所有 key 强制=100（不依赖硬编码列表）
 >   - ③ 样板生产纸样师傅列为空：旧记录 patternMaker=null 时 fallback 到 receiver（业务上两者同一人）
 >   - ④ 扫码 QR码/SIG-签名后缀剥离后回写 safeParams，修复 getByQrCode 永远查不到 DB 记录的 bug；补充 `[ScanExec/BundleLookup/ScanSave]` 诊断日志
+> - **智能驾驶舱全面扩展（2026-03-07 ~ 03-21）**：
+>   - **intelligence 模块扩张至 41 个编排器**：NlQueryOrchestrator（22种意图NL查询）、RhythmDnaOrchestrator（工序耗时DNA色带图）、SmartAssignmentOrchestrator（智能派工推荐评分引擎）、SmartNotificationOrchestrator（4类智能推送）、SmartPrecheckOrchestrator（扫码预检安全阀）、LivePulseOrchestrator（2h实时脉搏分桶）、LiveCostTrackerOrchestrator（已发生成本实时计算）、AiChatContextOrchestrator（AI顾问上下文构建器）、OrderTrackPortalOrchestrator（客户share-token无登录查进度）、WorkerProfileOrchestrator（工人效率画像4级评定）、WorkerEfficiencyOrchestrator（五维雷达评分）、StyleIntelligenceProfileOrchestrator（款式级智能画像）等
+>   - **CRM客户管理模块**：`modules/crm/` — 客户档案、跟单记录、信用评级（3个编排器）
+>   - **采购管理模块**：`modules/procurement/` — 采购单、供应商管理（1个编排器）
+>   - **孤儿Panel待挂载（7个）**：`RhythmDnaPanel`、`LiveCostTrackerPanel`、`WorkerProfilePanel`、`StyleQuoteSuggestionPanel`、`SupplierScorecardPanel`、`LearningReportPanel`、`DefectTracePanel` — 组件已完整实现，未导入任何页面，可直接在驾驶舱添加Tab展示
 
 ### 前端目录结构（模块化）
 ```
 frontend/src/
-├── modules/               # 业务模块（10个，按后端领域对应）
+├── modules/               # 业务模块（12个，按后端领域对应）
 │   ├── Login/             # 登录与认证
 │   ├── production/        # 生产订单、裁剪、扫码记录
 │   ├── StyleInfo/         # 款式管理与样衣资料
@@ -315,7 +323,9 @@ frontend/src/
 │   ├── basic/             # 基础数据（工厂、工序、模板等）
 │   ├── dashboard/         # 首页仪表板
 │   ├── integration/       # 第三方集成（电商平台等）
-│   └── intelligence/      # 智能运营驾驶舱
+│   ├── crm/               # CRM客户管理（客户档案/跟单/信用）⭐新
+│   ├── procurement/       # 采购管理（采购单/供应商）⭐新
+│   └── intelligence/      # 智能运营驾驶舱（41个API端点）
 ├── components/            # 公共组件
 │   └── common/            # 通用组件（RowActions, ResizableModal, QRCodeBox, ModalContentLayout）
 ├── services/              # API 调用层
