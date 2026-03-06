@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（86个编排器）| **规模**：244.5k行代码
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（92个编排器）| **规模**：244.8k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-04 | **AI指令版本**：v3.9
+> **最后更新**：2026-03-06 | **AI指令版本**：v3.10
 
 ---
 
@@ -195,8 +195,9 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 **关键约束**（代码审查必查项）：
-- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（86个编排器）
-  - **分布**：production(20) + finance(13) + style(8) + system(11) + integration(6) + warehouse(3) + intelligence(15) + template(2) + wechat(1) + dashboard(2) + datacenter(1) + other(4) = **86个**
+- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（92个编排器）
+  - **分布**：production(20) + finance(13) + style(8) + system(11) + integration(6) + warehouse(3) + intelligence(17) + template(2) + wechat(1) + dashboard(2) 
++ datacenter(1) + crm(1) + other(6) = **92个**（+6 vs v3.9）
   - **核心编排器**：ScanRecordOrchestrator、ProductionOrderOrchestrator、PayrollSettlementOrchestrator、MaterialStockOrchestrator、ReconciliationStatusOrchestrator 等
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
@@ -293,7 +294,8 @@ backend/src/main/java/com/fashion/supplychain/
 > - **系统状态监控**：`SystemStatusController` — 提供系统健康状态端点（CPU/内存/DB连接池）
 > - **应用商店重构**：`AppStoreOrchestrator` — 租户开通/关闭模块权限，对应 PC 端个人中心"应用管理"
 > - **智能运营日报（2026-03-01）**：`DailyBriefOrchestrator.java` + `DailyBriefController.java` + 前端 `SmartDailyBrief/index.tsx`。展示在仪表盘 `TopStats` 上方，汇总昨日入库/今日扫码/逾期订单/高风险订单/首要关注订单/智能建议。接口 `GET /api/dashboard/daily-brief`。DB 无新增，独立编排器，不混入 `DashboardOrchestrator`。
-> - **Bug修复汇总（2026-03-01）**：
+> - **工厂工序卡点可视化（2026-03-06）**：原卡点面板样式重组为逐条订单样式（`BottleneckRow`），与活跃订单实时滚动保持一致，增强 UX 统一性。
+> - **Bug修复汇总（2026-03-01 ~ 03-06）**：
 >   - ① 登录成功同步写入 `t_user.last_login_time` + `last_login_ip`（`UserOrchestrator`）
 >   - ② 样板生产 COMPLETED 卡片进度显示非100%：progressNodes 所有 key 强制=100（不依赖硬编码列表）
 >   - ③ 样板生产纸样师傅列为空：旧记录 patternMaker=null 时 fallback 到 receiver（业务上两者同一人）
@@ -825,13 +827,20 @@ POST /api/style-info/{id}/stage-action?stage=pattern&action=complete
 - ✅ `key: 'log'` 或 `label: '日志'` 自动折叠
 - ✅ 操作列固定宽度：`width: 120`（单个按钮）或 `width: 160`（2个按钮）
 
-### 颜色系统（禁止硬编码）
+### 颜色系统（禁止硬编码，但业务风险色除外）
 ```tsx
 // ✅ 正确：使用 CSS 变量
 <div style={{ color: 'var(--primary-color)' }} />
 
-// ❌ 错误：硬编码颜色
-<div style={{ color: '#2D7FF9' }} />
+// ✅ 特例：业务风险色（智能驾驶舱、进度跟踪等）必须硬编码，因为颜色映射业务意义
+const RiskColorMap = {
+  critical: '#ff4136',  // 红色 - 已逾期/关键风险
+  warning: '#f7a600',   // 橙色 - 预警/中等风险
+  safe: '#39ff14',      // 绿色 - 安全/低风险 
+};
+
+// ❌ 错误：其他场景忌硬编码
+<div style={{ color: '#2D7FF9' }} />  // 应用 CSS 变量或主题色
 <div style={{ background: 'linear-gradient(...)' }} />  // 禁止渐变
 ```
 
@@ -929,10 +938,12 @@ SKU = styleNo + color + size
 - 超出 50 行的函数必须拆成多个私有方法/子函数，并加 JSDoc/JavaDoc
 
 **当前待优化文件**（追踪中，新代码禁止参照）：
-- `Production/List/index.tsx`（2513 行）- 需拆分为列表、过滤、导出三个组件
-- `Cutting/index.tsx`（2190 行）- 需提取裁剪逻辑 Hook
-- `ScanRecordOrchestrator.java`（1891 行）- 需拆分工序识别和库存计算逻辑
+- `OrderManagement/index.tsx`（2120 行）- 订单表单复杂，待拆分
+- `MaterialPurchase/index.tsx`（1690 行）- 采购流程表单，待拆分
+- `MaterialInventory/index.tsx`（1649 行）- 库存表单，待拆分
+- `IntelligenceCenter/index.tsx`（1402 行）- 智能驾驶舱，待优化
 - ✅ ~~`TemplateCenter/index.tsx`（1912 行）~~ - 已拆分（900行 + 4个子组件）
+- ⚠️ **前端文件大小现状（2026-03-06）**：超过 500 行的页面有 10+ 个（实际 2120/1690/1649 等），原指南目标 ≤500 行与实际项目规模不匹配。建议：按模块功能复杂度调整目标，保持单个方法 ≤40 行即可
 
 ### API 端点数限制
 - ⚠️ **单 Controller >15 端点**：考虑拆分职责
