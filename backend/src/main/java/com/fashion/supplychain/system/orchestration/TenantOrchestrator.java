@@ -3,6 +3,7 @@ package com.fashion.supplychain.system.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.*;
@@ -65,6 +66,12 @@ public class TenantOrchestrator {
 
     @Autowired
     private TenantBillingRecordService billingRecordService;
+
+    @Autowired
+    private TenantSubscriptionService tenantSubscriptionService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired(required = false)
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
@@ -162,7 +169,10 @@ public class TenantOrchestrator {
         tenant.setOwnerUserId(owner.getId());
         tenantService.updateById(tenant);
 
-        // 5. 最终数据完整性校验 —— 以刚保存对象为主，避免超管上下文下 getById 被租户拦截误判
+        // 5. 新开户赠送：自动激活财税导出模块（1年免费）
+        autoGrantFinanceTaxFreebie(tenant.getId(), tenantName);
+
+        // 6. 最终数据完整性校验 —— 以刚保存对象为主，避免超管上下文下 getById 被租户拦截误判
         if (owner.getId() == null || owner.getRoleId() == null || owner.getTenantId() == null) {
             throw new IllegalStateException("[数据完整性] 租户主账号创建后数据异常: " +
                     "ownerId=" + owner.getId() +
@@ -399,6 +409,10 @@ public class TenantOrchestrator {
         tenant.setApplyUsername(activateUsername);
 
         log.info("[申请通过] tenantId={} 工厂={} 账号={} 已激活", tenantId, tenant.getTenantName(), finalUsername);
+
+        // 新开户赠送：自动激活财税导出模块（1年免费）
+        autoGrantFinanceTaxFreebie(tenant.getId(), tenant.getTenantName());
+
         Map<String, Object> result = new HashMap<>();
         result.put("tenant", tenant);
         result.put("ownerUsername", finalUsername);
@@ -1149,6 +1163,50 @@ public class TenantOrchestrator {
     }
 
     // ========== 辅助方法 ==========
+
+    /**
+     * 新开户赠送：自动激活财税导出模块（FINANCE_TAX），有效期1年。
+     * 绕开租户拦截器，用 JdbcTemplate 直接写入 t_tenant_subscription。
+     * 失败时仅打印 warn 日志，不阻塞租户创建主流程。
+     */
+    private void autoGrantFinanceTaxFreebie(Long tenantId, String tenantName) {
+        final String APP_CODE = "FINANCE_TAX";
+        try {
+            // 查询 t_app_store 是否存在该应用（若不存在则跳过，不报错）
+            List<Map<String, Object>> appRows = jdbcTemplate.queryForList(
+                "SELECT id, app_name FROM t_app_store WHERE app_code = ? AND status = 'PUBLISHED' LIMIT 1",
+                APP_CODE);
+            if (appRows.isEmpty()) {
+                log.warn("[新开户赠送] t_app_store 中 {} 不存在，跳过自动赠送", APP_CODE);
+                return;
+            }
+            Long appId = ((Number) appRows.get(0).get("id")).longValue();
+            String appName = (String) appRows.get(0).get("app_name");
+
+            // 若已存在有效订阅，则无需重复插入
+            List<Map<String, Object>> existing = jdbcTemplate.queryForList(
+                "SELECT id FROM t_tenant_subscription WHERE tenant_id = ? AND app_code = ? AND status IN ('ACTIVE','TRIAL') LIMIT 1",
+                tenantId, APP_CODE);
+            if (!existing.isEmpty()) {
+                log.info("[新开户赠送] 租户{}({}) 已有有效 {} 订阅，跳过", tenantName, tenantId, APP_CODE);
+                return;
+            }
+
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.time.LocalDateTime endTime = now.plusYears(1);
+            String subNo = tenantSubscriptionService.generateSubscriptionNo();
+            jdbcTemplate.update(
+                "INSERT INTO t_tenant_subscription " +
+                "(subscription_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
+                "subscription_type, price, user_count, start_time, end_time, status, auto_renew, created_by, remark, create_time, delete_flag) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                subNo, tenantId, tenantName, appId, APP_CODE, appName,
+                "FREE", 0, 999, now, endTime, "ACTIVE", false, "system", "新开户赠送", now, 0);
+            log.info("[新开户赠送] 租户{}({}) 已自动激活 {} 有效期至 {}", tenantName, tenantId, APP_CODE, endTime.toLocalDate());
+        } catch (Exception e) {
+            log.warn("[新开户赠送] 租户{}({}) 自动激活 {} 失败（不影响开户）: {}", tenantName, tenantId, APP_CODE, e.getMessage());
+        }
+    }
 
     private void assertSuperAdmin() {
         if (!UserContext.isSuperAdmin()) {

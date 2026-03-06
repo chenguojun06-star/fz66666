@@ -51,13 +51,16 @@ const TaxExport: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
   const [subscribed, setSubscribed] = useState(false);
+  const [subscriptionType, setSubscriptionType] = useState<string>('');
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
+    if (isSuperAdmin) { setSubscribed(true); setSubscriptionType('PERMANENT'); setChecking(false); return; }
     appStoreService.getMyApps().then((apps: any) => {
       const list = Array.isArray(apps) ? apps : (apps?.records || apps?.data || []);
-      setSubscribed(list.some((a: any) => a.appCode === 'FINANCE_TAX' && !a.isExpired));
+      const taxApp = list.find((a: any) => a.appCode === 'FINANCE_TAX' && !a.isExpired);
+      setSubscribed(!!taxApp);
+      if (taxApp) setSubscriptionType(taxApp.subscriptionType || '');
     }).catch(() => { }).finally(() => setChecking(false));
   }, [isSuperAdmin]);
 
@@ -157,10 +160,12 @@ const TaxExport: React.FC = () => {
           <Alert
             type="success"
             showIcon
-            icon={<RocketOutlined />}
+            icon={subscriptionType === 'FREE' ? <span style={{ fontSize: 16 }}>🎁</span> : <RocketOutlined />}
             style={{ marginBottom: 16 }}
-            message="已开通财税对接模块"
-            description="金蝶 KIS / 用友 T3 专用格式均已解锁，导出后可直接粘贴导入凭证。"
+            message={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
+            description={subscriptionType === 'FREE'
+              ? '恭喜！作为新开户福利，金蝶 KIS / 用友 T3 专用格式均已为您解锁，有效期1年。'
+              : '金蝶 KIS / 用友 T3 专用格式均已解锁，导出后可直接粘贴导入凭证。'}
           />
         )}
 
