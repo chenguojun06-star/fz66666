@@ -441,6 +441,33 @@ export interface DefectTraceResponse {
 }
 
 /* ================================================================
+   MindPush + OrderTrack 类型
+================================================================ */
+export interface MindPushRuleDTO {
+  ruleCode: string;
+  ruleName: string;
+  enabled: boolean;
+  thresholdDays: number;
+  thresholdProgress: number;
+}
+
+export interface MindPushLogItem {
+  id: number;
+  ruleCode: string;
+  ruleName: string;
+  orderNo: string;
+  pushMessage: string;
+  channel: string;
+  createdAt: string;
+}
+
+export interface MindPushStatusData {
+  rules: MindPushRuleDTO[];
+  recentLog: MindPushLogItem[];
+  stats: { pushed24h: number; pushed7d: number; activeRules: number };
+}
+
+/* ================================================================
    intelligenceApi — 全部智能运营接口
 ================================================================ */
 export const intelligenceApi = {
@@ -658,4 +685,26 @@ export const intelligenceApi = {
       '/intelligence/process-template',
       { params: { ...(category ? { category } : {}) } },
     ),
+
+  // ── 第六批：MindPush 主动推送中枢 + OrderTrack 客户进度门户 ──
+
+  /** 获取推送规则配置和最近日志 */
+  getMindPushStatus: () =>
+    api.get<{ code: number; data: MindPushStatusData }>('/intelligence/mind-push/status'),
+
+  /** 保存推送规则（启停/阈值） */
+  saveMindPushRule: (rule: MindPushRuleDTO) =>
+    api.post<{ code: number; data: string }>('/intelligence/mind-push/rule', rule),
+
+  /** 手动触发推送检测，返回触发条数 */
+  runMindPushCheck: () =>
+    api.post<{ code: number; data: number }>('/intelligence/mind-push/check', {}),
+
+  /** 生成订单分享 token */
+  generateShareToken: (orderId: string, expireDays = 30) =>
+    api.post<{ code: number; data: string }>('/intelligence/order-track/generate-token', { orderId, expireDays }),
+
+  /** 撤销订单分享 token */
+  revokeShareToken: (orderId: string) =>
+    api.delete<{ code: number; data: string }>(`/intelligence/order-track/revoke/${orderId}`),
 };
