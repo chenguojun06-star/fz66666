@@ -369,11 +369,42 @@ public class AppStoreController {
     }
 
     /**
+     * 【管理员】直接为指定租户开通付费模块（无需下单/支付）
+     * 支持 CRM_MODULE / FINANCE_TAX / PROCUREMENT 等 UI 模块
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/admin/grant-to-tenant")
+    public Result<?> adminGrantToTenant(@RequestBody GrantToTenantRequest request) {
+        try {
+            if (request.getTenantId() == null || request.getAppCodes() == null || request.getAppCodes().isEmpty()) {
+                return Result.fail("参数不完整：tenantId 和 appCodes 不能为空");
+            }
+            Map<String, Object> result = appStoreOrchestrator.adminGrantToTenant(
+                    request.getTenantId(), request.getAppCodes(), request.getDurationMonths());
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[超管直接开通] 失败: tenantId={}", request.getTenantId(), e);
+            return Result.fail("开通失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 管理员激活订单请求
      */
     @Data
     public static class ActivateOrderRequest {
         private Long orderId;
         private String remark; // 备注，如"已收款/转账确认"
+    }
+
+    /**
+     * 超管直接为租户开通模块请求
+     */
+    @Data
+    public static class GrantToTenantRequest {
+        private Long tenantId;
+        private List<String> appCodes;
+        /** 有效期（月）；<=0 表示永久 */
+        private int durationMonths;
     }
 }

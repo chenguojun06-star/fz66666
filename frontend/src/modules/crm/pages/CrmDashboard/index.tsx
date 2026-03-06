@@ -67,7 +67,7 @@ const CrmDashboard: React.FC = () => {
                   </Title>
                   <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
                     {subscribed
-                      ? '您已开通 CRM 客户管理模块。功能正在紧密开发中，即将上线，敬请期待！'
+                      ? '您已开通 CRM 客户管理模块，功能持续完善中，正式版即将上线，届时可让 B 端客户实时追踪订单进度。'
                       : '深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。'
                     }
                   </Paragraph>

@@ -184,6 +184,20 @@ export const appStoreService = {
   }> => {
     return request.post('/system/app-store/admin/activate-order', data);
   },
+
+  // 超管直接为指定租户开通付费模块（无需下单/支付）
+  adminGrantToTenant: (data: {
+    tenantId: number;
+    appCodes: string[];
+    durationMonths: number; // <=0 表示永久
+  }): Promise<{
+    tenantName: string;
+    activated: string[];
+    failed: string[];
+    endTime: string;
+  }> => {
+    return request.post('/system/app-store/admin/grant-to-tenant', data);
+  },
 };
 
 // =============================================

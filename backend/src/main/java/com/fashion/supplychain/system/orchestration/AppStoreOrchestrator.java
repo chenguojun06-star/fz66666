@@ -685,4 +685,90 @@ public class AppStoreOrchestrator {
             default: return BigDecimal.ZERO;
         }
     }
+
+    /**
+     * 【超管】直接为指定租户开通付费模块（无需下单/支付）
+     * 支持 CRM_MODULE / FINANCE_TAX / PROCUREMENT 三个 UI 模块
+     * 使用 JdbcTemplate 绕开 MyBatis-Plus 租户拦截器
+     *
+     * @param targetTenantId 目标租户 ID
+     * @param appCodes       应用编码列表，如 ["CRM_MODULE","PROCUREMENT"]
+     * @param durationMonths 有效期（月）；<=0 表示永久（99年）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminGrantToTenant(Long targetTenantId, List<String> appCodes, int durationMonths) {
+        if (targetTenantId == null || appCodes == null || appCodes.isEmpty()) {
+            throw new RuntimeException("参数不完整：租户 ID 和应用码不能为空");
+        }
+
+        List<String> activated = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime = durationMonths <= 0 ? now.plusYears(99) : now.plusMonths(durationMonths);
+        String tenantName = resolveTenantName(targetTenantId);
+        UserContext ctx = UserContext.get();
+        String operator = ctx != null ? ctx.getUsername() : "super_admin";
+
+        for (String appCode : appCodes) {
+            try {
+                // 查找 t_app_store 记录（绕开租户拦截器，直接 JDBC 查询）
+                List<Map<String, Object>> appRows = jdbcTemplate.queryForList(
+                    "SELECT id, app_code, app_name FROM t_app_store WHERE app_code = ? AND status = 'PUBLISHED' LIMIT 1",
+                    appCode);
+                if (appRows.isEmpty()) {
+                    failed.add(appCode + "(应用商店中不存在，请先在云端数据库执行 V20260315 SQL)");
+                    continue;
+                }
+                Long appId = ((Number) appRows.get(0).get("id")).longValue();
+                String appName = (String) appRows.get(0).get("app_name");
+
+                // 查询是否已有有效订阅
+                List<Map<String, Object>> existing = jdbcTemplate.queryForList(
+                    "SELECT id FROM t_tenant_subscription WHERE tenant_id = ? AND app_code = ? AND status IN ('ACTIVE','TRIAL') LIMIT 1",
+                    targetTenantId, appCode);
+
+                if (!existing.isEmpty()) {
+                    // 已有订阅 → 续期并升级为 ACTIVE
+                    long subId = ((Number) existing.get(0).get("id")).longValue();
+                    jdbcTemplate.update(
+                        "UPDATE t_tenant_subscription SET status='ACTIVE', end_time=?, " +
+                        "remark=CONCAT(IFNULL(remark,''),' | 超管续期:',?), update_time=? WHERE id=?",
+                        endTime, operator, now, subId);
+                    log.info("[超管直接开通] 租户{}({}) 续期签 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
+                } else {
+                    // 新建订阅
+                    TenantSubscription sub = new TenantSubscription();
+                    sub.setSubscriptionNo(tenantSubscriptionService.generateSubscriptionNo());
+                    sub.setTenantId(targetTenantId);
+                    sub.setTenantName(tenantName);
+                    sub.setAppId(appId);
+                    sub.setAppCode(appCode);
+                    sub.setAppName(appName);
+                    sub.setSubscriptionType("PERPETUAL");
+                    sub.setPrice(BigDecimal.ZERO);
+                    sub.setUserCount(999);
+                    sub.setStartTime(now);
+                    sub.setEndTime(endTime);
+                    sub.setStatus("ACTIVE");
+                    sub.setAutoRenew(false);
+                    sub.setCreatedBy(operator);
+                    sub.setRemark("超管直接开通");
+                    tenantSubscriptionService.save(sub);
+                    log.info("[超管直接开通] 租户{}({}) 新建订阅 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
+                }
+                activated.add(appCode);
+            } catch (Exception e) {
+                log.error("[超管直接开通] 租户{} 开通 {} 失败: {}", targetTenantId, appCode, e.getMessage(), e);
+                failed.add(appCode + "(" + e.getMessage() + ")");
+            }
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("tenantName", tenantName);
+        result.put("activated", activated);
+        result.put("failed", failed);
+        result.put("endTime", endTime.toString());
+        return result;
+    }
 }

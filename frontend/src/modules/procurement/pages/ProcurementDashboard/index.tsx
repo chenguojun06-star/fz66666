@@ -67,7 +67,7 @@ const ProcurementDashboard: React.FC = () => {
                   </Title>
                   <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
                     {subscribed
-                      ? '您已开通供应商采购管理模块。功能正在紧密开发中，即将上线，敬请期待！'
+                      ? '您已开通供应商采购管理模块，功能持续完善中，正式版即将上线，届时全流程采购数字化将自动与仓库模块打通。'
                       : '将面辅料采购流程完全数字化：下单→收货→入库→付款，打通仓库模块，替代手写台账与微信截图催货。'
                     }
                   </Paragraph>

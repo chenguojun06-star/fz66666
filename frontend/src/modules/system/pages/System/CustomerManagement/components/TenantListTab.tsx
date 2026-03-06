@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Row, Col, Radio, Badge } from 'antd';
-import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Row, Col, Radio, Badge, Checkbox } from 'antd';
+import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -8,6 +8,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';
+import { appStoreService } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
@@ -30,6 +31,53 @@ const TenantListTab: React.FC = () => {
   const [processingId, setProcessingId] = useState<number | null>(null);
   const approveModal = useModal<TenantInfo>();
   const [approveForm] = Form.useForm();
+  const grantModal = useModal<TenantInfo>();
+  const [grantAppCodes, setGrantAppCodes] = useState<string[]>(['CRM_MODULE', 'PROCUREMENT', 'FINANCE_TAX']);
+  const [grantDuration, setGrantDuration] = useState<number>(0);
+  const [granting, setGranting] = useState(false);
+
+  const MODULE_OPTIONS = [
+    { value: 'CRM_MODULE', label: 'CRM 客户管理' },
+    { value: 'PROCUREMENT', label: '供应商采购管理' },
+    { value: 'FINANCE_TAX', label: '财税导出' },
+  ];
+
+  const DURATION_OPTIONS = [
+    { value: 0, label: '永久' },
+    { value: 12, label: '12个月' },
+    { value: 6, label: '6个月' },
+    { value: 3, label: '3个月' },
+    { value: 1, label: '1个月' },
+  ];
+
+  const handleGrantModules = async () => {
+    const record = grantModal.data;
+    if (!record) return;
+    if (grantAppCodes.length === 0) {
+      message.warning('请至少选择一个付费模块');
+      return;
+    }
+    setGranting(true);
+    try {
+      const res: any = await appStoreService.adminGrantToTenant({
+        tenantId: record.id,
+        appCodes: grantAppCodes,
+        durationMonths: grantDuration,
+      });
+      const d = res?.data || res;
+      if (d?.activated?.length > 0) {
+        message.success(`已成功为「${d.tenantName}」开通：${d.activated.join('、')}`);
+      }
+      if (d?.failed?.length > 0) {
+        message.warning(`以下模块开通失败：${d.failed.join('；')}`);
+      }
+      grantModal.close();
+    } catch (e: any) {
+      message.error(e?.message || '开通失败');
+    } finally {
+      setGranting(false);
+    }
+  };
 
   const PLAN_OPTIONS = [
     { value: 'TRIAL', label: '免费试用', description: '5用户 / 1GB存储' },
@@ -267,6 +315,14 @@ const TenantListTab: React.FC = () => {
             key: 'qrcode', label: '注册码',
             primary: true,
             onClick: () => qrModal.open(record),
+          },
+          {
+            key: 'grantModules', label: '付费模块',
+            onClick: () => {
+              setGrantAppCodes(['CRM_MODULE', 'PROCUREMENT', 'FINANCE_TAX']);
+              setGrantDuration(0);
+              grantModal.open(record);
+            },
           },
           {
             key: 'markPaid', label: record.paidStatus === 'PAID' ? '取消付费' : '标记已付费',
@@ -548,8 +604,50 @@ const TenantListTab: React.FC = () => {
         </Form>
       </ResizableModal>
 
-      {/* 审批通过弹窗（含套餐选择） */}
+      {/* 付费模块开通弹窗 */}
       <ResizableModal
+        open={grantModal.visible}
+        title={<><AppstoreOutlined style={{ marginRight: 6 }} />为「{grantModal.data?.tenantName || ''}」开通付费模块</>}
+        onCancel={grantModal.close}
+        width="40vw"
+        footer={
+          <Space>
+            <Button onClick={grantModal.close}>取消</Button>
+            <Button type="primary" loading={granting} onClick={handleGrantModules}>确认开通</Button>
+          </Space>
+        }
+      >
+        <Alert
+          message="此操作将直接为该租户创建有效订阅，无需租户下单付费，适合人工确认付款后的手动开通场景。"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>选择要开通的模块（可多选）：</div>
+          <Checkbox.Group
+            value={grantAppCodes}
+            onChange={(v) => setGrantAppCodes(v as string[])}
+            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+          >
+            {MODULE_OPTIONS.map(opt => (
+              <Checkbox key={opt.value} value={opt.value} style={{ marginLeft: 0 }}>
+                {opt.label}
+              </Checkbox>
+            ))}
+          </Checkbox.Group>
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>有效期：</div>
+          <Radio.Group value={grantDuration} onChange={(e) => setGrantDuration(e.target.value)}>
+            {DURATION_OPTIONS.map(opt => (
+              <Radio.Button key={opt.value} value={opt.value}>{opt.label}</Radio.Button>
+            ))}
+          </Radio.Group>
+        </div>
+      </ResizableModal>
+
+      {/* 审批通过弹窗（含套餐选择） */}      <ResizableModal
         open={approveModal.visible}
         title={`审批通过 - ${approveModal.data?.tenantName || ''}`}
         onCancel={() => { approveModal.close(); approveForm.resetFields(); }}
