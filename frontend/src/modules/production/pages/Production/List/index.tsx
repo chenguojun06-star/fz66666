@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Badge, Tooltip, Tabs, Popover } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -29,6 +29,7 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
 import { useDeliveryRiskMap, clearDeliveryRiskCache } from '../ProgressDetail/hooks/useDeliveryRiskMap';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -79,6 +80,42 @@ const ProductionList: React.FC = () => {
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
+
+  // ===== 分享进度弹窗状态 =====
+  const [shareModal, setShareModal] = useState<{
+    open: boolean;
+    record: ProductionOrder | null;
+    token: string | null;
+    loading: boolean;
+    revoking: boolean;
+  }>({ open: false, record: null, token: null, loading: false, revoking: false });
+
+  const handleShareOrder = useCallback(async (record: ProductionOrder) => {
+    setShareModal({ open: true, record, token: null, loading: true, revoking: false });
+    try {
+      const res = await intelligenceApi.generateShareToken(String(record.id));
+      const token = (res as any)?.data as string | null;
+      if (!token) throw new Error('未返回 token');
+      setShareModal(prev => ({ ...prev, token, loading: false }));
+    } catch {
+      setShareModal(prev => ({ ...prev, loading: false }));
+      message.error('生成分享链接失败，请重试');
+    }
+  }, [message]);
+
+  const handleRevokeShare = useCallback(async () => {
+    const orderId = shareModal.record?.id;
+    if (!orderId) return;
+    setShareModal(prev => ({ ...prev, revoking: true }));
+    try {
+      await intelligenceApi.revokeShareToken(String(orderId));
+      message.success('分享链接已撤销');
+      setShareModal({ open: false, record: null, token: null, loading: false, revoking: false });
+    } catch {
+      setShareModal(prev => ({ ...prev, revoking: false }));
+      message.error('撤销失败，请重试');
+    }
+  }, [shareModal.record, message]);
 
   // ===== 查询参数 =====
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, includeScrapped: true });
@@ -401,6 +438,7 @@ const ProductionList: React.FC = () => {
     setRemarkPopoverId, setRemarkText,
     quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
     deliveryRiskMap,
+    handleShareOrder,
   });
 
   // 根据 visibleColumns 过滤列
@@ -1197,6 +1235,57 @@ const ProductionList: React.FC = () => {
               />
             </div>
           </div>
+        </ResizableModal>
+
+        {/* 分享进度弹窗 */}
+        <ResizableModal
+          title={<><ShareAltOutlined style={{ color: 'var(--primary-color)', marginRight: 8 }} />分享订单进度</>}
+          open={shareModal.open}
+          onCancel={() => setShareModal({ open: false, record: null, token: null, loading: false, revoking: false })}
+          footer={null}
+          width="30vw"
+          destroyOnClose
+        >
+          {shareModal.loading ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>正在生成链接……</div>
+          ) : shareModal.token ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Alert
+                type="info"
+                showIcon
+                message="链接已生成，1小时后自动失效"
+                description="客户打开链接可查看完整进度与AI预测，不展示单价，不支持下载。"
+                style={{ fontSize: 12 }}
+              />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/share/${shareModal.token}`}
+                  style={{ flex: 1, fontSize: 12 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<CopyOutlined />}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(`${window.location.origin}/share/${shareModal.token}`);
+                    message.success('链接已复制');
+                  }}
+                >
+                  复制
+                </Button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  danger
+                  icon={<StopOutlined />}
+                  loading={shareModal.revoking}
+                  onClick={handleRevokeShare}
+                >
+                  撤销链接
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </ResizableModal>
 
         {/* 打印预览弹窗 */}

@@ -34,6 +34,7 @@ export interface UseProductionColumnsProps {
   isSupervisorOrAbove: boolean;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
   deliveryRiskMap?: Map<string, DeliveryRiskItem>;
+  handleShareOrder: (record: ProductionOrder) => void;
 }
 
 /**
@@ -47,6 +48,7 @@ export function useProductionColumns({
   setPrintModalVisible, setPrintingRecord,
   setRemarkPopoverId, setRemarkText,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
+  handleShareOrder,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -664,6 +666,12 @@ export function useProductionColumns({
                 title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
                 disabled: frozen,
                 onClick: () => handleTransferOrder(record),
+              },
+              {
+                key: 'share',
+                label: '🔗 分享',
+                title: '生成客户查看链接（1小时有效）',
+                onClick: () => handleShareOrder(record),
               },
             ]}
           />
