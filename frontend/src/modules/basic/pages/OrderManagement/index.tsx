@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -23,6 +23,7 @@ import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/u
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
+import { SchedulingSuggestionResponse, SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import SmartStyleInsightCard from './components/SmartStyleInsightCard';
@@ -615,6 +616,11 @@ const OrderManagement: React.FC = () => {
   const [deliverySuggestion, setDeliverySuggestion] = useState<DeliveryDateSuggestionResponse | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
 
+  // AI 排产建议状态
+  const [schedulingResult, setSchedulingResult] = useState<SchedulingSuggestionResponse | null>(null);
+  const [schedulingLoading, setSchedulingLoading] = useState(false);
+  const [showSchedulingPanel, setShowSchedulingPanel] = useState(false);
+
   const fetchDeliverySuggestion = React.useCallback(async (factoryName?: string, qty?: number) => {
     if (!factoryName && !qty) return;
     setSuggestionLoading(true);
@@ -627,6 +633,8 @@ const OrderManagement: React.FC = () => {
       setSuggestionLoading(false);
     }
   }, []);
+
+  // 工厂或数量变化时自动重新计算交货期建议（effect 移至 totalOrderQuantity 声明之后）
 
   // 工厂或数量变化时自动重新计算建议（effect 移至 totalOrderQuantity 声明之后）
 
@@ -714,6 +722,28 @@ const OrderManagement: React.FC = () => {
   const totalOrderQuantity = useMemo(() => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
+
+  const fetchSchedulingSuggestion = React.useCallback(async () => {
+    const styleNo = selectedStyle?.styleNo || '';
+    const qty = totalOrderQuantity;
+    const deadline = form.getFieldValue('plannedEndDate');
+    if (!qty || qty <= 0) {
+      message.warning('请先填写订单数量');
+      return;
+    }
+    const deadlineStr = deadline ? (deadline.format?.('YYYY-MM-DD') ?? String(deadline)) : '';
+    setSchedulingLoading(true);
+    setShowSchedulingPanel(true);
+    try {
+      const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr });
+      if ((res as any).code === 200 && (res as any).data) {
+        setSchedulingResult((res as any).data as SchedulingSuggestionResponse);
+      }
+    } catch { /* 静默失败 */ } finally {
+      setSchedulingLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStyle, totalOrderQuantity, form, message]);
 
   // 工厂或数量变化时自动重新计算交货期建议
   useEffect(() => {
@@ -1692,6 +1722,121 @@ const OrderManagement: React.FC = () => {
                                   <span style={{ color: '#bbb', fontStyle: 'italic' }}>暂无产能数据（该工厂近30天无扫码记录）</span>
                                 )}
                               </div>
+                            </div>
+                          )}
+                        </Col>
+                      </Row>
+
+                      {/* AI 排产建议区域 */}
+                      <Row gutter={16} style={{ marginBottom: 8 }}>
+                        <Col xs={24}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: showSchedulingPanel ? 8 : 0 }}>
+                            <Button
+                              icon={<BulbOutlined />}
+                              size="small"
+                              type="dashed"
+                              loading={schedulingLoading}
+                              onClick={() => {
+                                if (showSchedulingPanel && schedulingResult) {
+                                  setShowSchedulingPanel(false);
+                                } else {
+                                  fetchSchedulingSuggestion();
+                                }
+                              }}
+                              style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                            >
+                              {showSchedulingPanel && schedulingResult ? '收起排产建议' : 'AI 排产建议'}
+                            </Button>
+                            {!showSchedulingPanel && (
+                              <span style={{ fontSize: 12, color: '#999' }}>
+                                根据各工厂当前负载，智能推荐最优排产方案
+                              </span>
+                            )}
+                          </div>
+
+                          {showSchedulingPanel && (
+                            <div style={{ border: '1px solid #e8e8e8', borderRadius: 6, padding: '10px 12px', background: '#fafcff' }}>
+                              {schedulingLoading ? (
+                                <div style={{ textAlign: 'center', padding: '20px 0', color: '#999', fontSize: 13 }}>⏳ 正在计算排产方案…</div>
+                              ) : !schedulingResult?.plans?.length ? (
+                                <div style={{ textAlign: 'center', padding: '16px 0', color: '#bbb', fontSize: 13 }}>暂无可用工厂数据</div>
+                              ) : (
+                                <>
+                                  <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                                    共 {schedulingResult.plans.length} 个工厂方案，按匹配度排序：
+                                  </div>
+                                  {schedulingResult.plans.map((plan: SchedulePlan, idx: number) => {
+                                    const scoreColor = plan.matchScore >= 70 ? '#52c41a' : plan.matchScore >= 50 ? '#fa8c16' : '#ff4d4f';
+                                    const totalGanttDays = plan.ganttItems?.reduce((s, g) => s + g.days, 0) || plan.estimatedDays || 1;
+                                    return (
+                                      <div key={idx} style={{
+                                        marginBottom: idx < schedulingResult.plans.length - 1 ? 8 : 0,
+                                        padding: '8px 10px',
+                                        background: '#fff',
+                                        border: '1px solid #e8e8e8',
+                                        borderRadius: 6,
+                                        position: 'relative',
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontWeight: 600, fontSize: 13 }}>{idx + 1}. {plan.factoryName}</span>
+                                            <span style={{
+                                              fontSize: 11, fontWeight: 700, padding: '1px 6px',
+                                              borderRadius: 10, color: '#fff', background: scoreColor,
+                                            }}>匹配 {plan.matchScore}分</span>
+                                            <span style={{ fontSize: 11, color: '#888' }}>
+                                              在制 {plan.currentLoad} 件 · 可用 {plan.availableCapacity.toLocaleString()} 件产能
+                                            </span>
+                                          </div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span style={{ fontSize: 11, color: '#555' }}>
+                                              建议 {plan.suggestedStart} 开始，约 <b style={{ color: '#1890ff' }}>{plan.estimatedDays}</b> 天
+                                            </span>
+                                            <Button
+                                              size="small"
+                                              type="primary"
+                                              ghost
+                                              icon={<CheckCircleOutlined />}
+                                              style={{ fontSize: 11, height: 22 }}
+                                              onClick={() => {
+                                                const factory = factories.find(f => f.factoryName === plan.factoryName);
+                                                if (factory) {
+                                                  form.setFieldValue('factoryId', factory.id);
+                                                  message.success(`已选择 ${plan.factoryName}`);
+                                                  setShowSchedulingPanel(false);
+                                                } else {
+                                                  message.warning('请先在系统中维护该工厂');
+                                                }
+                                              }}
+                                            >选此工厂</Button>
+                                          </div>
+                                        </div>
+                                        {/* 甘特条 */}
+                                        {plan.ganttItems?.length > 0 && (
+                                          <div style={{ display: 'flex', height: 18, borderRadius: 4, overflow: 'hidden', gap: 1 }}>
+                                            {plan.ganttItems.map((g, gi) => {
+                                              const pct = Math.round((g.days / totalGanttDays) * 100);
+                                              const colors = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#faad14'];
+                                              return (
+                                                <Tooltip key={gi} title={`${g.stage}: ${g.startDate} ~ ${g.endDate} (${g.days}天)`}>
+                                                  <div style={{
+                                                    width: `${pct}%`, background: colors[gi % colors.length],
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 10, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap',
+                                                    minWidth: 20,
+                                                  }}>
+                                                    {pct > 8 ? g.stage : ''}
+                                                  </div>
+                                                </Tooltip>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
                             </div>
                           )}
                         </Col>

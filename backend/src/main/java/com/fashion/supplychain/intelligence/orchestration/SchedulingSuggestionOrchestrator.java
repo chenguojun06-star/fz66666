@@ -87,8 +87,9 @@ public class SchedulingSuggestionOrchestrator {
             if (factoryName == null) continue;
 
             int currentLoad = loadByFactory.getOrDefault(factoryName, 0);
-            // 假设每个工厂额定日产能 500 件（后续可从配置表读取）
-            int dailyCapacity = 500;
+            // 从工厂记录读取日产能，未配置时默认 500
+            int dailyCapacity = (f.getDailyCapacity() != null && f.getDailyCapacity() > 0)
+                    ? f.getDailyCapacity() : 500;
             int availableCapacity = Math.max(0, dailyCapacity * 30 - currentLoad);
 
             // 估算生产天数

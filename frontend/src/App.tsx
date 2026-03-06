@@ -22,7 +22,9 @@ import {
   EcSalesRevenue,
   TaxExport,
 } from './modules/finance';
-import { CrmDashboard } from './modules/crm';
+import { CrmDashboard, ReceivableList } from './modules/crm';
+// 客户门户（公开页，无需登录）
+const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
 import { ProcurementDashboard } from './modules/procurement';
 import {
   WarehouseDashboard,
@@ -247,6 +249,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.ecSalesRevenue} element={<Suspense fallback={<Spin />}><EcSalesRevenue /></Suspense>} />
           <Route path={paths.financeTaxExport} element={<Suspense fallback={<Spin />}><TaxExport /></Suspense>} />
           <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
+          <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.procurement} element={<Suspense fallback={<Spin />}><ProcurementDashboard /></Suspense>} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
@@ -281,6 +284,8 @@ const AppRoutes: React.FC = () => {
         </Route>
         {/* 客户订单分享页（无需登录） */}
         <Route path="/share/:token" element={<Suspense fallback={<Spin />}><ShareOrderPage /></Suspense>} />
+        {/* 客户订单追踪门户（无需登录） */}
+        <Route path="/portal" element={<Suspense fallback={<Spin />}><CustomerPortal /></Suspense>} />
         <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
       </Routes>
 

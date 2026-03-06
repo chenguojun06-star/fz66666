@@ -2,12 +2,17 @@ package com.fashion.supplychain.crm.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.crm.entity.Customer;
+import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
+import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.crm.orchestration.PortalTokenOrchestrator;
+import com.fashion.supplychain.crm.entity.CustomerPortalToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -22,6 +27,12 @@ public class CrmController {
 
     @Autowired
     private CustomerOrchestrator customerOrchestrator;
+
+    @Autowired
+    private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired
+    private PortalTokenOrchestrator portalTokenOrchestrator;
 
     /** 客户列表（分页+搜索） */
     @PostMapping("/customers/list")
@@ -66,5 +77,66 @@ public class CrmController {
     @GetMapping("/stats")
     public Result<?> getStats() {
         return Result.success(customerOrchestrator.getStats());
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 应收账款（AR / Receivable）
+    // ──────────────────────────────────────────────────────────────────────
+
+    /** 应收账款列表（分页+过滤） */
+    @PostMapping("/receivables/list")
+    public Result<?> listReceivables(@RequestBody Map<String, Object> params) {
+        return Result.success(receivableOrchestrator.list(params));
+    }
+
+    /** 应收账款统计（待收合计/逾期合计/本月新增） */
+    @GetMapping("/receivables/stats")
+    public Result<?> getReceivableStats() {
+        return Result.success(receivableOrchestrator.getStats());
+    }
+
+    /** 新建应收单 */
+    @PostMapping("/receivables")
+    public Result<Receivable> createReceivable(@RequestBody Receivable receivable) {
+        return Result.success(receivableOrchestrator.create(receivable));
+    }
+
+    /**
+     * 登记到账（部分/全额）
+     * Body: { "amount": 5000.00 }
+     */
+    @PostMapping("/receivables/{id}/receive")
+    public Result<Void> markReceived(@PathVariable String id,
+                                     @RequestBody Map<String, Object> body) {
+        Object rawAmount = body.get("amount");
+        BigDecimal amount = rawAmount instanceof Number
+                ? new BigDecimal(rawAmount.toString())
+                : new BigDecimal((String) rawAmount);
+        receivableOrchestrator.markReceived(id, amount);
+        return Result.success(null);
+    }
+
+    /** 删除应收单（软删除） */
+    @DeleteMapping("/receivables/{id}")
+    public Result<Void> deleteReceivable(@PathVariable String id) {
+        receivableOrchestrator.delete(id);
+        return Result.success(null);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 客户追踪门户（Portal Token）
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * 为指定客户+订单生成追踪链接令牌
+     * Body: { "orderId": "xxx" }
+     */
+    @PostMapping("/customers/{customerId}/portal-link")
+    public Result<CustomerPortalToken> generatePortalLink(
+            @PathVariable String customerId,
+            @RequestBody Map<String, String> body) {
+        String orderId = body.get("orderId");
+        CustomerPortalToken token = portalTokenOrchestrator.generateToken(customerId, orderId);
+        return Result.success(token);
     }
 }

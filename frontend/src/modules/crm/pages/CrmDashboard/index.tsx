@@ -5,8 +5,8 @@ import {
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
-  ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined,
-  EditOutlined, EyeOutlined, LockOutlined, PlusOutlined,
+  ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined, DollarOutlined,
+  EditOutlined, EyeOutlined, LinkOutlined, LockOutlined, PlusOutlined,
   RocketOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -17,7 +17,7 @@ import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
-import { customerApi, type Customer } from '@/services/crm/customerApi';
+import { customerApi, receivableApi, generatePortalLink, type Customer, type Receivable } from '@/services/crm/customerApi';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -232,6 +232,9 @@ const CustomerManagement: React.FC = () => {
   const [drawerData, setDrawerData] = useState<Customer | null>(null);
   const [drawerOrders, setDrawerOrders] = useState<any[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerReceivables, setDrawerReceivables] = useState<Receivable[]>([]);
+  const [drawerReceivableLoading, setDrawerReceivableLoading] = useState(false);
+  const [portalLink, setPortalLink] = useState<{ open: boolean; url: string; orderNo: string }>({ open: false, url: '', orderNo: '' });
 
   const fetchList = useCallback(async (page = pagination.current, kw = keyword, st = statusFilter) => {
     setLoading(true);
@@ -289,13 +292,30 @@ const CustomerManagement: React.FC = () => {
     setDrawerData(record);
     setDrawerOpen(true);
     setDrawerLoading(true);
+    setDrawerReceivableLoading(true);
+    const [ordersRes, receivablesRes] = await Promise.allSettled([
+      customerApi.getOrders(record.id!),
+      receivableApi.list({ customerId: record.id, pageSize: 50, page: 1 }),
+    ]);
+    setDrawerOrders(ordersRes.status === 'fulfilled'
+      ? (((ordersRes.value as any)?.data ?? ordersRes.value) ?? [])
+      : []);
+    setDrawerReceivables(receivablesRes.status === 'fulfilled'
+      ? ((receivablesRes.value as any)?.data?.records ?? (receivablesRes.value as any)?.records ?? [])
+      : []);
+    setDrawerLoading(false);
+    setDrawerReceivableLoading(false);
+  };
+
+  const handleGeneratePortalLink = async (customerId: string, orderId: string, orderNo: string) => {
     try {
-      const res = await customerApi.getOrders(record.id!);
-      setDrawerOrders(((res as any)?.data ?? res) ?? []);
+      const res = await generatePortalLink(customerId, orderId);
+      const token = ((res as any)?.data?.token ?? (res as any)?.token) as string;
+      if (!token) { message.error('生成链接失败，请重试'); return; }
+      const url = `${window.location.origin}/portal?token=${token}`;
+      setPortalLink({ open: true, url, orderNo });
     } catch {
-      setDrawerOrders([]);
-    } finally {
-      setDrawerLoading(false);
+      message.error('生成追踪链接失败');
     }
   };
 
@@ -472,9 +492,59 @@ const CustomerManagement: React.FC = () => {
                         ),
                       },
                       { title: '状态', dataIndex: 'status', width: 100, render: v => <Tag>{v}</Tag> },
-                      { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+                      { title: '创建时间', dataIndex: 'createTime', width: 110, render: v => v?.substring(0, 10) ?? '-' },
+                      {
+                        title: '操作', width: 120,
+                        render: (_, order: any) => (
+                          <Button
+                            size="small"
+                            icon={<LinkOutlined />}
+                            onClick={() => handleGeneratePortalLink(drawerData!.id!, order.id, order.orderNo)}
+                          >
+                            追踪链接
+                          </Button>
+                        ),
+                      },
                     ]}
                     locale={{ emptyText: '暂无关联订单' }}
+                  />
+                ),
+              },
+              {
+                key: 'receivables',
+                label: (
+                  <Space size={4}>
+                    <DollarOutlined />
+                    {`应收账款${drawerReceivables.length > 0 ? ` (${drawerReceivables.length})` : ''}`}
+                  </Space>
+                ),
+                children: (
+                  <ResizableTable
+                    rowKey="id"
+                    loading={drawerReceivableLoading}
+                    dataSource={drawerReceivables}
+                    size="small"
+                    pagination={{ pageSize: 8, showTotal: (t: number) => `共 ${t} 条` }}
+                    columns={[
+                      { title: '单号', dataIndex: 'receivableNo', width: 150 },
+                      { title: '应收金额', dataIndex: 'amount', width: 110, render: (v: number) => `¥${Number(v).toFixed(2)}` },
+                      { title: '已收金额', dataIndex: 'receivedAmount', width: 110, render: (v: number) => `¥${Number(v ?? 0).toFixed(2)}` },
+                      { title: '到期日', dataIndex: 'dueDate', width: 110, render: (v: string) => v || '-' },
+                      {
+                        title: '状态', dataIndex: 'status', width: 110,
+                        render: (v: string) => {
+                          const cfg: Record<string, { label: string; color: string }> = {
+                            PENDING:  { label: '待收款', color: 'blue' },
+                            PARTIAL:  { label: '部分到账', color: 'orange' },
+                            PAID:     { label: '已全额到账', color: 'green' },
+                            OVERDUE:  { label: '已逾期', color: 'red' },
+                          };
+                          const c = cfg[v] ?? { label: v, color: 'default' };
+                          return <Tag color={c.color}>{c.label}</Tag>;
+                        },
+                      },
+                    ]}
+                    locale={{ emptyText: '暂无应收账款' }}
                   />
                 ),
               },
@@ -482,6 +552,27 @@ const CustomerManagement: React.FC = () => {
           />
         )}
       </ResizableModal>
+
+      {/* 客户门户追踪链接弹窗 */}
+      <Modal
+        title={<Space><LinkOutlined />客户订单追踪链接</Space>}
+        open={portalLink.open}
+        onCancel={() => setPortalLink({ open: false, url: '', orderNo: '' })}
+        footer={<Button onClick={() => setPortalLink({ open: false, url: '', orderNo: '' })}>关闭</Button>}
+        width="40vw"
+      >
+        <Descriptions size="small" column={1} bordered style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="关联订单">{portalLink.orderNo}</Descriptions.Item>
+          <Descriptions.Item label="追踪链接">
+            <Typography.Text copyable style={{ wordBreak: 'break-all', fontSize: 12 }}>
+              {portalLink.url}
+            </Typography.Text>
+          </Descriptions.Item>
+        </Descriptions>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          链接有效期 30 天，客户可通过此链接查询订单实时进度，无需登录系统。
+        </Text>
+      </Modal>
     </>
   );
 };

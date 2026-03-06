@@ -270,10 +270,18 @@ export interface GanttItem { stage: string; startDate: string; endDate: string; 
 export interface SchedulePlan {
   factoryName: string;
   factoryId: string;
-  totalDays: number;
+  reason?: string;
+  matchScore: number;
+  currentLoad: number;
+  availableCapacity: number;
+  suggestedStart: string;
   estimatedEnd: string;
-  capacityUtilization: number;
-  gantt: GanttItem[];
+  estimatedDays: number;
+  ganttItems: GanttItem[];
+  // legacy fields
+  totalDays?: number;
+  capacityUtilization?: number;
+  gantt?: GanttItem[];
 }
 export interface SchedulingSuggestionResponse {
   plans: SchedulePlan[];

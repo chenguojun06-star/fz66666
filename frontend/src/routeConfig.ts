@@ -86,6 +86,7 @@ export const paths = {
   integrationCenter: '/integration/center',
   intelligenceCenter: '/intelligence/center',
   crm: '/crm',
+  crmReceivables: '/crm/receivables',
   procurement: '/procurement',
 } as const;
 
@@ -136,6 +137,7 @@ export const permissionCodes = {
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
   crm: 'MENU_CRM',
+  crmReceivables: 'MENU_CRM',
   procurement: 'MENU_PROCUREMENT',
 } as const;
 
@@ -215,7 +217,10 @@ export const menuConfig: MenuSection[] = [
     title: 'CRM客户管理',
     key: 'crm',
     icon: React.createElement(TeamOutlined),
-    path: paths.crm,
+    items: [
+      { label: '客户档案', path: paths.crm, icon: React.createElement(TeamOutlined) },
+      { label: '应收账款', path: paths.crmReceivables, icon: React.createElement(DollarOutlined) },
+    ],
   },
   {
     title: '供应商采购',
@@ -316,6 +321,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.systemIssues]: permissionCodes.systemIssues,
   // financeTaxExport: 标准格式免费开放，所有有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
   [paths.crm]: permissionCodes.crm,
+  [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.procurement]: permissionCodes.procurement,
 };
 
