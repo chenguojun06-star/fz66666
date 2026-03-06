@@ -47,6 +47,42 @@ const RISK_COLOR = { LOW: '#52c41a', MEDIUM: '#faad14', HIGH: '#ff4d4f' } as con
 const RISK_LABEL = { LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' } as const;
 const STATUS_COLOR = { PENDING: '#d9d9d9', ACTIVE: '#1677ff', DONE: '#52c41a' } as const;
 
+function getDaysLeft(dateText?: string): number | null {
+  if (!dateText) return null;
+  const ms = new Date(dateText).getTime();
+  if (!Number.isFinite(ms)) return null;
+  return Math.ceil((ms - Date.now()) / 86400000);
+}
+
+function buildSmartNarrative(data: OrderTrackData) {
+  const daysLeft = getDaysLeft(data.plannedEndDate);
+  const latestStage = data.latestScanStage || data.statusText || '当前阶段';
+  const progress = Number(data.productionProgress || 0);
+  let summary = `当前订单已进入${latestStage}，整体完成 ${progress}%。`;
+  let reason = '当前生产节奏正常，系统将继续跟踪后续节点推进。';
+  let prediction = data.plannedEndDate ? `按当前节奏，预计在 ${formatDate(data.plannedEndDate)} 前后完成。` : '当前暂无明确交期，建议结合最新工厂反馈确认完成时间。';
+
+  if (daysLeft != null && daysLeft < 0) {
+    summary = `当前订单处于${latestStage}，已超过原计划交期 ${Math.abs(daysLeft)} 天。`;
+    reason = data.latestScanTime
+      ? `最近一次推进发生在 ${formatTime(data.latestScanTime)}，当前需要优先确认工厂卡点与补救安排。`
+      : '当前暂无最近推进记录，建议立即核查工厂是否停滞或存在缺料问题。';
+    prediction = '系统判断该单已进入高风险状态，建议优先做客户解释与内部催办。';
+  } else if (daysLeft != null && daysLeft <= 3 && progress < 80) {
+    summary = `距离交期只剩 ${daysLeft} 天，当前仍停留在${latestStage}，进度为 ${progress}%。`;
+    reason = '交期临近但推进仍偏慢，建议优先确认当前工序产能、是否存在返工或等待物料。';
+    prediction = data.plannedEndDate ? `如果后续节点连续推进，仍有机会在 ${formatDate(data.plannedEndDate)} 前完成。` : prediction;
+  } else if (progress >= 95) {
+    summary = `当前订单已接近完成，处于${latestStage}收尾阶段。`;
+    reason = '系统判断该单主要剩余尾部、质检或入库动作，整体风险较低。';
+    prediction = data.plannedEndDate ? `如无返工异常，预计可在 ${formatDate(data.plannedEndDate)} 前顺利收尾。` : '如无返工异常，预计很快可以完成。';
+  } else if (data.latestScanTime) {
+    reason = `最近一次推进时间为 ${formatTime(data.latestScanTime)}，系统将继续按最新节奏跟踪。`;
+  }
+
+  return { summary, reason, prediction };
+}
+
 function formatDate(str: string | null | undefined): string {
   if (!str) return '—';
   try {
@@ -108,67 +144,97 @@ const ShareOrderPage: React.FC = () => {
 
   const ai = data.aiPrediction;
   const riskColor = RISK_COLOR[ai?.riskLevel] ?? '#999';
+  const smartNarrative = buildSmartNarrative(data);
+  const daysLeft = getDaysLeft(data.plannedEndDate);
+  const pageRiskTone = daysLeft != null && daysLeft < 0
+    ? { label: '已逾期', color: '#ff4136' }
+    : ai?.riskLevel
+      ? { label: RISK_LABEL[ai.riskLevel], color: RISK_COLOR[ai.riskLevel] }
+      : { label: '跟踪中', color: '#00e5ff' };
 
   return (
-    <div style={{ background: '#f5f7fa', minHeight: '100vh', padding: '24px 0' }}>
+    <div style={{
+      minHeight: '100vh',
+      padding: '24px 0',
+      background:
+        'radial-gradient(circle at top left, rgba(0,229,255,0.10), transparent 28%), radial-gradient(circle at bottom right, rgba(57,255,20,0.08), transparent 22%), linear-gradient(180deg, #08101d 0%, #0b1424 100%)',
+    }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px' }}>
 
         {/* 品牌标题 */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 13, color: '#999', letterSpacing: 2, marginBottom: 4 }}>PRODUCTION TRACKING</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', letterSpacing: 0.5 }}>生产进度追踪</div>
+          <div style={{ fontSize: 13, color: '#76a7c4', letterSpacing: 2, marginBottom: 4 }}>PRODUCTION TRACKING</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#e6f7ff', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>生产进度追踪</div>
         </div>
 
         <Alert
-          style={{ marginBottom: 16, borderRadius: 12 }}
+          style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: '#d8f1ff' }}
           type="info"
           showIcon
-          message="该分享链接30天内有效"
+          message="该分享链接1天内有效"
           description="页面仅展示生产进度信息，不展示单价，不支持下载。"
         />
 
         {/* 订单基本信息 */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>订单编号</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', fontFamily: 'monospace' }}>{data.orderNo}</div>
+              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>订单编号</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#f2fbff', fontFamily: 'monospace' }}>{data.orderNo}</div>
             </div>
-            <Tag color={riskColor} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 20, border: 'none' }}>
-              {RISK_LABEL[ai?.riskLevel] ?? '未知'}
+            <Tag color={pageRiskTone.color} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 20, border: 'none', color: '#fff', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
+              {pageRiskTone.label}
             </Tag>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
             <div>
-              <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>款式名称</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{data.styleName || '—'}</div>
+              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>款式名称</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{data.styleName || '—'}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>生产工厂</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{data.factoryName || '—'}</div>
+              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>生产工厂</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{data.factoryName || '—'}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>预计交期</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{formatDate(data.plannedEndDate)}</div>
+              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>预计交期</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{formatDate(data.plannedEndDate)}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>总体进度</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1677ff' }}>{data.productionProgress ?? 0}%</div>
+              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>总体进度</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#00e5ff' }}>{data.productionProgress ?? 0}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(57,255,20,0.14)' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}>🤖 智能进度说明</div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>当前状态</div>
+              <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.summary}</div>
+            </div>
+            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>当前判断</div>
+              <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.reason}</div>
+            </div>
+            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预计说明</div>
+              <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.prediction}</div>
             </div>
           </div>
         </div>
 
         {/* 工序进度 */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>工序进度</div>
+        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 16 }}>工序进度</div>
           {data.stages?.map(s => (
             <div key={s.stageName} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLOR[s.status] }} />
-                  <span style={{ fontSize: 13, color: '#333' }}>{s.stageName}</span>
+                  <span style={{ fontSize: 13, color: '#dff5ff' }}>{s.stageName}</span>
                 </div>
-                <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>{s.rate}%</span>
+                <span style={{ fontSize: 12, color: '#8cccf2', fontWeight: 600 }}>{s.rate}%</span>
               </div>
               <Progress
                 percent={s.rate}
@@ -183,20 +249,20 @@ const ShareOrderPage: React.FC = () => {
 
         {/* AI 预测 */}
         {ai && (
-          <div style={{ background: `linear-gradient(135deg, ${riskColor}10, ${riskColor}05)`, border: `1px solid ${riskColor}30`, borderRadius: 16, padding: '18px 24px', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>🤖 AI 预测分析</div>
+          <div style={{ background: `linear-gradient(135deg, rgba(8,20,40,0.88), rgba(8,20,40,0.76))`, border: `1px solid ${riskColor}30`, borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: `0 8px 24px ${riskColor}14` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}>🤖 AI 预测分析</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>预测完成日期</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>{ai.predictedFinishDate || '计算中'}</div>
+              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预测完成日期</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff' }}>{ai.predictedFinishDate || '计算中'}</div>
               </div>
-              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>预测置信度</div>
+              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预测置信度</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: riskColor }}>{ai.confidence ?? 0}%</div>
               </div>
             </div>
             {ai.riskReason && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#666', background: '#fff', borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ marginTop: 10, fontSize: 12, color: '#d7efff', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 12px' }}>
                 💡 {ai.riskReason}
               </div>
             )}
@@ -205,27 +271,27 @@ const ShareOrderPage: React.FC = () => {
 
         {/* 最近扫码记录 */}
         {data.recentScans?.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>最近生产记录</div>
+          <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 14 }}>最近生产记录</div>
             {data.recentScans.map((s, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f6ffed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: '#39ff14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
                     ✓
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>{s.processName || '工序'}</div>
-                    <div style={{ fontSize: 11, color: '#999' }}>{formatTime(s.scanTime)}</div>
+                    <div style={{ fontSize: 13, color: '#dff5ff', fontWeight: 500 }}>{s.processName || '工序'}</div>
+                    <div style={{ fontSize: 11, color: '#7fa7c2' }}>{formatTime(s.scanTime)}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1677ff' }}>×{s.quantity}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#00e5ff' }}>×{s.quantity}</div>
               </div>
             ))}
           </div>
         )}
 
         {/* 底部说明 */}
-        <div style={{ textAlign: 'center', padding: '16px 0 8px', color: '#bbb', fontSize: 11 }}>
+        <div style={{ textAlign: 'center', padding: '16px 0 8px', color: '#7fa7c2', fontSize: 11 }}>
           此链接由供应链系统生成
           {data.expiresAt && (
             <span> · 失效时间 {formatTime(new Date(data.expiresAt).toISOString())}</span>

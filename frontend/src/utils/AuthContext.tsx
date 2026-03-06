@@ -36,6 +36,8 @@ export interface UserInfo extends Record<string, unknown> {
   tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
 }
 
+export type WorkspaceRole = 'boss' | 'management' | 'merchandiser';
+
 /**
  * 判断是否为管理员
  */
@@ -451,4 +453,18 @@ export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
     ? ((user as any).permissions as string[])
     : [];
   return perms.includes('all');
+};
+
+export const getWorkspaceRole = (user?: Partial<UserInfo> | null): WorkspaceRole => {
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
+  if ((user as any)?.isTenantOwner === true || role.includes('老板') || role.includes('总经理')) {
+    return 'boss';
+  }
+  if ((user as any)?.isSuperAdmin === true) {
+    return 'boss';
+  }
+  if (isSupervisorOrAboveUser(user)) {
+    return 'management';
+  }
+  return 'merchandiser';
 };

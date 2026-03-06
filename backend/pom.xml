@@ -27,14 +27,12 @@
         <snakeyaml.version>2.2</snakeyaml.version>
         <h2.version>2.2.224</h2.version>
         <hutool.version>5.8.27</hutool.version>
-        <zxing.version>3.5.3</zxing.version>
         <poi.version>5.2.5</poi.version>
         <lombok.version>1.18.38</lombok.version>
         <!-- 编译和构建 -->
         <maven.compiler.version>3.13.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
-        <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
     </properties>
     <dependencies>
         <!-- Spring Boot 核心依赖 -->
@@ -109,23 +107,6 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>${hutool.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.openhtmltopdf</groupId>
-            <artifactId>openhtmltopdf-pdfbox</artifactId>
-            <version>${openhtmltopdf.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.zxing</groupId>
-            <artifactId>core</artifactId>
-            <version>${zxing.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.zxing</groupId>
-            <artifactId>javase</artifactId>
-            <version>${zxing.version}</version>
         </dependency>
 
         <!-- Apache POI for Excel Export -->

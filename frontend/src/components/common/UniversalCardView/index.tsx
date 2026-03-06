@@ -48,6 +48,8 @@ export interface UniversalCardViewProps {
   pagination?: any; // 分页配置（由外部渲染）
   hoverRender?: (record: any) => React.ReactNode; // 悬停弹出内容
   titleTags?: (record: any) => React.ReactNode; // 标题旁的标签（急/首/翻等）
+  getCardId?: (record: any) => string | undefined;
+  getCardStyle?: (record: any) => React.CSSProperties | undefined;
 }
 
 const UniversalCardView: React.FC<UniversalCardViewProps> = ({
@@ -67,6 +69,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   onCardClick,
   hoverRender,
   titleTags,
+  getCardId,
+  getCardStyle,
 }) => {
   // 计算响应式列配置
   const getColSpan = () => {
@@ -150,9 +154,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
         const cardNode = (
           <Card
+              id={getCardId?.(record)}
               hoverable
               className="universal-card"
               loading={loading}
+              style={getCardStyle?.(record)}
               onClick={() => onCardClick?.(record)}
               cover={
                 <div className="universal-card-cover">

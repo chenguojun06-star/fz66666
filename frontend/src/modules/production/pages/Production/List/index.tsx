@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Badge, Tooltip, Tabs, Popover } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -12,34 +12,25 @@ import StylePrintModal from '@/components/common/StylePrintModal';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
-  isOrderFrozenByStatus,
-  isOrderFrozenByStatusOrStock,
   parseProductionOrderLines,
-  withQuery,
   isApiSuccess,
 } from '@/utils/api';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { getWorkspaceRole, isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { Dayjs } from 'dayjs';
 import '../../../styles.css';
 import dayjs from 'dayjs';
-import RowActions from '@/components/common/RowActions';
-import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
-import { useDeliveryRiskMap, clearDeliveryRiskCache } from '../ProgressDetail/hooks/useDeliveryRiskMap';
+import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { DeliveryRiskItem, AnomalyItem } from '@/services/intelligence/intelligenceApi';
+import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
-import { formatDateTime } from '@/utils/datetime';
-import { toCategoryCn } from '@/utils/styleCategory';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
-import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import {
@@ -51,7 +42,7 @@ import {
   useProductionStats,
   useProductionColumns,
 } from './hooks';
-import { safeString, getStatusConfig, mainStages } from './utils';
+import { safeString, mainStages } from './utils';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -74,6 +65,9 @@ const ProductionList: React.FC = () => {
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
+  const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
+  const currentUserName = useMemo(() => String(user?.name || user?.username || '').trim(), [user]);
+  const isMerchandiserWorkspace = workspaceRole === 'merchandiser';
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -136,6 +130,24 @@ const ProductionList: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!isMerchandiserWorkspace || !currentUserName) return;
+    setQueryParams((prev) => {
+      if (prev.merchandiser === currentUserName) return prev;
+      return { ...prev, merchandiser: currentUserName, page: 1 };
+    });
+  }, [currentUserName, isMerchandiserWorkspace]);
+
+  const merchandiserOptions = useMemo(() => {
+    if (isMerchandiserWorkspace && currentUserName) {
+      return [{ label: `我的订单：${currentUserName}`, value: currentUserName }];
+    }
+    return [
+      { label: '全部跟单员', value: '' },
+      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
+    ];
+  }, [currentUserName, isMerchandiserWorkspace, users]);
+
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -152,6 +164,10 @@ const ProductionList: React.FC = () => {
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
   const [aiRiskFilter, setAiRiskFilter] = useState<'all' | 'overdue' | 'danger' | 'warning'>('all');
+  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind'>('all');
+  const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
+  const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
+  const focusClearTimerRef = useRef<number | null>(null);
 
   // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
   const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed'), [productionList]);
@@ -242,6 +258,16 @@ const ProductionList: React.FC = () => {
 
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
+  const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
+    return String(record?.id || record?.orderNo || '').trim();
+  }, []);
+
+  const triggerOrderFocus = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
+    const key = getOrderDomKey(record);
+    if (!key) return;
+    setPendingScrollOrderId(key);
+  }, [getOrderDomKey]);
+
   // 智能提示：催交 + 落后计数（仅当前页）
   const smartHints = useMemo(() => {
     const active = productionList.filter(o => o.status !== 'completed');
@@ -257,6 +283,31 @@ const ProductionList: React.FC = () => {
     return { urgentCount, behindCount };
   }, [productionList]);
 
+  const urgentOrders = useMemo(() => productionList.filter((o) => {
+    if (o.status === 'completed' || !o.plannedEndDate) return false;
+    return dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
+  }), [productionList]);
+
+  const behindOrders = useMemo(() => productionList.filter((o) => {
+    if (!o.plannedEndDate || o.status === 'completed') return false;
+    const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
+    return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
+  }), [productionList]);
+
+  const overdueRiskOrders = useMemo(() => productionList.filter((o) => {
+    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue';
+  }), [deliveryRiskMap, productionList]);
+
+  const dangerRiskOrders = useMemo(() => productionList.filter((o) => {
+    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'danger';
+  }), [deliveryRiskMap, productionList]);
+
+  const warningRiskOrders = useMemo(() => productionList.filter((o) => {
+    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'warning';
+  }), [deliveryRiskMap, productionList]);
+
+  const attentionRiskOrders = useMemo(() => [...dangerRiskOrders, ...warningRiskOrders], [dangerRiskOrders, warningRiskOrders]);
+
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({
@@ -266,6 +317,53 @@ const ProductionList: React.FC = () => {
       actionText: '刷新重试',
     });
   };
+
+  const resolveAnomalyTargetOrder = useCallback((item: AnomalyItem) => {
+    const targetName = String(item.targetName || '').trim();
+    const description = String(item.description || '').trim();
+    const candidateTexts = [targetName, description].filter(Boolean);
+    const orderNoPattern = /[A-Z]{1,6}\d{6,}/g;
+
+    for (const text of candidateTexts) {
+      const matches = text.match(orderNoPattern) || [];
+      for (const match of matches) {
+        const order = productionList.find((record) => String(record.orderNo || '').trim() === match);
+        if (order) return order;
+      }
+      const exactOrder = productionList.find((record) => String(record.orderNo || '').trim() === text);
+      if (exactOrder) return exactOrder;
+    }
+
+    const factoryMatchedOrder = productionList.find((record) => {
+      const factoryName = String(record.factoryName || '').trim();
+      return !!factoryName && !!targetName && (factoryName === targetName || targetName.includes(factoryName) || factoryName.includes(targetName));
+    });
+    if (factoryMatchedOrder) return factoryMatchedOrder;
+
+    return null;
+  }, [productionList]);
+
+  const handleAnomalyClick = useCallback((item: AnomalyItem) => {
+    const targetOrder = resolveAnomalyTargetOrder(item);
+    if (!targetOrder) {
+      message.info(`暂未匹配到“${item.targetName}”对应订单`);
+      return;
+    }
+
+    setActiveStatFilter('all');
+    setShowDelayedOnly(false);
+    setSmartQueueFilter('all');
+    setAiRiskFilter('all');
+    setQueryParams((prev) => ({
+      ...prev,
+      page: 1,
+      status: '',
+      delayedOnly: undefined,
+      todayOnly: undefined,
+      keyword: String(targetOrder.orderNo || '').trim() || prev.keyword,
+    } as any));
+    triggerOrderFocus(targetOrder);
+  }, [message, resolveAnomalyTargetOrder, triggerOrderFocus]);
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
@@ -434,6 +532,15 @@ const ProductionList: React.FC = () => {
   // 排序：已关单/已完成始终排到最后，其余按选择字段排序；支持 AI 交期风险筛选
   const sortedProductionList = useMemo(() => {
     let filtered = [...productionList];
+    if (smartQueueFilter === 'urgent') {
+      filtered = filtered.filter(o => (o.urgencyLevel || '') === 'urgent');
+    } else if (smartQueueFilter === 'behind') {
+      filtered = filtered.filter(o => {
+        if (!o.plannedEndDate || o.status === 'completed') return false;
+        const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
+        return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
+      });
+    }
     // AI 交期风险层居筛选
     if (aiRiskFilter !== 'all' && deliveryRiskMap.size > 0) {
       filtered = filtered.filter(o => {
@@ -453,7 +560,126 @@ const ProductionList: React.FC = () => {
       return 0;
     });
     return filtered;
-  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, aiRiskFilter, deliveryRiskMap]);
+  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, aiRiskFilter, deliveryRiskMap, smartQueueFilter]);
+
+  const scrollToFocusedOrder = useCallback((orderId: string) => {
+    const safeId = orderId.replace(/"/g, '\\"');
+    const selector = viewMode === 'list'
+      ? `tr[data-row-key="${safeId}"]`
+      : `#production-order-card-${safeId}`;
+    const node = document.querySelector(selector) as HTMLElement | null;
+    if (!node) return false;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFocusedOrderId(orderId);
+    if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    focusClearTimerRef.current = window.setTimeout(() => setFocusedOrderId(null), 2200);
+    return true;
+  }, [viewMode]);
+
+  useEffect(() => {
+    return () => {
+      if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingScrollOrderId) return;
+    const exists = sortedProductionList.some((record) => getOrderDomKey(record) === pendingScrollOrderId);
+    if (!exists) return;
+    const timer = window.setTimeout(() => {
+      if (scrollToFocusedOrder(pendingScrollOrderId)) {
+        setPendingScrollOrderId(null);
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [getOrderDomKey, pendingScrollOrderId, scrollToFocusedOrder, sortedProductionList, viewMode]);
+
+  const smartActionItems = useMemo(() => {
+    const riskAttention = aiRiskCounts.danger + aiRiskCounts.warning;
+    const preferredRiskFilter = aiRiskCounts.danger > 0 ? 'danger' : aiRiskCounts.warning > 0 ? 'warning' : 'all';
+    return [
+      {
+        key: 'urgent',
+        label: '今日待催',
+        value: smartHints.urgentCount,
+        hint: '3天内要交货，适合优先催工厂与跟单节奏。',
+        tone: 'orange' as const,
+        active: smartQueueFilter === 'urgent',
+        onClick: () => {
+          if (smartQueueFilter === 'urgent' && aiRiskFilter === 'all') {
+            setSmartQueueFilter('all');
+            setAiRiskFilter('all');
+            setFocusedOrderId(null);
+            setPendingScrollOrderId(null);
+            return;
+          }
+          setSmartQueueFilter('urgent');
+          setAiRiskFilter('all');
+          triggerOrderFocus(urgentOrders[0]);
+        },
+      },
+      {
+        key: 'behind',
+        label: '进度落后',
+        value: smartHints.behindCount,
+        hint: '7天内交期但进度不足50%，先看这批最容易失控。',
+        tone: 'red' as const,
+        active: smartQueueFilter === 'behind',
+        onClick: () => {
+          if (smartQueueFilter === 'behind' && aiRiskFilter === 'all') {
+            setSmartQueueFilter('all');
+            setAiRiskFilter('all');
+            setFocusedOrderId(null);
+            setPendingScrollOrderId(null);
+            return;
+          }
+          setSmartQueueFilter('behind');
+          setAiRiskFilter('all');
+          triggerOrderFocus(behindOrders[0]);
+        },
+      },
+      {
+        key: 'overdue',
+        label: '预测逾期',
+        value: aiRiskCounts.overdue,
+        hint: '基于扫码速度预测掉期，适合先抢救最危险订单。',
+        tone: 'red' as const,
+        active: aiRiskFilter === 'overdue',
+        onClick: () => {
+          if (smartQueueFilter === 'all' && aiRiskFilter === 'overdue') {
+            setSmartQueueFilter('all');
+            setAiRiskFilter('all');
+            setFocusedOrderId(null);
+            setPendingScrollOrderId(null);
+            return;
+          }
+          setSmartQueueFilter('all');
+          setAiRiskFilter('overdue');
+          triggerOrderFocus(overdueRiskOrders[0]);
+        },
+      },
+      {
+        key: 'risk',
+        label: '存在风险',
+        value: riskAttention,
+        hint: '包含高风险和预警单，适合做今天的二优先处理池。',
+        tone: 'cyan' as const,
+        active: aiRiskFilter === 'danger' || aiRiskFilter === 'warning',
+        onClick: () => {
+          if (smartQueueFilter === 'all' && (aiRiskFilter === 'danger' || aiRiskFilter === 'warning')) {
+            setSmartQueueFilter('all');
+            setAiRiskFilter('all');
+            setFocusedOrderId(null);
+            setPendingScrollOrderId(null);
+            return;
+          }
+          setSmartQueueFilter('all');
+          setAiRiskFilter(preferredRiskFilter);
+          triggerOrderFocus((preferredRiskFilter === 'danger' ? dangerRiskOrders : warningRiskOrders)[0] || attentionRiskOrders[0]);
+        },
+      },
+    ];
+  }, [aiRiskCounts.danger, aiRiskCounts.overdue, aiRiskCounts.warning, aiRiskFilter, attentionRiskOrders, behindOrders, dangerRiskOrders, overdueRiskOrders, smartHints.behindCount, smartHints.urgentCount, smartQueueFilter, triggerOrderFocus, urgentOrders, warningRiskOrders]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
@@ -524,7 +750,26 @@ const ProductionList: React.FC = () => {
                         night_scan: '夜间扫码',
                       };
                       return (
-                        <div key={idx} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleAnomalyClick(item)}
+                          style={{
+                            fontSize: 12,
+                            color: 'var(--text-secondary)',
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'center',
+                            width: '100%',
+                            border: 'none',
+                            background: 'transparent',
+                            padding: '4px 6px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                          title="点击定位对应订单"
+                        >
                           <span style={{ color: severityColor, fontWeight: 700, minWidth: 60 }}>
                             [{typeLabel[item.type] ?? item.type}]
                           </span>
@@ -535,11 +780,11 @@ const ProductionList: React.FC = () => {
                               偏差 {(item.deviationRatio * 100).toFixed(0)}%
                             </span>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                     {anomalyItems.length > 5 && (
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>…还有 {anomalyItems.length - 5} 条，请前往智能运营中心查看</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>…还有 {anomalyItems.length - 5} 条，建议继续按异常项逐条处理</div>
                     )}
                   </div>
                 }
@@ -584,58 +829,71 @@ const ProductionList: React.FC = () => {
           />
 
           {/* 智能提示条 */}
-          {(smartHints.urgentCount > 0 || smartHints.behindCount > 0) && (
+          {smartActionItems.some((item) => item.value > 0) && (
             <div style={{
-              display: 'flex', gap: 12, flexWrap: 'wrap',
+              display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center',
               margin: '0 0 8px 0',
-              padding: '8px 14px',
-              background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
-              border: '1px solid #ffd591',
+              padding: '8px 12px',
+              background: 'linear-gradient(90deg, #fff9f0 0%, #fff4e8 100%)',
+              border: '1px solid #ffd8a8',
               borderRadius: 8,
               fontSize: 13,
             }}>
               <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
-              {smartHints.urgentCount > 0 && (
-                <span style={{ color: '#d46b08' }}>
-                  📅 今日有 <strong>{smartHints.urgentCount}</strong> 单需3天内交货
-                </span>
-              )}
-              {smartHints.urgentCount > 0 && smartHints.behindCount > 0 && <span style={{ color: '#d9d9d9' }}>·</span>}
-              {smartHints.behindCount > 0 && (
-                <span style={{ color: '#cf1322' }}>
-                  📉 <strong>{smartHints.behindCount}</strong> 单进度严重落后
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* AI 交期风险快速筛选 */}
-          {deliveryRiskMap.size > 0 && (aiRiskCounts.overdue > 0 || aiRiskCounts.danger > 0 || aiRiskCounts.warning > 0) && (
-            <div style={{
-              display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center',
-              margin: '0 0 8px', padding: '7px 14px',
-              background: 'linear-gradient(90deg, #f0f5ff 0%, #fff9f0 100%)',
-              border: '1px solid #d6e4ff', borderRadius: 8, fontSize: 13,
-            }}>
-              <span style={{ color: '#595959', fontWeight: 600, fontSize: 12 }}>🤖 AI交期预测：</span>
-              {([
-                { key: 'all',    label: '全部', color: aiRiskFilter === 'all' ? 'blue' : 'default' },
-                { key: 'overdue', label: `🔴 预测逾期 ${aiRiskCounts.overdue}`, color: aiRiskFilter === 'overdue' ? 'red' : 'default', show: aiRiskCounts.overdue > 0 },
-                { key: 'danger',  label: `🟠 存在风险 ${aiRiskCounts.danger}`, color: aiRiskFilter === 'danger' ? 'orange' : 'default', show: aiRiskCounts.danger > 0 },
-                { key: 'warning', label: `🟡 需关注 ${aiRiskCounts.warning}`, color: aiRiskFilter === 'warning' ? 'gold' : 'default', show: aiRiskCounts.warning > 0 },
-              ] as const).filter((item: any) => item.key === 'all' || item.show).map((item: any) => (
-                <Tag
-                  key={item.key}
-                  color={item.color}
-                  style={{ cursor: 'pointer', userSelect: 'none', margin: 0 }}
-                  onClick={() => setAiRiskFilter(item.key as typeof aiRiskFilter)}
+              {smartActionItems.filter((item) => item.value > 0).map((item) => {
+                const colorMap = {
+                  orange: '#d46b08',
+                  red: '#cf1322',
+                  cyan: '#08979c',
+                  green: '#389e0d',
+                } as const;
+                const bgMap = {
+                  orange: '#fff7e6',
+                  red: '#fff1f0',
+                  cyan: '#e6fffb',
+                  green: '#f6ffed',
+                } as const;
+                const color = colorMap[item.tone];
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    title={item.hint}
+                    onClick={item.onClick}
+                    style={{
+                      border: `1px solid ${item.active ? color : `${color}33`}`,
+                      background: item.active ? `${color}14` : bgMap[item.tone],
+                      color,
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item.label} {item.value}
+                  </button>
+                );
+              })}
+              {(smartQueueFilter !== 'all' || aiRiskFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSmartQueueFilter('all');
+                    setAiRiskFilter('all');
+                  }}
+                  style={{
+                    marginLeft: 'auto',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#8c8c8c',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                  }}
                 >
-                  {item.label}
-                </Tag>
-              ))}
-              <span style={{ fontSize: 11, color: '#8c8c8c', marginLeft: 4 }}>
-                · 基于扫码速度 + 历史工效预测
-              </span>
+                  清除筛选
+                </button>
+              )}
             </div>
           )}
 
@@ -687,15 +945,13 @@ const ProductionList: React.FC = () => {
                   <Select
                     value={queryParams.merchandiser || ''}
                     onChange={(value) => setQueryParams({ ...queryParams, merchandiser: value || undefined, page: 1 })}
-                    placeholder="跟单员"
-                    allowClear
+                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
+                    allowClear={!isMerchandiserWorkspace}
                     showSearch
                     optionFilterProp="label"
                     style={{ minWidth: 100 }}
-                    options={[
-                      { label: '全部跟单员', value: '' },
-                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
-                    ]}
+                    disabled={isMerchandiserWorkspace}
+                    options={merchandiserOptions}
                   />
                 </>
               )}
@@ -764,6 +1020,7 @@ const ProductionList: React.FC = () => {
               dataSource={sortedProductionList}
               rowKey="id"
               loading={loading}
+              rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               rowSelection={{
                 selectedRowKeys,
                 onChange: (keys: React.Key[], rows: ProductionOrder[]) => {
@@ -859,6 +1116,11 @@ const ProductionList: React.FC = () => {
                 show: true,
                 type: 'liquid',
               }}
+              getCardId={(record) => `production-order-card-${getOrderDomKey(record as ProductionOrder)}`}
+              getCardStyle={(record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? {
+                boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
+                transform: 'translateY(-2px)',
+              } : undefined}
               actions={(record: ProductionOrder) => [
                 { key: 'print', label: '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
                 { key: 'close', label: '关单', onClick: () => { handleCloseOrder(record); } },

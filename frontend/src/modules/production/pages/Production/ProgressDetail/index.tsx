@@ -13,7 +13,7 @@ import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess } from '@/utils/api';
-import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
+import { getWorkspaceRole, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ScanRecord } from '@/types/production';
@@ -79,6 +79,23 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
+  const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
+  const currentUserName = useMemo(() => String(user?.name || user?.username || '').trim(), [user]);
+  const isMerchandiserWorkspace = workspaceRole === 'merchandiser';
+  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
+  const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
+  const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
+  const focusClearTimerRef = useRef<number | null>(null);
+
+  const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
+    return String(record?.id || record?.orderNo || '').trim();
+  }, []);
+
+  const triggerOrderFocus = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
+    const key = getOrderDomKey(record);
+    if (!key) return;
+    setPendingScrollOrderId(key);
+  }, [getOrderDomKey]);
 
   // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
   const {
@@ -90,6 +107,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     statusOptions,
     handleOrderSort, handleStatClick,
   } = useProgressFilters();
+
+  useEffect(() => {
+    if (!isMerchandiserWorkspace || !currentUserName) return;
+    setQueryParams((prev) => {
+      if (prev.merchandiser === currentUserName) return prev;
+      return { ...prev, merchandiser: currentUserName, page: 1 };
+    });
+  }, [currentUserName, isMerchandiserWorkspace, setQueryParams]);
 
   // ── 订单数据 ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -226,6 +251,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       if (r?.code === 200) setUsers(r.data.records || []);
     }).catch(() => {});
   }, []);
+
+  const merchandiserOptions = useMemo(() => {
+    if (isMerchandiserWorkspace && currentUserName) {
+      return [{ label: `我的订单：${currentUserName}`, value: currentUserName }];
+    }
+    return [
+      { label: '全部跟单员', value: '' },
+      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
+    ];
+  }, [currentUserName, isMerchandiserWorkspace, users]);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -664,7 +699,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  const openScan = useOpenScan({
+  const _openScan = useOpenScan({
     isOrderFrozenByStatus: (o: ProductionOrder) => (o.status as string) === 'cancelled' || (o.status as string) === 'closed' || o.status === 'completed',
     message,
     fetchOrderDetail,
@@ -830,6 +865,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ── AI 交期风险地图（后台静默加载，5分钟缓存）────────────────────────
   const hasActiveOrders = orders.some(o => o.status !== 'completed');
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
+  const deliveryRiskCounts = useMemo(() => {
+    const counts = { overdue: 0, danger: 0, warning: 0 };
+    for (const o of orders) {
+      const risk = deliveryRiskMap.get(String(o.orderNo || ''));
+      if (risk && risk.riskLevel !== 'safe') {
+        counts[risk.riskLevel as keyof typeof counts]++;
+      }
+    }
+    return counts;
+  }, [deliveryRiskMap, orders]);
 
   // ── 分享订单给客户追踪链接（1天有效）─────────────────────────────────
   const handleShareOrder = useCallback(async (order: ProductionOrder) => {
@@ -880,6 +925,153 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }).length;
     return { urgentCount, behindCount };
   }, [orders]);
+
+  const urgentOrders = useMemo(() => orders.filter((o) => {
+    return !!o.plannedEndDate && o.status !== 'completed' && dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
+  }), [orders]);
+
+  const behindOrders = useMemo(() => orders.filter((o) => {
+    if (!o.plannedEndDate || o.status === 'completed') return false;
+    const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
+    return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
+  }), [orders]);
+
+  const stagnantOrders = useMemo(() => orders.filter((o) => stagnantOrderIds.has(String(o.id || ''))), [orders, stagnantOrderIds]);
+
+  const overdueOrders = useMemo(() => orders.filter((o) => {
+    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue';
+  }), [deliveryRiskMap, orders]);
+
+  const smartQueueOrders = useMemo(() => {
+    if (smartQueueFilter === 'all') return orders;
+    return orders.filter((o) => {
+      if (smartQueueFilter === 'urgent') {
+        return !!o.plannedEndDate && o.status !== 'completed' && dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
+      }
+      if (smartQueueFilter === 'behind') {
+        if (!o.plannedEndDate || o.status === 'completed') return false;
+        const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
+        return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
+      }
+      if (smartQueueFilter === 'stagnant') {
+        return stagnantOrderIds.has(String(o.id || ''));
+      }
+      if (smartQueueFilter === 'overdue') {
+        return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue';
+      }
+      return true;
+    });
+  }, [deliveryRiskMap, orders, smartQueueFilter, stagnantOrderIds]);
+
+  const scrollToFocusedOrder = useCallback((orderId: string) => {
+    const safeId = orderId.replace(/"/g, '\\"');
+    const selector = viewMode === 'list'
+      ? `tr[data-row-key="${safeId}"]`
+      : `#progress-order-card-${safeId}`;
+    const node = document.querySelector(selector) as HTMLElement | null;
+    if (!node) return false;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFocusedOrderId(orderId);
+    if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    focusClearTimerRef.current = window.setTimeout(() => setFocusedOrderId(null), 2200);
+    return true;
+  }, [viewMode]);
+
+  useEffect(() => {
+    return () => {
+      if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingScrollOrderId) return;
+    const currentRecords = smartQueueFilter === 'all'
+      ? orders
+      : smartQueueOrders;
+    const exists = currentRecords.some((record) => getOrderDomKey(record) === pendingScrollOrderId);
+    if (!exists) return;
+    const timer = window.setTimeout(() => {
+      if (scrollToFocusedOrder(pendingScrollOrderId)) {
+        setPendingScrollOrderId(null);
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [getOrderDomKey, orders, pendingScrollOrderId, scrollToFocusedOrder, smartQueueFilter, smartQueueOrders, viewMode]);
+
+  const smartActionItems = useMemo(() => ([
+    {
+      key: 'urgent',
+      label: '待催交付',
+      value: smartHints.urgentCount,
+      hint: '3天内要交货，适合先盯需要马上催推进的单。',
+      tone: 'orange' as const,
+      active: smartQueueFilter === 'urgent',
+      onClick: () => {
+        if (smartQueueFilter === 'urgent') {
+          setSmartQueueFilter('all');
+          setFocusedOrderId(null);
+          setPendingScrollOrderId(null);
+          return;
+        }
+        setSmartQueueFilter('urgent');
+        triggerOrderFocus(urgentOrders[0]);
+      },
+    },
+    {
+      key: 'behind',
+      label: '进度落后',
+      value: smartHints.behindCount,
+      hint: '交期临近但进度偏低，适合马上看节点卡在哪里。',
+      tone: 'red' as const,
+      active: smartQueueFilter === 'behind',
+      onClick: () => {
+        if (smartQueueFilter === 'behind') {
+          setSmartQueueFilter('all');
+          setFocusedOrderId(null);
+          setPendingScrollOrderId(null);
+          return;
+        }
+        setSmartQueueFilter('behind');
+        triggerOrderFocus(behindOrders[0]);
+      },
+    },
+    {
+      key: 'stagnant',
+      label: '停滞订单',
+      value: stagnantOrderIds.size,
+      hint: '已扫描过但连续停住，适合先联系工厂确认原因。',
+      tone: 'cyan' as const,
+      active: smartQueueFilter === 'stagnant',
+      onClick: () => {
+        if (smartQueueFilter === 'stagnant') {
+          setSmartQueueFilter('all');
+          setFocusedOrderId(null);
+          setPendingScrollOrderId(null);
+          return;
+        }
+        setSmartQueueFilter('stagnant');
+        triggerOrderFocus(stagnantOrders[0]);
+      },
+    },
+    {
+      key: 'overdue',
+      label: '预测逾期',
+      value: deliveryRiskCounts.overdue,
+      hint: '基于实时节奏预测掉期，适合优先抢救最危险的单。',
+      tone: 'green' as const,
+      active: smartQueueFilter === 'overdue',
+      onClick: () => {
+        if (smartQueueFilter === 'overdue') {
+          setSmartQueueFilter('all');
+          setFocusedOrderId(null);
+          setPendingScrollOrderId(null);
+          return;
+        }
+        setSmartQueueFilter('overdue');
+        triggerOrderFocus(overdueOrders[0]);
+      },
+    },
+  ]), [behindOrders, deliveryRiskCounts.overdue, overdueOrders, smartHints.behindCount, smartHints.urgentCount, smartQueueFilter, stagnantOrderIds.size, stagnantOrders, triggerOrderFocus, urgentOrders]);
 
   // ── 表格列定义 ─────────────────────────────────────────────────────
   const { columns } = useProgressColumns({
@@ -936,15 +1128,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   <Select
                     value={queryParams.merchandiser || ''}
                     onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
-                    placeholder="跟单员"
-                    allowClear
+                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
+                    allowClear={!isMerchandiserWorkspace}
                     showSearch
                     optionFilterProp="label"
                     style={{ minWidth: 100 }}
-                    options={[
-                      { label: '全部跟单员', value: '' },
-                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
-                    ]}
+                    disabled={isMerchandiserWorkspace}
+                    options={merchandiserOptions}
                   />
                 </>
               )}
@@ -1112,27 +1302,67 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           />
 
           {/* 智能提示条 */}
-          {(smartHints.urgentCount > 0 || smartHints.behindCount > 0) && (
+          {smartActionItems.some((item) => item.value > 0) && (
             <div style={{
-              display: 'flex', gap: 12, flexWrap: 'wrap',
+              display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center',
               margin: '0 0 8px 0',
-              padding: '8px 14px',
-              background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
-              border: '1px solid #ffd591',
+              padding: '8px 12px',
+              background: 'linear-gradient(90deg, #fff9f0 0%, #fff4e8 100%)',
+              border: '1px solid #ffd8a8',
               borderRadius: 8,
               fontSize: 13,
             }}>
               <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
-              {smartHints.urgentCount > 0 && (
-                <span style={{ color: '#d46b08' }}>
-                  📅 今日有 <strong>{smartHints.urgentCount}</strong> 单需3天内交货
-                </span>
-              )}
-              {smartHints.urgentCount > 0 && smartHints.behindCount > 0 && <span style={{ color: '#d9d9d9' }}>·</span>}
-              {smartHints.behindCount > 0 && (
-                <span style={{ color: '#cf1322' }}>
-                  📉 <strong>{smartHints.behindCount}</strong> 单进度严重落后
-                </span>
+              {smartActionItems.filter((item) => item.value > 0).map((item) => {
+                const colorMap = {
+                  orange: '#d46b08',
+                  red: '#cf1322',
+                  cyan: '#08979c',
+                  green: '#389e0d',
+                } as const;
+                const bgMap = {
+                  orange: '#fff7e6',
+                  red: '#fff1f0',
+                  cyan: '#e6fffb',
+                  green: '#f6ffed',
+                } as const;
+                const color = colorMap[item.tone];
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    title={item.hint}
+                    onClick={item.onClick}
+                    style={{
+                      border: `1px solid ${item.active ? color : `${color}33`}`,
+                      background: item.active ? `${color}14` : bgMap[item.tone],
+                      color,
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item.label} {item.value}
+                  </button>
+                );
+              })}
+              {smartQueueFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSmartQueueFilter('all')}
+                  style={{
+                    marginLeft: 'auto',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#8c8c8c',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                  }}
+                >
+                  清除筛选
+                </button>
               )}
             </div>
           )}
@@ -1175,15 +1405,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   <Select
                     value={queryParams.merchandiser || ''}
                     onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
-                    placeholder="跟单员"
-                    allowClear
+                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
+                    allowClear={!isMerchandiserWorkspace}
                     showSearch
                     optionFilterProp="label"
                     style={{ minWidth: 100 }}
-                    options={[
-                      { label: '全部跟单员', value: '' },
-                      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
-                    ]}
+                    disabled={isMerchandiserWorkspace}
+                    options={merchandiserOptions}
                   />
                 </>
               )}
@@ -1245,7 +1473,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading}
               columns={columns}
-              dataSource={orders}
+              dataSource={smartQueueOrders}
+              rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1259,7 +1488,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={sortedOrders}
+              dataSource={smartQueueFilter === 'all' ? sortedOrders : sortedOrders.filter((o) => smartQueueOrders.some((s) => String(s.id || '') === String(o.id || '')))}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1277,6 +1506,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 show: true,
                 type: 'liquid',
               }}
+              getCardId={(record) => `progress-order-card-${getOrderDomKey(record as ProductionOrder)}`}
+              getCardStyle={(record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? {
+                boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)',
+                transform: 'translateY(-2px)',
+              } : undefined}
               actions={(record: ProductionOrder) => [
                 {
                   key: 'print',

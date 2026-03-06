@@ -215,6 +215,11 @@
   background: #e6f4ff !important;
 }
 
+.smart-order-focus-row > td {
+  background: #fff7e6 !important;
+  transition: background-color 0.25s ease;
+}
+
 .order-flow-summary-top {
   display: flex;
   align-items: flex-start;

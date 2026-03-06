@@ -1,0 +1,125 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { intelligenceApi, productionOrderApi } from '@/services/production/productionApi';
+import type {
+  LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
+  WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
+  MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
+} from '@/services/production/productionApi';
+import type { ProductionOrder } from '@/types/production';
+import { useAuth } from '@/utils/AuthContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import type { WsMessage } from '@/hooks/useWebSocket';
+
+export interface CockpitData {
+  pulse:      LivePulseResponse | null;
+  health:     HealthIndexResponse | null;
+  notify:     SmartNotificationResponse | null;
+  workers:    WorkerEfficiencyResponse | null;
+  heatmap:    DefectHeatmapResponse | null;
+  ranking:    FactoryLeaderboardResponse | null;
+  shortage:   MaterialShortageResult | null;
+  healing:    SelfHealingResponse | null;
+  bottleneck: FactoryBottleneckItem[] | null;
+  orders:     ProductionOrder[];
+  loading:    boolean;
+  ts:         number;
+}
+
+const INITIAL: CockpitData = {
+  pulse: null, health: null, notify: null, workers: null,
+  heatmap: null, ranking: null, shortage: null, healing: null,
+  bottleneck: null, orders: [], loading: true, ts: 0,
+};
+
+export function useCockpit() {
+  const { user, isAuthenticated } = useAuth();
+  const [data, setData] = useState<CockpitData>(INITIAL);
+
+  const load = useCallback(async () => {
+    setData(d => ({ ...d, loading: true }));
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders] =
+      await Promise.allSettled([
+        intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
+        intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
+        intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
+        intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
+        intelligenceApi.getFactoryBottleneck(),
+        productionOrderApi.list({ pageSize: 50 } as any),
+      ]);
+    const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
+      r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
+    const orderResult: ProductionOrder[] = rOrders.status === 'fulfilled'
+      ? ((rOrders.value as any)?.data?.records ?? (rOrders.value as any)?.records ?? [])
+      : [];
+    setData({
+      pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
+      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
+      bottleneck: v(rBottleneck),
+      orders: orderResult.filter(o => o.status !== 'completed'), loading: false, ts: Date.now(),
+    });
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  /* 10 秒快刷：仅更新实时脉搏 */
+  const fetchPulseOnly = useCallback(async () => {
+    try {
+      const res = await intelligenceApi.getLivePulse();
+      const newPulse = (res as any)?.data ?? res;
+      if (newPulse) setData(prev => ({ ...prev, pulse: newPulse }));
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(fetchPulseOnly, 10_000);
+    return () => clearInterval(t);
+  }, [fetchPulseOnly]);
+
+  /* WebSocket: 扫码事件 → todayScanQty 立刻跳 + 2s 防抖刷新工厂心跳 */
+  const { subscribe } = useWebSocket({
+    userId: user?.id,
+    enabled: isAuthenticated && !!user?.id,
+  });
+  const wsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return subscribe('scan:realtime', (msg: WsMessage) => {
+      const qty: number = (msg.payload as any)?.quantity ?? 0;
+      if (qty > 0) {
+        setData(prev => {
+          if (!prev.pulse) return prev;
+          return { ...prev, pulse: { ...prev.pulse, todayScanQty: prev.pulse.todayScanQty + qty } };
+        });
+      }
+      if (wsDebounceRef.current) clearTimeout(wsDebounceRef.current);
+      wsDebounceRef.current = setTimeout(() => fetchPulseOnly(), 2000);
+    });
+  }, [subscribe, fetchPulseOnly]);
+
+  /* 每分钟本地递增 minutesSinceLastScan / minutesSilent */
+  useEffect(() => {
+    const t = setInterval(() => {
+      setData(prev => {
+        if (!prev.pulse) return prev;
+        return {
+          ...prev,
+          pulse: {
+            ...prev.pulse,
+            factoryActivity: (prev.pulse.factoryActivity ?? []).map(f => ({
+              ...f,
+              minutesSinceLastScan: f.minutesSinceLastScan + 1,
+              active: (f.minutesSinceLastScan + 1) < 30,
+            })),
+            stagnantFactories: (prev.pulse.stagnantFactories ?? []).map(sf => ({
+              ...sf,
+              minutesSilent: sf.minutesSilent + 1,
+            })),
+          },
+        };
+      });
+    }, 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  return { data, reload: load };
+}
