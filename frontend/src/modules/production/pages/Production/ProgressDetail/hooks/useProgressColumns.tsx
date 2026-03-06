@@ -574,7 +574,7 @@ export const useProgressColumns = ({
               {
                 key: 'share',
                 label: (
-                  <span><ShareAltOutlined style={{ marginRight: 4 }} />分享客户</span>
+                  <span><ShareAltOutlined style={{ marginRight: 4 }} />分享</span>
                 ),
                 onClick: () => onShareOrder?.(record),
               },

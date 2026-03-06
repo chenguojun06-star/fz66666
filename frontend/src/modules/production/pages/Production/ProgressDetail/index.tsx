@@ -1051,6 +1051,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   label: '编辑',
                   onClick: () => handleQuickEdit(record),
                 },
+                {
+                  key: 'share',
+                  label: '分享',
+                  onClick: () => handleShareOrder(record),
+                },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
               titleTags={(record) => (
@@ -1291,6 +1296,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   key: 'edit',
                   label: '编辑',
                   onClick: () => handleQuickEdit(record),
+                },
+                {
+                  key: 'share',
+                  label: '分享',
+                  onClick: () => handleShareOrder(record),
                 },
               ].filter(Boolean)}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
