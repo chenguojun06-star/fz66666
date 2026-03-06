@@ -70,6 +70,7 @@ import {
   fetchPricingProcesses as fetchPricingProcessesHelper,
 } from './helpers/fetchers';
 import { fetchNodeOperations } from './helpers/nodeOperations';
+import { useLocation } from 'react-router-dom';
 
 type ProgressDetailProps = {
   embedded?: boolean;
@@ -77,6 +78,7 @@ type ProgressDetailProps = {
 
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
+  const location = useLocation();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
   const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
@@ -85,6 +87,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
+  const [pendingFocusNode, setPendingFocusNode] = useState<{ orderNo: string; nodeName: string } | null>(null);
   const focusClearTimerRef = useRef<number | null>(null);
 
   const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
@@ -96,6 +99,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!key) return;
     setPendingScrollOrderId(key);
   }, [getOrderDomKey]);
+
+  const normalizeFocusNodeName = useCallback((value: string) => {
+    const safeValue = String(value || '').trim();
+    if (!safeValue) return '';
+    if (safeValue.includes('质检') || safeValue.includes('品检') || safeValue.includes('验货')) return '质检';
+    if (safeValue.includes('入库') || safeValue.includes('入仓')) return '入库';
+    if (safeValue.includes('包装') || safeValue.includes('打包') || safeValue.includes('后整')) return '包装';
+    if (safeValue.includes('车缝') || safeValue.includes('车间')) return '车缝';
+    if (safeValue.includes('裁剪') || safeValue.includes('裁床')) return '裁剪';
+    return safeValue;
+  }, []);
+
+  const getFocusNodeType = useCallback((nodeName: string) => {
+    const normalized = normalizeFocusNodeName(nodeName);
+    if (normalized === '质检') return 'quality';
+    if (normalized === '入库') return 'warehousing';
+    return normalized;
+  }, [normalizeFocusNodeName]);
 
   // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
   const {
@@ -115,6 +136,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       return { ...prev, merchandiser: currentUserName, page: 1 };
     });
   }, [currentUserName, isMerchandiserWorkspace, setQueryParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const styleNo = String(params.get('styleNo') || '').trim();
+    const orderNo = String(params.get('orderNo') || '').trim();
+    const focusNode = normalizeFocusNodeName(String(params.get('focusNode') || '').trim());
+    if (styleNo || orderNo) {
+      setQueryParams((prev) => ({
+        ...prev,
+        page: 1,
+        styleNo: styleNo || prev.styleNo,
+        keyword: orderNo || prev.keyword,
+      }));
+    }
+    if (orderNo && focusNode) {
+      setPendingFocusNode({ orderNo, nodeName: focusNode });
+    }
+  }, [location.search, normalizeFocusNodeName, setQueryParams]);
 
   // ── 订单数据 ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -997,6 +1036,56 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }, 120);
     return () => window.clearTimeout(timer);
   }, [getOrderDomKey, orders, pendingScrollOrderId, scrollToFocusedOrder, smartQueueFilter, smartQueueOrders, viewMode]);
+
+  useEffect(() => {
+    if (!pendingFocusNode) return;
+    const targetOrder = orders.find((record) => String(record.orderNo || '').trim() === pendingFocusNode.orderNo);
+    if (!targetOrder) return;
+
+    const orderId = String(targetOrder.id || '').trim();
+    if (orderId && boardStatsLoadingByOrder[orderId]) return;
+
+    const resolvedNodes = stripWarehousingNode(resolveNodesForListOrder(targetOrder, progressNodesByStyleNo, defaultNodes));
+    const matchedNode = resolvedNodes.find((node) => {
+      const nodeName = normalizeFocusNodeName(String(node.name || node.progressStage || '').trim());
+      const progressStageName = normalizeFocusNodeName(String(node.progressStage || '').trim());
+      return nodeName === pendingFocusNode.nodeName || progressStageName === pendingFocusNode.nodeName;
+    });
+    const resolvedNodeName = String(matchedNode?.name || pendingFocusNode.nodeName).trim();
+    const statsMap = boardStatsByOrder[orderId] || {};
+    const matchedStatKey = Object.keys(statsMap).find((key) => normalizeFocusNodeName(key) === pendingFocusNode.nodeName);
+    const completedQty = Number(statsMap[matchedStatKey || resolvedNodeName] || 0);
+    const totalQty = Number(targetOrder.cuttingQuantity || targetOrder.orderQuantity) || 0;
+    const percent = totalQty > 0 ? Math.min(100, Math.round((completedQty / totalQty) * 100)) : 0;
+    const remaining = Math.max(0, totalQty - completedQty);
+
+    triggerOrderFocus(targetOrder);
+    openNodeDetail(
+      targetOrder,
+      String(matchedNode?.progressStage || getFocusNodeType(resolvedNodeName) || pendingFocusNode.nodeName),
+      resolvedNodeName,
+      { done: completedQty, total: totalQty, percent, remaining },
+      matchedNode?.unitPrice,
+      resolvedNodes.map((node) => ({
+        id: String(node.id || '').trim() || undefined,
+        processCode: String(node.id || '').trim() || undefined,
+        name: node.name,
+        unitPrice: node.unitPrice,
+      }))
+    );
+    setPendingFocusNode(null);
+  }, [
+    boardStatsByOrder,
+    boardStatsLoadingByOrder,
+    defaultNodes,
+    getFocusNodeType,
+    normalizeFocusNodeName,
+    openNodeDetail,
+    orders,
+    pendingFocusNode,
+    progressNodesByStyleNo,
+    triggerOrderFocus,
+  ]);
 
   const smartActionItems = useMemo(() => ([
     {

@@ -350,6 +350,12 @@ const ProductionList: React.FC = () => {
       return;
     }
 
+    const targetOrderNo = String(targetOrder.orderNo || '').trim();
+    if (item.type === 'quality_spike' && targetOrderNo) {
+      navigate(`/production/progress-detail?orderNo=${encodeURIComponent(targetOrderNo)}&focusNode=${encodeURIComponent('质检')}`);
+      return;
+    }
+
     setActiveStatFilter('all');
     setShowDelayedOnly(false);
     setSmartQueueFilter('all');
@@ -360,10 +366,10 @@ const ProductionList: React.FC = () => {
       status: '',
       delayedOnly: undefined,
       todayOnly: undefined,
-      keyword: String(targetOrder.orderNo || '').trim() || prev.keyword,
+      keyword: targetOrderNo || prev.keyword,
     } as any));
     triggerOrderFocus(targetOrder);
-  }, [message, resolveAnomalyTargetOrder, triggerOrderFocus]);
+  }, [message, navigate, resolveAnomalyTargetOrder, triggerOrderFocus]);
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
