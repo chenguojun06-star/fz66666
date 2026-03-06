@@ -112,7 +112,7 @@ async function handleProcurementTaskFromBell(ctx, task) {
     const materialPurchases = await _fetchProcurementData(orderNo, purchaseId, task);
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-    const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || '').trim();
     const actionablePurchases = _filterActionablePurchases(materialPurchases, receiverId, receiverName);
 
     if (!actionablePurchases || actionablePurchases.length === 0) {
@@ -249,7 +249,7 @@ async function onHandleProcurement(ctx, e) {
 
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-    const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || '').trim();
     const actionablePurchases = _filterActionablePurchases(materialPurchases, receiverId, receiverName);
 
     if (!actionablePurchases || actionablePurchases.length === 0) {
@@ -328,7 +328,7 @@ async function receiveProcurementTask(ctx, userInfo) {
     userInfo?.id || userInfo?.userId || ''
   ).trim();
   const receiverName = String(
-    userInfo?.realName || userInfo?.username || userInfo?.name || userInfo?.nickName || ''
+    userInfo?.name || userInfo?.username || userInfo?.nickName || ''
   ).trim();
 
   if (!receiverId && !receiverName) {
@@ -487,7 +487,7 @@ function _buildProcurementUpdates(materialPurchases) {
   const receives = [];
   const updates = [];
   const userInfo = getUserInfo();
-  const receiverName = (userInfo.realName || userInfo.username || '').trim();
+  const receiverName = (userInfo.name || userInfo.username || '').trim();
   const receiverId = String(userInfo.id || userInfo.userId || '').trim();
 
   for (const item of materialPurchases) {
@@ -634,7 +634,7 @@ function validateProcurementData() {
   if (!userInfo || !userInfo.id) {
     throw new Error('请先登录');
   }
-  const receiverName = userInfo.realName || userInfo.username;
+  const receiverName = userInfo.name || userInfo.username;
   if (!receiverName) {
     throw new Error('用户信息不完整(无姓名)');
   }

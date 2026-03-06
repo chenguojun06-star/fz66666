@@ -69,13 +69,13 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
       if (result?.code === 200 && Array.isArray(result.data?.records)) {
         setTransferUsers(result.data.records.map((u: any) => ({
           id: String(u.id),
-          name: u.name || u.realName || u.username,
+          name: u.name || u.username,
           username: u.username || '',
         })));
       } else if (Array.isArray(result.data)) {
         setTransferUsers(result.data.map((u: any) => ({
           id: String(u.id),
-          name: u.name || u.realName || u.username,
+          name: u.name || u.username,
           username: u.username || '',
         })));
       }

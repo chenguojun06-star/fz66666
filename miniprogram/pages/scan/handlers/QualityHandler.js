@@ -130,7 +130,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
     quantity: totalQty,
     operatorId: userInfo.id || '',
-    operatorName: userInfo.realName || userInfo.username || '',
+    operatorName: userInfo.name || userInfo.username || '',
   };
 }
 

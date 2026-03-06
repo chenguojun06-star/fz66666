@@ -243,7 +243,7 @@ async function receiveCuttingTask(ctx, detail, userInfo) {
   }
 
   const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-  const receiverName = String(userInfo.realName || userInfo.username || '').trim();
+  const receiverName = String(userInfo.name || userInfo.username || '').trim();
   const task = _pickActionableCuttingTask(taskData.records, receiverId, receiverName);
 
   if (!task) {
