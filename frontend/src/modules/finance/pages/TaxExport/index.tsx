@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
+import { useAuth } from '@/utils/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -47,15 +48,18 @@ const TaxExport: React.FC = () => {
     dayjs(),
   ]);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
+  const isSuperAdmin = user?.isSuperAdmin === true;
   const [subscribed, setSubscribed] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
     appStoreService.getMyApps().then((apps: any) => {
       const list = Array.isArray(apps) ? apps : (apps?.records || apps?.data || []);
       setSubscribed(list.some((a: any) => a.appCode === 'FINANCE_TAX' && !a.isExpired));
     }).catch(() => { }).finally(() => setChecking(false));
-  }, []);
+  }, [isSuperAdmin]);
 
   const handleFormatClick = (opt: typeof FORMAT_OPTIONS[0]) => {
     if (!opt.free && !subscribed) {

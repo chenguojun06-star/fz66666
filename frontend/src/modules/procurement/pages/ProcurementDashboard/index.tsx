@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
+import { useAuth } from '@/utils/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -19,15 +20,18 @@ const FEATURES = [
 
 const ProcurementDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.isSuperAdmin === true;
   const [subscribed, setSubscribed] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
     appStoreService.getMyApps().then(apps => {
-      const active = apps.some(a => a.appCode === 'PROCUREMENT' && !a.isExpired);
+      const active = apps.some((a: any) => a.appCode === 'PROCUREMENT' && !a.isExpired);
       setSubscribed(active);
     }).catch(() => { }).finally(() => setChecking(false));
-  }, []);
+  }, [isSuperAdmin]);
 
   return (
     <Layout>
