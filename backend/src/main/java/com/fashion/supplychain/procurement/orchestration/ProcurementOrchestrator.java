@@ -33,7 +33,7 @@ public class ProcurementOrchestrator {
     private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
 
     /**
-     * 供应商列表（只读，supplier_type='MATERIAL'）
+     * 供应商列表（只读，从 t_factory 读取所有外部工厂，作为面料采购供应商）
      */
     public IPage<Factory> listSuppliers(Map<String, Object> params) {
         int page = parseIntOrDefault(params, "page", 1);
@@ -42,7 +42,6 @@ public class ProcurementOrchestrator {
 
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getDeleteFlag, 0)
-                .eq(Factory::getSupplierType, "MATERIAL")
                 .and(StringUtils.hasText(keyword), w -> w
                         .like(Factory::getFactoryName, keyword)
                         .or().like(Factory::getFactoryCode, keyword)
@@ -63,11 +62,10 @@ public class ProcurementOrchestrator {
      * 综合统计数据：供应商数量 + 采购单统计
      */
     public Map<String, Object> getStats(Map<String, Object> params) {
-        // 供应商总数（MATERIAL 类型，不分租户，是系统级资源）
+        // 供应商总数（t_factory 中所有未删除工厂）
         long supplierCount = factoryService.count(
                 new LambdaQueryWrapper<Factory>()
                         .eq(Factory::getDeleteFlag, 0)
-                        .eq(Factory::getSupplierType, "MATERIAL")
         );
 
         // 采购单状态汇总
