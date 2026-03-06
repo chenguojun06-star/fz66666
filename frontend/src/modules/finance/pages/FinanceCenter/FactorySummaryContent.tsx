@@ -8,6 +8,8 @@ import {
 } from '@ant-design/icons';
 import api from '@/utils/api';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { FactoryRank } from '@/services/intelligence/intelligenceApi';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
@@ -55,6 +57,25 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [pushedFactoryIds, setPushedFactoryIds] = useState<Set<string>>(new Set());
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  // ===== 工厂绩效榜 =====
+  const [leaderboard, setLeaderboard] = useState<FactoryRank[]>([]);
+  const [lbLoading, setLbLoading] = useState(false);
+  const [lbCollapsed, setLbCollapsed] = useState(false);
+  const lbFetched = React.useRef(false);
+
+  const fetchLeaderboard = useCallback(async () => {
+    if (lbFetched.current) return;
+    lbFetched.current = true;
+    setLbLoading(true);
+    try {
+      const res = await intelligenceApi.getFactoryLeaderboard() as any;
+      const ranks: FactoryRank[] = res?.data?.rankings ?? res?.rankings ?? [];
+      setLeaderboard(ranks.slice(0, 6));
+    } catch { /* silent */ } finally { setLbLoading(false); }
+  }, []);
+
+  useEffect(() => { void fetchLeaderboard(); }, [fetchLeaderboard]);
 
   const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -430,6 +451,48 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           </div>
         </Card>
       </div>
+
+      {/* 工厂绩效榜 */}
+      {leaderboard.length > 0 && (
+        <Card
+          size="small"
+          style={{ marginBottom: 12 }}
+          loading={lbLoading}
+          title={
+            <span style={{ fontSize: 13, fontWeight: 600 }}>🏆 工厂绩效榜</span>
+          }
+          extra={
+            <Button type="link" size="small" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>
+              {lbCollapsed ? '展开' : '收起'}
+            </Button>
+          }
+        >
+          {!lbCollapsed && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {leaderboard.map((r) => {
+                const scoreColor = r.totalScore >= 80 ? '#52c41a' : r.totalScore >= 60 ? '#fa8c16' : '#ff4d4f';
+                return (
+                  <div key={r.factoryId} style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 6,
+                    background: 'var(--background-secondary, #f8f9fa)',
+                    border: '1px solid var(--border-color, #e8e8e8)',
+                    minWidth: 190,
+                  }}>
+                    <span style={{ fontSize: 16 }}>{r.medal || `#${r.rank}`}</span>
+                    <span style={{ fontWeight: 600, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.factoryName}
+                    </span>
+                    <Tooltip title={`质量${r.qualityScore} · 速度${r.speedScore} · 交期${r.deliveryScore} · 成本${r.costScore}`}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor }}>{r.totalScore}</span>
+                    </Tooltip>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* 搜索 & 工具栏 */}
       <Card size="small" style={{ marginBottom: 12 }}>
