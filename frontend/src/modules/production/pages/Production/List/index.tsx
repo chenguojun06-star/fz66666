@@ -53,6 +53,7 @@ import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import SupplierScorecardPanel from '@/modules/intelligence/pages/IntelligenceCenter/SupplierScorecardPanel';
 
 const { Option } = Select;
 
@@ -349,10 +350,13 @@ const ProductionList: React.FC = () => {
     }
   );
 
-  // 排序
+  // 排序：已关单/已完成始终排到最后，其余按选择字段排序
   const sortedProductionList = useMemo(() => {
     const filtered = [...productionList];
     filtered.sort((a: any, b: any) => {
+      const aClose = (a.actualEndDate || a.status === 'CLOSED' || a.status === 'closed' || a.status === 'completed') ? 1 : 0;
+      const bClose = (b.actualEndDate || b.status === 'CLOSED' || b.status === 'closed' || b.status === 'completed') ? 1 : 0;
+      if (aClose !== bClose) return aClose - bClose;
       if (sortField === 'createTime') {
         const aTime = a[sortField] ? new Date(a[sortField]).getTime() : 0;
         const bTime = b[sortField] ? new Date(b[sortField]).getTime() : 0;
@@ -1162,6 +1166,11 @@ const ProductionList: React.FC = () => {
           }}
           sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
         />
+
+        {/* 工厂实力评分卡：订单列表页底部，接单/选巧工厂时参考各巧工厂历史评分 */}
+        <div style={{ padding: '16px 0 0' }}>
+          <SupplierScorecardPanel />
+        </div>
     </Layout>
   );
 };

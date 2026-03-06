@@ -68,6 +68,7 @@ import {
   fetchPricingProcesses as fetchPricingProcessesHelper,
 } from './helpers/fetchers';
 import { fetchNodeOperations } from './helpers/nodeOperations';
+import LiveCostTrackerPanel from '@/modules/intelligence/pages/IntelligenceCenter/LiveCostTrackerPanel';
 
 type ProgressDetailProps = {
   embedded?: boolean;
@@ -93,6 +94,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  // 卡片视图排序：已关单/已完成排到最后
+  const sortedOrders = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      const aClose = (a.actualEndDate || (a.status as string) === 'CLOSED' || (a.status as string) === 'closed' || a.status === 'completed') ? 1 : 0;
+      const bClose = (b.actualEndDate || (b.status as string) === 'CLOSED' || (b.status as string) === 'closed' || b.status === 'completed') ? 1 : 0;
+      return aClose - bClose;
+    });
+  }, [orders]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [globalStats, setGlobalStats] = useState({
     totalOrders: 0, totalQuantity: 0,
@@ -959,7 +968,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={orders}
+              dataSource={sortedOrders}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1172,7 +1181,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={orders}
+              dataSource={sortedOrders}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1294,6 +1303,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }}
         sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
       />
+
+      {/* 实时成本追踪：输入订单号，实时查看该订单的工序成本进展与利润分析 */}
+      <div style={{ padding: '16px 0 8px' }}>
+        <LiveCostTrackerPanel />
+      </div>
 
       {/* 节点详情弹窗 - 水晶球生产节点看板 */}
       <NodeDetailModal

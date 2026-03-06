@@ -16,6 +16,7 @@ import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import DefectTracePanel from '@/modules/intelligence/pages/IntelligenceCenter/DefectTracePanel';
 
 interface WarehousingListProps {
   hook: ReturnType<typeof useProductWarehousing>;
@@ -222,6 +223,11 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           setPreviewTitle('');
         }}
       />
+
+      {/* 智能次品溯源分析：质检入库时定位高次品率工序与工人 */}
+      <div style={{ padding: '16px 24px 0' }}>
+        <DefectTracePanel />
+      </div>
     </Layout>
   );
 };

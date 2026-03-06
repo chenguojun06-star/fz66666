@@ -18,6 +18,7 @@ import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
 
 import '../StyleInfo/styles.css';
+import StyleQuoteSuggestionPanel from '@/modules/intelligence/pages/IntelligenceCenter/StyleQuoteSuggestionPanel';
 
 /**
  * 款式信息列表页
@@ -297,6 +298,11 @@ const StyleInfoListPage: React.FC = () => {
         cover={printingRecord?.cover}
         color={printingRecord?.color}
       />
+
+      {/* 智能报价建议：在款式列表页底部，助力款式开发人员快速查询历史成本与建议报价 */}
+      <div style={{ padding: '16px 0 0' }}>
+        <StyleQuoteSuggestionPanel />
+      </div>
 
       {/* 维护原因弹窗 */}
       <Modal
