@@ -15,7 +15,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import { intelligenceApi, type DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -68,8 +67,6 @@ const Dashboard: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [priorityRisks, setPriorityRisks] = useState<DeliveryRiskItem[]>([]);
-
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -263,38 +260,6 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    let disposed = false;
-    const loadPriorityRisks = async () => {
-      try {
-        const res = await intelligenceApi.assessDeliveryRisk();
-        const items = (res as any)?.data?.items ?? [];
-        if (disposed || !Array.isArray(items)) return;
-        const levelRank: Record<string, number> = { overdue: 0, danger: 1, warning: 2, safe: 3 };
-        const next = [...items]
-          .filter((item: DeliveryRiskItem) => item.riskLevel !== 'safe')
-          .sort((a: DeliveryRiskItem, b: DeliveryRiskItem) => {
-            const levelDiff = (levelRank[a.riskLevel] ?? 99) - (levelRank[b.riskLevel] ?? 99);
-            if (levelDiff !== 0) return levelDiff;
-            return (a.daysLeft ?? 999) - (b.daysLeft ?? 999);
-          })
-          .slice(0, 5);
-        setPriorityRisks(next);
-      } catch {
-        if (!disposed) setPriorityRisks([]);
-      }
-    };
-    void loadPriorityRisks();
-    return () => { disposed = true; };
-  }, []);
-
-  const getRiskTone = (riskLevel: DeliveryRiskItem['riskLevel']) => {
-    if (riskLevel === 'overdue') return { label: '已逾期', color: '#ff4136' };
-    if (riskLevel === 'danger') return { label: '高风险', color: '#ff7a45' };
-    if (riskLevel === 'warning') return { label: '需关注', color: '#f7a600' };
-    return { label: '安全', color: '#39ff14' };
-  };
-
-  useEffect(() => {
     // 给body添加class标识首页
     document.body.classList.add('dashboard-page');
     return () => {
@@ -400,45 +365,6 @@ const Dashboard: React.FC = () => {
           <div className="dashboard-table-right">
             <OverdueOrderTable />
           </div>
-        </div>
-
-        <div className="dashboard-priority-queue">
-          <div className="dashboard-priority-queue__header">
-            <div>
-              <div className="dashboard-priority-queue__title">经营风险优先队列</div>
-              <div className="dashboard-priority-queue__subtitle">沿用太空舱视觉，只保留最该先处理的 5 条风险订单。</div>
-            </div>
-            <Button size="small" onClick={() => navigate('/production/progress-detail')}>进入生产进度</Button>
-          </div>
-          {priorityRisks.length === 0 ? (
-            <div className="dashboard-priority-queue__empty">当前没有需要优先处理的高风险订单</div>
-          ) : (
-            <div className="dashboard-priority-queue__list">
-              {priorityRisks.map((item) => {
-                const tone = getRiskTone(item.riskLevel);
-                return (
-                  <button
-                    key={`${item.orderId}-${item.orderNo}`}
-                    type="button"
-                    className="dashboard-priority-queue__item"
-                    onClick={() => navigate(`/production/progress-detail?orderNo=${encodeURIComponent(item.orderNo)}`)}
-                  >
-                    <div className="dashboard-priority-queue__item-main">
-                      <div className="dashboard-priority-queue__order">{item.orderNo}</div>
-                      <div className="dashboard-priority-queue__meta">{item.styleNo || '未标款号'} · {item.factoryName || '未指定工厂'}</div>
-                      <div className="dashboard-priority-queue__desc">{item.riskDescription || '交期风险上升，建议立即介入推进。'}</div>
-                    </div>
-                    <div className="dashboard-priority-queue__item-side">
-                      <span className="dashboard-priority-queue__tag" style={{ color: tone.color, borderColor: `${tone.color}55`, background: `${tone.color}14` }}>{tone.label}</span>
-                      <span className="dashboard-priority-queue__days" style={{ color: tone.color }}>
-                        {item.daysLeft < 0 ? `逾期 ${Math.abs(item.daysLeft)} 天` : `剩 ${item.daysLeft} 天`}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         <div className="dashboard-grid">

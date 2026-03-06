@@ -138,119 +138,6 @@
   overflow: hidden;
 }
 
-.dashboard-priority-queue {
-  margin: 0 0 24px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  border: 1px solid rgba(0, 229, 255, 0.14);
-  background:
-    radial-gradient(circle at top left, rgba(0, 229, 255, 0.12), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(57, 255, 20, 0.08), transparent 24%),
-    linear-gradient(135deg, rgba(8, 20, 40, 0.96) 0%, rgba(10, 18, 34, 0.94) 100%);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-}
-
-.dashboard-priority-queue__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.dashboard-priority-queue__title {
-  color: #e8f4ff;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
-
-.dashboard-priority-queue__subtitle {
-  margin-top: 4px;
-  color: #7ea7c4;
-  font-size: 12px;
-}
-
-.dashboard-priority-queue__list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-.dashboard-priority-queue__item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  text-align: left;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(8, 20, 40, 0.56);
-  color: #dff5ff;
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dashboard-priority-queue__item:hover {
-  transform: translateY(-1px);
-  border-color: rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.12), 0 0 16px rgba(0, 229, 255, 0.08);
-}
-
-.dashboard-priority-queue__item-main {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.dashboard-priority-queue__order {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f8fbff;
-}
-
-.dashboard-priority-queue__meta {
-  margin-top: 3px;
-  color: #8fb6d0;
-  font-size: 12px;
-}
-
-.dashboard-priority-queue__desc {
-  margin-top: 6px;
-  color: #bdd7e6;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.dashboard-priority-queue__item-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.dashboard-priority-queue__tag {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.dashboard-priority-queue__days {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.dashboard-priority-queue__empty {
-  padding: 16px 0 8px;
-  text-align: center;
-  color: #87a9bf;
-  font-size: 12px;
-}
-
 /* 统计卡片网格 */
 .stats-section {
   display: grid;
@@ -282,16 +169,6 @@
 @media (max-width: 600px) {
   .stats-section {
     grid-template-columns: 1fr;
-  }
-
-  .dashboard-priority-queue__header,
-  .dashboard-priority-queue__item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .dashboard-priority-queue__item-side {
-    align-items: flex-start;
   }
 }
 

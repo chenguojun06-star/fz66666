@@ -3,13 +3,15 @@
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Switch, Tag, Typography, Upload } from 'antd';
+import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Tag, Typography, Upload } from 'antd';
 import { LockOutlined, LinkOutlined, MessageOutlined, QrcodeOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
 import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
+import tenantIntelligenceProfileService from '@/services/system/tenantIntelligenceProfileService';
+import type { TenantIntelligenceProfilePayload, TenantIntelligenceProfileResponse } from '@/services/system/tenantIntelligenceProfileService';
 import {
     getSmartFeatureFlags,
     replaceSmartFeatureFlags,
@@ -18,6 +20,7 @@ import {
 } from '@/smart/core/featureFlags';
 import feedbackService from '@/services/feedbackService';
 import type { UserFeedback } from '@/services/feedbackService';
+import ProfileSmartSettingsPanel, { SMART_FEATURE_KEYS } from './ProfileSmartSettingsPanel';
 
 type ProfileMe = {
     id?: string | number;
@@ -43,57 +46,6 @@ const FEEDBACK_STATUS_MAP: Record<string, { label: string; color: string }> = {
     CLOSED: { label: '已关闭', color: 'default' },
 };
 
-const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: string }> = {
-    'smart.guide.enabled': {
-        title: '全局引导条',
-        desc: '在页面顶部显示下一步建议与待处理提醒。',
-    },
-    'smart.dict.autocollect.enabled': {
-        title: '词典自动收录',
-        desc: '启用智能词条自动收录能力（按页面接入情况生效）。',
-    },
-    'smart.production.precheck.enabled': {
-        title: '生产预检提示',
-        desc: '扫码/生产相关操作前显示风险提示与建议。',
-    },
-    'smart.finance.explain.enabled': {
-        title: '财务解释提示',
-        desc: '在财务页面展示差异解释与风险提示。',
-    },
-    'smart.system.guard.enabled': {
-        title: '系统防呆提示',
-        desc: '在系统设置中显示配置防呆建议。',
-    },
-    'smart.worker-profile.enabled': {
-        title: '工人效率画像',
-        desc: '工资汇总人员列显示效率徽标，悬停展示该工人近期各工序日均件数与工厂均值对比。',
-    },
-    'smart.warehousing.audit.enabled': {
-        title: '质检入库 AI 洞察',
-        desc: '质检入库页顶部显示当前各阶段积压分析与优先行动建议。',
-    },
-    'smart.material.inventory.ai.enabled': {
-        title: '面辅料库存 AI 摘要',
-        desc: '面辅料库存页显示低库存预警自然语言摘要，标注最紧缺物料与补货建议。',
-    },
-    'smart.material.purchase.ai.enabled': {
-        title: '物料采购 AI 分析',
-        desc: '物料采购页顶部按订单展示到货情况、裁剪可行性判断与未到货物料供应商提醒。',
-    },
-};
-
-const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
-    'smart.guide.enabled',
-    'smart.dict.autocollect.enabled',
-    'smart.production.precheck.enabled',
-    'smart.finance.explain.enabled',
-    'smart.system.guard.enabled',
-    'smart.worker-profile.enabled',
-    'smart.warehousing.audit.enabled',
-    'smart.material.inventory.ai.enabled',
-    'smart.material.purchase.ai.enabled',
-];
-
 const ProfileInfoTab: React.FC = () => {
     const { user, updateUser, isAdmin, isTenantOwner, isSuperAdmin } = useAuth();
     const { message } = App.useApp();
@@ -115,6 +67,10 @@ const ProfileInfoTab: React.FC = () => {
     const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
     const [smartFlags, setSmartFlags] = useState(() => getSmartFeatureFlags());
     const [savingSmartFlags, setSavingSmartFlags] = useState(false);
+    const [smartProfileForm] = Form.useForm<TenantIntelligenceProfilePayload>();
+    const [smartProfile, setSmartProfile] = useState<TenantIntelligenceProfileResponse | null>(null);
+    const [loadingSmartProfile, setLoadingSmartProfile] = useState(false);
+    const [savingSmartProfile, setSavingSmartProfile] = useState(false);
     const canManageSmartFlags = isAdmin || isTenantOwner || isSuperAdmin;
 
     // 主题
@@ -180,6 +136,28 @@ const ProfileInfoTab: React.FC = () => {
         }
     };
 
+    const syncSmartProfileForm = (profile: TenantIntelligenceProfileResponse) => {
+        setSmartProfile(profile);
+        smartProfileForm.setFieldsValue({
+            primaryGoal: profile.primaryGoal,
+            deliveryWarningDays: profile.deliveryWarningDays,
+            anomalyWarningCount: profile.anomalyWarningCount,
+            lowMarginThreshold: profile.lowMarginThreshold,
+        });
+    };
+
+    const loadSmartProfile = async () => {
+        setLoadingSmartProfile(true);
+        try {
+            const profile = await tenantIntelligenceProfileService.getCurrent();
+            syncSmartProfileForm(profile);
+        } catch (e: any) {
+            message.error(e?.message || '加载智能经营画像失败');
+        } finally {
+            setLoadingSmartProfile(false);
+        }
+    };
+
     useEffect(() => {
         applyTheme(theme);
         form.setFieldsValue({
@@ -194,6 +172,7 @@ const ProfileInfoTab: React.FC = () => {
         tenantSmartFeatureService.list().then((flags) => {
             setSmartFlags(replaceSmartFeatureFlags(flags));
         }).catch(() => {});
+        void loadSmartProfile();
 
         // 加载租户信息
         const tid = (user as any)?.tenantId;
@@ -383,7 +362,7 @@ const ProfileInfoTab: React.FC = () => {
 
     const updateSmartFlag = (key: SmartFeatureKey, enabled: boolean) => {
         const next = { ...smartFlags, [key]: enabled } as Record<SmartFeatureKey, boolean>;
-        void saveSmartFlags(next, `${SMART_FEATURE_LABELS[key].title}已${enabled ? '开启' : '关闭'}`);
+        void saveSmartFlags(next, `智能开关已${enabled ? '开启' : '关闭'}`);
     };
 
     const setAllSmartFlags = (enabled: boolean) => {
@@ -400,6 +379,47 @@ const ProfileInfoTab: React.FC = () => {
     };
 
     const enabledCount = SMART_FEATURE_KEYS.filter((key) => smartFlags[key]).length;
+
+    const saveSmartProfile = async () => {
+        if (!canManageSmartFlags) {
+            message.error('仅租户管理员可修改智能经营画像');
+            return;
+        }
+        try {
+            const values = await smartProfileForm.validateFields();
+            setSavingSmartProfile(true);
+            const profile = await tenantIntelligenceProfileService.save({
+                primaryGoal: values.primaryGoal,
+                deliveryWarningDays: Number(values.deliveryWarningDays),
+                anomalyWarningCount: Number(values.anomalyWarningCount),
+                lowMarginThreshold: Number(values.lowMarginThreshold),
+            });
+            syncSmartProfileForm(profile);
+            message.success('智能经营画像已保存');
+        } catch (e: any) {
+            if (e?.errorFields?.length) return;
+            message.error(e?.message || '保存智能经营画像失败');
+        } finally {
+            setSavingSmartProfile(false);
+        }
+    };
+
+    const resetSmartProfile = async () => {
+        if (!canManageSmartFlags) {
+            message.error('仅租户管理员可修改智能经营画像');
+            return;
+        }
+        try {
+            setSavingSmartProfile(true);
+            const profile = await tenantIntelligenceProfileService.reset();
+            syncSmartProfileForm(profile);
+            message.success('已恢复为系统学习建议');
+        } catch (e: any) {
+            message.error(e?.message || '恢复学习建议失败');
+        } finally {
+            setSavingSmartProfile(false);
+        }
+    };
 
     return (
         <>
@@ -612,61 +632,23 @@ const ProfileInfoTab: React.FC = () => {
                             );
                         })()}
 
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                <MessageOutlined style={{ color: 'var(--primary-color)' }} />
-                                <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                    （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
-                                </Typography.Text>
-                            </div>
-                            <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-                                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                                        开关已升级为按租户持久化保存，同租户成员读取同一套配置。
-                                    </Typography.Text>
-                                    <Space>
-                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={() => setAllSmartFlags(true)}>全部开启</Button>
-                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={() => setAllSmartFlags(false)}>全部关闭</Button>
-                                        <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={resetSmartFlags}>恢复默认</Button>
-                                    </Space>
-                                </Space>
-
-                                {SMART_FEATURE_KEYS.map((featureKey) => {
-                                    const meta = SMART_FEATURE_LABELS[featureKey];
-                                    return (
-                                        <div
-                                            key={featureKey}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: 12,
-                                                padding: '8px 0',
-                                                borderTop: '1px solid #f0f0f0',
-                                            }}
-                                        >
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
-                                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {meta.desc}
-                                                </Typography.Text>
-                                            </div>
-                                            <Switch
-                                                checked={Boolean(smartFlags[featureKey])}
-                                                disabled={!canManageSmartFlags || savingSmartFlags}
-                                                onChange={(checked) => updateSmartFlag(featureKey, checked)}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                {!canManageSmartFlags && (
-                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                        当前账号仅可查看租户智能开关，修改需使用租户管理员账号。
-                                    </Typography.Text>
-                                )}
-                            </Card>
-                        </div>
+                        <ProfileSmartSettingsPanel
+                            canManageSmartFlags={canManageSmartFlags}
+                            smartFlags={smartFlags as Record<SmartFeatureKey, boolean>}
+                            savingSmartFlags={savingSmartFlags}
+                            enabledCount={enabledCount}
+                            onEnableAll={() => setAllSmartFlags(true)}
+                            onDisableAll={() => setAllSmartFlags(false)}
+                            onResetFlags={resetSmartFlags}
+                            onToggleFlag={updateSmartFlag}
+                            smartProfileForm={smartProfileForm}
+                            smartProfile={smartProfile}
+                            loadingSmartProfile={loadingSmartProfile}
+                            savingSmartProfile={savingSmartProfile}
+                            onRefreshProfile={() => void loadSmartProfile()}
+                            onResetProfile={resetSmartProfile}
+                            onSaveProfile={saveSmartProfile}
+                        />
                     </div>
 
                     {/* 提交反馈弹窗 */}

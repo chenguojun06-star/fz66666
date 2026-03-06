@@ -19,7 +19,7 @@ public class TenantIntelligencePreferenceService {
     private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
 
     public TenantPreferenceProfile learnProfile(List<ProductionOrder> orders, List<ScanRecord> scanRecords) {
-        TenantPreferenceProfile profile = new TenantPreferenceProfile();
+        TenantPreferenceProfile profile = defaultProfile();
 
         double delayedRate = orders.isEmpty() ? 0D : orders.stream()
                 .filter(order -> "delayed".equalsIgnoreCase(order.getStatus()))
@@ -54,13 +54,13 @@ public class TenantIntelligencePreferenceService {
 
         if (profitPressure >= deliveryPressure && profitPressure >= cashflowPressure) {
             profile.setPrimaryGoal("PROFIT");
-            profile.setPrimaryGoalLabel("利润优先");
+            profile.setPrimaryGoalLabel(resolvePrimaryGoalLabel("PROFIT"));
         } else if (cashflowPressure >= deliveryPressure && cashflowPressure > 0.35D) {
             profile.setPrimaryGoal("CASHFLOW");
-            profile.setPrimaryGoalLabel("回款优先");
+            profile.setPrimaryGoalLabel(resolvePrimaryGoalLabel("CASHFLOW"));
         } else {
             profile.setPrimaryGoal("DELIVERY");
-            profile.setPrimaryGoalLabel("交期优先");
+            profile.setPrimaryGoalLabel(resolvePrimaryGoalLabel("DELIVERY"));
         }
 
         FactoryRiskAggregate topFactory = buildFactoryRiskAggregates(orders).values().stream()
@@ -76,6 +76,55 @@ public class TenantIntelligencePreferenceService {
         }
 
         return profile;
+    }
+
+    public TenantPreferenceProfile defaultProfile() {
+        return new TenantPreferenceProfile();
+    }
+
+    public TenantPreferenceProfile mergeProfile(TenantPreferenceProfile learnedProfile,
+                                                String primaryGoal,
+                                                Integer deliveryWarningDays,
+                                                Integer anomalyWarningCount,
+                                                BigDecimal lowMarginThreshold) {
+        TenantPreferenceProfile merged = copyProfile(learnedProfile == null ? defaultProfile() : learnedProfile);
+        if (primaryGoal != null && !primaryGoal.isBlank()) {
+            merged.setPrimaryGoal(primaryGoal.trim().toUpperCase());
+            merged.setPrimaryGoalLabel(resolvePrimaryGoalLabel(merged.getPrimaryGoal()));
+        }
+        if (deliveryWarningDays != null) {
+            merged.setDeliveryWarningDays(deliveryWarningDays);
+        }
+        if (anomalyWarningCount != null) {
+            merged.setAnomalyWarningCount(anomalyWarningCount);
+        }
+        if (lowMarginThreshold != null) {
+            merged.setLowMarginThreshold(lowMarginThreshold.setScale(2, RoundingMode.HALF_UP));
+        }
+        return merged;
+    }
+
+    public TenantPreferenceProfile copyProfile(TenantPreferenceProfile source) {
+        TenantPreferenceProfile copy = defaultProfile();
+        if (source == null) {
+            return copy;
+        }
+        copy.setPrimaryGoal(source.getPrimaryGoal());
+        copy.setPrimaryGoalLabel(source.getPrimaryGoalLabel());
+        copy.setDeliveryWarningDays(source.getDeliveryWarningDays());
+        copy.setAnomalyWarningCount(source.getAnomalyWarningCount());
+        copy.setLowMarginThreshold(source.getLowMarginThreshold());
+        copy.setTopRiskFactoryName(source.getTopRiskFactoryName());
+        copy.setTopRiskFactoryReason(source.getTopRiskFactoryReason());
+        return copy;
+    }
+
+    public String resolvePrimaryGoalLabel(String primaryGoal) {
+        return switch (primaryGoal == null ? "DELIVERY" : primaryGoal.trim().toUpperCase()) {
+            case "PROFIT" -> "利润优先";
+            case "CASHFLOW" -> "回款优先";
+            default -> "交期优先";
+        };
     }
 
     private BigDecimal calculateAverageMargin(List<ProductionOrder> orders) {

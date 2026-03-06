@@ -21,7 +21,6 @@ import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.intelligence.service.IntelligenceReasonLibraryService;
-import com.fashion.supplychain.intelligence.service.TenantIntelligencePreferenceService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -64,7 +63,7 @@ public class StyleIntelligenceProfileOrchestrator {
     private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
     @Autowired
-    private TenantIntelligencePreferenceService tenantIntelligencePreferenceService;
+    private TenantIntelligenceProfileViewOrchestrator tenantIntelligenceProfileViewOrchestrator;
 
     @Autowired
     private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
@@ -79,7 +78,7 @@ public class StyleIntelligenceProfileOrchestrator {
 
         List<ProductionOrder> orders = loadOrders(style.getStyleNo());
         List<ScanRecord> scanRecords = loadScanRecords(style.getStyleNo());
-        TenantPreferenceProfile tenantProfile = tenantIntelligencePreferenceService.learnProfile(orders, scanRecords);
+        TenantPreferenceProfile tenantProfile = tenantIntelligenceProfileViewOrchestrator.getCurrentTenantPreferenceProfile();
         response.setTenantProfile(tenantProfile);
 
         fillBaseInfo(response, style, tenantProfile);

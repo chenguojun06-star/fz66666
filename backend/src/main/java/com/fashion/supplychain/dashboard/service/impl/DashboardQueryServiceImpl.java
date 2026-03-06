@@ -544,29 +544,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
-                .isNotNull(ScanRecord::getOperatorName)     // 必须有操作人名称
-                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
-                .isNotNull(ScanRecord::getOperatorId)       // 必须有真实操作人ID
-                .ne(ScanRecord::getOperatorId, "")          // 操作人ID不能为空字符串
-                .isNotNull(ScanRecord::getScanTime)         // 必须有扫码时间
+                .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
+                .isNotNull(ScanRecord::getScanTime)
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
 
-        log.info("查询到{}条真实扫码记录", scans.size());
-        if (!scans.isEmpty()) {
-            log.info("前3条: {}", scans.stream().limit(3).map(s ->
-                String.format("[订单=%s, 类型=%s, 操作人=%s, 操作人ID=%s]",
-                    s.getOrderNo(), s.getScanType(), s.getOperatorName(), s.getOperatorId())
-            ).toList());
-
-            // 调试：打印所有记录的operator信息
-            long systemCount = scans.stream().filter(s -> "system".equals(s.getOperatorName())).count();
-            long nullNameCount = scans.stream().filter(s -> s.getOperatorName() == null).count();
-            long nullIdCount = scans.stream().filter(s -> s.getOperatorId() == null).count();
-            long emptyIdCount = scans.stream().filter(s -> "".equals(s.getOperatorId())).count();
-            log.warn("过滤结果异常 - system: {}, nullName: {}, nullId: {}, emptyId: {}",
-                systemCount, nullNameCount, nullIdCount, emptyIdCount);
-        }
+        log.debug("查询到{}条扫码记录", scans.size());
 
         // 按日期分组统计次数
         Map<String, Integer> dailyCounts = new java.util.HashMap<>();
@@ -598,15 +581,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
-                .isNotNull(ScanRecord::getOperatorName)
-                .ne(ScanRecord::getOperatorName, "system")
-                .isNotNull(ScanRecord::getOperatorId)
-                .ne(ScanRecord::getOperatorId, "")
+                .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
                 .isNotNull(ScanRecord::getScanTime)
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
 
-        log.debug("查询到{}条真实扫码记录", scans.size());
+        log.debug("查询到{}条扫码记录（数量统计）", scans.size());
 
         // 按日期分组统计数量
         Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
