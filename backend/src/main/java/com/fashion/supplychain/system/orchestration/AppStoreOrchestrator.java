@@ -737,24 +737,14 @@ public class AppStoreOrchestrator {
                         endTime, operator, now, subId);
                     log.info("[超管直接开通] 租户{}({}) 续期签 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
                 } else {
-                    // 新建订阅
-                    TenantSubscription sub = new TenantSubscription();
-                    sub.setSubscriptionNo(tenantSubscriptionService.generateSubscriptionNo());
-                    sub.setTenantId(targetTenantId);
-                    sub.setTenantName(tenantName);
-                    sub.setAppId(appId);
-                    sub.setAppCode(appCode);
-                    sub.setAppName(appName);
-                    sub.setSubscriptionType("PERPETUAL");
-                    sub.setPrice(BigDecimal.ZERO);
-                    sub.setUserCount(999);
-                    sub.setStartTime(now);
-                    sub.setEndTime(endTime);
-                    sub.setStatus("ACTIVE");
-                    sub.setAutoRenew(false);
-                    sub.setCreatedBy(operator);
-                    sub.setRemark("超管直接开通");
-                    tenantSubscriptionService.save(sub);
+                    // 新建订阅 — 直接用 JDBC 避免 @TableField(fill=INSERT) 覆盖 tenantId
+                    String subNo = tenantSubscriptionService.generateSubscriptionNo();
+                    jdbcTemplate.update(
+                        "INSERT INTO t_tenant_subscription (subscription_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
+                        "subscription_type, price, user_count, start_time, end_time, status, auto_renew, created_by, remark, create_time, delete_flag) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        subNo, targetTenantId, tenantName, appId, appCode, appName,
+                        "PERPETUAL", 0, 999, now, endTime, "ACTIVE", false, operator, "超管直接开通", now, 0);
                     log.info("[超管直接开通] 租户{}({}) 新建订阅 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
                 }
                 activated.add(appCode);
