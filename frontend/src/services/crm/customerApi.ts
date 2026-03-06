@@ -38,25 +38,25 @@ type PageResult<T> = ApiResult<{ records: T[]; total: number; current: number; s
 export const customerApi = {
   /** 客户列表（分页） */
   list: (params: CustomerListParams = {}) =>
-    api.post<PageResult<Customer>>('/api/crm/customers/list', params),
+    api.post<PageResult<Customer>>('/crm/customers/list', params),
 
   /** 获取单个客户详情 */
-  getById: (id: string) => api.get<ApiResult<Customer>>(`/api/crm/customers/${id}`),
+  getById: (id: string) => api.get<ApiResult<Customer>>(`/crm/customers/${id}`),
 
   /** 新建客户 */
-  create: (data: Customer) => api.post<ApiResult<Customer>>('/api/crm/customers', data),
+  create: (data: Customer) => api.post<ApiResult<Customer>>('/crm/customers', data),
 
   /** 更新客户 */
   update: (id: string, data: Partial<Customer>) =>
-    api.put<ApiResult<void>>(`/api/crm/customers/${id}`, data),
+    api.put<ApiResult<void>>(`/crm/customers/${id}`, data),
 
   /** 删除客户 */
-  delete: (id: string) => api.delete<ApiResult<void>>(`/api/crm/customers/${id}`),
+  delete: (id: string) => api.delete<ApiResult<void>>(`/crm/customers/${id}`),
 
   /** 获取客户关联的历史生产订单 */
   getOrders: (customerId: string) =>
-    api.get<ApiResult<unknown[]>>(`/api/crm/customers/${customerId}/orders`),
+    api.get<ApiResult<unknown[]>>(`/crm/customers/${customerId}/orders`),
 
   /** 获取统计数据 */
-  getStats: () => api.get<ApiResult<CustomerStats>>('/api/crm/stats'),
+  getStats: () => api.get<ApiResult<CustomerStats>>('/crm/stats'),
 };
