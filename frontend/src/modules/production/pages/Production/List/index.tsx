@@ -30,7 +30,7 @@ import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCar
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
 import { useDeliveryRiskMap, clearDeliveryRiskCache } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
+import type { DeliveryRiskItem, AnomalyItem } from '@/services/intelligence/intelligenceApi';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -169,6 +169,25 @@ const ProductionList: React.FC = () => {
     return counts;
   }, [productionList, deliveryRiskMap]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+
+  // ===== 异常检测 Banner =====
+  const [anomalyItems, setAnomalyItems] = useState<AnomalyItem[]>([]);
+  const [anomalyBannerVisible, setAnomalyBannerVisible] = useState(false);
+  const anomalyFetched = useRef(false);
+
+  const fetchAnomalies = useCallback(async () => {
+    if (anomalyFetched.current || !isSmartFeatureEnabled('smart.production.precheck.enabled')) return;
+    anomalyFetched.current = true;
+    try {
+      const res = await intelligenceApi.detectAnomalies() as any;
+      const items: AnomalyItem[] = res?.data?.items ?? res?.items ?? [];
+      const significant = items.filter(i => i.severity === 'critical' || i.severity === 'warning');
+      if (significant.length > 0) {
+        setAnomalyItems(significant);
+        setAnomalyBannerVisible(true);
+      }
+    } catch { /* silent — 不阻塞主列表 */ }
+  }, []);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
   const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
@@ -360,6 +379,13 @@ const ProductionList: React.FC = () => {
   // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免无限循环
   }, [productionList, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
 
+  // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
+  useEffect(() => {
+    if (productionList.length > 0) void fetchAnomalies();
+  // productionList.length 变化是触发时机，fetchAnomalies 是稳定回调
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productionList.length]);
+
   // URL 参数解析
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -474,6 +500,52 @@ const ProductionList: React.FC = () => {
               <SmartErrorNotice error={smartError} onFix={fetchProductionList} />
             </div>
           ) : null}
+
+          {anomalyBannerVisible && anomalyItems.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <Alert
+                type={anomalyItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
+                showIcon
+                closable
+                onClose={() => setAnomalyBannerVisible(false)}
+                message={
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>
+                    🔔 智能异常检测：发现 {anomalyItems.length} 条异常
+                  </span>
+                }
+                description={
+                  <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {anomalyItems.slice(0, 5).map((item, idx) => {
+                      const severityColor = item.severity === 'critical' ? '#ff4d4f' : '#fa8c16';
+                      const typeLabel: Record<string, string> = {
+                        output_spike: '产量异常',
+                        quality_spike: '质量异常',
+                        idle_worker: '工人空闲',
+                        night_scan: '夜间扫码',
+                      };
+                      return (
+                        <div key={idx} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ color: severityColor, fontWeight: 700, minWidth: 60 }}>
+                            [{typeLabel[item.type] ?? item.type}]
+                          </span>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)', minWidth: 80 }}>{item.targetName}</span>
+                          <span>{item.description}</span>
+                          {item.deviationRatio > 0 && (
+                            <span style={{ color: severityColor, marginLeft: 4 }}>
+                              偏差 {(item.deviationRatio * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {anomalyItems.length > 5 && (
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>…还有 {anomalyItems.length - 5} 条，请前往智能运营中心查看</div>
+                    )}
+                  </div>
+                }
+              />
+            </div>
+          )}
 
           <PageStatCards
             activeKey={activeStatFilter}
