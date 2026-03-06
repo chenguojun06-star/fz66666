@@ -470,12 +470,14 @@ const CrmDashboard: React.FC = () => {
     const checkSubscribed = async () => {
       try {
         const apps = await appStoreService.getMyApps();
-        const activeFromApps = (Array.isArray(apps) ? apps : []).some((a: any) =>
+        const appList = Array.isArray(apps) ? apps : ((apps as any)?.data ?? []);
+        const activeFromApps = appList.some((a: any) =>
           hasActiveSubscription(a, CRM_APP_CODE_ALIASES)
         );
         if (activeFromApps) { setSubscribed(true); return; }
         const subscriptions = await appStoreService.getMySubscriptions();
-        const activeFromSubs = (Array.isArray(subscriptions) ? subscriptions : []).some((s: any) =>
+        const subList = Array.isArray(subscriptions) ? subscriptions : ((subscriptions as any)?.data ?? []);
+        const activeFromSubs = subList.some((s: any) =>
           hasActiveSubscription(s, CRM_APP_CODE_ALIASES)
         );
         setSubscribed(activeFromSubs);
