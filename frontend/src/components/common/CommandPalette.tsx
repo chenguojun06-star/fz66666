@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { globalSearchApi } from '@/services/production/productionApi';
 import type { GlobalSearchOrderItem, GlobalSearchStyleItem, GlobalSearchWorkerItem } from '@/services/production/productionApi';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import './CommandPalette.css';
 
 // ─── 类型 ─────────────────────────────────────────────────────
@@ -239,7 +240,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                   >
                     <span className="cp-item-icon cp-icon-style">
                       {s.coverUrl ? (
-                        <img src={s.coverUrl} alt={s.styleName} className="cp-cover" />
+                        <img src={getFullAuthedFileUrl(s.coverUrl)} alt={s.styleName} className="cp-cover" />
                       ) : (
                         <SkinOutlined />
                       )}
