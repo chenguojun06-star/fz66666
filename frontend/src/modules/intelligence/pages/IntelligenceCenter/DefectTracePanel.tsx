@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Input, Button, Progress, Tag, Table } from 'antd';
 import { BugOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -9,8 +9,18 @@ const riskColor: Record<string, string> = {
 };
 
 /** 次品溯源可视化面板 — 按订单分析工人/工序缺陷分布 */
-const DefectTracePanel: React.FC = () => {
-  const [orderId, setOrderId] = useState('');
+interface DefectTracePanelProps {
+  defaultOrderId?: string;
+  autoLoad?: boolean;
+  compact?: boolean;
+}
+
+const DefectTracePanel: React.FC<DefectTracePanelProps> = ({
+  defaultOrderId = '',
+  autoLoad = false,
+  compact = false,
+}) => {
+  const [orderId, setOrderId] = useState(defaultOrderId);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DefectTraceResponse | null>(null);
   const [error, setError] = useState('');
@@ -35,19 +45,54 @@ const DefectTracePanel: React.FC = () => {
 
   const fmtRate = (r: number) => `${(r * 100).toFixed(1)}%`;
 
+  useEffect(() => {
+    setOrderId(defaultOrderId || '');
+  }, [defaultOrderId]);
+
+  useEffect(() => {
+    if (!autoLoad) return;
+    const id = String(defaultOrderId || '').trim();
+    if (!id) return;
+
+    let alive = true;
+    const run = async () => {
+      setLoading(true);
+      setError('');
+      setData(null);
+      try {
+        const res = await intelligenceApi.getDefectTrace(id);
+        const d = (res as any)?.data as DefectTraceResponse | null;
+        if (!alive) return;
+        if (!d) {
+          setError('未找到该订单的扫码质量数据');
+          return;
+        }
+        setData(d);
+      } catch {
+        if (alive) setError('查询失败，请稍后重试');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      alive = false;
+    };
+  }, [autoLoad, defaultOrderId]);
+
   return (
     <div className="c-card">
       <div className="c-card-title">
         <BugOutlined /> 次品溯源分析
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: compact ? 12 : 16 }}>
         <Input
           placeholder="输入订单 ID"
           value={orderId}
           onChange={e => setOrderId(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ maxWidth: 240 }}
+          style={{ maxWidth: compact ? 200 : 240 }}
         />
         <Button icon={<SearchOutlined />} loading={loading} onClick={handleSearch} type="primary">
           溯源
@@ -59,7 +104,7 @@ const DefectTracePanel: React.FC = () => {
       {data && (
         <>
           {/* 汇总指标 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
             {[
               { label: '总扫码次数', value: data.totalScans },
               { label: '次品数', value: data.totalDefects },
@@ -84,7 +129,7 @@ const DefectTracePanel: React.FC = () => {
 
           {/* 工序热点 */}
           {data.hotProcesses?.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: compact ? 12 : 16 }}>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>⚡ 高风险工序</div>
               {data.hotProcesses.slice(0, 5).map(p => (
                 <div key={p.processName} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -110,7 +155,7 @@ const DefectTracePanel: React.FC = () => {
               size="small"
               rowKey="operatorId"
               dataSource={data.workers}
-              pagination={{ pageSize: 5, size: 'small' }}
+              pagination={{ pageSize: compact ? 4 : 5, size: 'small' }}
               columns={[
                 { title: '工人', dataIndex: 'operatorName', width: 100 },
                 { title: '次品/总扫', render: (_, r) => `${r.defectCount}/${r.totalScans}`, width: 90 },

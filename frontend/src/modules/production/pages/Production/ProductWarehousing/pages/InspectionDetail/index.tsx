@@ -23,6 +23,7 @@ import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants'
 import UnqualifiedUpload from '../../components/WarehousingModal/components/UnqualifiedUpload';
 import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
+import DefectTracePanel from '@/modules/intelligence/pages/IntelligenceCenter/DefectTracePanel';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -895,6 +896,10 @@ const InspectionDetail: React.FC = () => {
             {order.remarks && (
               <Alert type="info" message="订单备注" description={order.remarks} showIcon />
             )}
+
+            <Card size="small" title="次品溯源分析" bodyStyle={{ padding: 12 }}>
+              <DefectTracePanel defaultOrderId={String(orderId || '').trim()} autoLoad compact />
+            </Card>
           </div>
 
           {/* ========== 右侧：上方标签页 + 下方质检操作区 ========== */}

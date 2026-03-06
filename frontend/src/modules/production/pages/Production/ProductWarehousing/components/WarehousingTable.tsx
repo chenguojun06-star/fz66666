@@ -314,20 +314,6 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       rowKey="id"
       loading={loading}
       scroll={{ x: 'max-content' }}
-      rowClassName={() => 'clickable-row'}
-      onRow={(record: unknown) => {
-        return {
-          onClick: (e) => {
-            const target = e.target as HTMLElement | null;
-            if (!target) return;
-            const interactive = target.closest(
-              'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
-            );
-            if (interactive) return;
-            goToDetail(record as WarehousingType, 'inspect');
-          },
-        };
-      }}
       pagination={{
         current: queryParams.page,
         pageSize: queryParams.pageSize,
