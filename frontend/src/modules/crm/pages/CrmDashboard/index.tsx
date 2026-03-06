@@ -1,14 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Button, Typography, Tag, Spin, Alert } from 'antd';
-import { LockOutlined, RocketOutlined, ArrowRightOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Button, Card, Col, Descriptions, Drawer, Form, Input,
+  message, Modal, Row, Select, Space, Spin, Table, Tag, Typography,
+} from 'antd';
+import {
+  ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined,
+  EditOutlined, EyeOutlined, LockOutlined, PlusOutlined,
+  RocketOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
+import { customerApi, type Customer } from '@/services/crm/customerApi';
 
 const { Title, Text, Paragraph } = Typography;
 
+// ─── 订阅检测（保持原有逻辑）───────────────────────────────────────
+const CRM_APP_CODE_ALIASES = ['CRM_MODULE', 'CRM'];
+
+const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
+  const code = String(item?.appCode || '').trim().toUpperCase();
+  if (!appCodeAliases.includes(code)) return false;
+  const status = String(item?.status || '').trim().toUpperCase();
+  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
+  if (item?.isExpired === true) return false;
+  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
+  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
+  return isStatusActive && notExpired;
+};
+
+// ─── 锁定页（未订阅时展示）─────────────────────────────────────────
 const FEATURES = [
   { icon: '👥', title: '客户档案管理', desc: '统一管理B端客户信息、联系人、合作历史' },
   { icon: '💳', title: '应收账款追踪', desc: '发货即自动生成应收单，逾期自动提醒催款' },
@@ -18,23 +42,422 @@ const FEATURES = [
   { icon: '📋', title: '报价单生成', desc: '一键生成带款式图、价格、工艺描述的PDF报价单' },
 ];
 
-const CRM_APP_CODE_ALIASES = ['CRM_MODULE', 'CRM'];
+const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
+  <>
+    <Card
+      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', marginBottom: 24 }}
+      bodyStyle={{ padding: '32px 40px' }}
+    >
+      <Row align="middle" gutter={24}>
+        <Col flex="auto">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+            <Tag color="gold" style={{ fontWeight: 600 }}>付费模块 · ¥599/月</Tag>
+          </div>
+          <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>客户管理 CRM</Title>
+          <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
+            深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。
+          </Paragraph>
+        </Col>
+        <Col>
+          <Button type="primary" size="large" icon={<RocketOutlined />}
+            style={{ background: '#fff', color: '#764ba2', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
+            onClick={onGoStore}
+          >
+            立即开通 <ArrowRightOutlined />
+          </Button>
+        </Col>
+      </Row>
+    </Card>
+    <Title level={5} style={{ marginBottom: 16 }}>开通后解锁以下功能</Title>
+    <Row gutter={[16, 16]}>
+      {FEATURES.map(f => (
+        <Col span={8} key={f.title}>
+          <Card size="small" style={{ height: '100%', opacity: 0.85 }} hoverable={false}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
+              <div>
+                <Text strong>{f.title}</Text>
+                <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>{f.desc}</Paragraph>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+    <Card style={{ marginTop: 24, background: '#f8f9fa' }} bordered={false}>
+      <Row gutter={24} align="middle">
+        <Col span={16}>
+          <Text strong>为什么比鼎普便宜5倍？</Text>
+          <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
+            鼎普 CRM 模块定价 ¥3000+/月，功能复杂适合大企业。本模块专注中小服装工厂核心需求：
+            应收款追踪 + 客户门户查单，去掉80%用不上的功能，降到 ¥599/月，90天回本，开通当月即可用起来。
+          </Paragraph>
+        </Col>
+        <Col span={8} style={{ textAlign: 'center' }}>
+          <Button type="primary" size="large" onClick={onGoStore} style={{ width: '100%' }}>
+            前往应用商店开通
+          </Button>
+        </Col>
+      </Row>
+    </Card>
+  </>
+);
 
-const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
-  const code = String(item?.appCode || '').trim().toUpperCase();
-  const match = appCodeAliases.includes(code);
-  if (!match) return false;
+// ─── 表单 Modal（新建/编辑客户）────────────────────────────────────
+interface CustomerFormModalProps {
+  open: boolean;
+  editData: Customer | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
 
-  const status = String(item?.status || '').trim().toUpperCase();
-  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
+const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, onClose, onSuccess }) => {
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
 
-  if (item?.isExpired === true) return false;
-  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
-  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
+  useEffect(() => {
+    if (open) {
+      form.setFieldsValue(editData ?? { status: 'ACTIVE', customerLevel: 'NORMAL' });
+    } else {
+      form.resetFields();
+    }
+  }, [open, editData, form]);
 
-  return isStatusActive && notExpired;
+  const handleOk = async () => {
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      if (editData?.id) {
+        await customerApi.update(editData.id, values);
+        message.success('更新成功');
+      } else {
+        await customerApi.create(values);
+        message.success('新建成功');
+      }
+      onSuccess();
+      onClose();
+    } catch {
+      message.error('保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={editData?.id ? '编辑客户' : '新建客户'}
+      open={open}
+      onOk={handleOk}
+      onCancel={onClose}
+      confirmLoading={saving}
+      width="40vw"
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="companyName" label="公司名称" rules={[{ required: true, message: '请输入公司名称' }]}>
+              <Input placeholder="请输入客户公司名称" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="customerLevel" label="客户等级">
+              <Select options={[{ value: 'NORMAL', label: '普通客户' }, { value: 'VIP', label: 'VIP客户' }]} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="contactPerson" label="联系人">
+              <Input placeholder="对接人姓名" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="contactPhone" label="联系电话">
+              <Input placeholder="手机号或座机" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="contactEmail" label="邮箱">
+              <Input placeholder="电子邮箱" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="industry" label="所属行业">
+              <Input placeholder="如：服装、家纺" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item name="address" label="地址">
+          <Input placeholder="公司地址" />
+        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="source" label="客户来源">
+              <Input placeholder="如：转介绍、展会、网络" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="status" label="状态">
+              <Select options={[{ value: 'ACTIVE', label: '合作中' }, { value: 'INACTIVE', label: '已停合作' }]} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item name="remark" label="备注">
+          <Input.TextArea rows={2} placeholder="其他备注信息" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
 };
 
+// ─── 主功能页（已订阅时展示）────────────────────────────────────────
+const CustomerManagement: React.FC = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [stats, setStats] = useState({ total: 0, newThisMonth: 0, vip: 0 });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState<Customer | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerData, setDrawerData] = useState<Customer | null>(null);
+  const [drawerOrders, setDrawerOrders] = useState<any[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+
+  const fetchList = useCallback(async (page = pagination.current, kw = keyword, st = statusFilter) => {
+    setLoading(true);
+    try {
+      const res = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
+      const data = (res as any)?.data ?? res;
+      setCustomers(data?.records ?? []);
+      setTotal(data?.total ?? 0);
+    } catch {
+      message.error('加载客户列表失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.pageSize, keyword, statusFilter]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await customerApi.getStats();
+      const data = (res as any)?.data ?? res;
+      setStats({ total: data?.total ?? 0, newThisMonth: data?.newThisMonth ?? 0, vip: data?.vip ?? 0 });
+    } catch { /* 统计失败不影响主流程 */ }
+  }, []);
+
+  useEffect(() => {
+    fetchList(1);
+    fetchStats();
+  }, []);
+
+  const handleSearch = () => {
+    setPagination(p => ({ ...p, current: 1 }));
+    fetchList(1, keyword, statusFilter);
+  };
+
+  const handleTableChange = (p: TablePaginationConfig) => {
+    const page = p.current ?? 1;
+    setPagination({ current: page, pageSize: p.pageSize ?? 20 });
+    fetchList(page);
+  };
+
+  const handleDelete = (record: Customer) => {
+    Modal.confirm({
+      title: `确认删除客户「${record.companyName}」？`,
+      content: '删除后不可恢复',
+      okType: 'danger',
+      onOk: async () => {
+        await customerApi.delete(record.id!);
+        message.success('已删除');
+        fetchList(pagination.current);
+        fetchStats();
+      },
+    });
+  };
+
+  const openDrawer = async (record: Customer) => {
+    setDrawerData(record);
+    setDrawerOpen(true);
+    setDrawerLoading(true);
+    try {
+      const res = await customerApi.getOrders(record.id!);
+      setDrawerOrders(((res as any)?.data ?? res) ?? []);
+    } catch {
+      setDrawerOrders([]);
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  const columns: ColumnsType<Customer> = [
+    { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    { title: '公司名称', dataIndex: 'companyName', width: 180, render: (v, r) => (
+      <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => openDrawer(r)}>{v}</Button>
+    )},
+    { title: '等级', dataIndex: 'customerLevel', width: 90, render: v =>
+      v === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>
+    },
+    { title: '联系人', dataIndex: 'contactPerson', width: 100 },
+    { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
+    { title: '状态', dataIndex: 'status', width: 90, render: v =>
+      v === 'ACTIVE' ? <Tag color="green">合作中</Tag> : <Tag color="default">已停合作</Tag>
+    },
+    { title: '创建人', dataIndex: 'creatorName', width: 90 },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, render: v => v?.substring(0, 16) ?? '-' },
+    {
+      title: '操作', width: 140, fixed: 'right',
+      render: (_, record) => (
+        <Space size={4}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => openDrawer(record)}>详情</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => { setEditData(record); setModalOpen(true); }}>编辑</Button>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      {/* 统计卡片 */}
+      <Row gutter={16} style={{ marginBottom: 20 }}>
+        {[
+          { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: '#1677ff' },
+          { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#52c41a' },
+          { icon: <TrophyOutlined />, label: 'VIP客户', value: stats.vip, color: '#fa8c16' },
+        ].map(s => (
+          <Col span={8} key={s.label}>
+            <Card size="small" bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+              <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* 搜索栏 */}
+      <Card size="small" style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Row gutter={12} align="middle">
+          <Col flex="auto">
+            <Space>
+              <Input
+                placeholder="搜索公司名称、联系人、电话"
+                prefix={<SearchOutlined />}
+                value={keyword}
+                onChange={e => setKeyword(e.target.value)}
+                onPressEnter={handleSearch}
+                style={{ width: 280 }}
+                allowClear
+              />
+              <Select
+                value={statusFilter}
+                onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, keyword, v); }}
+                style={{ width: 120 }}
+                options={[
+                  { value: '', label: '全部状态' },
+                  { value: 'ACTIVE', label: '合作中' },
+                  { value: 'INACTIVE', label: '已停合作' },
+                ]}
+              />
+              <Button icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+            </Space>
+          </Col>
+          <Col>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditData(null); setModalOpen(true); }}>
+              新增客户
+            </Button>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 表格 */}
+      <Card bodyStyle={{ padding: 0 }}>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={customers}
+          loading={loading}
+          scroll={{ x: 1200 }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: t => `共 ${t} 条`,
+          }}
+          onChange={handleTableChange}
+          size="small"
+        />
+      </Card>
+
+      {/* 新建/编辑 Modal */}
+      <CustomerFormModal
+        open={modalOpen}
+        editData={editData}
+        onClose={() => setModalOpen(false)}
+        onSuccess={() => { fetchList(pagination.current); fetchStats(); }}
+      />
+
+      {/* 客户详情侧边栏 */}
+      <Drawer
+        title={<Space><UserOutlined />{drawerData?.companyName}</Space>}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        width={600}
+      >
+        {drawerData && (
+          <>
+            <Descriptions column={2} size="small" bordered style={{ marginBottom: 20 }}>
+              <Descriptions.Item label="客户编号">{drawerData.customerNo}</Descriptions.Item>
+              <Descriptions.Item label="等级">
+                {drawerData.customerLevel === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>}
+              </Descriptions.Item>
+              <Descriptions.Item label="联系人">{drawerData.contactPerson || '-'}</Descriptions.Item>
+              <Descriptions.Item label="联系电话">{drawerData.contactPhone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="邮箱" span={2}>{drawerData.contactEmail || '-'}</Descriptions.Item>
+              <Descriptions.Item label="地址" span={2}>{drawerData.address || '-'}</Descriptions.Item>
+              <Descriptions.Item label="所属行业">{drawerData.industry || '-'}</Descriptions.Item>
+              <Descriptions.Item label="客户来源">{drawerData.source || '-'}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                {drawerData.status === 'ACTIVE' ? <Tag color="green">合作中</Tag> : <Tag>已停合作</Tag>}
+              </Descriptions.Item>
+              <Descriptions.Item label="创建人">{drawerData.creatorName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="备注" span={2}>{drawerData.remark || '-'}</Descriptions.Item>
+            </Descriptions>
+
+            <Title level={5}>关联生产订单</Title>
+            <Table
+              rowKey="id"
+              loading={drawerLoading}
+              dataSource={drawerOrders}
+              size="small"
+              pagination={{ pageSize: 5, showTotal: t => `共 ${t} 条` }}
+              columns={[
+                { title: '订单号', dataIndex: 'orderNo', width: 150 },
+                { title: '款式', dataIndex: 'styleName', width: 120 },
+                { title: '数量', dataIndex: 'orderQuantity', width: 80 },
+                { title: '状态', dataIndex: 'status', width: 100, render: v => <Tag>{v}</Tag> },
+                { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+              ]}
+              locale={{ emptyText: '暂无关联订单' }}
+            />
+          </>
+        )}
+      </Drawer>
+    </>
+  );
+};
+
+// ─── 页面主入口（订阅检测 + 分支渲染）──────────────────────────────
 const CrmDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -46,17 +469,11 @@ const CrmDashboard: React.FC = () => {
     if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
     const checkSubscribed = async () => {
       try {
-        // 优先使用 my-apps（包含开通信息 + 兼容字段）
         const apps = await appStoreService.getMyApps();
         const activeFromApps = (Array.isArray(apps) ? apps : []).some((a: any) =>
           hasActiveSubscription(a, CRM_APP_CODE_ALIASES)
         );
-        if (activeFromApps) {
-          setSubscribed(true);
-          return;
-        }
-
-        // 回退到 my-subscriptions，避免 my-apps 某些环境下误判
+        if (activeFromApps) { setSubscribed(true); return; }
         const subscriptions = await appStoreService.getMySubscriptions();
         const activeFromSubs = (Array.isArray(subscriptions) ? subscriptions : []).some((s: any) =>
           hasActiveSubscription(s, CRM_APP_CODE_ALIASES)
@@ -68,134 +485,20 @@ const CrmDashboard: React.FC = () => {
         setChecking(false);
       }
     };
-
     checkSubscribed();
   }, [isSuperAdmin]);
 
   return (
     <Layout>
-      <div style={{ padding: '24px', maxWidth: 960 }}>
+      <div style={{ padding: '24px' }}>
         {checking ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
+        ) : subscribed ? (
+          <CustomerManagement />
         ) : (
-          <>
-            {/* 头部状态卡片 */}
-            <Card
-              style={{
-                background: subscribed
-                  ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
-                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                marginBottom: 24,
-              }}
-              bodyStyle={{ padding: '32px 40px' }}
-            >
-              <Row align="middle" gutter={24}>
-                <Col flex="auto">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    {subscribed
-                      ? <CheckCircleOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.9)' }} />
-                      : <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
-                    }
-                    <Tag color={subscribed ? 'green' : 'gold'} style={{ fontWeight: 600 }}>
-                      {subscribed ? '✅ 已开通' : '付费模块 · ¥599/月'}
-                    </Tag>
-                  </div>
-                  <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>
-                    客户管理 CRM
-                  </Title>
-                  <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
-                    {subscribed
-                      ? '您已开通 CRM 客户管理模块，功能持续完善中，正式版即将上线，届时可让 B 端客户实时追踪订单进度。'
-                      : '深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。'
-                    }
-                  </Paragraph>
-                </Col>
-                {!subscribed && (
-                  <Col>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<RocketOutlined />}
-                      style={{
-                        background: '#fff',
-                        color: '#764ba2',
-                        border: 'none',
-                        fontWeight: 600,
-                        height: 44,
-                        padding: '0 28px',
-                      }}
-                      onClick={() => navigate(paths.appStore)}
-                    >
-                      立即开通 <ArrowRightOutlined />
-                    </Button>
-                  </Col>
-                )}
-              </Row>
-            </Card>
-
-            {subscribed && (
-              <Alert
-                type="info"
-                showIcon
-                message="功能开发进度"
-                description="客户档案管理、应收款追踪、客户查询门户等功能正在开发中，预计下一个版本上线。感谢您的支持！"
-                style={{ marginBottom: 24 }}
-              />
-            )}
-
-            {/* 功能介绍 */}
-            <Title level={5} style={{ marginBottom: 16 }}>
-              {subscribed ? '即将上线的功能' : '开通后解锁以下功能'}
-            </Title>
-            <Row gutter={[16, 16]}>
-              {FEATURES.map(f => (
-                <Col span={8} key={f.title}>
-                  <Card
-                    size="small"
-                    style={{ height: '100%', filter: subscribed ? 'none' : 'grayscale(30%)', opacity: subscribed ? 1 : 0.85 }}
-                    hoverable={false}
-                  >
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
-                      <div>
-                        <Text strong>{f.title}</Text>
-                        <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>
-                          {f.desc}
-                        </Paragraph>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-
-            {/* 对比说明（仅未开通时显示） */}
-            {!subscribed && (
-              <Card style={{ marginTop: 24, background: '#f8f9fa' }} bordered={false}>
-                <Row gutter={24} align="middle">
-                  <Col span={16}>
-                    <Text strong>为什么比鼎普便宜5倍？</Text>
-                    <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
-                      鼎普 CRM 模块定价 ¥3000+/月，功能复杂适合大企业。本模块专注中小服装工厂核心需求：
-                      应收款追踪 + 客户门户查单，去掉80%用不上的功能，降到 ¥599/月，
-                      90天回本，开通当月即可用起来。
-                    </Paragraph>
-                  </Col>
-                  <Col span={8} style={{ textAlign: 'center' }}>
-                    <Button
-                      type="primary"
-                      size="large"
-                      onClick={() => navigate(paths.appStore)}
-                      style={{ width: '100%' }}
-                    >
-                      前往应用商店开通
-                    </Button>
-                  </Col>
-                </Row>
-              </Card>
-            )}
-          </>
+          <div style={{ maxWidth: 960 }}>
+            <LockedView onGoStore={() => navigate(paths.appStore)} />
+          </div>
         )}
       </div>
     </Layout>

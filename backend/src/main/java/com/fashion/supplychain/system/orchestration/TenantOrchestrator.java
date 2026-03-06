@@ -125,7 +125,7 @@ public class TenantOrchestrator {
         tenant.setContactName(contactName);
         tenant.setContactPhone(contactPhone);
         tenant.setStatus("active");
-        tenant.setMaxUsers(maxUsers != null ? maxUsers : 50);
+        tenant.setMaxUsers(maxUsers != null ? maxUsers : (Integer) PLAN_DEFINITIONS.get("TRIAL").get("maxUsers")); // 未指定时默认 TRIAL 套餐的5人上限
         // 租户类型：决定初始权限包范围
         tenant.setTenantType(tenantType != null && !tenantType.isBlank() ? tenantType : "HYBRID");
         tenant.setCreateTime(LocalDateTime.now());
@@ -217,7 +217,7 @@ public class TenantOrchestrator {
         tenant.setApplyPassword(passwordEncoder.encode(applyPassword));
         tenant.setStatus("pending_review");
         tenant.setPaidStatus("TRIAL");
-        tenant.setMaxUsers(50);
+        tenant.setMaxUsers((Integer) PLAN_DEFINITIONS.get("TRIAL").get("maxUsers")); // TRIAL套餐初始值=5，审批通过时由 approveApplication 按选定套餐覆盖
         tenant.setCreateTime(LocalDateTime.now());
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.save(tenant);

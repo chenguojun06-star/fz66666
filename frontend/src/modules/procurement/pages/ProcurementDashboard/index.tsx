@@ -1,14 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Button, Typography, Tag, Spin, Alert } from 'antd';
-import { LockOutlined, RocketOutlined, ArrowRightOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Button, Card, Col, Input, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
+} from 'antd';
+import {
+  ArrowRightOutlined, LockOutlined, RocketOutlined, SearchOutlined,
+  ShoppingCartOutlined, ShopOutlined, WalletOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
+import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
 
 const { Title, Text, Paragraph } = Typography;
 
+// ─── 订阅检测 ─────────────────────────────────────────────────────
+const PROCUREMENT_APP_CODE_ALIASES = ['PROCUREMENT', 'SUPPLIER_PROCUREMENT'];
+
+const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
+  const code = String(item?.appCode || '').trim().toUpperCase();
+  if (!appCodeAliases.includes(code)) return false;
+  const status = String(item?.status || '').trim().toUpperCase();
+  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
+  if (item?.isExpired === true) return false;
+  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
+  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
+  return isStatusActive && notExpired;
+};
+
+// ─── 锁定页（未订阅时展示）─────────────────────────────────────────
 const FEATURES = [
   { icon: '📦', title: '采购订单管理', desc: '对面辅料供应商下单，支持多家比价与历史报价' },
   { icon: '✅', title: '收货确认', desc: '供应商发货后小程序扫码收货，自动入库并更新应付' },
@@ -18,23 +40,285 @@ const FEATURES = [
   { icon: '🔗', title: '仓库联动', desc: '收货入库、退货出库全程自动联动仓库模块，消除手写台账' },
 ];
 
-const PROCUREMENT_APP_CODE_ALIASES = ['PROCUREMENT', 'SUPPLIER_PROCUREMENT'];
+const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
+  <>
+    <Card
+      style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', border: 'none', marginBottom: 24 }}
+      bodyStyle={{ padding: '32px 40px' }}
+    >
+      <Row align="middle" gutter={24}>
+        <Col flex="auto">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+            <Tag color="gold" style={{ fontWeight: 600 }}>付费模块 · ¥599/月</Tag>
+          </div>
+          <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>供应商采购管理</Title>
+          <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
+            将面辅料采购流程完全数字化：下单→收货→入库→付款，打通仓库模块，替代手写台账与微信截图催货。
+          </Paragraph>
+        </Col>
+        <Col>
+          <Button type="primary" size="large" icon={<RocketOutlined />}
+            style={{ background: '#fff', color: '#11998e', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
+            onClick={onGoStore}
+          >
+            立即开通 <ArrowRightOutlined />
+          </Button>
+        </Col>
+      </Row>
+    </Card>
+    <Title level={5} style={{ marginBottom: 16 }}>开通后解锁以下功能</Title>
+    <Row gutter={[16, 16]}>
+      {FEATURES.map(f => (
+        <Col span={8} key={f.title}>
+          <Card size="small" style={{ height: '100%', opacity: 0.85 }} hoverable={false}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
+              <div>
+                <Text strong>{f.title}</Text>
+                <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>{f.desc}</Paragraph>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+    <Card style={{ marginTop: 24, background: '#f8f9fa' }} bordered={false}>
+      <Row gutter={24} align="middle">
+        <Col span={16}>
+          <Text strong>采购管理模块与工厂目录有什么区别？</Text>
+          <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
+            现有"供应商目录"（系统设置 → 工厂列表）仅保存联系方式。本模块在此基础上增加完整采购业务流：
+            下采购单 → 跟进供应商发货 → 扫码入库确认 → 应付账款核销，形成完整的采购财务闭环。
+          </Paragraph>
+        </Col>
+        <Col span={8} style={{ textAlign: 'center' }}>
+          <Button type="primary" size="large" onClick={onGoStore} style={{ width: '100%' }}>
+            前往应用商店开通
+          </Button>
+        </Col>
+      </Row>
+    </Card>
+  </>
+);
 
-const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
-  const code = String(item?.appCode || '').trim().toUpperCase();
-  const match = appCodeAliases.includes(code);
-  if (!match) return false;
+// ─── 供应商列表 Tab ────────────────────────────────────────────────
+const SupplierTab: React.FC = () => {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
 
-  const status = String(item?.status || '').trim().toUpperCase();
-  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
+  const fetchList = useCallback(async (page = pagination.current, kw = keyword) => {
+    setLoading(true);
+    try {
+      const res = await procurementApi.listSuppliers({ page, pageSize: pagination.pageSize, keyword: kw });
+      const data = (res as any)?.data ?? res;
+      setSuppliers(data?.records ?? []);
+      setTotal(data?.total ?? 0);
+    } catch {
+      /* 静默失败 */
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.pageSize, keyword]);
 
-  if (item?.isExpired === true) return false;
-  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
-  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
+  useEffect(() => { fetchList(1); }, []);
 
-  return isStatusActive && notExpired;
+  const columns: ColumnsType<Supplier> = [
+    { title: '供应商编码', dataIndex: 'factoryCode', width: 130, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    { title: '供应商名称', dataIndex: 'factoryName', width: 200 },
+    { title: '联系人', dataIndex: 'contactPerson', width: 100 },
+    { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
+    { title: '地区', dataIndex: 'region', width: 100 },
+    { title: '状态', dataIndex: 'status', width: 90, render: v =>
+      v === 'ACTIVE' || !v ? <Tag color="green">合作中</Tag> : <Tag color="default">停合作</Tag>
+    },
+    { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+  ];
+
+  return (
+    <>
+      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Space>
+          <Input
+            placeholder="搜索供应商名称或编码"
+            prefix={<SearchOutlined />}
+            value={keyword}
+            onChange={e => setKeyword(e.target.value)}
+            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, keyword); }}
+            style={{ width: 260 }}
+            allowClear
+          />
+          <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, keyword); }}>搜索</Button>
+        </Space>
+      </Card>
+      <Card bodyStyle={{ padding: 0 }}>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={suppliers}
+          loading={loading}
+          size="small"
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: t => `共 ${t} 条`,
+          }}
+          onChange={(p: TablePaginationConfig) => {
+            const page = p.current ?? 1;
+            setPagination({ current: page, pageSize: p.pageSize ?? 20 });
+            fetchList(page);
+          }}
+        />
+      </Card>
+    </>
+  );
 };
 
+// ─── 采购单 Tab ────────────────────────────────────────────────────
+const PurchaseOrderTab: React.FC = () => {
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+
+  const fetchList = useCallback(async (page = pagination.current, st = statusFilter) => {
+    setLoading(true);
+    try {
+      const res = await procurementApi.listPurchaseOrders({ page, pageSize: pagination.pageSize, status: st });
+      const data = (res as any)?.data ?? res;
+      setOrders(data?.records ?? []);
+      setTotal(data?.total ?? 0);
+    } catch {
+      /* 静默失败 */
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.pageSize, statusFilter]);
+
+  useEffect(() => { fetchList(1); }, []);
+
+  const statusTagColor: Record<string, string> = {
+    PENDING: 'default',
+    APPROVED: 'blue',
+    IN_TRANSIT: 'processing',
+    RECEIVED: 'green',
+    SETTLED: 'success',
+    CANCELLED: 'red',
+  };
+  const statusLabel: Record<string, string> = {
+    PENDING: '待审批', APPROVED: '已审批', IN_TRANSIT: '运输中', RECEIVED: '已收货',
+    SETTLED: '已结算', CANCELLED: '已取消',
+  };
+
+  const columns: ColumnsType<PurchaseOrder> = [
+    { title: '采购单号', dataIndex: 'purchaseNo', width: 160, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    { title: '供应商', dataIndex: 'supplierName', width: 160 },
+    { title: '物料名称', dataIndex: 'materialName', width: 160 },
+    { title: '数量', dataIndex: 'quantity', width: 80, render: (v, r: any) => `${v} ${r.unit ?? ''}` },
+    { title: '总金额', dataIndex: 'totalAmount', width: 100, render: v => v != null ? `¥${Number(v).toLocaleString()}` : '-' },
+    { title: '状态', dataIndex: 'status', width: 100, render: v =>
+      <Tag color={statusTagColor[v] ?? 'default'}>{statusLabel[v] ?? v}</Tag>
+    },
+    { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+  ];
+
+  return (
+    <>
+      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Select
+          value={statusFilter}
+          onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v); }}
+          style={{ width: 140 }}
+          options={[
+            { value: '', label: '全部状态' },
+            { value: 'PENDING', label: '待审批' },
+            { value: 'APPROVED', label: '已审批' },
+            { value: 'IN_TRANSIT', label: '运输中' },
+            { value: 'RECEIVED', label: '已收货' },
+            { value: 'SETTLED', label: '已结算' },
+          ]}
+        />
+      </Card>
+      <Card bodyStyle={{ padding: 0 }}>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={orders}
+          loading={loading}
+          size="small"
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: t => `共 ${t} 条`,
+          }}
+          onChange={(p: TablePaginationConfig) => {
+            const page = p.current ?? 1;
+            setPagination({ current: page, pageSize: p.pageSize ?? 20 });
+            fetchList(page);
+          }}
+        />
+      </Card>
+    </>
+  );
+};
+
+// ─── 主功能页（已订阅时展示）─────────────────────────────────────
+const ProcurementManagement: React.FC = () => {
+  const [stats, setStats] = useState({ supplierCount: 0, totalPurchaseOrders: 0, pendingOrders: 0 });
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  useEffect(() => {
+    setStatsLoading(true);
+    procurementApi.getStats({}).then(res => {
+      const data = (res as any)?.data ?? res;
+      setStats({
+        supplierCount: data?.supplierCount ?? 0,
+        totalPurchaseOrders: data?.totalPurchaseOrders ?? 0,
+        pendingOrders: data?.pendingOrders ?? 0,
+      });
+    }).catch(() => {/* 统计失败不影响主流程 */})
+      .finally(() => setStatsLoading(false));
+  }, []);
+
+  return (
+    <>
+      <Row gutter={16} style={{ marginBottom: 20 }}>
+        {[
+          { icon: <ShopOutlined />, label: '供应商数量', value: stats.supplierCount, color: '#1677ff' },
+          { icon: <ShoppingCartOutlined />, label: '采购单总数', value: stats.totalPurchaseOrders, color: '#52c41a' },
+          { icon: <WalletOutlined />, label: '待处理采购单', value: stats.pendingOrders, color: '#fa8c16' },
+        ].map(s => (
+          <Col span={8} key={s.label}>
+            <Card size="small" loading={statsLoading} bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+              <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Tabs
+        items={[
+          { key: 'suppliers', label: '供应商管理', children: <SupplierTab /> },
+          { key: 'orders', label: '采购单', children: <PurchaseOrderTab /> },
+        ]}
+      />
+    </>
+  );
+};
+
+// ─── 页面主入口（订阅检测 + 分支渲染）──────────────────────────────
 const ProcurementDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -46,17 +330,11 @@ const ProcurementDashboard: React.FC = () => {
     if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
     const checkSubscribed = async () => {
       try {
-        // 优先使用 my-apps（包含开通信息 + 兼容字段）
         const apps = await appStoreService.getMyApps();
         const activeFromApps = (Array.isArray(apps) ? apps : []).some((a: any) =>
           hasActiveSubscription(a, PROCUREMENT_APP_CODE_ALIASES)
         );
-        if (activeFromApps) {
-          setSubscribed(true);
-          return;
-        }
-
-        // 回退到 my-subscriptions，避免 my-apps 某些环境下误判
+        if (activeFromApps) { setSubscribed(true); return; }
         const subscriptions = await appStoreService.getMySubscriptions();
         const activeFromSubs = (Array.isArray(subscriptions) ? subscriptions : []).some((s: any) =>
           hasActiveSubscription(s, PROCUREMENT_APP_CODE_ALIASES)
@@ -68,132 +346,20 @@ const ProcurementDashboard: React.FC = () => {
         setChecking(false);
       }
     };
-
     checkSubscribed();
   }, [isSuperAdmin]);
 
   return (
     <Layout>
-      <div style={{ padding: '24px', maxWidth: 960 }}>
+      <div style={{ padding: '24px' }}>
         {checking ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
+        ) : subscribed ? (
+          <ProcurementManagement />
         ) : (
-          <>
-            {/* 头部状态卡片 */}
-            <Card
-              style={{
-                background: subscribed
-                  ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
-                  : 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                border: 'none',
-                marginBottom: 24,
-              }}
-              bodyStyle={{ padding: '32px 40px' }}
-            >
-              <Row align="middle" gutter={24}>
-                <Col flex="auto">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    {subscribed
-                      ? <CheckCircleOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.9)' }} />
-                      : <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
-                    }
-                    <Tag color={subscribed ? 'green' : 'gold'} style={{ fontWeight: 600 }}>
-                      {subscribed ? '✅ 已开通' : '付费模块 · ¥599/月'}
-                    </Tag>
-                  </div>
-                  <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>
-                    供应商采购管理
-                  </Title>
-                  <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
-                    {subscribed
-                      ? '您已开通供应商采购管理模块，功能持续完善中，正式版即将上线，届时全流程采购数字化将自动与仓库模块打通。'
-                      : '将面辅料采购流程完全数字化：下单→收货→入库→付款，打通仓库模块，替代手写台账与微信截图催货。'
-                    }
-                  </Paragraph>
-                </Col>
-                {!subscribed && (
-                  <Col>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<RocketOutlined />}
-                      style={{
-                        background: '#fff',
-                        color: '#11998e',
-                        border: 'none',
-                        fontWeight: 600,
-                        height: 44,
-                        padding: '0 28px',
-                      }}
-                      onClick={() => navigate(paths.appStore)}
-                    >
-                      立即开通 <ArrowRightOutlined />
-                    </Button>
-                  </Col>
-                )}
-              </Row>
-            </Card>
-
-            {subscribed && (
-              <Alert
-                type="info"
-                showIcon
-                message="功能开发进度"
-                description="采购订单管理、收货确认、应付账款、缺料预警等功能正在开发中，预计下一个版本上线。感谢您的支持！"
-                style={{ marginBottom: 24 }}
-              />
-            )}
-
-            <Title level={5} style={{ marginBottom: 16 }}>
-              {subscribed ? '即将上线的功能' : '开通后解锁以下功能'}
-            </Title>
-            <Row gutter={[16, 16]}>
-              {FEATURES.map(f => (
-                <Col span={8} key={f.title}>
-                  <Card
-                    size="small"
-                    style={{ height: '100%', filter: subscribed ? 'none' : 'grayscale(30%)', opacity: subscribed ? 1 : 0.85 }}
-                    hoverable={false}
-                  >
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
-                      <div>
-                        <Text strong>{f.title}</Text>
-                        <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>
-                          {f.desc}
-                        </Paragraph>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-
-            {!subscribed && (
-              <Card style={{ marginTop: 24, background: '#f8f9fa' }} bordered={false}>
-                <Row gutter={24} align="middle">
-                  <Col span={16}>
-                    <Text strong>采购管理模块与工厂目录有什么区别？</Text>
-                    <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
-                      现有"供应商目录"（系统设置 → 工厂列表）仅保存联系方式。
-                      本模块在此基础上增加完整采购业务流：下采购单 → 跟进供应商发货 → 扫码入库确认 → 应付账款核销，
-                      形成完整的采购财务闭环，让老板随时知道欠了哪家供应商多少钱。
-                    </Paragraph>
-                  </Col>
-                  <Col span={8} style={{ textAlign: 'center' }}>
-                    <Button
-                      type="primary"
-                      size="large"
-                      onClick={() => navigate(paths.appStore)}
-                      style={{ width: '100%' }}
-                    >
-                      前往应用商店开通
-                    </Button>
-                  </Col>
-                </Row>
-              </Card>
-            )}
-          </>
+          <div style={{ maxWidth: 960 }}>
+            <LockedView onGoStore={() => navigate(paths.appStore)} />
+          </div>
         )}
       </div>
     </Layout>
