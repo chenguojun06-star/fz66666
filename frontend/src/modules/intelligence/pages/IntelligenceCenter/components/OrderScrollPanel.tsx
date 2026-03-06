@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Popover } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type {
   BottleneckDetectionResponse, DeliveryRiskResponse, DeliveryRiskItem,
@@ -8,7 +8,7 @@ import type {
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import {
-  LiveDot, risk2color, sev2c, risk2badge,
+  LiveDot, sev2c, risk2badge,
   STAGE_FIELDS, getAiTip, fmtD,
 } from './IntelligenceWidgets';
 
@@ -345,9 +345,34 @@ export const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orde
 ═══════════════════════════════════════════════════ */
 
 export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item }) => {
+  const navigate = useNavigate();
   const c = item.stuckPct < 20 ? '#ff4136' : item.stuckPct < 50 ? '#f7a600' : '#39ff14';
+  const focusNode = String(item.stuckStage || '').trim();
+  const primaryOrderNo = String(item.worstOrders?.[0]?.orderNo || '').trim();
+
+  const openOrder = (orderNo?: string) => {
+    const safeOrderNo = String(orderNo || '').trim();
+    if (!safeOrderNo) return;
+    const query = new URLSearchParams({ orderNo: safeOrderNo });
+    if (focusNode) query.set('focusNode', focusNode);
+    navigate(`/production/progress-detail?${query.toString()}`);
+  };
+
   return (
-    <div className="c-order-row">
+    <div
+      className={`c-order-row c-bottleneck-row-clickable${primaryOrderNo ? ' clickable' : ''}`}
+      role={primaryOrderNo ? 'button' : undefined}
+      tabIndex={primaryOrderNo ? 0 : -1}
+      onClick={() => openOrder(primaryOrderNo)}
+      onKeyDown={(event) => {
+        if (!primaryOrderNo) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openOrder(primaryOrderNo);
+        }
+      }}
+      title={primaryOrderNo ? `打开 ${primaryOrderNo} 查看 ${focusNode || '工序'} 卡点` : undefined}
+    >
       <div className="c-order-row-main">
         <span className="c-order-factory">{item.factoryName}</span>
         <div className="c-order-center">
@@ -359,7 +384,18 @@ export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item 
           </div>
           <div className="c-order-dates">
             {item.worstOrders.slice(0, 2).map(w => (
-              <span key={w.orderNo}>{w.orderNo}</span>
+              <button
+                key={w.orderNo}
+                type="button"
+                className="c-order-chip-btn"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openOrder(w.orderNo);
+                }}
+                title={`打开 ${w.orderNo}`}
+              >
+                {w.orderNo}
+              </button>
             ))}
           </div>
         </div>

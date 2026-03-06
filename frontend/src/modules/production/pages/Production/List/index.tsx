@@ -47,6 +47,7 @@ import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { useProductionSmartQueue } from '../useProductionSmartQueue';
 
 const { Option } = Select;
 
@@ -171,18 +172,6 @@ const ProductionList: React.FC = () => {
   // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
   const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed'), [productionList]);
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
-
-  // AI 风险各级别计数
-  const aiRiskCounts = useMemo(() => {
-    const counts = { overdue: 0, danger: 0, warning: 0 };
-    for (const o of productionList) {
-      const risk = deliveryRiskMap.get(String(o.orderNo || ''));
-      if (risk && risk.riskLevel !== 'safe') {
-        counts[risk.riskLevel as keyof typeof counts]++;
-      }
-    }
-    return counts;
-  }, [productionList, deliveryRiskMap]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
 
   // ===== 异常检测 Banner =====
@@ -268,35 +257,10 @@ const ProductionList: React.FC = () => {
     setPendingScrollOrderId(key);
   }, [getOrderDomKey]);
 
-  // 智能提示：催交 + 落后计数（仅当前页）
-  const smartHints = useMemo(() => {
-    const active = productionList.filter(o => o.status !== 'completed');
-    const urgentCount = active.filter(o => {
-      if (!o.plannedEndDate) return false;
-      return dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
-    }).length;
-    const behindCount = active.filter(o => {
-      if (!o.plannedEndDate) return false;
-      const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
-      return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
-    }).length;
-    return { urgentCount, behindCount };
-  }, [productionList]);
-
-  const urgentOrders = useMemo(() => productionList.filter((o) => {
-    if (o.status === 'completed' || !o.plannedEndDate) return false;
-    return dayjs(o.plannedEndDate).diff(dayjs(), 'day') <= 3;
-  }), [productionList]);
-
-  const behindOrders = useMemo(() => productionList.filter((o) => {
-    if (!o.plannedEndDate || o.status === 'completed') return false;
-    const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
-    return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
-  }), [productionList]);
-
-  const overdueRiskOrders = useMemo(() => productionList.filter((o) => {
-    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue';
-  }), [deliveryRiskMap, productionList]);
+  const clearSmartFocus = useCallback(() => {
+    setFocusedOrderId(null);
+    setPendingScrollOrderId(null);
+  }, []);
 
   const stagnantOrderIds = useMemo(() => {
     return new Set(
@@ -317,7 +281,19 @@ const ProductionList: React.FC = () => {
         .filter(Boolean)
     );
   }, [boardTimesByOrder, productionList]);
-  const stagnantOrders = useMemo(() => productionList.filter((o) => stagnantOrderIds.has(String(o.id || ''))), [productionList, stagnantOrderIds]);
+
+  const {
+    smartActionItems,
+    smartQueueOrders,
+  } = useProductionSmartQueue({
+    orders: productionList,
+    deliveryRiskMap,
+    stagnantOrderIds,
+    smartQueueFilter,
+    setSmartQueueFilter,
+    triggerOrderFocus,
+    clearFocus: clearSmartFocus,
+  });
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -545,22 +521,9 @@ const ProductionList: React.FC = () => {
     }
   );
 
-  // 排序：已关单/已完成始终排到最后，其余按选择字段排序；支持 AI 交期风险筛选
+  // 排序：已关单/已完成始终排到最后，智能条筛选结果也走同一套共享逻辑
   const sortedProductionList = useMemo(() => {
-    let filtered = [...productionList];
-    if (smartQueueFilter === 'urgent') {
-      filtered = filtered.filter(o => (o.urgencyLevel || '') === 'urgent');
-    } else if (smartQueueFilter === 'behind') {
-      filtered = filtered.filter(o => {
-        if (!o.plannedEndDate || o.status === 'completed') return false;
-        const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
-        return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
-      });
-    } else if (smartQueueFilter === 'stagnant') {
-      filtered = filtered.filter(o => stagnantOrderIds.has(String(o.id || '')));
-    } else if (smartQueueFilter === 'overdue') {
-      filtered = filtered.filter(o => deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue');
-    }
+    const filtered = [...smartQueueOrders];
     filtered.sort((a: any, b: any) => {
       const aClose = (a.actualEndDate || a.status === 'CLOSED' || a.status === 'closed' || a.status === 'completed') ? 1 : 0;
       const bClose = (b.actualEndDate || b.status === 'CLOSED' || b.status === 'closed' || b.status === 'completed') ? 1 : 0;
@@ -573,7 +536,7 @@ const ProductionList: React.FC = () => {
       return 0;
     });
     return filtered;
-  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, deliveryRiskMap, smartQueueFilter, stagnantOrderIds]);
+  }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
 
   const scrollToFocusedOrder = useCallback((orderId: string) => {
     const safeId = orderId.replace(/"/g, '\\"');
@@ -606,83 +569,6 @@ const ProductionList: React.FC = () => {
     }, 120);
     return () => window.clearTimeout(timer);
   }, [getOrderDomKey, pendingScrollOrderId, scrollToFocusedOrder, sortedProductionList, viewMode]);
-
-  const smartActionItems = useMemo(() => {
-    return [
-      {
-        key: 'urgent',
-        label: '待催交付',
-        value: smartHints.urgentCount,
-        hint: '3天内要交货，适合先盯需要马上催推进的单。',
-        tone: 'orange' as const,
-        active: smartQueueFilter === 'urgent',
-        onClick: () => {
-          if (smartQueueFilter === 'urgent') {
-            setSmartQueueFilter('all');
-            setFocusedOrderId(null);
-            setPendingScrollOrderId(null);
-            return;
-          }
-          setSmartQueueFilter('urgent');
-          triggerOrderFocus(urgentOrders[0]);
-        },
-      },
-      {
-        key: 'behind',
-        label: '进度落后',
-        value: smartHints.behindCount,
-        hint: '7天内交期但进度不足50%，先看这批最容易失控。',
-        tone: 'red' as const,
-        active: smartQueueFilter === 'behind',
-        onClick: () => {
-          if (smartQueueFilter === 'behind') {
-            setSmartQueueFilter('all');
-            setFocusedOrderId(null);
-            setPendingScrollOrderId(null);
-            return;
-          }
-          setSmartQueueFilter('behind');
-          triggerOrderFocus(behindOrders[0]);
-        },
-      },
-      {
-        key: 'stagnant',
-        label: '停滞订单',
-        value: stagnantOrderIds.size,
-        hint: '已扫描过但连续停住，适合先联系工厂确认原因。',
-        tone: 'cyan' as const,
-        active: smartQueueFilter === 'stagnant',
-        onClick: () => {
-          if (smartQueueFilter === 'stagnant') {
-            setSmartQueueFilter('all');
-            setFocusedOrderId(null);
-            setPendingScrollOrderId(null);
-            return;
-          }
-          setSmartQueueFilter('stagnant');
-          triggerOrderFocus(stagnantOrders[0]);
-        },
-      },
-      {
-        key: 'overdue',
-        label: '预测逾期',
-        value: aiRiskCounts.overdue,
-        hint: '基于实时节奏预测掉期，适合优先抢救最危险的单。',
-        tone: 'green' as const,
-        active: smartQueueFilter === 'overdue',
-        onClick: () => {
-          if (smartQueueFilter === 'overdue') {
-            setSmartQueueFilter('all');
-            setFocusedOrderId(null);
-            setPendingScrollOrderId(null);
-            return;
-          }
-          setSmartQueueFilter('overdue');
-          triggerOrderFocus(overdueRiskOrders[0]);
-        },
-      },
-    ];
-  }, [aiRiskCounts.overdue, behindOrders, overdueRiskOrders, smartHints.behindCount, smartHints.urgentCount, smartQueueFilter, stagnantOrderIds.size, stagnantOrders, triggerOrderFocus, urgentOrders]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({

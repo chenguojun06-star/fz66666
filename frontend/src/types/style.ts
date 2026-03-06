@@ -14,6 +14,7 @@ export interface StyleInfo extends Record<string, unknown> {
   color?: string;
   size?: string;
   sampleQuantity?: number;
+  deliveryDate?: string;
   cover?: string;
   status?: string;
   createTime?: string;

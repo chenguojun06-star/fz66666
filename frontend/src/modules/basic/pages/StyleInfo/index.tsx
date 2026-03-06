@@ -19,6 +19,7 @@ import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
 import StyleSizePriceTab from './components/StyleSizePriceTab';
 import StyleProcessKnowledgeTab from './components/StyleProcessKnowledgeTab';
+import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -327,6 +328,7 @@ const StyleInfoDetailPage: React.FC = () => {
             <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
           </Card>
         ) : null}
+        <StyleIntelligenceProfileCard style={currentStyle} onJumpTab={setActiveTabKey} />
         {/* ===== 基础信息卡片 ===== */}
         <Card
           title="样衣详情"
@@ -503,6 +505,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleProcessTab
                     styleId={currentStyle?.id}
+                    styleNo={currentStyle?.styleNo}
                     readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
                     processAssignee={(currentStyle as any)?.processAssignee}
                     processStartTime={(currentStyle as any)?.processStartTime}
@@ -539,7 +542,7 @@ const StyleInfoDetailPage: React.FC = () => {
               },
               {
                 key: '11',
-                label: '工序数据库',
+                label: '工序智能库',
                 children: <StyleProcessKnowledgeTab />
               }
             ]}

@@ -765,6 +765,17 @@
 .c-order-row:hover {
   background: rgba(0,229,255,0.05);
 }
+.c-bottleneck-row-clickable.clickable {
+  cursor: pointer;
+}
+.c-bottleneck-row-clickable.clickable:hover {
+  background: rgba(0,229,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(0,229,255,0.12);
+}
+.c-bottleneck-row-clickable.clickable:focus-visible {
+  outline: 1px solid rgba(0,229,255,0.42);
+  outline-offset: 1px;
+}
 .c-order-row-main {
   display: flex;
   align-items: center;
@@ -811,9 +822,24 @@
 .c-order-dates {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   font-size: 10px;
   color: #6e9ab0;
   letter-spacing: 0.2px;
+}
+.c-order-chip-btn {
+  border: 1px solid rgba(0,229,255,0.12);
+  background: rgba(0,229,255,0.05);
+  color: #7fdfff;
+  border-radius: 999px;
+  padding: 1px 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.c-order-chip-btn:hover {
+  background: rgba(0,229,255,0.1);
+  border-color: rgba(0,229,255,0.24);
+  color: #dff7ff;
 }
 /* 右：进度% + 天数 */
 .c-order-right {
@@ -1377,9 +1403,9 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
   align-items: end;
   gap: 5px;
-  height: 54px;
-  margin-bottom: 8px;
-  padding: 8px 6px 6px;
+  height: 64px;
+  margin-bottom: 12px;
+  padding: 6px 8px 14px;
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(0,229,255,0.06), rgba(255,255,255,0.02));
   border: 1px solid rgba(0,229,255,0.08);
@@ -1391,7 +1417,7 @@
   height: 100%;
   border: none;
   background: transparent;
-  padding: 0;
+  padding: 0 0 4px;
   cursor: pointer;
 }
 .lsf-pulse-bar.selected {
@@ -1399,11 +1425,12 @@
 }
 .lsf-pulse-fill {
   width: 100%;
-  max-width: 12px;
+  max-width: 14px;
   border-radius: 999px 999px 3px 3px;
   background: linear-gradient(180deg, rgba(0,229,255,0.95), rgba(0,229,255,0.18));
   box-shadow: 0 0 10px rgba(0,229,255,0.22);
-  transition: height 0.25s ease;
+  transition: height 0.25s ease, transform 0.18s ease;
+  transform: translateY(-3px);
 }
 .lsf-pulse-bar.active .lsf-pulse-fill {
   background: linear-gradient(180deg, rgba(57,255,20,0.95), rgba(57,255,20,0.18));

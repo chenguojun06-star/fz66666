@@ -498,6 +498,73 @@ export interface StyleQuoteSuggestionResponse {
   suggestion: string;
 }
 
+export interface StyleIntelligenceStageStatus {
+  key: string;
+  label: string;
+  status: string;
+  assignee?: string | null;
+  startTime?: string | null;
+  completedTime?: string | null;
+}
+
+export interface StyleIntelligenceProfileResponse {
+  styleId?: number;
+  styleNo: string;
+  styleName: string;
+  category?: string;
+  progressNode?: string;
+  deliveryDate?: string | null;
+  daysToDelivery?: number | null;
+  deliveryRisk?: 'OVERDUE' | 'WARNING' | 'SAFE' | 'UNKNOWN' | string;
+  developmentCompletionRate?: number;
+  developmentStatus?: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | string;
+  production: {
+    orderCount: number;
+    activeOrderCount: number;
+    delayedOrderCount: number;
+    totalOrderQuantity: number;
+    totalCompletedQuantity: number;
+    avgProductionProgress: number;
+    latestOrderNo?: string | null;
+    latestOrderStatus?: string | null;
+    latestProductionProgress?: number | null;
+    latestPlannedEndDate?: string | null;
+  };
+  scan: {
+    totalRecords: number;
+    successRecords: number;
+    failedRecords: number;
+    successQuantity: number;
+    settledRecordCount: number;
+    unsettledRecordCount: number;
+    latestScanTime?: string | null;
+    latestProgressStage?: string | null;
+    latestProcessName?: string | null;
+  };
+  stock: {
+    totalQuantity: number;
+    loanedQuantity: number;
+    availableQuantity: number;
+    developmentQuantity: number;
+    preProductionQuantity: number;
+    shipmentQuantity: number;
+  };
+  finance: {
+    currentQuotation?: number | null;
+    suggestedQuotation?: number | null;
+    materialCost?: number | null;
+    processCost?: number | null;
+    totalCost?: number | null;
+    estimatedRevenue?: number | null;
+    estimatedProcessingCost?: number | null;
+    estimatedGrossProfit?: number | null;
+    estimatedGrossMargin?: number | null;
+    historicalOrderCount: number;
+  };
+  stages: StyleIntelligenceStageStatus[];
+  insights: string[];
+}
+
 /* ================================================================
    供应商评分卡
 ================================================================ */
@@ -715,6 +782,10 @@ export const intelligenceApi = {
   /** 款式报价建议（按款号聚合） */
   getStyleQuoteSuggestion: (styleNo: string) =>
     api.get<{ code: number; data: StyleQuoteSuggestionResponse }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
+
+  /** 款式智能档案卡（按款式聚合开发/生产/库存/财务） */
+  getStyleIntelligenceProfile: (params: { styleId?: string | number; styleNo?: string }) =>
+    api.get<{ code: number; data: StyleIntelligenceProfileResponse }>('/intelligence/style-profile', { params }),
 
   /** 工序单价 AI 提示 */
   getProcessPriceHint: (processName: string, standardTime?: number) =>

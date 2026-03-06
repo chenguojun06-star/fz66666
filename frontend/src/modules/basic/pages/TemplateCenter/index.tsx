@@ -766,7 +766,7 @@ const TemplateCenter: React.FC = () => {
         title="单价维护"
         tabList={[
           { key: 'list', tab: '模板列表' },
-          { key: 'knowledge', tab: '工序数据库' },
+          { key: 'knowledge', tab: '工序智能库' },
         ]}
         activeTabKey={cardTab}
         onTabChange={(key) => setCardTab(key as 'list' | 'knowledge')}

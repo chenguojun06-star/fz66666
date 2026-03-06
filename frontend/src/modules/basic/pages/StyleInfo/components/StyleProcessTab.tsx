@@ -10,9 +10,11 @@ import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 
 import StyleStageControlBar from './StyleStageControlBar';
+import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
 
 interface Props {
   styleId: string | number;
+  styleNo?: string;
   readOnly?: boolean;
   hidePrice?: boolean; // 是否隐藏单价列
   progressNode?: string; // 进度节点
@@ -50,6 +52,7 @@ const isTempId = (id: any) => {
 
 const StyleProcessTab: React.FC<Props> = ({
   styleId,
+  styleNo,
   readOnly,
   hidePrice = false,
   progressNode: _progressNode,
@@ -851,6 +854,8 @@ const StyleProcessTab: React.FC<Props> = ({
 
   return (
     <div>
+      <StyleQuoteSuggestionInlineCard styleNo={styleNo} sourceStyleNo={templateSourceStyleNo} />
+
       {/* 进度节点 - 已隐藏 */}
       {/* {progressNode && (
         <div style={{

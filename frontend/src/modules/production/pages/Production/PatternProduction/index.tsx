@@ -12,6 +12,7 @@ import RowActions from '@/components/common/RowActions';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -775,18 +776,8 @@ const PatternProduction: React.FC = () => {
     [dataSource]
   );
 
-  // 待审款（生产完成但尚未审款）
-  const pendingReviewPatterns = useMemo(() =>
-    dataSource.filter(r =>
-      r.status === 'PRODUCTION_COMPLETED' &&
-      (!r.reviewStatus || r.reviewStatus === 'PENDING')
-    ),
-    [dataSource]
-  );
-
-  // 待领取（已发布但无人接单）
-  const notPickedPatterns = useMemo(() =>
-    dataSource.filter(r => r.status === 'PENDING' && !r.receiver),
+  const warningPatterns = useMemo(() =>
+    dataSource.filter(r => r.status !== 'COMPLETED' && getDeliveryStatus(r.deliveryTime) === 'warning'),
     [dataSource]
   );
 
@@ -838,32 +829,12 @@ const PatternProduction: React.FC = () => {
             />
           </Card>
 
-          {/* 智能提示条 */}
-          {(overduePatterns.length > 0 || pendingReviewPatterns.length > 0 || notPickedPatterns.length > 0) && (
-            <div style={{
-              display: 'flex', gap: 12, flexWrap: 'wrap',
-              margin: '0 0 12px 0', padding: '8px 14px',
-              background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
-              border: '1px solid #ffd591', borderRadius: 8, fontSize: 13,
-            }}>
-              <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
-              {overduePatterns.length > 0 && (
-                <span style={{ color: '#cf1322' }}>⚠️ <strong>{overduePatterns.length}</strong> 个样板已逾期</span>
-              )}
-              {overduePatterns.length > 0 && pendingReviewPatterns.length > 0 && (
-                <span style={{ color: '#d9d9d9' }}>·</span>
-              )}
-              {pendingReviewPatterns.length > 0 && (
-                <span style={{ color: '#d46b08' }}>🔍 <strong>{pendingReviewPatterns.length}</strong> 个样板待审款</span>
-              )}
-              {(overduePatterns.length > 0 || pendingReviewPatterns.length > 0) && notPickedPatterns.length > 0 && (
-                <span style={{ color: '#d9d9d9' }}>·</span>
-              )}
-              {notPickedPatterns.length > 0 && (
-                <span style={{ color: '#096dd9' }}>📋 <strong>{notPickedPatterns.length}</strong> 个样板待领取</span>
-              )}
-            </div>
-          )}
+          <SmartPredictionStrip
+            items={[
+              { key: 'overdue', count: overduePatterns.length, tone: 'danger', label: '个样板已延期' },
+              { key: 'warning', count: warningPatterns.length, tone: 'warning', label: '个样板即将超期' },
+            ]}
+          />
 
           {/* 表格/卡片视图 */}
           {viewMode === 'list' ? (

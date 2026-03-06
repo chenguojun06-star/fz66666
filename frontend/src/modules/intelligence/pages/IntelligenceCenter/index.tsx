@@ -733,7 +733,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
+              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
             </div>
             <AutoScrollBox className="c-orders-scroll">
               {factoryBottleneck.map(f => <BottleneckRow key={f.factoryName} item={f} />)}

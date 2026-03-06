@@ -100,6 +100,9 @@ public class IntelligenceController {
     private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
     @Autowired
+    private StyleIntelligenceProfileOrchestrator styleIntelligenceProfileOrchestrator;
+
+    @Autowired
     private MaterialShortageOrchestrator materialShortageOrchestrator;
 
     @Autowired
@@ -278,6 +281,14 @@ public class IntelligenceController {
     @GetMapping("/style-quote-suggestion")
     public Result<StyleQuoteSuggestionResponse> styleQuoteSuggestion(@RequestParam("styleNo") String styleNo) {
         return Result.success(styleQuoteSuggestionOrchestrator.suggest(styleNo));
+    }
+
+    /** 款式智能档案卡 — 聚合开发、生产、扫码、库存与财务信息 */
+    @GetMapping("/style-profile")
+    public Result<StyleIntelligenceProfileResponse> styleProfile(
+            @RequestParam(value = "styleId", required = false) Long styleId,
+            @RequestParam(value = "styleNo", required = false) String styleNo) {
+        return Result.success(styleIntelligenceProfileOrchestrator.profile(styleId, styleNo));
     }
 
     /**

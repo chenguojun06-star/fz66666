@@ -4,8 +4,10 @@ import { App, Button, Card, Input, Modal } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
+import dayjs from 'dayjs';
 
 // Hooks
 import { useStyleList, useStyleStats } from '../StyleInfo/hooks';
@@ -18,7 +20,6 @@ import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
 
 import '../StyleInfo/styles.css';
-import StyleQuoteSuggestionPanel from '@/modules/intelligence/pages/IntelligenceCenter/StyleQuoteSuggestionPanel';
 
 /**
  * 款式信息列表页
@@ -170,17 +171,29 @@ const StyleInfoListPage: React.FC = () => {
     }
   };
 
-  // 智能提示：样衣开发待办
-  const styleHints = useMemo(() => {
-    const active = data.filter(s => s.status !== 'archived');
-    // 样衣已出但纸样待完成（催纸样跟进）
-    const pendingPatternCount = active.filter(s =>
-      s.sampleStatus === 'COMPLETED' && s.patternStatus !== 'COMPLETED'
-    ).length;
-    // 还未开始（无进度节点记录）
-    const notStartedCount = active.filter(s => !s.progressNode).length;
-    return { pendingPatternCount, notStartedCount };
+  const activeStyles = useMemo(() => {
+    return data.filter((item) => {
+      if (String(item.status || '').trim().toLowerCase() === 'archived') return false;
+      const progressNode = String(item.progressNode || '').trim();
+      const sampleStatus = String(item.sampleStatus || '').trim().toUpperCase();
+      return progressNode !== '样衣完成' && sampleStatus !== 'COMPLETED';
+    });
   }, [data]);
+
+  const overdueStyleCount = useMemo(() => {
+    return activeStyles.filter((item) => {
+      if (!item.deliveryDate) return false;
+      return dayjs(item.deliveryDate).endOf('day').isBefore(dayjs());
+    }).length;
+  }, [activeStyles]);
+
+  const warningStyleCount = useMemo(() => {
+    return activeStyles.filter((item) => {
+      if (!item.deliveryDate) return false;
+      const diffDays = dayjs(item.deliveryDate).startOf('day').diff(dayjs().startOf('day'), 'day');
+      return diffDays >= 0 && diffDays <= 3;
+    }).length;
+  }, [activeStyles]);
 
   // 分页处理
   const handlePageChange = (page: number, pageSize: number) => {
@@ -207,26 +220,12 @@ const StyleInfoListPage: React.FC = () => {
           onRangeChange={handleStatsRangeChange}
         />
 
-        {/* 智能提示条 */}
-        {(styleHints.pendingPatternCount > 0 || styleHints.notStartedCount > 0) && (
-          <div style={{
-            display: 'flex', gap: 12, flexWrap: 'wrap',
-            margin: '0 0 8px 0', padding: '8px 14px',
-            background: 'linear-gradient(90deg, #fff9f0 0%, #fff0f0 100%)',
-            border: '1px solid #ffd591', borderRadius: 8, fontSize: 13,
-          }}>
-            <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
-            {styleHints.pendingPatternCount > 0 && (
-              <span style={{ color: '#d46b08' }}>🎯 <strong>{styleHints.pendingPatternCount}</strong> 款样衣已出待跟进纸样</span>
-            )}
-            {styleHints.pendingPatternCount > 0 && styleHints.notStartedCount > 0 && (
-              <span style={{ color: '#d9d9d9' }}>·</span>
-            )}
-            {styleHints.notStartedCount > 0 && (
-              <span style={{ color: '#cf1322' }}>⏸ <strong>{styleHints.notStartedCount}</strong> 款尚未开始开发</span>
-            )}
-          </div>
-        )}
+        <SmartPredictionStrip
+          items={[
+            { key: 'overdue', count: overdueStyleCount, tone: 'danger', label: '个样衣开发已延期' },
+            { key: 'warning', count: warningStyleCount, tone: 'warning', label: '个样衣开发即将超期' },
+          ]}
+        />
 
         {/* 筛选面板 */}
         <StyleFilterPanel
@@ -298,11 +297,6 @@ const StyleInfoListPage: React.FC = () => {
         cover={printingRecord?.cover}
         color={printingRecord?.color}
       />
-
-      {/* 智能报价建议：在款式列表页底部，助力款式开发人员快速查询历史成本与建议报价 */}
-      <div style={{ padding: '16px 0 0' }}>
-        <StyleQuoteSuggestionPanel />
-      </div>
 
       {/* 维护原因弹窗 */}
       <Modal
