@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button, Card, Input, Progress, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { useSearchParams } from 'react-router-dom';
@@ -17,6 +17,8 @@ import WorkerPerformanceBadge from '@/smart/components/WorkerPerformanceBadge';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -88,6 +90,32 @@ const PayrollOperatorSummary: React.FC = () => {
     const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
     const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+    // ── 效率排名 Tab 数据 ────────────────────────────────────────────────────
+    const [workerEffList, setWorkerEffList] = useState<WorkerEfficiencyItem[]>([]);
+    const [workerEffLoading, setWorkerEffLoading] = useState(false);
+    const workerEffFetched = useRef(false);
+
+    const fetchWorkerEfficiency = useCallback(async () => {
+        if (workerEffFetched.current) return;
+        workerEffFetched.current = true;
+        setWorkerEffLoading(true);
+        try {
+            const res = await intelligenceApi.getWorkerEfficiency() as any;
+            const list: WorkerEfficiencyItem[] = res?.data?.workers ?? res?.workers ?? [];
+            setWorkerEffList([...list].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0)));
+        } catch {
+            // 后端无数据时静默失败，不打扰用户
+        } finally {
+            setWorkerEffLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === 'efficiency') {
+            void fetchWorkerEfficiency();
+        }
+    }, [activeTab, fetchWorkerEfficiency]);
 
     const reportSmartError = (title: string, reason?: string, code?: string) => {
         if (!showSmartErrorNotice) return;
@@ -971,6 +999,20 @@ const PayrollOperatorSummary: React.FC = () => {
                                 </>
                             ),
                         },
+                        {
+                            key: 'efficiency',
+                            label: '效率排名',
+                            children: (
+                                <WorkerEfficiencyTab
+                                    list={workerEffList}
+                                    loading={workerEffLoading}
+                                    onRefresh={() => {
+                                        workerEffFetched.current = false;
+                                        void fetchWorkerEfficiency();
+                                    }}
+                                />
+                            ),
+                        },
                     ]}
                 />
 
@@ -981,3 +1023,97 @@ const PayrollOperatorSummary: React.FC = () => {
 };
 
 export default PayrollOperatorSummary;
+
+// ── 效率排名子组件（懒挂载，不影响主页面初始加载） ────────────────────────────────
+
+const TREND_ICON: Record<string, { icon: string; color: string }> = {
+    up:   { icon: '↑', color: '#52c41a' },
+    down: { icon: '↓', color: '#ff4d4f' },
+    flat: { icon: '→', color: '#8c8c8c' },
+};
+
+function ScoreCell({ value }: { value: number }) {
+    const color = value >= 80 ? '#52c41a' : value >= 60 ? '#faad14' : '#ff4d4f';
+    return (
+        <span style={{ fontVariantNumeric: 'tabular-nums', color, fontWeight: 600 }}>
+            {value}
+        </span>
+    );
+}
+
+function WorkerEfficiencyTab({
+    list,
+    loading,
+    onRefresh,
+}: {
+    list: WorkerEfficiencyItem[];
+    loading: boolean;
+    onRefresh: () => void;
+}) {
+    const columns = [
+        {
+            title: '排名', key: 'rank', width: 60, align: 'center' as const,
+            render: (_: unknown, __: unknown, idx: number) => {
+                if (idx === 0) return <Tag color="gold">🥇 1</Tag>;
+                if (idx === 1) return <Tag color="silver">🥈 2</Tag>;
+                if (idx === 2) return <Tag color="orange">🥉 3</Tag>;
+                return <span style={{ color: '#8c8c8c' }}>{idx + 1}</span>;
+            },
+        },
+        {
+            title: '姓名', dataIndex: 'workerName', key: 'name', width: 100, ellipsis: true,
+        },
+        {
+            title: '综合得分', dataIndex: 'overallScore', key: 'overall', width: 160,
+            render: (v: number) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Progress
+                        percent={v ?? 0}
+                        size="small"
+                        strokeColor={v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f'}
+                        format={() => <span style={{ fontSize: 11 }}>{v}</span>}
+                        style={{ flex: 1, minWidth: 80 }}
+                    />
+                </div>
+            ),
+        },
+        { title: '速度', dataIndex: 'speedScore',       key: 'speed',       width: 64, align: 'center' as const, render: (v: number) => <ScoreCell value={v ?? 0} /> },
+        { title: '质量', dataIndex: 'qualityScore',     key: 'quality',     width: 64, align: 'center' as const, render: (v: number) => <ScoreCell value={v ?? 0} /> },
+        { title: '稳定', dataIndex: 'stabilityScore',   key: 'stability',   width: 64, align: 'center' as const, render: (v: number) => <ScoreCell value={v ?? 0} /> },
+        { title: '出勤', dataIndex: 'attendanceScore',  key: 'attendance',  width: 64, align: 'center' as const, render: (v: number) => <ScoreCell value={v ?? 0} /> },
+        { title: '多面', dataIndex: 'versatilityScore', key: 'versatility', width: 64, align: 'center' as const, render: (v: number) => <ScoreCell value={v ?? 0} /> },
+        {
+            title: '最擅长工序', dataIndex: 'bestProcess', key: 'bestProcess', width: 120, ellipsis: true,
+            render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-',
+        },
+        {
+            title: '日均产量', dataIndex: 'dailyAvgOutput', key: 'output', width: 90, align: 'right' as const,
+            render: (v: number) => v != null ? `${v.toFixed(1)} 件` : '-',
+        },
+        {
+            title: '近7天', dataIndex: 'trend', key: 'trend', width: 70, align: 'center' as const,
+            render: (v: string) => {
+                const t = TREND_ICON[v] ?? TREND_ICON.flat;
+                return <span style={{ color: t.color, fontWeight: 700, fontSize: 16 }}>{t.icon}</span>;
+            },
+        },
+    ];
+
+    return (
+        <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                <Button size="small" onClick={onRefresh} loading={loading}>刷新</Button>
+            </div>
+            <ResizableTable
+                storageKey="finance-worker-efficiency"
+                rowKey={(r: Record<string, unknown>) => String(r?.workerId ?? r?.workerName ?? '')}
+                columns={columns}
+                dataSource={list as any}
+                loading={loading}
+                pagination={{ showTotal: (t) => `共 ${t} 人`, defaultPageSize: 50, showSizeChanger: true }}
+                scroll={{ x: 900 }}
+                size="small"
+            />
+        </>
+    );
+}
