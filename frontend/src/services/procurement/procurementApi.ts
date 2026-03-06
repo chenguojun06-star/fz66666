@@ -55,13 +55,13 @@ type PageResult<T> = ApiResult<{ records: T[]; total: number; current: number; s
 export const procurementApi = {
   /** 供应商列表 */
   listSuppliers: (params: SupplierListParams = {}) =>
-    api.post<PageResult<Supplier>>('/api/procurement/suppliers/list', params),
+    api.post<PageResult<Supplier>>('/procurement/suppliers/list', params),
 
   /** 采购单列表 */
   listPurchaseOrders: (params: PurchaseOrderListParams = {}) =>
-    api.post<PageResult<PurchaseOrder>>('/api/procurement/purchase-orders/list', params),
+    api.post<PageResult<PurchaseOrder>>('/procurement/purchase-orders/list', params),
 
   /** 统计数据 */
   getStats: (params: Record<string, unknown> = {}) =>
-    api.post<ApiResult<ProcurementStats>>('/api/procurement/stats', params),
+    api.post<ApiResult<ProcurementStats>>('/procurement/stats', params),
 };
