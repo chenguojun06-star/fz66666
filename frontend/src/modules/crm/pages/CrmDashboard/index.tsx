@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button, Card, Col, Descriptions, Form, Input,
-  message, Modal, Progress, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
+  message, Modal, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography,
 } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined,
   EditOutlined, EyeOutlined, LockOutlined, PlusOutlined,
@@ -385,7 +386,7 @@ const CustomerManagement: React.FC = () => {
 
       {/* 表格 */}
       <Card bodyStyle={{ padding: 0 }}>
-        <Table
+        <ResizableTable
           rowKey="id"
           columns={columns}
           dataSource={customers}
@@ -450,7 +451,7 @@ const CustomerManagement: React.FC = () => {
                 key: 'orders',
                 label: `生产订单${drawerOrders.length > 0 ? ` (${drawerOrders.length})` : ''}`,
                 children: (
-                  <Table
+                  <ResizableTable
                     rowKey="id"
                     loading={drawerLoading}
                     dataSource={drawerOrders}

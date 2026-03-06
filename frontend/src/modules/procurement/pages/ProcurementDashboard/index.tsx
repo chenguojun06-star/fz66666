@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button, Card, Col, DatePicker, Form, Input, InputNumber,
-  message, Modal, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
+  message, Modal, Row, Select, Space, Spin, Tabs, Tag, Typography,
 } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   ArrowRightOutlined, CheckCircleOutlined, LockOutlined, PlusOutlined, RocketOutlined, SearchOutlined,
   ShoppingCartOutlined, ShopOutlined, WalletOutlined,
@@ -167,7 +168,7 @@ const SupplierTab: React.FC = () => {
         </Space>
       </Card>
       <Card bodyStyle={{ padding: 0 }}>
-        <Table
+        <ResizableTable
           rowKey="id"
           columns={columns}
           dataSource={suppliers}
@@ -270,7 +271,7 @@ const PurchaseOrderTab: React.FC = () => {
         />
       </Card>
       <Card bodyStyle={{ padding: 0 }}>
-        <Table
+        <ResizableTable
           rowKey="id"
           columns={columns}
           dataSource={orders}
