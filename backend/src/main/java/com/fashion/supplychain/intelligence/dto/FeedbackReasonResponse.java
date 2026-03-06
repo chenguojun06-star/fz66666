@@ -4,17 +4,16 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-public class FeedbackRequest {
+public class FeedbackReasonResponse {
+    private Long id;
     private String predictionId;
     private String suggestionType;
+    private Boolean accepted;
     private String reasonCode;
     private String reasonText;
-    private String orderId;
     private String orderNo;
     private String stageName;
     private String processName;
-    private LocalDateTime predictedFinishTime;
-    private LocalDateTime actualFinishTime;
-    private String actualResult;
-    private Boolean acceptedSuggestion;
+    private String operatorName;
+    private LocalDateTime createTime;
 }

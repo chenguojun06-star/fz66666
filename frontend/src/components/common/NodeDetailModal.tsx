@@ -3,6 +3,7 @@ import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin
 import { FileTextOutlined, UnorderedListOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
+import PredictionFeedbackBar from '@/components/common/PredictionFeedbackBar';
 import ResizableModal from './ResizableModal';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
@@ -511,7 +512,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       predictedFinishTime: prediction?.predictedFinishTime,
       actualFinishTime: maxScanTime,
       actualResult: 'completed',
-      acceptedSuggestion: false,
     }).catch(() => { /* 静默失败 */ });
   }, [orderId, nodeName, visible, isPatternProduction, nodeStats?.percent, filteredScanRecords, prediction, orderSummary.orderNo]);
 
@@ -1148,35 +1148,44 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             borderRadius: 6,
             padding: '8px 12px',
             marginBottom: 8,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
             fontSize: 13,
           }}>
-            <span style={{ fontSize: 16 }}>🎯</span>
-            {predicting ? (
-              <span style={{ color: '#1677ff' }}>预测中…</span>
-            ) : prediction?.predictedFinishTime ? (
-              <>
-                <span style={{ color: '#333' }}>
-                  预计完工：<b style={{ color: '#1677ff' }}>
-                    {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
-                  </b>
-                </span>
-                {(prediction.confidence != null) && (
-                  <span style={{ color: '#888', marginLeft: 4 }}>
-                    置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
-                      {prediction.confidence}%
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 16 }}>🎯</span>
+              {predicting ? (
+                <span style={{ color: '#1677ff' }}>预测中…</span>
+              ) : prediction?.predictedFinishTime ? (
+                <>
+                  <span style={{ color: '#333' }}>
+                    预计完工：<b style={{ color: '#1677ff' }}>
+                      {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
                     </b>
                   </span>
-                )}
-                {prediction.reasons && prediction.reasons.length > 0 && (
-                  <span style={{ color: '#aaa', fontSize: 11, marginLeft: 4 }}>
-                    · {prediction.reasons[0]}
-                  </span>
-                )}
-              </>
-            ) : null}
+                  {(prediction.confidence != null) && (
+                    <span style={{ color: '#888', marginLeft: 4 }}>
+                      置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
+                        {prediction.confidence}%
+                      </b>
+                    </span>
+                  )}
+                  {prediction.reasons && prediction.reasons.length > 0 && (
+                    <span style={{ color: '#aaa', fontSize: 11, marginLeft: 4 }}>
+                      · {prediction.reasons[0]}
+                    </span>
+                  )}
+                </>
+              ) : null}
+            </div>
+            {!!prediction?.predictedFinishTime && (
+              <PredictionFeedbackBar
+                predictionId={prediction?.predictionId}
+                predictedFinishTime={prediction?.predictedFinishTime}
+                orderId={orderId}
+                orderNo={orderSummary.orderNo}
+                stageName={nodeName}
+                processName={String(currentNodeData.delegateProcessName || nodeName || '').trim() || undefined}
+              />
+            )}
           </div>
         )}
         <Tabs

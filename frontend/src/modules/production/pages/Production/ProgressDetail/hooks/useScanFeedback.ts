@@ -23,7 +23,6 @@ export const useScanFeedback = () => {
       stageName: params.stageName,
       processName: params.processName,
       actualFinishTime: new Date().toISOString(),
-      acceptedSuggestion: true,
     }).catch(() => {
       // 静默失败 — 反馈数据丢失不影响生产
     });

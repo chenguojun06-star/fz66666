@@ -3,9 +3,8 @@
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, QRCode, Select, Space, Spin, Tag, Typography, Upload } from 'antd';
-import { LockOutlined, LinkOutlined, MessageOutlined, QrcodeOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Typography, Upload } from 'antd';
+import { LockOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
@@ -21,6 +20,8 @@ import {
 import feedbackService from '@/services/feedbackService';
 import type { UserFeedback } from '@/services/feedbackService';
 import ProfileSmartSettingsPanel, { SMART_FEATURE_KEYS } from './ProfileSmartSettingsPanel';
+import ProfileTenantEngagementPanel from './ProfileTenantEngagementPanel';
+import ProfileFeedbackModal from './ProfileFeedbackModal';
 
 type ProfileMe = {
     id?: string | number;
@@ -30,20 +31,6 @@ type ProfileMe = {
     email?: string;
     roleName?: string;
     roleId?: string | number;
-};
-
-const FEEDBACK_CATEGORY_MAP: Record<string, { label: string; color: string }> = {
-    BUG: { label: '缺陷', color: 'red' },
-    SUGGESTION: { label: '建议', color: 'blue' },
-    QUESTION: { label: '咨询', color: 'orange' },
-    OTHER: { label: '其他', color: 'default' },
-};
-
-const FEEDBACK_STATUS_MAP: Record<string, { label: string; color: string }> = {
-    PENDING: { label: '待处理', color: 'default' },
-    PROCESSING: { label: '处理中', color: 'processing' },
-    RESOLVED: { label: '已解决', color: 'success' },
-    CLOSED: { label: '已关闭', color: 'default' },
 };
 
 const ProfileInfoTab: React.FC = () => {
@@ -550,87 +537,23 @@ const ProfileInfoTab: React.FC = () => {
                             alignItems: 'start',
                         }}
                     >
-                        {tenantInfo?.tenantCode && (() => {
-                            const origin = window.location.origin;
-                            const registerUrl = `${origin}/register?tenantCode=${encodeURIComponent(tenantInfo.tenantCode!)}&tenantName=${encodeURIComponent(tenantInfo.tenantName || '')}`;
-                            return (
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                        <TeamOutlined style={{ color: 'var(--primary-color)' }} />
-                                        <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
-                                    </div>
-                                    <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                        <div
-                                            style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '1fr 1fr',
-                                                gap: 12,
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <div style={{ textAlign: 'center' }}>
-                                                <QRCode value={registerUrl} size={160} />
-                                            </div>
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-start' }}>
-                                                    <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
-                                                    <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
-                                                        {tenantInfo.tenantCode}
-                                                    </Typography.Text>
-                                                </div>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                                    <Button size="small" icon={<LinkOutlined />}
-                                                        onClick={() => { navigator.clipboard.writeText(registerUrl); message.success('注册链接已复制'); }}>
-                                                        复制注册链接
-                                                    </Button>
-                                                    <Button size="small" icon={<QrcodeOutlined />}
-                                                        onClick={() => { navigator.clipboard.writeText(tenantInfo.tenantCode!); message.success('工厂码已复制'); }}>
-                                                        复制工厂码
-                                                    </Button>
-                                                </div>
-                                                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
-                                                    员工扫码二维码或输入工厂码即可申请加入
-                                                </Typography.Text>
-                                            </div>
-                                        </div>
-                                    </Card>
-
-                                    {/* 问题反馈 */}
-                                    <div style={{ marginTop: 16 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                            <MessageOutlined style={{ color: 'var(--primary-color)' }} />
-                                            <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
-                                        </div>
-                                        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                            <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
-                                                遇到问题或有改进建议？提交反馈帮助我们优化系统
-                                            </Typography.Text>
-                                            <Space>
-                                                <Button type="primary" icon={<MessageOutlined />} onClick={() => setFeedbackVisible(true)}>提交反馈</Button>
-                                                <Button onClick={() => { loadMyFeedbacks(); }}>我的反馈</Button>
-                                            </Space>
-                                            {myFeedbacks.length > 0 && (
-                                                <div style={{ marginTop: 16 }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
-                                                    {myFeedbacks.slice(0, 5).map(fb => (
-                                                        <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
-                                                            <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
-                                                                {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
-                                                            </Tag>
-                                                            <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
-                                                            <Tag color={FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.color || 'default'} style={{ margin: 0 }}>
-                                                                {FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.label}
-                                                            </Tag>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>加载中...</div>}
-                                        </Card>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        {tenantInfo?.tenantCode && (
+                            <ProfileTenantEngagementPanel
+                                tenantInfo={tenantInfo}
+                                myFeedbacks={myFeedbacks}
+                                loadingFeedbacks={loadingFeedbacks}
+                                onOpenFeedback={() => setFeedbackVisible(true)}
+                                onLoadFeedbacks={() => { void loadMyFeedbacks(); }}
+                                onCopyRegisterUrl={(registerUrl) => {
+                                    navigator.clipboard.writeText(registerUrl);
+                                    message.success('注册链接已复制');
+                                }}
+                                onCopyTenantCode={(tenantCode) => {
+                                    navigator.clipboard.writeText(tenantCode);
+                                    message.success('工厂码已复制');
+                                }}
+                            />
+                        )}
 
                         <ProfileSmartSettingsPanel
                             canManageSmartFlags={canManageSmartFlags}
@@ -651,36 +574,13 @@ const ProfileInfoTab: React.FC = () => {
                         />
                     </div>
 
-                    {/* 提交反馈弹窗 */}
-                    <ResizableModal
+                    <ProfileFeedbackModal
                         open={feedbackVisible}
-                        title="提交问题反馈"
+                        feedbackForm={feedbackForm}
+                        submitting={submittingFeedback}
                         onCancel={() => setFeedbackVisible(false)}
-                        width="40vw"
-                        onOk={submitFeedback}
-                        confirmLoading={submittingFeedback}
-                        okText="提交"
-                    >
-                        <Form form={feedbackForm} layout="vertical" requiredMark={false}>
-                            <Form.Item label="分类" name="category" initialValue="BUG" rules={[{ required: true }]}>
-                                <Select options={[
-                                    { value: 'BUG', label: '🐛 系统缺陷' },
-                                    { value: 'SUGGESTION', label: '💡 功能建议' },
-                                    { value: 'QUESTION', label: '❓ 使用咨询' },
-                                    { value: 'OTHER', label: '📋 其他' },
-                                ]} />
-                            </Form.Item>
-                            <Form.Item label="标题" name="title" rules={[{ required: true, message: '请输入标题' }]}>
-                                <Input placeholder="简要描述您遇到的问题" maxLength={100} />
-                            </Form.Item>
-                            <Form.Item label="详细描述" name="content" rules={[{ required: true, message: '请描述问题详情' }]}>
-                                <Input.TextArea rows={5} placeholder="请详细描述问题现象、操作步骤、期望结果等" maxLength={2000} showCount />
-                            </Form.Item>
-                            <Form.Item label="联系方式（选填）" name="contact">
-                                <Input placeholder="手机号或微信号，方便我们与您联系" />
-                            </Form.Item>
-                        </Form>
-                    </ResizableModal>
+                        onSubmit={submitFeedback}
+                    />
                 </div>
             </div>
         </>

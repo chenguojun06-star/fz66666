@@ -31,6 +31,9 @@ public class FeedbackLearningOrchestrator {
     @Autowired
     private IntelligencePredictionLogMapper predictionLogMapper;
 
+    @Autowired
+    private FeedbackReasonOrchestrator feedbackReasonOrchestrator;
+
     public FeedbackResponse acceptFeedback(FeedbackRequest request) {
         FeedbackResponse response = new FeedbackResponse();
         response.setAccepted(Boolean.TRUE);
@@ -79,6 +82,7 @@ public class FeedbackLearningOrchestrator {
             log.debug("[反馈闭环] 未传 predictionId，僅返回偏差计算结果");
         }
 
+        feedbackReasonOrchestrator.recordFeedbackReason(request);
         return response;
     }
 

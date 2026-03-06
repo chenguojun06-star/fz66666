@@ -317,6 +317,96 @@
 .c-kpi-val.green  { color: #39ff14; }
 .c-kpi-val.purple { color: #a78bfa; }
 
+.c-pain-card {
+  padding-top: 12px;
+}
+
+.c-pain-refresh {
+  margin-left: auto;
+  color: #7aaec8;
+}
+
+.c-pain-refresh:hover {
+  color: #00e5ff !important;
+}
+
+.c-pain-loading,
+.c-pain-empty {
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7aaec8;
+}
+
+.c-pain-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.c-pain-item {
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  padding: 12px;
+  min-height: 120px;
+}
+
+.c-pain-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.c-pain-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.c-pain-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8f4ff;
+}
+
+.c-pain-domain {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.c-pain-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #8ab4c8;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.c-pain-reason {
+  color: #c8d8ea;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1440px) {
+  .c-pain-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .c-pain-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* 分值霓虹动画 */
 .neon-cyan  { animation: neon-pulse-cyan  3s ease-in-out infinite; }
 .neon-green { animation: neon-pulse-green 3s ease-in-out infinite; }
