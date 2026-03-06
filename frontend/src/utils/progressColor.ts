@@ -49,8 +49,8 @@ export const getRemainingDaysDisplay = (
   actualEndDate?: string | null
 ): { text: string; color: string } => {
   if (!endDate) return { text: '-', color: '#999' };
-  // 已关单：停止倒计时，固定显示"已关单"
-  if (actualEndDate) return { text: '已关单', color: '#52c41a' };
+  // 已关单：停止倒计时，固定显示"已关单"（灰色）
+  if (actualEndDate) return { text: '已关单', color: '#8c8c8c' };
 
   const now = new Date();
   const deadline = new Date(endDate);

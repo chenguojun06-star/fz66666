@@ -55,7 +55,8 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const processWorkers = processWorkerCountsByOrder[String(order.id)] ?? {};
 
   const total       = Number(order.orderQuantity) || 0;
-  const isCompleted = order.status === 'completed';
+  // 已完成（status=completed）或已关单（status=CLOSED / actualEndDate 有值）均不显示悬浮卡
+  const isCompleted = order.status === 'completed' || (order.status as string) === 'CLOSED' || !!order.actualEndDate;
   const now         = dayjs();
   const planEnd     = order.plannedEndDate ? dayjs(order.plannedEndDate) : null;
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
@@ -289,6 +290,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   }, [order, stages, boardTimes, speed, isCompleted]);
 
   /* ─────── RENDER ─────── */
+  // 已完成/已关单不显示悬浮卡
+  if (isCompleted) return null;
+
   return (
     <div style={{ width: 270, fontSize: 12, lineHeight: 1.5 }}>
 

@@ -111,9 +111,27 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     return groups;
   };
 
+  // 排序：已完成/已关单卡片沉底，活跃卡片按交期升序（最紧迫在前）
+  const sortedData = [...dataSource].sort((a, b) => {
+    const isDone = (r: any) =>
+      !!(progressConfig?.isCompleted?.(r)) ||
+      !!(r.actualEndDate) ||
+      String(r.status).toUpperCase() === 'CLOSED' ||
+      (progressConfig ? progressConfig.calculate(r) >= 100 : false);
+    const aDone = isDone(a);
+    const bDone = isDone(b);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    if (aDone) {
+      // 都已完成/关单：最近关单的排前面
+      return (b.actualEndDate ?? '').localeCompare(a.actualEndDate ?? '');
+    }
+    // 都活跃：交期最近的排前面（无交期的沉底）
+    return (a.plannedEndDate ?? '9999-99-99').localeCompare(b.plannedEndDate ?? '9999-99-99');
+  });
+
   return (
     <Row gutter={[16, 16]}>
-      {dataSource.map((record, index) => {
+      {sortedData.map((record, index) => {
         // 计算是否已完成 - 添加防护检查
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
           ? progressConfig.calculate(record) >= 100
@@ -249,18 +267,21 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               </div>
             </Card>
           );
-          return (
+        return (
           <Col {...getColSpan()} key={record.id || index}>
-            {hoverRender ? (
-              <Popover
-                content={hoverRender(record)}
-                trigger="hover"
-                placement="rightTop"
-                overlayStyle={{ maxWidth: 280 }}
-              >
-                {cardNode}
-              </Popover>
-            ) : cardNode}
+            {hoverRender ? (() => {
+              const hoverContent = hoverRender(record);
+              return hoverContent ? (
+                <Popover
+                  content={hoverContent}
+                  trigger="hover"
+                  placement="rightTop"
+                  overlayStyle={{ maxWidth: 280 }}
+                >
+                  {cardNode}
+                </Popover>
+              ) : cardNode;
+            })() : cardNode}
           </Col>
         );
       })}
