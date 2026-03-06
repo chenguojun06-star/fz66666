@@ -467,6 +467,42 @@ const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) =
   </div>
 );
 
+/* ─── 工厂卡点行（与 OrderRow 同款布局）─── */
+const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item }) => {
+  const c = item.stuckPct < 20 ? '#ff4136' : item.stuckPct < 50 ? '#f7a600' : '#39ff14';
+  return (
+    <div className="c-order-row">
+      <div className="c-order-row-main">
+        {/* 左：工厂名 */}
+        <span className="c-order-factory">{item.factoryName}</span>
+        {/* 中：卡点工序 + 订单数 + 进度条 + AI提示 */}
+        <div className="c-order-center">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: c, fontWeight: 700, fontSize: 11, flexShrink: 0 }}>卡在&nbsp;{item.stuckStage}</span>
+            <span style={{ color: '#2a4455', fontSize: 10, flexShrink: 0 }}>{item.orderCount}单</span>
+            {item.worstOrders.slice(0, 2).map(w => (
+              <span key={w.orderNo} style={{ fontSize: 10, color: '#6a9aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {w.orderNo}
+              </span>
+            ))}
+          </div>
+          <div className="c-order-bar-wrap">
+            <div className="c-order-bar" style={{ width: `${item.stuckPct}%`, background: c }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#2a4a5a' }}>
+            <LiveDot size={4} color="#f7c948" />
+            <span style={{ color: '#4a7a8a' }}>AI：{getFactoryAiHint(item.stuckStage, item.stuckPct)}</span>
+          </div>
+        </div>
+        {/* 右：百分比 */}
+        <div className="c-order-right">
+          <span className="c-order-pct" style={{ color: c }}>{item.stuckPct}%</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ─── 数据 hook ─── */
 interface CockpitData {
   pulse:   LivePulseResponse | null;
@@ -1012,37 +1048,13 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-card-title">
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
-              <span className="c-card-badge cyan-badge">全部 {factoryBottleneck.length} 家工厂</span>
+              <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
+              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
             </div>
-            {factoryBottleneck.length === 0 ? (
-              <div className="c-empty">暂无在制订单</div>
-            ) : (
-              <AutoScrollBox className="c-bottleneck-list">
-                {factoryBottleneck.map(f => {
-                  const c = f.stuckPct < 20 ? '#ff4136' : f.stuckPct < 50 ? '#f7a600' : '#39ff14';
-                  return (
-                    <div key={f.factoryName} className="c-bottleneck-item">
-                      <div className="c-bottleneck-row">
-                        <span className="c-bottleneck-factory">{f.factoryName}</span>
-                        <span className="c-bottleneck-stage" style={{ color: c }}>卡在&nbsp;{f.stuckStage}</span>
-                        <div className="c-bottleneck-orders">
-                          {f.worstOrders.map(w => (
-                            <span key={w.orderNo} className="c-bottleneck-order-chip" style={{ borderColor: c + '55', color: '#8ab4cc' }}>
-                              {w.orderNo}&nbsp;<b style={{ color: c }}>{w.pct}%</b>
-                            </span>
-                          ))}
-                        </div>
-                        <span className="c-bottleneck-pct" style={{ color: c }}>{f.stuckPct}%</span>
-                        <span className="c-bottleneck-cnt">{f.orderCount}单</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: '#3a6878', paddingLeft: 2, marginTop: 3, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <LiveDot size={5} color="#f7c948" /><span style={{ color: '#6a9ab4' }}>AI：{getFactoryAiHint(f.stuckStage, f.stuckPct)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </AutoScrollBox>
-            )}
+            <AutoScrollBox className="c-orders-scroll">
+              {factoryBottleneck.map(f => <BottleneckRow key={f.factoryName} item={f} />)}
+              {!factoryBottleneck.length && <div className="c-empty">暂无在制订单</div>}
+            </AutoScrollBox>
           </div>
 
           {/* 逾期 & 预计延期订单 */}
