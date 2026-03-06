@@ -23,6 +23,7 @@ public class StyleIntelligenceProfileResponse {
     private ScanSummary scan = new ScanSummary();
     private StockSummary stock = new StockSummary();
     private FinanceSummary finance = new FinanceSummary();
+    private TenantPreferenceProfile tenantProfile = new TenantPreferenceProfile();
     private List<StageStatus> stages = new ArrayList<>();
     private List<String> insights = new ArrayList<>();
 
@@ -38,6 +39,11 @@ public class StyleIntelligenceProfileResponse {
         private String latestOrderStatus;
         private Integer latestProductionProgress = 0;
         private String latestPlannedEndDate;
+        private String topRiskOrderNo;
+        private String topRiskOrderStatus;
+        private String topRiskReason;
+        private String topRiskFactoryName;
+        private String topRiskFactoryReason;
     }
 
     @Data
@@ -51,6 +57,9 @@ public class StyleIntelligenceProfileResponse {
         private String latestScanTime;
         private String latestProgressStage;
         private String latestProcessName;
+        private String topAnomalyProcessName;
+        private String topAnomalyStage;
+        private Integer topAnomalyCount = 0;
     }
 
     @Data
@@ -75,6 +84,20 @@ public class StyleIntelligenceProfileResponse {
         private BigDecimal estimatedGrossProfit;
         private BigDecimal estimatedGrossMargin;
         private Integer historicalOrderCount = 0;
+        private BigDecimal quotationGap;
+        private String costPressureSource;
+        private BigDecimal costPressureAmount;
+    }
+
+    @Data
+    public static class TenantPreferenceProfile {
+        private String primaryGoal = "DELIVERY";
+        private String primaryGoalLabel = "交期优先";
+        private Integer deliveryWarningDays = 3;
+        private Integer anomalyWarningCount = 5;
+        private BigDecimal lowMarginThreshold = BigDecimal.valueOf(5);
+        private String topRiskFactoryName;
+        private String topRiskFactoryReason;
     }
 
     @Data

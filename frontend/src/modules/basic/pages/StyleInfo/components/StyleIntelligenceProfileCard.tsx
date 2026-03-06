@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Spin, Tag } from 'antd';
+import { Card, Spin, Tag } from 'antd';
 import { BulbOutlined, CalendarOutlined, NodeIndexOutlined, RadarChartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
@@ -8,7 +8,6 @@ import type { StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } f
 
 interface Props {
   style: StyleInfo | null;
-  onJumpTab: (tabKey: string) => void;
 }
 
 const STAGE_MAP = [
@@ -31,7 +30,39 @@ const fmtPercent = (value?: number | null) => {
   return `${Number(value).toFixed(1)}%`;
 };
 
-const getDeliveryMeta = (deliveryDate?: string) => {
+const costPressureLabel = (value?: string | null) => {
+  if (value === 'PROCESS') return '工序成本';
+  if (value === 'MATERIAL') return '物料成本';
+  if (value === 'OTHER') return '其他成本';
+  return '成本';
+};
+
+const riskTone = (level: 'high' | 'medium' | 'low') => {
+  if (level === 'high') {
+    return {
+      border: '1px solid rgba(255,77,79,0.22)',
+      background: 'rgba(255,77,79,0.06)',
+      tagBg: '#fff1f0',
+      tagColor: '#cf1322',
+    };
+  }
+  if (level === 'medium') {
+    return {
+      border: '1px solid rgba(250,140,22,0.22)',
+      background: 'rgba(250,140,22,0.06)',
+      tagBg: '#fff7e6',
+      tagColor: '#d46b08',
+    };
+  }
+  return {
+    border: '1px solid rgba(82,196,26,0.22)',
+    background: 'rgba(82,196,26,0.06)',
+    tagBg: '#f6ffed',
+    tagColor: '#389e0d',
+  };
+};
+
+const getDeliveryMeta = (deliveryDate?: string, warningDays = 3) => {
   if (!deliveryDate) {
     return { label: '待补交期', color: 'default' as const, detail: '当前还没有设置交板日期' };
   }
@@ -39,7 +70,7 @@ const getDeliveryMeta = (deliveryDate?: string) => {
   if (diffDays < 0) {
     return { label: '已延期', color: 'error' as const, detail: `已超期 ${Math.abs(diffDays)} 天` };
   }
-  if (diffDays <= 3) {
+  if (diffDays <= warningDays) {
     return { label: '即将超期', color: 'warning' as const, detail: `${diffDays} 天内到期` };
   }
   return { label: '交期正常', color: 'success' as const, detail: `距交期还有 ${diffDays} 天` };
@@ -89,7 +120,7 @@ const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggestionResp
   return insights.slice(0, 4);
 };
 
-const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onJumpTab }) => {
+const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [quoteSuggestion, setQuoteSuggestion] = useState<StyleQuoteSuggestionResponse | null>(null);
   const [profile, setProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
@@ -123,7 +154,10 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onJumpTab }) => 
     void loadProfile();
   }, [loadProfile]);
 
-  const deliveryMeta = useMemo(() => getDeliveryMeta(profile?.deliveryDate || style?.deliveryDate), [profile?.deliveryDate, style?.deliveryDate]);
+  const deliveryMeta = useMemo(
+    () => getDeliveryMeta(profile?.deliveryDate || style?.deliveryDate, profile?.tenantProfile?.deliveryWarningDays ?? 3),
+    [profile?.deliveryDate, profile?.tenantProfile?.deliveryWarningDays, style?.deliveryDate],
+  );
   const progressMeta = useMemo(() => getProgressMeta(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }), [style]);
   const insights = useMemo(
     () => (profile?.insights?.length ? profile.insights : buildFallbackInsights(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }, quoteSuggestion)),
@@ -141,49 +175,75 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onJumpTab }) => 
     return STAGE_MAP.map((item) => ({ key: item.key, label: item.label, done: item.done(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }) }));
   }, [profile?.stages, style]);
 
-  const analysisBlocks = useMemo(() => {
+  const diagnosticCards = useMemo(() => {
     const production = profile?.production;
     const scan = profile?.scan;
-    const stock = profile?.stock;
     const finance = profile?.finance;
-    return [
-      {
-        key: 'production',
-        title: '生产联动',
-        lines: [
-          `关联订单 ${production?.orderCount ?? 0} 单，进行中 ${production?.activeOrderCount ?? 0} 单，延期 ${production?.delayedOrderCount ?? 0} 单。`,
-          `平均生产进度 ${production?.avgProductionProgress ?? 0}%，累计完成 ${production?.totalCompletedQuantity ?? 0} 件。`,
-          production?.latestOrderNo ? `最近订单 ${production.latestOrderNo}，状态 ${production.latestOrderStatus || '未知'}。` : '当前还没有形成生产订单。',
-        ],
-      },
-      {
-        key: 'scan',
-        title: '扫码追踪',
-        lines: [
-          `成功扫码 ${scan?.successRecords ?? 0} 条，共 ${scan?.successQuantity ?? 0} 件；异常 ${scan?.failedRecords ?? 0} 条。`,
-          `已结算 ${scan?.settledRecordCount ?? 0} 条，未结算 ${scan?.unsettledRecordCount ?? 0} 条。`,
-          scan?.latestProgressStage ? `最近扫码停留在 ${scan.latestProgressStage}${scan.latestProcessName ? ` / ${scan.latestProcessName}` : ''}。` : '当前还没有扫码轨迹。',
-        ],
-      },
-      {
-        key: 'stock',
-        title: '样衣库存',
-        lines: [
-          `总库存 ${stock?.totalQuantity ?? 0} 件，可用 ${stock?.availableQuantity ?? 0} 件，借出 ${stock?.loanedQuantity ?? 0} 件。`,
-          `开发样 ${stock?.developmentQuantity ?? 0} 件，产前样 ${stock?.preProductionQuantity ?? 0} 件，出货样 ${stock?.shipmentQuantity ?? 0} 件。`,
-        ],
-      },
-      {
-        key: 'finance',
-        title: '财务预估',
-        lines: [
-          `当前报价 ${fmtMoney(finance?.currentQuotation)}，AI 建议报价 ${fmtMoney(finance?.suggestedQuotation)}。`,
-          `预计营收 ${fmtMoney(finance?.estimatedRevenue)}，加工成本 ${fmtMoney(finance?.estimatedProcessingCost)}，预计毛利 ${fmtMoney(finance?.estimatedGrossProfit)}。`,
-          `预计毛利率 ${fmtPercent(finance?.estimatedGrossMargin)}，历史样本 ${finance?.historicalOrderCount ?? 0} 单。`,
-        ],
-      },
-    ];
-  }, [profile?.finance, profile?.production, profile?.scan, profile?.stock]);
+    const cards: Array<{
+      key: string;
+      title: string;
+      level: 'high' | 'medium' | 'low';
+      issue: string;
+      cause: string;
+    }> = [];
+
+    cards.push({
+      key: 'production',
+      title: '拖期订单',
+      level: production?.topRiskOrderNo ? (production?.delayedOrderCount ? 'high' : 'medium') : 'low',
+      issue: production?.topRiskOrderNo
+        ? `订单 ${production.topRiskOrderNo} 是当前最容易拖慢这款的生产单。`
+        : production?.latestOrderNo
+          ? '当前还没有出现明确的拖期订单。'
+          : '当前还没有形成生产订单。',
+      cause: production?.topRiskOrderNo
+        ? (production.topRiskReason || '这张订单的进度、状态或交期窗口已经出现风险信号。')
+        : production?.latestOrderNo
+          ? `${production?.topRiskFactoryName ? `当前主要风险工厂是 ${production.topRiskFactoryName}。` : ''}${production?.topRiskFactoryReason || `最近订单 ${production.latestOrderNo} 状态 ${production.latestOrderStatus || '未知'}，平均生产进度 ${production?.avgProductionProgress ?? 0}%。`}`
+          : '没有订单，就暂时无法判断哪一张生产单在拖慢这款。',
+    });
+
+    cards.push({
+      key: 'scan',
+      title: '异常工序',
+      level: (scan?.failedRecords ?? 0) >= (profile?.tenantProfile?.anomalyWarningCount ?? 5) ? 'high' : (scan?.failedRecords ?? 0) > 0 ? 'medium' : 'low',
+      issue: scan?.topAnomalyProcessName
+        ? `${scan.topAnomalyStage ? `${scan.topAnomalyStage} / ` : ''}${scan.topAnomalyProcessName} 是当前最异常的工序。`
+        : scan?.latestProgressStage
+          ? '当前还没有识别到集中异常工序。'
+          : '当前还没有扫码轨迹。',
+      cause: scan?.topAnomalyProcessName
+        ? `该工序累计出现 ${scan.topAnomalyCount ?? 0} 条异常记录，${(scan.topAnomalyCount ?? 0) >= (profile?.tenantProfile?.anomalyWarningCount ?? 5) ? '已经达到该租户的异常预警线。' : '异常已开始重复出现。'}`
+        : scan?.latestProgressStage
+          ? `最近扫码停留在 ${scan.latestProgressStage}${scan.latestProcessName ? ` / ${scan.latestProcessName}` : ''}，但还未形成异常聚集。`
+          : '没有扫码数据，就暂时无法判断哪道工序最容易出错。',
+    });
+
+    const grossMargin = Number(finance?.estimatedGrossMargin ?? 0);
+    const quotationGap = Math.abs(Number(finance?.quotationGap ?? 0));
+    cards.push({
+      key: 'finance',
+      title: '利润压力',
+      level: grossMargin < 0 ? 'high' : grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5) || quotationGap >= 1 ? 'medium' : 'low',
+      issue: grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5)
+        ? `当前预计毛利率只有 ${fmtPercent(finance?.estimatedGrossMargin)}。`
+        : quotationGap >= 1
+          ? `当前报价和 AI 建议已经偏离 ${fmtMoney(finance?.quotationGap)}。`
+          : '当前没有明显的利润压力。',
+      cause: finance?.costPressureSource
+        ? `${costPressureLabel(finance.costPressureSource)}占压最明显，当前测算规模约 ${fmtMoney(finance.costPressureAmount)}，${grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5) ? `已经低于该租户的利润安全线 ${fmtPercent(profile?.tenantProfile?.lowMarginThreshold)}。` : '是当前最主要的利润挤压来源。'}`
+        : '当前报价、成本和加工价之间没有看到明显的单点挤压。',
+    });
+
+    const goal = profile?.tenantProfile?.primaryGoal;
+    const priorityMap: Record<string, number> = goal === 'PROFIT'
+      ? { finance: 0, production: 1, scan: 2 }
+      : goal === 'CASHFLOW'
+        ? { finance: 0, scan: 1, production: 2 }
+        : { production: 0, scan: 1, finance: 2 };
+
+    return cards.sort((a, b) => (priorityMap[a.key] ?? 99) - (priorityMap[b.key] ?? 99));
+  }, [profile?.finance, profile?.production, profile?.scan, profile?.tenantProfile?.anomalyWarningCount, profile?.tenantProfile?.lowMarginThreshold, profile?.tenantProfile?.primaryGoal]);
 
   if (!style?.id) return null;
 
@@ -214,12 +274,6 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onJumpTab }) => 
             <div>当前节点：{profile?.progressNode || style.progressNode || '未启动'} · {deliveryMeta.detail}</div>
             <div>最新订单：{profile?.production?.latestOrderNo || style.latestOrderNo || '暂无'} · 生产进度 {profile?.production?.latestProductionProgress != null ? `${profile.production.latestProductionProgress}%` : style.latestProductionProgress != null ? `${style.latestProductionProgress}%` : '—'}</div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Button onClick={() => onJumpTab('7')}>去工序单价</Button>
-          <Button onClick={() => onJumpTab('8')}>去生产制单</Button>
-          <Button type="primary" onClick={() => onJumpTab('11')}>看工序智能库</Button>
         </div>
       </div>
 
@@ -290,33 +344,46 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onJumpTab }) => 
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#1f1f1f' }}>AI全链路判断</div>
         {loading ? (
           <div style={{ padding: '4px 0' }}><Spin size="small" /></div>
-        ) : insights.length ? (
+        ) : diagnosticCards.length ? (
           <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ display: 'grid', gap: 6 }}>
-              {insights.map((item) => (
-                <div key={item} style={{ fontSize: 13, color: '#434343', lineHeight: 1.7 }}>• {item}</div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-              {analysisBlocks.map((block) => (
-                <div
-                  key={block.key}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    background: 'rgba(255,255,255,0.72)',
-                    border: '1px solid rgba(24,144,255,0.08)',
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#262626', marginBottom: 6 }}>{block.title}</div>
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {block.lines.map((line) => (
-                      <div key={line} style={{ fontSize: 12, color: '#595959', lineHeight: 1.7 }}>{line}</div>
-                    ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+              {diagnosticCards.map((item) => {
+                const tone = riskTone(item.level);
+                return (
+                  <div
+                    key={item.key}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      ...tone,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#262626' }}>{item.title}</div>
+                      <span style={{ padding: '2px 8px', borderRadius: 999, background: tone.tagBg, color: tone.tagColor, fontSize: 12, fontWeight: 600 }}>
+                        {item.level === 'high' ? '高风险' : item.level === 'medium' ? '需关注' : '已识别'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>报了什么问题</div>
+                        <div style={{ fontSize: 13, color: '#262626', lineHeight: 1.7 }}>{item.issue}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>是什么导致的</div>
+                        <div style={{ fontSize: 13, color: '#434343', lineHeight: 1.7 }}>{item.cause}</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+          </div>
+        ) : insights.length ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {insights.slice(0, 3).map((item) => (
+              <div key={item} style={{ fontSize: 13, color: '#434343', lineHeight: 1.7 }}>• {item}</div>
+            ))}
           </div>
         ) : (
           <div style={{ fontSize: 13, color: '#595959' }}>当前款式信息较完整，建议继续保持按节点推进，并在形成订单后接入生产和财务成本回流。</div>

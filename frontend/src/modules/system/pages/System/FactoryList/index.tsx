@@ -13,12 +13,13 @@ import type { UploadFile } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
+import { paths } from '@/routeConfig';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -27,6 +28,7 @@ const FactoryList: React.FC = () => {
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // ===== 使用 useModal 管理弹窗 =====
   const factoryModal = useModal<FactoryType>();
@@ -451,7 +453,19 @@ const FactoryList: React.FC = () => {
               onClick: () => openDialog('edit', factory),
               primary: true,
             },
-
+            ...(factory.supplierType === 'OUTSOURCE'
+              ? [{
+                  key: 'workers',
+                  label: '工人管理',
+                  title: '工人管理',
+                  onClick: () => {
+                    const params = new URLSearchParams();
+                    if (factory.id) params.set('factoryId', String(factory.id));
+                    if (factory.factoryName) params.set('factoryName', factory.factoryName);
+                    navigate(`${paths.factoryWorkers}?${params.toString()}`);
+                  },
+                }]
+              : []),
             {
               key: 'account',
               label: '收款账户',

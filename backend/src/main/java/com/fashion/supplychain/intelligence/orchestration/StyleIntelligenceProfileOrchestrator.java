@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.ScanSummary;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.StageStatus;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.StockSummary;
+import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.TenantPreferenceProfile;
 import com.fashion.supplychain.intelligence.dto.StyleQuoteSuggestionResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -19,6 +20,8 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
+import com.fashion.supplychain.intelligence.service.IntelligenceReasonLibraryService;
+import com.fashion.supplychain.intelligence.service.TenantIntelligencePreferenceService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -27,7 +30,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +63,12 @@ public class StyleIntelligenceProfileOrchestrator {
     @Autowired
     private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
+    @Autowired
+    private TenantIntelligencePreferenceService tenantIntelligencePreferenceService;
+
+    @Autowired
+    private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
+
     public StyleIntelligenceProfileResponse profile(Long styleId, String styleNo) {
         StyleIntelligenceProfileResponse response = new StyleIntelligenceProfileResponse();
         StyleInfo style = findStyle(styleId, styleNo);
@@ -66,13 +77,14 @@ public class StyleIntelligenceProfileOrchestrator {
             return response;
         }
 
-        fillBaseInfo(response, style);
-
         List<ProductionOrder> orders = loadOrders(style.getStyleNo());
-        fillProductionSummary(response.getProduction(), orders);
-
         List<ScanRecord> scanRecords = loadScanRecords(style.getStyleNo());
-        fillScanSummary(response.getScan(), scanRecords);
+        TenantPreferenceProfile tenantProfile = tenantIntelligencePreferenceService.learnProfile(orders, scanRecords);
+        response.setTenantProfile(tenantProfile);
+
+        fillBaseInfo(response, style, tenantProfile);
+        fillProductionSummary(response.getProduction(), orders, tenantProfile);
+        fillScanSummary(response.getScan(), scanRecords, tenantProfile);
 
         List<SampleStock> sampleStocks = loadSampleStocks(style.getStyleNo());
         fillStockSummary(response.getStock(), sampleStocks);
@@ -103,7 +115,7 @@ public class StyleIntelligenceProfileOrchestrator {
         return styleInfoService.getOne(qw, false);
     }
 
-    private void fillBaseInfo(StyleIntelligenceProfileResponse response, StyleInfo style) {
+    private void fillBaseInfo(StyleIntelligenceProfileResponse response, StyleInfo style, TenantPreferenceProfile tenantProfile) {
         response.setStyleId(style.getId());
         response.setStyleNo(style.getStyleNo());
         response.setStyleName(style.getStyleName());
@@ -113,7 +125,8 @@ public class StyleIntelligenceProfileOrchestrator {
             response.setDeliveryDate(style.getDeliveryDate().format(DATE_FMT));
             int days = (int) ChronoUnit.DAYS.between(LocalDate.now(), style.getDeliveryDate().toLocalDate());
             response.setDaysToDelivery(days);
-            response.setDeliveryRisk(days < 0 ? "OVERDUE" : days <= 3 ? "WARNING" : "SAFE");
+            int warningDays = tenantProfile != null && tenantProfile.getDeliveryWarningDays() != null ? tenantProfile.getDeliveryWarningDays() : 3;
+            response.setDeliveryRisk(days < 0 ? "OVERDUE" : days <= warningDays ? "WARNING" : "SAFE");
         } else {
             response.setDeliveryRisk("UNKNOWN");
         }
@@ -143,7 +156,7 @@ public class StyleIntelligenceProfileOrchestrator {
         return productionOrderService.list(qw);
     }
 
-    private void fillProductionSummary(ProductionSummary summary, List<ProductionOrder> orders) {
+    private void fillProductionSummary(ProductionSummary summary, List<ProductionOrder> orders, TenantPreferenceProfile tenantProfile) {
         summary.setOrderCount(orders.size());
         summary.setActiveOrderCount((int) orders.stream()
                 .filter(order -> !"completed".equalsIgnoreCase(order.getStatus()) && !"cancelled".equalsIgnoreCase(order.getStatus()))
@@ -169,6 +182,19 @@ public class StyleIntelligenceProfileOrchestrator {
                 summary.setLatestPlannedEndDate(latest.getPlannedEndDate().format(DATE_FMT));
             }
         }
+
+        ProductionOrder topRiskOrder = orders.stream()
+                .max(Comparator.comparingInt(this::calculateOrderRiskScore))
+                .orElse(null);
+        if (topRiskOrder != null && calculateOrderRiskScore(topRiskOrder) > 0) {
+            summary.setTopRiskOrderNo(topRiskOrder.getOrderNo());
+            summary.setTopRiskOrderStatus(topRiskOrder.getStatus());
+            summary.setTopRiskReason(intelligenceReasonLibraryService.buildOrderRiskReason(topRiskOrder, tenantProfile));
+        }
+        if (tenantProfile != null) {
+            summary.setTopRiskFactoryName(tenantProfile.getTopRiskFactoryName());
+            summary.setTopRiskFactoryReason(tenantProfile.getTopRiskFactoryReason());
+        }
     }
 
     private List<ScanRecord> loadScanRecords(String styleNo) {
@@ -183,7 +209,7 @@ public class StyleIntelligenceProfileOrchestrator {
         return scanRecordService.list(qw);
     }
 
-    private void fillScanSummary(ScanSummary summary, List<ScanRecord> records) {
+    private void fillScanSummary(ScanSummary summary, List<ScanRecord> records, TenantPreferenceProfile tenantProfile) {
         summary.setTotalRecords(records.size());
         summary.setSuccessRecords((int) records.stream().filter(this::isSuccessRecord).count());
         summary.setFailedRecords((int) records.stream().filter(record -> !isSuccessRecord(record)).count());
@@ -210,6 +236,25 @@ public class StyleIntelligenceProfileOrchestrator {
                 summary.setLatestScanTime(latest.getScanTime().format(DATE_TIME_FMT));
             }
         }
+
+        Map<String, Integer> anomalyCountByProcess = new HashMap<>();
+        Map<String, String> stageByProcess = new HashMap<>();
+        records.stream()
+                .filter(record -> !isSuccessRecord(record))
+                .forEach(record -> {
+                    String processName = hasText(record.getProcessName()) ? record.getProcessName() : "未知工序";
+                    anomalyCountByProcess.merge(processName, 1, Integer::sum);
+                    if (hasText(record.getProgressStage())) {
+                        stageByProcess.putIfAbsent(processName, record.getProgressStage());
+                    }
+                });
+        anomalyCountByProcess.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .ifPresent(entry -> {
+                    summary.setTopAnomalyProcessName(entry.getKey());
+                    summary.setTopAnomalyCount(entry.getValue());
+                    summary.setTopAnomalyStage(stageByProcess.get(entry.getKey()));
+                });
     }
 
     private List<SampleStock> loadSampleStocks(String styleNo) {
@@ -264,6 +309,23 @@ public class StyleIntelligenceProfileOrchestrator {
         }
         if (summary.getTotalCost() == null) {
             summary.setTotalCost(suggestion.getTotalCost());
+        }
+        if (summary.getSuggestedQuotation() != null || summary.getCurrentQuotation() != null) {
+            summary.setQuotationGap(scale2(nonNull(summary.getSuggestedQuotation()).subtract(nonNull(summary.getCurrentQuotation()))));
+        }
+
+        BigDecimal materialCost = nonNull(summary.getMaterialCost());
+        BigDecimal processCost = nonNull(summary.getProcessCost());
+        BigDecimal otherCost = nonNull(summary.getTotalCost()).subtract(materialCost).subtract(processCost);
+        if (processCost.compareTo(materialCost) >= 0 && processCost.compareTo(otherCost) >= 0) {
+            summary.setCostPressureSource("PROCESS");
+            summary.setCostPressureAmount(scale2(processCost));
+        } else if (materialCost.compareTo(processCost) >= 0 && materialCost.compareTo(otherCost) >= 0) {
+            summary.setCostPressureSource("MATERIAL");
+            summary.setCostPressureAmount(scale2(materialCost));
+        } else if (otherCost.compareTo(BigDecimal.ZERO) > 0) {
+            summary.setCostPressureSource("OTHER");
+            summary.setCostPressureAmount(scale2(otherCost));
         }
 
         int totalOrderQty = orders.stream().mapToInt(order -> safeInt(order.getOrderQuantity())).sum();
@@ -340,16 +402,41 @@ public class StyleIntelligenceProfileOrchestrator {
             insights.add(String.format("已有 %d 个关联订单，但平均生产进度仅 %d%%，需要提前干预工厂节奏。",
                     response.getProduction().getOrderCount(), response.getProduction().getAvgProductionProgress()));
         }
+        if (hasText(response.getProduction().getTopRiskOrderNo())) {
+            insights.add(String.format("当前最危险订单是 %s，原因：%s", response.getProduction().getTopRiskOrderNo(), response.getProduction().getTopRiskReason()));
+        }
+        if (hasText(response.getProduction().getTopRiskFactoryName())) {
+            insights.add(String.format("当前风险主要来自工厂 %s，%s", response.getProduction().getTopRiskFactoryName(), response.getProduction().getTopRiskFactoryReason()));
+        }
 
         if (response.getScan().getFailedRecords() > 0) {
             insights.add(String.format("检测到 %d 条异常扫码记录，建议排查最近工序与质检环节。", response.getScan().getFailedRecords()));
         }
+        if (hasText(response.getScan().getTopAnomalyProcessName())) {
+            insights.add(intelligenceReasonLibraryService.buildScanAnomalyReason(
+                    response.getScan().getTopAnomalyStage(),
+                    response.getScan().getTopAnomalyProcessName(),
+                    safeInt(response.getScan().getTopAnomalyCount()),
+                    response.getTenantProfile().getAnomalyWarningCount()));
+        }
 
         if (response.getFinance().getEstimatedGrossMargin() != null
-                && response.getFinance().getEstimatedGrossMargin().compareTo(BigDecimal.valueOf(5)) < 0
+                && response.getFinance().getEstimatedGrossMargin().compareTo(response.getTenantProfile().getLowMarginThreshold()) < 0
                 && response.getFinance().getEstimatedRevenue() != null
                 && response.getFinance().getEstimatedRevenue().compareTo(BigDecimal.ZERO) > 0) {
             insights.add("当前预计毛利偏低，建议复核报价与加工成本，避免后续财务吃亏。");
+        }
+        if (response.getFinance().getQuotationGap() != null
+                && response.getFinance().getQuotationGap().abs().compareTo(BigDecimal.ONE) >= 0) {
+            insights.add(String.format("AI 建议报价与当前报价相差 %s，说明这款仍有定价修正空间。",
+                    response.getFinance().getQuotationGap().toPlainString()));
+        }
+        if (hasText(response.getFinance().getCostPressureSource())) {
+            insights.add(intelligenceReasonLibraryService.buildProfitPressureReason(
+                    response.getFinance().getCostPressureSource(),
+                    response.getFinance().getCostPressureAmount(),
+                    response.getFinance().getEstimatedGrossMargin(),
+                    response.getTenantProfile().getLowMarginThreshold()));
         }
 
         if (!hasText(style.getProcessAssignee()) || style.getProcessCompletedTime() == null) {
@@ -368,6 +455,33 @@ public class StyleIntelligenceProfileOrchestrator {
 
     private boolean isSuccessRecord(ScanRecord record) {
         return "success".equalsIgnoreCase(record.getScanResult()) && safeInt(record.getQuantity()) > 0;
+    }
+
+    private int calculateOrderRiskScore(ProductionOrder order) {
+        int score = 0;
+        if ("delayed".equalsIgnoreCase(order.getStatus())) {
+            score += 100;
+        }
+        int progress = safeInt(order.getProductionProgress());
+        if (progress < 30) {
+            score += 40;
+        } else if (progress < 60) {
+            score += 20;
+        }
+        if (order.getPlannedEndDate() != null) {
+            long diffDays = ChronoUnit.DAYS.between(LocalDate.now(), order.getPlannedEndDate().toLocalDate());
+            if (diffDays < 0) {
+                score += 60;
+            } else if (diffDays <= 3) {
+                score += 30;
+            }
+        }
+        int orderQty = safeInt(order.getOrderQuantity());
+        int completedQty = safeInt(order.getCompletedQuantity());
+        if (orderQty > 0 && completedQty < orderQty / 2) {
+            score += 10;
+        }
+        return score;
     }
 
     private String formatDateTime(LocalDateTime value) {

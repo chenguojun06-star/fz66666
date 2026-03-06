@@ -529,6 +529,11 @@ export interface StyleIntelligenceProfileResponse {
     latestOrderStatus?: string | null;
     latestProductionProgress?: number | null;
     latestPlannedEndDate?: string | null;
+    topRiskOrderNo?: string | null;
+    topRiskOrderStatus?: string | null;
+    topRiskReason?: string | null;
+    topRiskFactoryName?: string | null;
+    topRiskFactoryReason?: string | null;
   };
   scan: {
     totalRecords: number;
@@ -540,6 +545,9 @@ export interface StyleIntelligenceProfileResponse {
     latestScanTime?: string | null;
     latestProgressStage?: string | null;
     latestProcessName?: string | null;
+    topAnomalyProcessName?: string | null;
+    topAnomalyStage?: string | null;
+    topAnomalyCount?: number | null;
   };
   stock: {
     totalQuantity: number;
@@ -560,6 +568,18 @@ export interface StyleIntelligenceProfileResponse {
     estimatedGrossProfit?: number | null;
     estimatedGrossMargin?: number | null;
     historicalOrderCount: number;
+    quotationGap?: number | null;
+    costPressureSource?: 'PROCESS' | 'MATERIAL' | 'OTHER' | string | null;
+    costPressureAmount?: number | null;
+  };
+  tenantProfile: {
+    primaryGoal?: 'DELIVERY' | 'PROFIT' | 'CASHFLOW' | string | null;
+    primaryGoalLabel?: string | null;
+    deliveryWarningDays?: number | null;
+    anomalyWarningCount?: number | null;
+    lowMarginThreshold?: number | null;
+    topRiskFactoryName?: string | null;
+    topRiskFactoryReason?: string | null;
   };
   stages: StyleIntelligenceStageStatus[];
   insights: string[];

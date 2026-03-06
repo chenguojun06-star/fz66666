@@ -328,7 +328,7 @@ const StyleInfoDetailPage: React.FC = () => {
             <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
           </Card>
         ) : null}
-        <StyleIntelligenceProfileCard style={currentStyle} onJumpTab={setActiveTabKey} />
+        <StyleIntelligenceProfileCard style={currentStyle} />
         {/* ===== 基础信息卡片 ===== */}
         <Card
           title="样衣详情"
