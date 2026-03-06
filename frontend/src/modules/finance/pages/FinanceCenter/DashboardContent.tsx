@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/charts';
@@ -9,6 +9,8 @@ import styles from './index.module.css';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { HealthIndexResponse } from '@/services/intelligence/intelligenceApi';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -88,6 +90,19 @@ const DashboardContent: React.FC = () => {
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+  // ─────── 系统健康指数 ───────
+  const [healthData, setHealthData] = useState<HealthIndexResponse | null>(null);
+  const [healthCollapsed, setHealthCollapsed] = useState(false);
+  const healthFetched = useRef(false);
+
+  useEffect(() => {
+    if (healthFetched.current) return;
+    healthFetched.current = true;
+    intelligenceApi.getHealthIndex()
+      .then(res => { setHealthData((res as any)?.data ?? (res as any) ?? null); })
+      .catch(() => {});
+  }, []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -490,6 +505,78 @@ const DashboardContent: React.FC = () => {
           />
         </Card>
       ) : null}
+
+      {/* 🩺 系统健康指数 */}
+      {healthData && (
+        <Card
+          size="small"
+          style={{ marginBottom: 12 }}
+          title={
+            <span>
+              <span style={{ fontSize: 14, marginRight: 6 }}>🩺</span>
+              <span style={{ fontWeight: 600 }}>系统健康指数</span>
+              <span style={{
+                marginLeft: 10, fontSize: 20, fontWeight: 700,
+                color: healthData.healthIndex >= 80 ? '#52c41a'
+                  : healthData.healthIndex >= 60 ? '#fa8c16' : '#ff4d4f',
+              }}>
+                {healthData.healthIndex}
+              </span>
+              <span style={{
+                marginLeft: 6, padding: '1px 6px', borderRadius: 4, fontSize: 11,
+                background: healthData.grade === 'A' ? '#f6ffed' : healthData.grade === 'B' ? '#fffbe6' : '#fff2f0',
+                color: healthData.grade === 'A' ? '#52c41a' : healthData.grade === 'B' ? '#fa8c16' : '#ff4d4f',
+                border: `1px solid ${healthData.grade === 'A' ? '#b7eb8f' : healthData.grade === 'B' ? '#ffe58f' : '#ffa39e'}`,
+              }}>
+                {healthData.grade}级
+              </span>
+            </span>
+          }
+          extra={
+            <Tooltip title={healthCollapsed ? '展开' : '收起'}>
+              <span
+                style={{ cursor: 'pointer', color: '#999', fontSize: 12 }}
+                onClick={() => setHealthCollapsed(!healthCollapsed)}
+              >
+                {healthCollapsed ? '展开' : '收起'}
+              </span>
+            </Tooltip>
+          }
+        >
+          {!healthCollapsed && (
+            <>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 6 }}>
+                {([
+                  { label: '交期', key: 'deliveryScore' as const },
+                  { label: '质量', key: 'qualityScore' as const },
+                  { label: '效率', key: 'efficiencyScore' as const },
+                  { label: '产能', key: 'capacityScore' as const },
+                  { label: '成本', key: 'costScore' as const },
+                ] as const).map(({ label, key }) => {
+                  const score = healthData[key] as number;
+                  const color = score >= 80 ? '#52c41a' : score >= 60 ? '#fa8c16' : '#ff4d4f';
+                  return (
+                    <span key={key} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#999' }}>{label}</span>
+                      <span style={{ color, fontWeight: 600 }}>{score}</span>
+                    </span>
+                  );
+                })}
+              </div>
+              {healthData.topRisk && (
+                <div style={{ color: '#ff4d4f', fontSize: 11, marginBottom: 4 }}>
+                  ⚠ 首要风险：{healthData.topRisk}
+                </div>
+              )}
+              {healthData.suggestion && (
+                <div style={{ color: '#666', fontSize: 11 }}>
+                  💡 {healthData.suggestion}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+      )}
 
       {/* 顶部筛选区域：时间范围 + 工厂选择 */}
       <div className={styles.periodSelector}>
