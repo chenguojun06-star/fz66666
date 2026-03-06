@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Select, Button, Tag, Space, message, Modal, Typography } from 'antd';
+import { Card, Select, Button, Tag, Space, message, Typography } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { SearchOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -141,7 +142,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
         scroll={{ x: 900 }}
       />
 
-      <Modal
+      <ResizableModal
         title="回调原始报文"
         open={rawBodyModal.open}
         onCancel={() => setRawBodyModal({ open: false, content: '' })}
@@ -154,7 +155,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
         }}>
           {formatRawBody(rawBodyModal.content)}
         </pre>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

@@ -3,8 +3,9 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card, Spin, Button, message, Tabs, Alert, Descriptions, Table, Tag,
   Image, List, Typography, Select, Space, Statistic, Row, Col,
-  Form, InputNumber, Input, Modal, Popconfirm,
+  Form, InputNumber, Input, Popconfirm,
 } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ExperimentOutlined,
   InboxOutlined, OrderedListOutlined, ToolOutlined,
@@ -1039,16 +1040,16 @@ const InspectionDetail: React.FC = () => {
         </div>
 
         {/* ========== 入库弹窗 ========== */}
-        <Modal
+        <ResizableModal
           title="入库操作"
           open={showWarehousingModal}
           onCancel={() => setShowWarehousingModal(false)}
           footer={null}
-          width={800}
+          width="60vw"
           destroyOnClose
         >
           {renderWarehousingAction()}
-        </Modal>
+        </ResizableModal>
     </Layout>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Button, Modal, Tag, Input, App } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -299,7 +300,7 @@ const OrderTransferPage: React.FC = () => {
           }}
         />
 
-        <Modal
+        <ResizableModal
           title="拒绝转移"
           open={rejectModalVisible}
           onOk={submitReject}
@@ -310,6 +311,7 @@ const OrderTransferPage: React.FC = () => {
           }}
           okText="确认拒绝"
           cancelText="取消"
+          width="40vw"
         >
           <div style={{ marginBottom: 16 }}>
             <strong>订单号:</strong> {selectedTransfer?.orderNo}
@@ -327,7 +329,7 @@ const OrderTransferPage: React.FC = () => {
               style={{ marginTop: 8 }}
             />
           </div>
-        </Modal>
+        </ResizableModal>
     </Layout>
   );
 };

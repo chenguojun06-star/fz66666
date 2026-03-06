@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Select, Input, InputNumber, message } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
+import { Form, Select, Input, InputNumber, message } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
@@ -186,7 +187,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   ];
 
   return (
-    <Modal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width={1000} confirmLoading={loading}>
+    <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="60vw" confirmLoading={loading}>
       <Form form={form} onFinish={handleFinish} layout="vertical">
         <Form.Item name="orderId" label="生产订单" rules={[{ required: true }]}>
             <Select onChange={handleOrderChange} showSearch optionFilterProp="children">
@@ -209,7 +210,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
             scroll={{ y: 300 }}
         />
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

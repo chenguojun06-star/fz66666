@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin, Alert } from 'antd';
+import { Button, Card, Tag, Space, message, Form, Input, Row, Col, Spin, Alert } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
 import Layout from '@/components/Layout';
@@ -464,7 +465,7 @@ const MaterialPurchaseDetail: React.FC = () => {
         </Card>
 
         {/* 确认回料完成弹窗 */}
-        <Modal
+        <ResizableModal
           title="确认回料完成"
           open={confirmVisible}
           onOk={handleConfirm}
@@ -473,7 +474,7 @@ const MaterialPurchaseDetail: React.FC = () => {
             confirmForm.resetFields();
           }}
           confirmLoading={confirmLoading}
-          width={600}
+          width="40vw"
         >
           {order && (
             <ModalContentLayout.HeaderCard>
@@ -509,7 +510,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               />
             </Form.Item>
           </Form>
-        </Modal>
+        </ResizableModal>
 
         {/* 打印预览弹窗 */}
         <StylePrintModal

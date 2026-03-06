@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 
@@ -37,12 +37,12 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
   ];
 
   return (
-    <Modal
+    <ResizableModal
       title="领料详情"
       open={visible}
       onCancel={onCancel}
       footer={null}
-      width={800}
+      width="60vw"
     >
       <ResizableTable
         storageKey="picking-detail"
@@ -53,7 +53,7 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
         pagination={false}
         size="small"
       />
-    </Modal>
+    </ResizableModal>
   );
 };
 

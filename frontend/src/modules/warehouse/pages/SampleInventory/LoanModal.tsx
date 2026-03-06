@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, DatePicker, message } from 'antd';
+import { Form, Input, InputNumber, DatePicker, message } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
@@ -62,12 +63,13 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
   const available = stock ? (stock.quantity - stock.loanedQuantity) : 0;
 
   return (
-    <Modal
+    <ResizableModal
       title={`借出样衣 - ${stock?.styleNo} (${stock?.color}/${stock?.size})`}
       open={visible}
       onCancel={onCancel}
       onOk={handleOk}
       confirmLoading={loading}
+      width="40vw"
     >
       {showSmartErrorNotice && smartError ? (
         <div style={{ marginBottom: 12 }}>
@@ -110,7 +112,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

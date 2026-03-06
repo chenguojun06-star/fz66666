@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/utils/AuthContext';
-import { Card, Row, Col, Tag, Button, Modal, Form, Input, Select, InputNumber, App, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
+import { Card, Row, Col, Tag, Button, Form, Input, Select, InputNumber, App, Spin, Badge, Alert, Steps, Divider, Typography, Modal } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { appStoreService } from '@/services/system/appStore';
@@ -362,7 +363,7 @@ const AppStore: React.FC = () => {
       </Spin>
 
       {/* 应用详情弹窗 */}
-      <Modal
+      <ResizableModal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>{selectedApp?.appIcon}</span>
@@ -370,7 +371,7 @@ const AppStore: React.FC = () => {
             {isAppActivated(selectedApp?.appCode || '') && <Tag color="green">已开通</Tag>}
           </div>
         }
-        open={detailVisible} onCancel={() => setDetailVisible(false)} width={520}
+        open={detailVisible} onCancel={() => setDetailVisible(false)} width="40vw"
         footer={
           isAppActivated(selectedApp?.appCode || '') ? [
             <Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate('/system/tenant?tab=apps'); }}>
@@ -455,12 +456,12 @@ const AppStore: React.FC = () => {
             </div>
           </div>
         </div>
-      </Modal>
+      </ResizableModal>
 
       {/* 一键开通设置向导 */}
-      <Modal
+      <ResizableModal
         title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><RocketOutlined style={{ color: 'var(--color-success)' }} /><span>{wizardData.appName} - 智能配置向导</span></div>}
-        open={wizardVisible} onCancel={handleSetupSkip} width={600} footer={null} maskClosable={false}
+        open={wizardVisible} onCancel={handleSetupSkip} width="40vw" footer={null} maskClosable={false}
       >
         <Steps current={wizardStep} size="small" style={{ marginBottom: 20, padding: '0 20px' }}
           items={[
@@ -592,12 +593,12 @@ const AppStore: React.FC = () => {
             </div>
           </div>
         )}
-      </Modal>
+      </ResizableModal>
 
       {/* 购买意向弹窗 */}
-      <Modal
+      <ResizableModal
         title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>{selectedApp?.appIcon}</span><span>购买意向 - {selectedApp?.appName}</span></div>}
-        open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width={480} okText="提交意向" cancelText="取消"
+        open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width="40vw" okText="提交意向" cancelText="取消"
       >
         <div style={{ padding: '8px 0' }}>
           <Alert type="info" showIcon style={{ marginBottom: 12, fontSize: 12 }} message="提交后，商务团队将在1-3个工作日内联系您确认并完成开通。" />
@@ -630,7 +631,7 @@ const AppStore: React.FC = () => {
             </Form.Item>
           </Form>
         </div>
-      </Modal>
+      </ResizableModal>
 
     </div>
     </Layout>

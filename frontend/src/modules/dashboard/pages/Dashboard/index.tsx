@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Card, Checkbox, Modal, Space } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Space } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
@@ -430,12 +431,12 @@ const Dashboard: React.FC = () => {
       </Card>
 
       {/* 快捷入口设置弹窗 */}
-      <Modal
+      <ResizableModal
         title="快捷入口设置"
         open={settingsVisible}
         onOk={handleSaveSettings}
         onCancel={() => setSettingsVisible(false)}
-        width={600}
+        width="40vw"
         footer={[
           <Button key="reset" onClick={handleResetSettings}>
             重置默认
@@ -468,7 +469,7 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         </div>
-      </Modal>
+      </ResizableModal>
       </div>
     </Layout>
   );

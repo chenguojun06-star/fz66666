@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Badge, Tooltip, Tabs, Popover } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Badge, Tooltip, Tabs, Popover } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -720,7 +721,7 @@ const ProductionList: React.FC = () => {
         />
 
         {/* 备注异常 Modal */}
-        <Modal
+        <ResizableModal
           title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
           open={remarkPopoverId !== null}
           onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
@@ -728,7 +729,7 @@ const ProductionList: React.FC = () => {
           okText="保存"
           cancelText="取消"
           confirmLoading={remarkSaving}
-          width={500}
+          width="40vw"
           destroyOnClose
         >
           <Input.TextArea
@@ -740,7 +741,7 @@ const ProductionList: React.FC = () => {
             placeholder="请输入异常备注..."
             style={{ marginTop: 8 }}
           />
-        </Modal>
+        </ResizableModal>
 
         {/* 工序详情弹窗 */}
         <ProcessDetailModal
@@ -967,7 +968,7 @@ const ProductionList: React.FC = () => {
         />
 
         {/* 转单弹窗 */}
-        <Modal
+        <ResizableModal
           title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
           open={transferModalVisible}
           onCancel={closeTransferModal}
@@ -1136,7 +1137,7 @@ const ProductionList: React.FC = () => {
               />
             </div>
           </div>
-        </Modal>
+        </ResizableModal>
 
         {/* 打印预览弹窗 */}
         <StylePrintModal

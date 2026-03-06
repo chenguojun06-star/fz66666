@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Modal, Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
+import { Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api from '@/utils/api';
@@ -62,7 +63,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
   };
 
   return (
-    <Modal
+    <ResizableModal
       title="样衣入库 (支持扫码)"
       open={visible}
       onCancel={onCancel}
@@ -175,7 +176,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           </Col>
         </Row>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 
