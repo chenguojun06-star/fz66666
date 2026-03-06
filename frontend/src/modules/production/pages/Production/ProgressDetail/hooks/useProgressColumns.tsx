@@ -81,7 +81,6 @@ interface UseProgressColumnsParams {
   setQuickEditVisible: (v: boolean) => void;
   setRemarkPopoverId: (id: string | null) => void;
   setRemarkText: (text: string) => void;
-  openScan: (order: ProductionOrder) => void;
   /** 停滞订单 Map（orderId → 停滞天数） */
   stagnantOrderIds?: Map<string, number>;
   /** AI 交期风险 Map（orderNo → DeliveryRiskItem） */
@@ -108,7 +107,6 @@ export const useProgressColumns = ({
   setQuickEditVisible,
   setRemarkPopoverId,
   setRemarkText,
-  openScan,
   stagnantOrderIds,
   deliveryRiskMap,
   onShareOrder,
@@ -564,13 +562,6 @@ export const useProgressColumns = ({
                 onClick: () => setPrintingRecord(record),
               },
               {
-                key: 'scan',
-                label: '扫码',
-                disabled: frozen,
-                title: frozen ? '扫码（订单已关单）' : '扫码',
-                onClick: () => openScan(record),
-              },
-              {
                 key: 'edit',
                 label: '编辑',
                 title: frozen ? '编辑（订单已关单）' : '编辑',
@@ -598,7 +589,7 @@ export const useProgressColumns = ({
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
-    setRemarkPopoverId, setRemarkText, openScan,
+    setRemarkPopoverId, setRemarkText,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,
   ]);

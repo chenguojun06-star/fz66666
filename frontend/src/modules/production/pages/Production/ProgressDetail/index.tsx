@@ -888,7 +888,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText,
-    openScan,
     stagnantOrderIds,
     deliveryRiskMap,
     onShareOrder: handleShareOrder,
