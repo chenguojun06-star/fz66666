@@ -12,8 +12,7 @@ import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { ProfitEstimationResponse } from '@/services/intelligence/intelligenceApi';
+
 
 interface Props { order: ProductionOrder; }
 
@@ -291,19 +290,6 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     return analyzeProgress(order, snapshots, boardTimes, speed);
   }, [order, stages, boardTimes, speed, isCompleted]);
 
-  /* ─────── 利润预估（按需懒加载）─────── */
-  const [profitData, setProfitData] = useState<ProfitEstimationResponse | null>(null);
-  const [profitLoaded, setProfitLoaded] = useState(false);
-
-  useEffect(() => {
-    if (isCompleted || !order.id || profitLoaded) return;
-    setProfitLoaded(true);
-    intelligenceApi.estimateProfit({ orderId: String(order.id) })
-      .then(res => { setProfitData((res as any)?.data ?? (res as any) ?? null); })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order.id]);
-
   /* ─────── RENDER ─────── */
   // 已完成/已关单不显示悬浮卡
   if (isCompleted) return null;
@@ -561,34 +547,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
-      {/* 💰 利润预估 */}
-      {profitData && (
-        <div style={{
-          borderTop: '1px solid #f0f0f0', marginTop: 7, paddingTop: 6,
-        }}>
-          <span style={{ color: '#bbb' }}>利润预估 </span>
-          <span style={{
-            fontWeight: 600,
-            color: profitData.profitStatus === '盈利' ? '#52c41a'
-              : profitData.profitStatus === '亏损' ? '#ff4d4f'
-              : '#fa8c16',
-            marginLeft: 4,
-          }}>
-            {profitData.profitStatus}
-          </span>
-          <span style={{ marginLeft: 6, color: '#555' }}>
-            {profitData.grossMarginPct?.toFixed(1)}%
-          </span>
-          <span style={{ marginLeft: 6, color: '#999' }}>
-            ¥{((profitData.estimatedProfit ?? 0) / 10000).toFixed(1)}万
-          </span>
-          {profitData.costWarning && (
-            <div style={{ color: '#fa8c16', fontSize: 11, marginTop: 3 }}>
-              ⚠ {profitData.costWarning}
-            </div>
-          )}
-        </div>
-      )}
+
     </div>
   );
 };

@@ -23,7 +23,8 @@ import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants'
 import UnqualifiedUpload from '../../components/WarehousingModal/components/UnqualifiedUpload';
 import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
-import DefectTracePanel from '@/modules/intelligence/pages/IntelligenceCenter/DefectTracePanel';
+import { qualityAiApi } from '@/services/production/productionApi';
+import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -72,6 +73,10 @@ const InspectionDetail: React.FC = () => {
   /* ---- 质检记录 ---- */
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [qcRecords, setQcRecords] = useState<WarehousingDetailRecord[]>([]);
+
+  /* ---- AI质检意见 ---- */
+  const [aiSuggestion, setAiSuggestion] = useState<QualityAiSuggestionResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [orderDetail, setOrderDetail] = useState<ProductionOrder | null>(null);
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [bundles, setBundles] = useState<CuttingBundleRow[]>([]);
@@ -165,6 +170,15 @@ const InspectionDetail: React.FC = () => {
 
   useEffect(() => { fetchBriefing(); }, [fetchBriefing]);
   useEffect(() => { fetchQcRecords(); }, [fetchQcRecords]);
+
+  useEffect(() => {
+    if (!orderId) return;
+    setAiLoading(true);
+    qualityAiApi.getSuggestion(orderId)
+      .then(res => { setAiSuggestion((res as any)?.data ?? null); })
+      .catch(() => {})
+      .finally(() => setAiLoading(false));
+  }, [orderId]);
 
   /* ==================== 派生计算 ==================== */
   const bundleByQr = useMemo(() => {
@@ -897,8 +911,64 @@ const InspectionDetail: React.FC = () => {
               <Alert type="info" message="订单备注" description={order.remarks} showIcon />
             )}
 
-            <Card size="small" title="次品溯源分析" bodyStyle={{ padding: 12 }}>
-              <DefectTracePanel defaultOrderId={String(orderId || '').trim()} autoLoad compact />
+            {/* AI质检意见 */}
+            <Card
+              size="small"
+              style={{ background: '#fff' }}
+              title={
+                <span>
+                  <span style={{ marginRight: 6 }}>🤖</span>
+                  AI质检意见
+                  {aiSuggestion?.historicalDefectRate !== undefined && (
+                    <span style={{
+                      marginLeft: 8, fontSize: 11, fontWeight: 400,
+                      color: aiSuggestion.historicalDefectRate > 0.05 ? '#ff4d4f'
+                        : aiSuggestion.historicalDefectRate > 0.02 ? '#fa8c16' : '#52c41a',
+                    }}>
+                      历史次品率 {(aiSuggestion.historicalDefectRate * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </span>
+              }
+              loading={aiLoading}
+            >
+              {!aiSuggestion && !aiLoading && (
+                <div style={{ color: '#bbb', textAlign: 'center', padding: '12px 0', fontSize: 12 }}>暂无AI建议</div>
+              )}
+              {aiSuggestion && (
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  {aiSuggestion.urgentTip && (
+                    <div style={{
+                      padding: '4px 10px', background: '#fff7e6',
+                      border: '1px solid #ffd591', borderRadius: 6,
+                      marginBottom: 10, color: '#d46b08', fontWeight: 600,
+                    }}>
+                      ⚠️ {aiSuggestion.urgentTip}
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, color: '#333', marginBottom: 6 }}>质检要点</div>
+                  <ol style={{ margin: 0, paddingLeft: 18 }}>
+                    {aiSuggestion.checkpoints.map((cp, i) => (
+                      <li key={i} style={{ marginBottom: 4, color: '#555' }}>{cp}</li>
+                    ))}
+                  </ol>
+                  {aiSuggestion.defectSuggestions && Object.keys(aiSuggestion.defectSuggestions).length > 0 && (
+                    <>
+                      <div style={{ fontWeight: 600, color: '#333', marginTop: 10, marginBottom: 6 }}>常见缺陷处理建议</div>
+                      {Object.entries(aiSuggestion.defectSuggestions).map(([defect, advice]) => (
+                        <div key={defect} style={{
+                          marginBottom: 6, padding: '4px 8px',
+                          background: '#f6ffed', borderLeft: '3px solid #52c41a',
+                          borderRadius: '0 4px 4px 0',
+                        }}>
+                          <span style={{ color: '#cf1322', fontWeight: 600 }}>{defect}</span>
+                          <span style={{ color: '#666', marginLeft: 8 }}>{advice}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
 
