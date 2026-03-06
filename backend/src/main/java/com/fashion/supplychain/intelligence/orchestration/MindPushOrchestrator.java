@@ -173,7 +173,7 @@ public class MindPushOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
-                .in("status", "IN_PROGRESS", "PENDING")
+                .in("status", "production", "pending")
                 .isNotNull("expected_ship_date")
         );
         int count = 0;
@@ -198,7 +198,7 @@ public class MindPushOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
-                .eq("status", "IN_PROGRESS")
+                .eq("status", "production")
         );
         LocalDateTime cutoff = LocalDateTime.now().minusDays(3);
         int count = 0;
@@ -223,18 +223,17 @@ public class MindPushOrchestrator {
     private int checkMaterialLow(Long tenantId, Map<String, MindPushRule> ruleMap) {
         if (!isEnabled("MATERIAL_LOW", ruleMap)) return 0;
 
+        // procurement_completion_rate 列不存在，改为检查「未手动完成采购」的进行中/待生产订单
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
-                .in("status", "PENDING", "IN_PROGRESS")
-                .isNotNull("procurement_completion_rate")
-                .lt("procurement_completion_rate", 40)
+                .in("status", "pending", "production")
+                .eq("procurement_manually_completed", 0)
         );
         int count = 0;
         for (ProductionOrder o : orders) {
-            int rate = o.getProcurementCompletionRate() != null ? o.getProcurementCompletionRate() : 0;
-            String title = "📦 面料不足：" + o.getOrderNo();
-            String content = String.format("订单 %s 面料到货率仅 %d%%，可能影响开工进度，请及时采购", o.getOrderNo(), rate);
+            String title = "📦 面料待確认：" + o.getOrderNo();
+            String content = String.format("订单 %s 采购尚未确认完成，可能影响开工进度，请及时跟进", o.getOrderNo());
             writePushLog(tenantId, "MATERIAL_LOW", o.getId().toString(), o.getOrderNo(), title, content);
             count++;
         }
@@ -250,7 +249,7 @@ public class MindPushOrchestrator {
         long completedCount = productionOrderService.count(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
-                .in("status", "COMPLETED", "IN_PROGRESS")
+                .in("status", "completed", "production")
                 .gt("completed_quantity", 0)
         );
         if (completedCount > 0) {

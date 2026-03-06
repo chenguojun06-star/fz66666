@@ -1362,11 +1362,7 @@ const IntelligenceCenter: React.FC = () => {
         {/* ╔══════════════════════════════════════════════╗
             ║   MindPush 主动推送中枢                      ║
             ╚══════════════════════════════════════════════╝ */}
-        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,140,0,0.04)', border: '1px solid rgba(255,140,0,0.15)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#ff8c00', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>🔔 MindPush 主动推送</span>
-          <span style={{ fontSize: 11, color: '#4a6d8a' }}>交期风险 · 停滞预警 · 工资提醒 — 系统主动触达</span>
-        </div>
-        <div style={{ padding: '0 24px 8px' }}>
+        <div style={{ padding: '4px 24px 8px' }}>
           <MindPushPanel />
         </div>
 
