@@ -1,6 +1,7 @@
 package com.fashion.supplychain.procurement.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,5 +41,11 @@ public class ProcurementController {
     public Result<?> getStats(@RequestBody(required = false) Map<String, Object> params) {
         if (params == null) params = Map.of();
         return Result.success(procurementOrchestrator.getStats(params));
+    }
+
+    /** 新建采购单 */
+    @PostMapping("/purchase-orders")
+    public Result<?> createPurchaseOrder(@RequestBody MaterialPurchase purchase) {
+        return Result.success(procurementOrchestrator.createPurchaseOrder(purchase));
     }
 }

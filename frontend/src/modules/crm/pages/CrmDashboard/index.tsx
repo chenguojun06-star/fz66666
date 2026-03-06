@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button, Card, Col, Descriptions, Drawer, Form, Input,
-  message, Modal, Row, Select, Space, Spin, Table, Tag, Typography,
+  Button, Card, Col, Descriptions, Form, Input,
+  message, Modal, Progress, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
 } from 'antd';
 import {
   ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined,
@@ -14,6 +14,8 @@ import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
+import ResizableModal from '@/components/common/ResizableModal';
+import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
 
 const { Title, Text, Paragraph } = Typography;
@@ -145,7 +147,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
   };
 
   return (
-    <Modal
+    <ResizableModal
       title={editData?.id ? '编辑客户' : '新建客户'}
       open={open}
       onOk={handleOk}
@@ -210,7 +212,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
           <Input.TextArea rows={2} placeholder="其他备注信息" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 
@@ -222,7 +224,7 @@ const CustomerManagement: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
-  const [stats, setStats] = useState({ total: 0, newThisMonth: 0, vip: 0 });
+  const [stats, setStats] = useState({ total: 0, activeCount: 0, newThisMonth: 0, vip: 0 });
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Customer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -248,7 +250,7 @@ const CustomerManagement: React.FC = () => {
     try {
       const res = await customerApi.getStats();
       const data = (res as any)?.data ?? res;
-      setStats({ total: data?.total ?? 0, newThisMonth: data?.newThisMonth ?? 0, vip: data?.vip ?? 0 });
+      setStats({ total: data?.total ?? 0, activeCount: data?.activeCount ?? 0, newThisMonth: data?.newThisMonth ?? 0, vip: data?.vip ?? 0 });
     } catch { /* 统计失败不影响主流程 */ }
   }, []);
 
@@ -312,14 +314,15 @@ const CustomerManagement: React.FC = () => {
     { title: '创建人', dataIndex: 'creatorName', width: 90 },
     { title: '创建时间', dataIndex: 'createTime', width: 160, render: v => v?.substring(0, 16) ?? '-' },
     {
-      title: '操作', width: 140, fixed: 'right',
-      render: (_, record) => (
-        <Space size={4}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => openDrawer(record)}>详情</Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => { setEditData(record); setModalOpen(true); }}>编辑</Button>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
-        </Space>
-      ),
+      title: '操作', width: 160, fixed: 'right',
+      render: (_, record) => {
+        const actions: RowAction[] = [
+          { key: 'detail', label: '详情', primary: true, onClick: () => openDrawer(record) },
+          { key: 'edit', label: '编辑', onClick: () => { setEditData(record); setModalOpen(true); } },
+          { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(record) },
+        ];
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 
@@ -329,10 +332,11 @@ const CustomerManagement: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 20 }}>
         {[
           { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: '#1677ff' },
-          { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#52c41a' },
+          { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: '#52c41a' },
           { icon: <TrophyOutlined />, label: 'VIP客户', value: stats.vip, color: '#fa8c16' },
+          { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#722ed1' },
         ].map(s => (
-          <Col span={8} key={s.label}>
+          <Col span={6} key={s.label}>
             <Card size="small" bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
@@ -407,52 +411,76 @@ const CustomerManagement: React.FC = () => {
         onSuccess={() => { fetchList(pagination.current); fetchStats(); }}
       />
 
-      {/* 客户详情侧边栏 */}
-      <Drawer
+      {/* 客户详情弹窗 */}
+      <ResizableModal
         title={<Space><UserOutlined />{drawerData?.companyName}</Space>}
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        width={600}
+        onCancel={() => setDrawerOpen(false)}
+        footer={null}
+        width="60vw"
+        destroyOnClose
       >
         {drawerData && (
-          <>
-            <Descriptions column={2} size="small" bordered style={{ marginBottom: 20 }}>
-              <Descriptions.Item label="客户编号">{drawerData.customerNo}</Descriptions.Item>
-              <Descriptions.Item label="等级">
-                {drawerData.customerLevel === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>}
-              </Descriptions.Item>
-              <Descriptions.Item label="联系人">{drawerData.contactPerson || '-'}</Descriptions.Item>
-              <Descriptions.Item label="联系电话">{drawerData.contactPhone || '-'}</Descriptions.Item>
-              <Descriptions.Item label="邮箱" span={2}>{drawerData.contactEmail || '-'}</Descriptions.Item>
-              <Descriptions.Item label="地址" span={2}>{drawerData.address || '-'}</Descriptions.Item>
-              <Descriptions.Item label="所属行业">{drawerData.industry || '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户来源">{drawerData.source || '-'}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                {drawerData.status === 'ACTIVE' ? <Tag color="green">合作中</Tag> : <Tag>已停合作</Tag>}
-              </Descriptions.Item>
-              <Descriptions.Item label="创建人">{drawerData.creatorName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="备注" span={2}>{drawerData.remark || '-'}</Descriptions.Item>
-            </Descriptions>
-
-            <Title level={5}>关联生产订单</Title>
-            <Table
-              rowKey="id"
-              loading={drawerLoading}
-              dataSource={drawerOrders}
-              size="small"
-              pagination={{ pageSize: 5, showTotal: t => `共 ${t} 条` }}
-              columns={[
-                { title: '订单号', dataIndex: 'orderNo', width: 150 },
-                { title: '款式', dataIndex: 'styleName', width: 120 },
-                { title: '数量', dataIndex: 'orderQuantity', width: 80 },
-                { title: '状态', dataIndex: 'status', width: 100, render: v => <Tag>{v}</Tag> },
-                { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
-              ]}
-              locale={{ emptyText: '暂无关联订单' }}
-            />
-          </>
+          <Tabs
+            items={[
+              {
+                key: 'info',
+                label: '基本信息',
+                children: (
+                  <Descriptions column={2} size="small" bordered>
+                    <Descriptions.Item label="客户编号">{drawerData.customerNo}</Descriptions.Item>
+                    <Descriptions.Item label="等级">
+                      {drawerData.customerLevel === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="联系人">{drawerData.contactPerson || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="联系电话">{drawerData.contactPhone || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="邮箱" span={2}>{drawerData.contactEmail || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="地址" span={2}>{drawerData.address || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="所属行业">{drawerData.industry || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="客户来源">{drawerData.source || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="状态">
+                      {drawerData.status === 'ACTIVE' ? <Tag color="green">合作中</Tag> : <Tag>已停合作</Tag>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="创建人">{drawerData.creatorName || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="备注" span={2}>{drawerData.remark || '-'}</Descriptions.Item>
+                  </Descriptions>
+                ),
+              },
+              {
+                key: 'orders',
+                label: `生产订单${drawerOrders.length > 0 ? ` (${drawerOrders.length})` : ''}`,
+                children: (
+                  <Table
+                    rowKey="id"
+                    loading={drawerLoading}
+                    dataSource={drawerOrders}
+                    size="small"
+                    pagination={{ pageSize: 8, showTotal: t => `共 ${t} 条` }}
+                    columns={[
+                      { title: '订单号', dataIndex: 'orderNo', width: 160 },
+                      { title: '款式', dataIndex: 'styleName', width: 120 },
+                      { title: '数量', dataIndex: 'orderQuantity', width: 80 },
+                      {
+                        title: '生产进度', dataIndex: 'productionProgress', width: 150,
+                        render: v => (
+                          <Progress
+                            percent={Number(v) || 0}
+                            size="small"
+                            strokeColor={Number(v) >= 100 ? '#52c41a' : undefined}
+                          />
+                        ),
+                      },
+                      { title: '状态', dataIndex: 'status', width: 100, render: v => <Tag>{v}</Tag> },
+                      { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+                    ]}
+                    locale={{ emptyText: '暂无关联订单' }}
+                  />
+                ),
+              },
+            ]}
+          />
         )}
-      </Drawer>
+      </ResizableModal>
     </>
   );
 };

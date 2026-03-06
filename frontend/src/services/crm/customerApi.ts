@@ -30,6 +30,7 @@ export interface CustomerStats {
   total: number;
   newThisMonth: number;
   vip: number;
+  activeCount: number;
 }
 
 interface ApiResult<T> { code: number; data: T; message?: string; }

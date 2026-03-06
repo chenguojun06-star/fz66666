@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
+import org.springframework.transaction.annotation.Transactional;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
 import lombok.extern.slf4j.Slf4j;
@@ -84,6 +85,14 @@ public class ProcurementOrchestrator {
         }
 
         return result;
+    }
+
+    /**
+     * 新建采购单（委托给 MaterialPurchaseOrchestrator.save）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean createPurchaseOrder(MaterialPurchase purchase) {
+        return materialPurchaseOrchestrator.save(purchase);
     }
 
     // ──────────────────────────────────────────────

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button, Card, Col, Input, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
+  Button, Card, Col, DatePicker, Form, Input, InputNumber,
+  message, Modal, Row, Select, Space, Spin, Table, Tabs, Tag, Typography,
 } from 'antd';
 import {
-  ArrowRightOutlined, LockOutlined, RocketOutlined, SearchOutlined,
+  ArrowRightOutlined, CheckCircleOutlined, LockOutlined, PlusOutlined, RocketOutlined, SearchOutlined,
   ShoppingCartOutlined, ShopOutlined, WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -12,6 +13,8 @@ import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
+import ResizableModal from '@/components/common/ResizableModal';
+import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
 
 const { Title, Text, Paragraph } = Typography;
@@ -136,6 +139,15 @@ const SupplierTab: React.FC = () => {
       v === 'ACTIVE' || !v ? <Tag color="green">合作中</Tag> : <Tag color="default">停合作</Tag>
     },
     { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+    {
+      title: '操作', width: 100, fixed: 'right' as const,
+      render: (_: unknown, record: Supplier) => {
+        const actions: RowAction[] = [
+          { key: 'orders', label: '采购历史', primary: true, onClick: () => message.info(`查看 ${record.factoryName} 的采购历史`) },
+        ];
+        return <RowActions actions={actions} />;
+      },
+    },
   ];
 
   return (
@@ -173,6 +185,7 @@ const SupplierTab: React.FC = () => {
             setPagination({ current: page, pageSize: p.pageSize ?? 20 });
             fetchList(page);
           }}
+          scroll={{ x: 900 }}
         />
       </Card>
     </>
@@ -220,12 +233,23 @@ const PurchaseOrderTab: React.FC = () => {
     { title: '采购单号', dataIndex: 'purchaseNo', width: 160, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
     { title: '供应商', dataIndex: 'supplierName', width: 160 },
     { title: '物料名称', dataIndex: 'materialName', width: 160 },
-    { title: '数量', dataIndex: 'quantity', width: 80, render: (v, r: any) => `${v} ${r.unit ?? ''}` },
-    { title: '总金额', dataIndex: 'totalAmount', width: 100, render: v => v != null ? `¥${Number(v).toLocaleString()}` : '-' },
-    { title: '状态', dataIndex: 'status', width: 100, render: v =>
+    { title: '规格', dataIndex: 'specifications', width: 120 },
+    { title: '数量', dataIndex: 'purchaseQuantity', width: 80, render: (v: unknown, r: PurchaseOrder) => `${v ?? r.quantity ?? '-'} ${r.unit ?? ''}` },
+    { title: '总金额', dataIndex: 'totalAmount', width: 100, render: (v: unknown) => v != null ? `￥${Number(v).toLocaleString()}` : '-' },
+    { title: '状态', dataIndex: 'status', width: 100, render: (v: string) =>
       <Tag color={statusTagColor[v] ?? 'default'}>{statusLabel[v] ?? v}</Tag>
     },
-    { title: '创建时间', dataIndex: 'createTime', render: v => v?.substring(0, 10) ?? '-' },
+    { title: '预计到货', dataIndex: 'expectedDate', width: 110, render: (v: string) => v?.substring(0, 10) ?? '-' },
+    { title: '创建时间', dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-' },
+    {
+      title: '操作', width: 80, fixed: 'right' as const,
+      render: (_: unknown, record: PurchaseOrder) => {
+        const actions: RowAction[] = [
+          { key: 'view', label: '详情', primary: true, onClick: () => message.info(`采购单 ${record.purchaseNo}`) },
+        ];
+        return <RowActions actions={actions} />;
+      },
+    },
   ];
 
   return (
@@ -264,18 +288,149 @@ const PurchaseOrderTab: React.FC = () => {
             setPagination({ current: page, pageSize: p.pageSize ?? 20 });
             fetchList(page);
           }}
+          scroll={{ x: 980 }}
         />
       </Card>
     </>
   );
 };
 
-// ─── 主功能页（已订阅时展示）─────────────────────────────────────
-const ProcurementManagement: React.FC = () => {
-  const [stats, setStats] = useState({ supplierCount: 0, totalPurchaseOrders: 0, pendingOrders: 0 });
-  const [statsLoading, setStatsLoading] = useState(false);
+// ─── 新建采购单弹窗 ────────────────────────────────────────────────
+interface CreatePurchaseOrderModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ open, onClose, onSuccess }) => {
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   useEffect(() => {
+    if (open) {
+      form.resetFields();
+      procurementApi.listSuppliers({ page: 1, pageSize: 100 }).then(res => {
+        const data = (res as any)?.data ?? res;
+        setSuppliers(data?.records ?? []);
+      }).catch(() => setSuppliers([]));
+    }
+  }, [open, form]);
+
+  const handleOk = async () => {
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
+      const payload: PurchaseOrder = {
+        ...values,
+        supplierName: selectedSupplier?.factoryName,
+        expectedDate: values.expectedDate ? values.expectedDate.format('YYYY-MM-DD') : undefined,
+        totalAmount: values.purchaseQuantity && values.unitPrice
+          ? Number(values.purchaseQuantity) * Number(values.unitPrice) : undefined,
+      };
+      await procurementApi.createPurchaseOrder(payload);
+      message.success('采购单已创建');
+      onSuccess();
+    } catch {
+      message.error('创建失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ResizableModal
+      title="新建采购单"
+      open={open}
+      onOk={handleOk}
+      onCancel={onClose}
+      confirmLoading={saving}
+      width="40vw"
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
+              <Select
+                placeholder="请选择供应商"
+                showSearch
+                filterOption={(input, option) =>
+                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                options={suppliers.map(s => ({ value: s.id, label: s.factoryName }))}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请输入物料名称' }]}>
+              <Input placeholder="如：红色涤纶面料" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="materialType" label="物料类别">
+              <Select placeholder="请选择" allowClear options={[
+                { value: 'FABRIC', label: '面料' },
+                { value: 'LINING', label: '里料' },
+                { value: 'ACCESSORY', label: '辅料' },
+                { value: 'OTHER', label: '其他' },
+              ]} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="specifications" label="规格">
+              <Input placeholder="如：宽148cm，克重280g" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '请输入数量' }]}>
+              <InputNumber placeholder="数量" style={{ width: '100%' }} min={1} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="unit" label="单位">
+              <Select placeholder="单位" options={[
+                { value: '米', label: '米' }, { value: '码', label: '码' },
+                { value: '千克', label: '千克' }, { value: '件', label: '件' },
+                { value: '条', label: '条' }, { value: '个', label: '个' },
+              ]} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="unitPrice" label="单价（元）">
+              <InputNumber placeholder="单价" style={{ width: '100%' }} min={0} precision={2} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="expectedDate" label="预计到货日期">
+              <DatePicker style={{ width: '100%' }} placeholder="选择预计到货日期" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="remark" label="备注">
+              <Input.TextArea rows={1} placeholder="备注信息" />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+    </ResizableModal>
+  );
+};
+
+// ─── 主功能页（已订阅时展示）─────────────────────────────────────
+const ProcurementManagement: React.FC = () => {
+  const [stats, setStats] = useState({ supplierCount: 0, totalPurchaseOrders: 0, pendingOrders: 0, receivedOrders: 0 });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [poRefresh, setPoRefresh] = useState(0);
+
+  const loadStats = useCallback(() => {
     setStatsLoading(true);
     procurementApi.getStats({}).then(res => {
       const data = (res as any)?.data ?? res;
@@ -283,24 +438,42 @@ const ProcurementManagement: React.FC = () => {
         supplierCount: data?.supplierCount ?? 0,
         totalPurchaseOrders: data?.totalPurchaseOrders ?? 0,
         pendingOrders: data?.pendingOrders ?? 0,
+        receivedOrders: data?.receivedOrders ?? 0,
       });
     }).catch(() => {/* 统计失败不影响主流程 */})
       .finally(() => setStatsLoading(false));
   }, []);
 
+  useEffect(() => { loadStats(); }, [loadStats]);
+
   return (
     <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Typography.Title level={5} style={{ margin: 0 }}>供应商采购管理</Typography.Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          新建采购单
+        </Button>
+      </div>
+
       <Row gutter={16} style={{ marginBottom: 20 }}>
         {[
-          { icon: <ShopOutlined />, label: '供应商数量', value: stats.supplierCount, color: '#1677ff' },
-          { icon: <ShoppingCartOutlined />, label: '采购单总数', value: stats.totalPurchaseOrders, color: '#52c41a' },
-          { icon: <WalletOutlined />, label: '待处理采购单', value: stats.pendingOrders, color: '#fa8c16' },
+          { icon: <ShopOutlined />, label: '供应商数量', value: stats.supplierCount, color: '#1677ff', warn: false },
+          { icon: <ShoppingCartOutlined />, label: '采购单总数', value: stats.totalPurchaseOrders, color: '#52c41a', warn: false },
+          { icon: <WalletOutlined />, label: '待处理', value: stats.pendingOrders, color: '#fa8c16', warn: Number(stats.pendingOrders) > 0 },
+          { icon: <CheckCircleOutlined />, label: '已收货', value: stats.receivedOrders, color: '#13c2c2', warn: false },
         ].map(s => (
-          <Col span={8} key={s.label}>
-            <Card size="small" loading={statsLoading} bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+          <Col span={6} key={s.label}>
+            <Card
+              size="small"
+              loading={statsLoading}
+              bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}
+              style={{ borderColor: s.warn ? '#fa8c16' : undefined }}
+            >
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, color: s.warn ? '#fa8c16' : undefined }}>
+                  {s.value}
+                </div>
                 <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
               </div>
             </Card>
@@ -311,8 +484,13 @@ const ProcurementManagement: React.FC = () => {
       <Tabs
         items={[
           { key: 'suppliers', label: '供应商管理', children: <SupplierTab /> },
-          { key: 'orders', label: '采购单', children: <PurchaseOrderTab /> },
+          { key: 'orders', label: '采购单', children: <PurchaseOrderTab key={poRefresh} /> },
         ]}
+      />
+      <CreatePurchaseOrderModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => { setCreateOpen(false); setPoRefresh(c => c + 1); loadStats(); }}
       />
     </>
   );

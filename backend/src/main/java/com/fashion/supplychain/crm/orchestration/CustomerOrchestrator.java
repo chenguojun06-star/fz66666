@@ -104,10 +104,17 @@ public class CustomerOrchestrator {
                         .eq(Customer::getCustomerLevel, "VIP")
                         .eq(tenantId != null, Customer::getTenantId, tenantId));
 
+        long activeCount = customerService.count(
+                new LambdaQueryWrapper<Customer>()
+                        .eq(Customer::getDeleteFlag, 0)
+                        .eq(Customer::getStatus, "ACTIVE")
+                        .eq(tenantId != null, Customer::getTenantId, tenantId));
+
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
         result.put("newThisMonth", newThisMonth);
         result.put("vip", vip);
+        result.put("activeCount", activeCount);
         return result;
     }
 

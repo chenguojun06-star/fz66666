@@ -15,9 +15,14 @@ export interface Supplier {
 export interface PurchaseOrder {
   id?: string;
   purchaseNo?: string;
+  supplierId?: string;
   supplierName?: string;
   materialName?: string;
+  materialType?: string;
   materialCategory?: string;
+  specifications?: string;
+  unit?: string;
+  purchaseQuantity?: number;
   quantity?: number;
   unitPrice?: number;
   totalAmount?: number;
@@ -25,6 +30,8 @@ export interface PurchaseOrder {
   orderDate?: string;
   expectedDate?: string;
   arrivedQuantity?: number;
+  remark?: string;
+  tenantId?: string;
   createTime?: string;
 }
 
@@ -64,4 +71,8 @@ export const procurementApi = {
   /** 统计数据 */
   getStats: (params: Record<string, unknown> = {}) =>
     api.post<ApiResult<ProcurementStats>>('/procurement/stats', params),
+
+  /** 新建采购单 */
+  createPurchaseOrder: (data: PurchaseOrder) =>
+    api.post<ApiResult<boolean>>('/procurement/purchase-orders', data),
 };
