@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Tag, Input, Button, Tooltip, Popover } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
   FullscreenOutlined, FullscreenExitOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
-import type { NlQueryResponse, DeliveryRiskItem } from '@/services/production/productionApi';
+import type { NlQueryResponse } from '@/services/production/productionApi';
 import Layout from '@/components/Layout';
 import SmartAssignmentPanel from './SmartAssignmentPanel';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
@@ -14,14 +15,60 @@ import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
-  KpiPop, AnimatedNum, medalColor, getFactoryAiHint, fmtD,
+  KpiPop, AnimatedNum, medalColor,
 } from './components/IntelligenceWidgets';
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
 import './styles.css';
 
+type KpiMetricSnapshot = {
+  todayScanQty: number;
+  scanRatePerHour: number;
+  activeFactories: number;
+  activeWorkers: number;
+  healthIndex: number;
+  stagnantFactories: number;
+  shortageItems: number;
+  pendingNotify: number;
+  sentToday: number;
+};
+
+type KpiHistoryPoint = {
+  ts: number;
+  value: number;
+};
+
+type KpiHistoryStore = Record<keyof KpiMetricSnapshot, KpiHistoryPoint[]>;
+
+const EMPTY_KPI_METRICS: KpiMetricSnapshot = {
+  todayScanQty: 0,
+  scanRatePerHour: 0,
+  activeFactories: 0,
+  activeWorkers: 0,
+  healthIndex: 0,
+  stagnantFactories: 0,
+  shortageItems: 0,
+  pendingNotify: 0,
+  sentToday: 0,
+};
+
+const EMPTY_KPI_HISTORY = (): KpiHistoryStore => ({
+  todayScanQty: [],
+  scanRatePerHour: [],
+  activeFactories: [],
+  activeWorkers: [],
+  healthIndex: [],
+  stagnantFactories: [],
+  shortageItems: [],
+  pendingNotify: [],
+  sentToday: [],
+});
+
+const KPI_HISTORY_WINDOW_MS = 5 * 60 * 1000;
+
 
 const IntelligenceCenter: React.FC = () => {
+  const navigate = useNavigate();
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
@@ -34,8 +81,11 @@ const IntelligenceCenter: React.FC = () => {
   const [nlLoading, setNlLoading]   = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kpiFlash, setKpiFlash] = useState(false);
+  const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
+  const [kpiHistory, setKpiHistory] = useState<KpiHistoryStore>(EMPTY_KPI_HISTORY);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
+  const prevKpiMetricsRef = useRef<KpiMetricSnapshot | null>(null);
 
   /* KPI 刷新闪光：data.ts 每次全量刷新完成后更新，触发各 KPI 卡短暂氖灯闪光 */
   useEffect(() => {
@@ -118,6 +168,97 @@ const IntelligenceCenter: React.FC = () => {
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders } = data;
 
+  const currentKpiMetrics = useMemo<KpiMetricSnapshot>(() => ({
+    todayScanQty: Number(pulse?.todayScanQty) || 0,
+    scanRatePerHour: Number(pulse?.scanRatePerHour) || 0,
+    activeFactories: Number(pulse?.activeFactories) || 0,
+    activeWorkers: Number(pulse?.activeWorkers) || 0,
+    healthIndex: Number(health?.healthIndex) || 0,
+    stagnantFactories: Number(pulse?.stagnantFactories?.length) || 0,
+    shortageItems: Number(shortage?.shortageItems?.length) || 0,
+    pendingNotify: Number(notify?.pendingCount) || 0,
+    sentToday: Number(notify?.sentToday) || 0,
+  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, pulse?.activeFactories, pulse?.activeWorkers, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, shortage?.shortageItems]);
+
+  useEffect(() => {
+    const prev = prevKpiMetricsRef.current;
+    const nowTs = Date.now();
+    if (!prev) {
+      prevKpiMetricsRef.current = currentKpiMetrics;
+      setKpiHistory({
+        todayScanQty: [{ ts: nowTs, value: currentKpiMetrics.todayScanQty }],
+        scanRatePerHour: [{ ts: nowTs, value: currentKpiMetrics.scanRatePerHour }],
+        activeFactories: [{ ts: nowTs, value: currentKpiMetrics.activeFactories }],
+        activeWorkers: [{ ts: nowTs, value: currentKpiMetrics.activeWorkers }],
+        healthIndex: [{ ts: nowTs, value: currentKpiMetrics.healthIndex }],
+        stagnantFactories: [{ ts: nowTs, value: currentKpiMetrics.stagnantFactories }],
+        shortageItems: [{ ts: nowTs, value: currentKpiMetrics.shortageItems }],
+        pendingNotify: [{ ts: nowTs, value: currentKpiMetrics.pendingNotify }],
+        sentToday: [{ ts: nowTs, value: currentKpiMetrics.sentToday }],
+      });
+      return;
+    }
+    setKpiDelta({
+      todayScanQty: currentKpiMetrics.todayScanQty - prev.todayScanQty,
+      scanRatePerHour: currentKpiMetrics.scanRatePerHour - prev.scanRatePerHour,
+      activeFactories: currentKpiMetrics.activeFactories - prev.activeFactories,
+      activeWorkers: currentKpiMetrics.activeWorkers - prev.activeWorkers,
+      healthIndex: currentKpiMetrics.healthIndex - prev.healthIndex,
+      stagnantFactories: currentKpiMetrics.stagnantFactories - prev.stagnantFactories,
+      shortageItems: currentKpiMetrics.shortageItems - prev.shortageItems,
+      pendingNotify: currentKpiMetrics.pendingNotify - prev.pendingNotify,
+      sentToday: currentKpiMetrics.sentToday - prev.sentToday,
+    });
+    setKpiHistory((prevHistory) => {
+      const nextHistory = { ...prevHistory } as KpiHistoryStore;
+      (Object.keys(currentKpiMetrics) as Array<keyof KpiMetricSnapshot>).forEach((key) => {
+        const prevSeries = prevHistory[key] || [];
+        const lastPoint = prevSeries[prevSeries.length - 1];
+        if (lastPoint && lastPoint.value === currentKpiMetrics[key] && nowTs - lastPoint.ts < 8_000) {
+          nextHistory[key] = prevSeries.filter((point) => nowTs - point.ts <= KPI_HISTORY_WINDOW_MS);
+          return;
+        }
+        nextHistory[key] = [
+          ...prevSeries,
+          { ts: nowTs, value: currentKpiMetrics[key] },
+        ].filter((point) => nowTs - point.ts <= KPI_HISTORY_WINDOW_MS);
+      });
+      return nextHistory;
+    });
+    prevKpiMetricsRef.current = currentKpiMetrics;
+  }, [currentKpiMetrics]);
+
+  const formatDeltaText = useCallback((delta: number, suffix = '') => {
+    if (delta === 0) return `0${suffix}`;
+    return `${delta > 0 ? '+' : ''}${delta}${suffix}`;
+  }, []);
+
+  const renderDeltaBadge = useCallback((delta: number, options?: { flatText?: string; suffix?: string }) => {
+    const flatText = options?.flatText ?? '持平';
+    const suffix = options?.suffix ?? '';
+    const tone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+    return (
+      <span className={`c-kpi-delta ${tone}`}>
+        {delta === 0 ? flatText : formatDeltaText(delta, suffix)}
+      </span>
+    );
+  }, [formatDeltaText]);
+
+  const getKpiTrend = useCallback((key: keyof KpiMetricSnapshot) => {
+    return (kpiHistory[key] || []).map((point) => point.value);
+  }, [kpiHistory]);
+
+  const minFactorySilentMinutes = useMemo(() => {
+    const activity = pulse?.factoryActivity || [];
+    if (activity.length === 0) return null;
+    return activity.reduce<number | null>((min, item) => {
+      const value = Number(item.minutesSinceLastScan);
+      if (!Number.isFinite(value)) return min;
+      if (min === null) return value;
+      return Math.min(min, value);
+    }, null);
+  }, [pulse?.factoryActivity]);
+
   /* ── 逾期 & 延期风险订单（纯前端推导，无需额外接口） ── */
   const overdueRisk = useMemo(() => {
     const overdue: typeof orders = [];
@@ -148,18 +289,32 @@ const IntelligenceCenter: React.FC = () => {
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
   /* ── 跑马灯：紧急订单（预留，暂未渲染）── */
-  const _tickerItems = useMemo(() => {
-    const items: string[] = [];
+  const tickerItems = useMemo(() => {
+    const items: Array<{ orderNo: string; text: string; level: 'danger' | 'warning' }> = [];
     overdueRisk.overdue.forEach(o => {
       const d = o.plannedEndDate ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)) : 0;
-      items.push(`⚠ ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`);
+      items.push({
+        orderNo: String(o.orderNo || '').trim(),
+        text: `⚠ ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`,
+        level: 'danger',
+      });
     });
     overdueRisk.highRisk.forEach(o => {
       const d = o.plannedEndDate ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000) : 0;
-      items.push(`🔴 ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`);
+      items.push({
+        orderNo: String(o.orderNo || '').trim(),
+        text: `🔴 ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`,
+        level: 'warning',
+      });
     });
     return items;
   }, [overdueRisk]);
+
+  const handleTickerClick = useCallback((orderNo: string) => {
+    const safeOrderNo = String(orderNo || '').trim();
+    if (!safeOrderNo) return;
+    navigate(`/production/progress-detail?orderNo=${encodeURIComponent(safeOrderNo)}`);
+  }, [navigate]);
 
   /* ── 各 KPI 卡片悬浮详情内容 ── */
   const hourNow = Math.max(now.getHours(), 1);
@@ -312,14 +467,22 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* 紧急预警跑马灯：逾期 & 高风险订单滚动提示（有数据时才渲染） */}
-        {_tickerItems.length > 0 && (
+        {tickerItems.length > 0 && (
           <div className="cockpit-ticker">
             <span className="cockpit-ticker-label">⚠ 紧急预警</span>
             <div className="cockpit-ticker-track">
               <div className="cockpit-ticker-inner"
-                style={{ animationDuration: `${Math.max(12, _tickerItems.length * 5)}s` }}>
-                {[..._tickerItems, ..._tickerItems].map((item, i) => (
-                  <span key={i} className="cockpit-ticker-item">{item}</span>
+                style={{ animationDuration: `${Math.max(12, tickerItems.length * 5)}s` }}>
+                {[...tickerItems, ...tickerItems].map((item, i) => (
+                  <button
+                    key={`${item.orderNo}-${i}`}
+                    type="button"
+                    className={`cockpit-ticker-item ${item.level}`}
+                    onClick={() => handleTickerClick(item.orderNo)}
+                    title={`点击查看 ${item.orderNo} 生产进度`}
+                  >
+                    {item.text}
+                  </button>
                 ))}
               </div>
             </div>
@@ -338,6 +501,14 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-val cyan neon-cyan"><AnimatedNum val={pulse?.todayScanQty?.toLocaleString() ?? '—'} /></div>
             <div className="c-kpi-unit">件</div>
             <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}><AnimatedNum val={pulse?.scanRatePerHour ?? '—'} /></b>&nbsp;件/时</div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.todayScanQty, { flatText: '本轮无新增', suffix: '件' })}
+              <span className="c-kpi-delta-note">速率 {formatDeltaText(kpiDelta.scanRatePerHour, '/h')}</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('todayScanQty')} color="#00e5ff" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -349,6 +520,14 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-val green neon-green"><AnimatedNum val={pulse?.activeFactories ?? '—'} /></div>
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.activeFactories, { flatText: '工厂稳定', suffix: '家' })}
+              <span className="c-kpi-delta-note">员工 {formatDeltaText(kpiDelta.activeWorkers, '人')}</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('activeFactories')} color="#39ff14" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -362,6 +541,14 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <div className="c-kpi-unit">分</div>
             <div className="c-kpi-sub">等级&nbsp;<b style={{ color: grade2color(health?.grade ?? '') }}>{health?.grade ?? '—'}&nbsp;级</b></div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.healthIndex, { flatText: '健康稳定', suffix: '分' })}
+              <span className="c-kpi-delta-note">异常 {formatDeltaText(-(Number(healing?.issuesFound) || 0), '项基线')}</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('healthIndex')} color={grade2color(health?.grade ?? '') || '#39ff14'} width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -381,6 +568,14 @@ const IntelligenceCenter: React.FC = () => {
               {(pulse?.stagnantFactories?.length ?? 0) > 0
                 ? <span className="blink-text">⚠️ 需立即处理</span>
                 : '生产运转正常'}
+            </div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.stagnantFactories, { flatText: '无新增停滞', suffix: '家' })}
+              <span className="c-kpi-delta-note">异常越少越好</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('stagnantFactories')} color="#ff6b6b" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
             </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
@@ -402,6 +597,14 @@ const IntelligenceCenter: React.FC = () => {
                 ? <span style={{ color: '#f7a600' }}>⚡ 请及时补单</span>
                 : '库存储备充足'}
             </div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.shortageItems, { flatText: '缺口未变', suffix: '项' })}
+              <span className="c-kpi-delta-note">补单越快越稳</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('shortageItems')} color="#f7a600" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -413,6 +616,14 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-val purple"><AnimatedNum val={notify?.pendingCount ?? '—'} /></div>
             <div className="c-kpi-unit">条待发</div>
             <div className="c-kpi-sub">今日已发&nbsp;<b style={{ color: '#7c4dff' }}><AnimatedNum val={notify?.sentToday ?? 0} /></b>&nbsp;条</div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.pendingNotify, { flatText: '待发稳定', suffix: '条' })}
+              <span className="c-kpi-delta-note">已发 {formatDeltaText(kpiDelta.sentToday, '条')}</span>
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('pendingNotify')} color="#a78bfa" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
             <div className="c-kpi-hover-hint">悬停查看详情 ↑</div>
           </div>
           </Popover>
@@ -460,7 +671,10 @@ const IntelligenceCenter: React.FC = () => {
               </div>
             )}
             {/* WebSocket 驱动的实时扫码事件流，有扫码时自动出现 */}
-            <LiveScanFeed />
+            <LiveScanFeed
+              minMinutesSinceLastScan={minFactorySilentMinutes}
+              currentScanRatePerHour={Number(pulse?.scanRatePerHour) || 0}
+            />
           </div>
 
           {/* 人效实时动态 */}

@@ -163,8 +163,7 @@ const ProductionList: React.FC = () => {
   };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
-  const [aiRiskFilter, setAiRiskFilter] = useState<'all' | 'overdue' | 'danger' | 'warning'>('all');
-  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind'>('all');
+  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
   const focusClearTimerRef = useRef<number | null>(null);
@@ -206,6 +205,7 @@ const ProductionList: React.FC = () => {
   }, []);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
+  const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
   const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
   const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
   const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
@@ -298,15 +298,26 @@ const ProductionList: React.FC = () => {
     return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue';
   }), [deliveryRiskMap, productionList]);
 
-  const dangerRiskOrders = useMemo(() => productionList.filter((o) => {
-    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'danger';
-  }), [deliveryRiskMap, productionList]);
-
-  const warningRiskOrders = useMemo(() => productionList.filter((o) => {
-    return deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'warning';
-  }), [deliveryRiskMap, productionList]);
-
-  const attentionRiskOrders = useMemo(() => [...dangerRiskOrders, ...warningRiskOrders], [dangerRiskOrders, warningRiskOrders]);
+  const stagnantOrderIds = useMemo(() => {
+    return new Set(
+      productionList
+        .filter((record) => {
+          if (record.status === 'completed') return false;
+          const orderId = String(record.id || '').trim();
+          if (!orderId) return false;
+          const nodeTimes = boardTimesByOrder[orderId] || {};
+          const timestamps = Object.values(nodeTimes)
+            .map((value) => dayjs(String(value || '')).valueOf())
+            .filter((value) => Number.isFinite(value) && value > 0);
+          if (timestamps.length === 0) return false;
+          const latestScanTime = Math.max(...timestamps);
+          return dayjs().diff(dayjs(latestScanTime), 'day') >= 3;
+        })
+        .map((record) => String(record.id || '').trim())
+        .filter(Boolean)
+    );
+  }, [boardTimesByOrder, productionList]);
+  const stagnantOrders = useMemo(() => productionList.filter((o) => stagnantOrderIds.has(String(o.id || ''))), [productionList, stagnantOrderIds]);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -359,7 +370,6 @@ const ProductionList: React.FC = () => {
     setActiveStatFilter('all');
     setShowDelayedOnly(false);
     setSmartQueueFilter('all');
-    setAiRiskFilter('all');
     setQueryParams((prev) => ({
       ...prev,
       page: 1,
@@ -546,13 +556,10 @@ const ProductionList: React.FC = () => {
         const daysLeft = dayjs(o.plannedEndDate).diff(dayjs(), 'day');
         return daysLeft <= 7 && (Number(o.productionProgress) || 0) < 50;
       });
-    }
-    // AI 交期风险层居筛选
-    if (aiRiskFilter !== 'all' && deliveryRiskMap.size > 0) {
-      filtered = filtered.filter(o => {
-        const risk = deliveryRiskMap.get(String(o.orderNo || ''));
-        return risk?.riskLevel === aiRiskFilter;
-      });
+    } else if (smartQueueFilter === 'stagnant') {
+      filtered = filtered.filter(o => stagnantOrderIds.has(String(o.id || '')));
+    } else if (smartQueueFilter === 'overdue') {
+      filtered = filtered.filter(o => deliveryRiskMap.get(String(o.orderNo || ''))?.riskLevel === 'overdue');
     }
     filtered.sort((a: any, b: any) => {
       const aClose = (a.actualEndDate || a.status === 'CLOSED' || a.status === 'closed' || a.status === 'completed') ? 1 : 0;
@@ -566,7 +573,7 @@ const ProductionList: React.FC = () => {
       return 0;
     });
     return filtered;
-  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, aiRiskFilter, deliveryRiskMap, smartQueueFilter]);
+  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, deliveryRiskMap, smartQueueFilter, stagnantOrderIds]);
 
   const scrollToFocusedOrder = useCallback((orderId: string) => {
     const safeId = orderId.replace(/"/g, '\\"');
@@ -601,26 +608,22 @@ const ProductionList: React.FC = () => {
   }, [getOrderDomKey, pendingScrollOrderId, scrollToFocusedOrder, sortedProductionList, viewMode]);
 
   const smartActionItems = useMemo(() => {
-    const riskAttention = aiRiskCounts.danger + aiRiskCounts.warning;
-    const preferredRiskFilter = aiRiskCounts.danger > 0 ? 'danger' : aiRiskCounts.warning > 0 ? 'warning' : 'all';
     return [
       {
         key: 'urgent',
-        label: '今日待催',
+        label: '待催交付',
         value: smartHints.urgentCount,
-        hint: '3天内要交货，适合优先催工厂与跟单节奏。',
+        hint: '3天内要交货，适合先盯需要马上催推进的单。',
         tone: 'orange' as const,
         active: smartQueueFilter === 'urgent',
         onClick: () => {
-          if (smartQueueFilter === 'urgent' && aiRiskFilter === 'all') {
+          if (smartQueueFilter === 'urgent') {
             setSmartQueueFilter('all');
-            setAiRiskFilter('all');
             setFocusedOrderId(null);
             setPendingScrollOrderId(null);
             return;
           }
           setSmartQueueFilter('urgent');
-          setAiRiskFilter('all');
           triggerOrderFocus(urgentOrders[0]);
         },
       },
@@ -632,60 +635,54 @@ const ProductionList: React.FC = () => {
         tone: 'red' as const,
         active: smartQueueFilter === 'behind',
         onClick: () => {
-          if (smartQueueFilter === 'behind' && aiRiskFilter === 'all') {
+          if (smartQueueFilter === 'behind') {
             setSmartQueueFilter('all');
-            setAiRiskFilter('all');
             setFocusedOrderId(null);
             setPendingScrollOrderId(null);
             return;
           }
           setSmartQueueFilter('behind');
-          setAiRiskFilter('all');
           triggerOrderFocus(behindOrders[0]);
+        },
+      },
+      {
+        key: 'stagnant',
+        label: '停滞订单',
+        value: stagnantOrderIds.size,
+        hint: '已扫描过但连续停住，适合先联系工厂确认原因。',
+        tone: 'cyan' as const,
+        active: smartQueueFilter === 'stagnant',
+        onClick: () => {
+          if (smartQueueFilter === 'stagnant') {
+            setSmartQueueFilter('all');
+            setFocusedOrderId(null);
+            setPendingScrollOrderId(null);
+            return;
+          }
+          setSmartQueueFilter('stagnant');
+          triggerOrderFocus(stagnantOrders[0]);
         },
       },
       {
         key: 'overdue',
         label: '预测逾期',
         value: aiRiskCounts.overdue,
-        hint: '基于扫码速度预测掉期，适合先抢救最危险订单。',
-        tone: 'red' as const,
-        active: aiRiskFilter === 'overdue',
+        hint: '基于实时节奏预测掉期，适合优先抢救最危险的单。',
+        tone: 'green' as const,
+        active: smartQueueFilter === 'overdue',
         onClick: () => {
-          if (smartQueueFilter === 'all' && aiRiskFilter === 'overdue') {
+          if (smartQueueFilter === 'overdue') {
             setSmartQueueFilter('all');
-            setAiRiskFilter('all');
             setFocusedOrderId(null);
             setPendingScrollOrderId(null);
             return;
           }
-          setSmartQueueFilter('all');
-          setAiRiskFilter('overdue');
+          setSmartQueueFilter('overdue');
           triggerOrderFocus(overdueRiskOrders[0]);
         },
       },
-      {
-        key: 'risk',
-        label: '存在风险',
-        value: riskAttention,
-        hint: '包含高风险和预警单，适合做今天的二优先处理池。',
-        tone: 'cyan' as const,
-        active: aiRiskFilter === 'danger' || aiRiskFilter === 'warning',
-        onClick: () => {
-          if (smartQueueFilter === 'all' && (aiRiskFilter === 'danger' || aiRiskFilter === 'warning')) {
-            setSmartQueueFilter('all');
-            setAiRiskFilter('all');
-            setFocusedOrderId(null);
-            setPendingScrollOrderId(null);
-            return;
-          }
-          setSmartQueueFilter('all');
-          setAiRiskFilter(preferredRiskFilter);
-          triggerOrderFocus((preferredRiskFilter === 'danger' ? dangerRiskOrders : warningRiskOrders)[0] || attentionRiskOrders[0]);
-        },
-      },
     ];
-  }, [aiRiskCounts.danger, aiRiskCounts.overdue, aiRiskCounts.warning, aiRiskFilter, attentionRiskOrders, behindOrders, dangerRiskOrders, overdueRiskOrders, smartHints.behindCount, smartHints.urgentCount, smartQueueFilter, triggerOrderFocus, urgentOrders, warningRiskOrders]);
+  }, [aiRiskCounts.overdue, behindOrders, overdueRiskOrders, smartHints.behindCount, smartHints.urgentCount, smartQueueFilter, stagnantOrderIds.size, stagnantOrders, triggerOrderFocus, urgentOrders]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
@@ -881,12 +878,11 @@ const ProductionList: React.FC = () => {
                   </button>
                 );
               })}
-              {(smartQueueFilter !== 'all' || aiRiskFilter !== 'all') && (
+              {smartQueueFilter !== 'all' && (
                 <button
                   type="button"
                   onClick={() => {
                     setSmartQueueFilter('all');
-                    setAiRiskFilter('all');
                   }}
                   style={{
                     marginLeft: 'auto',
