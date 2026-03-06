@@ -243,7 +243,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             <div key={i} style={{ display: 'flex', alignItems: 'center',
               gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 11 }}>
               <span style={{ color: sev2c(b.severity), fontWeight: 700, minWidth: 34 }}>{b.stageName}</span>
-              <span style={{ color: '#3a5470', flex: 1 }}>积压 {b.backlog} 件</span>
+              <span style={{ color: '#7aaec8', flex: 1 }}>积压 {b.backlog} 件</span>
               <span style={{ color: sev2c(b.severity), fontSize: 10,
                 border: `1px solid ${sev2c(b.severity)}44`, padding: '0 4px', borderRadius: 3 }}>
                 {b.severity === 'critical' ? '严重' : b.severity === 'warning' ? '预警' : '正常'}
@@ -251,7 +251,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             </div>
           ))}
           {intel.bottleneck.items[0]?.suggestion && (
-            <div style={{ fontSize: 10, color: '#4a6a7a', marginTop: 5, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: '#8ab4c8', marginTop: 5, lineHeight: 1.5 }}>
               💡 {intel.bottleneck.items[0].suggestion}
             </div>
           )}
@@ -267,17 +267,17 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 10, color: risk2badge(intel.riskItem.riskLevel).color,
               fontWeight: 700 }}>📊 交期风险评估</span>
-            <span style={{ fontSize: 10, color: '#3a5470' }}>
+            <span style={{ fontSize: 10, color: '#7aaec8' }}>
               预测: {intel.riskItem.predictedEndDate?.slice(0, 10) ?? '--'}
             </span>
           </div>
-          <div style={{ fontSize: 10, color: '#4a7a8a', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 10, color: '#8ab4c8', lineHeight: 1.55 }}>
             {intel.riskItem.riskDescription}
           </div>
           {(intel.riskItem.requiredDailyOutput || intel.riskItem.currentDailyOutput) ? (
             <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 10 }}>
-              <span style={{ color: '#2a5a70' }}>日产需 <b style={{ color: '#f7a600' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
-              <span style={{ color: '#2a5a70' }}>当前 <b style={{ color: '#00e5ff' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
+              <span style={{ color: '#7aaec8' }}>日产需 <b style={{ color: '#f7a600' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
+              <span style={{ color: '#7aaec8' }}>当前 <b style={{ color: '#00e5ff' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
             </div>
           ) : null}
         </div>
@@ -304,7 +304,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
 
       {/* ─ 加载中占位符 ─ */}
       {intel.loading && (
-        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 10, color: '#1e3348' }}>
+        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 10, color: '#4a8aaa' }}>
           ⁙ 智能分析中...
         </div>
       )}
@@ -327,7 +327,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             </div>
           ))}
           {intel.defectTrace.overallDefectRate !== undefined && (
-            <div style={{ fontSize: 10, color: '#4a3a60', marginTop: 4 }}>💡 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
+            <div style={{ fontSize: 10, color: '#9d87c0', marginTop: 4 }}>💡 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
           )}
         </div>
       )}
@@ -459,7 +459,7 @@ const OrderScrollPanel: React.FC<{ orders: ProductionOrder[] }> = ({ orders }) =
       <LiveDot size={7} />
       活跃订单实时滚动
       <span className="c-card-badge cyan-badge">{orders.length} 单进行中</span>
-      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
+      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
     </div>
     <AutoScrollBox className="c-orders-scroll">
       {orders.map(o => <OrderRow key={String(o.id)} order={o} />)}
@@ -1140,7 +1140,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1e3348', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
+              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
             </div>
             <AutoScrollBox className="c-orders-scroll">
               {factoryBottleneck.map(f => <BottleneckRow key={f.factoryName} item={f} />)}
@@ -1278,7 +1278,7 @@ const IntelligenceCenter: React.FC = () => {
                         const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                         return (
                           <div key={fac} className="c-heat-cell"
-                            style={{ background: `rgba(255,65,54,${alpha})`, color: alpha > 0.45 ? '#fff' : '#444' }}>
+                            style={{ background: `rgba(255,65,54,${alpha})`, color: alpha > 0.45 ? '#fff' : '#aaa' }}>
                             {cell?.defectCount || ''}
                           </div>
                         );
@@ -1361,7 +1361,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ color: '#ffd700', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>⚡ AI 运营工具</span>
-          <span style={{ fontSize: 11, color: '#4a6d8a' }}>智能派工 · AI排程 — 日常高频使用</span>
+          <span style={{ fontSize: 11, color: '#7aaec8' }}>智能派工 · AI排程 — 日常高频使用</span>
         </div>
         <div className="cockpit-grid-2">
           <SmartAssignmentPanel />
@@ -1398,7 +1398,7 @@ const IntelligenceCenter: React.FC = () => {
 
               {/* 自然语言数据查询区 */}
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 5 }}>📊 数据快查（自然语言）</div>
+                <div style={{ fontSize: 10, color: '#7aaec8', marginBottom: 5 }}>📊 数据快查（自然语言）</div>
                 <div className="c-chat-row" style={{ marginBottom: 4 }}>
                   <Input
                     size="small"
@@ -1419,14 +1419,14 @@ const IntelligenceCenter: React.FC = () => {
                       onClick={() => handleNlQuery(q)}>{q}</button>
                   ))}
                 </div>
-                {nlLoading && <div style={{ fontSize: 10, color: '#4a6d8a', paddingTop: 4 }}>⌛ 查询中...</div>}
+                {nlLoading && <div style={{ fontSize: 10, color: '#7aaec8', paddingTop: 4 }}>⌛ 查询中...</div>}
                 {nlResult && (
                   <div style={{ fontSize: 11, color: '#c4b5fd', marginTop: 5,
                     padding: '5px 8px', background: 'rgba(100,80,200,0.08)',
                     borderRadius: 4, border: '1px solid rgba(100,80,200,0.2)', lineHeight: 1.6 }}>
                     {nlResult.answer}
                     {nlResult.confidence !== undefined && (
-                      <span style={{ fontSize: 9, color: '#4a5a7a', marginLeft: 6 }}>
+                      <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>
                         置信度 {Math.round(nlResult.confidence * 100)}%
                       </span>
                     )}
@@ -1435,8 +1435,8 @@ const IntelligenceCenter: React.FC = () => {
               </div>
 
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 5 }}>💬 AI 对话（深度分析）</div>
-                <div style={{ fontSize: 11, color: '#3a5060', marginBottom: 6 }}
+                <div style={{ fontSize: 10, color: '#7aaec8', marginBottom: 5 }}>💬 AI 对话（深度分析）</div>
+                <div style={{ fontSize: 11, color: '#6a9ab8', marginBottom: 6 }}
                   >直接问询生产、订单、库存、财务任何问题</div>
               </div>
               <div className="c-chat-row" style={{ marginBottom: 8 }}>

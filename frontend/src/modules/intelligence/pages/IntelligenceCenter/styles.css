@@ -498,7 +498,7 @@
 }
 .c-table tr:last-child td { border-bottom: none; }
 .c-table tr:hover td { background: rgba(0,229,255,0.04); }
-.c-empty-td { color: #1e3348 !important; }
+.c-empty-td { color: #4a8aaa !important; }
 
 /* ────────────────────────────────────────────────
    质量缺陷热力图
@@ -677,7 +677,7 @@
 /* ────────────────────────────────────────────────
    通用空状态 & 旧兼容类
 ─────────────────────────────────────────────────── */
-.c-empty { color: #1e3348; font-size: 12px; text-align: center; padding: 20px 0; }
+.c-empty { color: #5a8aa8; font-size: 12px; text-align: center; padding: 20px 0; }
 
 /* 语义颜色类 (保留兼容) */
 .severity-critical { color: #ff4136; font-weight: 600; }
