@@ -104,16 +104,30 @@ public class FactoryBottleneckOrchestrator {
             String minStage = STAGE_LABELS[0];
             int minAvg = Integer.MAX_VALUE;
 
-            for (String stage : STAGE_LABELS) {
+            for (int si = 0; si < STAGE_LABELS.length; si++) {
+                String stage = STAGE_LABELS[si];
                 int sumPct = 0;
                 for (ProductionOrder o : group) {
                     String oid = String.valueOf(o.getId());
                     int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
                             ? o.getOrderQuantity() : 1;
-                    int scanned = scanQtyMap
-                            .getOrDefault(oid, Collections.emptyMap())
-                            .getOrDefault(stage, 0);
-                    sumPct += Math.min(100, scanned * 100 / total);
+                    Map<String, Integer> orderScans = scanQtyMap.getOrDefault(oid, Collections.emptyMap());
+                    int scanned = orderScans.getOrDefault(stage, 0);
+                    int pct = Math.min(100, scanned * 100 / total);
+
+                    // 关键修复：后续工序有扫码记录 → 当前工序必然已完成
+                    // 例：裁剪有扫码 → 采购已完成；车缝有扫码 → 采购+裁剪均已完成
+                    // 避免"采购"因从不扫码而永远被误判为卡点
+                    if (pct < 100) {
+                        for (int j = si + 1; j < STAGE_LABELS.length; j++) {
+                            if (orderScans.getOrDefault(STAGE_LABELS[j], 0) > 0) {
+                                pct = 100;
+                                break;
+                            }
+                        }
+                    }
+
+                    sumPct += pct;
                 }
                 int avg = sumPct / group.size();
                 if (avg < minAvg) {
