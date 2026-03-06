@@ -22,16 +22,14 @@ public class OrderTrackController {
 
     /**
      * 生成订单分享链接 token（需登录）
-     * 请求体：{ "orderId": "xxx", "expireDays": 30 }
+     * 请求体：{ "orderId": "xxx" }
+     * 规则：固定 1 小时有效，过期自动失效
      */
     @PostMapping("/api/intelligence/order-track/generate-token")
     @PreAuthorize("isAuthenticated()")
     public Result<String> generateToken(@RequestBody Map<String, Object> req) {
         String orderId = (String) req.get("orderId");
-        int expireDays = req.containsKey("expireDays")
-                ? Integer.parseInt(String.valueOf(req.get("expireDays")))
-                : 30;
-        String token = orderTrackPortalOrchestrator.generateToken(orderId, expireDays);
+        String token = orderTrackPortalOrchestrator.generateToken(orderId);
         return Result.success(token);
     }
 

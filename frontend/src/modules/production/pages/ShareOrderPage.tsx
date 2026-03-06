@@ -10,10 +10,8 @@ interface StageProgress {
 
 interface ScanEntry {
   processName: string;
-  progressStage?: string;
   quantity: number;
   scanTime: string;
-  scanResult: string;
 }
 
 interface AiPrediction {
@@ -24,7 +22,6 @@ interface AiPrediction {
 }
 
 interface ShareInfo {
-  token: string;
   expiresAt: string;
   accessCount: number;
 }
@@ -35,7 +32,7 @@ interface OrderTrackData {
   factoryName: string;
   productionProgress: number;
   expectedShipDate: string;
-  stageProgress: StageProgress[];
+  stages: StageProgress[];
   recentScans: ScanEntry[];
   aiPrediction: AiPrediction;
   shareInfo: ShareInfo;
@@ -117,6 +114,14 @@ const ShareOrderPage: React.FC = () => {
           <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', letterSpacing: 0.5 }}>生产进度追踪</div>
         </div>
 
+        <Alert
+          style={{ marginBottom: 16, borderRadius: 12 }}
+          type="info"
+          showIcon
+          message="该分享链接仅1小时内有效"
+          description="页面仅展示生产进度与AI预测信息，不展示单价，不支持下载。"
+        />
+
         {/* 订单基本信息 */}
         <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -151,7 +156,7 @@ const ShareOrderPage: React.FC = () => {
         {/* 工序进度 */}
         <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>工序进度</div>
-          {data.stageProgress?.map(s => (
+          {data.stages?.map(s => (
             <div key={s.stageName} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -200,11 +205,11 @@ const ShareOrderPage: React.FC = () => {
             {data.recentScans.map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: s.scanResult === 'success' ? '#f6ffed' : '#fff2f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
-                    {s.scanResult === 'success' ? '✓' : '✗'}
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f6ffed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                    ✓
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>{s.processName || s.progressStage || '工序'}</div>
+                    <div style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>{s.processName || '工序'}</div>
                     <div style={{ fontSize: 11, color: '#999' }}>{formatTime(s.scanTime)}</div>
                   </div>
                 </div>
@@ -218,7 +223,7 @@ const ShareOrderPage: React.FC = () => {
         <div style={{ textAlign: 'center', padding: '16px 0 8px', color: '#bbb', fontSize: 11 }}>
           此链接由供应链系统生成 · 访问次数：{data.shareInfo?.accessCount ?? 0} 次
           {data.shareInfo?.expiresAt && (
-            <span> · 有效期至 {formatDate(data.shareInfo.expiresAt)}</span>
+            <span> · 失效时间 {formatTime(data.shareInfo.expiresAt)}</span>
           )}
         </div>
 

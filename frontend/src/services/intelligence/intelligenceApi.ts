@@ -769,9 +769,9 @@ export const intelligenceApi = {
   runMindPushCheck: () =>
     api.post<{ code: number; data: number }>('/intelligence/mind-push/check', {}),
 
-  /** 生成订单分享 token */
-  generateShareToken: (orderId: string, expireDays = 30) =>
-    api.post<{ code: number; data: string }>('/intelligence/order-track/generate-token', { orderId, expireDays }),
+  /** 生成订单分享 token（固定1小时有效） */
+  generateShareToken: (orderId: string) =>
+    api.post<{ code: number; data: string }>('/intelligence/order-track/generate-token', { orderId }),
 
   /** 撤销订单分享 token */
   revokeShareToken: (orderId: string) =>

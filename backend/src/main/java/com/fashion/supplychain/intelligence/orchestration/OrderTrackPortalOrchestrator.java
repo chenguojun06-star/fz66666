@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class OrderTrackPortalOrchestrator {
 
     private static final DateTimeFormatter MONTH_DAY = DateTimeFormatter.ofPattern("MM月dd日");
+    private static final int SHARE_EXPIRE_HOURS = 1;
 
     @Autowired
     private OrderShareTokenMapper orderShareTokenMapper;
@@ -47,7 +48,7 @@ public class OrderTrackPortalOrchestrator {
     // ─── 生成分享 Token ───────────────────────────────────────────
 
     @Transactional(rollbackFor = Exception.class)
-    public String generateToken(String orderId, int expireDays) {
+    public String generateToken(String orderId) {
         Long tenantId = UserContext.tenantId();
         String userId  = UserContext.userId();
 
@@ -69,14 +70,15 @@ public class OrderTrackPortalOrchestrator {
         entity.setOrderId(orderId);
         entity.setOrderNo(order.getOrderNo());
         entity.setToken(token);
-        entity.setExpireDays(expireDays);
-        entity.setExpiresAt(LocalDateTime.now().plusDays(expireDays));
+        // 历史字段保留用于兼容旧表结构；当前策略统一固定 1 小时有效。
+        entity.setExpireDays(0);
+        entity.setExpiresAt(LocalDateTime.now().plusHours(SHARE_EXPIRE_HOURS));
         entity.setAccessCount(0);
         entity.setCreatedBy(userId);
         entity.setCreatedAt(LocalDateTime.now());
         orderShareTokenMapper.insert(entity);
 
-        log.info("[OrderTrack] 生成 token orderId={} expireDays={} token={}", orderId, expireDays, token);
+        log.info("[OrderTrack] 生成 token orderId={} expireHours={} token={}", orderId, SHARE_EXPIRE_HOURS, token);
         return token;
     }
 
