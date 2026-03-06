@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class OrderTrackPortalOrchestrator {
 
     private static final DateTimeFormatter MONTH_DAY = DateTimeFormatter.ofPattern("MM月dd日");
-    private static final int SHARE_EXPIRE_HOURS = 1;
+    private static final int SHARE_EXPIRE_HOURS = 24;
 
     @Autowired
     private OrderShareTokenMapper orderShareTokenMapper;
@@ -70,7 +70,7 @@ public class OrderTrackPortalOrchestrator {
         entity.setOrderId(orderId);
         entity.setOrderNo(order.getOrderNo());
         entity.setToken(token);
-        // 历史字段保留用于兼容旧表结构；当前策略统一固定 1 小时有效。
+        // 历史字段保留用于兼容旧表结构；当前策略统一固定 1 天（24小时）有效。
         entity.setExpireDays(0);
         entity.setExpiresAt(LocalDateTime.now().plusHours(SHARE_EXPIRE_HOURS));
         entity.setAccessCount(0);

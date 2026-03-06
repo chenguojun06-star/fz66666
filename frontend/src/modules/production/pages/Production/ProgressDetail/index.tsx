@@ -831,7 +831,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const hasActiveOrders = orders.some(o => o.status !== 'completed');
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
 
-  // ── 分享订单给客户追踪链接（30天JWT）─────────────────────────────────
+  // ── 分享订单给客户追踪链接（1天有效）─────────────────────────────────
   const handleShareOrder = useCallback(async (order: ProductionOrder) => {
     if (!order.id) return;
     try {
@@ -844,7 +844,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         content: (
           <div>
             <p style={{ marginBottom: 8, color: '#555', fontSize: 13 }}>
-              发送以下链接给客户，客户无需登录即可实时查看订单生产进度（30天有效）：
+              发送以下链接给客户，客户无需登录即可实时查看订单生产进度（1天有效）：
             </p>
             <Input.TextArea value={shareUrl} autoSize={{ minRows: 2 }} readOnly
               style={{ fontSize: 12, background: '#f5f5f5', cursor: 'text' }}
