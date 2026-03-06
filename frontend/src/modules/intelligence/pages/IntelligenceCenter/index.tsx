@@ -24,6 +24,11 @@ import RhythmDnaPanel from './RhythmDnaPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
 import MindPushPanel from './MindPushPanel';
+import StyleQuoteSuggestionPanel from './StyleQuoteSuggestionPanel';
+import FinanceAuditPanel from './FinanceAuditPanel';
+import DefectTracePanel from './DefectTracePanel';
+import SupplierScorecardPanel from './SupplierScorecardPanel';
+import LiveCostTrackerPanel from './LiveCostTrackerPanel';
 import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
@@ -1493,6 +1498,29 @@ const IntelligenceCenter: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ╔══════════════════════════════════════════════════════════╗
+            ║   智能化黑科技 — 报价建议 / 财务审核 / 次品溯源         ║
+            ╚══════════════════════════════════════════════════════════╝ */}
+        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(247,166,0,0.04)', border: '1px solid rgba(247,166,0,0.15)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#f7a600', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>💡 智能商务工具</span>
+          <span style={{ fontSize: 11, color: '#4a6d8a' }}>报价建议 · 财务审核 · 次品溯源</span>
+        </div>
+        <div className="cockpit-grid-2" style={{ padding: '0 24px 0' }}>
+          <StyleQuoteSuggestionPanel />
+          <FinanceAuditPanel />
+        </div>
+        <div className="cockpit-grid-2" style={{ padding: '0 24px 0' }}>
+          <DefectTracePanel />
+          <SupplierScorecardPanel />
+        </div>
+
+        {/* ╔══════════════════════════════════════════════════════════╗
+            ║   实时成本追踪                                           ║
+            ╚══════════════════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 16px' }}>
+          <LiveCostTrackerPanel />
         </div>
 
       </div>

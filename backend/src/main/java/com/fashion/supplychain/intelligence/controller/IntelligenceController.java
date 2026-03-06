@@ -126,6 +126,12 @@ public class IntelligenceController {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired
+    private SupplierScorecardOrchestrator supplierScorecardOrchestrator;
+
+    @Autowired
+    private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
+
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
         return Result.success(smartPrecheckOrchestrator.precheckScan(request));
@@ -389,5 +395,17 @@ public class IntelligenceController {
                 "answer", aiAnswer != null ? aiAnswer : "AI 暂时无法回答，请稍后再试",
                 "source", "ai"
         ));
+    }
+
+    /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
+    @GetMapping("/supplier-scorecard")
+    public Result<SupplierScorecardResponse> supplierScorecard() {
+        return Result.success(supplierScorecardOrchestrator.scorecard());
+    }
+
+    /** 实时成本追踪 — 订单工序成本进度与利润预估 */
+    @GetMapping("/live-cost")
+    public Result<LiveCostResponse> liveCost(@RequestParam String orderId) {
+        return Result.success(liveCostTrackerOrchestrator.track(orderId));
     }
 }

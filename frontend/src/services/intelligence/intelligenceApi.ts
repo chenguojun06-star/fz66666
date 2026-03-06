@@ -468,6 +468,75 @@ export interface MindPushStatusData {
 }
 
 /* ================================================================
+   款式报价建议
+================================================================ */
+export interface HistoricalOrder {
+  orderNo: string;
+  quantity: number;
+  unitPrice: number;
+  createTime: string;
+  status: string;
+}
+export interface StyleQuoteSuggestionResponse {
+  styleNo: string;
+  historicalOrderCount: number;
+  historicalTotalQuantity: number;
+  currentQuotation: number | null;
+  materialCost: number | null;
+  processCost: number | null;
+  totalCost: number | null;
+  suggestedPrice: number | null;
+  recentOrders: HistoricalOrder[];
+  suggestion: string;
+}
+
+/* ================================================================
+   供应商评分卡
+================================================================ */
+export interface SupplierScore {
+  factoryName: string;
+  totalOrders: number;
+  completedOrders: number;
+  overdueOrders: number;
+  onTimeRate: number;
+  qualityScore: number;
+  overallScore: number;
+  tier: 'S' | 'A' | 'B' | 'C';
+}
+export interface SupplierScorecardResponse {
+  scores: SupplierScore[];
+  topCount: number;
+  summary: string;
+}
+
+/* ================================================================
+   实时成本追踪
+================================================================ */
+export interface ProcessCostItem {
+  processName: string;
+  unitPrice: number;
+  scannedQty: number;
+  cost: number;
+  progress: number;
+}
+export interface LiveCostResponse {
+  orderNo: string;
+  styleNo: string;
+  factoryName: string;
+  orderQuantity: number;
+  completedQty: number;
+  estimatedLaborCost: number;
+  actualLaborCost: number;
+  estimatedRevenue: number;
+  estimatedProfit: number;
+  profitMargin: number;
+  costProgress: number;
+  processBreakdown: ProcessCostItem[];
+  costStatus: 'ON_TRACK' | 'OVER_BUDGET' | 'UNDER_BUDGET';
+  suggestion: string;
+}
+
+/* ================================================================
    intelligenceApi — 全部智能运营接口
 ================================================================ */
 export const intelligenceApi = {
@@ -637,7 +706,7 @@ export const intelligenceApi = {
 
   /** 款式报价建议（按款号聚合） */
   getStyleQuoteSuggestion: (styleNo: string) =>
-    api.get<{ code: number; data: unknown }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
+    api.get<{ code: number; data: StyleQuoteSuggestionResponse }>('/intelligence/style-quote-suggestion', { params: { styleNo } }),
 
   /** 工序单价 AI 提示 */
   getProcessPriceHint: (processName: string, standardTime?: number) =>
@@ -707,4 +776,14 @@ export const intelligenceApi = {
   /** 撤销订单分享 token */
   revokeShareToken: (orderId: string) =>
     api.delete<{ code: number; data: string }>(`/intelligence/order-track/revoke/${orderId}`),
+
+  // ── 第七批：款式报价 + 供应商评分卡 + 实时成本追踪 ──
+
+  /** 供应商智能评分卡（近3个月工厂履约/质量得分） */
+  getSupplierScorecard: () =>
+    api.get<{ code: number; data: SupplierScorecardResponse }>('/intelligence/supplier-scorecard'),
+
+  /** 实时成本追踪（订单工序成本进度与利润预估） */
+  getLiveCostTracker: (orderId: string) =>
+    api.get<{ code: number; data: LiveCostResponse }>('/intelligence/live-cost', { params: { orderId } }),
 };
