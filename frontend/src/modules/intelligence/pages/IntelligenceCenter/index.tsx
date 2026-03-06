@@ -473,28 +473,26 @@ const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item }) => {
   return (
     <div className="c-order-row">
       <div className="c-order-row-main">
-        {/* 左：工厂名 */}
+        {/* 左：工厂名（与活跃订单同款列宽，不截断） */}
         <span className="c-order-factory">{item.factoryName}</span>
-        {/* 中：卡点工序 + 订单数 + 进度条 + AI提示 */}
+        {/* 中：三行结构与 OrderRow 完全一致 */}
         <div className="c-order-center">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: c, fontWeight: 700, fontSize: 11, flexShrink: 0 }}>卡在&nbsp;{item.stuckStage}</span>
-            <span style={{ color: '#2a4455', fontSize: 10, flexShrink: 0 }}>{item.orderCount}单</span>
-            {item.worstOrders.slice(0, 2).map(w => (
-              <span key={w.orderNo} style={{ fontSize: 10, color: '#6a9aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {w.orderNo}
-              </span>
-            ))}
-          </div>
+          {/* 第一行：卡点工序 + 订单数（对应订单号位置） */}
+          <span className="c-order-no" style={{ color: c }}>
+            卡在 {item.stuckStage}&nbsp;·&nbsp;{item.orderCount} 单
+          </span>
+          {/* 第二行：进度条 */}
           <div className="c-order-bar-wrap">
             <div className="c-order-bar" style={{ width: `${item.stuckPct}%`, background: c }} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#2a4a5a' }}>
-            <LiveDot size={4} color="#f7c948" />
-            <span style={{ color: '#4a7a8a' }}>AI：{getFactoryAiHint(item.stuckStage, item.stuckPct)}</span>
+          {/* 第三行：最差订单号（对应日期位置） */}
+          <div className="c-order-dates">
+            {item.worstOrders.slice(0, 2).map(w => (
+              <span key={w.orderNo}>{w.orderNo}</span>
+            ))}
           </div>
         </div>
-        {/* 右：百分比 */}
+        {/* 右：百分比（与活跃订单完全一致） */}
         <div className="c-order-right">
           <span className="c-order-pct" style={{ color: c }}>{item.stuckPct}%</span>
         </div>
