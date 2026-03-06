@@ -72,8 +72,8 @@ public class RhythmDnaOrchestrator {
 
         List<OrderRhythm> rhythms = new ArrayList<>();
         for (var order : orders) {
-            Map<String, Object> snap = snapshotMap.get(order.getId());
-            if (snap == null) continue;
+            // 无扫码记录也参与分析，传空 Map 触发订单级别兜底时间条
+            Map<String, Object> snap = snapshotMap.getOrDefault(order.getId(), Collections.emptyMap());
             OrderRhythm or = buildRhythm(order, snap);
             if (or != null) rhythms.add(or);
         }
@@ -126,12 +126,47 @@ public class RhythmDnaOrchestrator {
             totalDays += days;
         }
 
+        // 无扫码记录时降级：用订单总用时 + 进度百分比生成估算占位色条
+        if (totalDays < 0.5) {
+            segments.clear();
+            double elapsed = Math.max(1.0,
+                    Math.round(ChronoUnit.HOURS.between(orderStart, LocalDateTime.now()) / 24.0 * 10.0) / 10.0);
+            int progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
+            if (progress > 5) {
+                RhythmSegment done = new RhythmSegment();
+                done.setStageName("已完成");
+                done.setDays(Math.max(0.1, Math.round(elapsed * progress / 100.0 * 10) / 10.0));
+                done.setColor("#4FC3F7");
+                done.setBottleneck(false);
+                segments.add(done);
+                RhythmSegment rem = new RhythmSegment();
+                rem.setStageName("进行中");
+                rem.setDays(Math.max(0.1, Math.round(elapsed * (100 - progress) / 100.0 * 10) / 10.0));
+                rem.setColor("#546E9A");
+                rem.setBottleneck(false);
+                segments.add(rem);
+            } else {
+                RhythmSegment single = new RhythmSegment();
+                single.setStageName("待扫码");
+                single.setDays(elapsed);
+                single.setColor("#546E9A");
+                single.setBottleneck(false);
+                segments.add(single);
+            }
+            totalDays = segments.stream().mapToDouble(RhythmSegment::getDays).sum();
+        }
+
+        // 剔除天数近似为 0 的阶段（无数据工序不展示）
+        segments.removeIf(s -> s.getDays() < 0.05);
+        if (segments.isEmpty()) return null;
+
         // 计算占比 + 瓶颈检测
         double avgDays = totalDays / Math.max(1, segments.size());
         for (RhythmSegment seg : segments) {
-            seg.setPct(totalDays > 0
-                    ? Math.round(seg.getDays() / totalDays * 1000.0) / 10.0 : 0);
-            seg.setBottleneck(seg.getDays() > avgDays * 1.5);
+            seg.setPct(totalDays > 0 ? Math.round(seg.getDays() / totalDays * 1000.0) / 10.0 : 0);
+            if (!seg.isBottleneck()) {  // 占位条不做瓶颈标记
+                seg.setBottleneck(seg.getDays() > avgDays * 1.5);
+            }
         }
 
         OrderRhythm rhythm = new OrderRhythm();

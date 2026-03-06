@@ -51,7 +51,7 @@ const RhythmDnaPanel: React.FC = () => {
           {loading ? '加载中…' : '刷新'}
         </button>
       </div>
-      <div style={{ fontSize: 11, color: '#4a6d8a', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: '#7aaec8', marginBottom: 12 }}>
         每行 = 一个订单，色块宽度代表各工序天数占比，鼠标悬停查看详情。
         <span style={{ marginLeft: 8, color: '#ff4136' }}>🔴 = 瓶颈工序</span>
       </div>
@@ -71,7 +71,7 @@ const RhythmDnaPanel: React.FC = () => {
                 {/* 订单标题行 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
                   <span style={{ color: '#e2f0ff', fontWeight: 600 }}>{order.orderNo}</span>
-                  <span style={{ color: '#4a6d8a' }}>
+                  <span style={{ color: '#7aaec8' }}>
                     {order.segments?.reduce((s, seg) => s + seg.days, 0)} 天
                   </span>
                 </div>
