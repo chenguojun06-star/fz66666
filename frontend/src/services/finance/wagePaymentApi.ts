@@ -96,6 +96,8 @@ export interface PayableItem {
   description: string;
   sourceStatus: string;
   createTime: string;
+  /** 所属月份 yyyy-MM，后端计算，供前端按月聚合展示 */
+  yearMonth?: string;
 }
 
 export const BIZ_TYPE_OPTIONS = [

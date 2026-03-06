@@ -425,6 +425,7 @@ public class WagePaymentOrchestrator {
                     .description("物料对账 - " + r.getMaterialName())
                     .sourceStatus(r.getStatus())
                     .createTime(r.getCreateTime())
+                    .yearMonth(r.getCreateTime() != null ? r.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
                     .build());
             }
         }
@@ -451,6 +452,7 @@ public class WagePaymentOrchestrator {
                     .description(e.getTitle() + " - " + e.getExpenseType())
                     .sourceStatus(e.getStatus())
                     .createTime(e.getCreateTime())
+                    .yearMonth(e.getCreateTime() != null ? e.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
                     .build());
             }
         }
@@ -474,6 +476,7 @@ public class WagePaymentOrchestrator {
                         .sourceStatus("pending")
                         .description(wp.getPaymentRemark())
                         .createTime(wp.getCreateTime())
+                        .yearMonth(wp.getCreateTime() != null ? wp.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
                         .build());
                 }
             } catch (Exception e) {
@@ -500,6 +503,7 @@ public class WagePaymentOrchestrator {
                         .sourceStatus("pending")
                         .description(wp.getPaymentRemark())
                         .createTime(wp.getCreateTime())
+                        .yearMonth(wp.getCreateTime() != null ? wp.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
                         .build());
                 }
             } catch (Exception e) {
@@ -825,5 +829,7 @@ public class WagePaymentOrchestrator {
         private String sourceStatus;
         /** 创建时间 */
         private LocalDateTime createTime;
+        /** 所属月份（yyyy-MM），供前端按月聚合展示 */
+        private String yearMonth;
     }
 }

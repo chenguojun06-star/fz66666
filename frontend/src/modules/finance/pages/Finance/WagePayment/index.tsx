@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import {
   App,
   Button,
@@ -88,6 +89,11 @@ const PaymentCenterPage: React.FC = () => {
   const [payables, setPayables] = useState<PayableItem[]>([]);
   const [payablesLoading, setPayablesLoading] = useState(true);
   const [payableBizType, setPayableBizType] = useState<string>('');
+  const [payableYearMonth, setPayableYearMonth] = useState<string>('');
+
+  // ---- 待付款批量选择 ----
+  const [selectedPayableKeys, setSelectedPayableKeys] = useState<React.Key[]>([]);
+  const [batchPaySubmitting, setBatchPaySubmitting] = useState(false);
 
   // ---- 支付记录列表 ----
   const [payments, setPayments] = useState<WagePayment[]>([]);
@@ -487,6 +493,79 @@ const PaymentCenterPage: React.FC = () => {
     });
   };
 
+  // ============================================================
+  //  统计（需在 handleBatchPay 之前声明，因为函数体内引用了 filteredPayables）
+  // ============================================================
+
+  /** 按 yearMonth 前端过滤（bizType 后端已过滤，yearMonth 前端再过滤） */
+  const filteredPayables = useMemo(() => {
+    if (!payableYearMonth) return payables;
+    return payables.filter(p => {
+      const ym = p.yearMonth ?? p.createTime?.substring(0, 7) ?? '';
+      return ym === payableYearMonth;
+    });
+  }, [payables, payableYearMonth]);
+
+  const pendingStats = useMemo(() => {
+    const total = filteredPayables.length;
+    const totalAmount = filteredPayables.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const reconCount = filteredPayables.filter(p => p.bizType === 'RECONCILIATION').length;
+    const reimbCount = filteredPayables.filter(p => p.bizType === 'REIMBURSEMENT').length;
+    const payrollCount = filteredPayables.filter(p => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length;
+    const orderCount = filteredPayables.filter(p => p.bizType === 'ORDER_SETTLEMENT').length;
+    return { total, totalAmount, reconCount, reimbCount, payrollCount, orderCount };
+  }, [filteredPayables]);
+
+  // ---- 批量付款（线下方式，逐条发起）----
+  const handleBatchPay = () => {
+    const selected = filteredPayables.filter(p => selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`));
+    if (selected.length === 0) return;
+    const totalAmt = selected.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    Modal.confirm({
+      title: `批量线下付款`,
+      content: (
+        <div>
+          <p>选中 <strong>{selected.length}</strong> 笔待付款，合计金额：<strong style={{ color: '#cf1322' }}>¥{totalAmt.toFixed(2)}</strong></p>
+          <p style={{ fontSize: 12, color: '#999' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
+        </div>
+      ),
+      okText: '确认批量发起',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchPaySubmitting(true);
+        let successCount = 0;
+        let failCount = 0;
+        for (const item of selected) {
+          try {
+            await wagePaymentApi.initiateWithCallback({
+              payeeType: item.payeeType,
+              payeeId: item.payeeId ?? '',
+              payeeName: item.payeeName,
+              paymentMethod: 'OFFLINE',
+              amount: Number(item.amount) - Number(item.paidAmount || 0),
+              bizType: item.bizType,
+              bizId: item.bizId,
+              bizNo: item.bizNo,
+              remark: `批量付款 - ${item.description ?? ''}`,
+            });
+            successCount++;
+          } catch {
+            failCount++;
+          }
+        }
+        setBatchPaySubmitting(false);
+        setSelectedPayableKeys([]);
+        if (failCount === 0) {
+          msg.success(`批量发起成功：${successCount} 笔已进入支付流程`);
+        } else {
+          msg.warning(`批量发起完成：${successCount} 成功，${failCount} 失败`);
+        }
+        void fetchPayables();
+        void fetchPayments();
+      },
+    });
+  };
+
   // ---- 表格列定义（usePaymentColumns hook）----
   const { payableColumns, paymentColumns } = usePaymentColumns({
     openPayModal,
@@ -501,18 +580,8 @@ const PaymentCenterPage: React.FC = () => {
   });
 
   // ============================================================
-  //  统计
+  //  支付记录统计
   // ============================================================
-  const pendingStats = useMemo(() => {
-    const total = payables.length;
-    const totalAmount = payables.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    const reconCount = payables.filter(p => p.bizType === 'RECONCILIATION').length;
-    const reimbCount = payables.filter(p => p.bizType === 'REIMBURSEMENT').length;
-    const payrollCount = payables.filter(p => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length;
-    const orderCount = payables.filter(p => p.bizType === 'ORDER_SETTLEMENT').length;
-    return { total, totalAmount, reconCount, reimbCount, payrollCount, orderCount };
-  }, [payables]);
-
   const paymentStats = useMemo(() => {
     const total = payments.length;
     const successCount = payments.filter(p => p.status === 'success').length;
@@ -584,29 +653,69 @@ const PaymentCenterPage: React.FC = () => {
 
                     {/* 过滤 */}
                     <div style={{ marginBottom: 16 }}>
-                      <Space>
+                      <Space wrap>
                         <span style={{ color: '#666' }}>业务类型：</span>
                         {BIZ_TYPE_OPTIONS.map(opt => (
                           <Button
                             key={opt.value}
                             type={payableBizType === opt.value ? 'primary' : 'default'}
                             size="small"
-                            onClick={() => setPayableBizType(opt.value)}
+                            onClick={() => { setPayableBizType(opt.value); setSelectedPayableKeys([]); }}
                           >
                             {opt.label}
                           </Button>
                         ))}
+                        <span style={{ color: '#666', marginLeft: 8 }}>月份：</span>
+                        <DatePicker
+                          picker="month"
+                          size="small"
+                          placeholder="选择月份"
+                          allowClear
+                          value={payableYearMonth ? dayjs(payableYearMonth, 'YYYY-MM') : null}
+                          onChange={(_, dateStr) => { setPayableYearMonth(typeof dateStr === 'string' ? dateStr : ''); setSelectedPayableKeys([]); }}
+                          style={{ width: 120 }}
+                        />
+                        {selectedPayableKeys.length > 0 && (
+                          <>
+                            <span style={{ color: '#1677ff', marginLeft: 8 }}>
+                              已选 {selectedPayableKeys.length} 笔
+                              （¥{filteredPayables.filter(p => selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0).toFixed(2)}）
+                            </span>
+                            <Button
+                              type="primary"
+                              size="small"
+                              loading={batchPaySubmitting}
+                              onClick={handleBatchPay}
+                            >
+                              批量付款
+                            </Button>
+                            <Button size="small" onClick={() => setSelectedPayableKeys([])}>
+                              清空选择
+                            </Button>
+                          </>
+                        )}
                       </Space>
                     </div>
 
                     {/* 待付款表格 */}
                     <ResizableTable
                       columns={payableColumns}
-                      dataSource={payables}
+                      dataSource={filteredPayables}
                       rowKey={(r) => `${r.bizType}-${r.bizId}`}
                       loading={payablesLoading}
                       scroll={{ x: 1200 }}
                       pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+                      rowSelection={{
+                        selectedRowKeys: selectedPayableKeys,
+                        onChange: (keys) => setSelectedPayableKeys(keys),
+                        selections: [
+                          {
+                            key: 'select-all-month',
+                            text: payableYearMonth ? `全选 ${payableYearMonth} 月` : '全选当前月份',
+                            onSelect: () => setSelectedPayableKeys(filteredPayables.map(p => `${p.bizType}-${p.bizId}`)),
+                          },
+                        ],
+                      }}
                     />
                   </>
                 ),
