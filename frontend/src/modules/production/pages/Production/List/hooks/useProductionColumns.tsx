@@ -3,6 +3,7 @@ import { Tag, Popover, Tooltip, Badge } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { NavigateFunction } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
+import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
@@ -32,6 +33,7 @@ export interface UseProductionColumnsProps {
   quickEditModal: { open: (r: ProductionOrder) => void };
   isSupervisorOrAbove: boolean;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
+  deliveryRiskMap?: Map<string, DeliveryRiskItem>;
 }
 
 /**
@@ -44,7 +46,7 @@ export function useProductionColumns({
   navigate, openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   setRemarkPopoverId, setRemarkText,
-  quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
+  quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -567,6 +569,7 @@ export function useProductionColumns({
           else if (dLeft <= 14 && prog < 30)      riskTag = { text: '🟡 需关注', color: '#faad14' };
           else if (prog >= 80 && dLeft >= 3)      riskTag = { text: '🟢 顺利', color: '#52c41a' };
         }
+        const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
@@ -574,6 +577,15 @@ export function useProductionColumns({
             {riskTag && (
               <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
                 {riskTag.text}
+              </span>
+            )}
+            {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: aiRisk.riskLevel === 'overdue' ? '#ff4d4f' : aiRisk.riskLevel === 'danger' ? '#fa8c16' : '#faad14',
+              }}>
+                🤖 {dayjs(aiRisk.predictedEndDate).format('M/D完工')}
+                {aiRisk.riskLevel === 'overdue' ? '·逾期风险' : aiRisk.riskLevel === 'danger' ? '·存在风险' : '·需关注'}
               </span>
             )}
           </div>

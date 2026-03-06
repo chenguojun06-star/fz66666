@@ -36,7 +36,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
     try {
       const values = await form.validateFields();
       setLoading(true);
-      
+
       const payload = {
         sampleStockId: stock?.id,
         ...values,

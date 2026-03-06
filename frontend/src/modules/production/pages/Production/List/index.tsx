@@ -28,6 +28,8 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
+import { useDeliveryRiskMap, clearDeliveryRiskCache } from '../ProgressDetail/hooks/useDeliveryRiskMap';
+import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -113,6 +115,23 @@ const ProductionList: React.FC = () => {
   };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
+  const [aiRiskFilter, setAiRiskFilter] = useState<'all' | 'overdue' | 'danger' | 'warning'>('all');
+
+  // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
+  const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed' && o.status !== 'COMPLETED'), [productionList]);
+  const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
+
+  // AI 风险各级别计数
+  const aiRiskCounts = useMemo(() => {
+    const counts = { overdue: 0, danger: 0, warning: 0 };
+    for (const o of productionList) {
+      const risk = deliveryRiskMap.get(String(o.orderNo || ''));
+      if (risk && risk.riskLevel !== 'safe') {
+        counts[risk.riskLevel as keyof typeof counts]++;
+      }
+    }
+    return counts;
+  }, [productionList, deliveryRiskMap]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
@@ -350,9 +369,16 @@ const ProductionList: React.FC = () => {
     }
   );
 
-  // 排序：已关单/已完成始终排到最后，其余按选择字段排序
+  // 排序：已关单/已完成始终排到最后，其余按选择字段排序；支持 AI 交期风险筛选
   const sortedProductionList = useMemo(() => {
-    const filtered = [...productionList];
+    let filtered = [...productionList];
+    // AI 交期风险层居筛选
+    if (aiRiskFilter !== 'all' && deliveryRiskMap.size > 0) {
+      filtered = filtered.filter(o => {
+        const risk = deliveryRiskMap.get(String(o.orderNo || ''));
+        return risk?.riskLevel === aiRiskFilter;
+      });
+    }
     filtered.sort((a: any, b: any) => {
       const aClose = (a.actualEndDate || a.status === 'CLOSED' || a.status === 'closed' || a.status === 'completed') ? 1 : 0;
       const bClose = (b.actualEndDate || b.status === 'CLOSED' || b.status === 'closed' || b.status === 'completed') ? 1 : 0;
@@ -365,7 +391,7 @@ const ProductionList: React.FC = () => {
       return 0;
     });
     return filtered;
-  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
+  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter, aiRiskFilter, deliveryRiskMap]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
@@ -375,6 +401,7 @@ const ProductionList: React.FC = () => {
     setPrintModalVisible, setPrintingRecord,
     setRemarkPopoverId, setRemarkText,
     quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
+    deliveryRiskMap,
   });
 
   // 根据 visibleColumns 过滤列
@@ -470,6 +497,36 @@ const ProductionList: React.FC = () => {
                   📉 <strong>{smartHints.behindCount}</strong> 单进度严重落后
                 </span>
               )}
+            </div>
+          )}
+
+          {/* AI 交期风险快速筛选 */}
+          {deliveryRiskMap.size > 0 && (aiRiskCounts.overdue > 0 || aiRiskCounts.danger > 0 || aiRiskCounts.warning > 0) && (
+            <div style={{
+              display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center',
+              margin: '0 0 8px', padding: '7px 14px',
+              background: 'linear-gradient(90deg, #f0f5ff 0%, #fff9f0 100%)',
+              border: '1px solid #d6e4ff', borderRadius: 8, fontSize: 13,
+            }}>
+              <span style={{ color: '#595959', fontWeight: 600, fontSize: 12 }}>🤖 AI交期预测：</span>
+              {([
+                { key: 'all',    label: '全部', color: aiRiskFilter === 'all' ? 'blue' : 'default' },
+                { key: 'overdue', label: `🔴 预测逾期 ${aiRiskCounts.overdue}`, color: aiRiskFilter === 'overdue' ? 'red' : 'default', show: aiRiskCounts.overdue > 0 },
+                { key: 'danger',  label: `🟠 存在风险 ${aiRiskCounts.danger}`, color: aiRiskFilter === 'danger' ? 'orange' : 'default', show: aiRiskCounts.danger > 0 },
+                { key: 'warning', label: `🟡 需关注 ${aiRiskCounts.warning}`, color: aiRiskFilter === 'warning' ? 'gold' : 'default', show: aiRiskCounts.warning > 0 },
+              ] as const).filter((item: any) => item.key === 'all' || item.show).map((item: any) => (
+                <Tag
+                  key={item.key}
+                  color={item.color}
+                  style={{ cursor: 'pointer', userSelect: 'none', margin: 0 }}
+                  onClick={() => setAiRiskFilter(item.key as typeof aiRiskFilter)}
+                >
+                  {item.label}
+                </Tag>
+              ))}
+              <span style={{ fontSize: 11, color: '#8c8c8c', marginLeft: 4 }}>
+                · 基于扫码速度 + 历史工效预测
+              </span>
             </div>
           )}
 

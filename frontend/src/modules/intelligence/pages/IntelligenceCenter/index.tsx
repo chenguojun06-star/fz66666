@@ -16,14 +16,10 @@ import type {
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import Layout from '@/components/Layout';
-import WorkerProfilePanel from './WorkerProfilePanel';
 import SmartAssignmentPanel from './SmartAssignmentPanel';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
-import LearningReportPanel from './LearningReportPanel';
-import RhythmDnaPanel from './RhythmDnaPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
-import MindPushPanel from './MindPushPanel';
 
 import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -1361,13 +1357,6 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
-            ║   MindPush 主动推送中枢                      ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ padding: '4px 24px 8px' }}>
-          <MindPushPanel />
-        </div>
-
-        {/* ╔══════════════════════════════════════════════╗
             ║   运营工具：智能派工 + AI 排程建议           ║
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1379,26 +1368,7 @@ const IntelligenceCenter: React.FC = () => {
           <SchedulingSuggestionPanel />
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   深度分析：工人画像 + 生产节奏DNA           ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#00e5ff', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>🔬 深度分析</span>
-          <span style={{ fontSize: 11, color: '#4a6d8a' }}>工人能力画像 · 节奏DNA可视化 — 按需查阅</span>
-        </div>
-        <div className="cockpit-grid-2">
-          <WorkerProfilePanel />
-          <RhythmDnaPanel />
-        </div>
 
-        {/* AI学习进化报告（最底部，技术性指标） */}
-        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(57,255,20,0.02)', border: '1px solid rgba(57,255,20,0.08)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#39ff14', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>📊 AI 自学报告</span>
-          <span style={{ fontSize: 11, color: '#4a6d8a' }}>模型进化 · 预测准确率 — 技术指标参考</span>
-        </div>
-        <div style={{ padding: '0 24px 12px' }}>
-          <LearningReportPanel />
-        </div>
 
         {/* ╔════════════════════════════════════════════╗
             ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
