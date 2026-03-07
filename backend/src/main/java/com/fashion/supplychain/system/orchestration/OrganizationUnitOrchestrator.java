@@ -96,7 +96,7 @@ public class OrganizationUnitOrchestrator {
      * templateType: FACTORY（工厂/车间）或 INTERNAL（公司内部部门）
      */
     @Transactional(rollbackFor = Exception.class)
-    public void initTemplate(String templateType, String rootName) {
+    public void initTemplate(String templateType, String rootName, String factoryId) {
         assertAdmin();
         if (!StringUtils.hasText(rootName) || rootName.trim().isEmpty()) {
             throw new IllegalArgumentException("根节点名称不能为空");
@@ -115,14 +115,25 @@ public class OrganizationUnitOrchestrator {
         }
         // 创建根节点
         OrganizationUnit root = buildUnit(rootName.trim(), null, ownerType, tenantId, 0);
+        // 若选择了关联工厂，根节点绑定 factoryId
+        if (StringUtils.hasText(factoryId)) {
+            root.setFactoryId(factoryId);
+        }
         organizationUnitService.save(root);
-        String rootId = root.getId(); // MyBatis-Plus ASSIGN_UUID 在 save 前赋值，此处已有值
+        String rootId = root.getId();
         // 批量创建子节点
         for (int i = 0; i < childNames.size(); i++) {
             OrganizationUnit child = buildUnit(childNames.get(i), rootId, ownerType, tenantId, i + 1);
             organizationUnitService.save(child);
         }
         bindingHelper.refreshPaths(tenantId);
+        // 若关联了工厂，同步更新工厂的 orgUnitId
+        if (StringUtils.hasText(factoryId)) {
+            Factory factoryPatch = new Factory();
+            factoryPatch.setId(factoryId);
+            factoryPatch.setOrgUnitId(rootId);
+            factoryService.updateById(factoryPatch);
+        }
     }
 
     /** 构造一个标准部门节点（不含 factoryId） */

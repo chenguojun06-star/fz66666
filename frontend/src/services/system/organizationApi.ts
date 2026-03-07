@@ -14,8 +14,8 @@ export const organizationApi = {
   create: (payload: Partial<OrganizationUnit>) => api.post<boolean>('/system/organization', payload),
   update: (payload: Partial<OrganizationUnit>) => api.put<boolean>('/system/organization', payload),
   delete: (id: string, remark: string) => api.delete<boolean>(`/system/organization/${id}`, { params: { remark } }),
-  initTemplate: (templateType: string, rootName: string) =>
-    api.post<void>('/system/organization/init-template', { templateType, rootName }),
+  initTemplate: (templateType: string, rootName: string, factoryId?: string) =>
+    api.post<void>('/system/organization/init-template', { templateType, rootName, factoryId }),
 };
 
 export default organizationApi;

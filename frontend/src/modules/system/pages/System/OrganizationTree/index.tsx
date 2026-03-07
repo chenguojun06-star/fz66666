@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import { organizationApi } from '@/services/system/organizationApi';
+import { factoryApi } from '@/services/system/factoryApi';
+import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import {
   App, Avatar, Badge, Button, Card, Empty, Form, Input,
@@ -35,10 +37,20 @@ const OrganizationTreePage: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // 模板创建弹窗状态
-  const [tplModal, setTplModal] = useState<{ open: boolean; type: 'FACTORY' | 'INTERNAL' | null; rootName: string }>(
+  const [tplModal, setTplModal] = useState<{ open: boolean; type: 'FACTORY' | 'INTERNAL' | null; rootName: string; factoryId?: string }>(
     { open: false, type: null, rootName: '' },
   );
   const [tplLoading, setTplLoading] = useState(false);
+  const [factories, setFactories] = useState<Factory[]>([]);
+
+  // 打开模板弹窗时加载工厂列表
+  useEffect(() => {
+    if (tplModal.open) {
+      factoryApi.list({ pageSize: 500, status: 'active' }).then((res) => {
+        setFactories((res as any)?.data?.records ?? []);
+      }).catch(() => setFactories([]));
+    }
+  }, [tplModal.open]);
 
   // 成员分配弹窗状态
   const [assignModal, setAssignModal] = useState<{ open: boolean; node: OrganizationUnit | null }>({ open: false, node: null });
@@ -51,7 +63,7 @@ const OrganizationTreePage: React.FC = () => {
     if (!tplModal.rootName.trim()) { message.warning('请输入根节点名称'); return; }
     setTplLoading(true);
     try {
-      await organizationApi.initTemplate(tplModal.type, tplModal.rootName.trim());
+      await organizationApi.initTemplate(tplModal.type, tplModal.rootName.trim(), tplModal.factoryId);
       message.success('模板初始化成功！组织架构已创建');
       setTplModal({ open: false, type: null, rootName: '' });
       loadData();
@@ -452,6 +464,23 @@ const OrganizationTreePage: React.FC = () => {
             onChange={(e) => setTplModal((prev) => ({ ...prev, rootName: e.target.value }))}
             style={{ marginBottom: 16 }}
           />
+
+          {tplModal.type === 'FACTORY' && (
+            <>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>第三步：关联现有工厂（可选）</div>
+              <Select
+                allowClear
+                placeholder="选择已有工厂，可跳过"
+                value={tplModal.factoryId}
+                onChange={(v) => setTplModal((prev) => ({ ...prev, factoryId: v }))}
+                options={factories.map((f) => ({
+                  value: f.id,
+                  label: f.factoryName + (f.contactPerson ? ' · ' + f.contactPerson : ''),
+                }))}
+                style={{ width: '100%', marginBottom: 16 }}
+              />
+            </>
+          )}
 
           {tplModal.type && (
             <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '12px 16px', fontSize: 13 }}>

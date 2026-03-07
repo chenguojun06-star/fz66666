@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
+  const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: string; desc: string }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
@@ -133,18 +133,14 @@ const Dashboard: React.FC = () => {
           api.get('/system/factory/list', { params: { factoryName: keyword, page: 1, pageSize: 5 } }),
         ]);
 
-        const options: Array<{ value: string; label: React.ReactNode }> = [];
+        const options: Array<{ value: string; label: string; desc: string }> = [];
 
         const styleRecords = styleRes?.data?.records || [];
         styleRecords.forEach((item: any) => {
           options.push({
             value: `style:${item.styleNo}`,
-            label: (
-              <div>
-                <div>款式：{item.styleNo}</div>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.styleName || '款式名未填写'}</div>
-              </div>
-            ),
+            label: `款式：${item.styleNo}`,                          // plain string — 避免 AntD6 nodeName.toLowerCase 报错
+            desc: item.styleName || '款式名未填写',
           });
         });
 
@@ -152,14 +148,8 @@ const Dashboard: React.FC = () => {
         orderRecords.forEach((item: any) => {
           options.push({
             value: `order:${item.orderNo}`,
-            label: (
-              <div>
-                <div>订单：{item.orderNo}</div>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
-                  款号：{item.styleNo} | 工厂：{item.factoryName || '未指定'}
-                </div>
-              </div>
-            ),
+            label: `订单：${item.orderNo}`,
+            desc: `款号：${item.styleNo} | 工厂：${item.factoryName || '未指定'}`,
           });
         });
 
@@ -167,12 +157,8 @@ const Dashboard: React.FC = () => {
         factoryRecords.forEach((item: any) => {
           options.push({
             value: `factory:${item.factoryName}`,
-            label: (
-              <div>
-                <div>工厂：{item.factoryName}</div>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.contactPerson || '未填写联系人'}</div>
-              </div>
-            ),
+            label: `工厂：${item.factoryName}`,
+            desc: item.contactPerson || '未填写联系人',
           });
         });
 
@@ -321,6 +307,13 @@ const Dashboard: React.FC = () => {
                 placeholder="搜索订单号/款号/工厂名"
                 allowClear
                 notFoundContent={searchLoading ? '搜索中...' : null}
+                // optionRender: 保持双行富内容展示，label 用纯字符串避免 nodeName.toLowerCase 报错
+                optionRender={(opt: any) => (
+                  <div>
+                    <div style={{ fontWeight: 500 }}>{opt.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{opt.desc}</div>
+                  </div>
+                )}
               />
             </div>
           )}

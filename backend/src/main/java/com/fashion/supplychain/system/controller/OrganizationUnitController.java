@@ -79,7 +79,7 @@ public class OrganizationUnitController {
      */
     @PostMapping("/init-template")
     public Result<Void> initTemplate(@RequestBody Map<String, String> body) {
-        organizationUnitOrchestrator.initTemplate(body.get("templateType"), body.get("rootName"));
+        organizationUnitOrchestrator.initTemplate(body.get("templateType"), body.get("rootName"), body.get("factoryId"));
         return Result.success(null);
     }
 }
