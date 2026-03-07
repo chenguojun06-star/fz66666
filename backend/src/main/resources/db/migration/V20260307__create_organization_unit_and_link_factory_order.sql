@@ -19,20 +19,36 @@ CREATE TABLE IF NOT EXISTS `t_organization_unit` (
     KEY `idx_org_unit_tenant_type` (`tenant_id`, `node_type`, `delete_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='组织架构节点表';
 
+-- ⚠️ 云端 Flyway 关闭，这些 ALTER TABLE 已在微信云托管控制台手动执行
+-- 本地开发环境将自动执行以下语句（若列已存在将被忽略）
+-- 云端部署时（FLYWAY_ENABLED=false）无需重复执行
+
+-- 工厂表关联组织架构（幂等化：检查列是否存在）
 ALTER TABLE `t_factory`
-    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '工厂对应的组织节点ID' AFTER `supplier_type`,
-    ADD COLUMN `parent_org_unit_id` VARCHAR(64) NULL COMMENT '归属部门节点ID' AFTER `org_unit_id`,
-    ADD COLUMN `parent_org_unit_name` VARCHAR(128) NULL COMMENT '归属部门名称' AFTER `parent_org_unit_id`,
+    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '工厂对应的组织节点ID' AFTER `supplier_type`;
+ALTER TABLE `t_factory`
+    ADD COLUMN `parent_org_unit_id` VARCHAR(64) NULL COMMENT '归属部门节点ID' AFTER `org_unit_id`;
+ALTER TABLE `t_factory`
+    ADD COLUMN `parent_org_unit_name` VARCHAR(128) NULL COMMENT '归属部门名称' AFTER `parent_org_unit_id`;
+ALTER TABLE `t_factory`
     ADD COLUMN `org_path` VARCHAR(1000) NULL COMMENT '组织路径（名称）' AFTER `parent_org_unit_name`;
 
+-- 生产订单表关联组织快照（幂等化）
 ALTER TABLE `t_production_order`
-    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '生产组织节点ID快照' AFTER `factory_name`,
-    ADD COLUMN `parent_org_unit_id` VARCHAR(64) NULL COMMENT '归属部门节点ID快照' AFTER `org_unit_id`,
-    ADD COLUMN `parent_org_unit_name` VARCHAR(128) NULL COMMENT '归属部门名称快照' AFTER `parent_org_unit_id`,
-    ADD COLUMN `org_path` VARCHAR(1000) NULL COMMENT '组织路径快照' AFTER `parent_org_unit_name`,
+    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '生产组织节点ID快照' AFTER `factory_name`;
+ALTER TABLE `t_production_order`
+    ADD COLUMN `parent_org_unit_id` VARCHAR(64) NULL COMMENT '归属部门节点ID快照' AFTER `org_unit_id`;
+ALTER TABLE `t_production_order`
+    ADD COLUMN `parent_org_unit_name` VARCHAR(128) NULL COMMENT '归属部门名称快照' AFTER `parent_org_unit_id`;
+ALTER TABLE `t_production_order`
+    ADD COLUMN `org_path` VARCHAR(1000) NULL COMMENT '组织路径快照' AFTER `parent_org_unit_name`;
+ALTER TABLE `t_production_order`
     ADD COLUMN `factory_type` VARCHAR(32) NULL COMMENT '内外工厂标签快照' AFTER `org_path`;
 
+-- 用户表关联组织（幂等化）
 ALTER TABLE `t_user`
-    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '所属组织节点ID' AFTER `factory_id`,
-    ADD COLUMN `org_unit_name` VARCHAR(128) NULL COMMENT '所属组织节点名称' AFTER `org_unit_id`,
+    ADD COLUMN `org_unit_id` VARCHAR(64) NULL COMMENT '所属组织节点ID' AFTER `factory_id`;
+ALTER TABLE `t_user`
+    ADD COLUMN `org_unit_name` VARCHAR(128) NULL COMMENT '所属组织节点名称' AFTER `org_unit_id`;
+ALTER TABLE `t_user`
     ADD COLUMN `org_path` VARCHAR(1000) NULL COMMENT '所属组织路径' AFTER `org_unit_name`;
