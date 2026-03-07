@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.MindPushRuleDTO;
 import com.fashion.supplychain.intelligence.dto.MindPushStatusResponse;
@@ -57,6 +58,9 @@ public class MindPushOrchestrator {
 
     @Autowired
     private MindPushLogMapper mindPushLogMapper;
+
+    @Autowired
+    private WxAlertNotifyService wxAlertNotifyService;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -283,6 +287,8 @@ public class MindPushOrchestrator {
         log.setChannel("IN_APP");
         log.setPushedAt(LocalDateTime.now());
         mindPushLogMapper.insert(log);
+        // 同步推送微信订阅消息（跟单员 + 工厂主账号）
+        wxAlertNotifyService.notifyAlert(tenantId, title, content, orderNo, null);
     }
 
     private List<MindPushRule> fetchRules(Long tenantId) {
