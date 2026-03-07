@@ -123,7 +123,7 @@ export default function AiExecutionPanel() {
       title: '确认拒绝',
       content: `确定要拒绝该命令吗？\n命令ID: ${selectedCommand.commandId}`,
       okText: '拒绝',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         try {

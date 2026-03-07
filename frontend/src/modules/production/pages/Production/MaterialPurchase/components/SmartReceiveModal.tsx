@@ -261,7 +261,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         </div>
       ),
       okText: '确认撤销',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         if (!reason.trim()) {

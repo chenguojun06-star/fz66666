@@ -94,7 +94,7 @@ const PredictionFeedbackBar: React.FC<Props> = ({
         <Button size="small" type={mode === 'accept' ? 'primary' : 'default'} ghost={mode !== 'accept'} onClick={() => chooseMode('accept')}>
           可执行
         </Button>
-        <Button size="small" danger={mode === 'reject'} type={mode === 'reject' ? 'primary' : 'default'} onClick={() => chooseMode('reject')}>
+        <Button size="small" danger={mode === 'reject'} type="default" onClick={() => chooseMode('reject')}>
           不可执行
         </Button>
         {submitted && <Tag color="success">已记录</Tag>}

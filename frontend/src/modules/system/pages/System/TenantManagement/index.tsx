@@ -389,7 +389,7 @@ const AppManagementTab: React.FC = () => {
       title: '重置密钥',
       content: '重置后旧密钥立即失效，客户系统需要更新配置。确认重置？',
       okText: '确认重置',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         try {
           const res: any = await tenantAppService.resetSecret(record.id);
@@ -413,7 +413,7 @@ const AppManagementTab: React.FC = () => {
       title: '删除应用',
       content: `确认删除应用"${record.appName}"？删除后无法恢复。`,
       okText: '确认删除',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         try {
           await tenantAppService.deleteApp(record.id);

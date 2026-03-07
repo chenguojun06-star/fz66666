@@ -189,7 +189,7 @@ const PatternRevisionManagement: React.FC = () => {
       title: '确认删除',
       content: `确定要删除版本 ${record.revisionNo} 吗？`,
       okText: '删除',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         try {
@@ -283,7 +283,7 @@ const PatternRevisionManagement: React.FC = () => {
         />
       ),
       okText: '拒绝',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         if (!comment.trim()) {

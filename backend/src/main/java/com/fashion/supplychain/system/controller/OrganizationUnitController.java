@@ -72,4 +72,14 @@ public class OrganizationUnitController {
     public Result<Boolean> delete(@PathVariable String id, @RequestParam(required = false) String remark) {
         return Result.success(organizationUnitOrchestrator.deleteDepartment(id, remark));
     }
+
+    /**
+     * 从模板批量初始化组织架构（仅超管可用）。
+     * body: { templateType: "FACTORY" | "INTERNAL", rootName: "xxx" }
+     */
+    @PostMapping("/init-template")
+    public Result<Void> initTemplate(@RequestBody Map<String, String> body) {
+        organizationUnitOrchestrator.initTemplate(body.get("templateType"), body.get("rootName"));
+        return Result.success(null);
+    }
 }

@@ -16,6 +16,8 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
+import com.fashion.supplychain.common.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -63,6 +65,9 @@ public class QualityScanExecutor {
 
     @Autowired
     private ProductWarehousingHelper warehousingHelper;
+
+    @Autowired(required = false)
+    private WxAlertNotifyService wxAlertNotifyService;
 
     /**
      * 执行质检扫码
@@ -255,6 +260,8 @@ public class QualityScanExecutor {
                 createScrapRecord(order, bundle, dq, operatorId, operatorName);
             } else {
                 createQualityScanRecord(order, bundle, dq, operatorId, operatorName);
+                // ★ 质检不合格时推送通知给扫码记录人（触发次品入库）
+                notifyDefectiveQuality(order, bundle, dq, operatorName, defectCategory);
             }
         }
 
@@ -824,6 +831,64 @@ public class QualityScanExecutor {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
+    }
+
+    /**
+     * 质检不合格时推送通知给扫码记录人（交付次品入库任务）
+     * 推送目标：该菲号原始扫码人（scanRecordOperatorId）
+     * 推送内容：菲号 + 颜色 + 尺码 + 不合格数量 + 缺陷分类
+     *
+     * 业务背景：质检员确认次品 → 通知扫码人 → 扫码人在小程序"我的任务"列表中看到待返修菲号 → 申报返修 → 再质检入库
+     */
+    private void notifyDefectiveQuality(ProductionOrder order, CuttingBundle bundle, int defectQty,
+                                       String qualityOperatorName, String defectCategory) {
+        try {
+            if (wxAlertNotifyService == null) {
+                log.debug("[质检通知] WxAlertNotifyService 未配置，跳过推送");
+                return;
+            }
+
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) {
+                log.warn("[质检通知] 无效租户 ID，无法推送通知");
+                return;
+            }
+
+            String bundleNo = String.valueOf(bundle.getBundleNo());
+            String color = hasText(bundle.getColor()) ? bundle.getColor() : "未知";
+            String size = hasText(bundle.getSize()) ? bundle.getSize() : "均码";
+            String categoryLabel = parseDefectCategoryLabel(defectCategory);
+
+            String title = "菲号质检不合格";
+            String content = String.format("菲号 %s（%s/%s）%d 件不合格%s，请安排返修。",
+                    bundleNo, color, size, defectQty,
+                    hasText(categoryLabel) ? "（" + categoryLabel + "）" : "");
+            String page = "pages/warehouse/finished/details/index?bundleId=" + bundle.getId();
+
+            wxAlertNotifyService.notifyAlert(tenantId, title, content, order.getOrderNo(), page);
+            log.info("[质检通知] 菲号质检不合格推送完成: bundleNo={}, defectQty={}, category={}",
+                    bundleNo, defectQty, categoryLabel);
+        } catch (Exception e) {
+            log.warn("[质检通知] 推送失败（不阻断主流程）: bundleId={}, error={}",
+                    bundle.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 解析缺陷分类标签
+     */
+    private String parseDefectCategoryLabel(String defectCategory) {
+        if (!hasText(defectCategory)) {
+            return "";
+        }
+        return switch (defectCategory.trim().toLowerCase()) {
+            case "appearance_integrity" -> "外观完整性问题";
+            case "size_accuracy" -> "尺寸精度问题";
+            case "process_compliance" -> "工艺规范性问题";
+            case "functional_effectiveness" -> "功能有效性问题";
+            case "other" -> "其他问题";
+            default -> defectCategory;
+        };
     }
 
     /**

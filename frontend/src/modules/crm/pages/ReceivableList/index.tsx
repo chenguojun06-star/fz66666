@@ -235,7 +235,7 @@ const ReceivableList: React.FC = () => {
     Modal.confirm({
       title: `确认删除应收单「${record.receivableNo}」？`,
       content: '删除后不可恢复',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         await receivableApi.delete(record.id!);
         message.success('已删除');

@@ -278,7 +278,7 @@ const CustomerManagement: React.FC = () => {
     Modal.confirm({
       title: `确认删除客户「${record.companyName}」？`,
       content: '删除后不可恢复',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         await customerApi.delete(record.id!);
         message.success('已删除');

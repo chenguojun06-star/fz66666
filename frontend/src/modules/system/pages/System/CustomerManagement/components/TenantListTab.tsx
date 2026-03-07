@@ -196,7 +196,7 @@ const TenantListTab: React.FC = () => {
         ? `该租户状态为「${statusLabel}」，删除后将同时清除其所有用户、角色、账单数据，此操作不可恢复！`
         : `将删除该${statusLabel}的入驻申请。`,
       okText: '确认删除',
-      okType: 'danger',
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         try {
@@ -442,7 +442,7 @@ const TenantListTab: React.FC = () => {
         footer={
           <Space>
             <Button onClick={() => { rejectModal.close(); rejectReasonForm.resetFields(); }}>取消</Button>
-            <Button danger type="primary" loading={processingId === rejectModal.data?.id} onClick={handleRejectApplication}>确认拒绝</Button>
+            <Button danger type="default" loading={processingId === rejectModal.data?.id} onClick={handleRejectApplication}>确认拒绝</Button>
           </Space>
         }
       >
@@ -587,7 +587,7 @@ const TenantListTab: React.FC = () => {
         footer={
           <Space>
             <Button onClick={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }}>取消</Button>
-            <Button type="primary" danger loading={resettingPwd} onClick={handleResetOwnerPassword}>确认重置</Button>
+            <Button type="default" danger loading={resettingPwd} onClick={handleResetOwnerPassword}>确认重置</Button>
           </Space>
         }
       >

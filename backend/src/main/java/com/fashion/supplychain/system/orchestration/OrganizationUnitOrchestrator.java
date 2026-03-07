@@ -91,6 +91,56 @@ public class OrganizationUnitOrchestrator {
         return true;
     }
 
+    /**
+     * 从预设模板批量初始化组织架构节点。
+     * templateType: FACTORY（工厂/车间）或 INTERNAL（公司内部部门）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void initTemplate(String templateType, String rootName) {
+        assertAdmin();
+        if (!StringUtils.hasText(rootName) || rootName.trim().isEmpty()) {
+            throw new IllegalArgumentException("根节点名称不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+        String ownerType;
+        List<String> childNames;
+        if ("FACTORY".equalsIgnoreCase(templateType)) {
+            ownerType = "EXTERNAL";
+            childNames = List.of("车间一", "车间二", "车间三");
+        } else if ("INTERNAL".equalsIgnoreCase(templateType)) {
+            ownerType = "INTERNAL";
+            childNames = List.of("生产部门", "财务部门", "行政部门");
+        } else {
+            throw new IllegalArgumentException("不支持的模板类型：" + templateType);
+        }
+        // 创建根节点
+        OrganizationUnit root = buildUnit(rootName.trim(), null, ownerType, tenantId, 0);
+        organizationUnitService.save(root);
+        String rootId = root.getId(); // MyBatis-Plus ASSIGN_UUID 在 save 前赋值，此处已有值
+        // 批量创建子节点
+        for (int i = 0; i < childNames.size(); i++) {
+            OrganizationUnit child = buildUnit(childNames.get(i), rootId, ownerType, tenantId, i + 1);
+            organizationUnitService.save(child);
+        }
+        bindingHelper.refreshPaths(tenantId);
+    }
+
+    /** 构造一个标准部门节点（不含 factoryId） */
+    private OrganizationUnit buildUnit(String name, String parentId, String ownerType, Long tenantId, int sortOrder) {
+        OrganizationUnit u = new OrganizationUnit();
+        u.setNodeName(name);
+        u.setParentId(parentId);
+        u.setNodeType("DEPARTMENT");
+        u.setOwnerType(resolveOwnerType(ownerType));
+        u.setDeleteFlag(0);
+        u.setStatus("active");
+        u.setSortOrder(sortOrder);
+        u.setTenantId(tenantId);
+        u.setCreateTime(LocalDateTime.now());
+        u.setUpdateTime(LocalDateTime.now());
+        return u;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDepartment(OrganizationUnit unit) {
         assertAdmin();
