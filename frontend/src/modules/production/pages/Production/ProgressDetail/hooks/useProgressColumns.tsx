@@ -222,9 +222,20 @@ export const useProgressColumns = ({
       title: '工厂',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 120,
+      width: 220,
       ellipsis: true,
-      render: (v: any) => v || '-',
+      render: (v: any, record: ProductionOrder) => (
+        <div style={{ lineHeight: 1.3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>{v || '-'}</span>
+            {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ margin: 0 }}>内部</Tag> : null}
+            {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ margin: 0 }}>外部</Tag> : null}
+          </div>
+          {record.orgPath ? (
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>{record.orgPath}</div>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: (

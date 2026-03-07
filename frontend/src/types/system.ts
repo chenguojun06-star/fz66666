@@ -69,10 +69,30 @@ export interface Factory extends Record<string, unknown> {
   contactPhone?: string;
   address?: string;
   status: 'active' | 'inactive';
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
   supplierType?: 'MATERIAL' | 'OUTSOURCE';
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   operationRemark?: string;
   createTime?: string;
   updateTime?: string;
+}
+
+export interface OrganizationUnit extends Record<string, unknown> {
+  id?: string;
+  parentId?: string;
+  nodeName: string;
+  nodeType: 'DEPARTMENT' | 'FACTORY';
+  ownerType?: 'INTERNAL' | 'EXTERNAL' | 'NONE';
+  factoryId?: string;
+  sortOrder?: number;
+  status?: 'active' | 'inactive';
+  pathIds?: string;
+  pathNames?: string;
+  children?: OrganizationUnit[];
+  operationRemark?: string;
 }
 
 export interface UserQueryParams {
@@ -106,6 +126,8 @@ export interface FactoryQueryParams extends Record<string, unknown> {
   factoryName?: string;
   status?: string;
   supplierType?: string;
+  factoryType?: string;
+  parentOrgUnitId?: string;
   page: number;
   pageSize: number;
 }

@@ -70,23 +70,21 @@ public class DuplicateScanPreventer {
      */
     public boolean hasRecentDuplicateScan(String scanCode, String scanType,
                                           Integer bundleQuantity, Integer processMinutes) {
+        return hasRecentDuplicateScan(scanCode, scanType, bundleQuantity, processMinutes, null, null);
+    }
+
+    /**
+     * 检查是否存在近期重复扫码（支持按工序和操作人缩小范围）
+     */
+    public boolean hasRecentDuplicateScan(String scanCode, String scanType,
+                                          Integer bundleQuantity, Integer processMinutes,
+                                          String processCode, String operatorId) {
         if (!hasText(scanCode)) {
             return false;
         }
 
         try {
-            // 计算最小间隔（秒）- 优化算法
-            int minIntervalSeconds = 30; // 默认30秒底线
-
-            if (bundleQuantity != null && bundleQuantity > 0
-                    && processMinutes != null && processMinutes > 0) {
-                // 预期完成时间（秒）
-                int expectedTime = bundleQuantity * processMinutes * 60;
-                // 计算间隔（改为 10% 而非 50%）
-                int calculatedInterval = expectedTime / 10;
-                // 应用范围限制：30秒～300秒（5分钟）
-                minIntervalSeconds = Math.min(300, Math.max(30, calculatedInterval));
-            }
+            int minIntervalSeconds = calculateMinIntervalSeconds(bundleQuantity, processMinutes);
 
             LocalDateTime cutoffTime = LocalDateTime.now().minus(minIntervalSeconds, ChronoUnit.SECONDS);
 
@@ -99,12 +97,18 @@ public class DuplicateScanPreventer {
             if (hasText(scanType)) {
                 wrapper.eq(ScanRecord::getScanType, scanType);
             }
+            if (hasText(processCode)) {
+                wrapper.eq(ScanRecord::getProcessCode, processCode);
+            }
+            if (hasText(operatorId)) {
+                wrapper.eq(ScanRecord::getOperatorId, operatorId);
+            }
 
             ScanRecord recent = scanRecordService.getOne(wrapper);
 
             if (recent != null) {
-                log.warn("防重复拦截: scanCode={}, scanType={}, 最近扫码时间={}, 最小间隔={}秒",
-                        scanCode, scanType, recent.getScanTime(), minIntervalSeconds);
+                log.warn("防重复拦截: scanCode={}, scanType={}, processCode={}, operatorId={}, 最近扫码时间={}, 最小间隔={}秒",
+                        scanCode, scanType, processCode, operatorId, recent.getScanTime(), minIntervalSeconds);
                 return true;
             }
 
@@ -113,6 +117,28 @@ public class DuplicateScanPreventer {
             log.error("检查重复扫码失败: scanCode={}", scanCode, e);
             return false; // 检查失败时不拦截
         }
+    }
+
+    public boolean isWithinDuplicateInterval(LocalDateTime scanTime,
+                                             Integer bundleQuantity,
+                                             Integer processMinutes) {
+        if (scanTime == null) {
+            return false;
+        }
+        int minIntervalSeconds = calculateMinIntervalSeconds(bundleQuantity, processMinutes);
+        LocalDateTime cutoffTime = LocalDateTime.now().minus(minIntervalSeconds, ChronoUnit.SECONDS);
+        return !scanTime.isBefore(cutoffTime);
+    }
+
+    public int calculateMinIntervalSeconds(Integer bundleQuantity, Integer processMinutes) {
+        int minIntervalSeconds = 30;
+        if (bundleQuantity != null && bundleQuantity > 0
+                && processMinutes != null && processMinutes > 0) {
+            int expectedTime = bundleQuantity * processMinutes * 60;
+            int calculatedInterval = expectedTime / 10;
+            minIntervalSeconds = Math.min(300, Math.max(30, calculatedInterval));
+        }
+        return minIntervalSeconds;
     }
 
     /**

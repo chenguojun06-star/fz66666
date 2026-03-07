@@ -83,6 +83,9 @@ public class ProductionOrderQueryService {
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
         String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
         String includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
+        String orgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orgUnitId"));
+        String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
+        String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -97,6 +100,9 @@ public class ProductionOrderQueryService {
                 .eq(StringUtils.hasText(status), "status", status)
                 .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
                 .eq(StringUtils.hasText(plateType), "plate_type", plateType)
+                .eq(StringUtils.hasText(orgUnitId), "org_unit_id", orgUnitId)
+                .eq(StringUtils.hasText(parentOrgUnitId), "parent_org_unit_id", parentOrgUnitId)
+                .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
                 .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
                 .eq("delete_flag", 0)
                 // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤

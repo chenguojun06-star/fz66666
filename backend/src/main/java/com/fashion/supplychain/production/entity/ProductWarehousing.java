@@ -112,6 +112,24 @@ public class ProductWarehousing {
     @TableField(exist = false)
     private Integer cuttingQuantity;
 
+    @TableField(exist = false)
+    private String factoryName;
+
+    @TableField(exist = false)
+    private String factoryType;
+
+    @TableField(exist = false)
+    private String orgUnitId;
+
+    @TableField(exist = false)
+    private String parentOrgUnitId;
+
+    @TableField(exist = false)
+    private String parentOrgUnitName;
+
+    @TableField(exist = false)
+    private String orgPath;
+
     /**
      * 扫码内容/菲号（从ScanRecord填充）
      */

@@ -95,12 +95,26 @@ const StyleQuoteSuggestionPanel: React.FC = () => {
             ))}
           </div>
 
-          {/* 建议文案 */}
+          {/* 建议文案 / AI深度分析 */}
           <div style={{
-            background: 'rgba(57,255,20,0.07)', border: '1px solid rgba(57,255,20,0.2)',
+            background: data.aiAnalysis
+              ? 'rgba(167,139,250,0.1)'
+              : 'rgba(57,255,20,0.07)',
+            border: `1px solid ${ data.aiAnalysis
+              ? 'rgba(167,139,250,0.3)'
+              : 'rgba(57,255,20,0.2)' }`,
             borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--text-primary)',
           }}>
-            {data.suggestion}
+            {data.aiAnalysis ? (
+              <>
+                <span style={{ fontSize: 10, color: '#a78bfa', marginRight: 6,
+                  background: 'rgba(167,139,250,0.15)', padding: '1px 6px',
+                  borderRadius: 3 }}>&#129302; AI 报价建议</span>
+                {data.aiAnalysis}
+              </>
+            ) : (
+              data.suggestion
+            )}
           </div>
 
           {/* 历史订单 */}

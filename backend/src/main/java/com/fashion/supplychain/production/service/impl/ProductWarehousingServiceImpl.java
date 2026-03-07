@@ -68,6 +68,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String cuttingBundleId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleId"));
         String cuttingBundleQrCode = ParamUtils
                 .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
+        String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
+        String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
 
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
@@ -85,8 +87,28 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         // 工厂账号隔离（由 ProductWarehousingOrchestrator 注入 _factoryOrderIds）
         @SuppressWarnings("unchecked")
         List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
-        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
-            wrapper.in(ProductWarehousing::getOrderId, factoryOrderIds);
+        List<String> scopedOrderIds = factoryOrderIds != null ? new java.util.ArrayList<>(factoryOrderIds) : null;
+
+        if (StringUtils.hasText(parentOrgUnitId) || StringUtils.hasText(factoryType)) {
+            List<String> matchedOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(StringUtils.hasText(parentOrgUnitId), ProductionOrder::getParentOrgUnitId, parentOrgUnitId)
+                            .eq(StringUtils.hasText(factoryType), ProductionOrder::getFactoryType, factoryType)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).filter(StringUtils::hasText).toList();
+            if (scopedOrderIds == null) {
+                scopedOrderIds = new java.util.ArrayList<>(matchedOrderIds);
+            } else {
+                scopedOrderIds.retainAll(matchedOrderIds);
+            }
+        }
+
+        if (scopedOrderIds != null) {
+            if (scopedOrderIds.isEmpty()) {
+                return new Page<>(page, pageSize, 0);
+            }
+            wrapper.in(ProductWarehousing::getOrderId, scopedOrderIds);
         }
 
         return baseMapper.selectPage(pageInfo, wrapper);

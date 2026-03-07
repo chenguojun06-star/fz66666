@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Input, Button, App, Tooltip, Timeline } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Input, Button, App, Tooltip, Timeline, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import api from '@/utils/api';
@@ -15,6 +15,7 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -23,6 +24,9 @@ interface FinishedSettlementRow {
   styleNo: string;
   factoryId: string;
   factoryName: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
+  parentOrgUnitName?: string;
+  orgPath?: string;
   orderQuantity: number;
   styleFinalPrice: number;    // 销售单价（含利润率），来自 t_style_quotation.total_price
   targetProfitRate?: number;  // 目标利润率(%)，来自报价单设定值
@@ -49,6 +53,8 @@ interface PageParams {
   orderNo?: string;
   styleNo?: string;
   status?: string;
+  parentOrgUnitId?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
   startDate?: string;
   endDate?: string;
 }
@@ -73,11 +79,25 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [selectedParentOrgUnitId, setSelectedParentOrgUnitId] = useState('');
+  const [selectedFactoryType, setSelectedFactoryType] = useState('');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: 20,
   });
+  const buildPageParams = useCallback((overrides?: Partial<PageParams>): PageParams => ({
+    page: overrides?.page || 1,
+    pageSize: overrides?.pageSize || pageParams.pageSize,
+    orderNo: (overrides?.orderNo ?? searchOrderNo) || undefined,
+    styleNo: (overrides?.styleNo ?? searchStyleNo) || undefined,
+    status: (overrides?.status ?? searchStatus) || undefined,
+    parentOrgUnitId: (overrides?.parentOrgUnitId ?? selectedParentOrgUnitId) || undefined,
+    factoryType: ((overrides?.factoryType ?? selectedFactoryType) || undefined) as PageParams['factoryType'],
+    startDate: overrides?.startDate ?? (dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined),
+    endDate: overrides?.endDate ?? (dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined),
+  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo, selectedFactoryType, selectedParentOrgUnitId]);
 
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -129,8 +149,21 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       title: '工厂',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 150,
-      render: (text) => text || '-',
+      width: 220,
+      render: (_text, record) => (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>{record.factoryName || '-'}</span>
+            {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ margin: 0 }}>内部</Tag> : null}
+            {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ margin: 0 }}>外部</Tag> : null}
+          </div>
+          {record.orgPath || record.parentOrgUnitName ? (
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+              {record.orgPath || record.parentOrgUnitName}
+            </div>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: '状态',
@@ -367,17 +400,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   };
 
   // 搜索
-  const handleSearch = () => {
-    const params: PageParams = {
-      page: 1,
-      pageSize: pageParams.pageSize,
-      orderNo: searchOrderNo || undefined,
-      styleNo: searchStyleNo || undefined,
-      status: searchStatus || undefined,
-      startDate: dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined,
-      endDate: dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined,
-    };
-
+  const handleSearch = (overrides?: Partial<PageParams>) => {
+    const params = buildPageParams(overrides);
     setPageParams(params);
     loadData(params);
   };
@@ -387,6 +411,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     setSearchOrderNo('');
     setSearchStyleNo('');
     setSearchStatus('');
+    setSelectedParentOrgUnitId('');
+    setSelectedFactoryType('');
     setDateRange(null);
     const params: PageParams = { page: 1, pageSize: 20 };
     setPageParams(params);
@@ -488,13 +514,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   // 导出全部
   const handleExport = async () => {
     try {
-      const params = {
-        orderNo: searchOrderNo || undefined,
-        styleNo: searchStyleNo || undefined,
-        status: searchStatus || undefined,
-        startDate: dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined,
-        endDate: dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined,
-      };
+      const params = buildPageParams();
 
       message.loading({ content: '导出中...', key: 'export' });
 
@@ -542,33 +562,60 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
         <StandardToolbar
           left={(
-            <StandardSearchBar
-              searchValue={searchOrderNo}
-              onSearchChange={(value) => {
-                setSearchOrderNo(value);
-                setSearchStyleNo('');
-                handleSearch();
-              }}
-              searchPlaceholder="搜索订单号/款号"
-              dateValue={dateRange}
-              onDateChange={(value) => {
-                setDateRange(value);
-                handleSearch();
-              }}
-              statusValue={searchStatus}
-              onStatusChange={(value) => {
-                setSearchStatus(value || '');
-                handleSearch();
-              }}
-              statusOptions={[
-                { label: '全部', value: '' },
-                { label: '待确认', value: 'PENDING' },
-                { label: '已确认', value: 'CONFIRMED' },
-                { label: '生产中', value: 'IN_PRODUCTION' },
-                { label: '已完成', value: 'COMPLETED' },
-                // 已取消的订单不参与结算，不显示在列表中
-              ]}
-            />
+            <>
+              <StandardSearchBar
+                searchValue={searchOrderNo}
+                onSearchChange={(value) => {
+                  setSearchOrderNo(value);
+                  setSearchStyleNo('');
+                  handleSearch();
+                }}
+                searchPlaceholder="搜索订单号/款号"
+                dateValue={dateRange}
+                onDateChange={(value) => {
+                  setDateRange(value);
+                  handleSearch();
+                }}
+                statusValue={searchStatus}
+                onStatusChange={(value) => {
+                  setSearchStatus(value || '');
+                  handleSearch();
+                }}
+                statusOptions={[
+                  { label: '全部', value: '' },
+                  { label: '待确认', value: 'PENDING' },
+                  { label: '已确认', value: 'CONFIRMED' },
+                  { label: '生产中', value: 'IN_PRODUCTION' },
+                  { label: '已完成', value: 'COMPLETED' },
+                ]}
+              />
+              <Select
+                value={selectedParentOrgUnitId}
+                onChange={(value) => {
+                  const nextValue = value || '';
+                  setSelectedParentOrgUnitId(nextValue);
+                  handleSearch({ parentOrgUnitId: nextValue || undefined });
+                }}
+                placeholder="归属部门"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                style={{ minWidth: 130 }}
+                options={departmentOptions}
+              />
+              <Select
+                value={selectedFactoryType}
+                onChange={(value) => {
+                  const nextValue = value || '';
+                  setSelectedFactoryType(nextValue);
+                  handleSearch({ factoryType: (nextValue || undefined) as PageParams['factoryType'] });
+                }}
+                placeholder="内外标签"
+                allowClear
+                style={{ minWidth: 110 }}
+                options={factoryTypeOptions}
+              />
+            </>
           )}
           right={(
             <>

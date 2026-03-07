@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.*;
+import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.helper.ProcessStageDetector;
 import com.fashion.supplychain.production.service.*;
@@ -63,6 +64,9 @@ public class ProductionScanExecutor {
 
     @Autowired
     private InventoryValidator inventoryValidator;
+
+    @Autowired
+    private DuplicateScanPreventer duplicateScanPreventer;
 
     @Autowired
     private SKUService skuService;
@@ -228,9 +232,6 @@ public class ProductionScanExecutor {
             checkPatternForCutting(order);
         }
 
-        // 验证数量不超过订单数量（用子工序名匹配，避免同父节点所有子工序量累加）
-        inventoryValidator.validateNotExceedOrderQuantity(order, scanType, childProcessName, quantity, bundle);
-
         // 解析单价（优先用子工序名精确匹配，匹配不上再用父节点名模糊匹配）
         BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), childProcessName);
         if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !childProcessName.equals(progressStage)) {
@@ -245,6 +246,32 @@ public class ProductionScanExecutor {
         String processCode = hasText(TextUtils.safeText(params.get("processCode")))
                              ? TextUtils.safeText(params.get("processCode"))
                              : childProcessName;
+
+        String duplicateCheckScanCode = scanCode;
+        if (!hasText(duplicateCheckScanCode) && bundle != null) {
+            duplicateCheckScanCode = TextUtils.safeText(bundle.getQrCode());
+        }
+        if (!hasText(duplicateCheckScanCode)) {
+            duplicateCheckScanCode = orderNo;
+        }
+
+        Integer bundleQuantity = bundle != null ? bundle.getQuantity() : quantity;
+        if (duplicateScanPreventer.hasRecentDuplicateScan(
+                duplicateCheckScanCode,
+                scanType,
+                bundleQuantity,
+                null,
+                processCode,
+                operatorId)) {
+            Map<String, Object> duplicate = new HashMap<>();
+            duplicate.put("success", true);
+            duplicate.put("message", "扫码过快，已自动忽略重复提交");
+            duplicate.put("duplicateIgnored", true);
+            return duplicate;
+        }
+
+        // 验证数量不超过订单数量（用子工序名匹配，避免同父节点所有子工序量累加）
+        inventoryValidator.validateNotExceedOrderQuantity(order, scanType, childProcessName, quantity, bundle);
 
         String color = colorResolver.apply(null);
         // 🔧 修复(2026-02-25)：orchestrator 传入的 resolver 未携带 bundle/order 上下文，
@@ -441,6 +468,16 @@ public class ProductionScanExecutor {
             if (!isSameOperator) {
                 String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
                 throw new IllegalStateException("该菲号「" + processCode + "」环节已被「" + otherName + "」领取，无法重复操作");
+            }
+
+            Integer bundleQuantity = bundle.getQuantity();
+            if (duplicateScanPreventer.isWithinDuplicateInterval(existing.getScanTime(), bundleQuantity, null)) {
+                Map<String, Object> duplicate = new HashMap<>();
+                duplicate.put("success", true);
+                duplicate.put("message", "扫码过快，已自动忽略重复提交");
+                duplicate.put("duplicateIgnored", true);
+                duplicate.put("scanRecord", existing);
+                return duplicate;
             }
 
             int existedQty = existing.getQuantity() == null ? 0 : existing.getQuantity();

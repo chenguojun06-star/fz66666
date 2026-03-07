@@ -16,7 +16,7 @@ import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLin
 import { getWorkspaceRole, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
-import { CuttingBundle, ProductionOrder, ScanRecord } from '@/types/production';
+import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { TemplateLibrary } from '@/types/style';
 
 import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
@@ -72,6 +72,7 @@ import {
 import { fetchNodeOperations } from './helpers/nodeOperations';
 import { useLocation } from 'react-router-dom';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
+import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 
 type ProgressDetailProps = {
   embedded?: boolean;
@@ -80,6 +81,7 @@ type ProgressDetailProps = {
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const location = useLocation();
+  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
   const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
@@ -1086,6 +1088,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
+                    value={queryParams.parentOrgUnitId || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value || undefined, page: 1 }))}
+                    placeholder="归属部门"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 130 }}
+                    options={departmentOptions}
+                  />
+                  <Select
+                    value={queryParams.factoryType || ''}
+                    onChange={(value) =>
+                      setQueryParams((prev) => ({
+                        ...prev,
+                        factoryType: (value || undefined) as ProductionQueryParams['factoryType'],
+                        page: 1,
+                      }))
+                    }
+                    placeholder="内外标签"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={factoryTypeOptions}
+                  />
+                  <Select
                     value={queryParams.urgencyLevel || ''}
                     onChange={(value) => setQueryParams((prev) => ({ ...prev, urgencyLevel: value || undefined, page: 1 }))}
                     placeholder="紧急程度"
@@ -1361,6 +1387,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusValue={String(queryParams.status || '')}
                     onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
                     statusOptions={statusOptions}
+                  />
+                  <Select
+                    value={queryParams.parentOrgUnitId || ''}
+                    onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value || undefined, page: 1 }))}
+                    placeholder="归属部门"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 130 }}
+                    options={departmentOptions}
+                  />
+                  <Select
+                    value={queryParams.factoryType || ''}
+                    onChange={(value) =>
+                      setQueryParams((prev) => ({
+                        ...prev,
+                        factoryType: (value || undefined) as ProductionQueryParams['factoryType'],
+                        page: 1,
+                      }))
+                    }
+                    placeholder="内外标签"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={factoryTypeOptions}
                   />
                   <Select
                     value={queryParams.urgencyLevel || ''}

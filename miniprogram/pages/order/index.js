@@ -31,6 +31,7 @@ Page({
     form: { ...DEFAULT_FORM, orderLines: [] },
     factoryList: [],
     factoryNames: [],
+    factoryDisplayNames: [],
     plateTypes: [],
     submitting: false,
   },
@@ -180,7 +181,13 @@ Page({
       const res = await api.factory.list();
       const list = Array.isArray(res) ? res : (res && res.records) || [];
       const names = list.map(f => f.factoryName || f.name || '');
-      this.setData({ factoryList: list, factoryNames: names });
+      const displayNames = list.map(f => {
+        const name = f.factoryName || f.name || '';
+        const org = f.orgPath || f.parentOrgUnitName || '';
+        const tag = f.factoryType === 'INTERNAL' ? '内部' : f.factoryType === 'EXTERNAL' ? '外部' : '';
+        return [name, tag, org].filter(Boolean).join(' · ');
+      });
+      this.setData({ factoryList: list, factoryNames: names, factoryDisplayNames: displayNames });
     } catch (err) {
       console.warn('[Order] fetchFactories failed', err);
     }

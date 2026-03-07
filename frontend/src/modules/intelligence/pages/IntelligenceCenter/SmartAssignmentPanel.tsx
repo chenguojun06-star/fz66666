@@ -19,6 +19,7 @@ const SmartAssignmentPanel: React.FC = () => {
   const [recs, setRecs] = useState<WorkerRecommendation[]>([]);
   const [stageName, setStageName] = useState('');
   const [error, setError] = useState('');
+  const [aiSuggestion, setAiSuggestion] = useState('');
 
   const handleSearch = useCallback(async () => {
     const s = stage.trim();
@@ -33,6 +34,7 @@ const SmartAssignmentPanel: React.FC = () => {
       const d = res?.data ?? res;
       setRecs(d?.recommendations ?? []);
       setStageName(d?.stageName ?? s);
+      setAiSuggestion(d?.aiSuggestion ?? '');
       if (!(d?.recommendations?.length)) setError('该工序暂无足够的历史扫码数据，无法生成推荐');
     } catch {
       setError('推荐失败，请稍后重试');
@@ -112,7 +114,20 @@ const SmartAssignmentPanel: React.FC = () => {
 
       {recs.length > 0 && (
         <>
-          <div style={{ color: '#4a6d8a', fontSize: 12, marginBottom: 8 }}>
+          {aiSuggestion && (
+            <div style={{
+              background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: 6, padding: '8px 12px', marginBottom: 10,
+              fontSize: 12, color: '#c4b5fd', lineHeight: 1.6,
+            }}>
+              <span style={{ fontSize: 10, color: '#a78bfa', marginRight: 6,
+                background: 'rgba(167,139,250,0.15)', padding: '1px 6px',
+                borderRadius: 3 }}>&#129302; AI 分析</span>
+              {aiSuggestion}
+            </div>
+          )}
+          <div style={{ color: '#4a6d8a', fontSize: 12, marginBottom: 8 }}
+          >
             工序「<b style={{ color: '#a78bfa' }}>{stageName}</b>」推荐工人清单（按综合评分排序）
           </div>
           <table className="c-table">

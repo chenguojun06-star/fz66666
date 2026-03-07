@@ -102,6 +102,10 @@
     <view class="res-info">
       <text wx:if="{{lastResult.orderNo}}" class="res-order">{{lastResult.orderNo}}</text>
       <text wx:if="{{lastResult.styleNo}}" class="res-style">{{lastResult.styleNo}}</text>
+      <text wx:if="{{lastResult.factoryName}}">{{lastResult.factoryName}}</text>
+      <text wx:if="{{lastResult.orgPath}}">{{lastResult.orgPath}}</text>
+      <text wx:if="{{lastResult.factoryType === 'INTERNAL'}}" class="res-proc">内部</text>
+      <text wx:if="{{lastResult.factoryType === 'EXTERNAL'}}" class="res-proc">外部</text>
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
@@ -163,6 +167,9 @@
     </view>
     <!-- 外发工厂账号：工人选择器（currentUser.factoryId 非空时显示） -->
     <view wx:if="{{currentUser && currentUser.factoryId}}" class="warehouse-input-row">
+      <view wx:if="{{currentUser.factoryName || currentUser.orgPath}}" style="margin-bottom:8rpx;color:#666;font-size:24rpx;">
+        当前归属：{{currentUser.factoryName || '-'}}{{currentUser.orgPath ? ' · ' + currentUser.orgPath : ''}}{{currentUser.factoryType === 'INTERNAL' ? ' · 内部' : (currentUser.factoryType === 'EXTERNAL' ? ' · 外部' : '')}}
+      </view>
       <view class="warehouse-label">当前操作工人：</view>
       <picker mode="selector" range="{{workerList}}" range-key="workerName" bindchange="onWorkerSelect">
         <view class="warehouse-input-field" style="line-height:44rpx;min-height:44rpx;">

@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.SmartAssignmentRequest;
 import com.fashion.supplychain.intelligence.dto.SmartAssignmentResponse;
 import com.fashion.supplychain.intelligence.dto.SmartAssignmentResponse.WorkerRecommendation;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,6 +34,9 @@ public class SmartAssignmentOrchestrator {
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
 
     public SmartAssignmentResponse recommend(SmartAssignmentRequest request) {
         SmartAssignmentResponse response = new SmartAssignmentResponse();
@@ -81,6 +85,9 @@ public class SmartAssignmentOrchestrator {
         // 最多返回10个推荐
         response.setRecommendations(
                 candidates.subList(0, Math.min(10, candidates.size())));
+
+        // AI对本次派工结果的综合分析
+        enrichAssignmentWithAi(response, candidates, tenantId);
         return response;
     }
 
@@ -168,5 +175,33 @@ public class SmartAssignmentOrchestrator {
         double sumSq = values.stream()
                 .mapToDouble(v -> Math.pow(v - mean, 2)).sum();
         return Math.sqrt(sumSq / values.size());
+    }
+
+    /** 用AI生成派工推荐的综合分析文案 */
+    private void enrichAssignmentWithAi(SmartAssignmentResponse response,
+            List<WorkerRecommendation> candidates, Long tenantId) {
+        if (!aiAdvisorService.isEnabled()
+                || !aiAdvisorService.checkAndConsumeQuota(tenantId)
+                || candidates.isEmpty()) {
+            return;
+        }
+        try {
+            int top = Math.min(3, candidates.size());
+            StringBuilder ctx = new StringBuilder();
+            ctx.append("[当前工序]：").append(response.getStageName()).append("\n");
+            for (int i = 0; i < top; i++) {
+                WorkerRecommendation r = candidates.get(i);
+                ctx.append(String.format("  %d. %s 评分%d 日均%.0f件 %s\n",
+                        i + 1, r.getOperatorName(), r.getScore(),
+                        r.getAvgPerDay(), r.getReason()));
+            }
+            String sys = "你是服装产线派工顾问，请根据以下工人数据给出一句话的派工建议，重点说明为什么首选该工人，不超过80字。";
+            String answer = aiAdvisorService.chat(sys, ctx.toString());
+            if (answer != null && !answer.isBlank()) {
+                response.setAiSuggestion(answer);
+            }
+        } catch (Exception e) {
+            log.warn("[SmartAssignment] AI分析失败: {}", e.getMessage());
+        }
     }
 }

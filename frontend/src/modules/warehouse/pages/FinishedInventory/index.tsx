@@ -16,6 +16,7 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 
 
 // SKU明细接口
@@ -34,6 +35,11 @@ interface SKUDetail {
 interface FinishedInventory {
   id: string;
   orderNo: string;
+  factoryName?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
+  parentOrgUnitId?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   styleNo: string;
   styleName: string;
   styleImage?: string;
@@ -60,6 +66,9 @@ const _FinishedInventory: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [selectedParentOrgUnitId, setSelectedParentOrgUnitId] = useState('');
+  const [selectedFactoryType, setSelectedFactoryType] = useState('');
+  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
@@ -94,7 +103,14 @@ const _FinishedInventory: React.FC = () => {
     try {
       const res = await api.post<{ code: number; data: { records: FinishedInventory[]; total: number } }>(
         '/warehouse/finished-inventory/list',
-        { page: 1, pageSize: 500, orderNo: searchText || undefined }
+        {
+          page: 1,
+          pageSize: 500,
+          keyword: searchText || undefined,
+          orderNo: searchText || undefined,
+          parentOrgUnitId: selectedParentOrgUnitId || undefined,
+          factoryType: selectedFactoryType || undefined,
+        }
       );
       if (res.code === 200 && res.data?.records) {
         setRawDataSource(res.data.records);
@@ -110,7 +126,7 @@ const _FinishedInventory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchText, showSmartErrorNotice, reportSmartError]);
+  }, [searchText, selectedParentOrgUnitId, selectedFactoryType, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => {
     loadData();
@@ -135,6 +151,14 @@ const _FinishedInventory: React.FC = () => {
       filtered = filtered.filter(item => item.availableQty > 0);
     } else if (statusValue === 'defect') {
       filtered = filtered.filter(item => item.defectQty > 0);
+    }
+
+    if (selectedParentOrgUnitId) {
+      filtered = filtered.filter(item => item.parentOrgUnitId === selectedParentOrgUnitId);
+    }
+
+    if (selectedFactoryType) {
+      filtered = filtered.filter(item => item.factoryType === selectedFactoryType);
     }
 
     // 按 订单号+款号 聚合为一行（同一订单的不同尺码合并）
@@ -168,7 +192,7 @@ const _FinishedInventory: React.FC = () => {
     }
 
     return Array.from(groupMap.values());
-  }, [rawDataSource, searchText, statusValue]);
+  }, [rawDataSource, searchText, selectedFactoryType, selectedParentOrgUnitId, statusValue]);
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -319,6 +343,20 @@ const _FinishedInventory: React.FC = () => {
           <div style={{ fontSize: "var(--font-size-md)", color: 'var(--neutral-text)', fontWeight: 600, lineHeight: 1.4 }}>
             {record.styleName}
           </div>
+          {record.factoryName || record.orgPath || record.parentOrgUnitName || record.factoryType ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+                工厂：{record.factoryName || '-'}
+                {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ marginLeft: 8 }}>内部</Tag> : null}
+                {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ marginLeft: 8 }}>外部</Tag> : null}
+              </div>
+              {record.orgPath || record.parentOrgUnitName ? (
+                <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+                  组织：{record.orgPath || record.parentOrgUnitName}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {record.qualityInspectionNo && (
             <div style={{
               display: 'flex',
@@ -625,20 +663,40 @@ const _FinishedInventory: React.FC = () => {
 
           <StandardToolbar
             left={(
-              <StandardSearchBar
-                searchValue={searchText}
-                onSearchChange={setSearchText}
-                searchPlaceholder="搜索订单号/款号/SKU"
-                dateValue={dateRange}
-                onDateChange={setDateRange}
-                statusValue={statusValue}
-                onStatusChange={setStatusValue}
-                statusOptions={[
-                  { label: '全部', value: '' },
-                  { label: '可用库存', value: 'available' },
-                  { label: '次品库存', value: 'defect' },
-                ]}
-              />
+              <>
+                <StandardSearchBar
+                  searchValue={searchText}
+                  onSearchChange={setSearchText}
+                  searchPlaceholder="搜索订单号/款号/SKU/组织"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={statusValue}
+                  onStatusChange={setStatusValue}
+                  statusOptions={[
+                    { label: '全部', value: '' },
+                    { label: '可用库存', value: 'available' },
+                    { label: '次品库存', value: 'defect' },
+                  ]}
+                />
+                <Select
+                  value={selectedParentOrgUnitId}
+                  onChange={(value) => setSelectedParentOrgUnitId(value || '')}
+                  placeholder="归属部门"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  style={{ minWidth: 130 }}
+                  options={departmentOptions}
+                />
+                <Select
+                  value={selectedFactoryType}
+                  onChange={(value) => setSelectedFactoryType(value || '')}
+                  placeholder="内外标签"
+                  allowClear
+                  style={{ minWidth: 110 }}
+                  options={factoryTypeOptions}
+                />
+              </>
             )}
             right={(
               <>

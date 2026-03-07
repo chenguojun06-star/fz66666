@@ -61,6 +61,9 @@ export const useProgressFilters = () => {
       orderNo: undefined,
       styleNo: undefined,
       factoryName: undefined,
+      orgUnitId: undefined,
+      parentOrgUnitId: undefined,
+      factoryType: undefined,
     }));
   }, [location.search]);
 

@@ -97,10 +97,17 @@
         <view class="mf-field">
           <text class="mf-field-label">加工厂 <text class="mf-required">*</text></text>
           <view class="mf-field-ctrl">
-            <picker mode="selector" range="{{factoryNames}}" value="{{form.factoryIndex}}" data-field="factoryIndex" bindchange="onFactoryChange">
-              <view class="mf-picker">{{form.factoryIndex >= 0 ? factoryNames[form.factoryIndex] : '请选择加工厂'}}<text class="mf-picker-arrow">▾</text></view>
+            <picker mode="selector" range="{{factoryDisplayNames}}" value="{{form.factoryIndex}}" data-field="factoryIndex" bindchange="onFactoryChange">
+              <view class="mf-picker">{{form.factoryIndex >= 0 ? factoryDisplayNames[form.factoryIndex] : '请选择加工厂'}}<text class="mf-picker-arrow">▾</text></view>
             </picker>
           </view>
+        </view>
+        <view wx:if="{{form.factoryIndex >= 0 && factoryList[form.factoryIndex]}}" class="card-meta-row">
+          <text class="meta-label">组织</text>
+          <text class="meta-value">{{factoryList[form.factoryIndex].orgPath || factoryList[form.factoryIndex].parentOrgUnitName || '-'}}</text>
+          <text class="meta-sep">｜</text>
+          <text class="meta-label">标签</text>
+          <text class="meta-value">{{factoryList[form.factoryIndex].factoryType === 'INTERNAL' ? '内部' : (factoryList[form.factoryIndex].factoryType === 'EXTERNAL' ? '外部' : '未标记')}}</text>
         </view>
 
         <!-- 普通/急单 + 单型：去掉急单标题，同行排列 -->

@@ -50,6 +50,18 @@ public class Factory {
      */
     private String supplierType;
 
+    /** 工厂组织节点ID */
+    private String orgUnitId;
+
+    /** 归属部门节点ID */
+    private String parentOrgUnitId;
+
+    /** 归属部门名称 */
+    private String parentOrgUnitName;
+
+    /** 组织路径 */
+    private String orgPath;
+
     /**
      * 工厂日产能（件/天），用于AI排产建议引擎计算
      * 默认 500，可在工厂管理页面修改

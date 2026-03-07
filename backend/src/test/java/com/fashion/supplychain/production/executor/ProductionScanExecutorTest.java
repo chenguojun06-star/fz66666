@@ -45,6 +45,9 @@ class ProductionScanExecutorTest {
     private InventoryValidator inventoryValidator;
 
     @Mock
+    private DuplicateScanPreventer duplicateScanPreventer;
+
+    @Mock
     private SKUService skuService;
 
     @Mock
@@ -103,6 +106,8 @@ class ProductionScanExecutorTest {
         lenient().when(productionOrderService.getOne(any(LambdaQueryWrapper.class))).thenReturn(mockOrder);
         lenient().doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), nullable(CuttingBundle.class));
+        lenient().when(duplicateScanPreventer.hasRecentDuplicateScan(anyString(), anyString(), any(), any(), anyString(), anyString()))
+            .thenReturn(false);
 
         // Mock process detection (lenient)
         lenient().when(processStageDetector.resolveAutoProcessName(any(ProductionOrder.class))).thenReturn("车缝");
@@ -235,6 +240,43 @@ class ProductionScanExecutorTest {
                 // 业务拒绝是正常的，不算测试失败
             }
         });
+    }
+
+    @Test
+    void testTryUpdateExistingBundleScanRecord_RecentDuplicateIgnored() {
+        ScanRecord existing = new ScanRecord();
+        existing.setId("record-existing");
+        existing.setOperatorId("operator-001");
+        existing.setOperatorName("王五");
+        existing.setQuantity(30);
+        existing.setScanTime(java.time.LocalDateTime.now());
+        when(scanRecordService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(duplicateScanPreventer.isWithinDuplicateInterval(any(), any(), any())).thenReturn(true);
+
+        Map<String, Object> result = executor.execute(
+                baseParams, "req-upd-dup-001", "operator-001", "王五",
+                "production", 50, false, colorResolver, sizeResolver);
+
+        assertNotNull(result);
+        assertEquals("扫码过快，已自动忽略重复提交", result.get("message"));
+        assertEquals(Boolean.TRUE, result.get("duplicateIgnored"));
+        verify(scanRecordService, never()).updateById(any(ScanRecord.class));
+        verify(scanRecordService, never()).saveScanRecord(any(ScanRecord.class));
+    }
+
+    @Test
+    void testExecute_RecentDuplicateScan_Ignored() {
+        when(duplicateScanPreventer.hasRecentDuplicateScan(anyString(), anyString(), any(), any(), anyString(), anyString()))
+                .thenReturn(true);
+
+        Map<String, Object> result = executor.execute(
+                baseParams, "req-dup-001", "operator-001", "王五",
+                "production", 50, false, colorResolver, sizeResolver);
+
+        assertNotNull(result);
+        assertEquals("扫码过快，已自动忽略重复提交", result.get("message"));
+        assertEquals(Boolean.TRUE, result.get("duplicateIgnored"));
+        verify(scanRecordService, never()).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test

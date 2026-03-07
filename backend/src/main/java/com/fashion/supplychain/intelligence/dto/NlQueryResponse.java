@@ -19,4 +19,6 @@ public class NlQueryResponse {
     private Map<String, Object> data;
     /** 相关建议（后续可追问） */
     private List<String> suggestions;
+    /** DeepSeek直接生成的AI洞察（仅当intent=ai_direct时有值） */
+    private String aiInsight;
 }

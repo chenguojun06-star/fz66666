@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -49,6 +50,9 @@ public class NlQueryOrchestrator {
 
     @Autowired
     private NlQueryLearningTracker learningTracker;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
 
     private static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{8,}");
 
@@ -172,12 +176,47 @@ public class NlQueryOrchestrator {
             return handleSummaryQuery(tenantId);
         }
 
-        // ── 智能兜底：没命中任何关键词 → 给全景概要，但 confidence=40 标记「本地不确定」
-        // Controller 检测到低置信度时会转发给 DeepSeek 做深度分析
-        NlQueryResponse fallback = handleSummaryQuery(tenantId);
-        fallback.setConfidence(40);
-        fallback.setIntent("fallback");
-        return fallback;
+        // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
+        return handleAiDeepFallback(question, tenantId);
+    }
+
+    /**
+     * 未命中关键词时的AI深度底底 —— 将系统实时数据作为上下文喜入DeepSeek
+     */
+    private NlQueryResponse handleAiDeepFallback(String question, Long tenantId) {
+        NlQueryResponse ctx = handleSummaryQuery(tenantId);
+        if (aiAdvisorService.isEnabled() && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
+            try {
+                String ctxStr = buildBriefContext(ctx.getData(), ctx.getAnswer());
+                String sys = "你是服装供应铳AI助手，以下是当前业务实时数据：\n" + ctxStr
+                        + "\n请用中文简洁地回答用户问题，不超过120字。";
+                String aiAnswer = aiAdvisorService.chat(sys, question);
+                if (aiAnswer != null && !aiAnswer.isBlank()) {
+                    NlQueryResponse r = new NlQueryResponse();
+                    r.setIntent("ai_direct");
+                    r.setAnswer(aiAnswer);
+                    r.setConfidence(88);
+                    r.setData(ctx.getData());
+                    r.setAiInsight(aiAnswer);
+                    r.setSuggestions(ctx.getSuggestions());
+                    return r;
+                }
+            } catch (Exception e) {
+                log.warn("[NlQuery] AI底底失败，降级: {}", e.getMessage());
+            }
+        }
+        ctx.setConfidence(40);
+        ctx.setIntent("fallback");
+        ctx.setAnswer("您的问题暂时没有直接匹配，以下是系统当前概况：\n" + ctx.getAnswer());
+        return ctx;
+    }
+
+    /** 将业务数据压缩为短文本，作为DeepSeek的上下文 */
+    private String buildBriefContext(Map<String, Object> data, String summaryAnswer) {
+        if (data == null || data.isEmpty()) return summaryAnswer != null ? summaryAnswer : "（暂无数据）";
+        StringBuilder sb = new StringBuilder();
+        data.forEach((k, v) -> sb.append(k).append(": ").append(v).append("，"));
+        return sb.toString();
     }
 
     // ── 订单查询 ──

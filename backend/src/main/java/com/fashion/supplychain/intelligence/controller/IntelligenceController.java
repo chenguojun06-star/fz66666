@@ -120,6 +120,19 @@ public class IntelligenceController {
     @Autowired
     private ProcessTemplateOrchestrator processTemplateOrchestrator;
 
+    // ── 第四批（智能信号/记忆/学习闭环/统一大脑）──
+    @Autowired
+    private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
+
+    @Autowired
+    private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
+
+    @Autowired
+    private LearningLoopOrchestrator learningLoopOrchestrator;
+
+    @Autowired
+    private TenantIntelligenceBrainOrchestrator tenantIntelligenceBrainOrchestrator;
+
     @Autowired
     private AiAdvisorService aiAdvisorService;
 
@@ -134,6 +147,22 @@ public class IntelligenceController {
 
     @Autowired
     private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
+
+    @Autowired
+    private IntelligenceBrainOrchestrator intelligenceBrainOrchestrator;
+
+    @Autowired
+    private ActionCenterOrchestrator actionCenterOrchestrator;
+
+    @GetMapping("/brain/snapshot")
+    public Result<IntelligenceBrainSnapshotResponse> getBrainSnapshot() {
+        return Result.success(intelligenceBrainOrchestrator.snapshot());
+    }
+
+    @GetMapping("/action-center")
+    public Result<ActionCenterResponse> getActionCenter() {
+        return Result.success(actionCenterOrchestrator.getCenter());
+    }
 
     @PostMapping("/precheck/scan")
     public Result<?> precheckScan(@RequestBody(required = false) PrecheckScanRequest request) {
@@ -360,7 +389,9 @@ public class IntelligenceController {
         boolean enabled = aiAdvisorService.isEnabled();
         return Result.success(java.util.Map.of(
                 "enabled", enabled,
-                "message", enabled ? "AI 顾问已启用" : "AI 顾问未配置，请设置环境变量 DEEPSEEK_API_KEY"
+                "message", enabled ? "AI 顾问已启用" : "AI 顾问未配置，请设置模型直连或模型网关配置",
+                "modelGateway", intelligenceBrainOrchestrator.snapshot().getModelGateway(),
+                "observability", intelligenceBrainOrchestrator.snapshot().getObservability()
         ));
     }
 
@@ -418,5 +449,67 @@ public class IntelligenceController {
     @GetMapping("/live-cost")
     public Result<LiveCostResponse> liveCost(@RequestParam String orderId) {
         return Result.success(liveCostTrackerOrchestrator.track(orderId));
+    }
+
+    // ── 第四批：智能信号 / 记忆 / 学习闭环 / 统一大脑 ──
+
+    /** 全局信号采集 — 当前租户活跃风险信号汇总 */
+    @PostMapping("/signal/collect")
+    public Result<IntelligenceSignalResponse> collectSignals() {
+        return Result.success(intelligenceSignalOrchestrator.collectAndAnalyze());
+    }
+
+    /** 查询未处理信号列表（按优先级过滤） */
+    @GetMapping("/signal/open")
+    public Result<java.util.List<com.fashion.supplychain.intelligence.entity.IntelligenceSignal>>
+            openSignals(@RequestParam(defaultValue = "70") int minPriority) {
+        return Result.success(intelligenceSignalOrchestrator.getOpenSignals(
+                UserContext.tenantId(), minPriority));
+    }
+
+    /** 归档/标记信号为已处理 */
+    @PostMapping("/signal/{signalId}/resolve")
+    public Result<Void> resolveSignal(
+            @org.springframework.web.bind.annotation.PathVariable Long signalId) {
+        intelligenceSignalOrchestrator.resolveSignal(signalId, UserContext.tenantId());
+        return Result.success();
+    }
+
+    /** 写入一条经验记忆 */
+    @PostMapping("/memory/save")
+    public Result<IntelligenceMemoryResponse> saveMemory(
+            @RequestBody java.util.Map<String, String> body) {
+        return Result.success(intelligenceMemoryOrchestrator.saveCase(
+                body.get("memoryType"), body.get("businessDomain"),
+                body.get("title"), body.get("content")));
+    }
+
+    /** 相似记忆召回 */
+    @GetMapping("/memory/recall")
+    public Result<IntelligenceMemoryResponse> recallMemory(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "5") int topK) {
+        return Result.success(intelligenceMemoryOrchestrator.recallSimilar(
+                UserContext.tenantId(), query, topK));
+    }
+
+    /** 标记记忆为已采纳 */
+    @PostMapping("/memory/{memoryId}/adopted")
+    public Result<Void> markAdopted(
+            @org.springframework.web.bind.annotation.PathVariable Long memoryId) {
+        intelligenceMemoryOrchestrator.markAdopted(memoryId);
+        return Result.success();
+    }
+
+    /** 触发学习闭环（分析近7天反馈，提炼规律沉淀到记忆库） */
+    @PostMapping("/learning/loop")
+    public Result<LearningLoopResponse> runLearningLoop() {
+        return Result.success(learningLoopOrchestrator.runLoop());
+    }
+
+    /** 统一大脑快照（整合信号+记忆+AI综合分析的完整视图） */
+    @GetMapping("/brain/unified-snapshot")
+    public Result<IntelligenceBrainSnapshotResponse> unifiedBrainSnapshot() {
+        return Result.success(tenantIntelligenceBrainOrchestrator.unifiedSnapshot());
     }
 }

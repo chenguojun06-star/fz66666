@@ -343,9 +343,7 @@ Page({
       api.production.listOrders({
         page: 1,
         pageSize: 50,
-        orderNo: keyword,
-        styleNo: keyword,
-        factoryName: keyword,
+        keyword,
       }).catch(() => ({ records: [] })),
 
       api.production.listWarehousing({

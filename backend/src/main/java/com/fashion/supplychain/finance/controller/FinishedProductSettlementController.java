@@ -6,6 +6,8 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementExportService;
@@ -36,6 +38,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 /**
  * 成品结算控制器
@@ -51,6 +54,7 @@ public class FinishedProductSettlementController {
     private final FinishedProductSettlementExportService exportService;
     private final FinishedSettlementApprovalStatusService approvalStatusService;
     private final FactoryService factoryService;
+    private final ProductionOrderService productionOrderService;
 
     @Operation(summary = "分页查询成品结算列表")
     @GetMapping("/list")
@@ -60,6 +64,8 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String orderNo,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String parentOrgUnitId,
+            @RequestParam(required = false) String factoryType,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String factoryId
@@ -103,10 +109,15 @@ public class FinishedProductSettlementController {
             wrapper.eq(FinishedProductSettlement::getFactoryId, factoryId);
         }
 
+        if (!applyOrderScopeFilter(wrapper, parentOrgUnitId, factoryType)) {
+            return Result.success(new Page<>(page, pageSize, 0));
+        }
+
         // 按创建时间倒序
         wrapper.orderByDesc(FinishedProductSettlement::getCreateTime);
 
         Page<FinishedProductSettlement> result = settlementService.page(pageObj, wrapper);
+        enrichSettlementRecords(result.getRecords());
         return Result.success(result);
     }
 
@@ -135,6 +146,8 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String orderNo,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String parentOrgUnitId,
+            @RequestParam(required = false) String factoryType,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) throws IOException {
@@ -165,6 +178,10 @@ public class FinishedProductSettlementController {
         String ctxFactoryIdExport = UserContext.factoryId();
         if (StringUtils.isNotBlank(ctxFactoryIdExport)) {
             wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryIdExport);
+        }
+
+        if (!applyOrderScopeFilter(wrapper, parentOrgUnitId, factoryType)) {
+            wrapper.in(FinishedProductSettlement::getOrderId, Collections.singletonList("__NO_MATCH__"));
         }
 
         wrapper.orderByDesc(FinishedProductSettlement::getCreateTime);
@@ -323,28 +340,141 @@ public class FinishedProductSettlementController {
 
         // 批量查询工厂类型：factoryType（INTERNAL=本厂内部/EXTERNAL=外部工厂）
         Set<String> factoryIds = new HashSet<>();
+        Set<String> orderIds = new HashSet<>();
         for (Map<String, Object> row : grouped.values()) {
             String fId = (String) row.get("factoryId");
             if (StringUtils.isNotBlank(fId)) factoryIds.add(fId);
         }
+        for (FinishedProductSettlement item : allData) {
+            if (item != null && StringUtils.isNotBlank(item.getOrderId())) {
+                orderIds.add(item.getOrderId());
+            }
+        }
+
+        Map<String, ProductionOrder> orderMap = new HashMap<>();
+        if (!orderIds.isEmpty()) {
+            productionOrderService.listByIds(orderIds).forEach(order -> orderMap.put(order.getId(), order));
+        }
+
         if (!factoryIds.isEmpty()) {
             List<Factory> factoryList = factoryService.listByIds(factoryIds);
-            Map<String, String> typeMap = factoryList.stream()
+            Map<String, Factory> factoryMap = factoryList.stream()
                     .filter(f -> StringUtils.isNotBlank(f.getId()))
-                    .collect(Collectors.toMap(Factory::getId,
-                            f -> f.getFactoryType() != null ? f.getFactoryType() : "EXTERNAL",
-                            (a, b) -> a));
+                    .collect(Collectors.toMap(Factory::getId, f -> f, (a, b) -> a));
             for (Map<String, Object> row : grouped.values()) {
                 String fId = (String) row.get("factoryId");
-                row.put("factoryType", StringUtils.isNotBlank(fId)
-                        ? typeMap.getOrDefault(fId, "EXTERNAL")
+                Factory factory = StringUtils.isNotBlank(fId) ? factoryMap.get(fId) : null;
+                row.put("factoryType", factory != null && StringUtils.isNotBlank(factory.getFactoryType())
+                        ? factory.getFactoryType()
                         : "EXTERNAL");
+                row.put("parentOrgUnitName", factory != null ? factory.getParentOrgUnitName() : null);
+                row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
             }
         } else {
-            grouped.values().forEach(row -> row.put("factoryType", "EXTERNAL"));
+            grouped.values().forEach(row -> {
+                row.put("factoryType", "EXTERNAL");
+                row.put("parentOrgUnitName", null);
+                row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
+            });
         }
 
         return Result.success(new ArrayList<>(grouped.values()));
+    }
+
+    private boolean applyOrderScopeFilter(LambdaQueryWrapper<FinishedProductSettlement> wrapper,
+            String parentOrgUnitId,
+            String factoryType) {
+        if (StringUtils.isBlank(parentOrgUnitId) && StringUtils.isBlank(factoryType)) {
+            return true;
+        }
+
+        LambdaQueryWrapper<ProductionOrder> orderWrapper = new LambdaQueryWrapper<ProductionOrder>()
+                .select(ProductionOrder::getId)
+                .eq(StringUtils.isNotBlank(parentOrgUnitId), ProductionOrder::getParentOrgUnitId, parentOrgUnitId)
+                .eq(StringUtils.isNotBlank(factoryType), ProductionOrder::getFactoryType, factoryType)
+                .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0));
+
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            orderWrapper.eq(ProductionOrder::getTenantId, tenantId);
+        }
+
+        List<String> orderIds = productionOrderService.list(orderWrapper).stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toList());
+
+        if (orderIds.isEmpty()) {
+            return false;
+        }
+        wrapper.in(FinishedProductSettlement::getOrderId, orderIds);
+        return true;
+    }
+
+    private void enrichSettlementRecords(List<FinishedProductSettlement> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        Set<String> orderIds = records.stream()
+                .map(FinishedProductSettlement::getOrderId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Map<String, ProductionOrder> orderMap = new HashMap<>();
+        if (!orderIds.isEmpty()) {
+            productionOrderService.listByIds(orderIds).forEach(order -> orderMap.put(order.getId(), order));
+        }
+
+        Set<String> factoryIds = records.stream()
+                .map(FinishedProductSettlement::getFactoryId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Map<String, Factory> factoryMap = new HashMap<>();
+        if (!factoryIds.isEmpty()) {
+            factoryService.listByIds(factoryIds).forEach(factory -> factoryMap.put(factory.getId(), factory));
+        }
+
+        for (FinishedProductSettlement record : records) {
+            ProductionOrder order = orderMap.get(record.getOrderId());
+            Factory factory = factoryMap.get(record.getFactoryId());
+            record.setFactoryType(StringUtils.isNotBlank(order != null ? order.getFactoryType() : null)
+                    ? order.getFactoryType()
+                    : factory != null ? factory.getFactoryType() : null);
+            record.setParentOrgUnitId(StringUtils.isNotBlank(order != null ? order.getParentOrgUnitId() : null)
+                ? order.getParentOrgUnitId()
+                : factory != null ? factory.getParentOrgUnitId() : null);
+            record.setParentOrgUnitName(StringUtils.isNotBlank(order != null ? order.getParentOrgUnitName() : null)
+                    ? order.getParentOrgUnitName()
+                    : factory != null ? factory.getParentOrgUnitName() : null);
+            record.setOrgPath(StringUtils.isNotBlank(order != null ? order.getOrgPath() : null)
+                    ? order.getOrgPath()
+                    : factory != null ? factory.getOrgPath() : null);
+        }
+    }
+
+    private String resolveOrgPathForFactory(Map<String, Object> row, List<FinishedProductSettlement> allData,
+            Map<String, ProductionOrder> orderMap) {
+        @SuppressWarnings("unchecked")
+        List<String> orderNos = (List<String>) row.get("orderNos");
+        if (orderNos == null || orderNos.isEmpty()) {
+            return null;
+        }
+        for (FinishedProductSettlement item : allData) {
+            if (item == null || !orderNos.contains(item.getOrderNo())) {
+                continue;
+            }
+            ProductionOrder order = orderMap.get(item.getOrderId());
+            if (order == null) {
+                continue;
+            }
+            if (StringUtils.isBlank((String) row.get("parentOrgUnitName")) && StringUtils.isNotBlank(order.getParentOrgUnitName())) {
+                row.put("parentOrgUnitName", order.getParentOrgUnitName());
+            }
+            if (StringUtils.isNotBlank(order.getOrgPath())) {
+                return order.getOrgPath();
+            }
+        }
+        return null;
     }
 
     @Operation(summary = "取消成品结算单")

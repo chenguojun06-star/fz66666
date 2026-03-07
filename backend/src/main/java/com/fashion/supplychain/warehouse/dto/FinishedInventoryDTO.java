@@ -26,6 +26,18 @@ public class FinishedInventoryDTO {
      */
     private String orderNo;
 
+    private String factoryName;
+
+    private String factoryType;
+
+    private String orgUnitId;
+
+    private String parentOrgUnitId;
+
+    private String parentOrgUnitName;
+
+    private String orgPath;
+
     /**
      * 款式ID（必须，用于出库）
      */

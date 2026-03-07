@@ -86,4 +86,13 @@ public class User {
 
     /** 外发工厂ID，NULL=普通租户账号，非NULL=该账号属于外发工厂 */
     private String factoryId;
+
+    /** 所属组织节点ID */
+    private String orgUnitId;
+
+    /** 所属组织节点名称 */
+    private String orgUnitName;
+
+    /** 所属组织路径 */
+    private String orgPath;
 }

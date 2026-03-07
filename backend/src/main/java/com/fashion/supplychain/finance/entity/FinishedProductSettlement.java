@@ -47,6 +47,18 @@ public class FinishedProductSettlement implements Serializable {
      */
     private String factoryName;
 
+    @TableField(exist = false)
+    private String factoryType;
+
+    @TableField(exist = false)
+    private String parentOrgUnitId;
+
+    @TableField(exist = false)
+    private String parentOrgUnitName;
+
+    @TableField(exist = false)
+    private String orgPath;
+
     /**
      * 款号
      */

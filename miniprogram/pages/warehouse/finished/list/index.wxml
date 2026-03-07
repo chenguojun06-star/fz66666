@@ -13,6 +13,21 @@
     </view>
   </view>
 
+  <view class="filter-row">
+    <picker mode="selector" range="{{departmentOptions}}" range-key="label" value="{{selectedDepartmentIndex}}" bindchange="onDepartmentFilterChange">
+      <view class="filter-pill">
+        <text class="filter-pill-label">部门</text>
+        <text class="filter-pill-value">{{departmentOptions[selectedDepartmentIndex].label}}</text>
+      </view>
+    </picker>
+    <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{selectedFactoryTypeIndex}}" bindchange="onFactoryTypeFilterChange">
+      <view class="filter-pill">
+        <text class="filter-pill-label">标签</text>
+        <text class="filter-pill-value">{{factoryTypeOptions[selectedFactoryTypeIndex].label}}</text>
+      </view>
+    </picker>
+  </view>
+
   <!-- 统计栏 -->
   <view class="summary-filter-bar">
     <view class="summary-pill summary-pill-active">
@@ -55,6 +70,12 @@
             </view>
           </view>
           <text class="wc-subtitle">{{item.styleName || '未命名款式'}}</text>
+          <view wx:if="{{item.factoryName || item.orgPath || item.factoryType}}" class="wc-meta-row">
+            <text class="wc-meta-text">{{item.factoryName || '-'}}</text>
+            <text wx:if="{{item.orgPath}}" class="wc-meta-text">{{item.orgPath}}</text>
+            <text wx:if="{{item.factoryType === 'INTERNAL'}}" class="wc-meta-tag wc-meta-tag-internal">内部</text>
+            <text wx:if="{{item.factoryType === 'EXTERNAL'}}" class="wc-meta-tag wc-meta-tag-external">外部</text>
+          </view>
           <view class="wc-tags-row">
             <text class="wc-tag wc-tag-color" wx:for="{{item.colors}}" wx:key="*this" wx:for-item="c">{{c}}</text>
           </view>

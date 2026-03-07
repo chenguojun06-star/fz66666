@@ -38,6 +38,13 @@ function mapPlateTypeLabel(plateType) {
   return '';
 }
 
+function mapFactoryTypeLabel(factoryType) {
+  const text = normalizeText(factoryType).toUpperCase();
+  if (text === 'INTERNAL') return '内部';
+  if (text === 'EXTERNAL') return '外部';
+  return '';
+}
+
 /**
  * 判断订单是否为已关闭状态
  * @param {string} status - 订单状态
@@ -196,6 +203,8 @@ function transformOrderData(r) {
   const delivery = calcDeliveryInfo(source);
   const urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
   const plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
+  const factoryTypeText = mapFactoryTypeLabel(source.factoryType || source.factory_type);
+  const orgDisplay = normalizeText(source.orgPath || source.parentOrgUnitName);
   // 构建款式图片完整 URL
   let styleCoverUrl = '';
   if (source.styleCover) {
@@ -217,6 +226,8 @@ function transformOrderData(r) {
     remainDaysClass: delivery.remainDaysClass,
     urgencyTagText,
     plateTypeTagText,
+    factoryTypeText,
+    orgDisplay,
   };
 }
 

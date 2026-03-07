@@ -13,6 +13,15 @@ import SmartAssignmentPanel from './SmartAssignmentPanel';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
+import RhythmDnaPanel from './RhythmDnaPanel';
+import WorkerProfilePanel from './WorkerProfilePanel';
+import LiveCostTrackerPanel from './LiveCostTrackerPanel';
+import StyleQuoteSuggestionPanel from './StyleQuoteSuggestionPanel';
+import SupplierScorecardPanel from './SupplierScorecardPanel';
+import LearningReportPanel from './LearningReportPanel';
+import DefectTracePanel from './DefectTracePanel';
+import FinanceAuditPanel from './FinanceAuditPanel';
+import MindPushPanel from './MindPushPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -166,7 +175,7 @@ const IntelligenceCenter: React.FC = () => {
     finally { setNlLoading(false); }
   };
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter } = data;
 
   const currentKpiMetrics = useMemo<KpiMetricSnapshot>(() => ({
     todayScanQty: Number(pulse?.todayScanQty) || 0,
@@ -949,6 +958,109 @@ const IntelligenceCenter: React.FC = () => {
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
+            ║   AI 大脑状态 + 行动中心 (brain + actionCenter) ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-2">
+
+          {/* AI 大脑快照 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <RobotOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
+              AI 大脑状态
+              {brain && (
+                <span className="c-card-badge" style={{
+                  background: brain.summary.healthGrade === 'A' ? 'rgba(82,196,26,0.12)' : 'rgba(212,137,6,0.12)',
+                  color: brain.summary.healthGrade === 'A' ? '#73d13d' : '#d48806',
+                  borderColor: brain.summary.healthGrade === 'A' ? '#73d13d55' : '#d4880655',
+                }}>
+                  {brain.summary.healthGrade} 级 · {brain.summary.healthIndex} 分
+                </span>
+              )}
+            </div>
+            {brain ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                  <div style={{ textAlign: 'center', padding: '6px 0', background: 'rgba(0,229,255,0.04)', borderRadius: 6, border: '1px solid rgba(0,229,255,0.1)' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#00e5ff' }}>{brain.summary.todayScanQty.toLocaleString()}</div>
+                    <div style={{ fontSize: 10, color: '#7aaec8' }}>今日扫码</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '6px 0', background: 'rgba(167,139,250,0.04)', borderRadius: 6, border: '1px solid rgba(167,139,250,0.1)' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#a78bfa' }}>{brain.summary.anomalyCount}</div>
+                    <div style={{ fontSize: 10, color: '#7aaec8' }}>异常项</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '6px 0', background: 'rgba(255,65,54,0.04)', borderRadius: 6, border: '1px solid rgba(255,65,54,0.1)' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: brain.summary.highRiskOrders > 0 ? '#ff4136' : '#39ff14' }}>{brain.summary.highRiskOrders}</div>
+                    <div style={{ fontSize: 10, color: '#7aaec8' }}>高风险订单</div>
+                  </div>
+                </div>
+                {/* 模型网关状态 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 11, color: '#b0c4de' }}>
+                  <span style={{ color: brain.modelGateway.status === 'CONNECTED' ? '#39ff14' : '#ff4136', fontWeight: 600 }}>
+                    ● {brain.modelGateway.status}
+                  </span>
+                  <span>{brain.modelGateway.provider} · {brain.modelGateway.activeModel}</span>
+                  {brain.modelGateway.fallbackEnabled && <Tag style={{ fontSize: 9, background: 'rgba(0,229,255,0.08)', color: '#00e5ff', borderColor: '#00e5ff33' }}>降级就绪</Tag>}
+                </div>
+                {/* 信号列表 */}
+                {brain.signals?.slice(0, 4).map((sig, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <span style={{ color: sig.level === 'CRITICAL' ? '#ff4136' : sig.level === 'WARNING' ? '#f7a600' : '#39ff14', fontWeight: 600, fontSize: 10, minWidth: 52 }}>
+                      {sig.level}
+                    </span>
+                    <span style={{ color: '#b0c4de', flex: 1 }}>{sig.title}</span>
+                    {sig.relatedOrderNo && <span style={{ color: '#5a7a9a', fontSize: 10 }}>{sig.relatedOrderNo}</span>}
+                  </div>
+                ))}
+                {brain.summary.topRisk && (
+                  <div style={{ marginTop: 6, fontSize: 10, color: '#f7a600', background: 'rgba(247,166,0,0.06)', padding: '4px 8px', borderRadius: 4 }}>
+                    🎯 首要风险：{brain.summary.topRisk}
+                  </div>
+                )}
+              </>
+            ) : <div className="c-empty">大脑快照加载中...</div>}
+          </div>
+
+          {/* 行动中心 */}
+          <div className="c-card">
+            <div className="c-card-title">
+              <ThunderboltOutlined style={{ color: '#ffd700', marginRight: 6 }} />
+              行动中心
+              {actionCenter?.summary && (
+                <span className="c-card-badge red-badge">
+                  待处理 {actionCenter.summary.totalTasks} · 紧急 {actionCenter.summary.highPriorityTasks}
+                </span>
+              )}
+            </div>
+            {actionCenter?.tasks?.length ? (
+              <>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                  {actionCenter.summary.productionTasks > 0 && <Tag style={{ fontSize: 10, background: 'rgba(0,229,255,0.08)', color: '#00e5ff', borderColor: '#00e5ff33' }}>生产 {actionCenter.summary.productionTasks}</Tag>}
+                  {actionCenter.summary.financeTasks > 0 && <Tag style={{ fontSize: 10, background: 'rgba(167,139,250,0.08)', color: '#a78bfa', borderColor: '#a78bfa33' }}>财务 {actionCenter.summary.financeTasks}</Tag>}
+                  {actionCenter.summary.factoryTasks > 0 && <Tag style={{ fontSize: 10, background: 'rgba(247,166,0,0.08)', color: '#f7a600', borderColor: '#f7a60033' }}>工厂 {actionCenter.summary.factoryTasks}</Tag>}
+                </div>
+                {actionCenter.tasks.slice(0, 6).map((task) => (
+                  <div key={task.taskCode} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: task.routePath ? 'pointer' : 'default' }}
+                    onClick={() => task.routePath && navigate(task.routePath)}>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, minWidth: 22, textAlign: 'center', padding: '1px 4px', borderRadius: 3,
+                      background: task.priority === 'CRITICAL' ? 'rgba(255,65,54,0.15)' : task.priority === 'HIGH' ? 'rgba(247,166,0,0.12)' : 'rgba(0,229,255,0.08)',
+                      color: task.priority === 'CRITICAL' ? '#ff4136' : task.priority === 'HIGH' ? '#f7a600' : '#00e5ff',
+                    }}>
+                      L{task.escalationLevel}
+                    </span>
+                    <span style={{ color: '#b0c4de', flex: 1 }}>{task.title}</span>
+                    {task.relatedOrderNo && <span style={{ color: '#5a7a9a', fontSize: 10 }}>{task.relatedOrderNo}</span>}
+                    {task.dueHint && <span style={{ color: '#f7a600', fontSize: 9 }}>{task.dueHint}</span>}
+                    {task.autoExecutable && <Tag style={{ fontSize: 9, background: 'rgba(82,196,26,0.08)', color: '#73d13d', borderColor: '#73d13d33' }}>自动</Tag>}
+                  </div>
+                ))}
+              </>
+            ) : <div className="c-empty">暂无待办任务</div>}
+          </div>
+
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
             ║   运营工具：智能派工 + AI 排程建议           ║
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -958,6 +1070,29 @@ const IntelligenceCenter: React.FC = () => {
         <div className="cockpit-grid-2">
           <SmartAssignmentPanel />
           <SchedulingSuggestionPanel />
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   扩展面板：各维度深度分析工具               ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>🔬 深度分析工具</span>
+          <span style={{ fontSize: 11, color: '#7aaec8' }}>工序节拍 · 成本追踪 · 工人画像 · 供应商评分 · 报价建议 · 缺陷追溯 · 财务审计 · 智能推送 · 学习报告</span>
+        </div>
+        <div className="cockpit-grid-3">
+          <RhythmDnaPanel />
+          <LiveCostTrackerPanel />
+          <WorkerProfilePanel />
+        </div>
+        <div className="cockpit-grid-3">
+          <StyleQuoteSuggestionPanel />
+          <SupplierScorecardPanel />
+          <DefectTracePanel />
+        </div>
+        <div className="cockpit-grid-3">
+          <FinanceAuditPanel />
+          <MindPushPanel />
+          <LearningReportPanel />
         </div>
 
 
@@ -1016,6 +1151,11 @@ const IntelligenceCenter: React.FC = () => {
                   <div style={{ fontSize: 11, color: '#c4b5fd', marginTop: 5,
                     padding: '5px 8px', background: 'rgba(100,80,200,0.08)',
                     borderRadius: 4, border: '1px solid rgba(100,80,200,0.2)', lineHeight: 1.6 }}>
+                    {nlResult.intent === 'ai_direct' && (
+                      <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
+                        background: 'rgba(167,139,250,0.15)', padding: '1px 5px',
+                        borderRadius: 3 }}>🤖 AI直接回答</span>
+                    )}
                     {nlResult.answer}
                     {nlResult.confidence !== undefined && (
                       <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>

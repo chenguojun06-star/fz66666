@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -35,6 +37,7 @@ public class FinishedInventoryOrchestrator {
 
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final ProductionOrderService productionOrderService;
     private final StyleInfoService styleInfoService;
     private final StyleAttachmentService styleAttachmentService;
 
@@ -53,6 +56,9 @@ public class FinishedInventoryOrchestrator {
         String orderNo = (String) params.get("orderNo");
         String styleNo = (String) params.get("styleNo");
         String warehouseLocation = (String) params.get("warehouseLocation");
+        String keyword = params.get("keyword") == null ? null : String.valueOf(params.get("keyword")).trim();
+        String parentOrgUnitId = params.get("parentOrgUnitId") == null ? null : String.valueOf(params.get("parentOrgUnitId")).trim();
+        String factoryType = params.get("factoryType") == null ? null : String.valueOf(params.get("factoryType")).trim();
 
         // 查询SKU表（有库存的）
         Page<ProductSku> skuPage = new Page<>(page, pageSize);
@@ -173,6 +179,38 @@ public class FinishedInventoryOrchestrator {
             }
         }
 
+        Map<String, ProductionOrder> orderById = new HashMap<>();
+        Map<String, ProductionOrder> orderByNo = new HashMap<>();
+        Set<String> orderIds = new HashSet<>();
+        Set<String> orderNos = new HashSet<>();
+        warehousingMap.values().forEach(item -> {
+            if (item != null && StringUtils.hasText(item.getOrderId())) {
+                orderIds.add(item.getOrderId());
+            }
+            if (item != null && StringUtils.hasText(item.getOrderNo())) {
+                orderNos.add(item.getOrderNo());
+            }
+        });
+        styleInfoMap.values().forEach(item -> {
+            if (item != null && StringUtils.hasText(item.getOrderNo())) {
+                orderNos.add(item.getOrderNo());
+            }
+        });
+        if (!orderIds.isEmpty()) {
+            productionOrderService.listByIds(orderIds).forEach(order -> {
+                orderById.put(order.getId(), order);
+                if (StringUtils.hasText(order.getOrderNo())) {
+                    orderByNo.put(order.getOrderNo(), order);
+                }
+            });
+        }
+        if (!orderNos.isEmpty()) {
+            productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
+                    .in(ProductionOrder::getOrderNo, orderNos)
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0)))
+                    .forEach(order -> orderByNo.put(order.getOrderNo(), order));
+        }
+
         // 统计每个 styleId 的总入库数量
         Map<String, Integer> totalInboundQtyMap = new HashMap<>();
         if (!styleIds.isEmpty()) {
@@ -247,6 +285,21 @@ public class FinishedInventoryOrchestrator {
                 dto.setLastInboundBy(latestInboundBy);
             }
 
+            ProductionOrder relatedOrder = StringUtils.hasText(dto.getOrderId())
+                    ? orderById.get(dto.getOrderId())
+                    : orderByNo.get(dto.getOrderNo());
+            if (relatedOrder == null && StringUtils.hasText(dto.getOrderNo())) {
+                relatedOrder = orderByNo.get(dto.getOrderNo());
+            }
+            if (relatedOrder != null) {
+                dto.setFactoryName(relatedOrder.getFactoryName());
+                dto.setFactoryType(relatedOrder.getFactoryType());
+                dto.setOrgUnitId(relatedOrder.getOrgUnitId());
+                dto.setParentOrgUnitId(relatedOrder.getParentOrgUnitId());
+                dto.setParentOrgUnitName(relatedOrder.getParentOrgUnitName());
+                dto.setOrgPath(relatedOrder.getOrgPath());
+            }
+
             // 兜底：若最新记录缺少操作人/库位，回填“最新非空值”
             if (!StringUtils.hasText(dto.getLastInboundBy())) {
                 dto.setLastInboundBy(latestOperatorByStyleId.get(styleIdStr));
@@ -281,8 +334,30 @@ public class FinishedInventoryOrchestrator {
             if (StringUtils.hasText(orderNo) && (dto.getOrderNo() == null || !dto.getOrderNo().contains(orderNo))) {
                 match = false;
             }
+            if (StringUtils.hasText(parentOrgUnitId) && !parentOrgUnitId.equals(dto.getParentOrgUnitId())) {
+                match = false;
+            }
+            if (StringUtils.hasText(factoryType) && !factoryType.equalsIgnoreCase(dto.getFactoryType())) {
+                match = false;
+            }
             if (StringUtils.hasText(warehouseLocation) && (dto.getWarehouseLocation() == null || !dto.getWarehouseLocation().contains(warehouseLocation))) {
                 match = false;
+            }
+            if (StringUtils.hasText(keyword)) {
+                String factoryTypeLabel = "INTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "内部" : "EXTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "外部" : "";
+                String combined = String.join(" ",
+                        Optional.ofNullable(dto.getOrderNo()).orElse(""),
+                        Optional.ofNullable(dto.getStyleNo()).orElse(""),
+                        Optional.ofNullable(dto.getStyleName()).orElse(""),
+                        Optional.ofNullable(dto.getSku()).orElse(""),
+                        Optional.ofNullable(dto.getFactoryName()).orElse(""),
+                        Optional.ofNullable(dto.getParentOrgUnitName()).orElse(""),
+                        Optional.ofNullable(dto.getOrgPath()).orElse(""),
+                        factoryTypeLabel
+                ).toLowerCase(Locale.ROOT);
+                if (!combined.contains(keyword.toLowerCase(Locale.ROOT))) {
+                    match = false;
+                }
             }
 
             if (match) {
@@ -291,7 +366,7 @@ public class FinishedInventoryOrchestrator {
         }
 
         // 构建分页结果
-        Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, skuPageResult.getTotal());
+        Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, dtoList.size());
         resultPage.setRecords(dtoList);
         return resultPage;
     }

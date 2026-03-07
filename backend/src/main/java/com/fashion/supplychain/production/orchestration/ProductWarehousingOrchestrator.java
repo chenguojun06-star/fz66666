@@ -93,6 +93,11 @@ public class ProductWarehousingOrchestrator {
         IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);
         // 填充缺失的显示字段（兼容旧数据）
         if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
+            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(page.getRecords().stream()
+                    .map(ProductWarehousing::getOrderId)
+                    .filter(StringUtils::hasText)
+                    .collect(java.util.stream.Collectors.toSet())).stream()
+                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, order -> order, (a, b) -> a));
             // 收集所有需要查询的菲号ID和二维码
             List<String> bundleIds = new ArrayList<>();
             List<String> bundleQrCodes = new ArrayList<>();
@@ -141,6 +146,18 @@ public class ProductWarehousingOrchestrator {
 
             for (ProductWarehousing w : page.getRecords()) {
                 if (w == null) continue;
+
+                ProductionOrder order = orderMap.get(w.getOrderId());
+                if (order != null) {
+                    if (!StringUtils.hasText(w.getFactoryName())) {
+                        w.setFactoryName(order.getFactoryName());
+                    }
+                    w.setFactoryType(order.getFactoryType());
+                    w.setOrgUnitId(order.getOrgUnitId());
+                    w.setParentOrgUnitId(order.getParentOrgUnitId());
+                    w.setParentOrgUnitName(order.getParentOrgUnitName());
+                    w.setOrgPath(order.getOrgPath());
+                }
 
                 // 填充颜色和尺码
                 CuttingBundle bundle = null;

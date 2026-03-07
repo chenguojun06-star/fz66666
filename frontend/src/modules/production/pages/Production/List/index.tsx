@@ -31,6 +31,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import {
@@ -71,6 +72,7 @@ const ProductionList: React.FC = () => {
   const isMerchandiserWorkspace = workspaceRole === 'merchandiser';
   const navigate = useNavigate();
   const location = useLocation();
+  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -805,6 +807,30 @@ const ProductionList: React.FC = () => {
                       { label: '已逾期', value: 'delayed' },
                       { label: '已取消', value: 'cancelled' },
                     ]}
+                  />
+                  <Select
+                    value={queryParams.parentOrgUnitId || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, parentOrgUnitId: value || undefined, page: 1 })}
+                    placeholder="归属部门"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 130 }}
+                    options={departmentOptions}
+                  />
+                  <Select
+                    value={queryParams.factoryType || ''}
+                    onChange={(value) =>
+                      setQueryParams({
+                        ...queryParams,
+                        factoryType: (value || undefined) as ProductionQueryParams['factoryType'],
+                        page: 1,
+                      })
+                    }
+                    placeholder="内外标签"
+                    allowClear
+                    style={{ minWidth: 110 }}
+                    options={factoryTypeOptions}
                   />
                   <Select
                     value={queryParams.urgencyLevel || ''}

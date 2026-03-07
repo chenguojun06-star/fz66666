@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.StyleQuoteSuggestionResponse;
 import com.fashion.supplychain.intelligence.dto.StyleQuoteSuggestionResponse.HistoricalOrder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleQuotationService;
@@ -36,6 +37,9 @@ public class StyleQuoteSuggestionOrchestrator {
 
     @Autowired
     private StyleQuotationService styleQuotationService;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final BigDecimal DEFAULT_MARGIN = new BigDecimal("1.20"); // 20%利润
@@ -86,6 +90,9 @@ public class StyleQuoteSuggestionOrchestrator {
 
             // 4. 生成建议文案
             buildSuggestion(resp);
+
+            // 5. AI深度分析报价策略
+            enrichQuoteWithAi(resp, tenantId);
 
         } catch (Exception e) {
             log.error("[款式报价建议] styleNo={} 异常: {}", styleNo, e.getMessage(), e);
@@ -157,5 +164,36 @@ public class StyleQuoteSuggestionOrchestrator {
         }
 
         resp.setSuggestion(sb.toString());
+    }
+
+    /** AI对报价策略的深度解义 */
+    private void enrichQuoteWithAi(StyleQuoteSuggestionResponse resp, Long tenantId) {
+        if (!aiAdvisorService.isEnabled() || !aiAdvisorService.checkAndConsumeQuota(tenantId)) return;
+        try {
+            StringBuilder ctx = new StringBuilder();
+            ctx.append(String.format("款号：%s\n历史订单：%d单，共%d件\n",
+                    resp.getStyleNo(), resp.getHistoricalOrderCount(), resp.getHistoricalTotalQuantity()));
+            if (resp.getTotalCost() != null)
+                ctx.append("综合成本：¥").append(resp.getTotalCost().toPlainString()).append("\n");
+            if (resp.getSuggestedPrice() != null)
+                ctx.append("计算建议报价：¥").append(resp.getSuggestedPrice().toPlainString()).append("\n");
+            if (resp.getCurrentQuotation() != null)
+                ctx.append("历史均价：¥").append(resp.getCurrentQuotation().toPlainString()).append("\n");
+            if (!resp.getRecentOrders().isEmpty()) {
+                ctx.append("最近报价：");
+                resp.getRecentOrders().forEach(o -> {
+                    if (o.getUnitPrice() != null)
+                        ctx.append("¥").append(o.getUnitPrice().toPlainString()).append(" ");
+                });
+                ctx.append("\n");
+            }
+            String sys = "你是服装报价顾问，请根据成本与历史报价，给出报价建议与风险提示，不超过100字。";
+            String answer = aiAdvisorService.chat(sys, ctx.toString());
+            if (answer != null && !answer.isBlank()) {
+                resp.setAiAnalysis(answer);
+            }
+        } catch (Exception e) {
+            log.warn("[StyleQuote] AI分析失败: {}", e.getMessage());
+        }
     }
 }

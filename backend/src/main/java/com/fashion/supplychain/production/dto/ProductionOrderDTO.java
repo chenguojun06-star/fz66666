@@ -42,6 +42,16 @@ public class ProductionOrderDTO {
     private String factoryName;
 
     /**
+     * 组织路径
+     */
+    private String orgPath;
+
+    /**
+     * 工厂内外标签
+     */
+    private String factoryType;
+
+    /**
      * 订单数量
      */
     private Integer orderQuantity;

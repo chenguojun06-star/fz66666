@@ -83,6 +83,31 @@ public class ProductionOrder {
     private String factoryName;
 
     /**
+     * 生产组织节点ID快照
+     */
+    private String orgUnitId;
+
+    /**
+     * 归属部门节点ID快照
+     */
+    private String parentOrgUnitId;
+
+    /**
+     * 归属部门名称快照
+     */
+    private String parentOrgUnitName;
+
+    /**
+     * 组织路径快照
+     */
+    private String orgPath;
+
+    /**
+     * 工厂内外标签快照
+     */
+    private String factoryType;
+
+    /**
      * 加工厂联系人
      */
     private String factoryContactPerson;

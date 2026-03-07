@@ -136,6 +136,41 @@ page {
   white-space: nowrap;
 }
 
+.org-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.org-filter-pill {
+  min-width: 110px;
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.org-filter-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.org-filter-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.org-filter-clear {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+
 .grid-menu {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -1,0 +1,300 @@
+package com.fashion.supplychain.intelligence.orchestration;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.dto.AnomalyDetectionResponse;
+import com.fashion.supplychain.intelligence.dto.DeliveryRiskRequest;
+import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse;
+import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse;
+import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse.SignalItem;
+import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
+import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 统一信号采集编排器 — 感知即分析
+ *
+ * <p>职责：
+ * <ol>
+ *   <li>并发调用所有检测器（异常、交付风险、物料短缺）</li>
+ *   <li>统一计算优先级得分（critical=90, warning=65, info=40）</li>
+ *   <li>可选：调用 AI 为每条信号生成一段类人化分析</li>
+ *   <li>持久化到 t_intelligence_signal</li>
+ *   <li>返回 IntelligenceSignalResponse</li>
+ * </ol>
+ *
+ * <p>降级：上游任何检测器失败均跳过，不影响整体响应。
+ */
+@Service
+@Slf4j
+public class IntelligenceSignalOrchestrator {
+
+    // 优先级分值常量
+    private static final int PRIORITY_CRITICAL = 92;
+    private static final int PRIORITY_WARNING = 65;
+    private static final int PRIORITY_INFO = 40;
+
+    @Autowired
+    private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
+
+    @Autowired
+    private OrderDeliveryRiskOrchestrator orderDeliveryRiskOrchestrator;
+
+    @Autowired
+    private MaterialShortageOrchestrator materialShortageOrchestrator;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
+
+    @Autowired
+    private IntelligenceSignalMapper signalMapper;
+
+    // ──────────────────────────────────────────────────────────────
+    //  公开接口
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * 执行一次全域信号采集与分析，结果持久化后返回。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public IntelligenceSignalResponse collectAndAnalyze() {
+        Long tenantId = UserContext.tenantId();
+        IntelligenceSignalResponse response = new IntelligenceSignalResponse();
+        boolean aiEnabled = aiAdvisorService.isEnabled();
+        response.setAiAnalysisEnabled(aiEnabled);
+
+        List<SignalItem> allSignals = new ArrayList<>();
+
+        // ① 异常检测
+        allSignals.addAll(collectAnomalies(tenantId));
+
+        // ② 交付风险
+        allSignals.addAll(collectDeliveryRisks(tenantId));
+
+        // ③ 物料短缺
+        allSignals.addAll(collectMaterialShortages(tenantId));
+
+        // ④ AI 批量分析（优先分析 critical 的前5条）
+        if (aiEnabled && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
+            enrichWithAiAnalysis(allSignals, tenantId);
+        }
+
+        // ⑤ 批量持久化
+        persistSignals(allSignals, tenantId);
+
+        // ⑥ 统计汇总
+        AtomicInteger critical = new AtomicInteger(0);
+        AtomicInteger warning = new AtomicInteger(0);
+        AtomicInteger info = new AtomicInteger(0);
+        allSignals.forEach(s -> {
+            if ("critical".equals(s.getSignalLevel())) critical.incrementAndGet();
+            else if ("warning".equals(s.getSignalLevel())) warning.incrementAndGet();
+            else info.incrementAndGet();
+        });
+
+        response.setTotalSignals(allSignals.size());
+        response.setCriticalCount(critical.get());
+        response.setWarningCount(warning.get());
+        response.setInfoCount(info.get());
+        response.setSignals(allSignals);
+
+        log.info("[信号采集] tenantId={} 发现信号 {}条（critical={}, warning={}, info={}）",
+                tenantId, allSignals.size(), critical.get(), warning.get(), info.get());
+        return response;
+    }
+
+    /**
+     * 查询未解决的高优先级信号（priority >= threshold）。
+     */
+    public List<IntelligenceSignal> getOpenSignals(Long tenantId, int minPriority) {
+        return signalMapper.selectList(new QueryWrapper<IntelligenceSignal>()
+                .eq("tenant_id", tenantId)
+                .eq("status", "open")
+                .eq("delete_flag", 0)
+                .ge("priority_score", minPriority)
+                .orderByDesc("priority_score")
+                .last("LIMIT 50"));
+    }
+
+    /** 将信号标记为已处理 */
+    @Transactional(rollbackFor = Exception.class)
+    public void resolveSignal(Long signalId, Long tenantId) {
+        signalMapper.resolveSignal(signalId, tenantId);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  私有：各检测器采集
+    // ──────────────────────────────────────────────────────────────
+
+    private List<SignalItem> collectAnomalies(Long tenantId) {
+        List<SignalItem> items = new ArrayList<>();
+        try {
+            AnomalyDetectionResponse resp = anomalyDetectionOrchestrator.detect();
+            if (resp == null || resp.getAnomalies() == null) return items;
+            for (AnomalyDetectionResponse.AnomalyItem a : resp.getAnomalies()) {
+                SignalItem s = new SignalItem();
+                s.setSignalType("anomaly");
+                s.setSignalCode(a.getType());
+                s.setSignalLevel(toLevel(a.getSeverity()));
+                s.setSourceDomain("production");
+                s.setSignalTitle(buildAnomalyTitle(a));
+                s.setSignalDetail(a.getDescription());
+                s.setPriorityScore(calcPriority(s.getSignalLevel(), a.getDeviationRatio()));
+                s.setStatus("open");
+                items.add(s);
+            }
+        } catch (Exception e) {
+            log.warn("[信号采集] 异常检测器失败，已跳过: {}", e.getMessage());
+        }
+        return items;
+    }
+
+    private List<SignalItem> collectDeliveryRisks(Long tenantId) {
+        List<SignalItem> items = new ArrayList<>();
+        try {
+            DeliveryRiskRequest req = new DeliveryRiskRequest();
+            DeliveryRiskResponse resp = orderDeliveryRiskOrchestrator.assess(req);
+            if (resp == null || resp.getOrders() == null) return items;
+            for (DeliveryRiskResponse.DeliveryRiskItem r : resp.getOrders()) {
+                if (r.getRiskLevel() == null) continue;
+                SignalItem s = new SignalItem();
+                s.setSignalType("delivery_risk");
+                s.setSignalCode("order_delay_risk");
+                s.setSignalLevel(toLevel(r.getRiskLevel()));
+                s.setSourceDomain("production");
+                s.setSourceId(r.getOrderId());
+                s.setSignalTitle("订单 " + r.getOrderNo() + " 存在逾期风险");
+                s.setSignalDetail(r.getRiskDescription());
+                s.setPriorityScore(calcPriority(s.getSignalLevel(), 0));
+                s.setStatus("open");
+                items.add(s);
+            }
+        } catch (Exception e) {
+            log.warn("[信号采集] 交付风险检测器失败，已跳过: {}", e.getMessage());
+        }
+        return items;
+    }
+
+    private List<SignalItem> collectMaterialShortages(Long tenantId) {
+        List<SignalItem> items = new ArrayList<>();
+        try {
+            MaterialShortageResponse resp = materialShortageOrchestrator.predict();
+            if (resp == null || resp.getShortageItems() == null) return items;
+            for (MaterialShortageResponse.ShortageItem m : resp.getShortageItems()) {
+                boolean urgent = "high".equals(m.getRiskLevel()) || "critical".equals(m.getRiskLevel());
+                SignalItem s = new SignalItem();
+                s.setSignalType("material_shortage");
+                s.setSignalCode("stock_below_safety");
+                s.setSignalLevel(urgent ? "critical" : "warning");
+                s.setSourceDomain("warehouse");
+                s.setSignalTitle("面料 " + m.getMaterialName() + " 库存不足");
+                s.setSignalDetail("当前库存: " + m.getCurrentStock() + m.getUnit()
+                        + "，需求量: " + m.getDemandQuantity() + m.getUnit());
+                s.setPriorityScore(urgent ? PRIORITY_CRITICAL : PRIORITY_WARNING);
+                s.setStatus("open");
+                items.add(s);
+            }
+        } catch (Exception e) {
+            log.warn("[信号采集] 物料短缺检测器失败，已跳过: {}", e.getMessage());
+        }
+        return items;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  私有：AI 分析
+    // ──────────────────────────────────────────────────────────────
+
+    private void enrichWithAiAnalysis(List<SignalItem> signals, Long tenantId) {
+        // 只分析 critical 的前 5 条，节省 quota
+        signals.stream()
+                .filter(s -> "critical".equals(s.getSignalLevel()))
+                .limit(5)
+                .forEach(s -> {
+                    try {
+                        String prompt = "你是供应链智慧大脑，用2-3句话分析这个生产信号。"
+                                + "格式：①为什么 ②可能影响 ③首选建议。信号：" + s.getSignalTitle()
+                                + "。详情：" + s.getSignalDetail();
+                        String analysis = aiAdvisorService.chat(
+                                "你是一个专业的服装供应链分析师，给出简洁准确的信号分析。", prompt);
+                        if (analysis != null) s.setSignalAnalysis(analysis);
+                    } catch (Exception e) {
+                        log.debug("[信号采集] AI 分析单条信号失败: {}", e.getMessage());
+                    }
+                });
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  私有：持久化
+    // ──────────────────────────────────────────────────────────────
+
+    private void persistSignals(List<SignalItem> items, Long tenantId) {
+        for (SignalItem item : items) {
+            try {
+                IntelligenceSignal entity = new IntelligenceSignal();
+                entity.setTenantId(tenantId);
+                entity.setSignalType(item.getSignalType());
+                entity.setSignalCode(item.getSignalCode());
+                entity.setSignalLevel(item.getSignalLevel());
+                entity.setSourceDomain(item.getSourceDomain());
+                entity.setSourceId(item.getSourceId());
+                entity.setSignalTitle(item.getSignalTitle());
+                entity.setSignalDetail(item.getSignalDetail());
+                entity.setSignalAnalysis(item.getSignalAnalysis());
+                entity.setPriorityScore(item.getPriorityScore());
+                entity.setStatus("open");
+                entity.setCreateTime(LocalDateTime.now());
+                entity.setUpdateTime(LocalDateTime.now());
+                entity.setDeleteFlag(0);
+                signalMapper.insert(entity);
+                item.setId(entity.getId());
+            } catch (Exception e) {
+                log.warn("[信号采集] 信号持久化失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  私有：工具方法
+    // ──────────────────────────────────────────────────────────────
+
+    private String toLevel(String severity) {
+        if (severity == null) return "info";
+        return switch (severity.toLowerCase()) {
+            case "critical", "high", "urgent" -> "critical";
+            case "warning", "medium", "warn" -> "warning";
+            default -> "info";
+        };
+    }
+
+    private int calcPriority(String level, Object rawScore) {
+        int base = switch (level) {
+            case "critical" -> PRIORITY_CRITICAL;
+            case "warning" -> PRIORITY_WARNING;
+            default -> PRIORITY_INFO;
+        };
+        if (rawScore instanceof Number number) {
+            int score = number.intValue();
+            if (score > 0 && score <= 100) return Math.min(100, (base + score) / 2);
+        }
+        return base;
+    }
+
+    private String buildAnomalyTitle(AnomalyDetectionResponse.AnomalyItem a) {
+        return switch (a.getType()) {
+            case "output_spike" -> "工人 " + a.getTargetName() + " 今日产量异常偏高";
+            case "quality_spike" -> "工人 " + a.getTargetName() + " 今日质检失败率异常";
+            case "idle_worker" -> "工人 " + a.getTargetName() + " 连续多日无扫码";
+            case "night_scan" -> "检测到非工作时间扫码记录";
+            default -> a.getDescription();
+        };
+    }
+}

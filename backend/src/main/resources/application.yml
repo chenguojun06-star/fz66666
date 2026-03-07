@@ -246,3 +246,18 @@ ai:
     model: deepseek-chat
     max-tokens: 1024
     timeout-seconds: 30
+  gateway:
+    routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:direct}   # direct / failover / weighted
+    fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
+    litellm:
+      enabled: ${AI_LITELLM_ENABLED:false}
+      base-url: ${AI_LITELLM_BASE_URL:}
+      api-key: ${AI_LITELLM_API_KEY:}
+      default-model: ${AI_LITELLM_DEFAULT_MODEL:}
+      timeout-seconds: ${AI_LITELLM_TIMEOUT_SECONDS:30}
+  observability:
+    enabled: ${AI_OBSERVABILITY_ENABLED:false}
+    provider: ${AI_OBSERVABILITY_PROVIDER:none}               # openlit / langfuse / otel / none
+    endpoint: ${AI_OBSERVABILITY_ENDPOINT:}
+    capture-prompts: ${AI_OBSERVABILITY_CAPTURE_PROMPTS:false}
+    sample-rate: ${AI_OBSERVABILITY_SAMPLE_RATE:100}

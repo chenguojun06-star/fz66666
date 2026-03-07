@@ -4,6 +4,7 @@ import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
+  IntelligenceBrainSnapshotResponse, ActionCenterResponse,
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
@@ -11,24 +12,27 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
 
 export interface CockpitData {
-  pulse:      LivePulseResponse | null;
-  health:     HealthIndexResponse | null;
-  notify:     SmartNotificationResponse | null;
-  workers:    WorkerEfficiencyResponse | null;
-  heatmap:    DefectHeatmapResponse | null;
-  ranking:    FactoryLeaderboardResponse | null;
-  shortage:   MaterialShortageResult | null;
-  healing:    SelfHealingResponse | null;
-  bottleneck: FactoryBottleneckItem[] | null;
-  orders:     ProductionOrder[];
-  loading:    boolean;
-  ts:         number;
+  pulse:        LivePulseResponse | null;
+  health:       HealthIndexResponse | null;
+  notify:       SmartNotificationResponse | null;
+  workers:      WorkerEfficiencyResponse | null;
+  heatmap:      DefectHeatmapResponse | null;
+  ranking:      FactoryLeaderboardResponse | null;
+  shortage:     MaterialShortageResult | null;
+  healing:      SelfHealingResponse | null;
+  bottleneck:   FactoryBottleneckItem[] | null;
+  brain:        IntelligenceBrainSnapshotResponse | null;
+  actionCenter: ActionCenterResponse | null;
+  orders:       ProductionOrder[];
+  loading:      boolean;
+  ts:           number;
 }
 
 const INITIAL: CockpitData = {
   pulse: null, health: null, notify: null, workers: null,
   heatmap: null, ranking: null, shortage: null, healing: null,
-  bottleneck: null, orders: [], loading: true, ts: 0,
+  bottleneck: null, brain: null, actionCenter: null,
+  orders: [], loading: true, ts: 0,
 };
 
 export function useCockpit() {
@@ -37,7 +41,7 @@ export function useCockpit() {
 
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
@@ -45,6 +49,8 @@ export function useCockpit() {
         intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
         intelligenceApi.getFactoryBottleneck(),
         productionOrderApi.list({ pageSize: 50 } as any),
+        intelligenceApi.getBrainSnapshot(),
+        intelligenceApi.getActionCenter(),
       ]);
     const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
       r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
@@ -54,7 +60,7 @@ export function useCockpit() {
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
-      bottleneck: v(rBottleneck),
+      bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
       orders: orderResult.filter(o => o.status !== 'completed'), loading: false, ts: Date.now(),
     });
   }, []);

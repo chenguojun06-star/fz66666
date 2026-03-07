@@ -4,7 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
-import { Factory as FactoryType, FactoryQueryParams } from '@/types/system';
+import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit } from '@/types/system';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
@@ -20,6 +20,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { paths } from '@/routeConfig';
+import { organizationApi } from '@/services/system/organizationApi';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -60,6 +61,7 @@ const FactoryList: React.FC = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
+  const [departmentOptions, setDepartmentOptions] = useState<OrganizationUnit[]>([]);
 
   // 收款账户管理
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -147,9 +149,22 @@ const FactoryList: React.FC = () => {
     }
   };
 
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const result = await organizationApi.departments();
+      setDepartmentOptions(Array.isArray(result) ? result : []);
+    } catch (error) {
+      console.warn('[FactoryList] fetchDepartments failed', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchFactories();
   }, [queryParams]);
+
+  useEffect(() => {
+    void fetchDepartments();
+  }, [fetchDepartments]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -176,6 +191,8 @@ const FactoryList: React.FC = () => {
         address: '',
         status: 'active',
         supplierType: activeTab === 'ALL' ? 'MATERIAL' : activeTab,
+        factoryType: activeTab === 'OUTSOURCE' ? 'EXTERNAL' : 'INTERNAL',
+        parentOrgUnitId: undefined,
         businessLicense: undefined,
       });
       setLicenseFileList([]);
@@ -188,6 +205,8 @@ const FactoryList: React.FC = () => {
         address: factory?.address,
         status: factory?.status || 'inactive',
         supplierType: factory?.supplierType || 'MATERIAL',
+        factoryType: factory?.factoryType || 'INTERNAL',
+        parentOrgUnitId: factory?.parentOrgUnitId,
         businessLicense: (factory as any)?.businessLicense,
       });
       setLicenseFileList(buildImageFileList((factory as any)?.businessLicense));
@@ -397,6 +416,25 @@ const FactoryList: React.FC = () => {
       },
     },
     {
+      title: '归属架构',
+      dataIndex: 'orgPath',
+      key: 'orgPath',
+      width: 260,
+      ellipsis: true,
+      render: (_: string, record: FactoryType) => record.orgPath || record.parentOrgUnitName || '-',
+    },
+    {
+      title: '内外标签',
+      dataIndex: 'factoryType',
+      key: 'factoryType',
+      width: 110,
+      render: (v: string) => {
+        if (v === 'INTERNAL') return <Tag color="orange">内部</Tag>;
+        if (v === 'EXTERNAL') return <Tag color="purple">外部</Tag>;
+        return <Tag>未标记</Tag>;
+      },
+    },
+    {
       title: '类型',
       dataIndex: 'supplierType',
       key: 'supplierType',
@@ -545,10 +583,36 @@ const FactoryList: React.FC = () => {
                 ]}
                 onChange={(value) => setQueryParams((prev) => ({ ...prev, status: value, page: 1 }))}
               />
+              <Select
+                placeholder="内外标签"
+                style={{ width: 140 }}
+                allowClear
+                value={String((queryParams as any)?.factoryType || '') || undefined}
+                options={[
+                  { value: 'INTERNAL', label: '内部' },
+                  { value: 'EXTERNAL', label: '外部' },
+                ]}
+                onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: value, page: 1 }))}
+              />
+              <Select
+                placeholder="归属部门"
+                style={{ width: 220 }}
+                allowClear
+                value={String((queryParams as any)?.parentOrgUnitId || '') || undefined}
+                options={departmentOptions.map((item) => ({
+                  value: String(item.id || ''),
+                  label: item.pathNames || item.nodeName,
+                }))}
+                onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, page: 1 }))}
+              />
               <Button type="primary" onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}>
                 查询
               </Button>
-              <Button onClick={() => setQueryParams({ page: 1, pageSize: queryParams.pageSize })}>重置</Button>
+              <Button onClick={() => setQueryParams({
+                page: 1,
+                pageSize: queryParams.pageSize,
+                supplierType: activeTab === 'ALL' ? undefined : activeTab,
+              })}>重置</Button>
             </Space>
             <Button type="primary" onClick={() => openDialog('create')}>
               {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
@@ -605,6 +669,27 @@ const FactoryList: React.FC = () => {
               ]}
             />
           </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="factoryType" label="内外标签" rules={[{ required: true, message: '请选择内外标签' }]}>
+              <Select
+                options={[
+                  { value: 'INTERNAL', label: '内部工厂' },
+                  { value: 'EXTERNAL', label: '外部工厂' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="parentOrgUnitId" label="归属部门" rules={[{ required: true, message: '请选择归属部门' }]}>
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="请选择归属部门"
+                options={departmentOptions.map((item) => ({
+                  value: String(item.id || ''),
+                  label: item.pathNames || item.nodeName,
+                }))}
+              />
+            </Form.Item>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
               <Input placeholder="请输入供应商编码" />

@@ -50,6 +50,7 @@ public class FactoryBottleneckOrchestrator {
     public static class FactoryBottleneckItem {
         private String factoryName;
         private int orderCount;
+        private int stuckOrderCount;
         private String stuckStage;
         private int stuckPct;
         private List<WorstOrderItem> worstOrders;
@@ -164,7 +165,7 @@ public class FactoryBottleneckOrchestrator {
 
             // 取该工序中完成率 < 80% 的前3单（按完成率升序）
             final String finalStage = minStage;
-            List<WorstOrderItem> worstOrders = group.stream()
+            List<WorstOrderItem> allStuckOrders = group.stream()
                     .map(o -> {
                         String oid = String.valueOf(o.getId());
                         int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
@@ -180,12 +181,16 @@ public class FactoryBottleneckOrchestrator {
                     })
                     .filter(w -> w.getPct() < 80)
                     .sorted(Comparator.comparingInt(WorstOrderItem::getPct))
-                    .limit(3)
                     .collect(Collectors.toList());
+            // 实际卡点单数（完整数量，用于前端显示）
+            int stuckCount = allStuckOrders.size();
+            // 卡点最差的前3单（用于前端芯片展示）
+            List<WorstOrderItem> worstOrders = allStuckOrders.stream().limit(3).collect(Collectors.toList());
 
             FactoryBottleneckItem item = new FactoryBottleneckItem();
             item.setFactoryName(entry.getKey());
             item.setOrderCount(group.size());
+            item.setStuckOrderCount(stuckCount);
             item.setStuckStage(minStage);
             item.setStuckPct(minAvg);
             item.setWorstOrders(worstOrders);

@@ -75,6 +75,8 @@ export interface WorkerRecommendation {
 export interface SmartAssignmentResponse {
   stageName: string;
   recommendations: WorkerRecommendation[];
+  /** AI对本次派工的综合分析（需AI函数已启用） */
+  aiSuggestion?: string;
 }
 
 export interface StageLearningStat {
@@ -218,6 +220,8 @@ export interface NlQueryResponse {
   confidence: number;
   data: Record<string, unknown>;
   suggestions: string[];
+  /** DeepSeek直接回答的AI洞察（仅intent=ai_direct时有值） */
+  aiInsight?: string;
 }
 
 export interface MaterialShortageItem {
@@ -247,6 +251,7 @@ export interface FactoryBottleneckWorstOrder {
 export interface FactoryBottleneckItem {
   factoryName: string;
   orderCount: number;
+  stuckOrderCount: number;
   stuckStage: string;
   stuckPct: number;
   worstOrders: FactoryBottleneckWorstOrder[];
@@ -496,6 +501,8 @@ export interface StyleQuoteSuggestionResponse {
   suggestedPrice: number | null;
   recentOrders: HistoricalOrder[];
   suggestion: string;
+  /** AI深度分析报价策略（需AI函数已启用） */
+  aiAnalysis?: string;
 }
 
 export interface StyleIntelligenceStageStatus {
@@ -645,10 +652,130 @@ export interface FeedbackReasonRecord {
   createTime?: string;
 }
 
+export interface IntelligenceBrainSummary {
+  healthIndex: number;
+  healthGrade: string;
+  topRisk?: string;
+  highRiskOrders: number;
+  anomalyCount: number;
+  stagnantFactories: number;
+  activeFactories: number;
+  activeWorkers: number;
+  todayScanQty: number;
+  pendingNotifications: number;
+  suggestedActions: number;
+}
+
+export interface IntelligenceBrainLearning {
+  totalSamples: number;
+  stageCount: number;
+  feedbackCount: number;
+  accuracyRate: number;
+  lastLearnTime?: string;
+}
+
+export interface IntelligenceBrainModelGateway {
+  enabled: boolean;
+  provider: string;
+  baseUrl?: string | null;
+  routingStrategy: string;
+  activeModel: string;
+  fallbackEnabled: boolean;
+  status: string;
+}
+
+export interface IntelligenceBrainObservability {
+  enabled: boolean;
+  provider: string;
+  endpoint?: string | null;
+  capturePrompts: boolean;
+  sampleRate: number;
+  status: string;
+}
+
+export interface IntelligenceBrainSignal {
+  signalType: string;
+  level: 'high' | 'medium' | 'low' | string;
+  title: string;
+  summary: string;
+  source: string;
+  relatedOrderNo?: string;
+  ownerRole?: string;
+}
+
+export interface IntelligenceBrainAction {
+  actionType: string;
+  priority: 'high' | 'medium' | 'low' | string;
+  ownerRole: string;
+  title: string;
+  summary: string;
+  reason: string;
+  routePath: string;
+  autoExecutable: boolean;
+}
+
+/* ================================================================
+   行动中心
+================================================================ */
+export interface ActionCenterTaskSummary {
+  totalTasks: number;
+  highPriorityTasks: number;
+  productionTasks: number;
+  financeTasks: number;
+  factoryTasks: number;
+}
+
+export interface ActionCenterTask {
+  taskCode: string;
+  domain: string;
+  priority: string;
+  escalationLevel: string;
+  ownerRole: string;
+  title: string;
+  summary: string;
+  reason: string;
+  routePath: string;
+  relatedOrderNo: string;
+  dueHint: string;
+  autoExecutable: boolean;
+}
+
+export interface ActionCenterResponse {
+  summary: ActionCenterTaskSummary;
+  tasks: ActionCenterTask[];
+}
+
+export interface IntelligenceBrainSnapshotResponse {
+  tenantId?: number;
+  generatedAt: string;
+  featureFlags: Record<string, boolean>;
+  summary: IntelligenceBrainSummary;
+  learning: IntelligenceBrainLearning;
+  modelGateway: IntelligenceBrainModelGateway;
+  observability: IntelligenceBrainObservability;
+  signals: IntelligenceBrainSignal[];
+  actions: IntelligenceBrainAction[];
+}
+
 /* ================================================================
    intelligenceApi — 全部智能运营接口
 ================================================================ */
 export const intelligenceApi = {
+  /** AI 大脑总快照：统一感知、判断、行动、学习状态入口 */
+  getBrainSnapshot: () =>
+    api.get<{ code: number; data: IntelligenceBrainSnapshotResponse }>('/intelligence/brain/snapshot'),
+
+  /** 行动中心：多域风险转可执行任务 */
+  getActionCenter: () =>
+    api.get<{ code: number; data: ActionCenterResponse }>('/intelligence/action-center'),
+
+  /** 服务端租户级智能开关，优先级应高于前端 localStorage */
+  getTenantSmartFeatureFlags: () =>
+    api.get<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature/list'),
+
+  saveTenantSmartFeatureFlags: (features: Record<string, boolean>) =>
+    api.post<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature/save', { features }),
+
   precheckScan: (payload: {
     orderId?: string;
     orderNo?: string;

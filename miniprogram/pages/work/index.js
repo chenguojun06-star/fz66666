@@ -27,7 +27,13 @@ Page({
       orderNo: '',
       styleNo: '',
       factoryName: '',
+      parentOrgUnitId: '',
+      factoryType: '',
     },
+    departmentOptions: [{ label: '全部部门', value: '' }],
+    factoryTypeOptions: [{ label: '全部标签', value: '' }, { label: '内部工厂', value: 'INTERNAL' }, { label: '外部工厂', value: 'EXTERNAL' }],
+    selectedDepartmentIndex: 0,
+    selectedFactoryTypeIndex: 0,
     orderStats: {
       orderCount: 0,
       totalQuantity: 0,
@@ -70,6 +76,7 @@ Page({
     }
     // 工厂账号隐藏仓库卡片
     this.setData({ isFactory: !!getCurrentFactoryId() });
+    this.loadOrganizationFilterOptions();
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {
@@ -191,6 +198,51 @@ Page({
     this.setData({ 'filters.factoryName': (e && e.detail && e.detail.value) || '' });
   },
 
+  loadOrganizationFilterOptions() {
+    api.system.listOrganizationDepartments()
+      .then((list) => {
+        const records = Array.isArray(list) ? list : [];
+        this.setData({
+          departmentOptions: [{ label: '全部部门', value: '' }].concat(
+            records
+              .filter(item => item && item.id)
+              .map(item => ({ label: item.nodeName || '未命名部门', value: item.id }))
+          ),
+        });
+      })
+      .catch(() => {});
+  },
+
+  onDepartmentFilterChange(e) {
+    const index = Number(e && e.detail ? e.detail.value : 0) || 0;
+    const option = this.data.departmentOptions[index] || { value: '' };
+    this.setData({
+      selectedDepartmentIndex: index,
+      'filters.parentOrgUnitId': option.value || '',
+    }, () => {
+      const app = getApp();
+      if (app && typeof app.resetPagedList === 'function') {
+        app.resetPagedList(this, 'orders');
+      }
+      this.loadOrders(true);
+    });
+  },
+
+  onFactoryTypeFilterChange(e) {
+    const index = Number(e && e.detail ? e.detail.value : 0) || 0;
+    const option = this.data.factoryTypeOptions[index] || { value: '' };
+    this.setData({
+      selectedFactoryTypeIndex: index,
+      'filters.factoryType': option.value || '',
+    }, () => {
+      const app = getApp();
+      if (app && typeof app.resetPagedList === 'function') {
+        app.resetPagedList(this, 'orders');
+      }
+      this.loadOrders(true);
+    });
+  },
+
   // ==================== 批量进度（委托 BatchProgressHandler） ====================
   toggleBatchProgress() { BatchProgressHandler.toggleBatchProgress(this); },
   onBatchSelectChange(e) { BatchProgressHandler.onBatchSelectChange(this, e); },
@@ -207,7 +259,11 @@ Page({
           orderNo: '',
           styleNo: '',
           factoryName: '',
+          parentOrgUnitId: '',
+          factoryType: '',
         },
+        selectedDepartmentIndex: 0,
+        selectedFactoryTypeIndex: 0,
       },
       () => {
         const app = getApp();
@@ -262,6 +318,8 @@ Page({
           orderNo: normalizeText(f.orderNo),
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
+          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || undefined,
+          factoryType: String(f.factoryType || '').trim() || undefined,
         };
 
         // 根据标签页添加当前工序节点过滤
@@ -318,6 +376,8 @@ Page({
           orderNo: normalizeText(f.orderNo),
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
+          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || undefined,
+          factoryType: String(f.factoryType || '').trim() || undefined,
         };
         return await api.production.listOrders(params);
       } catch (error) {
@@ -385,9 +445,9 @@ Page({
       const ordersRes = await api.production.listOrders({
         page: 1,
         pageSize: 50,
-        orderNo: keyword,
-        styleNo: keyword,
-        factoryName: keyword,
+        keyword,
+        parentOrgUnitId: String(this.data.filters.parentOrgUnitId || '').trim() || undefined,
+        factoryType: String(this.data.filters.factoryType || '').trim() || undefined,
       }).catch(() => ({ records: [] }));
 
       const results = (ordersRes.records || []).map(item => {

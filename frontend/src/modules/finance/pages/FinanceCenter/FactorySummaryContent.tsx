@@ -26,6 +26,8 @@ interface FactorySummaryRow {
   factoryName: string;
   /** 工厂类型: INTERNAL=本厂内部(工资结算), EXTERNAL=外部工厂(订单结算) */
   factoryType?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   orderCount: number;
   totalOrderQuantity: number;
   totalWarehousedQuantity: number;
@@ -241,18 +243,26 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       title: '工厂名称',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 210,
+      width: 260,
       render: (text: string, record: FactorySummaryRow) => (
         <FactoryAuditPopover record={record} auditedOrderNos={auditedOrderNos}>
-          <Space>
-            <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
-            <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
-            {record.factoryType === 'INTERNAL' && (
-              <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-                <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
-              </Tooltip>
-            )}
-          </Space>
+          <div style={{ lineHeight: 1.35 }}>
+            <Space>
+              <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
+              <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
+              {record.factoryType === 'INTERNAL' && (
+                <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
+                  <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
+                </Tooltip>
+              )}
+              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 11 }}>外部</Tag>}
+            </Space>
+            {record.orgPath || record.parentOrgUnitName ? (
+              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12, marginTop: 4 }}>
+                {record.orgPath || record.parentOrgUnitName}
+              </div>
+            ) : null}
+          </div>
         </FactoryAuditPopover>
       ),
     },

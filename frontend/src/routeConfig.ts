@@ -72,6 +72,7 @@ export const paths = {
   user: '/system/user',
   userApproval: '/system/user-approval',
   role: '/system/role',
+  organization: '/system/organization',
   factory: '/system/factory',
   factoryWorkers: '/system/factory-workers',
   loginLog: '/system/login-log',
@@ -122,6 +123,7 @@ export const permissionCodes = {
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
+  organization: 'MENU_FACTORY',
   factory: 'MENU_FACTORY',
   factoryWorkers: 'MENU_FACTORY', // 复用供应商管理权限，无需新增 DB 迁移
   loginLog: 'MENU_LOGIN_LOG',
@@ -236,6 +238,7 @@ export const menuConfig: MenuSection[] = [
       { label: '个人中心', path: paths.profile, icon: React.createElement(SettingOutlined) },
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
+      { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },

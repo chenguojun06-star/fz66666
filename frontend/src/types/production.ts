@@ -14,6 +14,11 @@ export interface ProductionOrder extends Record<string, unknown> {
   size?: string;
   factoryId: string;
   factoryName: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   factoryContactPerson?: string; // 工厂联系人
   factoryContactPhone?: string; // 工厂联系电话
   merchandiser?: string; // 跟单员（选填，可选择系统用户）
@@ -261,6 +266,12 @@ export interface ProductWarehousing extends Record<string, unknown> {
   warehousingNo: string;
   orderId: string;
   orderNo: string;
+  factoryName?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   styleId: string;
   styleNo: string;
   styleName: string;
@@ -314,6 +325,9 @@ export interface ProductionQueryParams {
   orderNo?: string;
   styleNo?: string;
   factoryName?: string;
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
   status?: string;
   /** 紧急程度筛选: urgent=急单, normal=普通 */
   urgencyLevel?: string;
@@ -357,6 +371,9 @@ export interface WarehousingQueryParams {
   orderNo?: string;
   styleNo?: string;
   warehouse?: string;
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
   page: number;
   pageSize: number;
 }

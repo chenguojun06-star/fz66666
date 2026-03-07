@@ -11,8 +11,10 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.OrderTransferMapper;
 import com.fashion.supplychain.production.service.OrderTransferService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,9 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
 
     @Autowired
     private FactoryService factoryService;
+
+    @Autowired
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
     /** 备注时间戳格式 */
     private static final DateTimeFormatter REMARK_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -296,6 +301,12 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
                     order.setFactoryName(factory.getFactoryName());
                     order.setFactoryContactPerson(factory.getContactPerson());
                     order.setFactoryContactPhone(factory.getContactPhone());
+                    FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.getFactorySnapshot(factory);
+                    order.setOrgUnitId(snapshot.getOrgUnitId());
+                    order.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+                    order.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+                    order.setOrgPath(snapshot.getOrgPath());
+                    order.setFactoryType(snapshot.getFactoryType());
                     productionOrderService.updateById(order);
                     log.info("[转单生效] 工厂更新: orderId={}, factoryId={}, factoryName={}",
                             order.getId(), factory.getId(), factory.getFactoryName());

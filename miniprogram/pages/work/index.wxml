@@ -66,6 +66,22 @@
       <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">入库</view>
     </view>
 
+    <view class="org-filter-row">
+      <picker mode="selector" range="{{departmentOptions}}" range-key="label" value="{{selectedDepartmentIndex}}" bindchange="onDepartmentFilterChange">
+        <view class="org-filter-pill">
+          <text class="org-filter-label">部门</text>
+          <text class="org-filter-value">{{departmentOptions[selectedDepartmentIndex].label}}</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{selectedFactoryTypeIndex}}" bindchange="onFactoryTypeFilterChange">
+        <view class="org-filter-pill">
+          <text class="org-filter-label">标签</text>
+          <text class="org-filter-value">{{factoryTypeOptions[selectedFactoryTypeIndex].label}}</text>
+        </view>
+      </picker>
+      <view class="org-filter-clear" bindtap="clearOrderFilters">重置</view>
+    </view>
+
     <!-- 订单列表 -->
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
@@ -97,6 +113,13 @@
                 <text class="meta-sep">｜</text>
                 <text class="meta-label">工厂</text>
                 <text class="meta-value">{{item.factoryName || '-'}}</text>
+              </view>
+              <view wx:if="{{item.orgDisplay || item.factoryTypeText}}" class="item-meta">
+                <text class="meta-label">组织</text>
+                <text class="meta-value">{{item.orgDisplay || '-'}}</text>
+                <text wx:if="{{item.factoryTypeText}}" class="meta-sep">｜</text>
+                <text wx:if="{{item.factoryTypeText}}" class="meta-label">标签</text>
+                <text wx:if="{{item.factoryTypeText}}" class="meta-value">{{item.factoryTypeText}}</text>
               </view>
               <view class="item-qty-row">
                 <text class="meta-label">数量</text>

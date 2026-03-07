@@ -1,15 +1,20 @@
 import api from '../../utils/api';
 
 export interface Factory extends Record<string, unknown> {
-  id: number;
+  id: string;
   factoryCode: string;
   factoryName: string;
   contactPerson?: string;
   contactPhone?: string;
   address?: string;
-  status: number;
+  status: 'active' | 'inactive';
   businessLicense?: string;
   tenantId: number;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
+  orgUnitId?: string;
+  parentOrgUnitId?: string;
+  parentOrgUnitName?: string;
+  orgPath?: string;
   createTime: string;
   updateTime: string;
 }
@@ -19,7 +24,9 @@ export interface FactoryListParams {
   pageSize?: number;
   factoryName?: string;
   factoryCode?: string;
-  status?: number;
+  status?: string;
+  factoryType?: string;
+  parentOrgUnitId?: string;
 }
 
 export interface FactoryListResponse {
@@ -39,7 +46,7 @@ export const factoryApi = {
   /**
    * 获取单个工厂/供应商详情
    */
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<{ code: number; data: Factory }>(`/system/factory/${id}`),
 
   /**
@@ -51,13 +58,13 @@ export const factoryApi = {
   /**
    * 更新工厂/供应商
    */
-  update: (id: number, data: Partial<Factory>) =>
-    api.put<{ code: number; message: string; data: Factory }>(`/system/factory/${id}`, data),
+  update: (_id: string, data: Partial<Factory>) =>
+    api.put<{ code: number; message: string; data: Factory }>(`/system/factory`, data),
 
   /**
    * 删除工厂/供应商
    */
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<{ code: number; message: string }>(`/system/factory/${id}`),
 };
 

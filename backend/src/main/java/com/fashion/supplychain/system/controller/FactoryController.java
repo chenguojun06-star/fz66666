@@ -23,8 +23,10 @@ public class FactoryController {
             @RequestParam(required = false) String factoryCode,
             @RequestParam(required = false) String factoryName,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String supplierType) {
-        IPage<Factory> result = factoryOrchestrator.list(page, pageSize, factoryCode, factoryName, status, supplierType);
+            @RequestParam(required = false) String supplierType,
+            @RequestParam(required = false) String factoryType,
+            @RequestParam(required = false) String parentOrgUnitId) {
+        IPage<Factory> result = factoryOrchestrator.list(page, pageSize, factoryCode, factoryName, status, supplierType, factoryType, parentOrgUnitId);
         return Result.success(result);
     }
 

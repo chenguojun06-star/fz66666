@@ -11,6 +11,8 @@ import lombok.Data;
 public class SmartAssignmentResponse {
     private String stageName;
     private List<WorkerRecommendation> recommendations = new ArrayList<>();
+    /** AI对本次派工结果的综合分析（需AI服务已启用） */
+    private String aiSuggestion;
 
     @Data
     public static class WorkerRecommendation {

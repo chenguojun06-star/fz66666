@@ -4,6 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.util.ProductionOrderUtils;
+import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
+import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +31,19 @@ public class ProductionOrderCommandService {
 
     private final ProductionOrderService productionOrderService;
     private final StyleInfoService styleInfoService;
+    private final FactoryService factoryService;
+    private final OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
     @Autowired
     public ProductionOrderCommandService(
             ProductionOrderService productionOrderService,
-            StyleInfoService styleInfoService) {
+            StyleInfoService styleInfoService,
+            FactoryService factoryService,
+            OrganizationUnitBindingHelper organizationUnitBindingHelper) {
         this.productionOrderService = productionOrderService;
         this.styleInfoService = styleInfoService;
+        this.factoryService = factoryService;
+        this.organizationUnitBindingHelper = organizationUnitBindingHelper;
     }
 
     /**
@@ -64,6 +74,8 @@ public class ProductionOrderCommandService {
                 throw new IllegalStateException("请填写操作备注");
             }
         }
+
+        applyFactorySnapshot(productionOrder);
 
         // 设置基础字段
         LocalDateTime now = LocalDateTime.now();
@@ -211,5 +223,35 @@ public class ProductionOrderCommandService {
         }
 
         return prefix + String.format("%04d", seq);
+    }
+
+    private void applyFactorySnapshot(ProductionOrder productionOrder) {
+        if (!StringUtils.hasText(productionOrder.getFactoryId())) {
+            productionOrder.setOrgUnitId(null);
+            productionOrder.setParentOrgUnitId(null);
+            productionOrder.setParentOrgUnitName(null);
+            productionOrder.setOrgPath(null);
+            productionOrder.setFactoryType(null);
+            return;
+        }
+        Factory factory = factoryService.getById(productionOrder.getFactoryId().trim());
+        if (factory == null || factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("所选工厂不存在");
+        }
+        if (!StringUtils.hasText(productionOrder.getFactoryName())) {
+            productionOrder.setFactoryName(factory.getFactoryName());
+        }
+        if (!StringUtils.hasText(productionOrder.getFactoryContactPerson())) {
+            productionOrder.setFactoryContactPerson(factory.getContactPerson());
+        }
+        if (!StringUtils.hasText(productionOrder.getFactoryContactPhone())) {
+            productionOrder.setFactoryContactPhone(factory.getContactPhone());
+        }
+        FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.getFactorySnapshot(factory);
+        productionOrder.setOrgUnitId(snapshot.getOrgUnitId());
+        productionOrder.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+        productionOrder.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+        productionOrder.setOrgPath(snapshot.getOrgPath());
+        productionOrder.setFactoryType(snapshot.getFactoryType());
     }
 }

@@ -30,6 +30,8 @@ public class ProductionOrderDtoConverter {
         dto.setStyleNo(entity.getStyleNo());
         dto.setStyleName(entity.getStyleName());
         dto.setFactoryName(entity.getFactoryName());
+        dto.setOrgPath(entity.getOrgPath());
+        dto.setFactoryType(entity.getFactoryType());
         dto.setOrderQuantity(entity.getOrderQuantity());
         dto.setCompletedQuantity(entity.getCompletedQuantity());
         dto.setProductionProgress(entity.getProductionProgress());

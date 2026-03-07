@@ -377,7 +377,7 @@ export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item 
         <span className="c-order-factory">{item.factoryName}</span>
         <div className="c-order-center">
           <span className="c-order-no" style={{ color: c }}>
-            卡在 {item.stuckStage}&nbsp;·&nbsp;{item.orderCount} 单
+            卡在 {item.stuckStage}&nbsp;·&nbsp;{item.stuckOrderCount ?? item.worstOrders.length} 单
           </span>
           <div className="c-order-bar-wrap">
             <div className="c-order-bar" style={{ width: `${item.stuckPct}%`, background: c }} />

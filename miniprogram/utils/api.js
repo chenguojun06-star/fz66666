@@ -255,6 +255,9 @@ const system = {
   getOnlineCount() {
     return ok('/api/system/user/online-count', 'GET', {});
   },
+  listOrganizationDepartments() {
+    return ok('/api/system/organization/departments', 'GET', {});
+  },
   changePassword(oldPassword, newPassword) {
     return ok('/api/system/user/me/change-password', 'POST', { oldPassword, newPassword });
   },

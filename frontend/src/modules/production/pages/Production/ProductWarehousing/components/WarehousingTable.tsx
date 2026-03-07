@@ -127,11 +127,20 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         }
 
         const inner = (
-          <span style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
-            {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{plateTag.text}</Tag>}
-            {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{urgencyTag.text}</Tag>}
-          </span>
+          <div style={{ fontSize: 12 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
+              {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{plateTag.text}</Tag>}
+              {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{urgencyTag.text}</Tag>}
+              {(record as any).factoryType === 'INTERNAL' ? <Tag color="orange" style={{ marginInlineEnd: 0, fontSize: 11 }}>内部</Tag> : null}
+              {(record as any).factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ marginInlineEnd: 0, fontSize: 11 }}>外部</Tag> : null}
+            </div>
+            {(record as any).orgPath || (record as any).parentOrgUnitName ? (
+              <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 2 }}>
+                {(record as any).orgPath || (record as any).parentOrgUnitName}
+              </div>
+            ) : null}
+          </div>
         );
 
         return tooltipContent

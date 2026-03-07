@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.LoginLogService;
 import java.time.LocalDateTime;
@@ -24,13 +26,19 @@ public class FactoryOrchestrator {
     @Autowired
     private LoginLogService loginLogService;
 
-    public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status, String supplierType) {
+    @Autowired
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
+
+    public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status,
+            String supplierType, String factoryType, String parentOrgUnitId) {
         int p = parsePositiveIntOrDefault(page, 1, "page");
         int ps = parsePositiveIntOrDefault(pageSize, 10, "pageSize");
         String code = TextUtils.safeText(factoryCode);
         String name = TextUtils.safeText(factoryName);
         String st = TextUtils.safeText(status);
         String sType = TextUtils.safeText(supplierType);
+        String fType = TextUtils.safeText(factoryType);
+        String parentId = TextUtils.safeText(parentOrgUnitId);
 
         Page<Factory> pageInfo = new Page<>(p, ps);
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
@@ -39,8 +47,14 @@ public class FactoryOrchestrator {
                 .like(StringUtils.hasText(name), Factory::getFactoryName, name)
                 .eq(StringUtils.hasText(st), Factory::getStatus, st)
                 .eq(StringUtils.hasText(sType), Factory::getSupplierType, sType)
+                .eq(StringUtils.hasText(fType), Factory::getFactoryType, fType)
+                .eq(StringUtils.hasText(parentId), Factory::getParentOrgUnitId, parentId)
                 .orderByDesc(Factory::getCreateTime);
-        return factoryService.page(pageInfo, wrapper);
+        IPage<Factory> result = factoryService.page(pageInfo, wrapper);
+        if (result != null && result.getRecords() != null) {
+            result.getRecords().forEach(factory -> applySnapshot(factory, organizationUnitBindingHelper.getFactorySnapshot(factory)));
+        }
+        return result;
     }
 
     public Factory getById(String id) {
@@ -51,6 +65,7 @@ public class FactoryOrchestrator {
         if (factory == null || (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1)) {
             throw new NoSuchElementException("供应商不存在");
         }
+        applySnapshot(factory, organizationUnitBindingHelper.getFactorySnapshot(factory));
         return factory;
     }
 
@@ -67,6 +82,9 @@ public class FactoryOrchestrator {
         if (!StringUtils.hasText(factory.getStatus())) {
             factory.setStatus("active");
         }
+        if (!StringUtils.hasText(factory.getFactoryType())) {
+            factory.setFactoryType("EXTERNAL");
+        }
         if (factory.getDeleteFlag() == null) {
             factory.setDeleteFlag(0);
         }
@@ -74,6 +92,8 @@ public class FactoryOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.syncFactoryNode(factory);
+        persistSnapshot(factory.getId(), snapshot);
         saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "CREATE", null);
         return true;
     }
@@ -90,9 +110,19 @@ public class FactoryOrchestrator {
             throw new IllegalArgumentException("操作原因不能为空");
         }
         factory.setUpdateTime(LocalDateTime.now());
+        if (!StringUtils.hasText(factory.getFactoryType())) {
+            factory.setFactoryType("EXTERNAL");
+        }
         boolean ok = factoryService.updateById(factory);
         if (!ok) {
             throw new IllegalStateException("更新失败");
+        }
+        Factory latest = factoryService.getById(factory.getId());
+        if (latest != null) {
+            latest.setParentOrgUnitId(factory.getParentOrgUnitId());
+            latest.setFactoryType(factory.getFactoryType());
+            FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.syncFactoryNode(latest);
+            persistSnapshot(latest.getId(), snapshot);
         }
         saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "UPDATE", remark);
         return true;
@@ -124,8 +154,35 @@ public class FactoryOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        organizationUnitBindingHelper.deleteFactoryNode(existing != null ? existing.getOrgUnitId() : null, id);
         saveOperationLog("factory", id, factoryName, "DELETE", normalized);
         return true;
+    }
+
+    private void persistSnapshot(String factoryId, FactoryOrganizationSnapshot snapshot) {
+        if (!StringUtils.hasText(factoryId) || snapshot == null) {
+            return;
+        }
+        Factory patch = new Factory();
+        patch.setId(factoryId);
+        patch.setOrgUnitId(snapshot.getOrgUnitId());
+        patch.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+        patch.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+        patch.setOrgPath(snapshot.getOrgPath());
+        patch.setFactoryType(snapshot.getFactoryType());
+        patch.setUpdateTime(LocalDateTime.now());
+        factoryService.updateById(patch);
+    }
+
+    private void applySnapshot(Factory factory, FactoryOrganizationSnapshot snapshot) {
+        if (factory == null || snapshot == null) {
+            return;
+        }
+        factory.setOrgUnitId(snapshot.getOrgUnitId());
+        factory.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+        factory.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+        factory.setOrgPath(snapshot.getOrgPath());
+        factory.setFactoryType(snapshot.getFactoryType());
     }
 
     // 使用TextUtils.safeText()替代

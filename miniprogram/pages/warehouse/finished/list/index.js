@@ -29,6 +29,12 @@ function sortSizes(sizes) {
 Page({
   data: {
     keyword: '',
+    departmentOptions: [{ label: '全部部门', value: '' }],
+    factoryTypeOptions: [{ label: '全部标签', value: '' }, { label: '内部工厂', value: 'INTERNAL' }, { label: '外部工厂', value: 'EXTERNAL' }],
+    selectedDepartmentIndex: 0,
+    selectedFactoryTypeIndex: 0,
+    parentOrgUnitId: '',
+    factoryType: '',
     list: [],
     page: 1,
     pageSize: 10,
@@ -54,6 +60,7 @@ Page({
   },
 
   onLoad() {
+    this.loadOrganizationFilterOptions();
     this.loadData(true);
   },
 
@@ -69,6 +76,39 @@ Page({
 
   onSearch() {
     this.loadData(true);
+  },
+
+  loadOrganizationFilterOptions() {
+    api.system.listOrganizationDepartments()
+      .then((list) => {
+        const records = Array.isArray(list) ? list : [];
+        this.setData({
+          departmentOptions: [{ label: '全部部门', value: '' }].concat(
+            records
+              .filter(item => item && item.id)
+              .map(item => ({ label: item.nodeName || '未命名部门', value: item.id }))
+          ),
+        });
+      })
+      .catch(() => {});
+  },
+
+  onDepartmentFilterChange(e) {
+    const index = Number(e && e.detail ? e.detail.value : 0) || 0;
+    const option = this.data.departmentOptions[index] || { value: '' };
+    this.setData({
+      selectedDepartmentIndex: index,
+      parentOrgUnitId: option.value || '',
+    }, () => this.loadData(true));
+  },
+
+  onFactoryTypeFilterChange(e) {
+    const index = Number(e && e.detail ? e.detail.value : 0) || 0;
+    const option = this.data.factoryTypeOptions[index] || { value: '' };
+    this.setData({
+      selectedFactoryTypeIndex: index,
+      factoryType: option.value || '',
+    }, () => this.loadData(true));
   },
 
   async loadData(reset) {
@@ -87,6 +127,12 @@ Page({
         params.keyword = kw;
         params.styleNo = kw;
       }
+      if (this.data.parentOrgUnitId) {
+        params.parentOrgUnitId = this.data.parentOrgUnitId;
+      }
+      if (this.data.factoryType) {
+        params.factoryType = this.data.factoryType;
+      }
 
       const data = await api.warehouse.listFinishedInventory(params);
       const records = (data && data.records) || [];
@@ -101,6 +147,9 @@ Page({
             styleNo: item.styleNo,
             styleName: item.styleName,
             imageUrl: item.styleImage ? getAuthedImageUrl(item.styleImage) : '',
+            factoryName: item.factoryName || '',
+            factoryType: item.factoryType || '',
+            orgPath: item.orgPath || item.parentOrgUnitName || '',
             colors: item.colors || [],
             sizes: sortSizes(item.sizes || []),
             availableQty: 0,

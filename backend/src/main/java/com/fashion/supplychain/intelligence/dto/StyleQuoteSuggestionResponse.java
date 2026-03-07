@@ -29,6 +29,8 @@ public class StyleQuoteSuggestionResponse {
     private List<HistoricalOrder> recentOrders;
     /** 建议文案 */
     private String suggestion;
+    /** AI深度分析报价策略（需AI服务已启用） */
+    private String aiAnalysis;
 
     @Data
     public static class HistoricalOrder {

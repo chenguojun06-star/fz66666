@@ -4,7 +4,10 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.FeedbackRequest;
 import com.fashion.supplychain.intelligence.dto.FeedbackResponse;
 import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
+import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +36,12 @@ public class FeedbackLearningOrchestrator {
 
     @Autowired
     private FeedbackReasonOrchestrator feedbackReasonOrchestrator;
+
+    @Autowired
+    private IntelligenceFeedbackRecordMapper feedbackRecordMapper;
+
+    @Autowired
+    private AiAdvisorService aiAdvisorService;
 
     public FeedbackResponse acceptFeedback(FeedbackRequest request) {
         FeedbackResponse response = new FeedbackResponse();
@@ -82,8 +91,47 @@ public class FeedbackLearningOrchestrator {
             log.debug("[反馈闭环] 未传 predictionId，僅返回偏差计算结果");
         }
 
+        writeFeedbackRecord(request, deviationMinutes);
         feedbackReasonOrchestrator.recordFeedbackReason(request);
         return response;
+    }
+
+    // 将反馈写入独立智能反馈记录表，供学习闭环使用
+    private void writeFeedbackRecord(FeedbackRequest request, long deviationMinutes) {
+        try {
+            UserContext ctx = UserContext.get();
+            IntelligenceFeedbackRecord record = new IntelligenceFeedbackRecord();
+            record.setTenantId(ctx != null ? ctx.getTenantId() : null);
+            record.setPredictionId(request.getPredictionId());
+            record.setSuggestionType(request.getSuggestionType());
+            record.setFeedbackResult(Boolean.TRUE.equals(request.getAcceptedSuggestion())
+                    ? "accepted" : "rejected");
+            record.setFeedbackReason(request.getReasonText());
+            record.setDeviationMinutes(Math.abs(deviationMinutes));
+            record.setCreateTime(LocalDateTime.now());
+            record.setUpdateTime(LocalDateTime.now());
+            feedbackRecordMapper.insert(record);
+            // 偏差超过30分钟时触发 AI 反思
+            if (aiAdvisorService.isEnabled() && Math.abs(deviationMinutes) > 30) {
+                try {
+                    String analysis = aiAdvisorService.chat(
+                            "你是供应链工序偏差分析专家，分析简洁、精准。",
+                            "工序「" + request.getStageName() + "」预测偏差 "
+                                + Math.abs(deviationMinutes) + " 分钟（"
+                                + (deviationMinutes > 0 ? "实际滞后" : "实际提前") + "）。"
+                                + "原因：" + request.getReasonText()
+                                + "。请用1句话给出最可能的根本原因和改进方向。");
+                    if (analysis != null) {
+                        record.setFeedbackAnalysis(analysis.trim());
+                        feedbackRecordMapper.updateById(record);
+                    }
+                } catch (Exception aiEx) {
+                    log.debug("[反馈闭环] AI分析失败（忽略）: {}", aiEx.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[反馈闭环] 写入feedback_record失败（不影响响应）: {}", e.getMessage());
+        }
     }
 
     // 私有：新建此前没有 predictionId 的反馈记录
