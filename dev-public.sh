@@ -144,8 +144,8 @@ if is_listening 5173; then
   echo "- 前端 5173 已在运行，跳过启动"
 else
   # ⚠️ 【禁止修改】--host 0.0.0.0 为内网访问固定配置
-  # 配合 vite.config.ts 中 hmr.host='192.168.1.19' 使用
-  # 访问地址: http://192.168.1.19:5173/
+  # 配合 vite.config.ts 中 hmr.host='192.168.2.215' 使用
+  # 访问地址: http://192.168.2.215:5173/
   (cd "$ROOT_DIR/frontend" && npm run dev -- --host 0.0.0.0 --port 5173) >"$FRONTEND_LOG" 2>&1 &
   FRONTEND_PID=$!
 fi

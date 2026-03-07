@@ -91,7 +91,7 @@ echo ""
 
 # 7. 系统健康状态
 echo "🏥 7. 系统服务状态"
-if curl -s http://localhost:8088/api/health > /dev/null 2>&1; then
+if curl -s http://localhost:8088/actuator/health > /dev/null 2>&1; then
   echo "✅ 后端服务: 运行正常 (http://localhost:8088)"
 else
   echo "❌ 后端服务: 未运行"

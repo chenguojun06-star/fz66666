@@ -180,7 +180,7 @@ wechat:
   mini-program:
     appid: ${WECHAT_MP_APPID:}
     secret: ${WECHAT_MP_SECRET:}
-    mock-enabled: true
+    mock-enabled: ${WECHAT_MINI_PROGRAM_MOCK_ENABLED:false}
 
 # 微信通知（Server酱，免费，直接推到个人微信"服务通知"）
 # 获取 SendKey：微信扫码登录 https://sct.ftqq.com/ → 复制 SendKey
