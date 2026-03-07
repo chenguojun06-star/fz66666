@@ -1119,9 +1119,9 @@ const IntelligenceCenter: React.FC = () => {
                             borderRadius: 3 }}>🤖 AI直接回答</span>
                         )}
                         {nlResult.answer}
-                        {nlResult.confidence !== undefined && (
+                        {nlResult.confidence !== undefined && nlResult.confidence > 0 && (
                           <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>
-                            置信度 {Math.round(nlResult.confidence * 100)}%
+                            置信度 {nlResult.confidence}%
                           </span>
                         )}
                       </div>
