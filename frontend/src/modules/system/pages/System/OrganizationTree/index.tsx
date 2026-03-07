@@ -4,12 +4,13 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import {
-  App, Avatar, Badge, Button, Card, Collapse, Empty, Form, Input,
-  InputNumber, List, Select, Space, Spin, Tag, Tooltip,
+  App, Avatar, Badge, Button, Card, Empty, Form, Input,
+  InputNumber, List, Select, Space, Tag, Tooltip,
 } from 'antd';
 import {
   ApartmentOutlined, BankOutlined, CloseOutlined, DeleteOutlined,
-  EditOutlined, PlusOutlined, TeamOutlined, UserAddOutlined, UserOutlined,
+  DownOutlined, EditOutlined, PlusOutlined, RightOutlined, TeamOutlined,
+  UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
 
@@ -188,7 +189,7 @@ const OrganizationTreePage: React.FC = () => {
   }, [modal, message]);
 
   const totalMembers = useMemo(() => {
-    return Object.values(membersMap).reduce((sum, list) => sum + list.length, 0);
+    return Object.values(membersMap).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
   }, [membersMap]);
 
   // 当前弹窗节点下的成员 id 集合（用于过滤已分配人员）
@@ -372,6 +373,10 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
   const children = node.children || [];
   const hasContent = members.length > 0 || children.length > 0;
 
+  // 用自定义 expanded state 替代 Collapse，避免 rc-collapse 对 label 调用
+  // nodeName.toLowerCase() 导致的 TypeError（Ant Design 6.x 已知问题）
+  const [expanded, setExpanded] = useState(depth < 2);
+
   const nodeIcon = isFactory
     ? <BankOutlined style={{ color: '#1677ff' }} />
     : <ApartmentOutlined style={{ color: '#722ed1' }} />;
@@ -386,98 +391,93 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
       ? <Tag color="cyan">外部</Tag>
       : null;
 
-  const header = (
-    <div className="org-node-header">
-      <div className="org-node-title">
-        {nodeIcon}
-        <span className="org-node-name">{node.nodeName}</span>
-        {nodeTag}
-        {ownerTag}
-        {members.length > 0 && (
-          <Badge count={members.length} style={{ backgroundColor: '#52c41a', marginLeft: 4 }} />
-        )}
-      </div>
-      <Space size={4} className="org-node-actions" onClick={(e) => e.stopPropagation()}>
-        {/* 所有节点都可以添加成员 */}
-        <Tooltip title="添加成员">
-          <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => onAddMember(node)} />
-        </Tooltip>
-        {/* 仅部门节点可以新增子部门 / 编辑 / 删除 */}
-        {!isFactory && (
-          <>
-            <Tooltip title="新增下级部门">
-              <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => onAdd(node)} />
-            </Tooltip>
-            <Tooltip title="编辑">
-              <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(node)} />
-            </Tooltip>
-            <Tooltip title="删除">
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => onDelete(node)} />
-            </Tooltip>
-          </>
-        )}
-      </Space>
-    </div>
-  );
-
-  if (!hasContent) {
-    return <div className="org-node-card org-node-leaf" style={{ marginLeft: depth > 0 ? 24 : 0 }}>{header}</div>;
-  }
-
   return (
     <div className="org-node-card" style={{ marginLeft: depth > 0 ? 24 : 0 }}>
-      <Collapse
-        ghost
-        defaultActiveKey={depth < 2 ? ['content'] : []}
-        items={[{
-          key: 'content',
-          label: header,
-          children: (
-            <div className="org-node-body">
-              {members.length > 0 && (
-                <div className="org-members-section">
-                  <div className="org-members-title">
-                    <TeamOutlined /> 成员（{members.length}人）
+      {/* 头部行：点击左侧区域折叠，右侧操作按钮独立处理事件 */}
+      <div className="org-node-header">
+        <div
+          className="org-node-title"
+          style={{ cursor: hasContent ? 'pointer' : 'default', flex: 1, userSelect: 'none' }}
+          onClick={() => hasContent && setExpanded((v) => !v)}
+        >
+          {hasContent && (
+            <span style={{ marginRight: 6, fontSize: 10, color: 'var(--neutral-text-secondary)', transition: 'transform .2s' }}>
+              {expanded ? <DownOutlined /> : <RightOutlined />}
+            </span>
+          )}
+          {nodeIcon}
+          <span className="org-node-name">{node.nodeName}</span>
+          {nodeTag}
+          {ownerTag}
+          {members.length > 0 && (
+            <Badge count={members.length} style={{ backgroundColor: '#52c41a', marginLeft: 4 }} />
+          )}
+        </div>
+        <Space size={4} className="org-node-actions">
+          <Tooltip title="添加成员">
+            <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => onAddMember(node)} />
+          </Tooltip>
+          {!isFactory && (
+            <>
+              <Tooltip title="新增下级部门">
+                <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => onAdd(node)} />
+              </Tooltip>
+              <Tooltip title="编辑">
+                <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(node)} />
+              </Tooltip>
+              <Tooltip title="删除">
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => onDelete(node)} />
+              </Tooltip>
+            </>
+          )}
+        </Space>
+      </div>
+
+      {/* 内容区：展开时显示 */}
+      {hasContent && expanded && (
+        <div className="org-node-body">
+          {members.length > 0 && (
+            <div className="org-members-section">
+              <div className="org-members-title">
+                <TeamOutlined /> 成员（{members.length}人）
+              </div>
+              <div className="org-members-grid">
+                {members.map((user) => (
+                  <div key={user.id || user.username} className="org-member-item">
+                    <Avatar size={28} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
+                    <div className="org-member-info">
+                      <span className="org-member-name">{user.name}</span>
+                      <span className="org-member-role">{user.roleName || '—'}</span>
+                    </div>
+                    <Tooltip title="移出">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CloseOutlined />}
+                        className="org-member-remove"
+                        onClick={() => onRemoveMember(String(user.id), user.name || user.username || '')}
+                      />
+                    </Tooltip>
                   </div>
-                  <div className="org-members-grid">
-                    {members.map((user) => (
-                      <div key={user.id || user.username} className="org-member-item">
-                        <Avatar size={28} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
-                        <div className="org-member-info">
-                          <span className="org-member-name">{user.name}</span>
-                          <span className="org-member-role">{user.roleName || '—'}</span>
-                        </div>
-                        <Tooltip title="移出">
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<CloseOutlined />}
-                            className="org-member-remove"
-                            onClick={() => onRemoveMember(String(user.id), user.name || user.username || '')}
-                          />
-                        </Tooltip>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {children.map((child) => (
-                <OrgNodeCard
-                  key={child.id || child.nodeName}
-                  node={child}
-                  depth={depth + 1}
-                  membersMap={membersMap}
-                  onAdd={onAdd}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onAddMember={onAddMember}
-                  onRemoveMember={onRemoveMember}
-                />
-              ))}
+                ))}
+              </div>
             </div>
-          ),
-        }]}
-      />
+          )}
+          {children.map((child) => (
+            <OrgNodeCard
+              key={child.id || child.nodeName}
+              node={child}
+              depth={depth + 1}
+              membersMap={membersMap}
+              onAdd={onAdd}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAddMember={onAddMember}
+              onRemoveMember={onRemoveMember}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

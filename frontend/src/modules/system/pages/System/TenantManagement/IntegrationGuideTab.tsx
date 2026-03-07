@@ -316,7 +316,7 @@ const IntegrationGuideTab: React.FC = () => {
         <Collapse accordion defaultActiveKey="order" items={[
           {
             key: 'order',
-            label: <span>📦 下单对接 — 3个端点</span>,
+            label: '📦 下单对接 — 3个端点',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -338,7 +338,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'quality',
-            label: <span>✅ 质检反馈 — 1个端点 + Webhook推送</span>,
+            label: '✅ 质检反馈 — 1个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -357,7 +357,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'logistics',
-            label: <span>🚚 物流对接 — 1个端点 + Webhook推送</span>,
+            label: '🚚 物流对接 — 1个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -376,7 +376,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'payment',
-            label: <span>💰 付款对接 — 2个端点 + Webhook推送</span>,
+            label: '💰 付款对接 — 2个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -396,7 +396,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'material',
-            label: <span>🧵 面辅料供应对接 — 2个主动端点 + 3个Webhook</span>,
+            label: '🧵 面辅料供应对接 — 2个主动端点 + 3个Webhook',
             children: (
               <div>
                 <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>主动调用端点</Title>
@@ -435,7 +435,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'pull',
-            label: <span>📥 数据拉取 — 从客户系统拉取纸样/制单</span>,
+            label: '📥 数据拉取 — 从客户系统拉取纸样/制单',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

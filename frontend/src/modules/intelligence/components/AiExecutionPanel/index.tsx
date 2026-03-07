@@ -233,7 +233,7 @@ export default function AiExecutionPanel() {
       title: '操作',
       key: 'action',
       width: 120,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size="small">
           <Button

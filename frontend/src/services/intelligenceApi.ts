@@ -1,5 +1,4 @@
-import { axiosInstance } from './core';
-import type { Result } from '@/types/result';
+import api, { type ApiResult } from '../utils/api';
 
 /**
  * 智能执行 API 服务层
@@ -29,11 +28,11 @@ import type { Result } from '@/types/result';
  * });
  */
 export async function executeCommand(command: any): Promise<any> {
-  const response = await axiosInstance.post<Result<any>>(
+  const response = await api.post<ApiResult<any>>(
     '/api/intelligence/commands/execute',
     command
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -52,11 +51,11 @@ export async function approveCommand(
   commandId: string,
   body?: { remark?: string }
 ): Promise<any> {
-  const response = await axiosInstance.post<Result<any>>(
+  const response = await api.post<ApiResult<any>>(
     `/api/intelligence/commands/${commandId}/approve`,
     body || {}
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -75,11 +74,11 @@ export async function rejectCommand(
   commandId: string,
   body: { reason?: string }
 ): Promise<any> {
-  const response = await axiosInstance.post<Result<any>>(
+  const response = await api.post<ApiResult<any>>(
     `/api/intelligence/commands/${commandId}/reject`,
     body
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -91,10 +90,10 @@ export async function rejectCommand(
  * const { pending, totalCount } = await intelligenceApi.getPendingCommands();
  */
 export async function getPendingCommands(): Promise<any> {
-  const response = await axiosInstance.get<Result<any>>(
+  const response = await api.get<ApiResult<any>>(
     '/api/intelligence/commands/pending'
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -121,11 +120,11 @@ export interface AuditLogQuery {
 }
 
 export async function queryAuditLogs(options: AuditLogQuery = {}): Promise<any> {
-  const response = await axiosInstance.get<Result<any>>(
+  const response = await api.get<ApiResult<any>>(
     '/api/intelligence/audit-logs',
     { params: options }
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -149,10 +148,10 @@ export interface ExecutionStats {
 }
 
 export async function getExecutionStats(): Promise<ExecutionStats> {
-  const response = await axiosInstance.get<Result<ExecutionStats>>(
+  const response = await api.get<ApiResult<ExecutionStats>>(
     '/api/intelligence/execution-stats'
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -165,10 +164,10 @@ export async function getExecutionStats(): Promise<ExecutionStats> {
  * const detail = await intelligenceApi.getCommandDetail('CMD-001');
  */
 export async function getCommandDetail(commandId: string): Promise<any> {
-  const response = await axiosInstance.get<Result<any>>(
+  const response = await api.get<ApiResult<any>>(
     `/api/intelligence/commands/${commandId}`
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -195,11 +194,11 @@ export async function submitFeedback(
   commandId: string,
   feedback: FeedbackData
 ): Promise<any> {
-  const response = await axiosInstance.post<Result<any>>(
+  const response = await api.post<ApiResult<any>>(
     `/api/intelligence/commands/${commandId}/feedback`,
     feedback
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -212,10 +211,10 @@ export async function submitFeedback(
  * const workflow = await intelligenceApi.queryWorkflowHistory('CMD-001');
  */
 export async function queryWorkflowHistory(commandId: string): Promise<any> {
-  const response = await axiosInstance.get<Result<any>>(
+  const response = await api.get<ApiResult<any>>(
     `/api/intelligence/commands/${commandId}/workflow`
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -237,10 +236,10 @@ export interface ExecutionConfig {
 }
 
 export async function getExecutionConfig(): Promise<ExecutionConfig> {
-  const response = await axiosInstance.get<Result<ExecutionConfig>>(
+  const response = await api.get<ApiResult<ExecutionConfig>>(
     '/api/intelligence/config'
   );
-  return response.data.data;
+  return response.data;
 }
 
 /**
@@ -258,11 +257,11 @@ export async function getExecutionConfig(): Promise<ExecutionConfig> {
 export async function updateExecutionConfig(
   config: Partial<ExecutionConfig>
 ): Promise<any> {
-  const response = await axiosInstance.put<Result<any>>(
+  const response = await api.put<ApiResult<any>>(
     '/api/intelligence/config',
     config
   );
-  return response.data.data;
+  return response.data;
 }
 
 // 导出所有方法
