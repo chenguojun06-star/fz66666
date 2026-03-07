@@ -263,7 +263,9 @@ async function receiveCuttingTask(ctx, detail, userInfo) {
 }
 
 /**
- * 一键导入裁剪数量（按计划数量填充）
+ * 一键导入裁剪数量（按计划数量填充，并前端预拆分为多行显示）
+ * 与PC端 splitQuantity 逻辑对齐，让用户看到实际会生成的菲号数量
+ * 例：100件 → [20,20,20,20,20] 显示5行，每行20件
  * @param {Object} ctx - Page 上下文
  * @returns {void}
  */
@@ -274,13 +276,38 @@ function onAutoImportCutting(ctx) {
     return;
   }
 
-  const updated = cuttingTasks.map(task => ({
-    ...task,
-    cuttingInput: task.plannedQuantity || 0,
-  }));
+  const PER_BUNDLE = 20; // 每菲件数
+  const updated = [];
+
+  for (const task of cuttingTasks) {
+    const plannedQty = Number(task.plannedQuantity || 0);
+
+    if (plannedQty <= 0) {
+      continue; // 跳过0数量
+    }
+
+    // ✅ 前端拆分显示（与PC端保持一致）
+    const chunks = _splitIntoChunks(plannedQty, PER_BUNDLE);
+    for (const qty of chunks) {
+      updated.push({
+        ...task,
+        plannedQuantity: qty,  // 单行菲号的计划数量
+        cuttingInput: qty,    // 填充为单行数量
+      });
+    }
+  }
+
+  if (updated.length === 0) {
+    toast.error('所有任务数量均为0');
+    return;
+  }
 
   ctx.setData({ 'scanConfirm.cuttingTasks': updated });
-  toast.success('已按计划数量填充');
+
+  // ℹ️ 向用户展示最终会生成多少条菲号
+  const bundleCount = updated.length;
+  const totalQty = updated.reduce((sum, t) => sum + (t.cuttingInput || 0), 0);
+  toast.success(`已按每菲20件拆分，共生成${bundleCount}条菲号（合计${totalQty}件）`);
 }
 
 /**
