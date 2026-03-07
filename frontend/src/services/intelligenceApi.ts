@@ -29,7 +29,7 @@ import api, { type ApiResult } from '../utils/api';
  */
 export async function executeCommand(command: any): Promise<any> {
   const response = await api.post<ApiResult<any>>(
-    '/api/intelligence/commands/execute',
+    '/intelligence/commands/execute',
     command
   );
   return response.data;
@@ -52,7 +52,7 @@ export async function approveCommand(
   body?: { remark?: string }
 ): Promise<any> {
   const response = await api.post<ApiResult<any>>(
-    `/api/intelligence/commands/${commandId}/approve`,
+    `/intelligence/commands/${commandId}/approve`,
     body || {}
   );
   return response.data;
@@ -75,7 +75,7 @@ export async function rejectCommand(
   body: { reason?: string }
 ): Promise<any> {
   const response = await api.post<ApiResult<any>>(
-    `/api/intelligence/commands/${commandId}/reject`,
+    `/intelligence/commands/${commandId}/reject`,
     body
   );
   return response.data;
@@ -91,7 +91,7 @@ export async function rejectCommand(
  */
 export async function getPendingCommands(): Promise<any> {
   const response = await api.get<ApiResult<any>>(
-    '/api/intelligence/commands/pending'
+    '/intelligence/commands/pending'
   );
   return response.data;
 }
@@ -121,7 +121,7 @@ export interface AuditLogQuery {
 
 export async function queryAuditLogs(options: AuditLogQuery = {}): Promise<any> {
   const response = await api.get<ApiResult<any>>(
-    '/api/intelligence/audit-logs',
+    '/intelligence/audit-logs',
     { params: options }
   );
   return response.data;
@@ -149,7 +149,7 @@ export interface ExecutionStats {
 
 export async function getExecutionStats(): Promise<ExecutionStats> {
   const response = await api.get<ApiResult<ExecutionStats>>(
-    '/api/intelligence/execution-stats'
+    '/intelligence/execution-stats'
   );
   return response.data;
 }
@@ -165,7 +165,7 @@ export async function getExecutionStats(): Promise<ExecutionStats> {
  */
 export async function getCommandDetail(commandId: string): Promise<any> {
   const response = await api.get<ApiResult<any>>(
-    `/api/intelligence/commands/${commandId}`
+    `/intelligence/commands/${commandId}`
   );
   return response.data;
 }
@@ -195,7 +195,7 @@ export async function submitFeedback(
   feedback: FeedbackData
 ): Promise<any> {
   const response = await api.post<ApiResult<any>>(
-    `/api/intelligence/commands/${commandId}/feedback`,
+    `/intelligence/commands/${commandId}/feedback`,
     feedback
   );
   return response.data;
@@ -212,7 +212,7 @@ export async function submitFeedback(
  */
 export async function queryWorkflowHistory(commandId: string): Promise<any> {
   const response = await api.get<ApiResult<any>>(
-    `/api/intelligence/commands/${commandId}/workflow`
+    `/intelligence/commands/${commandId}/workflow`
   );
   return response.data;
 }
@@ -237,7 +237,7 @@ export interface ExecutionConfig {
 
 export async function getExecutionConfig(): Promise<ExecutionConfig> {
   const response = await api.get<ApiResult<ExecutionConfig>>(
-    '/api/intelligence/config'
+    '/intelligence/config'
   );
   return response.data;
 }
@@ -258,7 +258,7 @@ export async function updateExecutionConfig(
   config: Partial<ExecutionConfig>
 ): Promise<any> {
   const response = await api.put<ApiResult<any>>(
-    '/api/intelligence/config',
+    '/intelligence/config',
     config
   );
   return response.data;
