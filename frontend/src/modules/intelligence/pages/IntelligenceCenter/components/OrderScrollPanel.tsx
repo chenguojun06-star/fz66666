@@ -176,6 +176,13 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           ))}
         </div>
       )}
+      {!intel.loading && intel.anomalies.length === 0 && (
+        <div style={{ marginBottom: 6, padding: '5px 8px',
+          background: 'rgba(57,255,20,0.03)', borderRadius: 5,
+          border: '1px solid rgba(57,255,20,0.10)', fontSize: 10, color: '#5a9a6a' }}>
+          ✅ 暂无异常行为
+        </div>
+      )}
 
       {/* 加载中占位符 */}
       {intel.loading && (

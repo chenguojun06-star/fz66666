@@ -58,6 +58,7 @@ import {
   type PayableItem,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import FinanceAuditPanel from '@/modules/intelligence/pages/IntelligenceCenter/FinanceAuditPanel';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import PaymentAuditPopover from '@/modules/finance/pages/FinanceCenter/PaymentAuditPopover';
@@ -627,6 +628,11 @@ const PaymentCenterPage: React.FC = () => {
             </Button>
           </div>
         </Card>
+
+        {/* 财务审核智能分析 */}
+        <div style={{ marginBottom: 16 }}>
+          <FinanceAuditPanel />
+        </div>
 
         {/* Tab 切换 */}
         <Card className="page-card">

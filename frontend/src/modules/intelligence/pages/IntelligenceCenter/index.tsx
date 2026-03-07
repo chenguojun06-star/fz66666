@@ -9,19 +9,8 @@ import {
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 import Layout from '@/components/Layout';
-import SmartAssignmentPanel from './SmartAssignmentPanel';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
-import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import LiveScanFeed from './LiveScanFeed';
-import RhythmDnaPanel from './RhythmDnaPanel';
-import WorkerProfilePanel from './WorkerProfilePanel';
-import LiveCostTrackerPanel from './LiveCostTrackerPanel';
-import StyleQuoteSuggestionPanel from './StyleQuoteSuggestionPanel';
-import SupplierScorecardPanel from './SupplierScorecardPanel';
-import LearningReportPanel from './LearningReportPanel';
-import DefectTracePanel from './DefectTracePanel';
-import FinanceAuditPanel from './FinanceAuditPanel';
-import MindPushPanel from './MindPushPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -1060,43 +1049,6 @@ const IntelligenceCenter: React.FC = () => {
 
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   运营工具：智能派工 + AI 排程建议           ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#ffd700', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>⚡ AI 运营工具</span>
-          <span style={{ fontSize: 11, color: '#7aaec8' }}>智能派工 · AI排程 — 日常高频使用</span>
-        </div>
-        <div className="cockpit-grid-2">
-          <SmartAssignmentPanel />
-          <SchedulingSuggestionPanel />
-        </div>
-
-        {/* ╔══════════════════════════════════════════════╗
-            ║   扩展面板：各维度深度分析工具               ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ margin: '4px 24px 0', padding: '5px 14px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>🔬 深度分析工具</span>
-          <span style={{ fontSize: 11, color: '#7aaec8' }}>工序节拍 · 成本追踪 · 工人画像 · 供应商评分 · 报价建议 · 缺陷追溯 · 财务审计 · 智能推送 · 学习报告</span>
-        </div>
-        <div className="cockpit-grid-3">
-          <RhythmDnaPanel />
-          <LiveCostTrackerPanel />
-          <WorkerProfilePanel />
-        </div>
-        <div className="cockpit-grid-3">
-          <StyleQuoteSuggestionPanel />
-          <SupplierScorecardPanel />
-          <DefectTracePanel />
-        </div>
-        <div className="cockpit-grid-3">
-          <FinanceAuditPanel />
-          <MindPushPanel />
-          <LearningReportPanel />
-        </div>
-
-
-
         {/* ╔════════════════════════════════════════════╗
             ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
             ╚════════════════════════════════════════════╝ */}
@@ -1140,7 +1092,7 @@ const IntelligenceCenter: React.FC = () => {
                     style={{ borderColor: '#4a5a8a', color: '#a0b0d0' }}>查</Button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {['本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常'].map(q => (
+                  {['本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常', '工序节拍分析', '哪个工序是瓶颈？'].map(q => (
                     <button key={q} className="c-suggest-btn"
                       style={{ fontSize: 9, padding: '1px 5px' }}
                       onClick={() => handleNlQuery(q)}>{q}</button>
@@ -1190,7 +1142,12 @@ const IntelligenceCenter: React.FC = () => {
               )}
               {chatA && <div className="c-chat-answer" style={{ fontSize: 12 }}>{chatA}</div>}
               <div className="c-chat-suggestions" style={{ marginTop: 'auto', paddingTop: 8 }}>
-                {['今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？', '异常订单处理吗？'].map(q => (
+                {[
+                  '今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？',
+                  '次品溯源分析', '工厂综合评分排行', '给新款式估算报价',
+                  '实时成本追踪分析', '工人效率画像排行', 'AI排程建议', '智能派工推荐',
+                  '学习效率报告', '最新智能推送消息',
+                ].map(q => (
                   <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
                 ))}
               </div>
