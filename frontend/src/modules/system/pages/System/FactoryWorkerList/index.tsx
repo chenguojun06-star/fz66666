@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { App, Button, Card, Form, Input, Select, Space, Tag } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import { paths } from '@/routeConfig';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -23,6 +25,7 @@ interface FactoryWorker {
 const FactoryWorkerList: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { message } = App.useApp();
 
   const isFactoryAccount = !!user?.factoryId;
@@ -164,7 +167,11 @@ const FactoryWorkerList: React.FC = () => {
         className="page-card"
         title={pageTitle}
         extra={
-          !readOnly && (
+          readOnly ? (
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.factory)}>
+              返回供应商管理
+            </Button>
+          ) : (
             <Button type="primary" onClick={handleOpenAdd}>
               新增工人
             </Button>
