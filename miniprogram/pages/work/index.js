@@ -40,6 +40,7 @@ Page({
     },
     orders: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
     highlightOrderNo: '', // 需要高亮显示的订单号
+    unreadNoticeCount: 0, // 未读智能提醒数
     rollback: {
       open: false,
       submitting: false,
@@ -92,6 +93,9 @@ Page({
 
     // ⚠️ 强制刷新订单列表（应对后端数据变更）
     this.loadOrders(true);
+
+    // 加载未读智能提醒数
+    this.loadUnreadNoticeCount();
 
     // 检查是否有pending_order_hint，如果有则显示提示
     try {
@@ -177,6 +181,17 @@ Page({
       app.resetPagedList(this, 'orders');
     }
     this.loadOrders(true);
+  },
+
+  async loadUnreadNoticeCount() {
+    try {
+      const count = await api.notice.unreadCount();
+      this.setData({ unreadNoticeCount: Number(count) || 0 });
+    } catch (_) { /* 静默失败，不影响主界面 */ }
+  },
+
+  goInbox() {
+    wx.navigateTo({ url: '/pages/work/inbox/index' });
   },
 
   navTo(e) {

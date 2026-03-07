@@ -157,6 +157,35 @@ export const qualityAiApi = {
     }),
 };
 
+// ── 站内通知（跟单员收件箱）──
+export interface SysNotice {
+  id: number;
+  tenantId: number;
+  toName: string;
+  fromName: string;
+  orderNo: string;
+  title: string;
+  content: string;
+  noticeType: 'stagnant' | 'deadline' | 'quality' | 'manual';
+  isRead: 0 | 1;
+  createdAt: string;
+}
+
+export const sysNoticeApi = {
+  /** 发送通知给跟单员 */
+  send: (orderNo: string, noticeType: string) =>
+    api.post('/production/notice/send', { orderNo, noticeType }),
+  /** 获取当前用户通知列表 */
+  getMyNotices: () =>
+    api.get<{ code: number; data: SysNotice[] }>('/production/notice/my'),
+  /** 获取未读数 */
+  getUnreadCount: () =>
+    api.get<{ code: number; data: { count: number } }>('/production/notice/unread-count'),
+  /** 标记单条已读 */
+  markRead: (id: number) =>
+    api.post(`/production/notice/${id}/read`),
+};
+
 export default {
   productionOrderApi,
   productionCuttingApi,
@@ -167,5 +196,6 @@ export default {
   materialPurchaseApi,
   processParentMappingApi,
   qualityAiApi,
+  sysNoticeApi,
 };
 

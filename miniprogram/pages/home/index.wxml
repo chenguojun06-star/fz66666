@@ -2,6 +2,13 @@
   <!-- 通用悬浮铃铛组件 -->
   <floating-bell />
 
+  <!-- 智能提醒角标（有未读通知时显示，非工厂账号或工厂账号均可见） -->
+  <view wx:if="{{unreadNoticeCount > 0}}" class="home-notice-bar" bindtap="goInbox" hover-class="home-notice-bar-hover" hover-stay-time="100">
+    <text class="home-notice-icon">🔔</text>
+    <text class="home-notice-text">{{unreadNoticeCount}} 条智能提醒待处理</text>
+    <text class="home-notice-arrow">›</text>
+  </view>
+
   <view class="card">
     <view class="title">首页</view>
 

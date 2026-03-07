@@ -1,0 +1,55 @@
+<view class="container">
+  <!-- 顶部统计条 -->
+  <view class="stats-bar">
+    <text class="stats-total">共 {{notices.length}} 条</text>
+    <text wx:if="{{unreadCount > 0}}" class="stats-unread">{{unreadCount}} 条未读</text>
+    <text wx:else class="stats-read-all">全部已读 ✓</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && notices.length === 0}}" class="empty-state empty-state-card">
+    <text class="empty-icon">🔔</text>
+    <text class="empty-text">暂无智能提醒</text>
+    <text class="empty-hint">系统检测到异常会第一时间通知你</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-box">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 通知列表 -->
+  <view wx:if="{{!loading && notices.length > 0}}" class="notice-list">
+    <view
+      wx:for="{{notices}}"
+      wx:key="id"
+      class="notice-card {{item.isRead === 0 ? 'notice-unread' : 'notice-read'}}"
+      bindtap="onTap"
+      data-id="{{item.id}}"
+      data-index="{{index}}"
+    >
+      <!-- 未读红点 -->
+      <view wx:if="{{item.isRead === 0}}" class="unread-dot"></view>
+
+      <!-- 通知类型图标 + 标题 -->
+      <view class="notice-header">
+        <text class="notice-icon">{{item.typeIcon}}</text>
+        <text class="notice-title">{{item.title}}</text>
+      </view>
+
+      <!-- 内容 -->
+      <text class="notice-content">{{item.content}}</text>
+
+      <!-- 底部元数据 -->
+      <view class="notice-meta">
+        <text class="meta-order" wx:if="{{item.orderNo}}">订单：{{item.orderNo}}</text>
+        <text class="meta-time">{{item.timeAgo}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 全部标记已读按钮 -->
+  <view wx:if="{{unreadCount > 0}}" class="mark-all-btn" bindtap="markAllRead">
+    <text>全部标为已读</text>
+  </view>
+</view>

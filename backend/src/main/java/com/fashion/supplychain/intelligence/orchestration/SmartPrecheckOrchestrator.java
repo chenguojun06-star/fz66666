@@ -81,6 +81,9 @@ public class SmartPrecheckOrchestrator {
         // ── 订单状态预检 ─────────────────────────────────────────────────
         checkOrderStatus(request, response);
 
+        // ── 服装工序跳序预检 ──────────────────────────────────────────────
+        checkGarmentStageSequence(request, response);
+
         // ── 数据驱动预检（需要 operatorId）──────────────────────────────
         if (StringUtils.hasText(request.getOperatorId())) {
             checkDuplicateScan(request, response);
@@ -200,6 +203,49 @@ public class SmartPrecheckOrchestrator {
             response.setRiskLevel("MEDIUM");
         } else if ("HIGH".equals(newLevel)) {
             response.setRiskLevel("HIGH");
+        }
+    }
+
+    /**
+     * 服装工序跳序校验（小程序场景）
+     * 工序链：采购 → 裁剪 → 车缝 → 质检 → 入库
+     * 若当前扫码工序的上道工序在本订单内无任何成功扫码 → MEDIUM 提示
+     * 设计原则：只提示不拦截，工人确认后可继续提交
+     */
+    private void checkGarmentStageSequence(PrecheckScanRequest request, PrecheckScanResponse response) {
+        try {
+            if (!StringUtils.hasText(request.getOrderId()) || !StringUtils.hasText(request.getProcessName())) return;
+            String cur = request.getProcessName();
+
+            // 确定当前工序对应的必要上道工序关键词
+            String curDisplay    = null;
+            String prereqKeyword = null;
+            String prereqDisplay = null;
+            if (cur.contains("车缝")) {
+                curDisplay = "车缝"; prereqKeyword = "裁剪"; prereqDisplay = "裁剪";
+            } else if (cur.contains("质检") || cur.contains("quality")) {
+                curDisplay = "质检"; prereqKeyword = "车缝"; prereqDisplay = "车缝";
+            } else if (cur.contains("入库") || cur.contains("warehouse")) {
+                curDisplay = "入库"; prereqKeyword = "质检"; prereqDisplay = "质检";
+            }
+            if (prereqKeyword == null) return; // 采购/裁剪为首道，无需校验
+
+            final String prereqFinal = prereqKeyword;
+            Long prereqCount = scanRecordMapper.selectCount(
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getOrderId, request.getOrderId())
+                            .eq(ScanRecord::getScanResult, "success")
+                            .like(ScanRecord::getProgressStage, prereqFinal));
+            if (prereqCount == null || prereqCount == 0) {
+                addIssue(response,
+                        "INTEL_PRECHECK_STAGE_SKIP",
+                        "MEDIUM",
+                        "提示：上道工序暂无扫码记录",
+                        "您当前扫的是[" + curDisplay + "]工序，但上道[" + prereqDisplay + "]工序在该订单中无成功扫码记录",
+                        "请确认[" + prereqDisplay + "]工序已完成并录入扫码，再继续[" + curDisplay + "]工序，以避免工序顺序异常");
+            }
+        } catch (Exception e) {
+            log.debug("[预检] 服装工序跳序检查失败（降级跳过）: {}", e.getMessage());
         }
     }
 }

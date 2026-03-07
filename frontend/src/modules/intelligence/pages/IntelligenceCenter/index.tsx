@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Tag, Input, Button, Tooltip, Popover } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
@@ -11,6 +11,16 @@ import type { NlQueryResponse } from '@/services/production/productionApi';
 import Layout from '@/components/Layout';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
+import RhythmDnaPanel from './RhythmDnaPanel';
+import WorkerProfilePanel from './WorkerProfilePanel';
+import LiveCostTrackerPanel from './LiveCostTrackerPanel';
+import StyleQuoteSuggestionPanel from './StyleQuoteSuggestionPanel';
+import SupplierScorecardPanel from './SupplierScorecardPanel';
+import LearningReportPanel from './LearningReportPanel';
+import DefectTracePanel from './DefectTracePanel';
+import SmartAssignmentPanel from './SmartAssignmentPanel';
+import MindPushPanel from './MindPushPanel';
+import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -75,6 +85,7 @@ const IntelligenceCenter: React.FC = () => {
   const [nlResult, setNlResult]     = useState<NlQueryResponse | null>(null);
   const [sending, setSending]       = useState(false);
   const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
+  const [inlineQuery, setInlineQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kpiFlash, setKpiFlash] = useState(false);
   const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
@@ -82,6 +93,17 @@ const IntelligenceCenter: React.FC = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
   const prevKpiMetricsRef = useRef<KpiMetricSnapshot | null>(null);
+
+  /* URL ?q= 参数：从生产页「问AI分析」或「催→AI」跳转时自动预填问题 */
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setInlineQuery(decodeURIComponent(q));
+      setSearchParams({}, { replace: true }); // 消费后清除 URL 参数，避免刷新重复触发
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* KPI 刷新闪光：data.ts 每次全量刷新完成后更新，触发各 KPI 卡短暂氖灯闪光 */
   useEffect(() => {
@@ -144,6 +166,7 @@ const IntelligenceCenter: React.FC = () => {
     if (!text) return;
     if (q) setQuery(q);
     setSending(true); setNlResult(null); setChatA('');
+    setInlineQuery(text);
     try {
       const [nlRes, chatRes] = await Promise.allSettled([
         intelligenceApi.nlQuery({ question: text }) as any,
@@ -1101,6 +1124,21 @@ const IntelligenceCenter: React.FC = () => {
                       </div>
                     )}
                     {chatA && <div>{chatA}</div>}
+                    {/* 根据问题关键词内联渲染对应智能面板 */}
+                    {(() => {
+                      const q = inlineQuery;
+                      if (/节拍|DNA|工序耗时|节奏/.test(q)) return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
+                      if (/工人效率|工人画像|工人排行/.test(q)) return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
+                      if (/实时成本|成本追踪|成本分析/.test(q)) return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
+                      if (/报价建议|款式估价|估算报价|报价/.test(q)) return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
+                      if (/供应商评分|工厂综合评分|综合评分排行/.test(q)) return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
+                      if (/学习报告|学习效率/.test(q)) return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
+                      if (/次品溯源|缺陷追溯|次品分析/.test(q)) return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
+                      if (/智能派工|派工推荐/.test(q)) return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
+                      if (/智能推送|推送消息/.test(q)) return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
+                      if (/排期建议|AI排程|排程/.test(q)) return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
+                      return null;
+                    })()}
                   </div>
                 )}
               </div>

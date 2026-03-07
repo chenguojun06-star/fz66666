@@ -421,6 +421,22 @@ const materialRoll = {
   },
 };
 
+/** 智能站内通知（AI 自动推送至工人/跟单员收件箱） */
+const notice = {
+  /** 获取当前用户的通知列表（最近30条） */
+  myList() {
+    return ok('/api/production/notice/my', 'GET', {});
+  },
+  /** 获取未读通知数量 */
+  unreadCount() {
+    return ok('/api/production/notice/unread-count', 'GET', {});
+  },
+  /** 标记某条通知为已读 */
+  markRead(id) {
+    return ok(`/api/production/notice/${id}/read`, 'POST', {});
+  },
+};
+
 const api = {
   dashboard,
   production,
@@ -438,6 +454,7 @@ const api = {
   intelligence,
   common,
   factoryWorker,
+  notice,
 };
 
 module.exports = api;
@@ -457,4 +474,5 @@ module.exports.wechat = wechat;
 module.exports.intelligence = intelligence;
 module.exports.common = common;
 module.exports.factoryWorker = factoryWorker;
+module.exports.notice = notice;
 

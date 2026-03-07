@@ -4,6 +4,7 @@
     "pages/register/index",
     "pages/home/index",
     "pages/work/index",
+    "pages/work/inbox/index",
     "pages/scan/index",
     "pages/scan/history/index",
     "pages/scan/monthly/index",

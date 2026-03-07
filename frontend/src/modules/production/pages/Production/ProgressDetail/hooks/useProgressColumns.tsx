@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import { Badge, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
@@ -111,6 +112,7 @@ export const useProgressColumns = ({
   deliveryRiskMap,
   onShareOrder,
 }: UseProgressColumnsParams) => {
+  const navigate = useNavigate();
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
   const columns = useMemo<any[]>(() => [
@@ -374,9 +376,25 @@ export const useProgressColumns = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag>
             {stagnantDays !== undefined && (
-              <div className="stagnant-pulse-badge">
+              <div className="stagnant-pulse-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="stagnant-pulse-dot" />
-                停滞 {stagnantDays} 天
+                <span>停滞 {stagnantDays} 天</span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={e => {
+                    e.stopPropagation();
+                    const q = encodeURIComponent(`订单${record.orderNo}已停滞${stagnantDays}天无扫码，工厂可能出现问题，请分析原因并给出催单建议`);
+                    navigate(`/intelligence/center?q=${q}`);
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && e.currentTarget.click()}
+                  style={{
+                    color: '#fa8c16', fontSize: 10, cursor: 'pointer',
+                    textDecoration: 'underline', lineHeight: 1,
+                  }}
+                >
+                  催→AI
+                </span>
               </div>
             )}
           </div>

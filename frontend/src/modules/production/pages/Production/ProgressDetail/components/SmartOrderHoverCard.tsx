@@ -8,11 +8,11 @@
  */
 import React, { useMemo, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
-
 
 interface Props { order: ProductionOrder; }
 
@@ -42,6 +42,7 @@ function fieldRate(o: ProductionOrder, key: string): number {
 }
 
 const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
+  const navigate = useNavigate();
   const boardTimesByOrder = useProductionBoardStore(s => s.boardTimesByOrder);
   const boardStatsByOrder = useProductionBoardStore(s => s.boardStatsByOrder);
   const processStatsByOrder      = useProductionBoardStore(s => s.processStatsByOrder);
@@ -547,6 +548,36 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
+      {/* ── 行动按钮区 ── */}
+      <div style={{
+        borderTop: '1px solid #f0f0f0', marginTop: 8, paddingTop: 7,
+        display: 'flex', gap: 6,
+      }}>
+        <button
+          onClick={() => {
+            const riskHint = progressInsight?.verdict === 'critical' ? '，风险较高' : progressInsight?.verdict === 'warn' ? '，进度偏慢' : '';
+            const q = encodeURIComponent(`订单${order.orderNo}当前进度${prog}%${riskHint}，${stuckNode ? `${stuckNode.node}已${stuckNode.days}天无扫码，` : ''}请分析原因并给出行动建议`);
+            navigate(`/intelligence/center?q=${q}`);
+          }}
+          style={{
+            flex: 1, padding: '4px 0', fontSize: 11, cursor: 'pointer',
+            background: '#f0f5ff', color: '#2f54eb', border: '1px solid #adc6ff',
+            borderRadius: 5, fontWeight: 500,
+          }}
+        >
+          🤖 问AI分析
+        </button>
+        <button
+          onClick={() => navigate(`/production/order-flow?orderNo=${order.orderNo}`)}
+          style={{
+            flex: 1, padding: '4px 0', fontSize: 11, cursor: 'pointer',
+            background: '#f6ffed', color: '#389e0d', border: '1px solid #b7eb8f',
+            borderRadius: 5, fontWeight: 500,
+          }}
+        >
+          📋 订单流水
+        </button>
+      </div>
 
     </div>
   );

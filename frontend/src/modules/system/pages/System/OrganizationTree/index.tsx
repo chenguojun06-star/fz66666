@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
-import { App, Button, Card, Form, Input, Modal, Select, Space, Tag, Tree } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Modal, Select, Space, Tag, Tree } from 'antd';
 import { ApartmentOutlined, PlusOutlined } from '@ant-design/icons';
 
 type DialogMode = 'create' | 'edit';
@@ -12,6 +12,12 @@ const ownerTypeOptions = [
   { value: 'INTERNAL', label: '内部' },
   { value: 'EXTERNAL', label: '外部' },
 ];
+
+const getDepartmentOptionLabel = (item?: OrganizationUnit | null) => {
+  const pathLabel = String(item?.pathNames ?? '').trim();
+  const nodeLabel = String(item?.nodeName ?? '').trim();
+  return pathLabel || nodeLabel || '未命名部门';
+};
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -44,17 +50,21 @@ const OrganizationTreePage: React.FC = () => {
     void loadData();
   }, [loadData]);
 
-  const departmentOptions = useMemo(
-    () => departments.map((item) => ({ value: item.id, label: item.pathNames || item.nodeName })),
-    [departments]
-  );
+  const departmentOptions = useMemo(() => {
+    return departments
+      .map((item) => ({
+        value: String(item.id ?? '').trim(),
+        label: getDepartmentOptionLabel(item),
+      }))
+      .filter((item) => item.value);
+  }, [departments]);
 
   const openCreate = (parent?: OrganizationUnit) => {
     setDialogMode('create');
     setCurrentRecord(parent || null);
     form.setFieldsValue({
       nodeName: '',
-      parentId: parent?.id,
+      parentId: parent?.id ? String(parent.id) : undefined,
       ownerType: parent?.ownerType || 'NONE',
       sortOrder: 0,
     });
@@ -65,9 +75,9 @@ const OrganizationTreePage: React.FC = () => {
     setDialogMode('edit');
     setCurrentRecord(record);
     form.setFieldsValue({
-      id: record.id,
+      id: record.id ? String(record.id) : undefined,
       nodeName: record.nodeName,
-      parentId: record.parentId,
+      parentId: record.parentId ? String(record.parentId) : undefined,
       ownerType: record.ownerType || 'NONE',
       sortOrder: record.sortOrder || 0,
     });
@@ -190,13 +200,19 @@ const OrganizationTreePage: React.FC = () => {
             <Input placeholder="例如：版房中心 / 外发供应链组" maxLength={50} />
           </Form.Item>
           <Form.Item name="parentId" label="上级部门">
-            <Select allowClear placeholder="顶级部门可留空" options={departmentOptions} />
+            <Select
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              placeholder="顶级部门可留空"
+              options={departmentOptions}
+            />
           </Form.Item>
           <Form.Item name="ownerType" label="内外标签" rules={[{ required: true, message: '请选择标签' }]}>
             <Select options={ownerTypeOptions} />
           </Form.Item>
           <Form.Item name="sortOrder" label="排序">
-            <Input type="number" placeholder="默认 0" />
+            <InputNumber min={0} precision={0} placeholder="默认 0" style={{ width: '100%' }} />
           </Form.Item>
           {currentRecord?.pathNames ? (
             <div style={{ color: 'var(--neutral-text-secondary)' }}>当前路径：{currentRecord.pathNames}</div>

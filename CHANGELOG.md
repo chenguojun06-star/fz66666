@@ -2,6 +2,164 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-23 智能通知直达工人 — AI 闭环首个落地
+
+### 🔔 核心变更：AI 自动检测 → 智能提醒直达工人手机
+
+**背景**：系统已有 54 个独立编排器，大量智能信号停留在后端，无法传递给真正需要行动的工人。本次打通"AI检测 → 工人手机"最后一公里，让智能化真正有意义。
+
+#### 后端：SysNoticeOrchestrator — 新增 `sendWorkerAlert()` 方法
+
+| 新增项 | 说明 |
+|--------|------|
+| `sendWorkerAlert(tenantId, workerName, order)` | 向最后一个扫码的工人发送 `worker_alert` 类型通知，包含订单号、款式、当前进度% |
+| 接收方命中逻辑 | `resolveMyNames()` 同时匹配 `user.name`（显示名）和 `loginUsername`，工人扫码的 `operatorName` 即可命中 |
+| 零侵入 | 无需数据库结构变更，复用既有 `t_sys_notice` 表 |
+
+#### 后端：SmartNotifyJob — 停滞检测同时通知工人
+
+| 变更项 | 说明 |
+|--------|------|
+| 停滞触发时 | 原有：通知跟单员 → 新增：同时通知 `lastScan.operatorName` 对应的工人 |
+| 防重复 | 对 `worker_alert` 类型同样应用 24h 去重检查（`noRecentNotice`），不重复打扰 |
+| 防跟单员自通 | 若工人与跟单员同名，跳过（避免重复通知同一人） |
+| 触发时机 | 每天 8:00 / 14:00 / 20:00 自动检测 |
+
+#### 小程序：新页面 `pages/work/inbox`（工人收件箱）
+
+| 文件 | 说明 |
+|------|------|
+| `index.json` | 深色导航栏「我的消息」 |
+| `index.wxml` | 统计栏（总条数 / 未读数）+ 通知卡片列表（未读橙色左边框、红色圆点角标）+ 全部标为已读按钮 |
+| `index.js` | `loadNotices()` + `onTap()` 标记已读后设 `pending_order_hint` 跳回工作台 + `markAllRead()` |
+| `index.wxss` | 深色风格完整样式 |
+
+**通知类型图标映射**：⏸ 停滞 / ⏰ 交期 / 🔴 质检 / ⚠️ 工人提醒 / 📢 手动通知
+
+#### 小程序：工作台 & 首页首屏未读提醒横幅
+
+| 文件 | 变更 |
+|------|------|
+| `pages/work/index.wxml` | `onShow` 时调用 `loadUnreadNoticeCount()`，未读 > 0 时顶部显示橙色横幅 |
+| `pages/home/index.wxml` | 同上，`onShow` 时检测未读，显示横幅 |
+| `pages/work/index.js` | 新增 `loadUnreadNoticeCount()` + `goInbox()` |
+| `pages/home/index.js` | 同上 |
+| `pages/work/index.wxss` / `pages/home/index.wxss` | 橙色渐变横幅样式 |
+
+#### 小程序：`utils/api.js` 新增 `notice` 模块
+
+```js
+api.notice.myList()          // 获取我的通知列表
+api.notice.unreadCount()     // 获取未读数
+api.notice.markRead(id)      // 标记单条已读
+```
+
+#### 完整闭环流程
+
+```
+SmartNotifyJob (定时)
+  └─ 检测到停滞订单
+       ├─ sendAuto()        → 通知跟单员（原有）
+       └─ sendWorkerAlert() → 通知最后扫码工人（新增）
+            ↓
+工人打开小程序 work/index 或 home/index
+  └─ onShow 调用 loadUnreadNoticeCount()
+       └─ 未读 > 0 → 显示橙色横幅「你有 X 条智能提醒待查看」
+            ↓
+工人点击横幅 → work/inbox 页面
+  └─ 看到 ⚠️ 工人提醒卡片（含订单号/款式/进度%/时间）
+       └─ 点击卡片 → 标记已读 + 设 pending_order_hint → 返回工作台
+            ↓
+工人在工作台看到订单高亮提示 → 继续推进生产
+```
+
+---
+
+## [Unreleased] - 2026-03-22 Phase A：服装供应链智能感知基础层
+
+### 🏭 IntelligenceSignalOrchestrator — 新增 3 类服装专属信号采集
+
+**背景**：现有信号融合层（异常检测 / 交期风险 / 面料预警）覆盖的是通用制造场景，尚未针对服装供应链特有问题建立感知能力。本次新增服装垂直领域的三类自动信号。
+
+#### 新增信号类型（`garment_risk` 信号域）
+
+| 信号码 | 中文说明 | 触发条件 | 风险等级 |
+|--------|----------|----------|----------|
+| `bom_missing` | 款式 BOM 工序缺失 | 生产中订单的 styleId 在 StyleProcess 表中无配置 | `warning` |
+| `scan_skip_sequence` | 工序扫码跳序 | 订单中下游工序有扫码但上游工序无扫码（如车缝有记录但裁剪无记录） | `warning` |
+| `order_stagnant` | 订单停滞 | 有扫码历史但连续 ≥3 天无新扫码；≥5 天升级为 `critical` | `warning/critical` |
+
+#### 架构亮点
+- **独立容错**：3 个子检测器各自 try-catch，任一失败不影响其他
+- **LIMIT 防爆**：每类信号最多扫描 80~100 条活跃订单（防低频定时任务打满 DB）
+- **服务注入**：复用既有 `ProductionOrderService`、`StyleProcessService`、`ScanRecordService`，零新增表
+- **跳序规则**：裁剪→车缝→质检→入库，通过 `GARMENT_STAGE_RULES` 常量维护，独立于业务代码
+
+### 🔍 SmartPrecheckOrchestrator — 新增工序跳序实时预检（小程序场景）
+
+**场景**：工人在小程序扫码时，若扫的工序的上道工序无任何成功扫码记录，实时给出 MEDIUM 预警提示。
+
+- **只提示不拦截**：小程序可继续提交扫码，预检结果仅作参考
+- **触发工序**：车缝（前道裁剪）/ 质检（前道车缝）/ 入库（前道质检）；裁剪及采购为首道，不校验
+- **错误码**：`INTEL_PRECHECK_STAGE_SKIP`，提示文案："您当前扫的是 [X] 工序，上道 [Y] 工序暂无扫码记录"
+- **降级安全**：数据库查询异常时自动跳过（log.debug），不影响正常扫码流程
+
+### 🗑️ SmartOrderHoverCard — 移除手动通知按钮
+
+- **移除**：生产进度悬浮卡片中的"📤 通知跟单"手动触发按钮
+- **原因**：通知能力已由 `SmartNotifyJob` 每日 3 次自动推送，手动按钮不符合 AI主动驱动理念
+- **同步清理**：移除 `import { message } from 'antd'` + `import { sysNoticeApi }` 两个仅被该按钮使用的 import
+
+### ✅ 验证
+- `mvn clean compile` → BUILD SUCCESS（exit 0）
+- `npx tsc --noEmit` → 0 errors（exit 0）
+
+---
+
+## [Unreleased] - 2026-03-07
+
+### 🛠️ 系统设置修复：新增部门弹窗上级部门下拉不再崩溃
+
+- **修复页面**：`frontend/src/modules/system/pages/System/OrganizationTree/index.tsx`
+- **问题现象**：在组织架构页打开“新增部门”弹窗后，操作“上级部门”下拉会触发前端异常：`nodeName.toLowerCase is not a function`，导致弹窗交互中断。
+- **根因**：Ant Design 6.x 对 `Select` 的 `options`
+  数据结构较敏感，部门下拉的 `label/value` 未做统一字符串收敛，
+  遇到非纯字符串数据时会在 `selectionchange` 阶段触发内部报错。
+- **修复内容**：统一把上级部门选项转换为“纯字符串 label + 纯字符串 value”，并将排序字段切换为数字输入组件，避免表单值类型漂移。
+- **对系统的帮助**：系统设置中的组织架构维护恢复稳定，管理员可以继续新增/编辑部门，不会因为下拉选择导致页面直接报错。
+
+### 🤖 AI 自主通知系统：跟单员收件箱 + 定时自动扫描
+
+#### 背景
+之前的方案需要管理者手动点按钮才能通知跟单员——这违背了"AI 大脑自主行动"的核心目标。本次彻底改为 **AI 主动驱动**：系统每天定时扫描风险订单，自动推送给对应跟单员，无需任何人工触发。
+
+#### 新增功能
+
+- **`SmartNotifyJob.java`（定时任务）**：
+  - 每天 08:00 / 14:00 / 20:00 自动执行
+  - 扫描所有租户的"生产中 + 逾期"订单
+  - 触发条件 ①：距计划完工 ≤ 3 天且进度 < 80% → 发送 `deadline` 通知
+  - 触发条件 ②：连续 3 天以上无成功扫码（已有历史扫码）→ 发送 `stagnant` 通知
+  - 防重复：同订单同类型通知 24h 内只发一次
+  - 按租户隔离执行（复用 `TenantAssert.bindTenantForTask`）
+
+- **`SysNoticeOrchestrator.sendAuto()`**：不依赖 `UserContext`，供定时任务调用，发件人显示为"系统自动检测"
+
+- **`t_sys_notice` 永久收件箱**（配套 Flyway `V20260322__add_sys_notice_table.sql`）：
+  - 接收方按 `to_name = 显示名 OR 登录名` 双字段匹配，兼容历史数据
+  - 完整 REST API：发送 / 我的通知列表 / 未读数 / 标记已读
+
+- **`SmartAlertBell.tsx` 收件箱 Tab**：
+  - 每 60 秒轮询未读数，自动计入右上角预警角标
+  - 展开面板后显示"我的通知"，橙色高亮未读，点击标记已读自驱处理
+
+#### 对系统的帮助
+- 跟单员无需依赖他人提醒，系统自动找到风险订单并直接送达
+- 通知有上下文（订单号 / 进度 / 工厂 / 截止日）可立即行动
+- 完全异步，不阻塞任何业务流程
+
+---
+
 ## [Unreleased] - 2026-03-05
 
 ### 🧭 T0 动作中心落地：统一任务编排 + 升级策略

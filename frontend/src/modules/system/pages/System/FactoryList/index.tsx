@@ -10,7 +10,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
 import { App, Button, Card, Form, Input, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
 import type { UploadFile } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -676,11 +676,29 @@ const FactoryList: React.FC = () => {
             />
           </Form.Item>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item name="factoryType" label="内外标签" rules={[{ required: true, message: '请选择内外标签' }]}>
+            <Form.Item
+              name="factoryType"
+              label={
+                <Space size={4}>
+                  <span>内外标签</span>
+                  <Tooltip
+                    title={
+                      <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                        <div><strong>内部工厂</strong>：本厂自有产能，完成后按人员工序统计工资（<span style={{ color: '#ffd666' }}>工资结算</span>）</div>
+                        <div><strong>外部工厂</strong>：外发加工厂，完成后按工厂结算加工费（<span style={{ color: '#95de64' }}>订单结算</span>）</div>
+                      </div>
+                    }
+                  >
+                    <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary, #999)', cursor: 'help' }} />
+                  </Tooltip>
+                </Space>
+              }
+              rules={[{ required: true, message: '请选择内外标签' }]}
+            >
               <Select
                 options={[
-                  { value: 'INTERNAL', label: '内部工厂' },
-                  { value: 'EXTERNAL', label: '外部工厂' },
+                  { value: 'INTERNAL', label: '内部工厂（工资结算）' },
+                  { value: 'EXTERNAL', label: '外部工厂（订单结算）' },
                 ]}
               />
             </Form.Item>

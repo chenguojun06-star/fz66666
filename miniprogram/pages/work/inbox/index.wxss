@@ -1,0 +1,130 @@
+@import '/styles/page-utils.wxss';
+
+.container {
+  min-height: 100vh;
+  background: #f4f6f9;
+  padding: 20rpx 24rpx 100rpx;
+  box-sizing: border-box;
+}
+
+/* 顶部统计条 */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0 16rpx;
+}
+.stats-total {
+  font-size: 26rpx;
+  color: #888;
+}
+.stats-unread {
+  font-size: 26rpx;
+  color: #fa8c16;
+  font-weight: 600;
+}
+.stats-read-all {
+  font-size: 26rpx;
+  color: #52c41a;
+}
+
+/* 加载中 */
+.loading-box {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #aaa;
+  font-size: 28rpx;
+}
+
+/* 通知列表 */
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+/* 通知卡片 */
+.notice-card {
+  position: relative;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 28rpx 28rpx 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.notice-unread {
+  border-left: 6rpx solid #fa8c16;
+}
+
+.notice-read {
+  border-left: 6rpx solid #e8e8e8;
+  opacity: 0.85;
+}
+
+/* 未读红点 */
+.unread-dot {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #ff4d4f;
+}
+
+/* 通知标题行 */
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+.notice-icon {
+  font-size: 34rpx;
+  line-height: 1;
+}
+.notice-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1a1a2e;
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* 通知内容 */
+.notice-content {
+  font-size: 26rpx;
+  color: #555;
+  line-height: 1.7;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+/* 底部元数据 */
+.notice-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.meta-order {
+  font-size: 24rpx;
+  color: #1677ff;
+  font-weight: 500;
+}
+.meta-time {
+  font-size: 24rpx;
+  color: #aaa;
+}
+
+/* 全部标为已读按钮 */
+.mark-all-btn {
+  margin-top: 28rpx;
+  text-align: center;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  color: #1677ff;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
+}

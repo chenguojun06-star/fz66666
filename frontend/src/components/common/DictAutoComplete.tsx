@@ -78,48 +78,20 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
     loadAllItems();
   }, [loadAllItems]);
 
-  // 构建 AutoComplete 的 options（含底部字典管理入口）
+  // 构建 AutoComplete 的 options
+  // 注意：options 的 label 只能是纯字符串，不能是 JSX 元素。
+  // antd 6.x 内部在 selectionchange 事件中会调用 label.nodeName.toLowerCase()，
+  // 若 label 是 React 元素会抛出 "nodeName.toLowerCase is not a function"。
+  // 原 "字典管理" footer 已迁移到 dropdownRender，不再放入 options 数组。
   const buildOptions = useCallback((keyword: string) => {
     const filtered = keyword
       ? allItems.filter(item => item.value.includes(keyword))
       : allItems;
 
-    const items = filtered.slice(0, maxSuggestions).map(item => ({
+    return filtered.slice(0, maxSuggestions).map(item => ({
       value: item.value,
       label: item.value,
     }));
-
-    // 底部附加字典管理跳转
-    const footer = {
-      value: '__dict_manage__',
-      disabled: true,
-      label: (
-        <div
-          style={{
-            borderTop: '1px solid var(--color-border, #f0f0f0)',
-            padding: '4px 0 2px',
-            fontSize: 11,
-            color: 'var(--color-text-tertiary, #999)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span>共 {allItems.length} 项</span>
-          <a
-            href="/system/dict"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{ color: 'var(--primary-color, #2D7FF9)', fontSize: 11 }}
-          >
-            + 字典管理维护选项 ↗
-          </a>
-        </div>
-      ),
-    };
-
-    return [...items, footer];
   }, [allItems, maxSuggestions]);
 
   // 聚焦时展开全部
@@ -146,9 +118,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
   // 选中时关闭
   const handleSelect = (val: string) => {
     setOpen(false);
-    if (val !== '__dict_manage__') {
-      onChange?.(val, { value: val, label: val });
-    }
+    onChange?.(val, { value: val, label: val });
   };
 
   return (
@@ -167,6 +137,34 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       placeholder={restProps.placeholder || `请选择或输入...`}
       filterOption={false}
       notFoundContent={loading ? <Spin size="small" /> : (allItems.length === 0 ? '暂无字典项，请前往字典管理添加' : '无匹配项')}
+      dropdownRender={(menu) => (
+        <>
+          {menu}
+          <div
+            style={{
+              borderTop: '1px solid var(--color-border, #f0f0f0)',
+              padding: '4px 8px 4px',
+              fontSize: 11,
+              color: 'var(--color-text-tertiary, #999)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <span>共 {allItems.length} 项</span>
+            <a
+              href="/system/dict"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ color: 'var(--primary-color, #2D7FF9)', fontSize: 11 }}
+            >
+              + 字典管理维护选项 ↗
+            </a>
+          </div>
+        </>
+      )}
       {...restProps}
     />
   );

@@ -89,27 +89,23 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   }, []);
 
   // 转换为 AutoComplete 选项格式
+  // 注意：label 必须是纯字符串，不能用 JSX 元素。
+  // antd 6.x 内部在 selectionchange 事件中会对 label 调用 nodeName.toLowerCase()，
+  // 若 label 是 React 元素（没有 nodeName 属性）会抛出 "nodeName.toLowerCase is not a function"。
   const options = useMemo(() => {
-    return suppliers.map(factory => ({
-      value: factory.factoryName,
-      label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{factory.factoryName}</span>
-          {factory.contactPerson && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
-              {factory.contactPerson}
-              {factory.contactPhone && ` · ${factory.contactPhone}`}
-            </span>
-          )}
-        </div>
-      ),
-      id: factory.id,
-      factory: factory,
-      // 附加字段，方便表单自动填充
-      supplierId: factory.id,
-      supplierContactPerson: factory.contactPerson,
-      supplierContactPhone: factory.contactPhone
-    }));
+    return suppliers.map(factory => {
+      const extra = [factory.contactPerson, factory.contactPhone].filter(Boolean).join(' · ');
+      return {
+        value: factory.factoryName,
+        label: extra ? `${factory.factoryName}（${extra}）` : factory.factoryName,
+        id: factory.id,
+        factory: factory,
+        // 附加字段，方便表单自动填充
+        supplierId: factory.id,
+        supplierContactPerson: factory.contactPerson,
+        supplierContactPhone: factory.contactPhone,
+      };
+    });
   }, [suppliers]);
 
   const handleSelect = (_selectedValue: string, option: any) => {

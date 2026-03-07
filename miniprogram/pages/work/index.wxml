@@ -2,6 +2,13 @@
   <!-- 通用悬浮铃铛组件 -->
   <floating-bell />
 
+  <!-- 智能提醒入口（有未读通知时显示） -->
+  <view wx:if="{{unreadNoticeCount > 0}}" class="inbox-banner" bindtap="goInbox" hover-class="inbox-banner-hover" hover-stay-time="100">
+    <text class="inbox-banner-icon">🔔</text>
+    <text class="inbox-banner-text">你有 {{unreadNoticeCount}} 条智能提醒待查看</text>
+    <text class="inbox-banner-arrow">›</text>
+  </view>
+
   <!-- 仓库管理卡片（工厂账号隐藏） -->
   <view class="card" wx:if="{{!isFactory}}">
     <view class="title">仓库</view>

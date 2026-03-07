@@ -73,6 +73,7 @@ Page({
     },
     activities: [],
     isFactory: false, // 是否为外发工厂账号（隐藏全公司统计数据）
+    unreadNoticeCount: 0, // 未读智能提醒数
   },
 
   onShow() {
@@ -87,8 +88,22 @@ Page({
     this.setData({ isFactory: !!getCurrentFactoryId() });
     this.loadStats();
 
+    // 加载未读智能提醒数（工人/跟单员首页都能看到）
+    this.loadUnreadNoticeCount();
+
     // 加载提醒列表（延迟执行，不阻塞首屏渲染）
     setTimeout(() => this.loadReminders(), 100);
+  },
+
+  async loadUnreadNoticeCount() {
+    try {
+      const count = await api.notice.unreadCount();
+      this.setData({ unreadNoticeCount: Number(count) || 0 });
+    } catch (_) { /* 静默失败，不影响首页加载 */ }
+  },
+
+  goInbox() {
+    wx.navigateTo({ url: '/pages/work/inbox/index' });
   },
 
   onPullDownRefresh() {

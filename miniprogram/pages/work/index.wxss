@@ -861,3 +861,33 @@ page {
   border-radius: 8rpx;
 }
 
+/* ── 智能提醒入口横幅 ─────────────────────────────────── */
+.inbox-banner {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  border: 1rpx solid #ffd591;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 0 16rpx;
+  gap: 14rpx;
+}
+.inbox-banner-hover {
+  background: linear-gradient(135deg, #ffe7ba 0%, #ffd591 100%);
+}
+.inbox-banner-icon {
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+.inbox-banner-text {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #d46b08;
+}
+.inbox-banner-arrow {
+  font-size: 36rpx;
+  color: #d46b08;
+  font-weight: 700;
+}
+

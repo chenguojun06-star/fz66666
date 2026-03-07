@@ -14,8 +14,8 @@ import {
 } from '@ant-design/icons';
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
-import { intelligenceApi } from '../../services/production/productionApi';
-import type { NlQueryResponse } from '../../services/production/productionApi';
+import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
+import type { NlQueryResponse, SysNotice } from '../../services/production/productionApi';
 
 // ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
@@ -88,15 +88,34 @@ const SmartAlertBell: React.FC = () => {
     { role: 'ai', content: AI_WELCOME, suggestions: AI_DEFAULT_SUGGESTIONS },
   ]);
   const [fetchedToday, setFetchedToday] = useState('');
+  const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
+  const [myUnreadCount, setMyUnreadCount] = useState(0);
   const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // 总预警数 = 逾期 + 高风险（紧急事件）
+  // 总预警数 = 逾期 + 高风险 + 紧急事件 + 个人未读通知
   const alertCount =
     (brief?.overdueOrderCount ?? 0) +
     (brief?.highRiskOrderCount ?? 0) +
-    events.length;
+    events.length +
+    myUnreadCount;
+
+  // 拉取「我的通知」
+  const fetchMyNotices = useCallback(async () => {
+    try {
+      const [noticesRes, countRes] = await Promise.allSettled([
+        sysNoticeApi.getMyNotices() as Promise<any>,
+        sysNoticeApi.getUnreadCount() as Promise<any>,
+      ]);
+      if (noticesRes.status === 'fulfilled' && noticesRes.value?.data) {
+        setMyNotices(noticesRes.value.data);
+      }
+      if (countRes.status === 'fulfilled' && countRes.value?.data?.count !== undefined) {
+        setMyUnreadCount(Number(countRes.value.data.count));
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // ── 拉取数据（每天只拉一次，展开时也重拉）──
   const abortRef = useRef<AbortController | null>(null);
@@ -126,12 +145,15 @@ const SmartAlertBell: React.FC = () => {
     }
   }, [fetchedToday, brief]);
 
-  // 每 10 分钟后台静默刷新
+  // 每 10 分钟后台静默刷新；每 60 秒轮询我的通知
   useEffect(() => {
     fetchData();
+    fetchMyNotices();
     const timer = setInterval(() => setFetchedToday(''), 10 * 60 * 1000);
+    const noticeTimer = setInterval(fetchMyNotices, 60 * 1000);
     return () => {
       clearInterval(timer);
+      clearInterval(noticeTimer);
       abortRef.current?.abort();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,6 +384,51 @@ const SmartAlertBell: React.FC = () => {
                 </div>
                 {brief.suggestions.slice(0, 3).map((s, i) => (
                   <div key={i} className="sap-suggestion">· {s}</div>
+                ))}
+              </div>
+            )}
+
+            {/* ── 我的通知 ── */}
+            {myNotices.length > 0 && (
+              <div className="sap-section">
+                <div className="sap-section-title">
+                  <span style={{ color: '#d46b08' }}>📤</span> 我的通知
+                  {myUnreadCount > 0 && (
+                    <span style={{ marginLeft: 4, fontSize: 10, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
+                      {myUnreadCount} 未读
+                    </span>
+                  )}
+                </div>
+                {myNotices.slice(0, 5).map(n => (
+                  <div key={n.id} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 6,
+                    padding: '5px 6px', marginBottom: 2,
+                    background: n.isRead ? '#fafafa' : '#fff7e6',
+                    borderRadius: 5, borderLeft: `3px solid ${n.isRead ? '#ddd' : '#ffa940'}`,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
+                        {n.title}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>
+                        {n.fromName} · {n.createdAt?.slice(5, 16)}
+                      </div>
+                    </div>
+                    {!n.isRead && (
+                      <button
+                        onClick={() => {
+                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                        }}
+                        style={{
+                          flexShrink: 0, fontSize: 10, padding: '1px 5px', cursor: 'pointer',
+                          background: '#fff', border: '1px solid #ffa940', borderRadius: 4,
+                          color: '#d46b08',
+                        }}
+                      >
+                        已读
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
