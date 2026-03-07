@@ -64,7 +64,7 @@ public class OrganizationUnitOrchestrator {
         ensureFactoryNodes();
         LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getDeleteFlag, 0)
-                .eq(OrganizationUnit::getNodeType, "DEPARTMENT")
+                .in(OrganizationUnit::getNodeType, "DEPARTMENT", "FACTORY")
                 .orderByAsc(OrganizationUnit::getSortOrder)
                 .orderByAsc(OrganizationUnit::getCreateTime);
         Long tenantId = UserContext.tenantId();
@@ -138,7 +138,72 @@ public class OrganizationUnitOrchestrator {
         existing.setDeleteFlag(1);
         existing.setUpdateTime(LocalDateTime.now());
         organizationUnitService.updateById(existing);
+        // 级联清除该部门下所有人员的组织归属
+        userService.lambdaUpdate()
+                .eq(User::getOrgUnitId, id)
+                .set(User::getOrgUnitId, null)
+                .update();
         return true;
+    }
+
+    /** 获取可分配的用户列表（同租户所有活跃用户） */
+    public List<User> getAssignableUsers() {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
+                .eq(User::getStatus, "active")
+                .orderByAsc(User::getName);
+        if (tenantId != null) {
+            wrapper.eq(User::getTenantId, tenantId);
+        }
+        List<User> users = userService.list(wrapper);
+        users.forEach(u -> u.setPassword(null));
+        return users;
+    }
+
+    /** 将用户分配到指定组织节点 */
+    @Transactional(rollbackFor = Exception.class)
+    public void assignMember(String userId, String orgUnitId) {
+        assertAdmin();
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(orgUnitId)) {
+            throw new IllegalArgumentException("参数不完整");
+        }
+        Long userIdLong;
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("用户ID格式错误");
+        }
+        OrganizationUnit unit = organizationUnitService.getById(orgUnitId);
+        if (unit == null || (unit.getDeleteFlag() != null && unit.getDeleteFlag() == 1)) {
+            throw new IllegalArgumentException("组织节点不存在或已停用");
+        }
+        User user = userService.getById(userIdLong);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        User patch = new User();
+        patch.setId(userIdLong);
+        patch.setOrgUnitId(orgUnitId);
+        userService.updateById(patch);
+    }
+
+    /** 从组织节点移出用户（清空归属） */
+    @Transactional(rollbackFor = Exception.class)
+    public void removeMember(String userId) {
+        assertAdmin();
+        if (!StringUtils.hasText(userId)) {
+            throw new IllegalArgumentException("参数不完整");
+        }
+        Long userIdLong;
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("用户ID格式错误");
+        }
+        userService.lambdaUpdate()
+                .eq(User::getId, userIdLong)
+                .set(User::getOrgUnitId, null)
+                .update();
     }
 
     /**
@@ -197,8 +262,9 @@ public class OrganizationUnitOrchestrator {
             if (parent == null || parent.getDeleteFlag() != null && parent.getDeleteFlag() == 1) {
                 throw new IllegalArgumentException("上级部门不存在");
             }
-            if (!"DEPARTMENT".equalsIgnoreCase(parent.getNodeType())) {
-                throw new IllegalArgumentException("上级节点必须是部门");
+            if (!"DEPARTMENT".equalsIgnoreCase(parent.getNodeType())
+                    && !"FACTORY".equalsIgnoreCase(parent.getNodeType())) {
+                throw new IllegalArgumentException("上级节点必须是部门或工厂");
             }
             if (StringUtils.hasText(selfId) && selfId.equals(parentId)) {
                 throw new IllegalArgumentException("部门不能挂到自己下面");

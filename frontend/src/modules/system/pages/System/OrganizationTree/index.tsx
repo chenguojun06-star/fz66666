@@ -3,15 +3,13 @@ import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit, User } from '@/types/system';
-import { App, Avatar, Badge, Button, Card, Collapse, Empty, Form, Input, InputNumber, Select, Space, Spin, Tag, Tooltip } from 'antd';
 import {
-  ApartmentOutlined,
-  BankOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  TeamOutlined,
-  UserOutlined,
+  App, Avatar, Badge, Button, Card, Collapse, Empty, Form, Input,
+  InputNumber, List, Select, Space, Spin, Tag, Tooltip,
+} from 'antd';
+import {
+  ApartmentOutlined, BankOutlined, CloseOutlined, DeleteOutlined,
+  EditOutlined, PlusOutlined, TeamOutlined, UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
 
@@ -35,25 +33,44 @@ const OrganizationTreePage: React.FC = () => {
   const [currentRecord, setCurrentRecord] = useState<OrganizationUnit | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
 
+  // 成员分配弹窗状态
+  const [assignModal, setAssignModal] = useState<{ open: boolean; node: OrganizationUnit | null }>({ open: false, node: null });
+  const [assignableUsers, setAssignableUsers] = useState<User[]>([]);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignActionLoading, setAssignActionLoading] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [tree, departmentList, members] = await Promise.all([
+      // 关键数据：tree + departments 必须成功
+      const [tree, departmentList] = await Promise.all([
         organizationApi.tree(),
         organizationApi.departments(),
-        organizationApi.members(),
       ]);
       setTreeData(Array.isArray(tree) ? tree : []);
       setDepartments(Array.isArray(departmentList) ? departmentList : []);
-      setMembersMap(members && typeof members === 'object' ? members : {});
     } catch (error: any) {
       message.error(error?.message || '组织架构加载失败');
     } finally {
       setLoading(false);
     }
+    // 成员数据独立加载，失败不影响主体
+    organizationApi.members()
+      .then((m) => setMembersMap(m && typeof m === 'object' ? m : {}))
+      .catch(() => { /* 静默，成员数据非关键 */ });
   }, [message]);
 
   useEffect(() => { void loadData(); }, [loadData]);
+
+  // 加载可分配用户（一次性，点开弹窗时刷新）
+  const loadAssignableUsers = useCallback(async () => {
+    try {
+      const users = await organizationApi.assignableUsers();
+      setAssignableUsers(Array.isArray(users) ? users : []);
+    } catch {
+      setAssignableUsers([]);
+    }
+  }, []);
 
   const departmentOptions = useMemo(() => {
     return departments
@@ -98,7 +115,7 @@ const OrganizationTreePage: React.FC = () => {
   const handleDelete = (record: OrganizationUnit) => {
     modal.confirm({
       title: `删除部门「${record.nodeName}」`,
-      content: '仅允许删除没有子节点的部门。',
+      content: '仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。',
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
@@ -131,9 +148,65 @@ const OrganizationTreePage: React.FC = () => {
     }
   };
 
+  // 打开分配成员弹窗
+  const handleOpenAssign = useCallback(async (node: OrganizationUnit) => {
+    setAssignSearch('');
+    setAssignModal({ open: true, node });
+    await loadAssignableUsers();
+  }, [loadAssignableUsers]);
+
+  // 分配用户到节点
+  const handleAssignUser = useCallback(async (userId: string) => {
+    if (!assignModal.node?.id) return;
+    setAssignActionLoading(userId);
+    try {
+      await organizationApi.assignMember(userId, String(assignModal.node.id));
+      message.success('分配成功');
+      // 刷新成员数据
+      organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
+    } catch (error: any) {
+      message.error(error?.message || '分配失败');
+    } finally {
+      setAssignActionLoading(null);
+    }
+  }, [assignModal.node, message]);
+
+  // 移出成员
+  const handleRemoveMember = useCallback(async (userId: string, userName: string) => {
+    modal.confirm({
+      title: `移出成员「${userName}」`,
+      content: '该成员将从当前组织节点移出，账号本身不受影响。',
+      okText: '移出',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        await organizationApi.removeMember(userId);
+        message.success('已移出');
+        organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
+      },
+    });
+  }, [modal, message]);
+
   const totalMembers = useMemo(() => {
     return Object.values(membersMap).reduce((sum, list) => sum + list.length, 0);
   }, [membersMap]);
+
+  // 当前弹窗节点下的成员 id 集合（用于过滤已分配人员）
+  const currentNodeMemberIds = useMemo(() => {
+    if (!assignModal.node?.id) return new Set<string>();
+    const members = membersMap[String(assignModal.node.id)] || [];
+    return new Set(members.map((u) => String(u.id)));
+  }, [assignModal.node, membersMap]);
+
+  // 可供分配的用户（过滤掉已在本节点者）
+  const filteredAssignableUsers = useMemo(() => {
+    return assignableUsers.filter((u) => {
+      if (currentNodeMemberIds.has(String(u.id))) return false;
+      if (!assignSearch.trim()) return true;
+      const q = assignSearch.toLowerCase();
+      return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
+    });
+  }, [assignableUsers, currentNodeMemberIds, assignSearch]);
 
   return (
     <Layout>
@@ -169,12 +242,15 @@ const OrganizationTreePage: React.FC = () => {
                 onAdd={openCreate}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+                onAddMember={handleOpenAssign}
+                onRemoveMember={handleRemoveMember}
               />
             ))}
           </div>
         )}
       </Card>
 
+      {/* 新增/编辑部门弹窗 */}
       <ResizableModal
         open={dialogOpen}
         title={dialogMode === 'edit' ? '编辑部门' : '新增部门'}
@@ -196,8 +272,9 @@ const OrganizationTreePage: React.FC = () => {
               showSearch
               allowClear
               optionFilterProp="label"
-              placeholder="顶级部门可留空"
+              placeholder="不选则为顶级部门"
               options={departmentOptions}
+              notFoundContent={departmentOptions.length === 0 ? '暂无部门，可先创建顶级部门' : '无匹配'}
               style={{ width: '100%' }}
             />
           </Form.Item>
@@ -214,6 +291,62 @@ const OrganizationTreePage: React.FC = () => {
           )}
         </Form>
       </ResizableModal>
+
+      {/* 分配成员弹窗 */}
+      <ResizableModal
+        open={assignModal.open}
+        title={`为「${assignModal.node?.nodeName || ''}」添加成员`}
+        onCancel={() => setAssignModal({ open: false, node: null })}
+        footer={null}
+        width="40vw"
+        initialHeight={500}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Input.Search
+            placeholder="搜索姓名或账号"
+            allowClear
+            value={assignSearch}
+            onChange={(e) => setAssignSearch(e.target.value)}
+            style={{ marginBottom: 12 }}
+          />
+          {filteredAssignableUsers.length === 0 ? (
+            <Empty description="暂无可分配人员（所有活跃账号均已分配到本节点，或尚无账号）" style={{ padding: '32px 0' }} />
+          ) : (
+            <List
+              size="small"
+              dataSource={filteredAssignableUsers}
+              style={{ maxHeight: 340, overflowY: 'auto' }}
+              renderItem={(user) => (
+                <List.Item
+                  key={String(user.id)}
+                  actions={[
+                    <Button
+                      key="assign"
+                      type="primary"
+                      size="small"
+                      loading={assignActionLoading === String(user.id)}
+                      onClick={() => handleAssignUser(String(user.id))}
+                    >
+                      分配
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />}
+                    title={<span>{user.name || user.username}</span>}
+                    description={
+                      <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+                        {user.username}
+                        {user.orgUnitId ? <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>已在其他组织</Tag> : null}
+                      </span>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          )}
+        </div>
+      </ResizableModal>
     </Layout>
   );
 };
@@ -227,9 +360,13 @@ interface OrgNodeCardProps {
   onAdd: (parent: OrganizationUnit) => void;
   onEdit: (record: OrganizationUnit) => void;
   onDelete: (record: OrganizationUnit) => void;
+  onAddMember: (node: OrganizationUnit) => void;
+  onRemoveMember: (userId: string, userName: string) => void;
 }
 
-const OrgNodeCard: React.FC<OrgNodeCardProps> = ({ node, depth, membersMap, onAdd, onEdit, onDelete }) => {
+const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
+  node, depth, membersMap, onAdd, onEdit, onDelete, onAddMember, onRemoveMember,
+}) => {
   const isFactory = node.nodeType === 'FACTORY';
   const members = node.id ? (membersMap[String(node.id)] || []) : [];
   const children = node.children || [];
@@ -261,6 +398,11 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({ node, depth, membersMap, onAd
         )}
       </div>
       <Space size={4} className="org-node-actions" onClick={(e) => e.stopPropagation()}>
+        {/* 所有节点都可以添加成员 */}
+        <Tooltip title="添加成员">
+          <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => onAddMember(node)} />
+        </Tooltip>
+        {/* 仅部门节点可以新增子部门 / 编辑 / 删除 */}
         {!isFactory && (
           <>
             <Tooltip title="新增下级部门">
@@ -305,6 +447,15 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({ node, depth, membersMap, onAd
                           <span className="org-member-name">{user.name}</span>
                           <span className="org-member-role">{user.roleName || '—'}</span>
                         </div>
+                        <Tooltip title="移出">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CloseOutlined />}
+                            className="org-member-remove"
+                            onClick={() => onRemoveMember(String(user.id), user.name || user.username || '')}
+                          />
+                        </Tooltip>
                       </div>
                     ))}
                   </div>
@@ -319,6 +470,8 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({ node, depth, membersMap, onAd
                   onAdd={onAdd}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onAddMember={onAddMember}
+                  onRemoveMember={onRemoveMember}
                 />
               ))}
             </div>

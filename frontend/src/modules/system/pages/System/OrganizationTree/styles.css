@@ -92,11 +92,23 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 4px 4px;
+  padding: 4px 4px 4px 4px;
   background: #fff;
   border-radius: 20px;
   border: 1px solid var(--neutral-border, #f0f0f0);
   min-width: 120px;
+  position: relative;
+}
+
+.org-member-remove {
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  color: var(--neutral-text-secondary, #999) !important;
+}
+
+.org-member-item:hover .org-member-remove {
+  opacity: 1;
 }
 
 .org-member-info {

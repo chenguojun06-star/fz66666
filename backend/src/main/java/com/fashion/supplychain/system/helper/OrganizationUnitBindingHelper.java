@@ -5,7 +5,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.OrganizationUnit;
+import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.OrganizationUnitService;
+import com.fashion.supplychain.system.service.UserService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,6 +26,9 @@ public class OrganizationUnitBindingHelper {
 
     @Autowired
     private OrganizationUnitService organizationUnitService;
+
+    @Autowired
+    private UserService userService;
 
     public void validateDepartmentParent(String parentId) {
         if (!StringUtils.hasText(parentId)) {
@@ -100,9 +105,17 @@ public class OrganizationUnitBindingHelper {
         if (node == null) {
             return;
         }
+        String nodeOrgUnitId = node.getId();
         node.setDeleteFlag(1);
         node.setUpdateTime(LocalDateTime.now());
         organizationUnitService.updateById(node);
+        // 工厂删除时级联清除该节点下所有成员的组织归属
+        if (org.springframework.util.StringUtils.hasText(nodeOrgUnitId)) {
+            userService.lambdaUpdate()
+                    .eq(User::getOrgUnitId, nodeOrgUnitId)
+                    .set(User::getOrgUnitId, null)
+                    .update();
+        }
     }
 
     public FactoryOrganizationSnapshot getFactorySnapshot(Factory factory) {

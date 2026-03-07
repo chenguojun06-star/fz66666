@@ -41,6 +41,23 @@ public class OrganizationUnitController {
         return Result.success(organizationUnitOrchestrator.membersByOrgUnit());
     }
 
+    @GetMapping("/assignable-users")
+    public Result<List<User>> assignableUsers() {
+        return Result.success(organizationUnitOrchestrator.getAssignableUsers());
+    }
+
+    @PostMapping("/assign-member")
+    public Result<Void> assignMember(@RequestBody Map<String, String> body) {
+        organizationUnitOrchestrator.assignMember(body.get("userId"), body.get("orgUnitId"));
+        return Result.success(null);
+    }
+
+    @PostMapping("/remove-member")
+    public Result<Void> removeMember(@RequestBody Map<String, String> body) {
+        organizationUnitOrchestrator.removeMember(body.get("userId"));
+        return Result.success(null);
+    }
+
     @PostMapping
     public Result<Boolean> create(@RequestBody OrganizationUnit unit) {
         return Result.success(organizationUnitOrchestrator.createDepartment(unit));

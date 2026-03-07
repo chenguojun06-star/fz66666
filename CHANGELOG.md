@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-23 P0 BUG修复：小程序生产页面暂无数据
+
+### 🔴 问题描述
+
+小程序手机端"生产"页面（`pages/work/index.js`）完全空白，显示"暂无数据"。
+
+### 🔎 根本原因
+
+`WeChatMiniProgramAuthOrchestrator.buildLoginSuccess()` 中权限范围（`permissionRange`）的默认逻辑与 PC 端 `UserOrchestrator` 不一致：
+
+- **修复前（小程序）**：未设置时仅管理员/租户主默认 `"all"`，其余所有人默认 `"own"`  
+- **PC端（已在 `9efe93a1` 修复）**：无工厂绑定的账号（跟单员、财务、采购等）也默认 `"all"`
+
+导致跟单员通过小程序登录时，`DataPermissionHelper` 对生产订单列表附加 `WHERE created_by_id = userId` 过滤条件，而这些用户并不创建订单（由 PC 端创建），因此返回 0 条记录。
+
+### ✅ 修复
+
+**文件**：`backend/.../wechat/orchestration/WeChatMiniProgramAuthOrchestrator.java`  
+**方法**：`buildLoginSuccess()`
+
+将 `permRange` 默认逻辑与 `UserOrchestrator` 对齐：
+
+```
+租户主 / 管理角色 / 无 factoryId 绑定的账号（跟单员等） → "all"（可查全局生产数据）
+绑定了 factoryId 的工厂工人                              → "own"（仅限自己 + factory_id 过滤）
+```
+
+### 📋 影响范围
+
+| 用户类型 | 修复前 | 修复后 |
+|---------|--------|--------|
+| 跟单员（无工厂绑定）| ❌ 暂无数据 | ✅ 看全部订单 |
+| 管理员 / 租户主 | ✅ 正常 | ✅ 不变 |
+| 外发工厂工人（有 factoryId）| ✅ 正常（factory_id过滤）| ✅ 不变 |
+
+---
+
 ## [Unreleased] - 2026-03-23 智能通知直达工人 — AI 闭环首个落地
 
 ### 🔔 核心变更：AI 自动检测 → 智能提醒直达工人手机
