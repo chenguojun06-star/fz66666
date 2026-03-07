@@ -269,6 +269,17 @@ const InspectionDetail: React.FC = () => {
     return { total, qualified, unqualified, count: qcRecords.length, warehoused, pendingWarehouse };
   }, [qcRecords]);
 
+  /** 本订单实际已发现的缺陷类别（用于高亮显示相关处理建议） */
+  const actualDefectSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of qcRecords) {
+      if (r.defectCategory && Number(r.unqualifiedQuantity || 0) > 0) {
+        set.add(r.defectCategory);
+      }
+    }
+    return set;
+  }, [qcRecords]);
+
   /* ==================== 入库提交 ==================== */
   const handleWarehouseSubmit = async () => {
     if (!warehouseValue) { message.error('请选择仓库'); return; }
@@ -954,17 +965,38 @@ const InspectionDetail: React.FC = () => {
                   </ol>
                   {aiSuggestion.defectSuggestions && Object.keys(aiSuggestion.defectSuggestions).length > 0 && (
                     <>
-                      <div style={{ fontWeight: 600, color: '#333', marginTop: 10, marginBottom: 6 }}>常见缺陷处理建议</div>
-                      {Object.entries(aiSuggestion.defectSuggestions).map(([defect, advice]) => (
-                        <div key={defect} style={{
-                          marginBottom: 6, padding: '4px 8px',
-                          background: '#f6ffed', borderLeft: '3px solid #52c41a',
-                          borderRadius: '0 4px 4px 0',
-                        }}>
-                          <span style={{ color: '#cf1322', fontWeight: 600 }}>{defect}</span>
-                          <span style={{ color: '#666', marginLeft: 8 }}>{advice}</span>
-                        </div>
-                      ))}
+                      <div style={{ fontWeight: 600, color: '#333', marginTop: 10, marginBottom: 6 }}>
+                        缺陷处理建议
+                        {actualDefectSet.size === 0 && (
+                          <span style={{ fontWeight: 400, fontSize: 11, color: '#aaa', marginLeft: 6 }}>（本批尚无次品记录，以下供参考）</span>
+                        )}
+                        {actualDefectSet.size > 0 && (
+                          <span style={{ fontWeight: 400, fontSize: 11, color: '#f5222d', marginLeft: 6 }}>⚠️ 本批已发现 {actualDefectSet.size} 类缺陷，请重点处理标红项</span>
+                        )}
+                      </div>
+                      {Object.entries(aiSuggestion.defectSuggestions)
+                        .sort(([aKey], [bKey]) => (actualDefectSet.has(bKey) ? 1 : 0) - (actualDefectSet.has(aKey) ? 1 : 0))
+                        .map(([defect, advice]) => {
+                          const isActual = actualDefectSet.has(defect);
+                          return (
+                            <div key={defect} style={{
+                              marginBottom: 6, padding: '6px 10px',
+                              background: isActual ? '#fff2f0' : '#fafafa',
+                              borderLeft: `3px solid ${isActual ? '#ff4d4f' : '#e8e8e8'}`,
+                              borderRadius: '0 4px 4px 0',
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                {isActual && (
+                                  <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
+                                )}
+                                <span style={{ fontWeight: 600, color: isActual ? '#cf1322' : '#595959', fontSize: 12 }}>
+                                  {getDefectCategoryLabel(defect)}
+                                </span>
+                              </div>
+                              <div style={{ color: '#666', fontSize: 11, lineHeight: 1.6 }}>{advice}</div>
+                            </div>
+                          );
+                        })}
                     </>
                   )}
                 </div>

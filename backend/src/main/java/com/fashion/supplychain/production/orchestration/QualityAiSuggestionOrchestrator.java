@@ -205,12 +205,14 @@ public class QualityAiSuggestionOrchestrator {
         }
         // 中文关键词匹配
         if (category.contains("衬") || category.contains("shirt")) return CATEGORY_CHECKPOINTS.getOrDefault("shirt", Collections.emptyList());
-        if (category.contains("裤")) return CATEGORY_CHECKPOINTS.getOrDefault("pants", Collections.emptyList());
+        if (category.contains("裤") || category.contains("短裤") || category.contains("长裤")) return CATEGORY_CHECKPOINTS.getOrDefault("pants", Collections.emptyList());
         if (category.contains("裙")) return CATEGORY_CHECKPOINTS.getOrDefault("skirt", Collections.emptyList());
         if (category.contains("连衣")) return CATEGORY_CHECKPOINTS.getOrDefault("dress", Collections.emptyList());
-        if (category.contains("外套") || category.contains("夹克") || category.contains("大衣")) return CATEGORY_CHECKPOINTS.getOrDefault("jacket", Collections.emptyList());
-        if (category.contains("T恤") || category.contains("t恤")) return CATEGORY_CHECKPOINTS.getOrDefault("t-shirt", Collections.emptyList());
+        if (category.contains("外套") || category.contains("夹克") || category.contains("大衣") || category.contains("风衣") || category.contains("棉服")) return CATEGORY_CHECKPOINTS.getOrDefault("jacket", Collections.emptyList());
+        if (category.contains("T恤") || category.contains("t恤") || category.contains("polo") || category.contains("POLO")) return CATEGORY_CHECKPOINTS.getOrDefault("t-shirt", Collections.emptyList());
         if (category.contains("童")) return CATEGORY_CHECKPOINTS.getOrDefault("kids", Collections.emptyList());
+        // 通用上衣：含"衫"（显头衫、衬衫已被上面处理）、"毛衣"、"卫衣"、"上衣"等
+        if (category.contains("衫") || category.contains("毛衣") || category.contains("卫衣") || category.contains("上衣") || category.contains("针织")) return CATEGORY_CHECKPOINTS.getOrDefault("top", Collections.emptyList());
         return Collections.emptyList();
     }
 
