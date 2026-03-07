@@ -218,4 +218,19 @@ public class SmartNotificationOrchestrator {
         n.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         list.add(n);
     }
+
+    // ── 对外调用方法（供 SmartWorkflowOrchestrator 使用）──
+
+    public void notifyTeam(String teamCode, String title, String content, Long tenantId) {
+        log.info("[Notification] notifyTeam: team={}, title={}, tenantId={}", teamCode, title, tenantId);
+    }
+
+    public void notifyRole(String roleCode, String title, String content, Long tenantId) {
+        log.info("[Notification] notifyRole: role={}, title={}, tenantId={}", roleCode, title, tenantId);
+    }
+
+    public void notifyKpiDashboard(String dashboardType, String targetId, String level, Long tenantId) {
+        log.info("[Notification] notifyKpiDashboard: type={}, targetId={}, level={}, tenantId={}",
+                dashboardType, targetId, level, tenantId);
+    }
 }

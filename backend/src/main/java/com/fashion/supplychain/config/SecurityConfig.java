@@ -340,6 +340,35 @@ public class SecurityConfig implements WebMvcConfigurer {
                     }
                     log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
                             ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
+
+                    // 自愈修复：租户主账号 t_user.tenant_id 为 NULL 时，从 t_tenant 表反查并回填
+                    // （V20260323 迁移脚本会批量修复存量数据，此处处理极端情况或迁移前的首次登录）
+                    if (ctx.getTenantId() == null && Boolean.TRUE.equals(ctx.getTenantOwner()) && !ctx.getSuperAdmin()) {
+                        try {
+                            List<Long> tids = jdbcTemplate.query(
+                                "SELECT id FROM t_tenant WHERE owner_user_id = ? LIMIT 1",
+                                (rs, i) -> rs.getLong(1),
+                                Long.parseLong(ctx.getUserId())
+                            );
+                            if (!tids.isEmpty()) {
+                                Long recoveredTenantId = tids.get(0);
+                                ctx.setTenantId(recoveredTenantId);
+                                // 顺手修复 t_user 数据，避免下次请求再次触发此逻辑
+                                jdbcTemplate.update(
+                                    "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
+                                    recoveredTenantId, Long.parseLong(ctx.getUserId())
+                                );
+                                tenantInfoCache.remove(ctx.getUserId()); // 失效缓存，下次重新读取修复后的值
+                                log.warn("[UserContextInterceptor] 自愈修复: 租户主 userId={} tenant_id 已回填为 {}（请检查 V20260323 迁移是否已执行）",
+                                        ctx.getUserId(), recoveredTenantId);
+                            } else {
+                                log.error("[UserContextInterceptor] 严重: 租户主 userId={} 在 t_tenant 中找不到对应记录，数据异常，用户将看不到业务数据!",
+                                        ctx.getUserId());
+                            }
+                        } catch (Exception e) {
+                            log.error("[UserContextInterceptor] 自愈查询失败 userId={}", ctx.getUserId(), e);
+                        }
+                    }
                 }
             }
 
