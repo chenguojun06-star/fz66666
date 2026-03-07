@@ -70,13 +70,11 @@ const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
-  const [chatQ, setChatQ]           = useState('');
+  const [query, setQuery]           = useState('');
   const [chatA, setChatA]           = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
-  const [nlQ, setNlQ]               = useState('');
   const [nlResult, setNlResult]     = useState<NlQueryResponse | null>(null);
-  const [nlLoading, setNlLoading]   = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kpiFlash, setKpiFlash] = useState(false);
   const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
@@ -141,27 +139,19 @@ const IntelligenceCenter: React.FC = () => {
       .catch(() => setAiAdvisorReady(false));
   }, []);
 
-  const handleChat = async () => {
-    if (!chatQ.trim()) return;
-    if (!aiAdvisorReady) { setChatA('AI 顾问服务当前不可用，请稍后再试。'); return; }
-    setChatLoading(true); setChatA('');
+  const handleSend = async (q?: string) => {
+    const text = (q ?? query).trim();
+    if (!text) return;
+    if (q) setQuery(q);
+    setSending(true); setNlResult(null); setChatA('');
     try {
-      const res = await intelligenceApi.aiAdvisorChat(chatQ) as any;
-      setChatA(res?.data?.answer || res?.answer || '暂无回复');
-    } catch { setChatA('AI 服务暂不可用，请稍后重试。'); }
-    finally { setChatLoading(false); }
-  };
-
-  const handleNlQuery = async (q?: string) => {
-    const query = (q ?? nlQ).trim();
-    if (!query) return;
-    if (q) setNlQ(q);
-    setNlLoading(true); setNlResult(null);
-    try {
-      const res = await intelligenceApi.nlQuery({ question: query }) as any;
-      setNlResult(res?.data ?? res);
-    } catch { setNlResult(null); }
-    finally { setNlLoading(false); }
+      const [nlRes, chatRes] = await Promise.allSettled([
+        intelligenceApi.nlQuery({ question: text }) as any,
+        aiAdvisorReady ? intelligenceApi.aiAdvisorChat(text) as any : Promise.reject(null),
+      ]);
+      if (nlRes.status === 'fulfilled') setNlResult((nlRes.value as any)?.data ?? nlRes.value);
+      if (chatRes.status === 'fulfilled') setChatA((chatRes.value as any)?.data?.answer || (chatRes.value as any)?.answer || '');
+    } finally { setSending(false); }
   };
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter } = data;
@@ -1075,80 +1065,55 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               )}
 
-              {/* 自然语言数据查询区 */}
+              {/* AI 问答区 */}
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: '#7aaec8', marginBottom: 5 }}>📊 数据快查（自然语言）</div>
                 <div className="c-chat-row" style={{ marginBottom: 4 }}>
                   <Input
                     size="small"
                     className="c-chat-input"
-                    placeholder="查本周逾期 / 哪个工厂效率最低？"
-                    value={nlQ}
-                    onChange={e => setNlQ(e.target.value)}
-                    onPressEnter={() => handleNlQuery()}
+                    placeholder="问任何问题：逾期订单 / 工厂效率 / 面料库存缺口 / 次品分析..."
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    onPressEnter={() => handleSend()}
                   />
-                  <Button size="small" type="default" loading={nlLoading}
-                    onClick={() => handleNlQuery()} className="c-chat-send"
-                    style={{ borderColor: '#4a5a8a', color: '#a0b0d0' }}>查</Button>
+                  <Button size="small" type="primary" icon={<SendOutlined />} loading={sending}
+                    onClick={() => handleSend()} className="c-chat-send">发送</Button>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {['本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常', '工序节拍分析', '哪个工序是瓶颈？'].map(q => (
-                    <button key={q} className="c-suggest-btn"
-                      style={{ fontSize: 9, padding: '1px 5px' }}
-                      onClick={() => handleNlQuery(q)}>{q}</button>
-                  ))}
-                </div>
-                {nlLoading && <div style={{ fontSize: 10, color: '#7aaec8', paddingTop: 4 }}>⌛ 查询中...</div>}
-                {nlResult && (
-                  <div style={{ fontSize: 11, color: '#c4b5fd', marginTop: 5,
-                    padding: '5px 8px', background: 'rgba(100,80,200,0.08)',
-                    borderRadius: 4, border: '1px solid rgba(100,80,200,0.2)', lineHeight: 1.6 }}>
-                    {nlResult.intent === 'ai_direct' && (
-                      <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
-                        background: 'rgba(167,139,250,0.15)', padding: '1px 5px',
-                        borderRadius: 3 }}>🤖 AI直接回答</span>
+                {sending && <div style={{ fontSize: 10, color: '#7aaec8', paddingTop: 4 }}>
+                  <DashboardOutlined spin style={{ marginRight: 4 }} />AI 正在分析…
+                </div>}
+                {/* 统一回复区 */}
+                {(nlResult || chatA) && (
+                  <div className="c-chat-answer" style={{ fontSize: 11, marginTop: 5, lineHeight: 1.6 }}>
+                    {nlResult && (
+                      <div style={{ color: '#c4b5fd', marginBottom: chatA ? 6 : 0 }}>
+                        {nlResult.intent === 'ai_direct' && (
+                          <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
+                            background: 'rgba(167,139,250,0.15)', padding: '1px 5px',
+                            borderRadius: 3 }}>🤖 AI直接回答</span>
+                        )}
+                        {nlResult.answer}
+                        {nlResult.confidence !== undefined && (
+                          <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>
+                            置信度 {Math.round(nlResult.confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
                     )}
-                    {nlResult.answer}
-                    {nlResult.confidence !== undefined && (
-                      <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>
-                        置信度 {Math.round(nlResult.confidence * 100)}%
-                      </span>
-                    )}
+                    {chatA && <div>{chatA}</div>}
                   </div>
                 )}
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: '#7aaec8', marginBottom: 5 }}>💬 AI 对话（深度分析）</div>
-                <div style={{ fontSize: 11, color: '#6a9ab8', marginBottom: 6 }}
-                  >直接问询生产、订单、库存、财务任何问题</div>
-              </div>
-              <div className="c-chat-row" style={{ marginBottom: 8 }}>
-                <Input
-                  className="c-chat-input"
-                  placeholder="例如：今天哪个工厂效率最高？面料缺口怎么处理？"
-                  value={chatQ}
-                  onChange={e => setChatQ(e.target.value)}
-                  onPressEnter={handleChat}
-                />
-                <Button type="primary" icon={<SendOutlined />} loading={chatLoading}
-                  onClick={handleChat} className="c-chat-send">发送</Button>
-              </div>
-              {chatLoading && (
-                <div className="c-chat-thinking">
-                  <DashboardOutlined spin style={{ marginRight: 6 }} />
-                  AI 正在分析...
-                </div>
-              )}
-              {chatA && <div className="c-chat-answer" style={{ fontSize: 12 }}>{chatA}</div>}
               <div className="c-chat-suggestions" style={{ marginTop: 'auto', paddingTop: 8 }}>
                 {[
+                  '本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常', '工序节拍分析', '哪个工序是瓶颈？',
                   '今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？',
                   '次品溯源分析', '工厂综合评分排行', '给新款式估算报价',
                   '实时成本追踪分析', '工人效率画像排行', 'AI排程建议', '智能派工推荐',
                   '学习效率报告', '最新智能推送消息',
                 ].map(q => (
-                  <button key={q} className="c-suggest-btn" onClick={() => setChatQ(q)}>{q}</button>
+                  <button key={q} className="c-suggest-btn" onClick={() => handleSend(q)}>{q}</button>
                 ))}
               </div>
             </div>

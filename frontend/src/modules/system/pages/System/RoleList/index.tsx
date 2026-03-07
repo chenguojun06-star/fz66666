@@ -9,6 +9,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { Role, RoleQueryParams } from '@/types/system';
 import { getErrorMessage } from '@/types/api';
 import api, { requestWithPathFallback } from '@/utils/api';
+import { organizationApi } from '@/services/system/organizationApi';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
@@ -174,9 +175,19 @@ const RoleList: React.FC = () => {
     };
     (async () => {
       const brands = await fetchDict('brand');
-      const depts = await fetchDict('department');
       setBrandOptions(brands);
-      setDeptOptions(depts);
+      // 部门选项来自组织架构树（t_organization_unit DEPARTMENT 节点）
+      try {
+        const units = await organizationApi.departments();
+        setDeptOptions(
+          (Array.isArray(units) ? units : []).map((u) => ({
+            label: String(u.nodeName || ''),
+            value: String(u.id || ''),
+          }))
+        );
+      } catch (e) {
+        console.error('[角色管理] 获取部门列表失败:', e);
+      }
     })();
   }, []);
 

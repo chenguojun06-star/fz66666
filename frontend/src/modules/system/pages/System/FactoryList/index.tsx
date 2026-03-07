@@ -24,6 +24,12 @@ import { organizationApi } from '@/services/system/organizationApi';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
+const getDepartmentLabel = (item?: OrganizationUnit | null) => {
+  const pathLabel = String(item?.pathNames ?? '').trim();
+  const nodeLabel = String(item?.nodeName ?? '').trim();
+  return pathLabel || nodeLabel || '未命名部门';
+};
+
 const FactoryList: React.FC = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
@@ -601,7 +607,7 @@ const FactoryList: React.FC = () => {
                 value={String((queryParams as any)?.parentOrgUnitId || '') || undefined}
                 options={departmentOptions.map((item) => ({
                   value: String(item.id || ''),
-                  label: item.pathNames || item.nodeName,
+                  label: getDepartmentLabel(item),
                 }))}
                 onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, page: 1 }))}
               />
@@ -678,14 +684,15 @@ const FactoryList: React.FC = () => {
                 ]}
               />
             </Form.Item>
-            <Form.Item name="parentOrgUnitId" label="归属部门" rules={[{ required: true, message: '请选择归属部门' }]}>
+            <Form.Item name="parentOrgUnitId" label="归属部门">
               <Select
                 showSearch
+                allowClear
                 optionFilterProp="label"
-                placeholder="请选择归属部门"
+                placeholder={departmentOptions.length === 0 ? '请先在系统设置中创建部门' : '请选择归属部门'}
                 options={departmentOptions.map((item) => ({
                   value: String(item.id || ''),
-                  label: item.pathNames || item.nodeName,
+                  label: getDepartmentLabel(item),
                 }))}
               />
             </Form.Item>
