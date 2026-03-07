@@ -21,6 +21,7 @@ import DefectTracePanel from './DefectTracePanel';
 import SmartAssignmentPanel from './SmartAssignmentPanel';
 import MindPushPanel from './MindPushPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
+import AiExecutionPanel from '../../components/AiExecutionPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -1138,6 +1139,7 @@ const IntelligenceCenter: React.FC = () => {
                       if (/智能派工|派工推荐/.test(q)) return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
                       if (/智能推送|推送消息/.test(q)) return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
                       if (/排期建议|AI排程|排程/.test(q)) return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
+                      if (/待审批|AI命令|执行命令|AI建议审批/.test(q)) return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
                       return null;
                     })()}
                   </div>
@@ -1150,7 +1152,7 @@ const IntelligenceCenter: React.FC = () => {
                   '今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？',
                   '次品溯源分析', '工厂综合评分排行', '给新款式估算报价',
                   '实时成本追踪分析', '工人效率画像排行', 'AI排程建议', '智能派工推荐',
-                  '学习效率报告', '最新智能推送消息',
+                  '学习效率报告', '最新智能推送消息', '待审批AI命令',
                 ].map(q => (
                   <button key={q} className="c-suggest-btn" onClick={() => handleSend(q)}>{q}</button>
                 ))}
