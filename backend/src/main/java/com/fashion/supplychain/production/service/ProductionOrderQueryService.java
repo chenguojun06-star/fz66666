@@ -122,13 +122,13 @@ public class ProductionOrderQueryService {
                    .le("create_time", today.atTime(23, 59, 59));
         }
 
-        // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
-        DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
-
-        // 外发工厂账号：只能看自己工厂承接的订单
+        // 外发工厂账号：factory_id 有值时按工厂隔离（优先），不再叠加 created_by_id 过滤
+        // 否则：无工厂绑定的账号（跟单员/工人）按数据权限范围过滤自己创建的订单
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
             wrapper.eq("factory_id", ctxFactoryId);
+        } else {
+            DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
         }
 
         wrapper.orderByDesc("create_time");
@@ -345,13 +345,12 @@ public class ProductionOrderQueryService {
             .eq(StringUtils.hasText(plateType), "plate_type", plateType)
             .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser);
 
-        // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
-        DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
-
-        // 外发工厂账号：只能看自己工厂承接的订单
+        // 外发工厂账号：factory_id 有值时按工厂隔离（优先），不再叠加 created_by_id 过滤
         String ctxFactoryId2 = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId2)) {
             wrapper.eq("factory_id", ctxFactoryId2);
+        } else {
+            DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
         }
 
         // 查询所有订单（只查询需要的字段以提高性能，含 status 字段用于延期判断）

@@ -1108,10 +1108,11 @@ const IntelligenceCenter: React.FC = () => {
                   <DashboardOutlined spin style={{ marginRight: 4 }} />AI 正在分析…
                 </div>}
                 {/* 统一回复区 */}
+                {/* nlResult 有明确数据意图时不再叠加显示 chatA，避免重复 */}
                 {(nlResult || chatA) && (
                   <div className="c-chat-answer" style={{ fontSize: 11, marginTop: 5, lineHeight: 1.6 }}>
                     {nlResult && (
-                      <div style={{ color: '#c4b5fd', marginBottom: chatA ? 6 : 0 }}>
+                      <div style={{ color: '#c4b5fd', marginBottom: (chatA && (nlResult.intent === 'fallback' || nlResult.intent === 'ai_direct')) ? 6 : 0 }}>
                         {nlResult.intent === 'ai_direct' && (
                           <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
                             background: 'rgba(167,139,250,0.15)', padding: '1px 5px',
@@ -1125,7 +1126,8 @@ const IntelligenceCenter: React.FC = () => {
                         )}
                       </div>
                     )}
-                    {chatA && <div>{chatA}</div>}
+                    {/* 仅当 NL查询无命中（fallback）或 AI直接回答模式时，才显示 chatA 补充 */}
+                    {chatA && (!nlResult || nlResult.intent === 'fallback' || nlResult.intent === 'ai_direct') && <div>{chatA}</div>}
                     {/* 根据问题关键词内联渲染对应智能面板 */}
                     {(() => {
                       const q = inlineQuery;

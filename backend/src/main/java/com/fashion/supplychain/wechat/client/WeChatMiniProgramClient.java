@@ -15,6 +15,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
@@ -229,6 +230,65 @@ public class WeChatMiniProgramClient {
 
         public void setUnionid(String unionid) {
             this.unionid = unionid;
+        }
+    }
+
+    /**
+     * 发送小程序订阅消息（需用户在小程序内订阅该模板）
+     * 接口：POST /cgi-bin/message/subscribe/send
+     *
+     * @param accessToken 有效的 access_token（调用方负责缓存，2小时有效）
+     * @param openid      接收者的小程序 openid
+     * @param templateId  微信公众平台申请的订阅消息模板 ID
+     * @param page        点击消息后跳转的小程序页面路径（可为 null）
+     * @param data        模板数据：模板变量key → 显示文本（最长20字）
+     * @return true=发送成功，false=失败（失败时已记录 warn 日志）
+     */
+    public boolean sendSubscribeMessage(String accessToken, String openid,
+                                        String templateId, String page,
+                                        Map<String, String> data) {
+        if (!StringUtils.hasText(accessToken) || !StringUtils.hasText(openid)
+                || !StringUtils.hasText(templateId)) {
+            return false;
+        }
+        String url = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token="
+                + urlEncode(accessToken);
+
+        // 将 {key: value} 包装为微信要求的 {key: {value: xxx}} 格式
+        Map<String, Map<String, String>> wrappedData = new LinkedHashMap<>();
+        if (data != null) {
+            data.forEach((k, v) -> {
+                Map<String, String> cell = new HashMap<>();
+                cell.put("value", v == null ? "" : (v.length() > 20 ? v.substring(0, 20) : v));
+                wrappedData.put(k, cell);
+            });
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("touser", openid);
+        body.put("template_id", templateId);
+        if (StringUtils.hasText(page)) body.put("page", page);
+        body.put("miniprogram_state", "formal");
+        body.put("lang", "zh_CN");
+        body.put("data", wrappedData);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<String> resp = restTemplate.postForEntity(url, request, String.class);
+            String respBody = resp == null ? null : resp.getBody();
+            if (!StringUtils.hasText(respBody)) return false;
+            JsonNode root = objectMapper.readTree(respBody);
+            int errcode = root.path("errcode").asInt(-1);
+            if (errcode == 0) return true;
+            // errcode=43101: 用户未订阅该模板，属于正常情况，仅 debug 级
+            if (errcode == 43101) {
+                return false;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
         }
     }
 }
