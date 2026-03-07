@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（107个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-07 | **AI指令版本**：v3.12
+> **最后更新**：2026-03-21 | **AI指令版本**：v3.11
 
 ---
 
@@ -15,7 +15,7 @@
 | 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | [编排层规划](#第三步编排层规划架构核心不可省略) |
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | [权限控制模式](#权限控制模式强制) |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | [第三步类型安全核查](#第三步编排层规划架构核心不可省略) |
-| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行分级目标) |
+| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行不可省略) |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | [快速判断Orchestrator](#快速判断什么时候新建-orchestrator) |
 
 > **工作流**：每次开始前，先默念这 6 条。执行前，跑【推送前三步验证】。90% 的 bug 都能避免。
@@ -115,7 +115,7 @@ Controller → Orchestrator → Service → Mapper
 ```
 □ 是否有跨 Service 调用？→ 必须新建或使用已有 Orchestrator，禁止在 Controller/Service 内交叉调用
 □ 是否有多表写操作？→ Orchestrator 方法加 @Transactional(rollbackFor = Exception.class)
-□ 现有 107 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
+□ 现有 56 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
 □ 新 Orchestrator 文件行数目标：≤ 200 行；单方法逻辑 ≤ 50 行
 □ 类型安全核查：UserContext.tenantId() → Long，userId() → String（见常见陷阱表）
 ```
@@ -147,8 +147,6 @@ Controller → Orchestrator → Service → Mapper
 □ 新功能是否影响其他页面？（在浏览器快速点击一遍相关页面）
 □ 是否需要同步更新 copilot-instructions.md 或 系统状态.md？
 □ 云端是否需要手动执行 SQL？（FLYWAY_ENABLED=false）
-□ 若涉及智能推荐/预警：是否记录了 baseline 指标（命中率/误报率/采纳率）？
-□ 若涉及智能模块：是否配置了租户级开关与回滚方案？
 ```
 
 ### 快速判断：什么时候新建 Orchestrator？
@@ -364,16 +362,16 @@ cd frontend && npm run dev
 
 **环境变量来源**：`.run/backend.env`（由 dev-public.sh 自动加载）
 - `APP_AUTH_JWT_SECRET` - JWT 签名密钥
-- `SPRING_DATASOURCE_URL` - 数据库连接：`jdbc:mysql://localhost:3308/template_library`
+- `SPRING_DATASOURCE_URL` - 数据库连接：`jdbc:mysql://localhost:3308/fashion_supplychain`
 - `WECHAT_MINI_PROGRAM_MOCK_ENABLED=true` - 开发环境启用 Mock（跳过微信登录验证）
 
 ### 内网访问配置（⚠️ 禁止修改）
 **固定配置**（永远不要改动）：
-- **内网 IP**：`192.168.2.248`（固定）
-- **访问地址**：`http://192.168.2.248:5173/`
+- **内网 IP**：`192.168.2.215`（本机固定，见 `vite.config.ts` line 63）
+- **访问地址**：`http://192.168.2.215:5173/`
 - **配置文件**：`frontend/vite.config.ts`
   - `server.host: '0.0.0.0'`（监听所有网络接口）
-  - `server.hmr.host: '192.168.2.248'`（HMR 固定内网 IP）
+  - `server.hmr.host: '192.168.2.215'`（HMR 固定内网 IP）
   - `server.port: 5173`（开发端口）
 - **启动脚本**：`dev-public.sh` 使用 `--host 0.0.0.0` 参数
 
@@ -386,7 +384,7 @@ cd frontend && npm run dev
 **故障排查**：
 ```bash
 # 如果遇到 "Failed to fetch dynamically imported module" 错误
-# 1. 检查 vite.config.ts 中 hmr.host 是否为 192.168.2.248
+# 1. 检查 vite.config.ts 中 hmr.host 是否为 192.168.2.215
 # 2. 检查 dev-public.sh 启动命令是否包含 --host 0.0.0.0
 # 3. 重启开发服务器：killall node && ./dev-public.sh
 ```
@@ -983,7 +981,7 @@ SKU = styleNo + color + size
 
 ## ⚠️ 常见陷阱与注意事项
 
-1. **【禁止】修改内网配置**：`vite.config.ts` 中 `hmr.host='192.168.2.248'` 和 `dev-public.sh` 中 `--host 0.0.0.0` 是固定配置，修改会导致动态模块导入失败和 API 代理异常
+1. **【禁止】修改内网配置**：`vite.config.ts` 中 `hmr.host='192.168.2.215'` 和 `dev-public.sh` 中 `--host 0.0.0.0` 是固定配置，修改会导致动态模块导入失败和 API 代理异常
 2. **403 错误**：未使用 `./dev-public.sh` 启动，缺少 `.run/backend.env` 环境变量
 3. **数据库连接失败**：检查端口是否为 3308（非标准 3306），容器名 `fashion-mysql-simple`
 4. **使用废弃 API**：检查 `@Deprecated` 标记，所有新代码必须使用 `POST /list` 和 `stage-action` 模式
@@ -995,7 +993,7 @@ SKU = styleNo + color + size
 10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 11. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
 12. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
-13. **git push = 云端自动重新部署**：微信云托管控制台已绑定 GitHub 仓库持续部署，push 到 main 分支后 3~5 分钟自动生效。**不需要** GitHub Actions Secrets，**不需要**手动上传 JAR。
+13. **git push = 云端自动重新部署**：`.github/workflows/ci.yml` 的 `deploy` job 通过腾讯云 `cloudbase-action` 触发部署，push 到 main 后 3~5 分钟自动生效。**需要** GitHub Actions Secrets（`CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` / `CLOUDBASE_ENV_ID`，已在仓库 Settings 中配置），**无需**手动上传 JAR。
 14. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
 
 ---
@@ -1049,7 +1047,7 @@ git diff --cached --stat
 
 **部署方式：微信云托管控制台持续部署（已绑定 GitHub repo）**
 
-> ⚠️ **AI 必读**：云端部署早已在微信云托管控制台中配置了持续部署，**不需要 GitHub Actions Secrets**。只要推送到 main 分支，云端容器会自动重新构建部署，无需任何额外操作。
+> ⚠️ **AI 必读**：部署通过 `.github/workflows/ci.yml` 的 `deploy` job 触发（使用 `CLOUDBASE_SECRET_ID`/`CLOUDBASE_SECRET_KEY`/`CLOUDBASE_ENV_ID` 三个 Secrets，已在仓库 Settings 中配置）。只要推送到 main 分支，CI 自动触发云端容器重建，无需手动上传 JAR。
 
 ```bash
 # 部署到云端：正确流程（绝对禁止直接 git add .）
@@ -1085,32 +1083,12 @@ git push upstream main
 **或者**通过容器内执行（如有 SSH/终端权限）：
 ```bash
 # 在云端容器内执行（内网地址）
-mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < your-migration.sql
+mysql -h10.1.104.42 -P3306 -uroot -pcC1997112 fashion_supplychain < your-migration.sql
 ```
-
-> ⚠️ 安全要求：禁止在文档、脚本、提交记录中写明文数据库密码。凭据统一存放在环境变量或密钥管理系统中。
 
 **历史上已手动执行的 SQL**（不会再重复执行）：
 - `V20260225__add_user_avatar_url.sql` — `t_user` 添加 `avatar_url` 列
 - `V20260226b__fix_login_log_error_message.sql` — `t_login_log.error_message` 改为 TEXT
-
-### 手工 SQL 执行审计模板（强制）
-每次在云端手工执行 SQL 后，必须在 PR 描述或变更记录中附以下内容：
-
-```text
-[SQL审计记录]
-执行环境：cloud-prod / cloud-staging
-执行时间：YYYY-MM-DD HH:mm:ss
-执行人：<name>
-变更脚本：VYYYYMMDD__xxx.sql
-影响对象：<table/index>
-影响行数：<rows>
-结果：SUCCESS / FAILED
-回滚语句：<rollback-sql>
-验收结论：<query-result-or-screenshot-ref>
-```
-
-> 缺失审计记录的数据库变更，视为未完成交付，不允许合并。
 
 **性能索引**（`V20260226c__add_scan_record_performance_indexes.sql`，✅ 已于 2026-02-26 手动在云端控制台执行完毕）：
 ```sql
@@ -1179,15 +1157,15 @@ mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,Product
 **原因**：开发团队多人协作，避免与本地 MySQL 3306 冲突
 - 修改端口需同步更新：`dev-public.sh` + `.run/backend.env` + `deployment/db-manager.sh`
 
-### 为什么内网 IP 固定为 192.168.2.248？
+### 为什么内网 IP 固定为 192.168.2.215？
 **原因**：Vite HMR（热模块替换）需要固定主机地址才能正常工作
-- ✅ **固定配置**：`vite.config.ts` 中 `hmr.host='192.168.2.248'`
+- ✅ **固定配置**：`vite.config.ts` 中 `hmr.host='192.168.2.215'`
 - ✅ **启动命令**：`dev-public.sh` 中 `--host 0.0.0.0`
 - ❌ **禁止修改**：修改 HMR host 会导致动态模块导入失败（React Router lazy loading）
 - ❌ **禁止修改**：修改监听 host 会导致内网无法访问
 - **访问方式**：
   - 本地：`http://localhost:5173/`（API 代理生效）
-  - 内网：`http://192.168.2.248:5173/`（支持团队协作）
+  - 内网：`http://192.168.2.215:5173/`（支持团队协作）
 
 ### 为什么小程序不用 TypeScript？
 **决策**：微信开发者工具 2020 年版本对 TS 支持差，编译耗时长
@@ -1328,7 +1306,7 @@ docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e 
 **原因**：使用内网 IP 会导致 Vite 代理失效 + 动态导入（lazy loading）失败
 ```bash
 # ❌ 错误访问（会导致两类问题）
-http://192.168.2.248:5173
+http://192.168.2.215:5173
 # 问题1：API 代理不生效 → 后端请求 404
 # 问题2：动态导入失败 → "Failed to fetch dynamically imported module"
 
@@ -1342,7 +1320,7 @@ frontend/vite.config.ts → server.proxy['/api']
 **典型错误信息**：
 ```
 TypeError: Failed to fetch dynamically imported module: 
-http://192.168.2.248:5173/src/modules/basic/pages/OrderManagement/index.tsx
+http://192.168.2.215:5173/src/modules/basic/pages/OrderManagement/index.tsx
 ```
 
 **快速修复**：
@@ -1519,40 +1497,6 @@ ls -1 test-*.sh           # 列出所有测试脚本
 - [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout）？
 - [ ] 是否更新了跨端验证规则？
 - [ ] 是否编写了测试？
-
-## 🧠 智能化升级与治理（强制）
-
-### 智能能力发布门槛（P0）
-
-| 维度 | 最低要求 | 验收方式 |
-|------|----------|----------|
-| 覆盖率 | 目标业务场景覆盖率 ≥ 80% | 发布说明附统计口径 |
-| 误报率 | 预警类误报率 ≤ 15% | 以最近7天人工复核数据计算 |
-| 采纳率 | 建议类人工采纳率 ≥ 30% | `建议总数/采纳数` 周报 |
-| 稳定性 | 智能接口 5xx 比例 ≤ 0.5% | 按接口维度统计 |
-
-> 未达到门槛：默认降级为规则基线，不允许全量开启。
-
-### 灰度、开关与回滚（P0）
-- 每个智能 Orchestrator 必须具备租户级开关（`tenant_id + feature_key`）。
-- 发布顺序固定：`开发环境 → 1个租户灰度 → 10%租户 → 全量`。
-- 必须支持 10 分钟内回滚到上一稳定版本（规则版本或模型版本）。
-- 接口返回需携带 `engineVersion`（例如 `rule-v3` / `model-v12`）用于追溯。
-
-### 反馈闭环（P1）
-- 用户反馈表必须可关联到智能建议（`suggestion_id`、`engine_version`、`accepted`、`reject_reason`）。
-- 每周至少一次回放“高误报 Top20”并输出修正规则或特征补强项。
-- 同类问题连续两周重复出现，必须升级为 P1 缺陷进入迭代计划。
-
-### 可解释性与审计（P1）
-- 推荐/预警接口至少返回 1 个主因字段：`reasonCode` 或 `topFactors`。
-- 涉及自动状态流转的智能决策，必须记录审计日志（入参快照、输出、执行人/系统、时间）。
-- 禁止“只给分数不给理由”的黑盒结果直接驱动关键业务动作。
-
-### 数据质量守门（P1）
-- 智能入口前必须做数据质量评分（完整性、时效性、异常值率）。
-- 评分低于阈值时自动降级：只展示“数据不足，建议人工判断”，不输出强建议。
-- 关键字段缺失（如 `tenant_id`、`order_id`、`scan_time`）时必须直接拒绝执行并记录告警日志。
 
 ---
 
