@@ -1071,16 +1071,23 @@ git push upstream main
 **云端环境信息**（微信云托管控制台截图确认）：
 - **云后端地址**：`backend-226678-6-1405390085.sh.run.tcloudbase.com`
 - **数据库**：`jdbc:mysql://10.1.104.42:3306/...`（VPC 内网，仅容器内可访问）
-- **`FLYWAY_ENABLED=false`** ← ⚠️ **Flyway 已关闭！**
+- **`FLYWAY_ENABLED=true`** ← ⚠️ **Flyway 实际在云端运行（cloudbaserc.json 配置）！**
 
-### ⚠️ FLYWAY_ENABLED=false — 云端数据库变更必须手动执行
+### ⚠️ FLYWAY_ENABLED=true — 云端 Flyway 自动执行，脚本必须幂等
 
-**关键约束**：云端 `FLYWAY_ENABLED=false`，所有 Flyway 迁移脚本（`V*.sql`）**不会自动运行**。
+**关键约束**：云端 `FLYWAY_ENABLED=true`（见 `cloudbaserc.json`），所有 Flyway 迁移脚本（`V*.sql`）**会自动执行**。  
+**任何脚本失败 → Spring Boot 启动失败 → 所有新接口 404（旧容器继续服务）**
 
-**正确做法**：
-1. 在 `backend/src/main/resources/db/migration/` 写好 `V*.sql` 文件（本地版本控制用）
-2. **同时**在微信云托管控制台执行对应 SQL：
-   - 进入 [微信云托管控制台](https://cloud.weixin.qq.com) → 数据库面板 → 执行 SQL
+**强制规范**：
+1. `CREATE TABLE` 必须用 `CREATE TABLE IF NOT EXISTS`
+2. `ALTER TABLE ADD COLUMN` **禁止直接写** → 必须用 INFORMATION_SCHEMA 条件判断（MySQL 8.0 不支持 `IF NOT EXISTS`）：
+```sql
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_xxx' AND COLUMN_NAME='col_name')=0,
+    'ALTER TABLE `t_xxx` ADD COLUMN `col_name` VARCHAR(64) NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+```
+3. 脚本本地执行通过后再 push，不再需要手动在控制台执行（Flyway 会自动迁移）
 
 **或者**通过容器内执行（如有 SSH/终端权限）：
 ```bash
