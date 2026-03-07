@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（107个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-21 | **AI指令版本**：v3.11
+> **最后更新**：2026-03-21 | **AI指令版本**：v3.12
 
 ---
 
@@ -115,7 +115,7 @@ Controller → Orchestrator → Service → Mapper
 ```
 □ 是否有跨 Service 调用？→ 必须新建或使用已有 Orchestrator，禁止在 Controller/Service 内交叉调用
 □ 是否有多表写操作？→ Orchestrator 方法加 @Transactional(rollbackFor = Exception.class)
-□ 现有 56 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
+□ 现有 107 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
 □ 新 Orchestrator 文件行数目标：≤ 200 行；单方法逻辑 ≤ 50 行
 □ 类型安全核查：UserContext.tenantId() → Long，userId() → String（见常见陷阱表）
 ```
@@ -147,6 +147,8 @@ Controller → Orchestrator → Service → Mapper
 □ 新功能是否影响其他页面？（在浏览器快速点击一遍相关页面）
 □ 是否需要同步更新 copilot-instructions.md 或 系统状态.md？
 □ 云端是否需要手动执行 SQL？（FLYWAY_ENABLED=false）
+□ 若涉及智能推荐/预警：是否记录了 baseline 指标（命中率/误报率/采纳率）？
+□ 若涉及智能模块：是否配置了租户级开关与回滚方案？
 ```
 
 ### 快速判断：什么时候新建 Orchestrator？
@@ -1082,9 +1084,11 @@ git push upstream main
 
 **或者**通过容器内执行（如有 SSH/终端权限）：
 ```bash
-# 在云端容器内执行（内网地址）
-mysql -h10.1.104.42 -P3306 -uroot -pcC1997112 fashion_supplychain < your-migration.sql
+# 在云端容器内执行（内网地址，凭据通过环境变量获取）
+mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < your-migration.sql
 ```
+
+> ⚠️ 安全要求：禁止在文档、脚本、提交记录中写明文数据库密码。凭据统一存放在环境变量或密钥管理系统中。
 
 **历史上已手动执行的 SQL**（不会再重复执行）：
 - `V20260225__add_user_avatar_url.sql` — `t_user` 添加 `avatar_url` 列
