@@ -3,7 +3,7 @@ import React, { CSSProperties } from 'react';
 /**
  * 通用弹窗内容布局组件
  * 统一字体、间距、布局等视觉规范
- * 
+ *
  * 使用场景：所有 ResizableModal 内的内容
  * 目的：只统一字体、布局、间距等样式，不影响具体业务内容
  */
@@ -129,6 +129,8 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
 // ================ 字段行容器 ================
 interface FieldRowProps {
   children: React.ReactNode;
+  /** 字段标签 */
+  label?: string;
   /** 是否移动端 */
   isMobile?: boolean;
   /** 字段之间的间距，默认 24px */
@@ -138,6 +140,7 @@ interface FieldRowProps {
 
 export const ModalFieldRow: React.FC<FieldRowProps> = ({
   children,
+  label,
   isMobile = false,
   gap = 24,
   style,
@@ -153,6 +156,11 @@ export const ModalFieldRow: React.FC<FieldRowProps> = ({
         ...style,
       }}
     >
+      {label && (
+        <span style={{ minWidth: 80, color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+          {label}
+        </span>
+      )}
       {children}
     </div>
   );

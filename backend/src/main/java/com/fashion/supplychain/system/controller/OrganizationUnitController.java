@@ -2,8 +2,10 @@ package com.fashion.supplychain.system.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.OrganizationUnit;
+import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.OrganizationUnitOrchestrator;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +34,11 @@ public class OrganizationUnitController {
     @GetMapping("/departments")
     public Result<List<OrganizationUnit>> departments() {
         return Result.success(organizationUnitOrchestrator.departmentOptions());
+    }
+
+    @GetMapping("/members")
+    public Result<Map<String, List<User>>> members() {
+        return Result.success(organizationUnitOrchestrator.membersByOrgUnit());
     }
 
     @PostMapping

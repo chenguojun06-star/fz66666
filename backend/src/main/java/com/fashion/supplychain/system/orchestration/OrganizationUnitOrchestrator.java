@@ -5,9 +5,11 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.OrganizationUnit;
+import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.OrganizationUnitService;
+import com.fashion.supplychain.system.service.UserService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,6 +34,9 @@ public class OrganizationUnitOrchestrator {
 
     @Autowired
     private OrganizationUnitBindingHelper bindingHelper;
+
+    @Autowired
+    private UserService userService;
 
     public List<OrganizationUnit> tree() {
         ensureFactoryNodes();
@@ -134,6 +139,25 @@ public class OrganizationUnitOrchestrator {
         existing.setUpdateTime(LocalDateTime.now());
         organizationUnitService.updateById(existing);
         return true;
+    }
+
+    /**
+     * 按组织节点分组返回成员列表（key=orgUnitId, value=该节点下的用户列表）
+     */
+    public Map<String, List<User>> membersByOrgUnit() {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
+                .eq(User::getStatus, "active")
+                .isNotNull(User::getOrgUnitId)
+                .ne(User::getOrgUnitId, "")
+                .orderByAsc(User::getName);
+        if (tenantId != null) {
+            wrapper.eq(User::getTenantId, tenantId);
+        }
+        List<User> users = userService.list(wrapper);
+        // 清除敏感字段
+        users.forEach(u -> u.setPassword(null));
+        return users.stream().collect(Collectors.groupingBy(User::getOrgUnitId));
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -99,7 +99,8 @@ const IntelligenceCenter: React.FC = () => {
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) {
-      setInlineQuery(decodeURIComponent(q));
+      // useSearchParams 已自动解码，无需再 decodeURIComponent（否则含 % 字符会 URIError）
+      setInlineQuery(q);
       setSearchParams({}, { replace: true }); // 消费后清除 URL 参数，避免刷新重复触发
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,0 +1,132 @@
+/* 组织架构页面样式 */
+.org-tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 节点卡片 */
+.org-node-card {
+  border: 1px solid var(--neutral-border, #f0f0f0);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: box-shadow 0.2s;
+}
+
+.org-node-card:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.org-node-leaf {
+  padding: 10px 16px;
+  background: var(--neutral-bg-secondary, #fafafa);
+}
+
+/* 节点头部 */
+.org-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+}
+
+.org-node-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.org-node-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--neutral-text-primary, #1a1a1a);
+  margin-left: 6px;
+}
+
+.org-node-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.org-node-header:hover .org-node-actions,
+.org-node-card:hover > .org-node-header .org-node-actions,
+.org-node-leaf:hover .org-node-actions {
+  opacity: 1;
+}
+
+/* 节点内容区 */
+.org-node-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 成员区域 */
+.org-members-section {
+  background: var(--neutral-bg-secondary, #fafafa);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+}
+
+.org-members-title {
+  font-size: 12px;
+  color: var(--neutral-text-secondary, #666);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.org-members-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.org-member-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid var(--neutral-border, #f0f0f0);
+  min-width: 120px;
+}
+
+.org-member-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.org-member-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--neutral-text-primary, #1a1a1a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-member-role {
+  font-size: 11px;
+  color: var(--neutral-text-secondary, #999);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapse 样式覆盖 */
+.org-node-card .ant-collapse-ghost > .ant-collapse-item > .ant-collapse-header {
+  padding: 8px 12px;
+}
+
+.org-node-card .ant-collapse-ghost > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 4px 8px 8px 8px;
+}

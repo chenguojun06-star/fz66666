@@ -48,7 +48,12 @@ public class SysNoticeController {
      */
     @GetMapping("/my")
     public Result<List<SysNotice>> my() {
-        return Result.success(sysNoticeOrchestrator.getMyNotices());
+        try {
+            return Result.success(sysNoticeOrchestrator.getMyNotices());
+        } catch (Exception e) {
+            log.warn("[SysNotice] getMyNotices 异常，返回空列表: {}", e.getMessage());
+            return Result.success(java.util.Collections.emptyList());
+        }
     }
 
     /**
@@ -56,8 +61,13 @@ public class SysNoticeController {
      */
     @GetMapping("/unread-count")
     public Result<Map<String, Long>> unreadCount() {
-        long count = sysNoticeOrchestrator.getUnreadCount();
-        return Result.success(Map.of("count", count));
+        try {
+            long count = sysNoticeOrchestrator.getUnreadCount();
+            return Result.success(Map.of("count", count));
+        } catch (Exception e) {
+            log.warn("[SysNotice] getUnreadCount 异常，返回0: {}", e.getMessage());
+            return Result.success(Map.of("count", 0L));
+        }
     }
 
     /**
