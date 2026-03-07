@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.OrderTrackResponse;
 import com.fashion.supplychain.intelligence.dto.OrderTrackResponse.*;
 import com.fashion.supplychain.intelligence.entity.OrderShareToken;
@@ -49,6 +50,7 @@ public class OrderTrackPortalOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public String generateToken(String orderId) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String userId  = UserContext.userId();
 
@@ -86,6 +88,7 @@ public class OrderTrackPortalOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void revokeToken(String orderId) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int deleted = orderShareTokenMapper.delete(
             new QueryWrapper<OrderShareToken>()

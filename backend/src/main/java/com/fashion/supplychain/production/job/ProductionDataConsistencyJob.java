@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -21,49 +23,63 @@ public class ProductionDataConsistencyJob {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private ProcessStatsEngine processStatsEngine;
+
     /**
      * 每30分钟执行一次，修复生产进度数据
-     * 针对状态为 'production' (生产中) 的订单
+     * 按租户隔离迭代，防止跨租户写入
      */
     @Scheduled(cron = "0 0/30 * * * ?")
     public void recomputeActiveOrdersProgress() {
-        log.info("开始执行生产进度一致性检查...");
+        log.info("[ConsistencyJob] 开始执行生产进度一致性检查...");
         long start = System.currentTimeMillis();
 
+        List<Long> tenantIds;
         try {
-            // 查询所有生产中的订单
-            List<ProductionOrder> activeOrders = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
-                    .eq(ProductionOrder::getStatus, "production")
-                    .eq(ProductionOrder::getDeleteFlag, 0));
-
-            if (activeOrders == null || activeOrders.isEmpty()) {
-                log.info("当前无进行中的订单，跳过检查");
-                return;
-            }
-
-            int success = 0;
-            int failed = 0;
-            for (ProductionOrder order : activeOrders) {
-                try {
-                    productionOrderService.recomputeProgressAsync(order.getId());
-                    success++;
-                } catch (Exception e) {
-                    failed++;
-                    log.error("订单进度重算失败: id={}, orderNo={}", order.getId(), order.getOrderNo(), e);
-                }
-            }
-
-            long duration = System.currentTimeMillis() - start;
-            if (failed > 0) {
-                log.warn("生产进度一致性检查完成（有失败项）: 成功={}, 失败={}, 共{}个订单, 耗时{}ms",
-                        success, failed, activeOrders.size(), duration);
-            } else {
-                log.info("生产进度一致性检查完成: 成功={}, 共{}个订单, 耗时{}ms",
-                        success, activeOrders.size(), duration);
-            }
-
+            tenantIds = processStatsEngine.findActiveTenantIds();
         } catch (Exception e) {
-            log.error("生产进度一致性检查任务异常", e);
+            log.error("[ConsistencyJob] 获取活跃租户列表失败，任务中止", e);
+            return;
+        }
+
+        int totalSuccess = 0, totalFailed = 0;
+        for (Long tenantId : tenantIds) {
+            TenantAssert.bindTenantForTask(tenantId, "进度一致性检查");
+            try {
+                List<ProductionOrder> activeOrders = productionOrderService.list(
+                        new LambdaQueryWrapper<ProductionOrder>()
+                                .eq(ProductionOrder::getStatus, "production")
+                                .eq(ProductionOrder::getDeleteFlag, 0));
+
+                if (activeOrders == null || activeOrders.isEmpty()) {
+                    continue;
+                }
+
+                for (ProductionOrder order : activeOrders) {
+                    try {
+                        productionOrderService.recomputeProgressAsync(order.getId());
+                        totalSuccess++;
+                    } catch (Exception e) {
+                        totalFailed++;
+                        log.error("[ConsistencyJob] 订单进度重算失败: tenantId={}, id={}, orderNo={}",
+                                tenantId, order.getId(), order.getOrderNo(), e);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("[ConsistencyJob] 租户 {} 进度检查异常", tenantId, e);
+            } finally {
+                TenantAssert.clearTenantContext();
+            }
+        }
+
+        long duration = System.currentTimeMillis() - start;
+        if (totalFailed > 0) {
+            log.warn("[ConsistencyJob] 检查完成（有失败项）: 成功={}, 失败={}, 租户数={}, 耗时{}ms",
+                    totalSuccess, totalFailed, tenantIds.size(), duration);
+        } else {
+            log.info("[ConsistencyJob] 检查完成: 成功={}, 租户数={}, 耗时{}ms",
+                    totalSuccess, tenantIds.size(), duration);
         }
     }
 }

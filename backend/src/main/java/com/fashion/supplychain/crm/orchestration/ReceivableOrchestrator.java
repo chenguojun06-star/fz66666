@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.service.CustomerService;
@@ -107,6 +108,7 @@ public class ReceivableOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public Receivable create(Receivable receivable) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         UserContext ctx = UserContext.get();
 
@@ -156,6 +158,7 @@ public class ReceivableOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Receivable markReceived(String id, BigDecimal paymentAmount) {
+        TenantAssert.assertTenantContext();
         Receivable r = receivableService.getById(id);
         if (r == null) throw new RuntimeException("应收单不存在");
         if ("PAID".equals(r.getStatus())) throw new RuntimeException("该应收单已结清，无法重复收款");
@@ -177,6 +180,7 @@ public class ReceivableOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
+        TenantAssert.assertTenantContext();
         Receivable r = new Receivable();
         r.setId(id);
         r.setDeleteFlag(1);
@@ -189,6 +193,7 @@ public class ReceivableOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
+        TenantAssert.assertTenantContext();
         List<Receivable> list = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)
