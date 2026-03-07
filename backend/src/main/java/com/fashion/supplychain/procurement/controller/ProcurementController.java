@@ -36,6 +36,32 @@ public class ProcurementController {
         return Result.success(procurementOrchestrator.listPurchaseOrders(params));
     }
 
+    /** 采购单详情 */
+    @GetMapping("/purchase-orders/{id}")
+    public Result<?> getPurchaseOrderDetail(@PathVariable String id) {
+        return Result.success(procurementOrchestrator.getPurchaseOrderDetail(id));
+    }
+
+    /** 采购单关联的物料对账记录 */
+    @PostMapping("/purchase-orders/{purchaseId}/material-reconciliations/list")
+    public Result<?> listMaterialReconciliations(@PathVariable String purchaseId,
+                                                 @RequestBody(required = false) Map<String, Object> params) {
+        return Result.success(procurementOrchestrator.listMaterialReconciliationsByPurchase(purchaseId, params));
+    }
+
+    /** 物料对账详情 */
+    @GetMapping("/material-reconciliations/{id}")
+    public Result<?> getMaterialReconciliationDetail(@PathVariable String id) {
+        return Result.success(procurementOrchestrator.getMaterialReconciliationDetail(id));
+    }
+
+    /** 供应商采购历史 */
+    @PostMapping("/suppliers/{supplierId}/purchase-orders/list")
+    public Result<?> listSupplierPurchaseOrders(@PathVariable String supplierId,
+                                                @RequestBody(required = false) Map<String, Object> params) {
+        return Result.success(procurementOrchestrator.listPurchaseOrdersBySupplier(supplierId, params));
+    }
+
     /** 综合统计（供应商数量 + 采购单状态汇总） */
     @PostMapping("/stats")
     public Result<?> getStats(@RequestBody(required = false) Map<String, Object> params) {
@@ -47,5 +73,29 @@ public class ProcurementController {
     @PostMapping("/purchase-orders")
     public Result<?> createPurchaseOrder(@RequestBody MaterialPurchase purchase) {
         return Result.success(procurementOrchestrator.createPurchaseOrder(purchase));
+    }
+
+    /** 到货登记 */
+    @PostMapping("/purchase-orders/update-arrived-quantity")
+    public Result<?> updateArrivedQuantity(@RequestBody Map<String, Object> params) {
+        return Result.success(procurementOrchestrator.updateArrivedQuantity(params));
+    }
+
+    /** 到货并入库 */
+    @PostMapping("/purchase-orders/confirm-arrival")
+    public Result<?> confirmArrivalAndInbound(@RequestBody Map<String, Object> params) {
+        return Result.success(procurementOrchestrator.confirmArrivalAndInbound(params));
+    }
+
+    /** 快速编辑 */
+    @PutMapping("/purchase-orders/quick-edit")
+    public Result<?> quickEditPurchaseOrder(@RequestBody Map<String, Object> payload) {
+        return Result.success(procurementOrchestrator.quickEditPurchaseOrder(payload));
+    }
+
+    /** 撤回领取 */
+    @PostMapping("/purchase-orders/cancel-receive")
+    public Result<?> cancelReceive(@RequestBody Map<String, Object> params) {
+        return Result.success(procurementOrchestrator.cancelReceive(params));
     }
 }

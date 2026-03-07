@@ -52,6 +52,7 @@ public class MaterialReconciliationServiceImpl
         String materialCode = (String) params.getOrDefault("materialCode", "");
         String status = (String) params.getOrDefault("status", "");
         String sourceType = (String) params.getOrDefault("sourceType", ""); // 采购来源筛选
+        String purchaseId = (String) params.getOrDefault("purchaseId", "");
 
         // sourceType筛选：batch同时匹配batch、stock和manual（均为非订单采购）
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReconciliation> wrapper =
@@ -60,6 +61,7 @@ public class MaterialReconciliationServiceImpl
                                 reconciliationNo)
                         .like(StringUtils.hasText(supplierName), MaterialReconciliation::getSupplierName, supplierName)
                         .like(StringUtils.hasText(materialCode), MaterialReconciliation::getMaterialCode, materialCode)
+                        .eq(StringUtils.hasText(purchaseId), MaterialReconciliation::getPurchaseId, purchaseId)
                         .eq(StringUtils.hasText(status), MaterialReconciliation::getStatus, status)
                         .eq(MaterialReconciliation::getDeleteFlag, 0)
                         .orderByDesc(MaterialReconciliation::getCreateTime);

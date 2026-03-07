@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（107个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-21 | **AI指令版本**：v3.11
+> **最后更新**：2026-03-07 | **AI指令版本**：v3.12
 
 ---
 
@@ -15,7 +15,7 @@
 | 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | [编排层规划](#第三步编排层规划架构核心不可省略) |
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | [权限控制模式](#权限控制模式强制) |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | [第三步类型安全核查](#第三步编排层规划架构核心不可省略) |
-| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行不可省略) |
+| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行分级目标) |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | [快速判断Orchestrator](#快速判断什么时候新建-orchestrator) |
 
 > **工作流**：每次开始前，先默念这 6 条。执行前，跑【推送前三步验证】。90% 的 bug 都能避免。
@@ -115,7 +115,7 @@ Controller → Orchestrator → Service → Mapper
 ```
 □ 是否有跨 Service 调用？→ 必须新建或使用已有 Orchestrator，禁止在 Controller/Service 内交叉调用
 □ 是否有多表写操作？→ Orchestrator 方法加 @Transactional(rollbackFor = Exception.class)
-□ 现有 56 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
+□ 现有 107 个 Orchestrator 中是否已有可复用的？→ 先 grep 再新建
 □ 新 Orchestrator 文件行数目标：≤ 200 行；单方法逻辑 ≤ 50 行
 □ 类型安全核查：UserContext.tenantId() → Long，userId() → String（见常见陷阱表）
 ```
@@ -147,6 +147,8 @@ Controller → Orchestrator → Service → Mapper
 □ 新功能是否影响其他页面？（在浏览器快速点击一遍相关页面）
 □ 是否需要同步更新 copilot-instructions.md 或 系统状态.md？
 □ 云端是否需要手动执行 SQL？（FLYWAY_ENABLED=false）
+□ 若涉及智能推荐/预警：是否记录了 baseline 指标（命中率/误报率/采纳率）？
+□ 若涉及智能模块：是否配置了租户级开关与回滚方案？
 ```
 
 ### 快速判断：什么时候新建 Orchestrator？
@@ -1083,12 +1085,32 @@ git push upstream main
 **或者**通过容器内执行（如有 SSH/终端权限）：
 ```bash
 # 在云端容器内执行（内网地址）
-mysql -h10.1.104.42 -P3306 -uroot -pcC1997112 fashion_supplychain < your-migration.sql
+mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < your-migration.sql
 ```
+
+> ⚠️ 安全要求：禁止在文档、脚本、提交记录中写明文数据库密码。凭据统一存放在环境变量或密钥管理系统中。
 
 **历史上已手动执行的 SQL**（不会再重复执行）：
 - `V20260225__add_user_avatar_url.sql` — `t_user` 添加 `avatar_url` 列
 - `V20260226b__fix_login_log_error_message.sql` — `t_login_log.error_message` 改为 TEXT
+
+### 手工 SQL 执行审计模板（强制）
+每次在云端手工执行 SQL 后，必须在 PR 描述或变更记录中附以下内容：
+
+```text
+[SQL审计记录]
+执行环境：cloud-prod / cloud-staging
+执行时间：YYYY-MM-DD HH:mm:ss
+执行人：<name>
+变更脚本：VYYYYMMDD__xxx.sql
+影响对象：<table/index>
+影响行数：<rows>
+结果：SUCCESS / FAILED
+回滚语句：<rollback-sql>
+验收结论：<query-result-or-screenshot-ref>
+```
+
+> 缺失审计记录的数据库变更，视为未完成交付，不允许合并。
 
 **性能索引**（`V20260226c__add_scan_record_performance_indexes.sql`，✅ 已于 2026-02-26 手动在云端控制台执行完毕）：
 ```sql
@@ -1497,6 +1519,40 @@ ls -1 test-*.sh           # 列出所有测试脚本
 - [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout）？
 - [ ] 是否更新了跨端验证规则？
 - [ ] 是否编写了测试？
+
+## 🧠 智能化升级与治理（强制）
+
+### 智能能力发布门槛（P0）
+
+| 维度 | 最低要求 | 验收方式 |
+|------|----------|----------|
+| 覆盖率 | 目标业务场景覆盖率 ≥ 80% | 发布说明附统计口径 |
+| 误报率 | 预警类误报率 ≤ 15% | 以最近7天人工复核数据计算 |
+| 采纳率 | 建议类人工采纳率 ≥ 30% | `建议总数/采纳数` 周报 |
+| 稳定性 | 智能接口 5xx 比例 ≤ 0.5% | 按接口维度统计 |
+
+> 未达到门槛：默认降级为规则基线，不允许全量开启。
+
+### 灰度、开关与回滚（P0）
+- 每个智能 Orchestrator 必须具备租户级开关（`tenant_id + feature_key`）。
+- 发布顺序固定：`开发环境 → 1个租户灰度 → 10%租户 → 全量`。
+- 必须支持 10 分钟内回滚到上一稳定版本（规则版本或模型版本）。
+- 接口返回需携带 `engineVersion`（例如 `rule-v3` / `model-v12`）用于追溯。
+
+### 反馈闭环（P1）
+- 用户反馈表必须可关联到智能建议（`suggestion_id`、`engine_version`、`accepted`、`reject_reason`）。
+- 每周至少一次回放“高误报 Top20”并输出修正规则或特征补强项。
+- 同类问题连续两周重复出现，必须升级为 P1 缺陷进入迭代计划。
+
+### 可解释性与审计（P1）
+- 推荐/预警接口至少返回 1 个主因字段：`reasonCode` 或 `topFactors`。
+- 涉及自动状态流转的智能决策，必须记录审计日志（入参快照、输出、执行人/系统、时间）。
+- 禁止“只给分数不给理由”的黑盒结果直接驱动关键业务动作。
+
+### 数据质量守门（P1）
+- 智能入口前必须做数据质量评分（完整性、时效性、异常值率）。
+- 评分低于阈值时自动降级：只展示“数据不足，建议人工判断”，不输出强建议。
+- 关键字段缺失（如 `tenant_id`、`order_id`、`scan_time`）时必须直接拒绝执行并记录告警日志。
 
 ---
 

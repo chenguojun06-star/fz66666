@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button, Card, Col, DatePicker, Form, Input, InputNumber,
-  message, Modal, Row, Select, Space, Spin, Tabs, Tag, Typography,
+  message, Row, Select, Space, Spin, Tabs, Tag, Typography,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
@@ -17,6 +17,8 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
+import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
+import SupplierPurchaseHistoryModal from './components/SupplierPurchaseHistoryModal';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -33,6 +35,8 @@ const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
   const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
   return isStatusActive && notExpired;
 };
+
+const normalizePurchaseStatus = (value?: string) => String(value || '').trim().toLowerCase();
 
 // ─── 锁定页（未订阅时展示）─────────────────────────────────────────
 const FEATURES = [
@@ -113,6 +117,9 @@ const SupplierTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [historyRefreshSeed, setHistoryRefreshSeed] = useState(0);
 
   const fetchList = useCallback(async (page = pagination.current, kw = keyword) => {
     setLoading(true);
@@ -144,7 +151,7 @@ const SupplierTab: React.FC = () => {
       title: '操作', width: 100, fixed: 'right' as const,
       render: (_: unknown, record: Supplier) => {
         const actions: RowAction[] = [
-          { key: 'orders', label: '采购历史', primary: true, onClick: () => message.info(`查看 ${record.factoryName} 的采购历史`) },
+          { key: 'orders', label: '采购历史', primary: true, onClick: () => setSelectedSupplier(record) },
         ];
         return <RowActions actions={actions} />;
       },
@@ -189,6 +196,20 @@ const SupplierTab: React.FC = () => {
           scroll={{ x: 900 }}
         />
       </Card>
+      <SupplierPurchaseHistoryModal
+        open={Boolean(selectedSupplier)}
+        supplier={selectedSupplier}
+        onClose={() => setSelectedSupplier(null)}
+        onViewOrder={(order) => setSelectedOrder(order)}
+        key={`${selectedSupplier?.id || 'empty'}-${historyRefreshSeed}`}
+      />
+      <PurchaseOrderDetailModal
+        open={Boolean(selectedOrder)}
+        orderId={selectedOrder?.id}
+        initialOrder={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onUpdated={() => setHistoryRefreshSeed(seed => seed + 1)}
+      />
     </>
   );
 };
@@ -200,6 +221,7 @@ const PurchaseOrderTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
 
   const fetchList = useCallback(async (page = pagination.current, st = statusFilter) => {
     setLoading(true);
@@ -218,16 +240,19 @@ const PurchaseOrderTab: React.FC = () => {
   useEffect(() => { fetchList(1); }, []);
 
   const statusTagColor: Record<string, string> = {
-    PENDING: 'default',
-    APPROVED: 'blue',
-    IN_TRANSIT: 'processing',
-    RECEIVED: 'green',
-    SETTLED: 'success',
-    CANCELLED: 'red',
+    pending: 'default',
+    approved: 'blue',
+    in_transit: 'processing',
+    received: 'green',
+    settled: 'success',
+    cancelled: 'red',
+    completed: 'success',
+    partial: 'orange',
+    partial_arrival: 'orange',
   };
   const statusLabel: Record<string, string> = {
-    PENDING: '待审批', APPROVED: '已审批', IN_TRANSIT: '运输中', RECEIVED: '已收货',
-    SETTLED: '已结算', CANCELLED: '已取消',
+    pending: '待处理', approved: '已审批', in_transit: '运输中', received: '已收货',
+    settled: '已结算', cancelled: '已取消', completed: '已完成', partial: '部分到货', partial_arrival: '部分到货',
   };
 
   const columns: ColumnsType<PurchaseOrder> = [
@@ -238,7 +263,7 @@ const PurchaseOrderTab: React.FC = () => {
     { title: '数量', dataIndex: 'purchaseQuantity', width: 80, render: (v: unknown, r: PurchaseOrder) => `${v ?? r.quantity ?? '-'} ${r.unit ?? ''}` },
     { title: '总金额', dataIndex: 'totalAmount', width: 100, render: (v: unknown) => v != null ? `￥${Number(v).toLocaleString()}` : '-' },
     { title: '状态', dataIndex: 'status', width: 100, render: (v: string) =>
-      <Tag color={statusTagColor[v] ?? 'default'}>{statusLabel[v] ?? v}</Tag>
+      <Tag color={statusTagColor[normalizePurchaseStatus(v)] ?? 'default'}>{statusLabel[normalizePurchaseStatus(v)] ?? v}</Tag>
     },
     { title: '预计到货', dataIndex: 'expectedDate', width: 110, render: (v: string) => v?.substring(0, 10) ?? '-' },
     { title: '创建时间', dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-' },
@@ -246,7 +271,7 @@ const PurchaseOrderTab: React.FC = () => {
       title: '操作', width: 80, fixed: 'right' as const,
       render: (_: unknown, record: PurchaseOrder) => {
         const actions: RowAction[] = [
-          { key: 'view', label: '详情', primary: true, onClick: () => message.info(`采购单 ${record.purchaseNo}`) },
+          { key: 'view', label: '详情', primary: true, onClick: () => setSelectedOrder(record) },
         ];
         return <RowActions actions={actions} />;
       },
@@ -262,11 +287,11 @@ const PurchaseOrderTab: React.FC = () => {
           style={{ width: 140 }}
           options={[
             { value: '', label: '全部状态' },
-            { value: 'PENDING', label: '待审批' },
-            { value: 'APPROVED', label: '已审批' },
-            { value: 'IN_TRANSIT', label: '运输中' },
-            { value: 'RECEIVED', label: '已收货' },
-            { value: 'SETTLED', label: '已结算' },
+            { value: 'pending', label: '待处理' },
+            { value: 'partial_arrival', label: '部分到货' },
+            { value: 'received', label: '已收货' },
+            { value: 'completed', label: '已完成' },
+            { value: 'cancelled', label: '已取消' },
           ]}
         />
       </Card>
@@ -292,6 +317,13 @@ const PurchaseOrderTab: React.FC = () => {
           scroll={{ x: 980 }}
         />
       </Card>
+      <PurchaseOrderDetailModal
+        open={Boolean(selectedOrder)}
+        orderId={selectedOrder?.id}
+        initialOrder={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onUpdated={() => fetchList()}
+      />
     </>
   );
 };
