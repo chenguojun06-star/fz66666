@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
  *
  * <p>五维度模型（各20分，合计100分）：
  * <ol>
- *   <li>生产执行（productionScore）— IN_PROGRESS 订单平均进度</li>
+ *   <li>生产执行（productionScore）— status=production 订单平均进度</li>
  *   <li>交期达成（deliveryScore）— 20分 − 延期订单占比 × 20</li>
  *   <li>质量合格（qualityScore）— 扫码成功率 × 20</li>
  *   <li>库存健康（inventoryScore）— 暂用固定分（后续接入库存模块）</li>
@@ -112,7 +112,7 @@ public class HealthIndexOrchestrator {
     private int calcProductionScore(Long tenantId) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
-          .eq("delete_flag", 0).eq("status", "IN_PROGRESS");
+          .eq("delete_flag", 0).eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
         if (orders.isEmpty()) return 20;
 
@@ -127,7 +127,7 @@ public class HealthIndexOrchestrator {
         QueryWrapper<ProductionOrder> all = new QueryWrapper<>();
         all.eq(tenantId != null, "tenant_id", tenantId)
            .eq("delete_flag", 0)
-           .in("status", Arrays.asList("IN_PROGRESS", "COMPLETED"));
+           .in("status", Arrays.asList("production", "completed", "delayed"));
         long totalOrders = productionOrderService.count(all);
         if (totalOrders == 0) return 20;
 
@@ -182,14 +182,14 @@ public class HealthIndexOrchestrator {
         QueryWrapper<ProductionOrder> total = new QueryWrapper<>();
         total.eq(tenantId != null, "tenant_id", tenantId)
              .eq("delete_flag", 0)
-             .ne("status", "CANCELLED");
+             .ne("status", "cancelled");
         long totalOrders = productionOrderService.count(total);
         if (totalOrders == 0) return 20;
 
         QueryWrapper<ProductionOrder> completed = new QueryWrapper<>();
         completed.eq(tenantId != null, "tenant_id", tenantId)
                  .eq("delete_flag", 0)
-                 .eq("status", "COMPLETED");
+                 .eq("status", "completed");
         long completedCount = productionOrderService.count(completed);
 
         return (int) Math.round((double) completedCount / totalOrders * 20);

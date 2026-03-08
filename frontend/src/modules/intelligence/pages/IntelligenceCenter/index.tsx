@@ -356,6 +356,14 @@ const IntelligenceCenter: React.FC = () => {
     return { overdue, highRisk, watch };
   }, [orders]);
 
+  /* ── 订单量汇总：各风险分组总件数 ── */
+  const orderStats = useMemo(() => ({
+    totalQty:    orders.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
+    overdueQty:  overdueRisk.overdue.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
+    highRiskQty: overdueRisk.highRisk.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
+    watchQty:    overdueRisk.watch.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
+  }), [orders, overdueRisk]);
+
   /* ── 工厂卡点分析：来自后端真实扫码统计（替代旧的从未写入的 *CompletionRate 字段） ── */
   const factoryBottleneck = bottleneck ?? [];
 
@@ -719,48 +727,142 @@ const IntelligenceCenter: React.FC = () => {
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
 
-          {/* 生产中订单数 */}
-          <div className="c-card c-kpi c-kpi-hoverable">
+          {/* 生产中订单数 —— 扩充版 */}
+          <div className="c-card" style={{ padding: '12px 14px' }}>
             <div className="c-kpi-label"><LiveDot size={7} color="#f7a600" />生产中订单</div>
-            <div className="c-kpi-val" style={{ color: '#f7a600', textShadow: '0 0 14px #f7a60088' }}>
-              <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
+
+            {/* 主数字 + 总件数 */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
+              <span style={{ color: '#f7a600', fontSize: 36, fontWeight: 700, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
+              </span>
+              <span style={{ color: '#7dacc4', fontSize: 12 }}>单在制</span>
+              <span style={{ marginLeft: 'auto', color: '#7dacc4', fontSize: 12 }}>
+                总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 14 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
+              </span>
             </div>
-            <div className="c-kpi-unit">单在制</div>
-            <div className="c-kpi-sub">
-              逾期&nbsp;<b style={{ color: '#ff4136' }}>{overdueRisk.overdue.length}</b>
-              &nbsp;/&nbsp;高风险&nbsp;<b style={{ color: '#f7a600' }}>{overdueRisk.highRisk.length}</b>
+
+            {/* 三色统计块：逾期 / 高风险 / 关注 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 10 }}>
+              <div style={{ background: 'rgba(255,65,54,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(255,65,54,0.3)' }}>
+                <div style={{ color: '#ff6b6b', fontSize: 10 }}>已逾期</div>
+                <div style={{ color: '#ff4136', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
+                  {overdueRisk.overdue.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                </div>
+                <div style={{ color: '#ff8080', fontSize: 11, marginTop: 2 }}>{orderStats.overdueQty.toLocaleString()} 件</div>
+              </div>
+              <div style={{ background: 'rgba(247,166,0,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(247,166,0,0.3)' }}>
+                <div style={{ color: '#f7a600', fontSize: 10 }}>高风险</div>
+                <div style={{ color: '#f7a600', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
+                  {overdueRisk.highRisk.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                </div>
+                <div style={{ color: '#f7a600', fontSize: 11, marginTop: 2 }}>{orderStats.highRiskQty.toLocaleString()} 件</div>
+              </div>
+              <div style={{ background: 'rgba(0,180,255,0.08)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(0,180,255,0.2)' }}>
+                <div style={{ color: '#7dacc4', fontSize: 10 }}>关注中</div>
+                <div style={{ color: '#7dacc4', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
+                  {overdueRisk.watch.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                </div>
+                <div style={{ color: '#5c9ab8', fontSize: 11, marginTop: 2 }}>{orderStats.watchQty.toLocaleString()} 件</div>
+              </div>
             </div>
-            <div className="c-kpi-delta-row">
+
+            {/* 逾期订单明细（最多3条） */}
+            {overdueRisk.overdue.length > 0 && (
+              <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
+                <div style={{ color: '#7dacc4', fontSize: 10, marginBottom: 5 }}>逾期订单明细</div>
+                {overdueRisk.overdue.slice(0, 3).map(o => {
+                  const d = o.plannedEndDate
+                    ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000))
+                    : 0;
+                  return (
+                    <div key={String(o.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3, gap: 4 }}>
+                      <span style={{ color: '#e0e0e0', flex: '0 0 auto', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.orderNo}</span>
+                      <span style={{ color: '#7dacc4', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>{o.factoryName ?? '—'}</span>
+                      <span style={{ color: '#ff4136', flex: '0 0 auto', whiteSpace: 'nowrap' }}>逾{d}天·{(Number(o.orderQuantity)||0).toLocaleString()}件</span>
+                    </div>
+                  );
+                })}
+                {overdueRisk.overdue.length > 3 && (
+                  <div style={{ color: '#5c9ab8', fontSize: 10, textAlign: 'right' }}>还有 {overdueRisk.overdue.length - 3} 单…</div>
+                )}
+              </div>
+            )}
+
+            <div className="c-kpi-delta-row" style={{ marginTop: 8 }}>
               {renderDeltaBadge(kpiDelta.productionOrderCount, { flatText: '订单稳定', suffix: '单' })}
             </div>
-            <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('productionOrderCount')} color="#f7a600" width={88} height={22} />
-              <span className="c-kpi-history-label">5分钟趋势</span>
-            </div>
-            <div className="c-kpi-hover-hint">逾期/高风险 实时更新</div>
           </div>
 
-          {/* 工厂全景：总数 vs 活跃 vs 停滞 */}
-          <div className="c-card c-kpi c-kpi-hoverable">
+          {/* 工厂全景 —— 扩充版 */}
+          <div className="c-card" style={{ padding: '12px 14px' }}>
             <div className="c-kpi-label"><LiveDot size={7} color="#00b4ff" />工厂全景</div>
-            <div className="c-kpi-val cyan" style={{ textShadow: '0 0 14px #00b4ff88' }}>
-              <AnimatedNum val={currentKpiMetrics.totalFactories} />
+
+            {/* 主数字 + 状态概要 */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
+              <span style={{ color: '#00e5ff', fontSize: 36, fontWeight: 700, textShadow: '0 0 14px #00b4ff88', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                <AnimatedNum val={currentKpiMetrics.totalFactories} />
+              </span>
+              <span style={{ color: '#7dacc4', fontSize: 12 }}>家工厂&nbsp;共计</span>
             </div>
-            <div className="c-kpi-unit">家工厂</div>
-            <div className="c-kpi-sub">
-              在线&nbsp;<b style={{ color: '#39ff14' }}>{pulse?.activeFactories ?? 0}</b>
-              &nbsp;/&nbsp;停滞&nbsp;<b style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' }}>
-                {pulse?.stagnantFactories?.length ?? 0}
-              </b>
+
+            {/* 在线 / 停滞 状态 pills */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.35)', borderRadius: 10, padding: '3px 10px', fontSize: 12, color: '#39ff14', whiteSpace: 'nowrap' }}>
+                ● 在线 {pulse?.activeFactories ?? 0} 家
+              </span>
+              <span style={{
+                background: (pulse?.stagnantFactories?.length ?? 0) > 0 ? 'rgba(255,65,54,0.12)' : 'rgba(57,255,20,0.06)',
+                border: `1px solid ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'rgba(255,65,54,0.4)' : 'rgba(57,255,20,0.2)'}`,
+                borderRadius: 10, padding: '3px 10px', fontSize: 12,
+                color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14',
+                whiteSpace: 'nowrap',
+              }}>
+                ● 停滞 {pulse?.stagnantFactories?.length ?? 0} 家
+              </span>
             </div>
-            <div className="c-kpi-delta-row">
+
+            {/* 在线工厂名单 */}
+            {(pulse?.factoryActivity?.filter(f => f.active).length ?? 0) > 0 && (
+              <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
+                <div style={{ color: '#7dacc4', fontSize: 10, marginBottom: 5 }}>在线工厂</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {pulse!.factoryActivity.filter(f => f.active).map(f => (
+                    <span key={f.factoryName} style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.3)', borderRadius: 4, padding: '2px 7px', fontSize: 11, color: '#39ff14' }}>
+                      {f.factoryName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 停滞工厂明细 */}
+            {(pulse?.stagnantFactories?.length ?? 0) > 0 && (
+              <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
+                <div style={{ color: '#ff6b6b', fontSize: 10, marginBottom: 5 }}>停滞工厂 ⚠</div>
+                {pulse!.stagnantFactories.map(f => {
+                  const h = Math.floor(f.minutesSilent / 60);
+                  const m = f.minutesSilent % 60;
+                  const silentStr = h > 0 ? `${h}h${m}m` : `${m}m`;
+                  return (
+                    <div key={f.factoryName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
+                      <span style={{ color: '#e0e0e0' }}>● {f.factoryName}</span>
+                      <span style={{ color: '#ff6b6b' }}>已 {silentStr} 无扫码</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 无活跃数据时的提示 */}
+            {(pulse?.factoryActivity?.filter(f => f.active).length ?? 0) === 0
+              && (pulse?.stagnantFactories?.length ?? 0) === 0 && (
+              <div style={{ marginTop: 12, color: '#5c9ab8', fontSize: 11, textAlign: 'center' }}>暂无活跃工厂数据</div>
+            )}
+
+            <div className="c-kpi-delta-row" style={{ marginTop: 8 }}>
               {renderDeltaBadge(kpiDelta.totalFactories, { flatText: '工厂稳定', suffix: '家' })}
             </div>
-            <div className="c-kpi-history-wrap">
-              <Sparkline pts={getKpiTrend('totalFactories')} color="#00b4ff" width={88} height={22} />
-              <span className="c-kpi-history-label">5分钟趋势</span>
-            </div>
-            <div className="c-kpi-hover-hint">活跃 / 停滞 实时对比</div>
           </div>
 
         </div>
