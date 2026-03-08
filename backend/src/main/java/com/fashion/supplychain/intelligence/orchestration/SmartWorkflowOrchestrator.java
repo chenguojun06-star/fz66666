@@ -2,14 +2,21 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
+import com.fashion.supplychain.intelligence.entity.IntelligenceWorkflowLog;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceWorkflowLogMapper;
+import com.fashion.supplychain.common.UserContext;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 智能工作流编排器
@@ -47,6 +54,12 @@ public class SmartWorkflowOrchestrator {
 
     @Autowired
     private AuditTrailOrchestrator auditTrail;
+
+    @Autowired
+    private IntelligenceWorkflowLogMapper workflowLogMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * 生成执行后的级联工作流
@@ -222,7 +235,7 @@ public class SmartWorkflowOrchestrator {
     }
 
     /**
-     * 记录工作流执行日志（用于分析和审计）
+     * 记录工作流执行日志，并持久化到 t_intelligence_workflow_log
      */
     private void logWorkflow(
         ExecutableCommand command,
@@ -238,14 +251,45 @@ public class SmartWorkflowOrchestrator {
             status
         );
 
-        // TODO: 持久化到 t_intelligence_workflow_log 表
+        try {
+            IntelligenceWorkflowLog logEntry = new IntelligenceWorkflowLog();
+            logEntry.setId(UUID.randomUUID().toString().replace("-", ""));
+            logEntry.setTenantId(command.getTenantId());
+            logEntry.setCommandId(command.getCommandId());
+            logEntry.setWorkflowType(command.getAction() + "_cascade");
+            logEntry.setTriggeredTasks(objectMapper.writeValueAsString(createdTasks));
+            logEntry.setNotifiedTeams(String.join(",", notifiedTeams));
+            logEntry.setCascadedCount(createdTasks.size() + notifiedTeams.size());
+            logEntry.setStatus(status);
+            logEntry.setCreatedAt(LocalDateTime.now());
+            logEntry.setCompletedAt(LocalDateTime.now());
+            logEntry.setDeletedFlag(0);
+            workflowLogMapper.insert(logEntry);
+        } catch (Exception e) {
+            // 日志写入失败不影响主流程
+            log.warn("[WorkflowLog] 持久化工作流日志失败: commandId={}, error={}",
+                command.getCommandId(), e.getMessage());
+        }
     }
 
     /**
      * 查询工作流执行历史
      */
     public Map<String, Object> queryWorkflowHistory(String commandId) {
-        // TODO: 从数据库查询工作流日志
-        return new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
+        try {
+            QueryWrapper<IntelligenceWorkflowLog> qw = new QueryWrapper<>();
+            qw.eq("command_id", commandId).eq("deleted_flag", 0).orderByDesc("created_at");
+            List<IntelligenceWorkflowLog> logs = workflowLogMapper.selectList(qw);
+            result.put("commandId", commandId);
+            result.put("logs", logs);
+            result.put("count", logs.size());
+        } catch (Exception e) {
+            log.warn("[Workflow] 查询工作流历史失败: commandId={}, error={}", commandId, e.getMessage());
+            result.put("commandId", commandId);
+            result.put("logs", new ArrayList<>());
+            result.put("count", 0);
+        }
+        return result;
     }
 }
