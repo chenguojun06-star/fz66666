@@ -14,7 +14,7 @@ interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
 interface DictOption {
   value: string;
   label: string;
-  sortOrder?: number;
+  sort?: number;
 }
 
 /**
@@ -63,8 +63,8 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       const records: any[] = response.data?.records || response.data || [];
       const items: DictOption[] = records
         .filter((item: any) => item.dictLabel)
-        .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
-        .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel, sortOrder: item.sortOrder }));
+        .sort((a: any, b: any) => (a.sort || 0) - (b.sort || 0))
+        .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel, sort: item.sort }));
       setAllItems(items);
       loadedRef.current = true;
     } catch {

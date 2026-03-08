@@ -8,6 +8,7 @@ import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/production/productionApi';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 import StyleStageControlBar from './StyleStageControlBar';
 import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
@@ -85,6 +86,8 @@ const StyleProcessTab: React.FC<Props> = ({
   const [priceHints, setPriceHints] = useState<Record<string | number, ProcessPriceHintResponse | null>>({});
   const [priceHintLoading, setPriceHintLoading] = useState<Record<string | number, boolean>>({});
   const hintTimerRef = useRef<Record<string | number, ReturnType<typeof setTimeout>>>({});
+
+  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
   // AI 工序补全状态
   const [aiOpen, setAiOpen] = useState(false);
@@ -1015,7 +1018,7 @@ const StyleProcessTab: React.FC<Props> = ({
                   optionFilterProp="label"
                   value={aiCategory}
                   onChange={setAiCategory}
-                  options={CATEGORY_CODE_OPTIONS}
+                  options={categoryOptions}
                 />
                 <Button
                   type="primary"

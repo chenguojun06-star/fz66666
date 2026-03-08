@@ -8,6 +8,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
+import { useDictOptions } from '@/hooks/useDictOptions';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import StyleQuotePopover from '../StyleQuotePopover';
 import SmartStyleInsightCard from './SmartStyleInsightCard';
@@ -133,6 +134,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
   handleSubmit,
   onFactorySelect,
 }) => {
+  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
   const filteredFactories = factories.filter(f => f.factoryType === factoryMode);
   return (
@@ -521,7 +523,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                             showSearch
                             optionFilterProp="label"
                             style={{ width: '100%' }}
-                            options={CATEGORY_CODE_OPTIONS}
+                            options={categoryOptions}
                           />
                         </Form.Item>
                       </Col>

@@ -20,6 +20,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
+import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
@@ -39,6 +40,7 @@ import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from '.
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
+  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
   const handleFactorySelect = (factoryName: string) => {
     const factory = factories.find(f => f.factoryName === factoryName);
@@ -1930,7 +1932,7 @@ const OrderManagement: React.FC = () => {
                               showSearch
                               optionFilterProp="label"
                               style={{ width: '100%' }}
-                              options={CATEGORY_CODE_OPTIONS}
+                              options={categoryOptions}
                             />
                           </Form.Item>
                         </Col>

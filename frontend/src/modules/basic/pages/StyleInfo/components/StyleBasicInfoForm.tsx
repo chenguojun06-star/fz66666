@@ -6,6 +6,7 @@ import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 interface StyleBasicInfoFormProps {
   _form: FormInstance; // 未使用，外部Form已包含
@@ -69,6 +70,9 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   qty1, setQty1, qty2, setQty2, qty3, setQty3, qty4, setQty4, qty5, setQty5,
   commonSizes, setCommonSizes, commonColors, setCommonColors
 }) => {
+  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
+  const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
+
   const sectionTitleBaseStyle: React.CSSProperties = {
     fontSize: 'var(--font-size-base)',
     fontWeight: 600,
@@ -119,7 +123,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={CATEGORY_CODE_OPTIONS}
+                    options={categoryOptions}
                   />
                 </Form.Item>
               </Col>
@@ -132,7 +136,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={SEASON_CODE_OPTIONS}
+                    options={seasonOptions}
                   />
                 </Form.Item>
               </Col>
