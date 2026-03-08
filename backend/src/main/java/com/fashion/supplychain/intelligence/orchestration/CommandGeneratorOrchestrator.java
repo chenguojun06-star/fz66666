@@ -65,27 +65,6 @@ public class CommandGeneratorOrchestrator {
         if (action.contains("恢复") || action.contains("resume") || action.contains("激活")) {
             commands.add(createOrderResumeCommand(orderId, tenantId, notification));
         }
-
-        // 模式4：创建采购单
-        if (action.contains("采购") || action.contains("补料") || action.contains("purchase")) {
-            commands.add(createPurchaseCommand(orderId, tenantId, notification));
-        }
-
-        // 模式5：库存检查
-        if (action.contains("检查库存") || action.contains("库存预警") || action.contains("inventory")) {
-            commands.add(createInventoryCheckCommand(orderId, tenantId, notification));
-        }
-
-        // 模式6：质检提升
-        if (action.contains("质检") || action.contains("复检") || action.contains("quality")) {
-            commands.add(createQualityCheckCommand(orderId, tenantId, notification));
-        }
-
-        // 模式7：财务审批
-        if (action.contains("审批") || action.contains("复核") || action.contains("review")) {
-            commands.add(createFinanceReviewCommand(orderId, tenantId, notification));
-        }
-
         log.info("[CommandGenerator] 生成了 {} 个命令", commands.size());
         return commands;
     }
@@ -156,106 +135,6 @@ public class CommandGeneratorOrchestrator {
             .riskLevel(2)  // 相对低风险
             .requiresApproval(false)  // 可自动执行
             .source("ai_notification")
-            .createdAt(System.currentTimeMillis())
-            .expiresAt(System.currentTimeMillis() + 48 * 3600 * 1000)
-            .build();
-    }
-
-    /**
-     * 创建"创建采购"命令
-     */
-    private ExecutableCommand createPurchaseCommand(
-        String orderId,
-        Long tenantId,
-        SmartNotification notification
-    ) {
-        return ExecutableCommand.builder()
-            .action("purchase:create")
-            .targetId(orderId)
-            .tenantId(tenantId)
-            .reason("AI检测原料短缺: " + notification.getTitle())
-            .riskLevel(4)  // 财务风险高
-            .requiresApproval(true)
-            .source("ai_notification")
-            .params(Map.of(
-                "priority", "urgent",
-                "autoOrderIfSmall", false  // 小额采购可自动
-            ))
-            .createdAt(System.currentTimeMillis())
-            .expiresAt(System.currentTimeMillis() + 6 * 3600 * 1000)  // 6小时过期
-            .build();
-    }
-
-    /**
-     * 创建"库存检查"命令
-     */
-    private ExecutableCommand createInventoryCheckCommand(
-        String orderId,
-        Long tenantId,
-        SmartNotification notification
-    ) {
-        return ExecutableCommand.builder()
-            .action("inventory:check")
-            .targetId(orderId)
-            .tenantId(tenantId)
-            .reason("AI库存预警")
-            .riskLevel(1)  // 低风险，只查询
-            .requiresApproval(false)  // 可自动执行
-            .source("ai_notification")
-            .params(Map.of(
-                "checkType", "material_status",
-                "alertIfBelow", 100
-            ))
-            .createdAt(System.currentTimeMillis())
-            .expiresAt(System.currentTimeMillis() + 2 * 3600 * 1000)  // 2小时过期
-            .build();
-    }
-
-    /**
-     * 创建"质检"命令
-     */
-    private ExecutableCommand createQualityCheckCommand(
-        String orderId,
-        Long tenantId,
-        SmartNotification notification
-    ) {
-        return ExecutableCommand.builder()
-            .action("quality:upgrade")
-            .targetId(orderId)
-            .tenantId(tenantId)
-            .reason("该款式高风险，提升质检等级")
-            .riskLevel(2)  // 中低风险
-            .requiresApproval(true)
-            .source("ai_notification")
-            .params(Map.of(
-                "qualityLevel", "strict",  // normal / enhanced / strict
-                "inspectionRate", 100
-            ))
-            .createdAt(System.currentTimeMillis())
-            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
-            .build();
-    }
-
-    /**
-     * 创建"财务审批"命令
-     */
-    private ExecutableCommand createFinanceReviewCommand(
-        String orderId,
-        Long tenantId,
-        SmartNotification notification
-    ) {
-        return ExecutableCommand.builder()
-            .action("finance:review")
-            .targetId(orderId)
-            .tenantId(tenantId)
-            .reason("AI财务风险预警")
-            .riskLevel(4)  // 高风险，可能涉及金额
-            .requiresApproval(true)
-            .source("ai_notification")
-            .params(Map.of(
-                "reviewType", "negative_profit",
-                "reviewLevel", "critical"
-            ))
             .createdAt(System.currentTimeMillis())
             .expiresAt(System.currentTimeMillis() + 48 * 3600 * 1000)
             .build();

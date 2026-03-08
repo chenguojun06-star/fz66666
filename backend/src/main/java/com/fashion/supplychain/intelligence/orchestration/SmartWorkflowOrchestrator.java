@@ -82,17 +82,8 @@ public class SmartWorkflowOrchestrator {
                 cascadedCount = workflowOrderExpedite(command, result);
                 break;
 
-            case "purchase:create":
-                cascadedCount = workflowPurchaseCreate(command, result);
-                break;
 
-            case "quality:upgrade":
-                cascadedCount = workflowQualityUpgrade(command, result);
-                break;
 
-            case "finance:review":
-                cascadedCount = workflowFinanceReview(command, result);
-                break;
 
             default:
                 log.debug("[Workflow] 命令类型 {} 无关联工作流", action);
@@ -198,39 +189,6 @@ public class SmartWorkflowOrchestrator {
      *   3. 通知采购经理审批
      *   4. 通知财务预备预算
      */
-    private int workflowPurchaseCreate(ExecutableCommand command, ExecutionResult<?> result) {
-        List<String> createdTasks = new ArrayList<>();
-        List<String> notifiedTeams = new ArrayList<>();
-
-        String purchaseId = command.getTargetId();
-
-        try {
-            // 任务1：生成合同草稿
-            createFollowupTask(purchaseId, "contract_draft", "high");
-            createdTasks.add("合同草稿生成");
-
-            // 任务2：发起询价流程
-            createFollowupTask(purchaseId, "rfq_initiate", "high");
-            createdTasks.add("询价流程启动");
-            notifiedTeams.add("supplier_management");
-
-            // 任务3：通知采购经理
-            log.info("[Notify] called");
-            notifiedTeams.add("procurement_team");
-
-            // 任务4：通知财务预备预算
-            log.info("[Notify] called");
-            notifiedTeams.add("finance_team");
-
-            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
-            return createdTasks.size();
-
-        } catch (Exception e) {
-            log.error("[Workflow] 采购单创建工作流异常", e);
-            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
-            return createdTasks.size();
-        }
-    }
 
     /**
      * 工作流：质检升级
@@ -240,34 +198,6 @@ public class SmartWorkflowOrchestrator {
      *   2. 通知质检部负责人
      *   3. 通知订单生产方风险预警
      */
-    private int workflowQualityUpgrade(ExecutableCommand command, ExecutionResult<?> result) {
-        List<String> createdTasks = new ArrayList<>();
-        List<String> notifiedTeams = new ArrayList<>();
-
-        String orderId = command.getTargetId();
-
-        try {
-            // 任务1：生成100%检验计划
-            createFollowupTask(orderId, "quality_plan_100pct", "high");
-            createdTasks.add("质检计划更新");
-
-            // 任务2：通知质检部
-            log.info("[Notify] called");
-            notifiedTeams.add("quality_team");
-
-            // 任务3：通知生产方
-            log.info("[Notify] called");
-            notifiedTeams.add("factory_owner");
-
-            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
-            return createdTasks.size();
-
-        } catch (Exception e) {
-            log.error("[Workflow] 质检升级工作流异常", e);
-            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
-            return createdTasks.size();
-        }
-    }
 
     /**
      * 工作流：财务审分
@@ -277,30 +207,6 @@ public class SmartWorkflowOrchestrator {
      *   2. 通知财务主管
      *   3. 如果审核未通过，通知相关方
      */
-    private int workflowFinanceReview(ExecutableCommand command, ExecutionResult<?> result) {
-        List<String> createdTasks = new ArrayList<>();
-        List<String> notifiedTeams = new ArrayList<>();
-
-        String orderId = command.getTargetId();
-
-        try {
-            // 任务1：生成财务审核任务
-            createFollowupTask(orderId, "finance_review_task", "high");
-            createdTasks.add("财务审核任务");
-
-            // 任务2：通知财务主管
-            log.info("[Notify] called");
-            notifiedTeams.add("finance_team");
-
-            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
-            return createdTasks.size();
-
-        } catch (Exception e) {
-            log.error("[Workflow] 财务审核工作流异常", e);
-            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
-            return createdTasks.size();
-        }
-    }
 
     /**
      * 创建后续任务

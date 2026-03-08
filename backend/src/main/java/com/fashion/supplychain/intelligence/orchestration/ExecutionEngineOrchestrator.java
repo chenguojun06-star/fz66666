@@ -8,8 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-import java.util.*;
+
 
 /**
  * 执行引擎编排器（核心）
@@ -77,18 +76,6 @@ public class ExecutionEngineOrchestrator {
                 }
                 case "order:resume" -> {
                     result = executeOrderResume(command, executorId);
-                }
-                case "purchase:create" -> {
-                    result = executePurchaseCreate(command, executorId);
-                }
-                case "inventory:check" -> {
-                    result = executeInventoryCheck(command, executorId);
-                }
-                case "quality:upgrade" -> {
-                    result = executeQualityUpgrade(command, executorId);
-                }
-                case "finance:review" -> {
-                    result = executeFinanceReview(command, executorId);
                 }
                 default -> {
                     throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
@@ -201,70 +188,6 @@ public class ExecutionEngineOrchestrator {
     }
 
     /**
-     * 执行命令：创建采购单
-     */
-    private Map<String, Object> executePurchaseCreate(ExecutableCommand command, Long executorId) {
-        String orderId = command.getTargetId();
-
-        // TODO: 调用采购服务创建采购单
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("purchaseOrderId", "PUR-" + System.currentTimeMillis());
-        result.put("status", "PENDING_APPROVAL");
-
-        log.info("[PurchaseCreate] 采购单已创建: orderId={}, purchaseId={}", orderId, result.get("purchaseOrderId"));
-        return result;
-    }
-
-    /**
-     * 执行命令：库存检查
-     */
-    private Map<String, Object> executeInventoryCheck(ExecutableCommand command, Long executorId) {
-        String orderId = command.getTargetId();
-
-        // TODO: 调用仓库服务检查库存
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("checkType", "material_status");
-        result.put("timestamp", System.currentTimeMillis());
-
-        log.info("[InventoryCheck] 库存检查完成: orderId={}", orderId);
-        return result;
-    }
-
-    /**
-     * 执行命令：质检升级
-     */
-    private Map<String, Object> executeQualityUpgrade(ExecutableCommand command, Long executorId) {
-        String orderId = command.getTargetId();
-
-        // TODO: 调用质检服务升级检验等级
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("qualityLevel", "strict");
-        result.put("inspectionRate", 100);
-
-        log.info("[QualityUpgrade] 质检已升级: orderId={}", orderId);
-        return result;
-    }
-
-    /**
-     * 执行命令：财务审批
-     */
-    private Map<String, Object> executeFinanceReview(ExecutableCommand command, Long executorId) {
-        String orderId = command.getTargetId();
-
-        // TODO: 调用财务服务生成审批单
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("reviewId", "REV-" + System.currentTimeMillis());
-        result.put("reviewType", "negative_profit");
-
-        log.info("[FinanceReview] 财务审批已生成: orderId={}, reviewId={}", orderId, result.get("reviewId"));
-        return result;
-    }
-
-    /**
      * 触发后续工作流（级联）
      * 例如：订单暂停后，需要生成任务、通知相关部门
      */
@@ -282,12 +205,6 @@ public class ExecutionEngineOrchestrator {
 
             // 订单被暂停后 → 通知财务部审查
             log.info("[Cascade] 通知财务部审查");
-            cascadedCount++;
-        }
-
-        if ("purchase:create".equals(command.getAction())) {
-            // 创建采购后 → 通知采购部
-            log.info("[Cascade] 通知采购部");
             cascadedCount++;
         }
 

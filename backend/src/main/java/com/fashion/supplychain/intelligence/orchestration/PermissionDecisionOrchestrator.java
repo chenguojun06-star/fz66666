@@ -163,12 +163,6 @@ public class PermissionDecisionOrchestrator {
         return switch (action) {
             case "order:hold", "order:expedite", "order:resume" ->
                 new String[]{"PRODUCTION_MANAGER", "ADMIN"};
-            case "purchase:create" ->
-                new String[]{"PROCUREMENT_MANAGER", "ADMIN"};
-            case "finance:review" ->
-                new String[]{"FINANCE_MANAGER", "ADMIN"};
-            case "inventory:check" ->
-                new String[]{"WAREHOUSE_STAFF", "PRODUCTION_MANAGER", "ADMIN"};
             default -> new String[]{"USER"};
         };
     }
@@ -180,10 +174,6 @@ public class PermissionDecisionOrchestrator {
         return switch (action) {
             case "order:hold", "order:expedite" ->
                 new String[]{"PRODUCTION_DIRECTOR"};
-            case "purchase:create" ->
-                new String[]{"PROCUREMENT_DIRECTOR"};
-            case "finance:review" ->
-                new String[]{"CFO", "FINANCE_DIRECTOR"};
             default -> new String[]{"MANAGER"};
         };
     }

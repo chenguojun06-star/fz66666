@@ -165,11 +165,7 @@ export default function AiExecutionPanel() {
       render: (action: string) => {
         const actionMap: any = {
           'order:hold': '暂停订单',
-          'order:expedite': '加急订单',
-          'purchase:create': '创建采购',
-          'quality:upgrade': '升级质检',
-          'finance:review': '财务审分',
-          'inventory:check': '库存检查'
+          'order:expedite': '加急订单'
         };
         return actionMap[action] || action;
       }
