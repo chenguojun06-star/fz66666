@@ -93,7 +93,12 @@ export async function getPendingCommands(): Promise<any> {
   const response = await api.get<ApiResult<any>>(
     '/intelligence/commands/pending'
   );
-  return response.data;
+  // NON_NULL Jackson 序列化：Result.fail() 不含 data 字段 → response.data = undefined
+  // 后端失败时抛出可读错误，避免组件拿到 undefined 后崩溃在 .pending 上
+  if (response == null || (response.code != null && response.code !== 200)) {
+    throw new Error(response?.message || '获取待审批命令失败');
+  }
+  return response.data ?? { pending: [], totalCount: 0 };
 }
 
 /**

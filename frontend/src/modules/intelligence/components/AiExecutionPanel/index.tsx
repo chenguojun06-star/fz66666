@@ -56,7 +56,7 @@ export default function AiExecutionPanel() {
     try {
       setLoading(true);
       const response = await intelligenceApi.getPendingCommands();
-      setPendingCommands(response.pending || []);
+      setPendingCommands(response?.pending ?? []);
       setError(null);
     } catch (err: any) {
       setError(err.message || '获取待审批命令失败');
