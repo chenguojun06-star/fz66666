@@ -439,43 +439,9 @@ public class StyleStageHelper {
             styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（含兜底逻辑）");
             log.info("样衣完成成功：styleId={}, 已自动补全所有未完成步骤", id);
 
-            // 自动推送到单价维护（模板库）
-            try {
-                StyleInfo updated = styleInfoService.getById(id);
-                if (updated != null && StringUtils.hasText(updated.getStyleNo())) {
-                    // 推送所有类型：BOM、工序、工序单价、进度节点
-                    List<String> templateTypes = List.of("bom", "process", "process_price", "progress");
-                    Map<String, Object> body = new HashMap<>();
-                    body.put("sourceStyleNo", updated.getStyleNo());
-                    body.put("templateTypes", templateTypes);
-                    templateLibraryOrchestrator.createFromStyle(body);
-                    log.info("样衣完成后自动推送到单价维护成功：styleNo={}", updated.getStyleNo());
-                }
-            } catch (Exception e) {
-                log.warn("样衣完成后自动推送到单价维护失败，但不影响样衣完成操作：{}", e.getMessage());
-            }
-
-            // 自动流转附件到数据中心（开发纸样，放码纸样如果存在也一起流转）
-            try {
-                List<StyleAttachment> attachments = styleAttachmentService.lambdaQuery()
-                        .eq(StyleAttachment::getStyleId, id)
-                        .in(StyleAttachment::getBizType, "pattern", "pattern_grading")
-                        .list();
-                if (!attachments.isEmpty()) {
-                    for (StyleAttachment attachment : attachments) {
-                        String finalType = "pattern".equals(attachment.getBizType()) ? "pattern_final" : "pattern_grading_final";
-                        styleAttachmentService.lambdaUpdate()
-                                .eq(StyleAttachment::getId, attachment.getId())
-                                .set(StyleAttachment::getBizType, finalType)
-                                .update();
-                    }
-                    log.info("样衣完成后自动流转附件到数据中心成功：styleId={}, count={}", id, attachments.size());
-                } else {
-                    log.warn("样衣完成时未找到开发纸样附件：styleId={}", id);
-                }
-            } catch (Exception e) {
-                log.warn("样衣完成后自动流转附件失败，但不影响样衣完成操作：{}", e.getMessage());
-            }
+            // [修改于2026-03-09]: 根据最新业务逻辑，不再在这里自动推送到单价维护或资料中心
+            // 这些流转操作已移动到 "推送到下单" (OrderManagementOrchestrator.createFromStyle) 时手动触发
+            log.info("样衣完成成功：只改变状态，不自动流转资料。等待手动点击【推送到下单】");
         }
         return ok;
     }
