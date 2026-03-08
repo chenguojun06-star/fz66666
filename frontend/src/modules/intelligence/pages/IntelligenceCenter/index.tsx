@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Tag, Input, Button, Tooltip, Popover } from 'antd';
+import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
-  WarningOutlined, CheckCircleOutlined, DashboardOutlined,
+  ThunderboltOutlined, SyncOutlined, RobotOutlined,
+  WarningOutlined, CheckCircleOutlined,
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
@@ -12,17 +12,6 @@ import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
-import RhythmDnaPanel from './RhythmDnaPanel';
-import WorkerProfilePanel from './WorkerProfilePanel';
-import LiveCostTrackerPanel from './LiveCostTrackerPanel';
-import StyleQuoteSuggestionPanel from './StyleQuoteSuggestionPanel';
-import SupplierScorecardPanel from './SupplierScorecardPanel';
-import LearningReportPanel from './LearningReportPanel';
-import DefectTracePanel from './DefectTracePanel';
-import SmartAssignmentPanel from './SmartAssignmentPanel';
-import MindPushPanel from './MindPushPanel';
-import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
-import FinanceAuditPanel from './FinanceAuditPanel';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
@@ -99,10 +88,7 @@ const IntelligenceCenter: React.FC = () => {
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
   const [query, setQuery]           = useState('');
-  const [messages, setMessages]     = useState<ChatMessage[]>([]);
-  const [sending, setSending]       = useState(false);
   const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
-  const [inlineQuery, setInlineQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [executingTask, setExecutingTask] = useState<string | null>(null);
@@ -121,7 +107,7 @@ const IntelligenceCenter: React.FC = () => {
     const q = searchParams.get('q');
     if (q) {
       // useSearchParams 已自动解码，无需再 decodeURIComponent（否则含 % 字符会 URIError）
-      setInlineQuery(q);
+      // setInlineQuery(q); // removed AI panel
       setSearchParams({}, { replace: true }); // 消费后清除 URL 参数，避免刷新重复触发
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,40 +189,6 @@ const IntelligenceCenter: React.FC = () => {
       setExecutingTask(null);
     }
   }, [reload]);
-
-  /* ai-advisor 状态预检 */
-  useEffect(() => {
-    intelligenceApi.getAiAdvisorStatus()
-      .then(r => setAiAdvisorReady((r as any)?.data?.enabled ?? true))
-      .catch(() => setAiAdvisorReady(false));
-  }, []);
-
-  const handleSend = async (q?: string) => {
-    const text = (q ?? query).trim();
-    if (!text) return;
-    setSending(true);
-    setInlineQuery(text);
-    setQuery('');
-    setMessages(prev => [
-      ...prev.slice(-9), // 最多保留 9 条历史，加本次共 10 条
-      { id: `u-${Date.now()}`, role: 'user', text, ts: Date.now() },
-    ]);
-    try {
-      const [nlRes, chatRes] = await Promise.allSettled([
-        intelligenceApi.nlQuery({ question: text }) as any,
-        aiAdvisorReady ? intelligenceApi.aiAdvisorChat(text) as any : Promise.reject(null),
-      ]);
-      const nl = nlRes.status === 'fulfilled' ? ((nlRes.value as any)?.data ?? nlRes.value) as NlQueryResponse : undefined;
-      const aiTxt = chatRes.status === 'fulfilled' ? String((chatRes.value as any)?.data?.answer || (chatRes.value as any)?.answer || '') : '';
-      setMessages(prev => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: 'ai', text: aiTxt || nl?.answer || '', nlResult: nl, inlineQ: text, ts: Date.now() },
-      ]);
-    } finally {
-      setSending(false);
-      setTimeout(() => chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' }), 80);
-    }
-  };
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter } = data;
 
@@ -1329,158 +1281,12 @@ const IntelligenceCenter: React.FC = () => {
         {/* ╔════════════════════════════════════════════╗
             ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
             ╚════════════════════════════════════════════╝ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 0, padding: '0 24px 28px', alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0, padding: '0 24px 28px', alignItems: 'stretch' }}>
           {/* 左：利润估算&完工预测 */}
           <div style={{ paddingRight: 6 }}>
             <ProfitDeliveryPanel />
           </div>
-          {/* 右：AI 智能顾问 */}
-          <div style={{ paddingLeft: 6 }}>
-            <div className="c-card c-chat-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <div className="c-card-title" style={{ marginBottom: 10 }}>
-                <RobotOutlined style={{ marginRight: 7, color: '#a78bfa', fontSize: 16 }} />
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
-                <LiveDot size={7} color="#a78bfa" />
-                {messages.length > 0 && (
-                  <button
-                    style={{ marginLeft: 'auto', fontSize: 9, color: '#5a7a9a', background: 'transparent',
-                      border: '1px solid rgba(90,122,154,0.3)', borderRadius: 3, padding: '1px 6px', cursor: 'pointer' }}
-                    onClick={() => setMessages([])}
-                  >
-                    清空对话
-                  </button>
-                )}
-              </div>
-
-              {/* ai-advisor 服务状态警告 */}
-              {!aiAdvisorReady && (
-                <div style={{ fontSize: 10, color: '#f7a600', background: 'rgba(247,166,0,0.08)',
-                  border: '1px solid rgba(247,166,0,0.25)', borderRadius: 4,
-                  padding: '4px 8px', marginBottom: 8 }}>
-                  ⚠ AI 顾问服务当前不可用，数据查询功能正常
-                </div>
-              )}
-
-              {/* 多轮对话历史气泡区 */}
-              <div ref={chatBoxRef} style={{
-                flex: 1,
-                overflowY: 'auto',
-                marginBottom: 8,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                maxHeight: 280,
-                paddingRight: 2,
-              }}>
-                {messages.length === 0 && !sending && (
-                  <div style={{ fontSize: 11, color: '#3a5a7a', textAlign: 'center', marginTop: 12 }}>
-                    💬 向 AI 顾问提问，支持自然语言查询业务数据
-                  </div>
-                )}
-                {messages.map(msg => (
-                  <div key={msg.id} style={{
-                    display: 'flex',
-                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                    alignItems: 'flex-start',
-                    gap: 6,
-                  }}>
-                    {/* 头像 */}
-                    <div style={{
-                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                      background: msg.role === 'user' ? 'rgba(0,229,255,0.25)' : 'rgba(167,139,250,0.25)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11,
-                    }}>
-                      {msg.role === 'user' ? '👤' : '🤖'}
-                    </div>
-                    {/* 气泡 */}
-                    <div style={{
-                      maxWidth: '82%',
-                      background: msg.role === 'user'
-                        ? 'rgba(0,229,255,0.08)'
-                        : 'rgba(167,139,250,0.07)',
-                      border: `1px solid ${msg.role === 'user' ? 'rgba(0,229,255,0.2)' : 'rgba(167,139,250,0.2)'}`,
-                      borderRadius: msg.role === 'user' ? '10px 2px 10px 10px' : '2px 10px 10px 10px',
-                      padding: '6px 10px',
-                      fontSize: 11,
-                      color: msg.role === 'user' ? '#b0d8e8' : '#c4b5fd',
-                      lineHeight: 1.6,
-                    }}>
-                      {msg.role === 'ai' && msg.nlResult?.intent === 'ai_direct' && (
-                        <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
-                          background: 'rgba(167,139,250,0.15)', padding: '1px 5px', borderRadius: 3 }}>
-                          🤖 AI直接回答
-                        </span>
-                      )}
-                      <span>{msg.text}</span>
-                      {msg.role === 'ai' && msg.nlResult?.confidence !== undefined && msg.nlResult.confidence > 0 && (
-                        <span style={{ fontSize: 9, color: '#5a7a9a', marginLeft: 6 }}>
-                          置信度 {msg.nlResult.confidence}%
-                        </span>
-                      )}
-                      {/* 根据智能引擎返回的意图(intent)自动渲染专属小组件 */}
-                      {msg.role === 'ai' && msg.nlResult?.intent && (() => {
-                        const intent = msg.nlResult.intent;
-                        switch (intent) {
-                          case 'rhythm': return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
-                          case 'worker': return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
-                          case 'cost': return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
-                          case 'quote': return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
-                          case 'supplier_scorecard': return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
-                          case 'learning_report': return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
-                          case 'defect': return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
-                          case 'smart_assignment': return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
-                          case 'notification': return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
-                          case 'scheduling': return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
-                          case 'execution': return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
-                          case 'finance_audit': return <div style={{ marginTop: 8 }}><FinanceAuditPanel /></div>;
-                          default: return null;
-                        }
-                      })()}
-                    </div>
-                  </div>
-                ))}
-                {sending && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%',
-                      background: 'rgba(167,139,250,0.25)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
-                      🤖
-                    </div>
-                    <div style={{ fontSize: 11, color: '#7aaec8' }}>
-                      <DashboardOutlined spin style={{ marginRight: 4 }} />AI 正在分析…
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 输入行 */}
-              <div className="c-chat-row" style={{ marginBottom: 4 }}>
-                <Input
-                  size="small"
-                  className="c-chat-input"
-                  placeholder="问任何问题：逾期订单 / 工厂效率 / 面料库存缺口 / 次品分析..."
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onPressEnter={() => handleSend()}
-                />
-                <Button size="small" type="primary" icon={<SendOutlined />} loading={sending}
-                  onClick={() => handleSend()} className="c-chat-send">发送</Button>
-              </div>
-
-              <div className="c-chat-suggestions" style={{ marginTop: 'auto', paddingTop: 8 }}>
-                {[
-                  '本周逾期订单', '效率最低工厂', '面料库存缺口', '今日扫码异常', '工序节拍分析', '哪个工序是瓶颈？',
-                  '今日生产进度如何？', '有哪些订单停工？', '面料库存是否充足？', '本月工厂绩效？',
-                  '次品溯源分析', '工厂综合评分排行', '给新款式估算报价',
-                  '实时成本追踪分析', '工人效率画像排行', 'AI排程建议', '智能派工推荐',
-                  '学习效率报告', '最新智能推送消息', '待审批AI命令',
-                ].map(q => (
-                  <button key={q} className="c-suggest-btn" onClick={() => handleSend(q)}>{q}</button>
-                ))}
-              </div>
-            </div>
-          </div>
+          
         </div>
 
 

@@ -138,24 +138,24 @@ export function analyzeProgress(
 
   // ── 3. 资源建议（动态定位瓶颈上下游） ──
   if (bottleneck) {
-    resourceSuggestions.push(`${bottleneck.stage} 是当前瓶颈 — 建议优先增派人手或延长该工序工时`);
+    resourceSuggestions.push(`${bottleneck.stage} 是当前严重卡点 — 建议优先增派该道工序的人手或安排突击加班。`);
 
     // 动态查找瓶颈的上游节点
     const bnIdx = allStages.findIndex(s => s.name === bottleneck!.stage);
     if (bnIdx > 0) {
       const upStage = allStages[bnIdx - 1];
       if (upStage.pct >= 90) {
-        resourceSuggestions.push(`${upStage.name} 已近完工(${upStage.pct}%)，可将人力调配至 ${bottleneck.stage}`);
+        resourceSuggestions.push(`上游前道工序 [${upStage.name}] 已近完工(${upStage.pct}%)，若车间实行柔性生产，可立即抽出该组人手支援 ${bottleneck.stage} 环节。`);
       }
     }
   }
 
-  // 速度不足判断
+  // 速度不足判断 (产能监控)
   if (daysLeft !== null && daysLeft > 0 && speed > 0 && total > 0) {
     const remaining = total - Math.round(prog / 100 * total);
     const neededSpeed = remaining / daysLeft;
     if (neededSpeed > speed * 1.5) {
-      resourceSuggestions.push(`当前速度 ${speed.toFixed(1)} 件/天，交期需要 ${neededSpeed.toFixed(1)} 件/天 — 缺口 ${Math.round((neededSpeed - speed) / speed * 100)}%`);
+      resourceSuggestions.push(`当前产能 ${speed.toFixed(1)} 件/天 无法满足交期目标(需 ${neededSpeed.toFixed(1)} 件/天) — 产能缺口 ${Math.round((neededSpeed - speed) / speed * 100)}%，建议及早安排转厂外发或延长开机工时。`);
       if (verdict === 'good') verdict = 'warn';
     }
   }
@@ -174,6 +174,8 @@ export function analyzeProgress(
   }
 
   // 长时间无扫码的节点（动态遍历所有节点）
+  let maxStagnantDays = 0;
+  let stagnantStage = '';
   for (const s of allStages) {
     if (s.pct >= 100 || s.pct === 0) continue;
     const t = boardTimes[s.name];
@@ -181,6 +183,10 @@ export function analyzeProgress(
     const days = now.diff(dayjs(t), 'day');
     if (days >= 2) {
       followUpPoints.push(`${s.name} 已 ${days} 天无新扫码（${s.pct}%），需确认是否停工`);
+      if (days > maxStagnantDays) {
+        maxStagnantDays = days;
+        stagnantStage = s.name;
+      }
     }
   }
 
@@ -190,28 +196,49 @@ export function analyzeProgress(
   }
 
   // ── 5. 风险预测 ──
-  // 交期风险
+  // 交期风险（结合实际情况组合智能化建议）
   if (daysLeft !== null) {
     if (daysLeft < 0) {
-      riskPredictions.push(`已逾期 ${-daysLeft} 天，需立即制定补救计划`);
       verdict = 'critical';
+      let msg = `已逾期 ${-daysLeft} 天 (总进度 ${prog}%)`;
+      if (stagnantStage && maxStagnantDays >= 2) {
+        msg += `，主因是 ${stagnantStage} 环节已停滞 ${maxStagnantDays} 天，建议立刻派员下厂核实异常。`;
+      } else if (bottleneck) {
+        msg += `，当前严重卡在 ${bottleneck.stage}，建议全线加急或外发分流。`;
+      } else if (speed > 0) {
+        msg += `，按目前 ${speed.toFixed(1)}件/天 的速度存在较大违约风险，需立即组织补救。`;
+      } else {
+        msg += `，需立即约谈相关负责人明确最终交付计划。`;
+      }
+      riskPredictions.push(msg);
+    } else if (daysLeft === 0 && prog < 100) {
+      verdict = 'critical';
+      riskPredictions.push(`今日需交货，但当前进度仅 ${prog}%，请立即确认是否需要安排加班突击！`);
     } else if (daysLeft <= 3 && prog < 70) {
-      riskPredictions.push(`3天内交货但进度仅 ${prog}%，极大可能逾期`);
       verdict = 'critical';
+      let msg = `极高危！仅剩 ${daysLeft} 天交货，进度才 ${prog}%`;
+      if (bottleneck) {
+        msg += `，且 ${bottleneck.stage} 形成明显堆积，导致连带逾期概率高。`;
+      } else {
+        msg += `，可能面临空运或违约赔偿风险。`;
+      }
+      riskPredictions.push(msg);
     } else if (daysLeft <= 7 && prog < 50) {
-      riskPredictions.push(`7天内交货但进度仅 ${prog}%，逾期风险较高`);
       if (verdict === 'good') verdict = 'warn';
+      riskPredictions.push(`风险单：距交期 ${daysLeft} 天但进度未过半(${prog}%)，建议提升下线优先级。`);
+    } else if (daysLeft <= 2 && prog >= 90 && prog < 100) {
+      riskPredictions.push(`临近尾声(${prog}%)，距交期 ${daysLeft}天，请催促尾部及质检尽快手工收尾清点。`);
     }
   }
 
   // 质量连锁风险
-  if (bottleneck && bottleneck.gap >= 40 && daysLeft !== null && daysLeft <= 7) {
-    riskPredictions.push(`${bottleneck.stage} 严重滞后且交期临近 — 赶工可能导致质量下降`);
+  if (bottleneck && bottleneck.gap >= 40 && daysLeft !== null && daysLeft <= 7 && daysLeft > 0) {
+    riskPredictions.push(`${bottleneck.stage} 严重滞后且交期临近 — 后续赶工可能导致次品率飙升，请前置通知质检把关。`);
   }
 
   // 首单风险
   if (order.plateType === 'FIRST' && prog < 30 && daysLeft !== null && daysLeft <= 14) {
-    riskPredictions.push('首翻单工艺磨合期，进度偏慢属正常但仍需密切关注');
+    riskPredictions.push('首单工艺磨合期较长，当前进度偏慢属正常现象，但仍需跟密以防前道工序踩坑。');
   }
 
   // 全链路顺畅正面反馈

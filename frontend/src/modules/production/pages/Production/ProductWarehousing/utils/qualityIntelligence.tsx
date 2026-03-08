@@ -84,38 +84,41 @@ export function analyzeQuality(orderRecs: WarehousingType[], isUrgent: boolean):
   // ── 综合风险判定 ──
   if (rate < 70 && processed > 0) {
     verdict = 'critical';
-    risks.push(`合格率仅 ${rate}%，质量严重异常`);
-    suggestions.push('建议暂停后续入库，立即排查生产工艺和面料品质');
-  } else if (rate < 85 && processed > 0) {
+    risks.push(`严重质量事故：整体合格率仅 ${rate}%（${totalQ}/${processed}件）。`);
+    suggestions.push('建议立刻按下全线暂停键⛔，封存同一批次面料，召集裁剪与车缝组长进行工艺还原排查！');
+  } else if (rate < 85 && processed > 0 && rate >= 70) {
     verdict = 'warn';
-    risks.push(`合格率 ${rate}% 偏低，需重点关注`);
+    risks.push(`质量亮黄灯：合格率 ${rate}% 偏低，可能带来后续入库缺口。`);
+    suggestions.push('请增加对该定单大货的抽检频次，提醒车间放慢节奏抓品质。');
   }
 
   // ── 尺码集中问题 ──
   if (badSizes.length > 0 && badSizes[0].rate >= 25) {
     const worst = badSizes[0];
-    risks.push(`${worst.size}码不合格率 ${worst.rate}%（${worst.count}件）— 可能裁剪版型偏差`);
-    suggestions.push(`建议检查${worst.size}码的裁剪模板和缝制标准`);
+    risks.push(`重灾区预警：【${worst.size}码】的不合格率高达 ${worst.rate}%（毁废${worst.count}件），怀疑存在系统性纸样放码偏差或对应模板缺陷！`);
+    suggestions.push(`立即让IE技术部或版房重新核对 ${worst.size} 码的净样，停止对应裁片发放到车间。`);
     if (verdict === 'good') verdict = 'warn';
   }
 
   // ── 颜色集中问题 ──
   if (badColors.length > 0 && badColors[0].rate >= 20) {
     const worst = badColors[0];
-    risks.push(`"${worst.color}" 不合格率最高 ${worst.rate}% — 可能存在染色/面料批次问题`);
+    risks.push(`面料批次可疑：【${worst.color}】色不合格率顶格达到 ${worst.rate}%，恐为印染缩水或缸差导致。`);
     if (badColors.length >= 2) {
-      suggestions.push(`优先检查"${worst.color}"面料来源，考虑更换供应商或面料批次`);
+      suggestions.push(`优先追溯【${worst.color}】配色的采购源头供应商，如非加工问题应尽快发起客诉退换布料处理。`);
+    } else {
+      suggestions.push(`提取几件【${worst.color}】的不合格样衣召开现场分析会，判定是布疵还是车工问题。`);
     }
   }
 
   // ── 裁剪 vs 质检进度差 ──
   if (totalCut > 0 && processed < totalCut * 0.5 && totalCut > 10) {
     const pending = totalCut - processed;
-    risks.push(`裁剪已出 ${totalCut} 件，质检仅完成 ${processed} 件 — ${pending} 件积压`);
-    suggestions.push('质检严重滞后于裁剪，建议增派质检人手或延长工时');
+    risks.push(`质检严重倒挂：裁房已落件 ${totalCut}件，而质检端仅完成 ${processed}件，超大 ${pending} 件的堵塞断层。`);
+    suggestions.push('质检处已形成灾难性瓶颈塞车，火速从后道包装或机动小组调人支援，防止发现质量异常时底盘已无法挽救。');
     if (verdict === 'good') verdict = 'warn';
   } else if (totalCut > 0 && processed < totalCut * 0.8 && totalCut > 10) {
-    suggestions.push(`裁剪 ${totalCut} 件中已质检 ${processed} 件，还需加快质检节奏`);
+    suggestions.push(`裁片总 ${totalCut} 件仅过检 ${processed} 件，注意保持平稳节奏，别让次品暗仓堆积。`);
   }
 
   // ── 缺码风险（影响齐码出货）──
@@ -123,28 +126,28 @@ export function analyzeQuality(orderRecs: WarehousingType[], isUrgent: boolean):
     .filter(([, v]) => v.q === 0 && (v.q + v.uq) > 0)
     .map(([sz]) => sz);
   if (zeroSizes.length > 0) {
-    risks.push(`${zeroSizes.join('、')}码无合格品 — 无法齐码出货`);
-    suggestions.push(`${zeroSizes.join('、')}码需优先返修或补裁，否则整单出货受阻`);
+    risks.push(`致命断码：${zeroSizes.join('、')}码当前 0 合格产出！齐码配比彻底失败！`);
+    suggestions.push(`首要任务补急救：马上为 ${zeroSizes.join('、')}码 开具返修快车道或特批补裁工单，否则封箱成箱绝对无法发车。`);
     if (verdict === 'good') verdict = 'warn';
   }
 
   // ── 预计影响 ──
   if (totalCut > 0 && rate > 0 && processed > 5) {
     const estimatedFinal = Math.round(totalCut * rate / 100);
-    impact.push(`按当前合格率 ${rate}%，预计最终可入库约 ${estimatedFinal} 件`);
+    impact.push(`📊 推演入库：凭过往合格率走势(${rate}%)，本次大盘预计最多斩获合格正品 ${estimatedFinal} 件。`);
     const shortfall = totalCut - estimatedFinal;
     if (shortfall > 0) {
-      impact.push(`预计短缺 ${shortfall} 件，可能需要补裁或返修`);
+      impact.push(`⚠️ 产能战损：大概率将凭空流失 ${shortfall} 件，如缺口过大建议提前联系客户商议让步或立马下单补料补货。`);
     }
   }
   if (totalW > 0 && totalCut > 0) {
     const warehousingRate = Math.round(totalW / totalCut * 100);
-    impact.push(`入库进度 ${warehousingRate}%（${totalW}/${totalCut}件）`);
+    impact.push(`✅ 净库流转进度 ${warehousingRate}%（${totalW}/${totalCut}件）已落地上架`);
   }
 
   // ── 急单特殊提示 ──
   if (isUrgent && verdict !== 'good') {
-    suggestions.unshift('⚡ 急单！建议最高优先级安排质检和返修');
+    suggestions.unshift('⚡ VIP急批流转中！特事特办：全员让行为该单开辟绿色人工初筛，并强制实行组长跟线防呆。');
   }
 
   // ── 全部合格的正面反馈 ──

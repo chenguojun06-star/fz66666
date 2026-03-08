@@ -1005,14 +1005,14 @@ const StyleProcessTab: React.FC<Props> = ({
             open={aiOpen}
             onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
-              <div style={{ width: 220 }}>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>✨ AI工序补全</div>
+              <div style={{ width: 260 }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: '#722ed1' }}>✨ AI 智能 IE 指导价 & 全套工序生成</div>
                 <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
-                  选择品类，AI 根据历史数据自动补全常见工序
+                  选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。
                 </div>
                 <Select
                   style={{ width: '100%', marginBottom: 8 }}
-                  placeholder="选择品类（可选）"
+                  placeholder="选择衣服品类（必选）"
                   allowClear
                   showSearch
                   optionFilterProp="label"
@@ -1024,19 +1024,27 @@ const StyleProcessTab: React.FC<Props> = ({
                   type="primary"
                   block
                   loading={aiLoading}
-                  disabled={aiLoading}
+                  disabled={aiLoading || !aiCategory}
+                  style={{ background: 'linear-gradient(135deg, #722ed1, #1677ff)', border: 'none' }}
                   onClick={handleAiTemplate}
                 >
-                  {aiLoading ? '补全中…' : '一键补全工序'}
+                  {aiLoading ? '生成中…' : '🚀 一键生成全套工序与指导价'}
                 </Button>
               </div>
             }
           >
             <Button
+              type="primary"
               disabled={Boolean(readOnly) || !editMode || loading || saving}
-              icon={aiLoading ? <LoadingOutlined /> : <BulbOutlined />}
+              icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}>✨</span>}
+              style={{
+                background: 'linear-gradient(135deg, #722ed1, #2f54eb)',
+                borderColor: 'transparent',
+                fontWeight: 500,
+                boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)'
+              }}
             >
-              AI补全
+              直接给出 AI 全套建议
             </Button>
           </Popover>
 

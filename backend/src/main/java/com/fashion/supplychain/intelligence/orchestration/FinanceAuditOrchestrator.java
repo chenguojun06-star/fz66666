@@ -164,10 +164,10 @@ public class FinanceAuditOrchestrator {
             f.setType("PRICE_DEVIATION");
             f.setRiskLevel(pd.getRiskLevel());
             f.setOrderNo(order.getOrderNo());
-            f.setDescription(String.format("%s 单价¥%s偏离均值¥%s达%.1f%%",
+            f.setDescription(String.format("工价异常飙升: %s 当前核价¥%s，偏离其历史结算锚点(¥%s)达 %.1f%%",
                     fn, fp.toPlainString(), avg.toPlainString(), deviationPct.doubleValue()));
             f.setAmount(fp.subtract(avg).abs());
-            f.setAction("核实报价单或是否为特殊工艺");
+            f.setAction("调取 IE 工位图核实是否工艺难度升级导致，防范暗箱改价");
             findings.add(f);
         }
     }
@@ -186,13 +186,13 @@ public class FinanceAuditOrchestrator {
 
         if (margin < 0) {
             pa.setNegativeCount(pa.getNegativeCount() + 1);
-            addProfitFinding(order, margin, "HIGH", "订单亏损", findings);
+            addProfitFinding(order, margin, "HIGH", "严重利润倒挂（穿底亏损）", findings);
         } else if (margin < 5) {
             pa.setLowProfitCount(pa.getLowProfitCount() + 1);
-            addProfitFinding(order, margin, "MEDIUM", "利润率极低", findings);
+            addProfitFinding(order, margin, "MEDIUM", "击穿利润红线（低毛利）", findings);
         } else if (margin > 50) {
             pa.setAbnormalHighCount(pa.getAbnormalHighCount() + 1);
-            addProfitFinding(order, margin, "MEDIUM", "利润率异常偏高", findings);
+            addProfitFinding(order, margin, "MEDIUM", "毛利异常虚高（疑似漏计成本）", findings);
         } else {
             pa.setNormalCount(pa.getNormalCount() + 1);
         }
@@ -212,8 +212,8 @@ public class FinanceAuditOrchestrator {
         f.setType("PROFIT_ANOMALY");
         f.setRiskLevel(risk);
         f.setOrderNo(order.getOrderNo());
-        f.setDescription(String.format("%s: 利润率%.1f%%", label, margin));
-        f.setAction(margin < 0 ? "紧急审查成本结构" : "复核报价合理性");
+        f.setDescription(String.format("%s: 当前核算利润率仅 %.1f%%", label, margin));
+        f.setAction(margin < 0 ? "立刻冻结单据，启动全链路成本盘查追踪！" : "追溯核实 IE 报价及原辅料 BOM 成本是否对齐");
         findings.add(f);
     }
 
@@ -237,10 +237,10 @@ public class FinanceAuditOrchestrator {
             f.setType("DUPLICATE_SETTLEMENT");
             f.setRiskLevel("HIGH");
             f.setOrderNo(sr.getOrderNo());
-            f.setDescription(String.format("扫码记录(结果:%s,数量:%d)被关联到结算单%s",
+            f.setDescription(String.format("发现飞单/串单套现嫌疑：废案类脱序扫码(结果:%s,件数:%d)强制入账了计件流水单 %s",
                     sr.getScanResult(), sr.getQuantity() != null ? sr.getQuantity() : 0,
                     sr.getPayrollSettlementId()));
-            f.setAction("检查该结算单是否包含无效扫码记录");
+            f.setAction("🚨 高危诈骗工价动作：立刻截停该工资结算批次，逐一人事面谈核查！");
             findings.add(f);
         }
         return suspects.size();
@@ -275,17 +275,17 @@ public class FinanceAuditOrchestrator {
 
     private String buildSuggestionText(Summary s) {
         if (s.getHighRiskCount() >= 3) {
-            return String.format("发现%d项高风险异常，建议驳回并逐项核实", s.getHighRiskCount());
+            return String.format("⚠️ 触碰财务审核最高红线！命中 %d 项关键风控指标，系统已建议锁定所有涉事账单，请总监级介入逐条约谈各车间负责人核算！", s.getHighRiskCount());
         }
         if (s.getDuplicateSuspectCount() > 0) {
-            return String.format("发现%d条疑似无效结算关联，建议复核结算单", s.getDuplicateSuspectCount());
+            return String.format("🚨 资金漏损风险：发现 %d 条疑似套现的废弃计件，建议重度筛查对应结算批次单据，谨防多算误发！", s.getDuplicateSuspectCount());
         }
         if (s.getAnomalyCount() >= 3) {
-            return String.format("发现%d项异常，建议人工复核后审批", s.getAnomalyCount());
+            return String.format("发现 %d 项财务异动预警信号，系统判定需由人工出具复核证明方可放行审批。", s.getAnomalyCount());
         }
         if (s.getAnomalyCount() > 0) {
-            return String.format("发现%d项轻微异常，整体风险可控，建议通过", s.getAnomalyCount());
+            return String.format("包含 %d 项常规波动指标，当前成本敞口尚在安全防滚区内，常规审核即可。", s.getAnomalyCount());
         }
-        return "各项指标正常，建议通过审批";
+        return "✅ 数据防波堤未见异动：各项核心成本红线正常，可快速闭环签批。";
     }
 }

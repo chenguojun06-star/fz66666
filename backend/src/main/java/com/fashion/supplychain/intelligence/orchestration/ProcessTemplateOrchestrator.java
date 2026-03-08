@@ -52,7 +52,7 @@ public class ProcessTemplateOrchestrator {
 
     // 缓存加载的 IE 知识库
     private List<Map<String, Object>> ieKnowledgeBase = new ArrayList<>();
-    
+
     // 细粒度的工序部位价格库 (1500+项)
     private List<Map<String, Object>> iePartsKnowledgeBase = new ArrayList<>();
 
@@ -136,7 +136,7 @@ public class ProcessTemplateOrchestrator {
                 }
             }
         }
-        
+
         String partsContext = "";
         try {
             if (!relatedParts.isEmpty()) {

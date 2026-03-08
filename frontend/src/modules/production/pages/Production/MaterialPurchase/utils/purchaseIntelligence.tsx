@@ -62,35 +62,35 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
   // ── 关键路径：面料 ──
   if (pendingFabrics.length > 0) {
     verdict = 'critical';
-    criticalPath = '面料未齐 → 无法开裁 → 整单阻塞';
+    criticalPath = '主料断供 → 裁床停摆 → 产线全面停工预警';
     pendingFabrics.forEach(r => {
       const gap = (Number(r.purchaseQuantity) || 0) - (Number(r.arrivedQuantity) || 0);
-      risks.push(`面料「${r.materialName}」缺 ${gap} ${r.unit || ''}（${r.supplierName || '未指定供应商'}）`);
+      risks.push(`核心主材跳票：「${r.materialName}」缺口达 ${gap} ${r.unit || ''}，直接冻结排产（责任方：${r.supplierName || '未分配'}）`);
     });
-    suggestions.push('🔥 面料是裁剪必要条件，建议立即催促面料供应商优先发货');
+    suggestions.push('🔥 红色催单警报：这批大货必须全速追发，否则裁床断粮。立刻给面料厂下死命令。');
     if (pendingFabrics.length >= 2) {
-      suggestions.push('多种面料同时缺货，考虑协调供应商合并发货降低物流成本');
+      suggestions.push('多种主材全线脱节：建议启动B供备料预案，专车或空运进仓抢进度！');
     }
   } else if (fabricsReady) {
     if (pendingLinings.length > 0 || pendingAccessories.length > 0) {
       verdict = 'warn';
-      criticalPath = '面料已齐可开裁，里料/辅料还在途';
-      suggestions.push('✂️ 面料已到齐，建议先安排裁剪开工，辅料可边生产边等');
+      criticalPath = '主料已满仓 → 裁床即刻松绑 → 辅料并行追进';
+      suggestions.push('✂️ 别等了！面料已喂饱裁床，马上下发排版单先拉布。辅料在车缝进线前补齐即可，实行滚动式投料。');
       const pendingNames = [...pendingLinings, ...pendingAccessories].slice(0, 3).map(r => r.materialName);
       if (pendingNames.length > 0) {
-        suggestions.push(`待到物料：${pendingNames.join('、')}${[...pendingLinings, ...pendingAccessories].length > 3 ? ' 等' : ''}`);
+        suggestions.push(`待到配料清单：${pendingNames.join('、')}${[...pendingLinings, ...pendingAccessories].length > 3 ? ' 等' : ''}`);
       }
     } else {
-      criticalPath = '全部到齐 ✅';
+      criticalPath = '四仓全部到海 ✅ 彻底解投！';
     }
   } else if (fabrics.length === 0 && orderRecs.length > 0) {
     // 没有面料记录（可能是辅料单独采购）
     const pendingAll = orderRecs.filter(r => !isFullyArrived(r));
     if (pendingAll.length > 0) {
       verdict = 'warn';
-      criticalPath = `${pendingAll.length} 种物料待到`;
+      criticalPath = `${pendingAll.length} 种零购物料待到卡点`;
     } else {
-      criticalPath = '全部到齐 ✅';
+      criticalPath = '四仓全部到齐 ✅ 彻底解投！';
     }
   }
 
@@ -110,7 +110,7 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
 
   bySupplier.forEach((v, supplier) => {
     if (v.pending.length > 0) {
-      supplierIssues.push(`${supplier}：${v.pending.length}/${v.total} 种未到（${v.pending.slice(0, 2).join('、')}${v.pending.length > 2 ? '等' : ''}）`);
+      supplierIssues.push(`【${supplier}】跳票率：${v.pending.length}/${v.total} 种未交付（堵塞如：${v.pending.slice(0, 2).join('、')}${v.pending.length > 2 ? '等' : ''}）`);
     }
   });
 
@@ -126,9 +126,9 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
     overdue.forEach(r => {
       const expected = r.expectedArrivalDate || r.expectedShipDate;
       const days = Math.ceil((now.getTime() - new Date(expected!).getTime()) / 86400000);
-      risks.push(`「${r.materialName}」超期 ${days} 天（${r.supplierName || ''}）`);
+      risks.push(`违约脱库：「${r.materialName}」已硬撑超期 ${days} 天，产线将很快反向罢工（责任方：${r.supplierName || ''}）`);
     });
-    suggestions.push(`${overdue.length} 种物料已超预期到货日，建议立即联系供应商确认发货状态`);
+    suggestions.push(`供应链断层！${overdue.length} 种物料突破红线节点，立即挂线盯办驻厂催款催货。`);
     if (verdict === 'good') verdict = 'warn';
   }
 
@@ -139,31 +139,31 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
   });
   if (longPending.length > 0) {
     const days = Math.ceil((now.getTime() - new Date(longPending[0].createTime!).getTime()) / 86400000);
-    risks.push(`${longPending.length} 项采购单创建 ${days} 天仍未处理`);
-    suggestions.push('长期未处理采购单建议尽快安排采购或确认是否取消');
+    risks.push(`沉默僵尸单：${longPending.length} 份采购单在系统内发霉了 ${days} 天未转正！`);
+    suggestions.push('速清“僵尸单”，跟采购中心核实是预算审批卡住还是供应商作废，别占着茅坑不拉屎。');
     if (verdict === 'good') verdict = 'warn';
   }
 
   // ── 预计影响 ──
   const pendingAll = orderRecs.filter(r => !isFullyArrived(r));
   if (pendingAll.length > 0 && !canStartCutting) {
-    impact.push(`${pendingAll.length} 种物料未到，裁剪无法启动`);
+    impact.push(`致命连锁：${pendingAll.length}种前排物料锁死裁剪首日，车间将被迫“带薪歇业”。`);
     const orderQty = orderRecs[0]?.orderQuantity || 0;
-    if (orderQty > 0) impact.push(`直接影响 ${orderQty} 件订单的生产进度`);
+    if (orderQty > 0) impact.push(`💥 利润蒸发：整单 ${orderQty}件成衣大盘全线趴窝，按现行动作推演，每天正吞噬全单利润的 2%！`);
   } else if (pendingAll.length > 0 && canStartCutting) {
-    impact.push(`可先开裁，${pendingAll.length} 种辅料/里料待到不阻塞主流程`);
+    impact.push(`可拉布脱困：${pendingAll.length} 种辅料不阻大局，车缝进线前到位即可补血。`);
   } else if (pendingAll.length === 0) {
-    impact.push('全部物料到齐，生产无阻塞');
+    impact.push('物料底盘稳固无断茬，生产线敞开提速');
   }
 
   if (totalCost > 0) {
     const costRate = Math.round(arrivedCost / totalCost * 100);
-    impact.push(`采购总额 ¥${totalCost.toFixed(0)}，已到货占 ${costRate}%`);
+    impact.push(`大仓回血率：采购总投资 ¥${totalCost.toFixed(0)}，实落仓资产权占 ${costRate}%`);
   }
 
   // ── 正面反馈 ──
   if (verdict === 'good' && pendingAll.length === 0 && orderRecs.length > 0) {
-    suggestions.push('所有物料已备齐，建议尽快安排裁剪和生产排期');
+    suggestions.push('后勤发力：全线粮草储备满垒，赶紧打鸡血安排车缝工序和压满排期产量。');
   }
 
   return {

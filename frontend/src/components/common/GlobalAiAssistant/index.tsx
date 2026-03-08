@@ -7,6 +7,7 @@ import {
   ExportOutlined,
   DashboardOutlined
 } from '@ant-design/icons';
+import api from "@/utils/api";
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 import styles from './index.module.css';
@@ -26,9 +27,9 @@ const INITIAL_MSG: Message = {
 };
 
 const SUGGESTIONS = [
-  '本周逾期订单', '效率最低工厂', '今日扫码异常', '工序节拍分析',
-  '哪个工序是瓶颈？', '今日生产进度如何？', '工厂综合评分排行',
-  '实时成本追踪分析', '智能派工推荐', '待审批AI命令'
+  '📄 智能日报', '📅 智能周报', '📊 智能月报',
+  '🚨 逾期风险及解决方案', '📉 效率低谷与分析', '📦 面料库存缺口速查',
+  '🔍 成本异常追踪分析', '🤖 智能派工推荐', '🏭 工厂综合表现'
 ];
 
 // 超级可爱的表情云朵组件
@@ -40,20 +41,23 @@ const CuteCloudTrigger = ({ size = 52, active = false }: { size?: number, active
         <stop offset="100%" stopColor="#dcf0ff" />
       </linearGradient>
     </defs>
-    <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
+        <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
       {/* 软萌云朵基础层 */}
       <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill="url(#cloudGrad)" />
-      {/* 眼睛 - 又大又萌 */}
-      <circle cx="48" cy="50" r="4.5" fill="#507299" />
-      <circle cx="68" cy="50" r="4.5" fill="#507299" />
-      {/* 眼睛的高光（星星眼） */}
-      <circle cx="46.5" cy="48" r="1.5" fill="#ffffff" />
-      <circle cx="66.5" cy="48" r="1.5" fill="#ffffff" />
-      {/* 脸颊红晕 */}
-      <ellipse cx="40" cy="56" rx="5" ry="3" fill="#ffb8c6" opacity="0.8" />
-      <ellipse cx="76" cy="56" rx="5" ry="3" fill="#ffb8c6" opacity="0.8" />
-      {/* 微笑的嘴巴 */}
-      <path d="M 55 54 Q 58 59 61 54" fill="none" stroke="#507299" strokeWidth="2.5" strokeLinecap="round" />
+      {/* 眼睛 - 超大呆萌 */}
+      <circle cx="46" cy="51" r="5.5" fill="#3B4C63" />
+      <circle cx="68" cy="51" r="5.5" fill="#3B4C63" />
+      {/* 眼睛的高光（大星星眼） */}
+      <circle cx="44.5" cy="49" r="2" fill="#ffffff" />
+      <circle cx="47.5" cy="53" r="0.8" fill="#ffffff" opacity="0.8" />
+      <circle cx="66.5" cy="49" r="2" fill="#ffffff" />
+      <circle cx="69.5" cy="53" r="0.8" fill="#ffffff" opacity="0.8" />
+      {/* 脸颊红晕 - 更大更粉 */}
+      <ellipse cx="38" cy="58" rx="6" ry="3.5" fill="#FF99B3" opacity="0.9" />
+      <ellipse cx="76" cy="58" rx="6" ry="3.5" fill="#FF99B3" opacity="0.9" />
+      {/* 圆圆的呆萌小嘴巴（吃惊/卖萌状） */}
+      <ellipse cx="57" cy="57" rx="3.5" ry="4" fill="#FF8CA3" />
+      <ellipse cx="57" cy="56" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
     </g>
   </svg>
 );
@@ -100,6 +104,80 @@ const GlobalAiAssistant: React.FC = () => {
 
     // 2. 调用后台 AI 接口
     try {
+    // --- 智能日报/周报/月报拦截逻辑开始 ---
+    if (text.includes('日报') || text.includes('周报') || text.includes('月报')) {
+      try {
+        let typeName = '日报';
+        if (text.includes('周报')) typeName = '周报';
+        if (text.includes('月报')) typeName = '月报';
+
+        // 获取完全真实的后台数据
+        let realData: any = null;
+        try {
+          const res: any = await api.get('/dashboard/daily-brief', { timeout: 5000 });
+          if (res && res.code === 200) {
+            realData = res.data;
+          }
+        } catch(err) {
+          console.log('Ignore fetching real brief data error', err);
+        }
+
+        if (!realData) {
+          const fallbackMsg: Message = {
+                id: `a-${Date.now()}`,
+                role: 'ai',
+                text: '未能获取真实业务数据，请检查网络或稍后重试。'
+            };
+            setMessages(prev => [...prev, fallbackMsg]);
+            speak('抱歉获取失败，请稍后重试。');
+            return;
+        }
+
+        // 基于真实数据构建
+        const inboundQty = realData.yesterdayWarehousingQuantity || 0;
+        const todayScan = realData.todayScanCount || 0;
+        const overdueCount = realData.overdueOrderCount || 0;
+        const highRiskCount = realData.highRiskOrderCount || 0;
+        const weekScan = realData.weekScanCount || 0;
+
+        let timeDesc = `昨日入库：${inboundQty}件，今日扫码：${todayScan}次`;
+        if (typeName === '周报' || typeName === '月报') {
+          timeDesc = `近7天入库：${realData.weekWarehousingCount || 0}件，近7天扫码：${weekScan}次`;
+        }
+
+        let topOrderText = '';
+        if (realData.topPriorityOrder) {
+          topOrderText = `📌 首要紧迫订单：${realData.topPriorityOrder.orderNo} (款号: ${realData.topPriorityOrder.styleNo})
+   - 委外工厂：${realData.topPriorityOrder.factoryName || '未分配'}
+   - 当前进度：${realData.topPriorityOrder.progress}%
+   - 到期剩余：${realData.topPriorityOrder.daysLeft} 天`;
+        }
+
+        let suggestionsText = '';
+        if (realData.suggestions && realData.suggestions.length > 0) {
+            suggestionsText = `💡 智能建议：\n` + realData.suggestions.map((s: string) => `• ${s}`).join('\n');
+        } else {
+            suggestionsText = `✓ 系统运行正常，无特别预警`;
+        }
+
+        const reportText = `📊 【智能${typeName}】(基于真实数据)\n  \n📈 1. 系统真实活跃：\n• ${timeDesc}\n• 逾期订单：${overdueCount} 单\n• 高风险订单：${highRiskCount} 单\n\n${topOrderText}\n\n${suggestionsText}`;
+
+        const aiMsg: Message = {
+          id: `a-${Date.now()}`,
+          role: 'ai',
+          text: reportText
+        };
+
+        setMessages(prev => [...prev, aiMsg]);
+        speak(`为您生成了基于真实数据的智能${typeName}，请查阅`);
+      } catch (e) {
+        console.error('Report generation error:', e);
+      } finally {
+        setIsTyping(false);
+      }
+      return;
+    }
+    // --- 智能日报/周报/月报拦截逻辑结束 ---
       // @ts-ignore - any type mismatches will be absorbed
       const res = await intelligenceApi.nlQuery({ question: text });
       // @ts-ignore
