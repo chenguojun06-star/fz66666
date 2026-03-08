@@ -22,6 +22,7 @@ import DefectTracePanel from './DefectTracePanel';
 import SmartAssignmentPanel from './SmartAssignmentPanel';
 import MindPushPanel from './MindPushPanel';
 import SchedulingSuggestionPanel from './SchedulingSuggestionPanel';
+import FinanceAuditPanel from './FinanceAuditPanel';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
 import {
   risk2color, grade2color, LiveDot, Sparkline,
@@ -1417,21 +1418,24 @@ const IntelligenceCenter: React.FC = () => {
                           置信度 {msg.nlResult.confidence}%
                         </span>
                       )}
-                      {/* 根据问题关键词内联渲染对应智能面板 */}
-                      {msg.role === 'ai' && msg.inlineQ && (() => {
-                        const q = msg.inlineQ;
-                        if (/节拍|DNA|工序耗时|节奏/.test(q)) return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
-                        if (/工人效率|工人画像|工人排行/.test(q)) return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
-                        if (/实时成本|成本追踪|成本分析/.test(q)) return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
-                        if (/报价建议|款式估价|估算报价|报价/.test(q)) return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
-                        if (/供应商评分|工厂综合评分|综合评分排行/.test(q)) return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
-                        if (/学习报告|学习效率/.test(q)) return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
-                        if (/次品溯源|缺陷追溯|次品分析/.test(q)) return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
-                        if (/智能派工|派工推荐/.test(q)) return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
-                        if (/智能推送|推送消息/.test(q)) return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
-                        if (/排期建议|AI排程|排程/.test(q)) return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
-                        if (/待审批|AI命令|执行命令|AI建议审批/.test(q)) return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
-                        return null;
+                      {/* 根据智能引擎返回的意图(intent)自动渲染专属小组件 */}
+                      {msg.role === 'ai' && msg.nlResult?.intent && (() => {
+                        const intent = msg.nlResult.intent;
+                        switch (intent) {
+                          case 'rhythm': return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
+                          case 'worker': return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
+                          case 'cost': return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
+                          case 'quote': return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
+                          case 'supplier_scorecard': return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
+                          case 'learning_report': return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
+                          case 'defect': return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
+                          case 'smart_assignment': return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
+                          case 'notification': return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
+                          case 'scheduling': return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
+                          case 'execution': return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
+                          case 'finance_audit': return <div style={{ marginTop: 8 }}><FinanceAuditPanel /></div>;
+                          default: return null;
+                        }
                       })()}
                     </div>
                   </div>

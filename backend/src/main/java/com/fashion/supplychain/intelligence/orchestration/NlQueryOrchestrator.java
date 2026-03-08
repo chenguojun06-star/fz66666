@@ -167,6 +167,28 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "学习", "学了什么", "置信度", "训练")) {
             return smartHandlers.handleLearningReportQuery();
         }
+
+        // 20.1) 报价建议
+        if (containsAny(question, "报价", "估价", "估算")) {
+            return handleDirectWidget("quote", "已经为您调取智能款式报价分析：");
+        }
+        // 20.2) 供应商评分/综合评分
+        if (containsAny(question, "供应商评分", "综合评分", "评分排行")) {
+            return handleDirectWidget("supplier_scorecard", "已经为您生成供应商与工厂多维综合评分，详情如下：");
+        }
+        // 20.3) 智能派工
+        if (containsAny(question, "派工", "派单")) {
+            return handleDirectWidget("smart_assignment", "智能派工引擎已启动，为您提供最优人员计算：");
+        }
+        // 20.4) 待审批执行命令
+        if (containsAny(question, "待审批", "AI命令", "执行命令", "审批", "执行")) {
+            return handleDirectWidget("execution", "已为您调取AI命令待审批与执行卡片：");
+        }
+        // 20.5) 财务/资金审核
+        if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
+            return handleDirectWidget("finance_audit", "已经调出智能异常资金流向监控面板：");
+        }
+
         // 21) 帮助
         if (containsAny(question, "帮助", "能做什么", "你会什么", "功能", "怎么用", "你好")) {
             return handleHelpQuery();
@@ -463,6 +485,14 @@ public class NlQueryOrchestrator {
     // ── 成本/利润查询已委托给 NlQuerySmartHandlers ──
 
     // ── 帮助/功能介绍（22 项全覆盖） ──
+    private NlQueryResponse handleDirectWidget(String intent, String message) {
+        NlQueryResponse resp = new NlQueryResponse();
+        resp.setIntent(intent);
+        resp.setAnswer(message);
+        resp.setConfidence(95);
+        return resp;
+    }
+
     private NlQueryResponse handleHelpQuery() {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("help");

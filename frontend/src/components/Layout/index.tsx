@@ -15,6 +15,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import SmartAlertBell from './SmartAlertBell';
 import DailyTodoModal from './DailyTodoModal';
+import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import './styles.css';
 
 interface LayoutProps {
@@ -597,6 +598,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
+
+      <GlobalAiAssistant />
     </div>
   );
 };

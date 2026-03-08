@@ -1,0 +1,325 @@
+/* 悬浮助手外层容器 */
+.assistantWrapper {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none; /* 让容器不阻挡点击，子元素内部恢复 */
+}
+
+/* 柔软弹跳出现动画 */
+@keyframes popupBounce {
+  0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+  60% { transform: scale(1.05) translateY(-5px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* 面板主体 */
+.chatPanel {
+  width: 360px;
+  height: 520px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 20px;
+  pointer-events: auto;
+  animation: popupBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform-origin: bottom right;
+  border: 1px solid rgba(230, 247, 255, 0.8);
+}
+
+/* 顶部头部区 */
+.panelHeader {
+  height: 90px;
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae0ff 100%);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatarContainer {
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+  margin-right: 16px;
+  font-size: 32px;
+  animation: floatAvatar 3s ease-in-out infinite;
+}
+
+@keyframes floatAvatar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.headerText {
+  flex: 1;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #003a8c;
+  margin-bottom: 4px;
+}
+
+.headerSubtitle {
+  font-size: 12px;
+  color: #1890ff;
+}
+
+.closeButton {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 16px;
+  color: #69c0ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  color: #0050b3;
+  transform: rotate(90deg);
+}
+
+/* 聊天历史区 */
+.chatArea {
+  flex: 1;
+  background: #fcfcfc;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 滚动条美化 */
+.chatArea::-webkit-scrollbar {
+  width: 6px;
+}
+.chatArea::-webkit-scrollbar-thumb {
+  background-color: #d9d9d9;
+  border-radius: 4px;
+}
+
+/* 消息气泡 */
+.messageRow {
+  display: flex;
+  align-items: flex-start;
+  max-width: 90%;
+  gap: 8px;
+}
+
+.rowAi {
+  align-self: flex-start;
+}
+
+.rowUser {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.messageAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e6f7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.messageBubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.bubbleAi {
+  background: #ffffff;
+  color: #333333;
+  border: 1px solid #f0f0f0;
+  border-top-left-radius: 2px;
+}
+
+.bubbleUser {
+  background: #1890ff;
+  color: #ffffff;
+  border-top-right-radius: 2px;
+}
+
+/* Suggestion Chips */
+.suggestionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-start;
+  padding: 0 4px;
+}
+
+.chip {
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #91d5ff;
+  border-radius: 16px;
+  font-size: 13px;
+  color: #1890ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  background: #e6f7ff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+}
+
+/* intent 链接快捷跳转样式的气泡扩展 */
+.intentWidgetHint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(24, 144, 255, 0.2);
+  font-size: 12px;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.intentWidgetHint:hover {
+  text-decoration: underline;
+}
+
+/* 正在输入动画 */
+.typingIndicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+}
+.typingDot {
+  width: 6px;
+  height: 6px;
+  background: #bae0ff;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+.typingDot:nth-child(1) { animation-delay: -0.32s; }
+.typingDot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); background: #1890ff; }
+}
+
+/* 底部输入框区 */
+.inputArea {
+  padding: 12px 16px;
+  background: #ffffff;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.chatInput {
+  flex: 1;
+  border: none;
+  background: #f5f5f5;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.chatInput:focus {
+  background: #e6f7ff;
+  box-shadow: inset 0 0 0 1px #91d5ff;
+}
+
+.sendBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #1890ff;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sendBtn:hover {
+  background: #40a9ff;
+  transform: scale(1.05);
+}
+
+.sendBtn:active {
+  transform: scale(0.95);
+}
+
+.sendBtn:disabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
+
+/* 悬浮呼吸云朵 (触发器) - 移除原来的渐变圆底色 */
+.triggerBtn {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: floatTrigger 4s ease-in-out infinite;
+  user-select: none;
+}
+
+.triggerBtn:hover {
+  transform: scale(1.15) rotate(5deg);
+}
+
+@keyframes floatTrigger {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* 语音播报按钮 */
+.speechBtn {
+  background: none;
+  border: none;
+  color: #8c8c8c;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  margin-left: 8px;
+}
+.speechBtn:hover {
+  color: #1890ff;
+}

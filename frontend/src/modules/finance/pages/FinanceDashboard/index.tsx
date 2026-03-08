@@ -10,7 +10,6 @@ import { useRequest } from '@/hooks';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import FinanceAuditPanel from '@/modules/intelligence/pages/IntelligenceCenter/FinanceAuditPanel';
 
 const { RangePicker } = DatePicker;
 
@@ -433,11 +432,6 @@ const FinanceDashboard: React.FC = () => {
           </Row>
         </Card>
       </Spin>
-
-      {/* 智能财务风险审核：财务人员工作台，分析结算异常与风险 */}
-      <div style={{ padding: '16px 0 0' }}>
-        <FinanceAuditPanel />
-      </div>
     </Layout>
   );
 };
