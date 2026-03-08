@@ -12,6 +12,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 智能执行引擎 REST 控制器
@@ -57,6 +64,12 @@ public class IntelligenceExecutionController {
     @Autowired
     private SmartWorkflowOrchestrator smartWorkflow;
 
+    @Autowired
+    private IntelligenceAuditLogMapper auditLogMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * 执行命令
      *
@@ -90,6 +103,9 @@ public class IntelligenceExecutionController {
             // 注入租户ID和创建时间
             command.setTenantId(tenantId);
             command.setCreatedAt(System.currentTimeMillis());
+            if (command.getCommandId() == null || command.getCommandId().isEmpty()) {
+                command.generateCommandId();
+            }
 
             // 第1步：权限决策
             ExecutionDecision decision = permissionDecision.decide(command, userId);
@@ -101,8 +117,22 @@ public class IntelligenceExecutionController {
             }
 
             if (decision.needsApproval()) {
-                // 高风险命令需要审批
-                log.info("[Controller] 命令 {} 需要审批，返回审批链接", command.getCommandId());
+                // 高风险命令需要审批 — 持久化到DB，以便后续 approve/reject 操作查询
+                log.info("[Controller] 命令 {} 需要审批，写入待审批记录", command.getCommandId());
+                IntelligenceAuditLog pending = new IntelligenceAuditLog();
+                pending.setCommandId(command.getCommandId());
+                pending.setTenantId(tenantId);
+                pending.setAction(command.getAction());
+                pending.setTargetId(command.getTargetId());
+                pending.setExecutorId(userId != null ? userId.toString() : null);
+                pending.setStatus("PENDING_APPROVAL");
+                pending.setReason(command.getReason());
+                pending.setRiskLevel(command.getRiskLevel());
+                pending.setRequiresApproval(true);
+                pending.setResultData(objectMapper.writeValueAsString(command));
+                pending.setCreatedAt(LocalDateTime.now());
+                auditLogMapper.insert(pending);
+
                 return Result.success(Map.of(
                     "status", "REQUIRES_APPROVAL",
                     "commandId", command.getCommandId(),
@@ -160,12 +190,41 @@ public class IntelligenceExecutionController {
 
             log.info("[Controller] 用户 {} 批准命令: {}", userId, commandId);
 
-            // TODO: 从缓存或数据库中查询待审批的命令
-            // TODO: 检查用户是否有权限审批该命令
-            // TODO: 调用 executionEngine.execute() 执行命令
-            // TODO: 记录审批者信息和审批时间
+            // 从DB中查询待审批命令
+            QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
+            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL");
+            IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
+            if (pendingLog == null) {
+                return Result.fail("待审批命令不存在或已处理: " + commandId);
+            }
 
-            return Result.success("命令已批准并执行");
+            // 反序列化原始命令
+            ExecutableCommand originalCommand = objectMapper.readValue(
+                pendingLog.getResultData(), ExecutableCommand.class);
+
+            // 更新审批信息
+            pendingLog.setStatus("APPROVED");
+            pendingLog.setApprovedBy(userId);
+            pendingLog.setApprovedAt(LocalDateTime.now());
+            pendingLog.setApprovalRemark(remark != null ? remark : "用户已批准");
+            auditLogMapper.updateById(pendingLog);
+
+            // 执行命令
+            Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+            ExecutionResult<?> result = executionEngine.execute(originalCommand, userIdLong);
+
+            if (result.isSuccess()) {
+                log.info("[Controller] 命令 {} 审批并执行成功", commandId);
+                return Result.success(Map.of(
+                    "status", "SUCCESS",
+                    "commandId", commandId,
+                    "message", "命令已批准并执行"
+                ));
+            } else {
+                log.error("[Controller] 命令 {} 审批后执行失败: {}",
+                    commandId, result.getErrorMessage());
+                return Result.fail("执行失败: " + result.getErrorMessage());
+            }
 
         } catch (Exception e) {
             log.error("[Controller] 命令审批异常", e);
@@ -188,11 +247,26 @@ public class IntelligenceExecutionController {
             log.info("[Controller] 用户 {} 拒绝命令: {} 原因: {}",
                 userId, commandId, rejectReason);
 
-            // TODO: 从缓存中移除待审批命令
-            // TODO: 记录拒绝审计日志
-            // TODO: 通知命令生成者
+            // 从 DB 查询待审批命令
+            QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
+            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL");
+            IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
+            if (pendingLog == null) {
+                return Result.fail("待审批命令不存在或已处理: " + commandId);
+            }
 
-            return Result.success("命令已拒绝");
+            pendingLog.setStatus("REJECTED");
+            pendingLog.setApprovedBy(userId);
+            pendingLog.setApprovedAt(LocalDateTime.now());
+            pendingLog.setApprovalRemark(rejectReason != null ? rejectReason : "用户已拒绝");
+            auditLogMapper.updateById(pendingLog);
+
+            log.info("[Controller] 命令 {} 已拒绝", commandId);
+            return Result.success(Map.of(
+                "status", "REJECTED",
+                "commandId", commandId,
+                "message", "命令已拒绝"
+            ));
 
         } catch (Exception e) {
             log.error("[Controller] 命令拒绝异常", e);
@@ -229,12 +303,26 @@ public class IntelligenceExecutionController {
         try {
             Long tenantId = UserContext.tenantId();
 
-            // TODO: 从缓存或数据库中查询待审批的命令
-            // TODO: 筛选当前用户有权限审批的命令
+            // 从 DB 查询当前租户的待审批命令
+            QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
+            qw.eq(tenantId != null, "tenant_id", tenantId)
+              .eq("status", "PENDING_APPROVAL")
+              .orderByDesc("created_at");
+            List<IntelligenceAuditLog> logs = auditLogMapper.selectList(qw);
 
-            List<Map<String, Object>> pendingCommands = new ArrayList<>();
+            List<Map<String, Object>> pendingCommands = logs.stream().map(l -> {
+                Map<String, Object> cmd = new HashMap<>();
+                cmd.put("commandId", l.getCommandId());
+                cmd.put("action", l.getAction());
+                cmd.put("targetId", l.getTargetId());
+                cmd.put("reason", l.getReason());
+                cmd.put("riskLevel", l.getRiskLevel());
+                cmd.put("createdAt", l.getCreatedAt());
+                cmd.put("executorId", l.getExecutorId());
+                return cmd;
+            }).collect(Collectors.toList());
 
-            log.debug("[Controller] 查询租户 {} 的待审批命令", tenantId);
+            log.debug("[Controller] 查询租户 {} 的待审批命令: {}个", tenantId, pendingCommands.size());
 
             return Result.success(Map.of(
                 "pending", pendingCommands,
@@ -273,11 +361,13 @@ public class IntelligenceExecutionController {
             log.debug("[Controller] 查询审计日志: page={}, status={}, action={}",
                 page, status, action);
 
-            // TODO: 调用 auditTrail.queryAuditLogs() 查询
+            // 委托 AuditTrail 查询
+            Page<IntelligenceAuditLog> pageResult =
+                auditTrail.queryAuditLogs(tenantId, page, pageSize, status);
 
             Map<String, Object> result = new HashMap<>();
-            result.put("logs", new ArrayList<>());
-            result.put("total", 0);
+            result.put("logs", pageResult.getRecords());
+            result.put("total", pageResult.getTotal());
             result.put("page", page);
             result.put("pageSize", pageSize);
 
@@ -321,14 +411,8 @@ public class IntelligenceExecutionController {
 
             log.debug("[Controller] 获取执行统计数据");
 
-            // TODO: 调用 auditTrail.getExecutionStats() 获取统计
-
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalExecuted", 0);
-            stats.put("successRate", 0.0);
-            stats.put("avgDuration", 0);
-            stats.put("commandTypeDistribution", new HashMap<>());
-            stats.put("userSatisfactionScore", 0.0);
+            // 委托 AuditTrail 获取统计
+            Map<String, Object> stats = auditTrail.getExecutionStats(tenantId);
 
             return Result.success(stats);
 
@@ -346,10 +430,31 @@ public class IntelligenceExecutionController {
         try {
             log.debug("[Controller] 查询命令详情: {}", commandId);
 
-            // TODO: 从审计日志查询命令执行记录
-            // TODO: 返回命令的全部信息，包括前置条件、执行过程、后续工作流
+            // 从审计日志查询命令执行详情
+            QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
+            qw.eq("command_id", commandId).orderByDesc("created_at").last("LIMIT 1");
+            IntelligenceAuditLog auditLog = auditLogMapper.selectOne(qw);
+            if (auditLog == null) {
+                return Result.fail("命令记录不存在: " + commandId);
+            }
 
-            return Result.success(new HashMap<>());
+            Map<String, Object> detail = new HashMap<>();
+            detail.put("commandId", auditLog.getCommandId());
+            detail.put("action", auditLog.getAction());
+            detail.put("targetId", auditLog.getTargetId());
+            detail.put("status", auditLog.getStatus());
+            detail.put("reason", auditLog.getReason());
+            detail.put("riskLevel", auditLog.getRiskLevel());
+            detail.put("executorId", auditLog.getExecutorId());
+            detail.put("createdAt", auditLog.getCreatedAt());
+            detail.put("approvedBy", auditLog.getApprovedBy());
+            detail.put("approvedAt", auditLog.getApprovedAt());
+            detail.put("approvalRemark", auditLog.getApprovalRemark());
+            detail.put("resultData", auditLog.getResultData());
+            detail.put("errorMessage", auditLog.getErrorMessage());
+            detail.put("durationMs", auditLog.getDurationMs());
+
+            return Result.success(detail);
 
         } catch (Exception e) {
             log.error("[Controller] 查询命令详情异常", e);

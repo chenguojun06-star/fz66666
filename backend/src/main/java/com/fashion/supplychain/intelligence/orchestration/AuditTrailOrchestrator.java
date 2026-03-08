@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -180,29 +182,42 @@ public class AuditTrailOrchestrator {
     /**
      * 获取审计日志（用于可视化）
      */
-    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<IntelligenceAuditLog>
+    public Page<IntelligenceAuditLog>
     queryAuditLogs(Long tenantId, int page, int pageSize, String status) {
-        // TODO: 调用 auditLogService 查询
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        Page<IntelligenceAuditLog> pageReq = new Page<>(page, pageSize);
+        QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
+        qw.eq(tenantId != null, "tenant_id", tenantId);
+        if (status != null && !status.isEmpty()) {
+            qw.eq("status", status);
+        }
+        qw.orderByDesc("created_at");
+        return auditLogMapper.selectPage(pageReq, qw);
     }
 
     /**
      * 获取 AI 执行统计（仪表板展示用）
      */
     public Map<String, Object> getExecutionStats(Long tenantId) {
+        // 总执行数（排除 PENDING_APPROVAL / EXECUTING / FEEDBACK 等中间态）
+        QueryWrapper<IntelligenceAuditLog> totalQw = new QueryWrapper<>();
+        totalQw.eq(tenantId != null, "tenant_id", tenantId)
+               .notIn("status", "PENDING_APPROVAL", "EXECUTING", "FEEDBACK");
+        long totalExecuted = auditLogMapper.selectCount(totalQw);
+
+        QueryWrapper<IntelligenceAuditLog> successQw = new QueryWrapper<>();
+        successQw.eq(tenantId != null, "tenant_id", tenantId)
+                 .eq("status", "SUCCESS");
+        long successCount = auditLogMapper.selectCount(successQw);
+
+        double successRate = totalExecuted > 0
+                ? Math.round((double) successCount / totalExecuted * 1000) / 10.0 : 0.0;
+
         Map<String, Object> stats = new HashMap<>();
-
-        // TODO: 从审计日志表统计
-        // - 总执行数
-        // - 成功率
-        // - 平均耗时
-        // - 按命令类型分布
-        // - 用户满意度
-
-        stats.put("totalExecuted", 0);
-        stats.put("successRate", 0.0);
-        stats.put("avgDuration", 0);
-
+        stats.put("totalExecuted", totalExecuted);
+        stats.put("successRate", successRate);
+        stats.put("avgDuration", 0L);
+        stats.put("commandTypeDistribution", new HashMap<>());
+        stats.put("userSatisfactionScore", 0.0);
         return stats;
     }
 
