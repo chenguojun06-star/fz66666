@@ -2,13 +2,27 @@
 -- 1. t_user 新增 factory_id 列（普通账号=NULL，外发工厂账号=工厂ID）
 -- 2. t_scan_record 新增 factory_id 列（记录扫码时的工厂归属）
 -- 3. 创建 t_factory_worker 工厂工人台账表
--- 云端 FLYWAY_ENABLED=false，此脚本需手动在微信云托管控制台执行
+-- ⚠️ 改为幂等写法（INFORMATION_SCHEMA 判断），支持 FLYWAY_ENABLED=true 自动执行
 
-ALTER TABLE t_user
-    ADD COLUMN factory_id VARCHAR(36) DEFAULT NULL COMMENT '外发工厂ID，NULL=普通租户账号，非NULL=外发工厂账号';
+SET @s_user_fid = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 't_user'
+       AND COLUMN_NAME = 'factory_id') = 0,
+    'ALTER TABLE `t_user` ADD COLUMN `factory_id` VARCHAR(36) DEFAULT NULL COMMENT ''外发工厂ID，NULL=普通租户账号，非NULL=外发工厂账号''',
+    'SELECT 1'
+);
+PREPARE stmt FROM @s_user_fid; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE t_scan_record
-    ADD COLUMN factory_id VARCHAR(36) DEFAULT NULL COMMENT '扫码时归属的外发工厂ID';
+SET @s_scan_fid = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 't_scan_record'
+       AND COLUMN_NAME = 'factory_id') = 0,
+    'ALTER TABLE `t_scan_record` ADD COLUMN `factory_id` VARCHAR(36) DEFAULT NULL COMMENT ''扫码时归属的外发工厂ID''',
+    'SELECT 1'
+);
+PREPARE stmt FROM @s_scan_fid; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS t_factory_worker (
     id          VARCHAR(36)  NOT NULL PRIMARY KEY,
