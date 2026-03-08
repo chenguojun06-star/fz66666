@@ -109,7 +109,6 @@ const TemplateCenter: React.FC = () => {
       ),
       okText: '确认退回',
       cancelText: '取消',
-      okButtonProps: { danger: true },
       onOk: async () => {
         const remark = String(reason || '').trim();
         if (!remark) {

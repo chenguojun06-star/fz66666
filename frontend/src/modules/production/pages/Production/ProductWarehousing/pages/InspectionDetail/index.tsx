@@ -649,7 +649,6 @@ const InspectionDetail: React.FC = () => {
                           ghost
                           icon={<ToolOutlined />}
                           loading={markingRepairBundleId === record.bundleId}
-                          danger
                         >
                           标记已返修
                         </Button>
@@ -1115,7 +1114,7 @@ const InspectionDetail: React.FC = () => {
                                 size="small" rowKey="key" pagination={false}
                                 dataSource={fixedRows}
                                 columns={[
-                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 48, align: 'center' as const },
+                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 36, align: 'center' as const },
                                   {
                                     title: '内容',
                                     dataIndex: 'content',

@@ -111,7 +111,6 @@ export function useProductionActions({
       title: `确认关单：${safeString((order as any)?.orderNo)}`,
       okText: '确认关单',
       cancelText: '取消',
-      okButtonProps: { danger: true },
       content: (
         <div>
           <div>订单数量：{orderQty}</div>
@@ -168,7 +167,6 @@ export function useProductionActions({
       title: `确认报废：${safeString((order as any)?.orderNo)}`,
       okText: '确认报废',
       cancelText: '取消',
-      okButtonProps: { danger: true },
       content: (
         <div>
           <div style={{ marginBottom: 12, fontWeight: 600 }}>报废原因</div>
