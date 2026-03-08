@@ -1578,7 +1578,7 @@ public class TenantOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> workerRegister(String username, String password, String name,
-                                                String phone, String tenantCode) {
+                                                String phone, String tenantCode, String factoryId) {
         // 验证租户码
         Tenant tenant = tenantService.findByTenantCode(tenantCode);
         if (tenant == null) {
@@ -1619,6 +1619,9 @@ public class TenantOrchestrator {
             user.setRoleName(workerRole.getRoleName());
         }
         user.setPermissionRange("self");
+        if (org.springframework.util.StringUtils.hasText(factoryId)) {
+            user.setFactoryId(factoryId);
+        }
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
         userService.save(user);

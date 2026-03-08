@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Tag, Tooltip, message } from 'antd';
+import { Button, Space, Tag, Tooltip, message } from 'antd';
 import QRCode from 'qrcode';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -132,8 +132,6 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
               <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
               {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{plateTag.text}</Tag>}
               {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 11 }}>{urgencyTag.text}</Tag>}
-              {(record as any).factoryType === 'INTERNAL' ? <Tag color="orange" style={{ marginInlineEnd: 0, fontSize: 11 }}>内部</Tag> : null}
-              {(record as any).factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ marginInlineEnd: 0, fontSize: 11 }}>外部</Tag> : null}
             </div>
             {(record as any).orgPath || (record as any).parentOrgUnitName ? (
               <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 2 }}>
@@ -161,6 +159,23 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       key: 'styleName',
       width: 80,
       ellipsis: true,
+    },
+    {
+      title: '生产方',
+      key: 'factoryName',
+      width: 120,
+      render: (_: any, record: any) => {
+        const name = String(record.factoryName || '').trim();
+        const type = record.factoryType as string | undefined;
+        if (!name) return '-';
+        return (
+          <Space size={4}>
+            {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+            <span style={{ fontSize: 12 }}>{name}</span>
+          </Space>
+        );
+      },
     },
     {
       title: '附件',

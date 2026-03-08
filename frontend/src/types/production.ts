@@ -198,6 +198,8 @@ export interface CuttingTask {
   orderTime?: string;
   remarks?: string;
   expectedShipDate?: string;
+  factoryName?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
 }
 
 export interface MaterialPurchase extends Record<string, unknown> {

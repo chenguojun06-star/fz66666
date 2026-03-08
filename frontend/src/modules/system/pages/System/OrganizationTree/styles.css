@@ -1,144 +1,92 @@
-/* 组织架构页面样式 */
-.org-tree-container {
+/* 组织架构页面样式 — 左树右成员分栏布局 */
+
+/* ===== 分栏容器 ===== */
+.org-split-layout {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* 节点卡片 */
-.org-node-card {
-  border: 1px solid var(--neutral-border, #f0f0f0);
-  border-radius: 8px;
-  margin-bottom: 4px;
-  transition: box-shadow 0.2s;
-}
-
-.org-node-card:hover {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.org-node-leaf {
-  padding: 10px 16px;
-  background: var(--neutral-bg-secondary, #fafafa);
-}
-
-/* 节点头部 */
-.org-node-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 32px;
-}
-
-.org-node-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.org-node-name {
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--neutral-text-primary, #1a1a1a);
-  margin-left: 6px;
-}
-
-.org-node-actions {
-  opacity: 0;
-  transition: opacity 0.15s;
-  flex-shrink: 0;
-}
-
-.org-node-header:hover .org-node-actions,
-.org-node-card:hover > .org-node-header .org-node-actions,
-.org-node-leaf:hover .org-node-actions {
-  opacity: 1;
-}
-
-/* 节点内容区 */
-.org-node-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* 成员区域 */
-.org-members-section {
-  background: var(--neutral-bg-secondary, #fafafa);
+  border: 1px solid #f0f0f0;
   border-radius: 6px;
-  padding: 10px 14px;
-  margin-bottom: 4px;
+  min-height: 520px;
 }
 
-.org-members-title {
-  font-size: 12px;
-  color: var(--neutral-text-secondary, #666);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.org-members-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.org-member-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 4px;
-  background: #fff;
-  border-radius: 20px;
-  border: 1px solid var(--neutral-border, #f0f0f0);
-  min-width: 120px;
-  position: relative;
-}
-
-.org-member-remove {
-  opacity: 0;
-  transition: opacity 0.15s;
+/* ===== 左侧树面板 ===== */
+.org-tree-panel {
+  width: 260px;
   flex-shrink: 0;
-  color: var(--neutral-text-secondary, #999) !important;
+  border-right: 1px solid #f0f0f0;
+  overflow-y: auto;
+  padding: 6px 0;
 }
 
-.org-member-item:hover .org-member-remove {
-  opacity: 1;
-}
-
-.org-member-info {
-  display: flex;
-  flex-direction: column;
+/* ===== 右侧成员面板 ===== */
+.org-member-panel {
+  flex: 1;
+  padding: 16px 20px;
+  overflow: auto;
   min-width: 0;
 }
 
-.org-member-name {
-  font-size: 13px;
+/* ===== 树节点行 ===== */
+.tree-item {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  border-radius: 4px;
+  margin: 1px 4px;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.tree-item:hover {
+  background: #f5f5f5;
+}
+
+.tree-item-selected {
+  background: #e6f4ff;
+}
+
+.tree-item-selected .tree-node-name {
+  color: #1677ff;
   font-weight: 500;
-  color: var(--neutral-text-primary, #1a1a1a);
-  white-space: nowrap;
+}
+
+/* 折叠箭头 */
+.tree-chevron {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #999;
+  margin-right: 2px;
+}
+
+/* 节点标签区（可点击部分） */
+.tree-node-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.tree-node-name {
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.org-member-role {
-  font-size: 11px;
-  color: var(--neutral-text-secondary, #999);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Collapse 样式覆盖 */
-.org-node-card .ant-collapse-ghost > .ant-collapse-item > .ant-collapse-header {
-  padding: 8px 12px;
+/* 节点操作按钮（hover 时显示） */
+.tree-item-actions {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
-.org-node-card .ant-collapse-ghost > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
-  padding: 4px 8px 8px 8px;
+.tree-item:hover .tree-item-actions {
+  display: flex;
 }

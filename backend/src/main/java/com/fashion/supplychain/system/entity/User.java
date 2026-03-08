@@ -87,6 +87,10 @@ public class User {
     /** 外发工厂ID，NULL=普通租户账号，非NULL=该账号属于外发工厂 */
     private String factoryId;
 
+    /** 是否为外发工厂主账号（老板/联系人），每个工厂只有一个 */
+    @TableField("is_factory_owner")
+    private Boolean isFactoryOwner;
+
     /** 所属组织节点ID */
     private String orgUnitId;
 

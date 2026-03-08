@@ -85,8 +85,6 @@ logging:
     org.springframework.security: warn
     org.apache.ibatis: warn
     com.baomidou.mybatisplus: warn
-    org.springdoc: debug
-    io.github.classgraph: debug
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
@@ -174,10 +172,10 @@ app:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app,https://*.trycloudflare.com}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
-    
-# Limit Springdoc/OpenAPI scanning to application packages to avoid scanning third-party classes
+
 springdoc:
   packages-to-scan: com.fashion.supplychain
+
   qrcode:
     hmac-secret: ${APP_QRCODE_HMAC_SECRET:}
     require-signature: ${APP_QRCODE_REQUIRE_SIGNATURE:false}

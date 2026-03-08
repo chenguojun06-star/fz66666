@@ -47,6 +47,41 @@ public class DictOrchestrator {
         dictService.removeById(id);
     }
 
+    /**
+     * 自动收录词典（如果不存在）
+     * @param dictType 词典类型
+     * @param label 标签（同时作为值）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void autoCollect(String dictType, String label) {
+        if (!StringUtils.hasText(dictType) || !StringUtils.hasText(label)) {
+            return;
+        }
+        String normalizedType = dictType.trim().toLowerCase();
+        String normalizedLabel = label.trim();
+        
+        // 检查是否存在
+        long count = dictService.count(new LambdaQueryWrapper<Dict>()
+                .eq(Dict::getDictType, normalizedType)
+                .eq(Dict::getDictLabel, normalizedLabel));
+        
+        if (count == 0) {
+            Dict dict = new Dict();
+            dict.setDictType(normalizedType);
+            dict.setDictLabel(normalizedLabel);
+            // 自动生成编码: TYPE_HASH_TIMESTAMP
+            String code = normalizedType.toUpperCase() + "_" + Math.abs(normalizedLabel.hashCode()) + "_" + System.currentTimeMillis();
+            if (code.length() > 50) {
+                code = code.substring(0, 50);
+            }
+            dict.setDictCode(code);
+            dict.setDictValue(code);
+            dict.setStatus("ENABLED");
+            dict.setSort(99); // 默认排在最后
+            dictService.save(dict);
+        }
+    }
+
     private void normalizeDict(Dict dict) {
         if (dict == null) {
             throw new IllegalArgumentException("字典数据不能为空");

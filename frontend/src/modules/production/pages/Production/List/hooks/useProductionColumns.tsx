@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Popover, Tooltip, Badge } from 'antd';
+import { Tag, Popover, Space, Tooltip, Badge } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { NavigateFunction } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
@@ -152,16 +152,21 @@ export function useProductionColumns({
       )
     },
     {
-      title: '加工厂',
+      title: '生产方',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 120,
+      width: 130,
       render: (v: any, record: any) => {
         const bizType = record.orderBizType as string | undefined;
+        const factoryType = record.factoryType as string | undefined;
         const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span>{v || '-'}</span>
+            <Space size={4} style={{ flexWrap: 'nowrap' }}>
+              {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+              {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+              <span>{v || '-'}</span>
+            </Space>
             {bizType && (
               <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16, width: 'fit-content' }}>{bizType}</Tag>
             )}

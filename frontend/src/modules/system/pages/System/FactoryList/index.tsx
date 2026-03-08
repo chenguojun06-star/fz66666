@@ -4,7 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
-import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit } from '@/types/system';
+import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
@@ -68,6 +68,7 @@ const FactoryList: React.FC = () => {
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
   const [departmentOptions, setDepartmentOptions] = useState<OrganizationUnit[]>([]);
+  const [userOptions, setUserOptions] = useState<User[]>([]);
 
   // 收款账户管理
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -157,10 +158,15 @@ const FactoryList: React.FC = () => {
 
   const fetchDepartments = useCallback(async () => {
     try {
-      const result = await organizationApi.departments();
-      setDepartmentOptions(Array.isArray(result) ? result : []);
+      const [deptResult, userResult] = await Promise.all([
+        organizationApi.departments(),
+        organizationApi.assignableUsers(),
+      ]);
+      setDepartmentOptions(Array.isArray(deptResult) ? deptResult : []);
+      const users = Array.isArray(userResult) ? userResult : [];
+      setUserOptions(users);
     } catch (error) {
-      console.warn('[FactoryList] fetchDepartments failed', error);
+      console.warn('[FactoryList] fetchData failed', error);
     }
   }, []);
 
@@ -194,6 +200,7 @@ const FactoryList: React.FC = () => {
         factoryName: '',
         contactPerson: '',
         contactPhone: '',
+        managerId: undefined,
         address: '',
         status: 'active',
         supplierType: activeTab === 'ALL' ? 'MATERIAL' : activeTab,
@@ -208,6 +215,7 @@ const FactoryList: React.FC = () => {
         factoryName: factory?.factoryName,
         contactPerson: factory?.contactPerson,
         contactPhone: factory?.contactPhone,
+        managerId: factory?.managerId,
         address: factory?.address,
         status: factory?.status || 'inactive',
         supplierType: factory?.supplierType || 'MATERIAL',
@@ -724,11 +732,43 @@ const FactoryList: React.FC = () => {
             </Form.Item>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item name="contactPerson" label="联系人">
-              <Input placeholder="请输入联系人" />
-            </Form.Item>
-            <Form.Item name="contactPhone" label="联系电话">
-              <Input placeholder="请输入联系电话" />
+            <Form.Item noStyle dependencies={['factoryType']}>
+              {({ getFieldValue }) => {
+                const factoryType = getFieldValue('factoryType');
+                const isInternal = factoryType === 'INTERNAL';
+                return (
+                  <>
+                    {isInternal ? (
+                      <Form.Item name="managerId" label="负责人">
+                        <Select
+                          showSearch
+                          optionFilterProp="label"
+                          placeholder="选择系统用户"
+                          options={userOptions.map(u => ({ label: `${u.name} (${u.phone || '-'})`, value: String(u.id) }))}
+                          onChange={(val) => {
+                            const user = userOptions.find(u => String(u.id) === val);
+                            if (user) {
+                              form.setFieldsValue({
+                                contactPerson: user.name,
+                                contactPhone: user.phone,
+                              });
+                            }
+                          }}
+                        />
+                      </Form.Item>
+                    ) : (
+                      <Form.Item name="contactPerson" label="联系人">
+                        <Input placeholder="请输入联系人" />
+                      </Form.Item>
+                    )}
+                    <Form.Item name="contactPhone" label="联系电话">
+                      <Input placeholder="请输入联系电话" />
+                    </Form.Item>
+                    {/* Hidden fields to store synced values if needed */}
+                    {isInternal && <Form.Item name="contactPerson" hidden><Input /></Form.Item>}
+                  </>
+                );
+              }}
             </Form.Item>
           </div>
           <Form.Item name="address" label="地址">

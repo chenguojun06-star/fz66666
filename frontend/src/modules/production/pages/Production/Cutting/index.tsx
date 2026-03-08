@@ -407,6 +407,23 @@ const CuttingManagement: React.FC = () => {
                   },
                   { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
                   {
+                    title: '生产方',
+                    key: 'factoryName',
+                    width: 120,
+                    render: (_: any, record: CuttingTask) => {
+                      const name = record.factoryName;
+                      const type = record.factoryType;
+                      if (!name) return '-';
+                      return (
+                        <Space size={4}>
+                          {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+                          {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+                          <span style={{ fontSize: 12 }}>{name}</span>
+                        </Space>
+                      );
+                    },
+                  },
+                  {
                     title: '附件',
                     key: 'attachments',
                     width: 100,

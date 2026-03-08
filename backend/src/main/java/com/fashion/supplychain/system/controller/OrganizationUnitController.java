@@ -58,6 +58,17 @@ public class OrganizationUnitController {
         return Result.success(null);
     }
 
+    /**
+     * 设置外发工厂主账号（老板/联系人）。
+     * body: { userId, factoryId }
+     * 同一工厂原主账号自动清除，每个工厂只有一个主账号。
+     */
+    @PostMapping("/factory/set-owner")
+    public Result<Void> setFactoryOwner(@RequestBody Map<String, String> body) {
+        organizationUnitOrchestrator.setFactoryOwner(body.get("userId"), body.get("factoryId"));
+        return Result.success(null);
+    }
+
     @PostMapping
     public Result<Boolean> create(@RequestBody OrganizationUnit unit) {
         return Result.success(organizationUnitOrchestrator.createDepartment(unit));

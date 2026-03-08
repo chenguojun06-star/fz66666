@@ -1,5 +1,5 @@
-import React from 'react';
-import { AutoComplete, Button, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import React, { useState } from 'react';
+import { AutoComplete, Button, Col, Form, Input, InputNumber, Row, Select, Segmented, Space, Tabs, Tag, Tooltip } from 'antd';
 import type { FormInstance } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { QuestionCircleOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
@@ -133,6 +133,8 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
   handleSubmit,
   onFactorySelect,
 }) => {
+  const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  const filteredFactories = factories.filter(f => f.factoryType === factoryMode);
   return (
     <ResizableModal
       open={open}
@@ -216,25 +218,24 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       </Col>
                       <Col xs={24} sm={12}>
                         <Form.Item
-                          name="factoryId"
                           label={
                             <Space size={4}>
-                              <span>加工厂</span>
+                              <span>生产方</span>
                               <Tooltip
                                 color={tooltipTheme.background}
                                 title={
                                   <div style={{ fontSize: "var(--font-size-sm)", color: tooltipTheme.text }}>
-                                    <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
+                                    <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 生产方式说明</div>
                                     <div style={{ marginBottom: 6 }}>
-                                      <span style={{ color: 'var(--primary-color-light)' }}>● 本厂生产：</span>
-                                      选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
+                                      <span style={{ color: 'var(--primary-color-light)' }}>● 内部自产：</span>
+                                      选择内部工厂/车间，由组织架构内部各工序团队完成生产。数据流向<strong>工序结算</strong>（按员工扫码工序统计工资）
                                     </div>
                                     <div>
-                                      <span style={{ color: 'var(--error-color-light)' }}>● 加工厂生产：</span>
-                                      选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂扫码结算加工费）
+                                      <span style={{ color: 'var(--error-color-light)' }}>● 外发加工：</span>
+                                      选择外发工厂，委托外厂接单生产。数据流向<strong>订单结算</strong>（按工厂整单结算加工费）
                                     </div>
                                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: "var(--font-size-xs)", opacity: 0.9 }}>
-                                      💡 所有数据最终在"订单结算数据看板"统一查看
+                                      💡 所有结算数据最终在"订单结算数据看板"统一查看
                                     </div>
                                   </div>
                                 }
@@ -247,38 +248,56 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                               </Tooltip>
                             </Space>
                           }
-                          rules={[{ required: true, message: '请选择加工厂' }]}
                         >
-                          <Select
-                            placeholder="请选择加工厂（本厂或外发加工）"
-                            options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
-                            showSearch
-                            optionFilterProp="label"
-                            allowClear
-                            dropdownRender={(menu) => (
-                              <>
-                                {menu}
-                                <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #f0f0f0)' }}>
-                                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>找不到工厂？直接新增：</div>
-                                  <Space.Compact style={{ width: '100%' }}>
-                                    <Input
-                                      size="small"
-                                      placeholder="输入工厂名称"
-                                      value={factoryQuickAddName}
-                                      onChange={e => setFactoryQuickAddName(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); quickAddFactory(); } }}
-                                    />
-                                    <Button
-                                      size="small"
-                                      type="primary"
-                                      loading={factoryQuickAdding}
-                                      onClick={quickAddFactory}
-                                    >新增</Button>
-                                  </Space.Compact>
-                                </div>
-                              </>
-                            )}
+                          <Segmented
+                            value={factoryMode}
+                            onChange={(v) => {
+                              setFactoryMode(v as 'INTERNAL' | 'EXTERNAL');
+                              form.setFieldValue('factoryId', undefined);
+                            }}
+                            options={[
+                              { label: '内部自产', value: 'INTERNAL' },
+                              { label: '外发加工', value: 'EXTERNAL' },
+                            ]}
+                            style={{ marginBottom: 6, width: '100%' }}
+                            block
                           />
+                          <Form.Item
+                            name="factoryId"
+                            noStyle
+                            rules={[{ required: true, message: '请选择生产方' }]}
+                          >
+                            <Select
+                              placeholder={factoryMode === 'INTERNAL' ? '请选择内部工厂/车间' : '请选择外发工厂'}
+                              options={filteredFactories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
+                              showSearch
+                              optionFilterProp="label"
+                              allowClear
+                              dropdownRender={(menu) => (
+                                <>
+                                  {menu}
+                                  <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #f0f0f0)' }}>
+                                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>找不到工厂？直接新增：</div>
+                                    <Space.Compact style={{ width: '100%' }}>
+                                      <Input
+                                        size="small"
+                                        placeholder="输入工厂名称"
+                                        value={factoryQuickAddName}
+                                        onChange={e => setFactoryQuickAddName(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); quickAddFactory(); } }}
+                                      />
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        loading={factoryQuickAdding}
+                                        onClick={quickAddFactory}
+                                      >新增</Button>
+                                    </Space.Compact>
+                                  </div>
+                                </>
+                              )}
+                            />
+                          </Form.Item>
                         </Form.Item>
                         {selectedFactoryStat && (
                           <div style={{

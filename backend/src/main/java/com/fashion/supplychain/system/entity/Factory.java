@@ -59,6 +59,9 @@ public class Factory {
     /** 归属部门名称 */
     private String parentOrgUnitName;
 
+    /** 负责人ID (关联系统用户，仅内部工厂有效) */
+    private String managerId;
+
     /** 组织路径 */
     private String orgPath;
 

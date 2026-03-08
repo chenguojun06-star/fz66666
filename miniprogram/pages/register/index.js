@@ -10,6 +10,7 @@ Page({
   data: {
     tenantCode: '',
     tenantName: '',
+    factoryId: '',
     scannedCode: false,
     username: '',
     name: '',
@@ -62,10 +63,11 @@ Page({
         if (parsed.tenantCode) {
           this.setData({
             tenantCode: parsed.tenantCode,
-            tenantName: parsed.tenantName || '',
+            tenantName: parsed.factoryName || parsed.tenantName || '',
+            factoryId: parsed.factoryId || '',
             scannedCode: true,
           });
-          toast.success('扫码成功：' + (parsed.tenantName || parsed.tenantCode));
+          toast.success('扫码成功：' + (parsed.factoryName || parsed.tenantName || parsed.tenantCode));
         } else {
           // 直接把扫到的内容作为工厂编码
           this.setData({
@@ -82,14 +84,28 @@ Page({
   },
 
   /**
-   * 解析二维码内容，提取 tenantCode 和 tenantName
+   * 解析二维码内容，提取 tenantCode 、 tenantName 和 factoryId
    * 支持格式：
-   * 1. URL 带参数：https://xxx/register?tenantCode=HUANAN&tenantName=华南服装厂
-   * 2. 纯编码文本：HUANAN
+   * 1. JSON 格式 (FACTORY_INVITE): {"type":"FACTORY_INVITE","tenantCode":"T001","factoryId":"123","factoryName":"工厂名"}
+   * 2. URL 带参数：https://xxx/register?tenantCode=HUANAN&tenantName=华南服装厂
+   * 3. 纯编码文本：HUANAN
    */
   _parseTenantCode(text) {
-    const result = { tenantCode: '', tenantName: '' };
+    const result = { tenantCode: '', tenantName: '', factoryId: '', factoryName: '' };
     if (!text) return result;
+
+    // 尝试 JSON 格式（外发工厂扫码注册二维码）
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && parsed.type === 'FACTORY_INVITE' && parsed.tenantCode) {
+        result.tenantCode = parsed.tenantCode;
+        result.factoryId = parsed.factoryId || '';
+        result.factoryName = parsed.factoryName || '';
+        return result;
+      }
+    } catch (_e) {
+      // 不是 JSON，继续尝试 URL 格式
+    }
 
     try {
       // 尝试解析为 URL
@@ -172,9 +188,10 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const { tenantCode, username, name, phone, password } = this.data;
+      const { tenantCode, factoryId, username, name, phone, password } = this.data;
       const resp = await api.tenant.workerRegister({
         tenantCode: tenantCode.trim(),
+        factoryId: factoryId || undefined,
         username: username.trim(),
         name: name.trim(),
         phone: phone.trim(),

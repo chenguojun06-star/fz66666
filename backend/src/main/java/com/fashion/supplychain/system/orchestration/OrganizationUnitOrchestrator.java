@@ -38,6 +38,9 @@ public class OrganizationUnitOrchestrator {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private DictOrchestrator dictOrchestrator;
+
     public List<OrganizationUnit> tree() {
         ensureFactoryNodes();
         List<OrganizationUnit> nodes = bindingHelper.listTenantNodes(UserContext.tenantId());
@@ -86,6 +89,12 @@ public class OrganizationUnitOrchestrator {
         unit.setSortOrder(unit.getSortOrder() == null ? 0 : unit.getSortOrder());
         unit.setCreateTime(LocalDateTime.now());
         unit.setUpdateTime(LocalDateTime.now());
+
+        // 自动收录部门类别到字典
+        if (StringUtils.hasText(unit.getCategory())) {
+            dictOrchestrator.autoCollect("org_unit_category", unit.getCategory());
+        }
+
         organizationUnitService.save(unit);
         bindingHelper.refreshPaths(unit.getTenantId() != null ? unit.getTenantId() : UserContext.tenantId());
         return true;
@@ -264,6 +273,41 @@ public class OrganizationUnitOrchestrator {
         userService.lambdaUpdate()
                 .eq(User::getId, userIdLong)
                 .set(User::getOrgUnitId, null)
+                .update();
+    }
+
+    /**
+     * 设置外发工厂主账号（老板）。
+     * 同一工厂前一个主账号会被自动清除，确保每个工厂只有一个主账号。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void setFactoryOwner(String userId, String factoryId) {
+        assertAdmin();
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(factoryId)) {
+            throw new IllegalArgumentException("参数不完整");
+        }
+        Long userIdLong;
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("用户ID格式错误");
+        }
+        User user = userService.getById(userIdLong);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        if (!factoryId.equals(user.getFactoryId())) {
+            throw new IllegalArgumentException("该用户不属于该工厂");
+        }
+        // 清除该工厂所有用户的主账号标记
+        userService.lambdaUpdate()
+                .eq(User::getFactoryId, factoryId)
+                .set(User::getIsFactoryOwner, false)
+                .update();
+        // 设置目标用户为主账号
+        userService.lambdaUpdate()
+                .eq(User::getId, userIdLong)
+                .set(User::getIsFactoryOwner, true)
                 .update();
     }
 

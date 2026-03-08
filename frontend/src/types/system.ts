@@ -16,6 +16,12 @@ export interface User extends Record<string, unknown> {
   updateTime?: string;
   lastLoginTime?: string;
   lastLoginIp?: string;
+  /** 外发工厂ID，属于外发工厂的账号时有值 */
+  factoryId?: string;
+  /** 是否为外发工厂主账号（老板/联系人） */
+  isFactoryOwner?: boolean;
+  /** 所属组织节点ID */
+  orgUnitId?: string;
 }
 
 export interface Role {
@@ -74,6 +80,8 @@ export interface Factory extends Record<string, unknown> {
   orgUnitId?: string;
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
+  /** 负责人ID (关联系统用户，仅内部工厂有效) */
+  managerId?: string;
   orgPath?: string;
   operationRemark?: string;
   createTime?: string;
@@ -86,6 +94,7 @@ export interface OrganizationUnit extends Record<string, unknown> {
   /** @deprecated Use unitName instead to avoid DOM node collision */
   nodeName?: string;
   unitName: string;
+  category?: string; // 上级部门类别
   nodeType: 'DEPARTMENT' | 'FACTORY';
   ownerType?: 'INTERNAL' | 'EXTERNAL' | 'NONE';
   factoryId?: string;

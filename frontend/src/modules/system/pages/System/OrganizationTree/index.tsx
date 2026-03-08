@@ -3,16 +3,18 @@ import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import { organizationApi } from '@/services/system/organizationApi';
 import { factoryApi } from '@/services/system/factoryApi';
+import tenantService from '@/services/tenantService';
 import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import {
-  App, Avatar, Badge, Button, Card, Empty, Form, Input,
-  InputNumber, List, Select, Space, Tag, Tooltip,
+  App, Avatar, Button, Card, Checkbox, Empty, Form, Input,
+  InputNumber, QRCode, Select, Space, Table, Tag, Tooltip, Typography,
 } from 'antd';
+import type { TableColumnsType } from 'antd';
 import {
-  ApartmentOutlined, BankOutlined, CloseOutlined, DeleteOutlined,
-  DownOutlined, EditOutlined, PlusOutlined, RightOutlined, SnippetsOutlined,
-  TeamOutlined, UserAddOutlined, UserOutlined,
+  ApartmentOutlined, BankOutlined, CrownFilled, DeleteOutlined,
+  DownOutlined, EditOutlined, PlusOutlined, QrcodeOutlined, RightOutlined,
+  SnippetsOutlined, UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
 
@@ -23,6 +25,26 @@ const ownerTypeOptions = [
   { value: 'INTERNAL', label: '内部' },
   { value: 'EXTERNAL', label: '外部' },
 ];
+
+function findUnit(nodes: OrganizationUnit[], id: string | null): OrganizationUnit | null {
+  if (!id) return null;
+  for (const node of nodes) {
+    if (String(node.id) === id) return node;
+    if (node.children?.length) {
+      const found = findUnit(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function getDescendantIds(node: OrganizationUnit): string[] {
+  const ids: string[] = [String(node.id)];
+  if (Array.isArray(node.children)) {
+    node.children.forEach(child => ids.push(...getDescendantIds(child)));
+  }
+  return ids;
+}
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -35,6 +57,18 @@ const OrganizationTreePage: React.FC = () => {
   const [dialogMode, setDialogMode] = useState<DialogMode>('create');
   const [currentRecord, setCurrentRecord] = useState<OrganizationUnit | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  // 左树选中节点
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  // 右侧成员搜索
+  const [memberSearch, setMemberSearch] = useState('');
+  // 包括下级成员
+  const [includeSubUnits, setIncludeSubUnits] = useState(false);
+
+  // 外发工厂注册二维码弹窗
+  const [qrModal, setQrModal] = useState<{ open: boolean; unit: OrganizationUnit | null; tenantCode: string }>(
+    { open: false, unit: null, tenantCode: '' },
+  );
 
   // 模板创建弹窗状态
   const [tplModal, setTplModal] = useState<{ open: boolean; type: 'FACTORY' | 'INTERNAL' | null; rootName: string; factoryId?: string }>(
@@ -56,7 +90,11 @@ const OrganizationTreePage: React.FC = () => {
   const [assignModal, setAssignModal] = useState<{ open: boolean; node: OrganizationUnit | null }>({ open: false, node: null });
   const [assignableUsers, setAssignableUsers] = useState<User[]>([]);
   const [assignSearch, setAssignSearch] = useState('');
-  const [assignActionLoading, setAssignActionLoading] = useState<string | null>(null);
+  // 批量添加：选中用户ID列表 + loading
+  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([]);
+  const [batchAssignLoading, setBatchAssignLoading] = useState(false);
+  // 设为老板操作 loading（存 userId）
+  const [setOwnerLoading, setSetOwnerLoading] = useState<string | null>(null);
 
   const handleInitTemplate = async () => {
     if (!tplModal.type) { message.warning('请选择一个模板类型'); return; }
@@ -102,16 +140,17 @@ const OrganizationTreePage: React.FC = () => {
     try {
       const users = await organizationApi.assignableUsers();
       setAssignableUsers(Array.isArray(users) ? users : []);
-    } catch {
+    } catch (e: any) {
+      message.error('加载用户列表失败：' + (e?.message || '请重试'));
       setAssignableUsers([]);
     }
-  }, []);
+  }, [message]);
 
   const departmentOptions = useMemo(() => {
     return departments
       .map((item) => ({
         value: String(item.id ?? '').trim(),
-        label: String(item.pathNames ?? item.unitName ?? '未命名'),
+        label: String(item.unitName ?? '未命名'),
       }))
       .filter((item) => item.value);
   }, [departments]);
@@ -186,25 +225,44 @@ const OrganizationTreePage: React.FC = () => {
   // 打开分配成员弹窗
   const handleOpenAssign = useCallback(async (node: OrganizationUnit) => {
     setAssignSearch('');
+    setBatchSelectedIds([]);
     setAssignModal({ open: true, node });
     await loadAssignableUsers();
   }, [loadAssignableUsers]);
 
-  // 分配用户到节点
-  const handleAssignUser = useCallback(async (userId: string) => {
-    if (!assignModal.node?.id) return;
-    setAssignActionLoading(userId);
-    try {
-      await organizationApi.assignMember(userId, String(assignModal.node.id));
-      message.success('分配成功');
-      // 刷新成员数据
-      organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
-    } catch (error: any) {
-      message.error(error?.message || '分配失败');
-    } finally {
-      setAssignActionLoading(null);
+  // 批量分配用户到节点
+  const handleBatchAssign = useCallback(async () => {
+    if (!assignModal.node?.id || batchSelectedIds.length === 0) {
+      message.warning('请勾选要添加的用户');
+      return;
     }
-  }, [assignModal.node, message]);
+    setBatchAssignLoading(true);
+    try {
+      await Promise.all(
+        batchSelectedIds.map((uid) => organizationApi.assignMember(uid, String(assignModal.node!.id))),
+      );
+      message.success(`已成功添加 ${batchSelectedIds.length} 名成员`);
+      setBatchSelectedIds([]);
+      const [m] = await Promise.allSettled([organizationApi.members(), loadAssignableUsers()]);
+      if (m.status === 'fulfilled' && m.value && typeof m.value === 'object') {
+        setMembersMap(m.value);
+      }
+    } catch (error: any) {
+      message.error(error?.message || '批量添加失败');
+    } finally {
+      setBatchAssignLoading(false);
+    }
+  }, [assignModal.node, batchSelectedIds, message, loadAssignableUsers]);
+
+  // 显示外发工厂注册二维码
+  const handleShowQRCode = useCallback(async (node: OrganizationUnit) => {
+    let tenantCode = '';
+    try {
+      const res = await (tenantService as any).myTenant();
+      tenantCode = (res as any)?.data?.tenantCode || (res as any)?.tenantCode || '';
+    } catch { /* 静默，二维码依然可以展示 */ }
+    setQrModal({ open: true, unit: node, tenantCode });
+  }, []);
 
   // 移出成员
   const handleRemoveMember = useCallback(async (userId: string, userName: string) => {
@@ -222,26 +280,149 @@ const OrganizationTreePage: React.FC = () => {
     });
   }, [modal, message]);
 
+  // 设置外发工厂主账号（老板）
+  const handleSetFactoryOwner = useCallback(async (user: User) => {
+    if (!user.factoryId || !user.id) return;
+    setSetOwnerLoading(String(user.id));
+    try {
+      await organizationApi.setFactoryOwner(String(user.id), String(user.factoryId));
+      message.success(`已设置「${user.name || user.username}」为工厂主账号（老板）`);
+      organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      message.error(err?.message || '设置失败');
+    } finally {
+      setSetOwnerLoading(null);
+    }
+  }, [message]);
+
   const totalMembers = useMemo(() => {
     return Object.values(membersMap).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
   }, [membersMap]);
 
-  // 当前弹窗节点下的成员 id 集合（用于过滤已分配人员）
+  // 当前弹窗节点下的成员 id 集合（用于标注已添加状态，不过滤）
   const currentNodeMemberIds = useMemo(() => {
     if (!assignModal.node?.id) return new Set<string>();
     const members = membersMap[String(assignModal.node.id)] || [];
     return new Set(members.map((u) => String(u.id)));
   }, [assignModal.node, membersMap]);
 
-  // 可供分配的用户（过滤掉已在本节点者）
+  // 可供分配的用户列表（显示所有人，按搜索过滤，已在本节点的排在后面）
   const filteredAssignableUsers = useMemo(() => {
-    return assignableUsers.filter((u) => {
-      if (currentNodeMemberIds.has(String(u.id))) return false;
+    const filtered = assignableUsers.filter((u) => {
       if (!assignSearch.trim()) return true;
       const q = assignSearch.toLowerCase();
       return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
     });
+    // 已在本节点的排到最后
+    return [
+      ...filtered.filter(u => !currentNodeMemberIds.has(String(u.id))),
+      ...filtered.filter(u => currentNodeMemberIds.has(String(u.id))),
+    ];
   }, [assignableUsers, currentNodeMemberIds, assignSearch]);
+
+  // 部门 ID → 名称 快查表
+  const unitNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    departments.forEach(d => {
+      if (d.id) map[String(d.id)] = d.unitName || '';
+    });
+    return map;
+  }, [departments]);
+
+  // 当前选中的 OrganizationUnit 对象
+  const selectedUnit = useMemo(() => findUnit(treeData, selectedUnitId), [treeData, selectedUnitId]);
+  // 当前选中节点是否为外发工厂（ownerType=EXTERNAL）
+  const isExternalSelected = selectedUnit?.ownerType === 'EXTERNAL';
+
+  // 右侧展示的成员列表
+  const displayedMembers = useMemo(() => {
+    if (!selectedUnitId || !selectedUnit) return [];
+    const unitIds = includeSubUnits ? getDescendantIds(selectedUnit) : [selectedUnitId];
+    const allMembers = unitIds.flatMap(id => membersMap[id] || []);
+    if (!memberSearch.trim()) return allMembers;
+    const q = memberSearch.toLowerCase();
+    return allMembers.filter(m =>
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.phone || '').includes(q)
+    );
+  }, [selectedUnitId, selectedUnit, includeSubUnits, membersMap, memberSearch]);
+
+  // 外发工厂只读成员表格列（无操作列）
+  const readOnlyMemberColumns: TableColumnsType<User> = [
+    {
+      title: '姓名',
+      dataIndex: 'name',
+      render: (v: string, r: User) => (
+        <Space size={6}>
+          <Avatar
+            size={24}
+            icon={<UserOutlined />}
+            style={{ backgroundColor: r.isFactoryOwner ? '#faad14' : '#52c41a', flexShrink: 0 }}
+          />
+          {v || r.username}
+          {r.isFactoryOwner && (
+            <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 2 }}>老板</Tag>
+          )}
+        </Space>
+      ),
+    },
+    { title: '手机号码', dataIndex: 'phone', render: (v: string) => v || '—' },
+    { title: '所属部门', dataIndex: 'orgUnitId', render: (v: string) => v ? (unitNameMap[v] || '未知部门') : '—' },
+    {
+      title: '操作',
+      width: 100,
+      render: (_: unknown, r: User) => r.isFactoryOwner ? (
+        <Tag color="gold"><CrownFilled /> 主账号</Tag>
+      ) : (
+        <Button
+          size="small"
+          icon={<CrownFilled />}
+          loading={setOwnerLoading === String(r.id)}
+          onClick={() => handleSetFactoryOwner(r)}
+        >
+          设为老板
+        </Button>
+      ),
+    },
+  ];
+
+  // 成员表格列定义
+  const memberColumns: TableColumnsType<User> = [
+    {
+      title: '姓名',
+      dataIndex: 'name',
+      render: (v: string, r: User) => (
+        <Space size={6}>
+          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff', flexShrink: 0 }} />
+          {v || r.username}
+        </Space>
+      ),
+    },
+    {
+      title: '手机号码',
+      dataIndex: 'phone',
+      render: (v: string) => v || '—',
+    },
+    {
+      title: '所属部门',
+      dataIndex: 'orgUnitId',
+      render: (v: string) => v ? (unitNameMap[v] || '未知部门') : '—',
+    },
+    {
+      title: '操作',
+      width: 80,
+      render: (_: unknown, r: User) => (
+        <Button
+          size="small"
+          danger
+          onClick={() => handleRemoveMember(String(r.id), r.name || r.username || '')}
+        >
+          移出
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Layout>
@@ -275,20 +456,80 @@ const OrganizationTreePage: React.FC = () => {
         {treeData.length === 0 && !loading ? (
           <Empty description="暂无组织架构数据，请先新增部门" style={{ padding: '60px 0' }} />
         ) : (
-          <div className="org-tree-container">
-            {treeData.map((node) => (
-              <OrgNodeCard
-                key={node.id || node.unitName}
-                node={node}
-                depth={0}
-                membersMap={membersMap}
-                onAdd={openCreate}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onAddMember={handleOpenAssign}
-                onRemoveMember={handleRemoveMember}
-              />
-            ))}
+          <div className="org-split-layout">
+            {/* 左侧：组织架构树 */}
+            <div className="org-tree-panel">
+              {treeData.map((node) => (
+                <TreeItem
+                  key={node.id ?? node.unitName}
+                  node={node}
+                  depth={0}
+                  selectedId={selectedUnitId}
+                  onSelect={setSelectedUnitId}
+                  onAdd={openCreate}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onAddMember={handleOpenAssign}
+                  onShowQRCode={handleShowQRCode}
+                />
+              ))}
+            </div>
+
+            {/* 右侧：成员面板 */}
+            <div className="org-member-panel">
+              {!selectedUnitId ? (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="请点击左侧节点查看成员"
+                  style={{ paddingTop: 80 }}
+                />
+              ) : (
+                <>
+                  <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15 }}>
+                    {selectedUnit?.unitName} · 成员列表
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Input
+                      placeholder="搜索姓名或手机号"
+                      allowClear
+                      value={memberSearch}
+                      onChange={e => setMemberSearch(e.target.value)}
+                      style={{ width: 200 }}
+                    />
+                    <Checkbox
+                      checked={includeSubUnits}
+                      onChange={e => setIncludeSubUnits(e.target.checked)}
+                    >
+                      包括下级成员
+                    </Checkbox>
+                    {isExternalSelected ? (
+                      <Button
+                        icon={<QrcodeOutlined />}
+                        onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
+                      >
+                        注册二维码
+                      </Button>
+                    ) : (
+                      <Button
+                        type="primary"
+                        icon={<UserAddOutlined />}
+                        onClick={() => selectedUnit && handleOpenAssign(selectedUnit)}
+                      >
+                        添加成员
+                      </Button>
+                    )}
+                  </div>
+                  <Table<User>
+                    size="small"
+                    rowKey={r => String(r.id ?? r.username)}
+                    columns={isExternalSelected ? readOnlyMemberColumns : memberColumns}
+                    dataSource={displayedMembers}
+                    pagination={displayedMembers.length > 10 ? { pageSize: 10, showSizeChanger: false } : false}
+                    locale={{ emptyText: isExternalSelected ? '外发工厂成员通过扫码二维码注册' : '暂无成员，点击「添加成员」分配' }}
+                  />
+                </>
+              )}
+            </div>
           </div>
         )}
       </Card>
@@ -335,14 +576,14 @@ const OrganizationTreePage: React.FC = () => {
         </Form>
       </ResizableModal>
 
-      {/* 分配成员弹窗 */}
+      {/* 分配成员弹窗（竖向布局 + 批量勾选） */}
       <ResizableModal
         open={assignModal.open}
         title={`为「${assignModal.node?.unitName || ''}」添加成员`}
-        onCancel={() => setAssignModal({ open: false, node: null })}
+        onCancel={() => { setAssignModal({ open: false, node: null }); setBatchSelectedIds([]); }}
         footer={null}
         width="40vw"
-        initialHeight={500}
+        initialHeight={580}
       >
         <div style={{ padding: '8px 0' }}>
           <Input.Search
@@ -353,41 +594,104 @@ const OrganizationTreePage: React.FC = () => {
             style={{ marginBottom: 12 }}
           />
           {filteredAssignableUsers.length === 0 ? (
-            <Empty description="暂无可分配人员（所有活跃账号均已分配到本节点，或尚无账号）" style={{ padding: '32px 0' }} />
+            <Empty description="暂无用户（该租户下尚无活跃账号）" style={{ padding: '32px 0' }} />
           ) : (
-            <List
+            <Table<User>
               size="small"
+              rowKey={(r) => String(r.id)}
               dataSource={filteredAssignableUsers}
-              style={{ maxHeight: 340, overflowY: 'auto' }}
-              renderItem={(user) => (
-                <List.Item
-                  key={String(user.id)}
-                  actions={[
-                    <Button
-                      key="assign"
-                      type="primary"
-                      size="small"
-                      loading={assignActionLoading === String(user.id)}
-                      onClick={() => handleAssignUser(String(user.id))}
-                    >
-                      分配
-                    </Button>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />}
-                    title={<span>{user.name || user.username}</span>}
-                    description={
-                      <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
-                        {user.username}
-                        {user.orgUnitId ? <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>已在其他组织</Tag> : null}
-                      </span>
-                    }
-                  />
-                </List.Item>
-              )}
+              scroll={{ y: 300 }}
+              pagination={false}
+              rowSelection={{
+                type: 'checkbox',
+                selectedRowKeys: batchSelectedIds,
+                onChange: (keys) => setBatchSelectedIds(keys as string[]),
+                getCheckboxProps: (r) => ({ disabled: currentNodeMemberIds.has(String(r.id)) }),
+              }}
+              columns={[
+                {
+                  title: '用户',
+                  render: (_: unknown, r: User) => {
+                    const alreadyIn = currentNodeMemberIds.has(String(r.id));
+                    return (
+                      <Space size={6}>
+                        <Avatar size={28} icon={<UserOutlined />}
+                          style={{ backgroundColor: alreadyIn ? '#ccc' : '#1677ff', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{r.name || r.username}</div>
+                          <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+                            {r.username}
+                            {!alreadyIn && r.orgUnitId && (
+                              <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>
+                                已在: {unitNameMap[String(r.orgUnitId)] || '其他组织'}
+                              </Tag>
+                            )}
+                          </div>
+                        </div>
+                      </Space>
+                    );
+                  },
+                },
+                { title: '手机号', dataIndex: 'phone', width: 110, render: (v: string) => v || '—' },
+                {
+                  title: '状态', width: 72,
+                  render: (_: unknown, r: User) => currentNodeMemberIds.has(String(r.id))
+                    ? <Tag color="success" style={{ fontSize: 11 }}>已添加</Tag>
+                    : null,
+                },
+              ]}
             />
           )}
+          {/* 底部批量确认区 */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0',
+          }}>
+            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+              {batchSelectedIds.length > 0 ? `已勾选 ${batchSelectedIds.length} 人` : '勾选后批量添加'}
+            </span>
+            <Space>
+              <Button onClick={() => { setAssignModal({ open: false, node: null }); setBatchSelectedIds([]); }}>取消</Button>
+              <Button
+                type="primary"
+                disabled={batchSelectedIds.length === 0}
+                loading={batchAssignLoading}
+                onClick={handleBatchAssign}
+              >
+                确认添加{batchSelectedIds.length > 0 ? ` (${batchSelectedIds.length} 人)` : ''}
+              </Button>
+            </Space>
+          </div>
+        </div>
+      </ResizableModal>
+
+      {/* 外发工厂注册二维码弹窗 */}
+      <ResizableModal
+        open={qrModal.open}
+        title={`${qrModal.unit?.unitName || ''} · 注册二维码`}
+        onCancel={() => setQrModal({ open: false, unit: null, tenantCode: '' })}
+        footer={null}
+        width="360px"
+        initialHeight={420}
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <QRCode
+            value={
+              qrModal.unit
+                ? JSON.stringify({
+                    type: 'FACTORY_INVITE',
+                    tenantCode: qrModal.tenantCode,
+                    factoryId: qrModal.unit.factoryId || String(qrModal.unit.id),
+                    factoryName: qrModal.unit.unitName,
+                  })
+                : ' '
+            }
+            size={220}
+            style={{ margin: '0 auto' }}
+          />
+          <Typography.Text type="secondary" style={{ display: 'block', marginTop: 16, fontSize: 13 }}>
+            外发工厂工人扫码注册，自动归属到「{qrModal.unit?.unitName}」
+          </Typography.Text>
         </div>
       </ResizableModal>
 
@@ -506,128 +810,93 @@ const OrganizationTreePage: React.FC = () => {
   );
 };
 
-/* ---------- 递归节点卡片 ---------- */
+/* ---------- 左侧树节点 ---------- */
 
-interface OrgNodeCardProps {
+interface TreeItemProps {
   node: OrganizationUnit;
   depth: number;
-  membersMap: Record<string, User[]>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   onAdd: (parent: OrganizationUnit) => void;
   onEdit: (record: OrganizationUnit) => void;
   onDelete: (record: OrganizationUnit) => void;
   onAddMember: (node: OrganizationUnit) => void;
-  onRemoveMember: (userId: string, userName: string) => void;
+  onShowQRCode: (node: OrganizationUnit) => void;
 }
 
-const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
-  node, depth, membersMap, onAdd, onEdit, onDelete, onAddMember, onRemoveMember,
+const TreeItem: React.FC<TreeItemProps> = ({
+  node, depth, selectedId, onSelect, onAdd, onEdit, onDelete, onAddMember, onShowQRCode,
 }) => {
-  const isFactory = node.nodeType === 'FACTORY';
-  const members = node.id ? (membersMap[String(node.id)] || []) : [];
-  const children = node.children || [];
-  const hasContent = members.length > 0 || children.length > 0;
-
-  // 用自定义 expanded state 替代 Collapse，避免 rc-collapse 对 label 调用
-  // unitName 替代 nodeName 以避免 DOM 属性冲突
   const [expanded, setExpanded] = useState(depth < 2);
-
-  const nodeIcon = isFactory
-    ? <BankOutlined style={{ color: '#1677ff' }} />
-    : <ApartmentOutlined style={{ color: '#722ed1' }} />;
-
-  const nodeTag = isFactory
-    ? <Tag color="blue" style={{ marginLeft: 8 }}>工厂</Tag>
-    : <Tag color="purple" style={{ marginLeft: 8 }}>部门</Tag>;
-
-  const ownerTag = node.ownerType === 'INTERNAL'
-    ? <Tag color="orange">内部</Tag>
-    : node.ownerType === 'EXTERNAL'
-      ? <Tag color="cyan">外部</Tag>
-      : null;
+  const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+  const isSelected = String(node.id) === selectedId;
+  const isFactory = node.nodeType === 'FACTORY';
+  const isExternal = node.ownerType === 'EXTERNAL';
 
   return (
-    <div className="org-node-card" style={{ marginLeft: depth > 0 ? 24 : 0 }}>
-      {/* 头部行：点击左侧区域折叠，右侧操作按钮独立处理事件 */}
-      <div className="org-node-header">
-        <div
-          className="org-node-title"
-          style={{ cursor: hasContent ? 'pointer' : 'default', flex: 1, userSelect: 'none' }}
-          onClick={() => hasContent && setExpanded((v) => !v)}
+    <div>
+      <div
+        className={`tree-item${isSelected ? ' tree-item-selected' : ''}`}
+        style={{ paddingLeft: depth * 16 + 8 }}
+      >
+        <span
+          className="tree-chevron"
+          onClick={() => hasChildren && setExpanded(v => !v)}
+          style={{ cursor: hasChildren ? 'pointer' : 'default', opacity: hasChildren ? 1 : 0 }}
         >
-          {hasContent && (
-            <span style={{ marginRight: 6, fontSize: 10, color: 'var(--neutral-text-secondary)', transition: 'transform .2s' }}>
-              {expanded ? <DownOutlined /> : <RightOutlined />}
-            </span>
+          {expanded ? <DownOutlined /> : <RightOutlined />}
+        </span>
+        <span className="tree-node-label" onClick={() => onSelect(String(node.id))}>
+          {isFactory
+            ? <BankOutlined style={{ color: '#1677ff', marginRight: 4 }} />
+            : <ApartmentOutlined style={{ color: '#722ed1', marginRight: 4 }} />
+          }
+          <span className="tree-node-name">{node.unitName}</span>
+        </span>
+        <div className="tree-item-actions">
+          {isExternal ? (
+            <Tooltip title="注册二维码">
+              <Button type="text" size="small" icon={<QrcodeOutlined />}
+                onClick={e => { e.stopPropagation(); onShowQRCode(node); }} />
+            </Tooltip>
+          ) : (
+            <Tooltip title="添加成员">
+              <Button type="text" size="small" icon={<UserAddOutlined />}
+                onClick={e => { e.stopPropagation(); onAddMember(node); }} />
+            </Tooltip>
           )}
-          {nodeIcon}
-          <span className="org-node-name">{node.unitName}</span>
-          {nodeTag}
-          {ownerTag}
-          {members.length > 0 && (
-            <Badge count={members.length} style={{ backgroundColor: '#52c41a', marginLeft: 4 }} />
-          )}
-        </div>
-        <Space size={4} className="org-node-actions">
-          <Tooltip title="添加成员">
-            <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => onAddMember(node)} />
-          </Tooltip>
-          {!isFactory && (
+          {(!isFactory || isExternal) && (
             <>
-              <Tooltip title="新增下级部门">
-                <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => onAdd(node)} />
+              <Tooltip title="新增下级">
+                <Button type="text" size="small" icon={<PlusOutlined />}
+                  onClick={e => { e.stopPropagation(); onAdd(node); }} />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(node)} />
+                <Button type="text" size="small" icon={<EditOutlined />}
+                  onClick={e => { e.stopPropagation(); onEdit(node); }} />
               </Tooltip>
               <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => onDelete(node)} />
+                <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                  onClick={e => { e.stopPropagation(); onDelete(node); }} />
               </Tooltip>
             </>
           )}
-        </Space>
+        </div>
       </div>
-
-      {/* 内容区：展开时显示 */}
-      {hasContent && expanded && (
-        <div className="org-node-body">
-          {members.length > 0 && (
-            <div className="org-members-section">
-              <div className="org-members-title">
-                <TeamOutlined /> 成员（{members.length}人）
-              </div>
-              <div className="org-members-grid">
-                {members.map((user) => (
-                  <div key={user.id || user.username} className="org-member-item">
-                    <Avatar size={28} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
-                    <div className="org-member-info">
-                      <span className="org-member-name">{user.name}</span>
-                      <span className="org-member-role">{user.roleName || '—'}</span>
-                    </div>
-                    <Tooltip title="移出">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<CloseOutlined />}
-                        className="org-member-remove"
-                        onClick={() => onRemoveMember(String(user.id), user.name || user.username || '')}
-                      />
-                    </Tooltip>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {children.map((child) => (
-            <OrgNodeCard
-              key={child.id || child.unitName}
+      {hasChildren && expanded && (
+        <div>
+          {node.children!.map(child => (
+            <TreeItem
+              key={child.id ?? child.unitName}
               node={child}
               depth={depth + 1}
-              membersMap={membersMap}
+              selectedId={selectedId}
+              onSelect={onSelect}
               onAdd={onAdd}
               onEdit={onEdit}
               onDelete={onDelete}
               onAddMember={onAddMember}
-              onRemoveMember={onRemoveMember}
+              onShowQRCode={onShowQRCode}
             />
           ))}
         </div>

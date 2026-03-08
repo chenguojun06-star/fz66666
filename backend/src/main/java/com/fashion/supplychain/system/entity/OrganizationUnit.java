@@ -20,6 +20,9 @@ public class OrganizationUnit {
 
     private String nodeName;
 
+    /** 部门类别/分类 */
+    private String category;
+
     private String nodeType;
 
     private String ownerType;

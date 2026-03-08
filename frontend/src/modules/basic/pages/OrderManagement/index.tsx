@@ -1636,14 +1636,14 @@ const OrderManagement: React.FC = () => {
                                   color={tooltipTheme.background}
                                   title={
                                     <div style={{ fontSize: "var(--font-size-sm)", color: tooltipTheme.text }}>
-                                      <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
+                                      <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 生产方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
-                                        <span style={{ color: 'var(--primary-color-light)' }}>● 本厂生产：</span>
-                                        选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
+                                        <span style={{ color: 'var(--primary-color-light)' }}>● 内部生产：</span>
+                                        选择"本厂"，由组织架构内部工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
                                       </div>
                                       <div>
-                                        <span style={{ color: 'var(--error-color-light)' }}>● 加工厂生产：</span>
-                                        选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂扫码结算加工费）
+                                        <span style={{ color: 'var(--error-color-light)' }}>● 外发加工：</span>
+                                        选择外发工厂名称，委托外厂生产。数据流向<strong>订单结算</strong>（按工厂整单结算加工费）
                                       </div>
                                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: "var(--font-size-xs)", opacity: 0.9 }}>
                                         💡 所有数据最终在"订单结算数据看板"统一查看
@@ -1662,7 +1662,7 @@ const OrderManagement: React.FC = () => {
                             rules={[{ required: true, message: '请选择加工厂' }]}
                           >
                             <Select
-                              placeholder="请选择加工厂（本厂或外发加工）"
+                              placeholder="请选择生产方（内部本厂 / 外发工厂）"
                               options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
                               showSearch
                               optionFilterProp="label"
