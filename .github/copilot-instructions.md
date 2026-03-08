@@ -7,7 +7,7 @@
 
 ---
 
-## 🚨 铁血规律速查（7大致命错误 - 优先避免）
+## 🚨 铁血规律速查（8大致命错误 - 优先避免）
 
 | 优先级 | 规律 | 触发条件 | 后果 | 详见 |
 |--------|------|---------|------|------|
@@ -16,11 +16,17 @@
 | 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | [编排层规划](#第三步编排层规划架构核心不可省略) |
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | [权限控制模式](#权限控制模式强制) |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | [第三步类型安全核查](#第三步编排层规划架构核心不可省略) |
+| 🔴 P0 | **代码与数据库不同步** | Entity 新增字段无 Flyway / Flyway 新增列无 Entity | Flyway 链断裂 UNknown column 500 | [推送前数据库检查](#推送前强制三步验证每次必做) |
 | 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行不可省略) |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | [快速判断Orchestrator](#快速判断什么时候新建-orchestrator) |
 
-> **工作流**：每次开始前，先默念这 7 条。核心是 ✅ **本地测试验证通过** → ✅ **git add 完整** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。
+> **工作流**：每次开始前，先默念这 8 条。核心是 ✅ **本地测试验证通过** → ✅ **git add 完整** → ✅ **代码与DB一致** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。
 > **废弃代码清理（强制）**：所有代码修改、变更前必须检查：是否有同步修改的旧逻辑、注释代码、兼容逻辑需要删除？废除代码清查确认完毕才能 push。禁止有 TODO/FIXME 标记或未处理的兼容代码直接推送仓库。
+> **数据库一致性检查（强制，P0规律第6条）**：
+>   - ✅ **新增 Entity 字段**：必须同时在 `db/migration/V*.sql` 新增或修改表列（使用 INFORMATION_SCHEMA 幂等写法）
+>   - ✅ **新增 Flyway 脚本**：检查是否对应新的 Entity 字段（扫码后向下游检查）
+>   - ✅ **修改现有表结构**：优先使用幂等 INFORMATION_SCHEMA 判断 + SET @s IF()，不要直接 ALTER TABLE
+>   - ❌ **禁止**：Entity 字段用 `@TableField(exist=false)` transient 字段，然后在代码里通过关联查询填充（脆弱、易 null、难维护）
 
 ---
 
@@ -145,6 +151,7 @@ Controller → Orchestrator → Service → Mapper
 □ 本地 mvn clean compile -q → BUILD SUCCESS（有 Java 改动）
 □ npx tsc --noEmit → 0 errors（有 TS 改动）
 □ git status + git diff --stat HEAD → 所有改动文件都已 git add，无遗漏
+□ **新增Entity字段必须有对应Flyway脚本；反之亦然** → grep Entity涉及字段，确认db/migration/V*.sql中有对应ALTER TABLE
 □ 新功能是否影响其他页面？（在浏览器快速点击一遍相关页面）
 □ 是否需要同步更新 copilot-instructions.md 或 系统状态.md？
 □ 云端是否需要手动执行 SQL？（FLYWAY_ENABLED=false）
@@ -1033,7 +1040,23 @@ git add frontend/src/modules/.../TargetComponent.tsx
 git diff --cached --stat
 ```
 
-### 第三步：提交前类型检查（新增 Java 类时）
+### 第三步：数据库检查（新增数据库字段/表时）
+**关键规律**：代码与数据库必须同时变更！每次修改前都要确认：
+```bash
+# ✅ 新增 Entity 字段 → 必须有对应 Flyway 脚本
+grep -r "@TableField\|private.*\s" backend/src/main/java/.../entity/*.java \
+  | grep -v "@TableField(exist=false)"  # 排除 transient 字段
+
+# ✅ 新增 Flyway 脚本 → 必须有对应 Entity 字段定义
+ls -ltr backend/src/main/resources/db/migration/V*.sql | tail -3
+
+# ✅ 检查脚本幂等性（云端 FLYWAY_ENABLED=true，脚本必须幂等）
+grep "ADD COLUMN\|CREATE TABLE\|ALTER TABLE" \
+  backend/src/main/resources/db/migration/V*.sql \
+  | grep -v "INFORMATION_SCHEMA\|IF NOT EXISTS"  # 非幂等的会被标出来
+```
+
+### 第四步：提交前类型检查（新增 Java 类时）
 **必须核对的高频类型陷阱**：
 | 方法 | 实际返回类型 | 常见错误 |
 |------|-------------|----------|
