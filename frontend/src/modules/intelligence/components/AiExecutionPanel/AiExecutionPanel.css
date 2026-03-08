@@ -1,130 +1,171 @@
-.ai-execution-panel {
-  .ai-panel-card {
-    margin-bottom: 0;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
+/* =====================================================
+   AiExecutionPanel — 对齐驾驶舱科技暗色风格
+   #080f1e 背景 + #00e5ff 青色调
+   注意：使用后代选择器覆盖 Ant Design 默认样式
+   ===================================================== */
 
-    :deep(.ant-card-head) {
-      background: transparent;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      min-height: 36px;
-      padding: 0 12px;
+/* 卡片容器 */
+.ai-execution-panel .ai-panel-card {
+  margin-bottom: 0;
+  background: rgba(0, 229, 255, 0.03) !important;
+  border: 1px solid rgba(0, 229, 255, 0.12) !important;
+  border-radius: 6px !important;
+}
 
-      .ant-card-head-title {
-        color: rgba(255, 255, 255, 0.75);
-        font-weight: 500;
-        font-size: 12px;
-        padding: 8px 0;
-      }
+/* 卡片头部 */
+.ai-execution-panel .ai-panel-card .ant-card-head {
+  background: rgba(0, 229, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.1) !important;
+  min-height: 34px !important;
+  padding: 0 12px !important;
+}
 
-      .ant-btn-link {
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 11px;
+.ai-execution-panel .ai-panel-card .ant-card-head-title {
+  color: #00e5ff !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 7px 0 !important;
+  letter-spacing: 0.5px;
+}
 
-        &:hover {
-          color: rgba(255, 255, 255, 0.75);
-        }
-      }
-    }
+.ai-execution-panel .ai-panel-card .ant-card-head .ant-btn-link {
+  color: rgba(0, 229, 255, 0.5) !important;
+  font-size: 11px !important;
+}
 
-    :deep(.ant-card-body) {
-      padding: 12px;
-    }
+.ai-execution-panel .ai-panel-card .ant-card-head .ant-btn-link:hover {
+  color: #00e5ff !important;
+}
 
-    /* 表格暗色 */
-    :deep(.ant-table) {
-      background: transparent;
-      font-size: 12px;
-    }
+/* 卡片内容区 */
+.ai-execution-panel .ai-panel-card .ant-card-body {
+  padding: 10px 12px !important;
+  background: transparent !important;
+}
 
-    :deep(.ant-table-thead > tr > th) {
-      background: rgba(255, 255, 255, 0.04);
-      color: rgba(255, 255, 255, 0.45);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 11px;
-      padding: 6px 8px;
-    }
+/* 表格 */
+.ai-execution-panel .ant-table {
+  background: transparent !important;
+  font-size: 12px !important;
+  color: #c8d8ea !important;
+}
 
-    :deep(.ant-table-tbody > tr > td) {
-      background: transparent;
-      color: rgba(255, 255, 255, 0.65);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 6px 8px;
-    }
+.ai-execution-panel .ant-table-thead > tr > th {
+  background: rgba(0, 229, 255, 0.05) !important;
+  color: rgba(0, 229, 255, 0.6) !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.1) !important;
+  font-size: 11px !important;
+  padding: 5px 8px !important;
+  font-weight: 500;
+}
 
-    :deep(.ant-table-tbody > tr:hover > td) {
-      background: rgba(255, 255, 255, 0.05) !important;
-    }
+.ai-execution-panel .ant-table-tbody > tr > td {
+  background: transparent !important;
+  color: #c8d8ea !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.06) !important;
+  padding: 6px 8px !important;
+}
 
-    :deep(.ant-empty-description) {
-      color: rgba(255, 255, 255, 0.3);
-      font-size: 12px;
-    }
+.ai-execution-panel .ant-table-tbody > tr:hover > td {
+  background: rgba(0, 229, 255, 0.04) !important;
+}
 
-    :deep(.ant-empty-image) {
-      opacity: 0.25;
-    }
+.ai-execution-panel .ant-table-wrapper {
+  background: transparent !important;
+}
 
-    :deep(.ant-spin-dot-item) {
-      background: #a78bfa;
-    }
-  }
+/* Empty 空状态：精简显示，融入背景 */
+.ai-execution-panel .ant-empty {
+  margin: 16px 0 !important;
+}
 
-  .command-detail-section {
-    margin-bottom: 24px;
+.ai-execution-panel .ant-empty-image {
+  height: 36px !important;
+  opacity: 0.15 !important;
+  filter: saturate(0);
+}
 
-    h4 {
-      margin: 0 0 12px 0;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.8);
-      border-bottom: 1px solid rgba(167, 139, 250, 0.4);
-      padding-bottom: 8px;
-    }
+.ai-execution-panel .ant-empty-description {
+  color: rgba(0, 229, 255, 0.35) !important;
+  font-size: 11px !important;
+  margin-top: 4px;
+}
 
-    .detail-row {
-      display: flex;
-      margin-bottom: 10px;
-      font-size: 13px;
+/* Spin loading */
+.ai-execution-panel .ant-spin-dot-item {
+  background: #00e5ff !important;
+}
 
-      .label {
-        min-width: 80px;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.35);
-      }
-    }
+/* Alert */
+.ai-execution-panel .ant-alert {
+  background: rgba(248, 113, 113, 0.08) !important;
+  border: 1px solid rgba(248, 113, 113, 0.2) !important;
+  border-radius: 4px;
+}
 
-    ul {
-      margin: 0;
-      padding-left: 20px;
+.ai-execution-panel .ant-alert-message {
+  color: #f87171 !important;
+  font-size: 12px;
+}
 
-      li {
-        margin-bottom: 8px;
-        color: rgba(255, 255, 255, 0.65);
-        line-height: 1.6;
-      }
-    }
+/* 详情侧边栏 */
+.ai-execution-panel .command-detail-section {
+  margin-bottom: 20px;
+}
 
-    pre {
-      margin: 0;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #7dd3fc;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-  }
+.ai-execution-panel .command-detail-section h4 {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #00e5ff;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  padding-bottom: 6px;
+  font-size: 13px;
+}
 
-  .result-content {
-    padding: 16px 0;
+.ai-execution-panel .command-detail-section .detail-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
 
-    h4 {
-      margin: 12px 0 8px 0;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.8);
-    }
-  }
+.ai-execution-panel .command-detail-section .detail-row .label {
+  min-width: 80px;
+  font-weight: 500;
+  color: rgba(0, 229, 255, 0.45);
+}
+
+.ai-execution-panel .command-detail-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ai-execution-panel .command-detail-section ul li {
+  margin-bottom: 6px;
+  color: #c8d8ea;
+  line-height: 1.6;
+  font-size: 12px;
+}
+
+.ai-execution-panel .command-detail-section pre {
+  margin: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 229, 255, 0.1);
+  color: #7dd3fc;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  overflow-x: auto;
+}
+
+.ai-execution-panel .result-content {
+  padding: 12px 0;
+}
+
+.ai-execution-panel .result-content h4 {
+  margin: 10px 0 6px 0;
+  font-weight: 600;
+  color: #00e5ff;
+  font-size: 13px;
 }
 
 /* 待审批标记 */
