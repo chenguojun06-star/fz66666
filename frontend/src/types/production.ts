@@ -433,6 +433,7 @@ export interface MaterialDatabase extends Record<string, unknown> {
 
 // 面辅料数据库查询参数
 export interface MaterialDatabaseQueryParams {
+  keyword?: string;
   materialCode?: string;
   materialName?: string;
   materialType?: string;

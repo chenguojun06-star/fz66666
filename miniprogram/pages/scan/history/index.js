@@ -157,8 +157,11 @@ Page({
       }
       if (this.data.searchKeyword) {
         const keyword = this.data.searchKeyword.trim();
-        params.orderNo = keyword;
-        params.bundleNo = keyword;
+        if (/^\d+$/.test(keyword)) {
+          params.bundleNo = keyword;  // 纯数字 → 按捆号搜索
+        } else {
+          params.orderNo = keyword;   // 含字母 → 按订单号搜索
+        }
       }
 
       // 并发请求：大货记录（分页）+ 样衣记录（仅 reset 时全量加载）

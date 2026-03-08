@@ -78,8 +78,7 @@ const MaterialDatabasePage: React.FC = () => {
       const fullQueryParams: MaterialDatabaseQueryParams = {
         page: pagination.current,
         pageSize: pagination.pageSize,
-        materialCode: searchKeyword || undefined,
-        materialName: searchKeyword || undefined,
+        keyword: searchKeyword || undefined,
         materialType: statusValue || undefined,
       };
 

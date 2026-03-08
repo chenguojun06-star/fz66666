@@ -25,6 +25,7 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
 
         Page<MaterialDatabase> pageInfo = new Page<>(page, pageSize);
 
+        String keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
         String materialCode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "materialCode"));
         String materialName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "materialName"));
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
@@ -34,8 +35,12 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
 
         LambdaQueryWrapper<MaterialDatabase> wrapper = new LambdaQueryWrapper<MaterialDatabase>()
                 .eq(MaterialDatabase::getDeleteFlag, 0)
-                .like(StringUtils.hasText(materialCode), MaterialDatabase::getMaterialCode, materialCode)
-                .like(StringUtils.hasText(materialName), MaterialDatabase::getMaterialName, materialName)
+                .and(StringUtils.hasText(keyword), w -> w
+                        .like(MaterialDatabase::getMaterialCode, keyword)
+                        .or()
+                        .like(MaterialDatabase::getMaterialName, keyword))
+                .like(!StringUtils.hasText(keyword) && StringUtils.hasText(materialCode), MaterialDatabase::getMaterialCode, materialCode)
+                .like(!StringUtils.hasText(keyword) && StringUtils.hasText(materialName), MaterialDatabase::getMaterialName, materialName)
                 .like(StringUtils.hasText(styleNo), MaterialDatabase::getStyleNo, styleNo)
                 .like(StringUtils.hasText(supplierName), MaterialDatabase::getSupplierName, supplierName)
                 .eq(StringUtils.hasText(status), MaterialDatabase::getStatus, status)
