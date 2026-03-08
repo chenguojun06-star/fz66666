@@ -43,20 +43,30 @@ const CuteCloudTrigger = ({ size = 52, active = false }: { size?: number, active
     <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
       {/* 软萌云朵基础层 */}
       <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill="url(#cloudGrad)" />
-      {/* 眼睛 - 超大超萌 */}
-      <circle cx="46" cy="50" r="6" fill="#4B6685" />
-      <circle cx="70" cy="50" r="6" fill="#4B6685" />
-      {/* 眼睛的高光（大星星眼） */}
-      <circle cx="44" cy="48" r="2" fill="#ffffff" />
-      <circle cx="47" cy="52" r="1" fill="#ffffff" opacity="0.8" />
-      <circle cx="68" cy="48" r="2" fill="#ffffff" />
-      <circle cx="71" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+      {/* 左眼组 (带眨眼动画) */}
+      <g className={styles.cloudEye} style={{ transformOrigin: '46px 50px' }}>
+        <circle cx="46" cy="50" r="6" fill="#4B6685" />
+        <circle cx="44" cy="48" r="2" fill="#ffffff" />
+        <circle cx="47" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+      </g>
+      {/* 右眼组 (带眨眼动画) */}
+      <g className={styles.cloudEye} style={{ transformOrigin: '70px 50px' }}>
+        <circle cx="70" cy="50" r="6" fill="#4B6685" />
+        <circle cx="68" cy="48" r="2" fill="#ffffff" />
+        <circle cx="71" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+      </g>
       {/* 脸颊红晕 - 更大 */}
       <ellipse cx="38" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
       <ellipse cx="78" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
       {/* 呆萌张开的嘴巴 😯 */}
-      <ellipse cx="58" cy="56" rx="3.5" ry="4" fill="#FF8CA3" />
-      <ellipse cx="58" cy="55" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
+      <g className={styles.cloudMouthO}>
+        <ellipse cx="58" cy="56" rx="3.5" ry="4" fill="#FF8CA3" />
+        <ellipse cx="58" cy="55" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
+      </g>
+      {/* 甜蜜微笑的嘴巴 😊 */}
+      <g className={styles.cloudMouthSmile}>
+        <path d="M 54 54 Q 58 60 62 54" fill="none" stroke="#FF8CA3" strokeWidth="2.5" strokeLinecap="round" />
+      </g>
     </g>
   </svg>
 );

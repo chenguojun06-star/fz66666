@@ -323,3 +323,36 @@
 .speechBtn:hover {
   color: #1890ff;
 }
+
+/* 小云专属动画：眨眼 */
+.cloudEye {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: cloudBlink 4s infinite;
+}
+
+@keyframes cloudBlink {
+  0%, 92%, 98%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+/* 小云专属动画：张嘴说话/微笑交替 */
+.cloudMouthO {
+  animation: mouthToggle 6s infinite alternate;
+}
+.cloudMouthSmile {
+  animation: mouthToggle 6s infinite alternate-reverse;
+}
+
+@keyframes mouthToggle {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+
+/* 小云专属动画：更有活力的弹跳 (覆盖原有的 floatTrigger，让它更像跳动) */
+@keyframes floatTrigger {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(-8px) scale(0.98, 1.02); }
+  50% { transform: translateY(0) scale(1.02, 0.98); }
+  80% { transform: translateY(-4px) scale(0.99, 1.01); }
+}
