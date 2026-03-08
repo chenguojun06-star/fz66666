@@ -356,26 +356,37 @@ public class FinishedProductSettlementController {
             productionOrderService.listByIds(orderIds).forEach(order -> orderMap.put(order.getId(), order));
         }
 
-        if (!factoryIds.isEmpty()) {
-            List<Factory> factoryList = factoryService.listByIds(factoryIds);
-            Map<String, Factory> factoryMap = factoryList.stream()
-                    .filter(f -> StringUtils.isNotBlank(f.getId()))
-                    .collect(Collectors.toMap(Factory::getId, f -> f, (a, b) -> a));
-            for (Map<String, Object> row : grouped.values()) {
-                String fId = (String) row.get("factoryId");
-                Factory factory = StringUtils.isNotBlank(fId) ? factoryMap.get(fId) : null;
-                row.put("factoryType", factory != null && StringUtils.isNotBlank(factory.getFactoryType())
-                        ? factory.getFactoryType()
-                        : "EXTERNAL");
-                row.put("parentOrgUnitName", factory != null ? factory.getParentOrgUnitName() : null);
-                row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
+        // 批量加载外发工厂实体（供 factoryType / parentOrgUnitName 查询）
+        Map<String, Factory> factoryMap = factoryIds.isEmpty() ? Collections.emptyMap() :
+                factoryService.listByIds(factoryIds).stream()
+                        .filter(f -> StringUtils.isNotBlank(f.getId()))
+                        .collect(Collectors.toMap(Factory::getId, f -> f, (a, b) -> a));
+
+        for (Map<String, Object> row : grouped.values()) {
+            String fId = (String) row.get("factoryId");
+            Factory factory = StringUtils.isNotBlank(fId) ? factoryMap.get(fId) : null;
+
+            // 优先从工厂实体取 factoryType；factoryId 为空（INTERNAL 模式）时从关联订单推断
+            String resolvedType = null;
+            if (factory != null && StringUtils.isNotBlank(factory.getFactoryType())) {
+                resolvedType = factory.getFactoryType();
+            } else if (StringUtils.isBlank(fId)) {
+                // INTERNAL 订单：factory_id 为空，从 orderMap 中按 orderNo 匹配推断
+                @SuppressWarnings("unchecked")
+                List<String> rowOrderNos = (List<String>) row.get("orderNos");
+                if (rowOrderNos != null) {
+                    for (ProductionOrder order : orderMap.values()) {
+                        if (rowOrderNos.contains(order.getOrderNo())
+                                && StringUtils.isNotBlank(order.getFactoryType())) {
+                            resolvedType = order.getFactoryType();
+                            break;
+                        }
+                    }
+                }
             }
-        } else {
-            grouped.values().forEach(row -> {
-                row.put("factoryType", "EXTERNAL");
-                row.put("parentOrgUnitName", null);
-                row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
-            });
+            row.put("factoryType", resolvedType != null ? resolvedType : "EXTERNAL");
+            row.put("parentOrgUnitName", factory != null ? factory.getParentOrgUnitName() : null);
+            row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
         }
 
         return Result.success(new ArrayList<>(grouped.values()));

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Segmented, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
@@ -87,8 +87,9 @@ const OrderManagement: React.FC = () => {
 
   const [factories, setFactories] = useState<Factory[]>([]);
   const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
-  const [factoryQuickAddName, setFactoryQuickAddName] = useState('');
-  const [factoryQuickAdding, setFactoryQuickAdding] = useState(false);
+
+  const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  const [departments, setDepartments] = useState<Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
 
   // ===== 弹窗状态（保留原状，未迁移到 useModal）=====
@@ -967,31 +968,18 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  // 工厂快速新增：在选择工厂下拉框中直接添加新工厂
-  const quickAddFactory = async () => {
-    const name = factoryQuickAddName.trim();
-    if (!name) {
-      message.warning('请输入工厂名称');
-      return;
-    }
-    setFactoryQuickAdding(true);
+  const fetchDepartments = async () => {
     try {
-      const res = await api.post<{ code: number; message: string; data: Factory }>('/system/factory', { factoryName: name });
-      if (res.code === 200 && res.data) {
-        await fetchFactories();
-        // 新增后自动选中新工厂
-        form.setFieldsValue({ factoryId: res.data.id });
-        setFactoryQuickAddName('');
-        message.success(`已添加工厂"${name}"并自动选中`);
-      } else {
-        message.error(res.message || '新增工厂失败');
+      const res = await api.get<{ code: number; data: Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }> }>('/system/organization/departments');
+      if (res.code === 200) {
+        setDepartments((res.data || []).filter((d: any) => d.nodeType === 'DEPARTMENT'));
       }
     } catch {
-      message.error('新增工厂失败，请稍后重试');
-    } finally {
-      setFactoryQuickAdding(false);
+      setDepartments([]);
     }
   };
+
+
 
   const fetchUsers = async () => {
     try {
@@ -1045,6 +1033,7 @@ const OrderManagement: React.FC = () => {
   useEffect(() => {
     fetchFactories();
     fetchUsers();
+    void fetchDepartments();
     // 拉取工厂产能（用于下单选厂时显示负荷）
     productionOrderApi.getFactoryCapacity().then(res => {
       if (res?.data) setFactoryCapacities(res.data);
@@ -1182,6 +1171,7 @@ const OrderManagement: React.FC = () => {
     setActiveTabKey('base');
     setOrderLines([]);
     setProgressNodes(defaultProgressNodes);
+    setFactoryMode('INTERNAL');
     form.resetFields();
   };
 
@@ -1223,7 +1213,18 @@ const OrderManagement: React.FC = () => {
         }
       }
 
-      const factory = factories.find(f => f.id === values.factoryId);
+      let resolvedFactoryId: string | null = null;
+      let resolvedOrgUnitId: string | null = null;
+      let resolvedFactoryName = '';
+      if (factoryMode === 'INTERNAL') {
+        const dept = departments.find(d => d.id === values.orgUnitId);
+        resolvedOrgUnitId = values.orgUnitId || null;
+        resolvedFactoryName = dept?.nodeName || '';
+      } else {
+        const factory = factories.find(f => f.id === values.factoryId);
+        resolvedFactoryId = values.factoryId || null;
+        resolvedFactoryName = factory?.factoryName || '';
+      }
 
       const colorLabel = orderLineColors.length ? orderLineColors.join(',') : undefined;
       const sizeLabel = orderLineSizes.length ? orderLineSizes.join(',') : undefined;
@@ -1251,8 +1252,10 @@ const OrderManagement: React.FC = () => {
         plateType: values.plateType || null,
         color: colorLabel,
         size: sizeLabel,
-        factoryId: values.factoryId,
-        factoryName: factory?.factoryName || '',
+        factoryId: resolvedFactoryId,
+        factoryName: resolvedFactoryName,
+        orgUnitId: resolvedOrgUnitId,
+        factoryType: factoryMode,
         merchandiser: values.merchandiser || null, // ✅ 修复: 使用null而非undefined
         company: values.company || null, // ✅ 修复: 使用null而非undefined
         productCategory: values.productCategory || null, // ✅ 修复: 使用null而非undefined
@@ -1628,22 +1631,21 @@ const OrderManagement: React.FC = () => {
                         </Col>
                         <Col xs={24} sm={12}>
                           <Form.Item
-                            name="factoryId"
                             label={
                               <Space size={4}>
-                                <span>加工厂</span>
+                                <span>生产方</span>
                                 <Tooltip
                                   color={tooltipTheme.background}
                                   title={
                                     <div style={{ fontSize: "var(--font-size-sm)", color: tooltipTheme.text }}>
                                       <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 生产方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
-                                        <span style={{ color: 'var(--primary-color-light)' }}>● 内部生产：</span>
-                                        选择"本厂"，由组织架构内部工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
+                                        <span style={{ color: 'var(--primary-color-light)' }}>● 内部自产：</span>
+                                        选择内部车间/部门，由本厂工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
                                       </div>
                                       <div>
                                         <span style={{ color: 'var(--error-color-light)' }}>● 外发加工：</span>
-                                        选择外发工厂名称，委托外厂生产。数据流向<strong>订单结算</strong>（按工厂整单结算加工费）
+                                        选择外发工厂，委托外厂生产。数据流向<strong>订单结算</strong>（按工厂整单结算加工费）
                                       </div>
                                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: "var(--font-size-xs)", opacity: 0.9 }}>
                                         💡 所有数据最终在"订单结算数据看板"统一查看
@@ -1659,41 +1661,45 @@ const OrderManagement: React.FC = () => {
                                 </Tooltip>
                               </Space>
                             }
-                            rules={[{ required: true, message: '请选择加工厂' }]}
                           >
-                            <Select
-                              placeholder="请选择生产方（内部本厂 / 外发工厂）"
-                              options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
-                              showSearch
-                              optionFilterProp="label"
-                              allowClear
-                              dropdownRender={(menu) => (
-                                <>
-                                  {menu}
-                                  <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #f0f0f0)' }}>
-                                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>找不到工厂？直接新增：</div>
-                                    <Space.Compact style={{ width: '100%' }}>
-                                      <Input
-                                        size="small"
-                                        placeholder="输入工厂名称"
-                                        value={factoryQuickAddName}
-                                        onChange={e => setFactoryQuickAddName(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); quickAddFactory(); } }}
-                                      />
-                                      <Button
-                                        size="small"
-                                        type="primary"
-                                        loading={factoryQuickAdding}
-                                        onClick={quickAddFactory}
-                                      >新增</Button>
-                                    </Space.Compact>
-                                  </div>
-                                </>
-                              )}
+                            <Segmented
+                              value={factoryMode}
+                              onChange={(v) => {
+                                setFactoryMode(v as 'INTERNAL' | 'EXTERNAL');
+                                form.setFieldValue('factoryId', undefined);
+                                form.setFieldValue('orgUnitId', undefined);
+                              }}
+                              options={[
+                                { label: '内部自产', value: 'INTERNAL' },
+                                { label: '外发加工', value: 'EXTERNAL' },
+                              ]}
+                              block
+                              style={{ marginBottom: 6 }}
                             />
+                            {factoryMode === 'INTERNAL' ? (
+                              <Form.Item name="orgUnitId" noStyle rules={[{ required: true, message: '请选择生产车间/部门' }]}>
+                                <Select
+                                  placeholder="请选择内部生产车间/部门"
+                                  options={departments.map(d => ({ value: d.id, label: d.pathNames || d.nodeName }))}
+                                  showSearch
+                                  optionFilterProp="label"
+                                  allowClear
+                                />
+                              </Form.Item>
+                            ) : (
+                              <Form.Item name="factoryId" noStyle rules={[{ required: true, message: '请选择外发工厂' }]}>
+                                <Select
+                                  placeholder="请选择外发工厂（工厂须先完成入驻）"
+                                  options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
+                                  showSearch
+                                  optionFilterProp="label"
+                                  allowClear
+                                />
+                              </Form.Item>
+                            )}
                           </Form.Item>
-                          {/* 选中工厂后显示当前负荷（在制单数/产能数据/货期完成率/高风险数） */}
-                          {selectedFactoryStat && (
+                          {/* 选中外发工厂后显示当前负荷（在制单数/产能数据/货期完成率/高风险数） */}
+                          {factoryMode === 'EXTERNAL' && selectedFactoryStat && (
                             <div style={{
                               marginTop: -12, marginBottom: 8, padding: '6px 10px',
                               background: 'var(--color-bg-container, #fafafa)',

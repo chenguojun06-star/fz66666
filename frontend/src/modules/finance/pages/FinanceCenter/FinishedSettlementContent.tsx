@@ -157,7 +157,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
             {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ margin: 0 }}>内部</Tag> : null}
             {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ margin: 0 }}>外部</Tag> : null}
           </div>
-          {record.orgPath || record.parentOrgUnitName ? (
+          {(record.orgPath || record.parentOrgUnitName) &&
+           (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
             <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
               {record.orgPath || record.parentOrgUnitName}
             </div>
@@ -596,7 +597,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   setSelectedParentOrgUnitId(nextValue);
                   handleSearch({ parentOrgUnitId: nextValue || undefined });
                 }}
-                placeholder="归属部门"
+                placeholder="生产方"
                 allowClear
                 showSearch
                 optionFilterProp="label"
@@ -622,7 +623,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               <Button
                 type="primary"
                 onClick={handleBatchAudit}
-                disabled={selectedRowKeys.length === 0}
+                disabled={selectedRowKeys.length === 0 || !data.some(r =>
+                  selectedRowKeys.includes(r.orderId) &&
+                  isOrderFrozenByStatus(r) &&
+                  !auditedOrderNos.has(r.orderNo)
+                )}
               >
                 批量审核 ({selectedRowKeys.length})
               </Button>

@@ -227,6 +227,16 @@ public class ProductionOrderCommandService {
 
     private void applyFactorySnapshot(ProductionOrder productionOrder) {
         if (!StringUtils.hasText(productionOrder.getFactoryId())) {
+            // 内部自产模式：factoryId 为空，但 orgUnitId 和 factoryType 已由前端直接设置，保留原值
+            if ("INTERNAL".equals(productionOrder.getFactoryType())
+                    && StringUtils.hasText(productionOrder.getOrgUnitId())) {
+                // 内部自产：清除外协工厂相关冗余字段，保留 orgUnitId / factoryType
+                productionOrder.setParentOrgUnitId(null);
+                productionOrder.setParentOrgUnitName(null);
+                productionOrder.setOrgPath(null);
+                return;
+            }
+            // 未指定任何生产方：清空所有工厂相关字段
             productionOrder.setOrgUnitId(null);
             productionOrder.setParentOrgUnitId(null);
             productionOrder.setParentOrgUnitName(null);

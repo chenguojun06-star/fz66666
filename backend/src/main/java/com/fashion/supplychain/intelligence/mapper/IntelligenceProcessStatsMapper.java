@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
 import java.util.List;
@@ -37,6 +38,7 @@ public interface IntelligenceProcessStatsMapper extends BaseMapper<IntelligenceP
      * <p>返回结果字段别名与 {@code IntelligenceProcessStats} 属性名一一对应，
      * MyBatis 自动完成映射（包含 BigDecimal 转换）。
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select({
         "SELECT",
         "  sub.progress_stage     AS stageName,",
