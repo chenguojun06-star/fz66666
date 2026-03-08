@@ -543,10 +543,10 @@ const OrganizationTreePage: React.FC = () => {
         confirmLoading={submitLoading}
         okText="保存"
         cancelText="取消"
-        width="40vw"
-        initialHeight={400}
+        width="30vw"
+        initialHeight={340}
       >
-        <Form form={form} layout="vertical" style={{ padding: '16px 0' }}>
+        <Form form={form} layout="vertical" style={{ padding: '4px 0' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
           <Form.Item name="unitName" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
             <Input placeholder="例如：版房中心 / 外发供应链组" maxLength={50} />
