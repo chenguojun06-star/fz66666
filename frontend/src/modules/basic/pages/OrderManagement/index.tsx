@@ -1641,7 +1641,7 @@ const OrderManagement: React.FC = () => {
                                       <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 生产方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
                                         <span style={{ color: 'var(--primary-color-light)' }}>● 内部自产：</span>
-                                        选择内部车间/部门，由本厂工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
+                                        选择内部车间/部门，由内部工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
                                       </div>
                                       <div>
                                         <span style={{ color: 'var(--error-color-light)' }}>● 外发加工：</span>

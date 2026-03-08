@@ -261,6 +261,9 @@ export interface MaterialPurchase extends Record<string, unknown> {
   // 采购来源字段
   sourceType?: 'order' | 'sample';  // order=生产订单, sample=样衣开发
   patternProductionId?: string;     // 样衣生产ID
+  // 生产方信息（从关联生产订单富化）
+  factoryName?: string;
+  factoryType?: 'INTERNAL' | 'EXTERNAL';
 }
 
 export interface ProductWarehousing extends Record<string, unknown> {

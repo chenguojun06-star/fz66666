@@ -24,7 +24,7 @@ import FactoryAuditPopover from './FactoryAuditPopover';
 interface FactorySummaryRow {
   factoryId: string;
   factoryName: string;
-  /** 工厂类型: INTERNAL=本厂内部(工资结算), EXTERNAL=外部工厂(订单结算) */
+  /** 工厂类型: INTERNAL=内部工厂(工资结算), EXTERNAL=外部工厂(订单结算) */
   factoryType?: string;
   parentOrgUnitName?: string;
   orgPath?: string;
@@ -251,7 +251,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
               <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
               {record.factoryType === 'INTERNAL' && (
-                <Tooltip title="本厂内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
+                <Tooltip title="内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
                   <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
                 </Tooltip>
               )}

@@ -692,7 +692,7 @@ const FactoryList: React.FC = () => {
                   <Tooltip
                     title={
                       <div style={{ fontSize: 12, lineHeight: 1.8 }}>
-                        <div><strong>内部工厂</strong>：本厂自有产能，完成后按人员工序统计工资（<span style={{ color: '#ffd666' }}>工资结算</span>）</div>
+                        <div><strong>内部工厂</strong>：组织内部产能，完成后按人员工序统计工资（<span style={{ color: '#ffd666' }}>工资结算</span>）</div>
                         <div><strong>外部工厂</strong>：外发加工厂，完成后按工厂结算加工费（<span style={{ color: '#95de64' }}>订单结算</span>）</div>
                       </div>
                     }
