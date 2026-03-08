@@ -69,6 +69,18 @@ public class OrganizationUnitController {
         return Result.success(null);
     }
 
+    /**
+     * 为外发工厂直接创建登录账号（管理员直接创建，账号立即激活）。
+     * body: { factoryId, username, password, name?, phone? }
+     */
+    @PostMapping("/factory/create-account")
+    public Result<Void> createFactoryAccount(@RequestBody Map<String, String> body) {
+        organizationUnitOrchestrator.createFactoryAccount(
+                body.get("factoryId"), body.get("username"),
+                body.get("password"), body.get("name"), body.get("phone"));
+        return Result.success(null);
+    }
+
     @PostMapping
     public Result<Boolean> create(@RequestBody OrganizationUnit unit) {
         return Result.success(organizationUnitOrchestrator.createDepartment(unit));

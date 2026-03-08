@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { App, Button, Card, Form, Input, Select, Space, Tag } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, UserAddOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -45,6 +45,11 @@ const FactoryWorkerList: React.FC = () => {
 
   const [form] = Form.useForm();
   const workerModal = useModal<FactoryWorker>();
+
+  // 创建工厂账号弹窗（仅管理员在只读模式下使用）
+  const [accountForm] = Form.useForm();
+  const accountModal = useModal<null>();
+  const [accountSaving, setAccountSaving] = useState(false);
 
   const fetchWorkers = useCallback(async () => {
     setLoading(true);
@@ -104,6 +109,24 @@ const FactoryWorkerList: React.FC = () => {
       fetchWorkers();
     } catch {
       message.error('删除失败');
+    }
+  };
+
+  const handleCreateAccount = async (values: { username: string; password: string; name?: string; phone?: string }) => {
+    if (!effectiveFactoryId) return;
+    setAccountSaving(true);
+    try {
+      await api.post('/system/organization/factory/create-account', {
+        factoryId: effectiveFactoryId,
+        ...values,
+      });
+      message.success('账号创建成功，外发工厂可用此账号登录');
+      accountModal.close();
+      accountForm.resetFields();
+    } catch {
+      message.error('创建账号失败');
+    } finally {
+      setAccountSaving(false);
     }
   };
 
@@ -168,9 +191,17 @@ const FactoryWorkerList: React.FC = () => {
         title={pageTitle}
         extra={
           readOnly ? (
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.factory)}>
-              返回供应商管理
-            </Button>
+            <Space>
+              <Button
+                icon={<UserAddOutlined />}
+                onClick={() => accountModal.open(null)}
+              >
+                创建账号
+              </Button>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.factory)}>
+                返回供应商管理
+              </Button>
+            </Space>
           ) : (
             <Button type="primary" onClick={handleOpenAdd}>
               新增工人
@@ -255,6 +286,52 @@ const FactoryWorkerList: React.FC = () => {
           </Form>
         </ResizableModal>
       )}
+
+      {/* 创建工厂登录账号弹窗（管理员使用） */}
+      <ResizableModal
+        open={accountModal.visible}
+        title={`创建账号 — ${factoryNameFromUrl || '外发工厂'}`}
+        defaultWidth="30vw"
+        defaultHeight="auto"
+        destroyOnHidden
+        onCancel={() => { accountModal.close(); accountForm.resetFields(); }}
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={() => { accountModal.close(); accountForm.resetFields(); }}>取消</Button>
+            <Button type="primary" loading={accountSaving} onClick={() => accountForm.submit()}>
+              创建
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          form={accountForm}
+          layout="vertical"
+          onFinish={handleCreateAccount}
+          style={{ padding: '16px 24px' }}
+        >
+          <Form.Item
+            name="username"
+            label="登录用户名"
+            rules={[{ required: true, message: '请输入用户名' }]}
+          >
+            <Input placeholder="工厂登录时使用的用户名" />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            label="初始密码"
+            rules={[{ required: true, message: '请输入初始密码' }, { min: 6, message: '密码至少6位' }]}
+          >
+            <Input.Password placeholder="设置初始密码（至少6位）" />
+          </Form.Item>
+          <Form.Item name="name" label="联系人姓名">
+            <Input placeholder="可选，方便识别" />
+          </Form.Item>
+          <Form.Item name="phone" label="联系电话">
+            <Input placeholder="可选" />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
     </Layout>
   );
 };

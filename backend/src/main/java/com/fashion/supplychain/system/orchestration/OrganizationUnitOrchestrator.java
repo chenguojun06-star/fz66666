@@ -1,6 +1,7 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Factory;
@@ -19,6 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,6 +39,9 @@ public class OrganizationUnitOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private DictOrchestrator dictOrchestrator;
@@ -369,6 +374,57 @@ public class OrganizationUnitOrchestrator {
                 throw new IllegalArgumentException("部门不能挂到自己下面");
             }
         }
+    }
+
+    /**
+     * 为外发工厂直接创建登录账号（管理员操作，账号立即激活）。
+     * 创建后工厂老板可用此账号登录，自行维护工人名册。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void createFactoryAccount(String factoryId, String username, String password,
+                                      String name, String phone) {
+        assertAdmin();
+        if (!StringUtils.hasText(factoryId) || !StringUtils.hasText(username)
+                || !StringUtils.hasText(password)) {
+            throw new IllegalArgumentException("工厂ID、用户名、密码不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+        // 验证工厂存在且属于当前租户
+        LambdaQueryWrapper<Factory> fq = new LambdaQueryWrapper<Factory>()
+                .eq(Factory::getId, factoryId)
+                .eq(Factory::getDeleteFlag, 0);
+        if (tenantId != null) {
+            fq.eq(Factory::getTenantId, tenantId);
+        }
+        Factory factory = factoryService.getOne(fq);
+        if (factory == null) {
+            throw new IllegalArgumentException("工厂不存在");
+        }
+        // 验证用户名全局唯一
+        QueryWrapper<User> uq = new QueryWrapper<User>().eq("username", username);
+        if (userService.count(uq) > 0) {
+            throw new IllegalArgumentException("用户名已存在: " + username);
+        }
+        // 创建工厂账号（直接激活，不需要审批）
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setName(StringUtils.hasText(name) ? name : username);
+        user.setPhone(phone);
+        user.setTenantId(tenantId);
+        user.setFactoryId(factoryId);
+        user.setIsFactoryOwner(true);
+        user.setIsTenantOwner(false);
+        user.setStatus("active");
+        user.setPermissionRange("self");
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        // 清除同工厂其他账号的主账号标记
+        userService.lambdaUpdate()
+                .eq(User::getFactoryId, factoryId)
+                .set(User::getIsFactoryOwner, false)
+                .update();
+        userService.saveUser(user);
     }
 
     private void assertAdmin() {
