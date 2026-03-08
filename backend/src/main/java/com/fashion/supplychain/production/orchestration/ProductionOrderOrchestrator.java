@@ -791,6 +791,7 @@ public class ProductionOrderOrchestrator {
         ProductionOrder newOrder = new ProductionOrder();
         newOrder.setStyleId(String.valueOf(style.getId()));
         newOrder.setStyleNo(style.getStyleNo());
+        newOrder.setSkc(style.getSkc());
         newOrder.setStyleName(style.getStyleName());
         newOrder.setRemarks(StringUtils.hasText(remark) ? remark.trim() : null);
 

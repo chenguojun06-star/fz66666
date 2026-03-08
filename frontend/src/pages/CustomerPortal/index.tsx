@@ -127,7 +127,7 @@ const CustomerPortal: React.FC = () => {
         {/* 进度卡片 */}
         <Card
           style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 16 }}
-          bodyStyle={{ padding: '24px 28px' }}
+          styles={{ body: { padding: '24px 28px' } }}
         >
           <Row align="middle" justify="space-between" style={{ marginBottom: 16 }}>
             <Col>

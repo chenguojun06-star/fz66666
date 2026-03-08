@@ -1258,6 +1258,82 @@ page {
   margin-bottom: 6px;
 }
 
+/* AI 扫码工艺提醒 */
+.ai-tip-card {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+  border: 1px solid #cce4ff;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.ai-tip-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ai-tip-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.ai-tip-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #0050b3;
+}
+
+.ai-tip-content {
+  font-size: 26rpx;
+  color: #092b00;
+  line-height: 1.5;
+  display: block;
+}
+
+.ai-tip-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+
+.ai-tip-kw {
+  background: #bae0ff;
+  color: #003a8c;
+  font-size: 22rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+}
+
+.ai-tip-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.ai-tip-loading-text {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  margin-left: 8rpx;
+}
+
+.rotating {
+  display: inline-block;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* 质检选项 - 弹窗内 */
 .qc-modal-bar {
   margin-top: 6px;
@@ -1573,6 +1649,12 @@ page {
 }
 .mbtn.ok.off {
   opacity: 0.5;
+}
+.mbtn.sos-btn {
+  background: var(--color-danger);
+  color: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
 /* 弹窗遮罩层 */

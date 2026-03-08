@@ -111,22 +111,23 @@ public class ProcessTemplateOrchestrator {
             }
         }
 
-        // 如果没找到完全匹配的，退而求其次选第一条，保证总有一个兜底约束！但最好匹配以保准确
-        if (matchedKnowledge == null && !ieKnowledgeBase.isEmpty()) {
-             matchedKnowledge = ieKnowledgeBase.get(0);
-        }
+        // 如果没找到完全匹配的，不要死板地退回第一条，而是让AI进行“无图纸动态估算”。
+        String details = "由于是泛类目，暂无具体IE标准工艺参考，请你完全基于行业（华南/珠三角服装厂）最通用的制衣工序进行推演。";
+        String pricingStr = "【弹性指导】该品类在当前系统无严格的价格红线，请你基于行业通常的市场加工费为准，预估一个合理的总加工价，并平摊到 裁床、车缝、尾部。";
+        String searchContext = category;
 
-        if (matchedKnowledge == null) {
-            return null; // 知识库都没了，直接退回数据库历史查询
+        if (matchedKnowledge != null) {
+            details = (String) matchedKnowledge.get("details");
+            Map<String, Object> pricing = (Map<String, Object>) matchedKnowledge.get("pricing_standard");
+            pricingStr = pricing.toString() + "\n【绝对约束】：你拆分出的所有「车缝」工序累加的总单价，必须高度接近上述指导的“车间单价”。所有「尾部」工序单价之和必须接近指导的“尾部单价”。";
+            searchContext = category + details;
+        } else {
+            pricingStr += "\n【约束】：请确保拆分出的各道工序单价符合国内下沉代工厂的单价标准。";
         }
-
-        String details = (String) matchedKnowledge.get("details");
-        Map<String, Object> pricing = (Map<String, Object>) matchedKnowledge.get("pricing_standard");
 
         // 从 1500+ 部位图库中，粗略模糊匹配出和当前款式特征相关的部位细化价格 (最多放50条防止Prompt超长)
         List<Map<String, Object>> relatedParts = new ArrayList<>();
         if (iePartsKnowledgeBase != null) {
-            String searchContext = category + details;
             for (Map<String, Object> part : iePartsKnowledgeBase) {
                 String p = (String) part.get("part");
                 String d = (String) part.get("description");
@@ -151,11 +152,10 @@ public class ProcessTemplateOrchestrator {
         String userPrompt = String.format("我们要核价的款式类别是：【%s】。\n" +
                 "系统的全局核价指导价和约束红线如下：\n%s\n" +
                 "已知该款式的部分大致工艺特征为：\n%s\n%s\n\n" +
-                "请你根据这些工艺特征，拆解出 5-10 道具体的常做工序（需要区分'裁床','车缝','尾部'等 progressStage）。\n" +
-                "【绝对约束】：你拆分出的所有「车缝」工序累加的总单价，必须高度接近上述指导的“车间单价”。所有「尾部」工序单价之和必须接近指导的“尾部单价”。\n" +
-                "【提示】：参考刚才提供的部分工艺标准价，合理地分配单价，保留到小数点后三位以内。\n" +
+                "请你根据这些工艺特征，拆解出 5-15 道具体的常做工序（需要区分'裁床','车缝','尾部'等 progressStage）。\n" +
+                "【提示】：请结合行业常识给出一个能够防爆单的科学单价，保留到小数点后三位以内。\n" +
                 "千万不要写 markdown ``` 符号，直接返回最纯粹的 JSON 数组。",
-                category, pricing.toString(), details, partsContext);
+                category, pricingStr, details, partsContext);
 
         try {
             String aiResult = aiAdvisorService.chat(systemPrompt, userPrompt);
@@ -164,7 +164,8 @@ public class ProcessTemplateOrchestrator {
                 aiResult = aiResult.replaceAll("(?i)```json", "").replaceAll("```", "").trim();
                 List<ProcessTemplateItem> list = objectMapper.readValue(aiResult, new TypeReference<List<ProcessTemplateItem>>() {});
                 if (!list.isEmpty()) {
-                    log.info("[工序模板] 通过 AI 结合 IE 标准成功生成了 {} 条微观工序限价数据 (匹配品类: {})", list.size(), matchedKnowledge.get("category"));
+                    String matchCat = matchedKnowledge != null ? (String) matchedKnowledge.get("category") : "泛品类大模型推演";
+                    log.info("[工序模板] 通过 AI 结合 IE 标准成功生成了 {} 条微观工序限价数据 (匹配品类: {})", list.size(), matchCat);
                     // 对大模型吐出来的数据做基本的安全容错垫底
                     for (ProcessTemplateItem p : list) {
                         if (!StringUtils.hasText(p.getProgressStage())) p.setProgressStage("车缝");

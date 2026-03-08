@@ -283,7 +283,7 @@ const OrdersTab: React.FC = () => {
           { title: '已关联排产', value: linked,    suffix: '单', color: '#1677ff' },
         ].map((s, i) => (
           <Col span={6} key={i}>
-            <Card size="small" bodyStyle={{ padding: '8px 12px' }}>
+            <Card size="small" styles={{ body: { padding: '8px 12px' } }}>
               <Statistic title={<span style={{ fontSize: 11 }}>{s.title}</span>}
                 value={s.value} suffix={s.suffix}
                 valueStyle={{ fontSize: 22, color: s.color }} />
@@ -292,7 +292,7 @@ const OrdersTab: React.FC = () => {
         ))}
       </Row>
       <Card size="small" style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
-        bodyStyle={{ padding: '8px 14px' }}>
+        styles={{ body: { padding: '8px 14px' } }}>
         <span style={{ fontSize: 12, color: '#888' }}>本页实付合计：</span>
         <span style={{ fontSize: 20, fontWeight: 700, color: '#eb2f96' }}>¥{totalRevenue.toFixed(2)}</span>
       </Card>

@@ -32,6 +32,11 @@ public class StyleInfo {
     private String styleNo;
 
     /**
+     * SKC统编号
+     */
+    private String skc;
+
+    /**
      * 款名
      * 支持多种前端字段名: styleName, styleNameCN, style_name
      */

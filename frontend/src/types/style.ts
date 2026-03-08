@@ -3,6 +3,7 @@
 export interface StyleInfo extends Record<string, unknown> {
   id?: string | number;
   styleNo: string;
+  skc?: string;
   styleName: string;
   category: string;
   price: number;

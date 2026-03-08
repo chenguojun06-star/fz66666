@@ -718,7 +718,7 @@ const MaterialReconciliation: React.FC = () => {
             <Card
               size="small"
               style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }}
-              bodyStyle={{ padding: '8px 12px' }}
+              styles={{ body: { padding: '8px 12px' } }}
               extra={
                 <Button
                   size="small"

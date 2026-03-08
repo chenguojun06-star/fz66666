@@ -166,6 +166,13 @@ export const useProgressColumns = ({
       render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
     },
     {
+      title: 'SKC',
+      dataIndex: 'skc',
+      key: 'skc',
+      width: 160,
+      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
+    },
+    {
       title: '跟单员',
       dataIndex: 'merchandiser',
       key: 'merchandiser',

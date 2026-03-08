@@ -1317,6 +1317,7 @@ const OrderManagement: React.FC = () => {
         </a>
       ),
     },
+    { title: 'SKC', dataIndex: 'skc', key: 'skc', width: 140, render: (v: any) => v || '-' },
     { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
     {
       title: '品类',

@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 /**
  * 款号资料Service实现类
  */
+@lombok.extern.slf4j.Slf4j
 @Service
 public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo> implements StyleInfoService {
 
@@ -523,11 +524,33 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             styleInfo.setPrice(null);
 
             // 设计师 = 创建款式的人（自动填充）
+            String currentUser = UserContext.username();
             if (!StringUtils.hasText(styleInfo.getSampleNo())) {
-                String currentUser = UserContext.username();
                 if (StringUtils.hasText(currentUser)) {
                     styleInfo.setSampleNo(currentUser);
                 }
+            }
+
+            // 自动生成款号和SKC
+            String timeStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
+
+            if (!StringUtils.hasText(styleInfo.getStyleNo())) {
+                String initials = "ST";
+                try {
+                    if (StringUtils.hasText(currentUser)) {
+                        String py = cn.hutool.extra.pinyin.PinyinUtil.getFirstLetter(currentUser, "");
+                        if (StringUtils.hasText(py)) {
+                            initials = py.toUpperCase();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to generate pinyin initials for user: " + currentUser, e);
+                }
+                styleInfo.setStyleNo(initials + timeStr);
+            }
+
+            if (!StringUtils.hasText(styleInfo.getSkc())) {
+                styleInfo.setSkc("SKC" + timeStr);
             }
         }
 

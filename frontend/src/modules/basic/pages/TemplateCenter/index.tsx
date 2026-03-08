@@ -16,7 +16,7 @@ import SyncProcessPriceModal from './components/SyncProcessPriceModal';
 import CreateFromStyleModal from './components/CreateFromStyleModal';
 import ApplyToStyleModal from './components/ApplyToStyleModal';
 import EditTemplateModal from './components/EditTemplateModal';
-import StyleProcessKnowledgeTab from '../StyleInfo/components/StyleProcessKnowledgeTab';
+import StyleProcessKnowledgeTab from './components/StyleProcessKnowledgeTab';
 import type { EditTemplateModalRef } from './components/EditTemplateModal';
 import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
 import type { TemplateLibraryRecord } from './utils/templateUtils';

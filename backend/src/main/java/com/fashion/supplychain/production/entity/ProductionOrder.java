@@ -63,6 +63,11 @@ public class ProductionOrder {
     private String styleId;
 
     /**
+     * SKC
+     */
+    private String skc;
+
+    /**
      * 款号
      */
     private String styleNo;

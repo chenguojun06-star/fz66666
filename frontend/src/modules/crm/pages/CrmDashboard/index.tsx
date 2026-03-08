@@ -49,7 +49,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
   <>
     <Card
       style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', marginBottom: 24 }}
-      bodyStyle={{ padding: '32px 40px' }}
+      styles={{ body: { padding: '32px 40px' } }}
     >
       <Row align="middle" gutter={24}>
         <Col flex="auto">
@@ -358,7 +358,7 @@ const CustomerManagement: React.FC = () => {
           { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#722ed1' },
         ].map(s => (
           <Col span={6} key={s.label}>
-            <Card size="small" bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+            <Card size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}>
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
@@ -370,7 +370,7 @@ const CustomerManagement: React.FC = () => {
       </Row>
 
       {/* 搜索栏 */}
-      <Card size="small" style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Card size="small" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle">
           <Col flex="auto">
             <Space>
@@ -405,7 +405,7 @@ const CustomerManagement: React.FC = () => {
       </Card>
 
       {/* 表格 */}
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <ResizableTable
           rowKey="id"
           columns={columns}

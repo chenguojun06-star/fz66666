@@ -470,6 +470,22 @@
           <view wx:if="{{(scanConfirm.detail.processName || scanConfirm.detail.progressStage) && !scanConfirm.detail.isProcurement && !scanConfirm.detail.isPattern}}" class="cf-item"><text class="cf-k">工序</text><text class="cf-v">{{scanConfirm.detail.processName || scanConfirm.detail.progressStage}}</text></view>
         </view>
 
+        <!-- AI 扫码工艺提醒 -->
+        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipData}}" class="ai-tip-card">
+          <view class="ai-tip-header">
+            <text class="ai-tip-icon">💡</text>
+            <text class="ai-tip-title">工艺提醒</text>
+          </view>
+          <text class="ai-tip-content">{{scanConfirm.aiTipData.aiTip}}</text>
+          <view class="ai-tip-keywords" wx:if="{{scanConfirm.aiTipData.keywords && scanConfirm.aiTipData.keywords.length > 0}}">
+            <text class="ai-tip-kw" wx:for="{{scanConfirm.aiTipData.keywords}}" wx:key="*this">{{item}}</text>
+          </view>
+        </view>
+        <view wx:elif="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipLoading}}" class="ai-tip-loading">
+          <text class="ai-tip-icon rotating">⏳</text>
+          <text class="ai-tip-loading-text">正在获取专家工艺提醒...</text>
+        </view>
+
         <!-- 样衣操作区（复用 scanConfirm 通用弹窗） -->
         <view wx:if="{{scanConfirm.detail.isPattern}}" class="purchase-modal-list">
           <view class="purchase-modal-item">
@@ -741,7 +757,8 @@
         </view>
       </view>
       <view class="modal-btns">
-        <view class="mbtn cancel" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onCancelScan">取消</view>
+        <view class="mbtn sos-btn" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onOpenSosModal">⚠️ 异常呼救</view>
+          <view class="mbtn cancel" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onCancelScan">取消</view>
         <!-- 裁剪模式：扫码时只显示"领取任务"（未领取状态） -->
         <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.progressStage === '裁剪' && !scanConfirm.cuttingTaskReceived && !scanConfirm.fromMyTasks}}" class="mbtn" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
           {{scanConfirm.loading ? '...' : '领取任务'}}

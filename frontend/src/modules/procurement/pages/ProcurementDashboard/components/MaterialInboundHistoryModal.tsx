@@ -148,7 +148,7 @@ const MaterialInboundHistoryModal: React.FC<MaterialInboundHistoryModalProps> = 
             </div>
           </ModalHeaderCard>
 
-          <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: 0 }}>
+          <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: 0 } }}>
             <ResizableTable
               rowKey="id"
               columns={columns}

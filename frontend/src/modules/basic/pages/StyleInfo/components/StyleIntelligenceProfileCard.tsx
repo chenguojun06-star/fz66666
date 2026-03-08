@@ -255,7 +255,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
         border: '1px solid rgba(24,144,255,0.15)',
         background: 'linear-gradient(135deg, #f7fbff 0%, #ffffff 42%, #f6ffed 100%)',
       }}
-      bodyStyle={{ padding: 18 }}
+      styles={{ body: { padding: 18 } }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>

@@ -116,6 +116,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       ),
     },
     {
+      title: 'SKC',
+      dataIndex: 'skc',
+      key: 'skc',
+      width: 160,
+      render: (text: string) => text || '-',
+    },
+    {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',

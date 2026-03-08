@@ -110,35 +110,40 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
+                <Form.Item name="skc" label="SKC" rules={[]}>
+                  <Input placeholder="如果不填将自动生成" disabled={editLocked || Boolean(currentStyle?.id)} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
                 <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
-                  <DictAutoComplete dictType="style_name" placeholder="请输入或选择款名（如：连衣裙、T恤）" disabled={editLocked} style={{ width: '100%' }} />
+                  <DictAutoComplete dictType="style_name" placeholder="请输入或选择" disabled={editLocked} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
-                <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                  <Select
-                    placeholder="请选择品类"
-                    disabled={isFieldLocked(currentStyle?.category)}
-                    style={{ width: '100%' }}
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    options={categoryOptions}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item name="season" label="季节">
-                  <Select
-                    placeholder="请选择季节"
-                    disabled={isFieldLocked(currentStyle?.season)}
-                    style={{ width: '100%' }}
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    options={seasonOptions}
-                  />
-                </Form.Item>
+                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <Form.Item name="category" label="品类" rules={[{ required: true, message: '必填' }]} style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+                    <Select
+                      placeholder="选择"
+                      disabled={isFieldLocked(currentStyle?.category)}
+                      style={{ width: '100%' }}
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      options={categoryOptions}
+                    />
+                  </Form.Item>
+                  <Form.Item name="season" label="季节" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+                    <Select
+                      placeholder="选择"
+                      disabled={isFieldLocked(currentStyle?.season)}
+                      style={{ width: '100%' }}
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      options={seasonOptions}
+                    />
+                  </Form.Item>
+                </div>
               </Col>
             </Row>
           </div>

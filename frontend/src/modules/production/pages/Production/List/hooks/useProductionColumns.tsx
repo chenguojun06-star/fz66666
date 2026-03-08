@@ -118,6 +118,12 @@ export function useProductionColumns({
       width: 100,
     },
     {
+      title: 'SKC',
+      dataIndex: 'skc',
+      key: 'skc',
+      width: 140,
+    },
+    {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',

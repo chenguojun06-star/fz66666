@@ -52,7 +52,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
   <>
     <Card
       style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', border: 'none', marginBottom: 24 }}
-      bodyStyle={{ padding: '32px 40px' }}
+      styles={{ body: { padding: '32px 40px' } }}
     >
       <Row align="middle" gutter={24}>
         <Col flex="auto">
@@ -160,7 +160,7 @@ const SupplierTab: React.FC = () => {
 
   return (
     <>
-      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '12px 16px' } }}>
         <Space>
           <Input
             placeholder="搜索供应商名称或编码"
@@ -174,7 +174,7 @@ const SupplierTab: React.FC = () => {
           <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, keyword); }}>搜索</Button>
         </Space>
       </Card>
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <ResizableTable
           rowKey="id"
           columns={columns}
@@ -280,7 +280,7 @@ const PurchaseOrderTab: React.FC = () => {
 
   return (
     <>
-      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '12px 16px' } }}>
         <Select
           value={statusFilter}
           onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v); }}
@@ -295,7 +295,7 @@ const PurchaseOrderTab: React.FC = () => {
           ]}
         />
       </Card>
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <ResizableTable
           rowKey="id"
           columns={columns}
@@ -499,7 +499,7 @@ const ProcurementManagement: React.FC = () => {
             <Card
               size="small"
               loading={statsLoading}
-              bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}
+              styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}
               style={{ borderColor: s.warn ? '#fa8c16' : undefined }}
             >
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>

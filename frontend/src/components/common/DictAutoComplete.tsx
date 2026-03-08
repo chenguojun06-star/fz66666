@@ -82,7 +82,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
   // 注意：options 的 label 只能是纯字符串，不能是 JSX 元素。
   // antd 6.x 内部在 selectionchange 事件中会调用 label.nodeName.toLowerCase()，
   // 若 label 是 React 元素会抛出 "nodeName.toLowerCase is not a function"。
-  // 原 "字典管理" footer 已迁移到 dropdownRender，不再放入 options 数组。
+  // 原 "字典管理" footer 已迁移到 popupRender，不再放入 options 数组。
   const buildOptions = useCallback((keyword: string) => {
     const filtered = keyword
       ? allItems.filter(item => item.value.includes(keyword))
@@ -127,7 +127,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       className={className}
       value={value}
       open={open}
-      onDropdownVisibleChange={setOpen}
+      onOpenChange={setOpen}
       options={open ? options : []}
       onChange={onChange}
       onSearch={handleSearch}
@@ -137,7 +137,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       placeholder={restProps.placeholder || `请选择或输入...`}
       filterOption={false}
       notFoundContent={loading ? <Spin size="small" /> : (allItems.length === 0 ? '暂无字典项，请前往字典管理添加' : '无匹配项')}
-      dropdownRender={(menu) => (
+      popupRender={(menu) => (
         <>
           {menu}
           <div

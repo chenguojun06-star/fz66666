@@ -54,8 +54,32 @@ function showConfirmModal(ctx, data) {
       materialPurchases: materialPurchases,
       bomFallback: data.bomFallback || false,
       fromMyTasks: data.fromMyTasks || false,
+      aiTipLoading: true,
+      aiTipData: null
     },
   });
+
+  // 异步获取 AI 扫码工艺提醒
+  if (data.orderNo && data.processName) {
+    api.intelligence.getScanTips({
+      orderNo: data.orderNo,
+      processName: data.processName
+    }).then(res => {
+      if (res && res.aiTip) {
+        ctx.setData({
+          'scanConfirm.aiTipLoading': false,
+          'scanConfirm.aiTipData': res
+        });
+      } else {
+        ctx.setData({ 'scanConfirm.aiTipLoading': false });
+      }
+    }).catch(err => {
+      console.error('获取 AI 扫码工艺提醒失败', err);
+      ctx.setData({ 'scanConfirm.aiTipLoading': false });
+    });
+  } else {
+    ctx.setData({ 'scanConfirm.aiTipLoading': false });
+  }
 }
 
 /**
@@ -164,6 +188,58 @@ function _buildCuttingTasks(data) {
  */
 function onCancelScan(ctx) {
   ctx.setData({ 'scanConfirm.visible': false });
+}
+
+/**
+ * 异常呼救（一键SOS）
+ * @param {Object} ctx - Page 上下文
+ */
+function onOpenSosModal(ctx) {
+  const detail = ctx.data.scanConfirm && ctx.data.scanConfirm.detail;
+  if (!detail || !detail.orderNo) {
+    wx.showToast({ title: '缺少订单信息，无法呼救', icon: 'none' });
+    return;
+  }
+
+  const options = [
+    { label: '🪡 缺面辅料(物料短缺)', value: 'MATERIAL_SHORTAGE' },
+    { label: '⚙️ 机器故障(设备异常)', value: 'MACHINE_FAULT' },
+    { label: '🆘 需指导协助(疑难求助)', value: 'NEED_HELP' }
+  ];
+
+  wx.showActionSheet({
+    itemList: options.map(o => o.label),
+    success: (res) => {
+      const selected = options[res.tapIndex];
+      wx.showModal({
+        title: '确认提交异常呼救?',
+        content: `上报类型：${selected.label}\n订单号：${detail.orderNo}\n工序：${detail.processName || detail.progressStage}`,
+        editable: true,
+        placeholderText: '可填写详细描述（选填）',
+        success: (mRes) => {
+          if (mRes.confirm) {
+            ctx.setData({ 'scanConfirm.loading': true });
+            const description = mRes.content || '';
+            api.production.reportException({
+              orderNo: detail.orderNo,
+              processName: detail.processName || detail.progressStage,
+              exceptionType: selected.value,
+              description: description
+            }).then(() => {
+              wx.showToast({ title: '呼救成功,已通知', icon: 'success' });
+              ctx.setData({
+                'scanConfirm.loading': false,
+                'scanConfirm.visible': false
+              });
+            }).catch(err => {
+              ctx.setData({ 'scanConfirm.loading': false });
+              wx.showToast({ title: err.message || '提交失败', icon: 'none' });
+            });
+          }
+        }
+      });
+    }
+  });
 }
 
 /**
@@ -293,6 +369,7 @@ async function processSKUSubmit(ctx, { detail, skuList }) {
 module.exports = {
   showConfirmModal,
   onCancelScan,
+  onOpenSosModal,
   onModalSkuInput,
   onConfirmScan,
   processSKUSubmit,

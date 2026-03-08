@@ -275,7 +275,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                               showSearch
                               optionFilterProp="label"
                               allowClear
-                              dropdownRender={(menu) => (
+                              popupRender={(menu) => (
                                 <>
                                   {menu}
                                   <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #f0f0f0)' }}>

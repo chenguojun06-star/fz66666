@@ -370,7 +370,7 @@ const ReceivableList: React.FC = () => {
         )}
 
         {/* 过滤栏 */}
-        <Card size="small" style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Card size="small" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
           <Row gutter={12} align="middle">
             <Col flex="auto">
               <Space>
@@ -397,7 +397,7 @@ const ReceivableList: React.FC = () => {
         </Card>
 
         {/* 表格 */}
-        <Card bodyStyle={{ padding: 0 }}>
+        <Card styles={{ body: { padding: 0 } }}>
           <ResizableTable
             rowKey="id"
             columns={columns}

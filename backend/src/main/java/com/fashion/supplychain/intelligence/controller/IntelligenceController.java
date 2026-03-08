@@ -154,6 +154,15 @@ public class IntelligenceController {
     @Autowired
     private ActionCenterOrchestrator actionCenterOrchestrator;
 
+    @Autowired
+    private ScanTipsOrchestrator scanTipsOrchestrator;
+
+    @GetMapping("/scan-tips")
+    public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
+                                 @RequestParam(required = false) String processName) {
+        return Result.success(scanTipsOrchestrator.getScanTips(orderNo, processName));
+    }
+
     @GetMapping("/brain/snapshot")
     public Result<IntelligenceBrainSnapshotResponse> getBrainSnapshot() {
         return Result.success(intelligenceBrainOrchestrator.snapshot());

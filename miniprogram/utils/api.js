@@ -36,6 +36,9 @@ const dashboard = {
 };
 
 const production = {
+  reportException(payload) {
+    return ok('/api/production/exception/report', 'POST', payload || {});
+  },
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
@@ -378,6 +381,9 @@ const wechat = {
 const intelligence = {
   precheckScan(payload) {
     return ok('/api/intelligence/precheck/scan', 'POST', payload || {});
+  },
+  getScanTips(params) {
+    return ok('/api/intelligence/scan-tips', 'GET', params || {});
   },
 };
 

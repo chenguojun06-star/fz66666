@@ -7,7 +7,6 @@ import {
   ExportOutlined,
   DashboardOutlined
 } from '@ant-design/icons';
-import api from "@/utils/api";
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 import styles from './index.module.css';
@@ -41,23 +40,23 @@ const CuteCloudTrigger = ({ size = 52, active = false }: { size?: number, active
         <stop offset="100%" stopColor="#dcf0ff" />
       </linearGradient>
     </defs>
-        <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
+    <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
       {/* 软萌云朵基础层 */}
       <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill="url(#cloudGrad)" />
-      {/* 眼睛 - 超大呆萌 */}
-      <circle cx="46" cy="51" r="5.5" fill="#3B4C63" />
-      <circle cx="68" cy="51" r="5.5" fill="#3B4C63" />
+      {/* 眼睛 - 超大超萌 */}
+      <circle cx="46" cy="50" r="6" fill="#4B6685" />
+      <circle cx="70" cy="50" r="6" fill="#4B6685" />
       {/* 眼睛的高光（大星星眼） */}
-      <circle cx="44.5" cy="49" r="2" fill="#ffffff" />
-      <circle cx="47.5" cy="53" r="0.8" fill="#ffffff" opacity="0.8" />
-      <circle cx="66.5" cy="49" r="2" fill="#ffffff" />
-      <circle cx="69.5" cy="53" r="0.8" fill="#ffffff" opacity="0.8" />
-      {/* 脸颊红晕 - 更大更粉 */}
-      <ellipse cx="38" cy="58" rx="6" ry="3.5" fill="#FF99B3" opacity="0.9" />
-      <ellipse cx="76" cy="58" rx="6" ry="3.5" fill="#FF99B3" opacity="0.9" />
-      {/* 圆圆的呆萌小嘴巴（吃惊/卖萌状） */}
-      <ellipse cx="57" cy="57" rx="3.5" ry="4" fill="#FF8CA3" />
-      <ellipse cx="57" cy="56" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
+      <circle cx="44" cy="48" r="2" fill="#ffffff" />
+      <circle cx="47" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+      <circle cx="68" cy="48" r="2" fill="#ffffff" />
+      <circle cx="71" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+      {/* 脸颊红晕 - 更大 */}
+      <ellipse cx="38" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
+      <ellipse cx="78" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
+      {/* 呆萌张开的嘴巴 😯 */}
+      <ellipse cx="58" cy="56" rx="3.5" ry="4" fill="#FF8CA3" />
+      <ellipse cx="58" cy="55" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
     </g>
   </svg>
 );
@@ -104,80 +103,6 @@ const GlobalAiAssistant: React.FC = () => {
 
     // 2. 调用后台 AI 接口
     try {
-    // --- 智能日报/周报/月报拦截逻辑开始 ---
-    if (text.includes('日报') || text.includes('周报') || text.includes('月报')) {
-      try {
-        let typeName = '日报';
-        if (text.includes('周报')) typeName = '周报';
-        if (text.includes('月报')) typeName = '月报';
-
-        // 获取完全真实的后台数据
-        let realData: any = null;
-        try {
-          const res: any = await api.get('/dashboard/daily-brief', { timeout: 5000 });
-          if (res && res.code === 200) {
-            realData = res.data;
-          }
-        } catch(err) {
-          console.log('Ignore fetching real brief data error', err);
-        }
-
-        if (!realData) {
-          const fallbackMsg: Message = {
-                id: `a-${Date.now()}`,
-                role: 'ai',
-                text: '未能获取真实业务数据，请检查网络或稍后重试。'
-            };
-            setMessages(prev => [...prev, fallbackMsg]);
-            speak('抱歉获取失败，请稍后重试。');
-            return;
-        }
-
-        // 基于真实数据构建
-        const inboundQty = realData.yesterdayWarehousingQuantity || 0;
-        const todayScan = realData.todayScanCount || 0;
-        const overdueCount = realData.overdueOrderCount || 0;
-        const highRiskCount = realData.highRiskOrderCount || 0;
-        const weekScan = realData.weekScanCount || 0;
-
-        let timeDesc = `昨日入库：${inboundQty}件，今日扫码：${todayScan}次`;
-        if (typeName === '周报' || typeName === '月报') {
-          timeDesc = `近7天入库：${realData.weekWarehousingCount || 0}件，近7天扫码：${weekScan}次`;
-        }
-
-        let topOrderText = '';
-        if (realData.topPriorityOrder) {
-          topOrderText = `📌 首要紧迫订单：${realData.topPriorityOrder.orderNo} (款号: ${realData.topPriorityOrder.styleNo})
-   - 委外工厂：${realData.topPriorityOrder.factoryName || '未分配'}
-   - 当前进度：${realData.topPriorityOrder.progress}%
-   - 到期剩余：${realData.topPriorityOrder.daysLeft} 天`;
-        }
-
-        let suggestionsText = '';
-        if (realData.suggestions && realData.suggestions.length > 0) {
-            suggestionsText = `💡 智能建议：\n` + realData.suggestions.map((s: string) => `• ${s}`).join('\n');
-        } else {
-            suggestionsText = `✓ 系统运行正常，无特别预警`;
-        }
-
-        const reportText = `📊 【智能${typeName}】(基于真实数据)\n  \n📈 1. 系统真实活跃：\n• ${timeDesc}\n• 逾期订单：${overdueCount} 单\n• 高风险订单：${highRiskCount} 单\n\n${topOrderText}\n\n${suggestionsText}`;
-
-        const aiMsg: Message = {
-          id: `a-${Date.now()}`,
-          role: 'ai',
-          text: reportText
-        };
-
-        setMessages(prev => [...prev, aiMsg]);
-        speak(`为您生成了基于真实数据的智能${typeName}，请查阅`);
-      } catch (e) {
-        console.error('Report generation error:', e);
-      } finally {
-        setIsTyping(false);
-      }
-      return;
-    }
-    // --- 智能日报/周报/月报拦截逻辑结束 ---
       // @ts-ignore - any type mismatches will be absorbed
       const res = await intelligenceApi.nlQuery({ question: text });
       // @ts-ignore
@@ -222,24 +147,45 @@ const GlobalAiAssistant: React.FC = () => {
       const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '');
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
-      
-      // 寻找更系统/更可爱的中文女声
+
+      // 寻找更温柔自然的中文女声（类似豆包“温柔桃子”）
       const voices = window.speechSynthesis.getVoices();
-      const cuteVoice = voices.find(v => 
-        v.lang.includes('zh') && (
-          v.name.includes('Xiaoxiao') || 
-          v.name.includes('Ting-Ting') || 
-          v.name.includes('Tingting') || 
-          v.name.includes('Mei-Jia') || 
-          v.name.includes('Yuehua')
-        )
-      );
-      if (cuteVoice) {
-        utterance.voice = cuteVoice;
+
+      const preferredVoices = [
+        'Xiaoxiao Online (Natural) - Chinese (Mainland)',  // 微软高质量自然声音（Edge浏览器独有）
+        'Google 普通话（中国大陆）',                           // Chrome高质量女声
+        'Microsoft Xiaoxiao Online (Natural)',
+        'Microsoft Xiaoxiao',
+        'XiaoxiaoNeural',
+        'Ting-Ting'
+      ];
+
+      let selectedVoice = undefined;
+      for (const vName of preferredVoices) {
+        selectedVoice = voices.find(v => v.name.includes(vName) && v.lang.includes('zh'));
+        if (selectedVoice) break;
       }
-      
-      utterance.rate = 1.05; // 稍微放慢一点点，显得呆萌
-      utterance.pitch = 1.6; // 提高音调，更加可爱轻快
+
+      // 兜底找一个中文女声
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.includes('Female'));
+      }
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.includes('zh'));
+      }
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      // 参照“温柔女生”的真人感调校：
+      // 1. 语速调到 0.9 倍
+      utterance.rate = 0.9;
+      // 2. 音调调低一点，去除尖锐感（默认是 1.0）
+      utterance.pitch = 0.85;
+      // 3. 压低音量，模拟“带点气声、轻柔的声音”
+      utterance.volume = 0.7;
+
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -284,7 +230,7 @@ const GlobalAiAssistant: React.FC = () => {
                 ))}
               </div>
             )}
-            
+
             {messages.map(msg => (
               <div
                 key={msg.id}

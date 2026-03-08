@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS `t_production_exception_report` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `order_no` VARCHAR(64) DEFAULT NULL COMMENT '订单号',
+    `process_name` VARCHAR(64) DEFAULT NULL COMMENT '工序名称',
+    `worker_id` VARCHAR(64) DEFAULT NULL COMMENT '工人ID',
+    `worker_name` VARCHAR(64) DEFAULT NULL COMMENT '工人姓名',
+    `exception_type` VARCHAR(64) NOT NULL COMMENT '异常类型: MATERIAL_SHORTAGE=缺料, MACHINE_FAULT=设备故障, NEED_HELP=需要协助',
+    `description` VARCHAR(500) DEFAULT NULL COMMENT '详细描述',
+    `status` VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING=待处理, RESOLVED=已解决',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `delete_flag` INT DEFAULT 0 COMMENT '删除标志'
+) COMMENT='生产一键呼救报告';

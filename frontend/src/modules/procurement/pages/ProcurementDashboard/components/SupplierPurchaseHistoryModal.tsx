@@ -122,7 +122,7 @@ const SupplierPurchaseHistoryModal: React.FC<SupplierPurchaseHistoryModalProps> 
           </div>
         </ModalHeaderCard>
 
-        <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '12px 16px' } }}>
           <ModalFieldGrid columns={3}>
             <ModalField label="历史采购单数" value={total} />
             <ModalField label="当前页金额合计" value={`￥${totalAmount.toLocaleString()}`} />
