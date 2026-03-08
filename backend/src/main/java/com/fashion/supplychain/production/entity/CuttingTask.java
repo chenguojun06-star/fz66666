@@ -71,6 +71,18 @@ public class CuttingTask {
     @TableField(exist = false)
     private LocalDateTime orderTime;
 
+    /**
+     * 生产方名称（来自关联的生产订单）
+     */
+    @TableField(exist = false)
+    private String factoryName;
+
+    /**
+     * 生产方类型（来自关联的生产订单）: INTERNAL / EXTERNAL
+     */
+    @TableField(exist = false)
+    private String factoryType;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

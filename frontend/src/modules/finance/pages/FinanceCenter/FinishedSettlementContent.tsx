@@ -353,7 +353,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       width: 200,
       fixed: 'right' as const,
       render: (_: unknown, record: FinishedSettlementRow) => {
-        const canAudit = isOrderFrozenByStatus(record) && !auditedOrderNos.has(record.orderNo);
+        // 内部工厂在工资结算中审核，此页面禁止审核内部工厂订单
+        const isInternalFactory = record.factoryType === 'INTERNAL';
+        const canAudit = !isInternalFactory && isOrderFrozenByStatus(record) && !auditedOrderNos.has(record.orderNo);
         const isAudited = auditedOrderNos.has(record.orderNo);
         const isCancelled = ['CANCELLED', 'cancelled', 'DELETED', 'deleted', 'scrapped', '废弃', '已取消'].includes(record.status || '');
         return (
@@ -363,7 +365,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 key: 'approve',
                 label: isAudited ? '已审核' : '审核',
                 primary: canAudit,
-                disabled: isCancelled || isAudited || !isOrderFrozenByStatus(record),
+                disabled: isInternalFactory || isCancelled || isAudited || !isOrderFrozenByStatus(record),
                 onClick: () => handleAuditOrder(record),
               },
               {
@@ -420,8 +422,12 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     loadData(params);
   };
 
-  // 审核单条订单（前端本地状态，已关单才可审核）
+  // 审核单条订单（仅外部工厂·已关单才可审核；内部工厂请在工资结算中审核）
   const handleAuditOrder = (record: FinishedSettlementRow) => {
+    if (record.factoryType === 'INTERNAL') {
+      message.warning('内部工厂订单请在「工资结算」中审核');
+      return;
+    }
     if (!isOrderFrozenByStatus(record)) {
       message.warning('该订单尚未关单，无法审核');
       return;
@@ -430,15 +436,16 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
   };
 
-  // 批量审核（只审核已关单且未审核的）
+  // 批量审核（仅外部工厂·已关单且未审核；内部工厂跳过）
   const handleBatchAudit = () => {
     const eligible = data.filter(r =>
       selectedRowKeys.includes(r.orderId) &&
+      r.factoryType !== 'INTERNAL' &&
       isOrderFrozenByStatus(r) &&
       !auditedOrderNos.has(r.orderNo)
     );
     if (eligible.length === 0) {
-      message.warning('选中订单中没有可审核的（已关单且未审核）');
+      message.warning('选中订单中没有可审核的（外部工厂·已关单且未审核）');
       return;
     }
     const newNos = new Set(auditedOrderNos);
@@ -625,6 +632,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 onClick={handleBatchAudit}
                 disabled={selectedRowKeys.length === 0 || !data.some(r =>
                   selectedRowKeys.includes(r.orderId) &&
+                  r.factoryType !== 'INTERNAL' &&
                   isOrderFrozenByStatus(r) &&
                   !auditedOrderNos.has(r.orderNo)
                 )}

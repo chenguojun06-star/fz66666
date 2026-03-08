@@ -7,8 +7,11 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -35,6 +38,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Autowired
     private MaterialPurchaseServiceHelper serviceHelper;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -170,6 +176,32 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
                 MaterialPurchaseHelper.repairReceiverFromRemark(record);
 
+            }
+        }
+
+        // 关联查询订单信息，填充生产方名称和类型
+        List<MaterialPurchase> records2 = pageResult.getRecords();
+        List<String> orderIdsForFactory = records2.stream()
+                .map(MaterialPurchase::getOrderId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!orderIdsForFactory.isEmpty()) {
+            List<ProductionOrder> factoryOrders = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .in(ProductionOrder::getId, orderIdsForFactory)
+                            .select(ProductionOrder::getId, ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
+            );
+            Map<String, ProductionOrder> factoryOrderMap = factoryOrders.stream()
+                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
+                    .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+            for (MaterialPurchase record : records2) {
+                String oid = record.getOrderId();
+                if (StringUtils.hasText(oid) && factoryOrderMap.containsKey(oid.trim())) {
+                    ProductionOrder order = factoryOrderMap.get(oid.trim());
+                    record.setFactoryName(order.getFactoryName());
+                    record.setFactoryType(order.getFactoryType());
+                }
             }
         }
 

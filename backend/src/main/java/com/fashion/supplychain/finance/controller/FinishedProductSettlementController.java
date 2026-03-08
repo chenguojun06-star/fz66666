@@ -222,6 +222,11 @@ public class FinishedProductSettlementController {
         }
         TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "结算单");
 
+        // 内部工厂结算单通过工资结算审核，禁止在成品结算页重复审核
+        if ("INTERNAL".equals(settlement.getFactoryType())) {
+            return Result.fail("内部工厂订单请在「工资结算」中审核");
+        }
+
         Long tenantId = settlement.getTenantId();
         if (tenantId == null) {
             tenantId = UserContext.tenantId();

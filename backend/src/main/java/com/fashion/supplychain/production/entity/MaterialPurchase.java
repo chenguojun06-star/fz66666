@@ -151,6 +151,18 @@ public class MaterialPurchase {
      */
     private String patternProductionId;
 
+    /**
+     * 生产方名称（来自关联的生产订单，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String factoryName;
+
+    /**
+     * 生产方类型（来自关联的生产订单，非数据库字段）: INTERNAL / EXTERNAL
+     */
+    @TableField(exist = false)
+    private String factoryType;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

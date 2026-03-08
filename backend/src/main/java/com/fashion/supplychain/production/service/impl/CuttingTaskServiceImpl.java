@@ -192,12 +192,13 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             t.setCuttingBundleCount(cnt);
         }
 
-        // 关联查询订单信息，填充下单人和下单时间
+        // 关联查询订单信息，填充下单人、下单时间和生产方
         if (!orderIdsFiltered.isEmpty()) {
             List<ProductionOrder> orders = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .in(ProductionOrder::getId, orderIdsFiltered)
-                            .select(ProductionOrder::getId, ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime)
+                            .select(ProductionOrder::getId, ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime,
+                                    ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
             );
             Map<String, ProductionOrder> orderMap = orders.stream()
                     .filter(o -> o != null && StringUtils.hasText(o.getId()))
@@ -209,6 +210,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                     ProductionOrder order = orderMap.get(orderId.trim());
                     t.setOrderCreatorName(order.getCreatedByName());
                     t.setOrderTime(order.getCreateTime());
+                    t.setFactoryName(order.getFactoryName());
+                    t.setFactoryType(order.getFactoryType());
                 }
             }
         }
