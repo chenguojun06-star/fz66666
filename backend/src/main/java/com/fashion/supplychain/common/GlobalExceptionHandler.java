@@ -134,9 +134,10 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleBadSqlGrammar(BadSqlGrammarException e, HttpServletRequest request) {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
-                logger.warn("SQL语法异常（可能DB列缺失，等待迁移自动修复）: {} {} - {}", method, uri, e.getMessage());
+                String rootMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                logger.error("SQL语法异常（DB列缺失）: {} {} - {}", method, uri, rootMsg, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据库结构不一致，请联系管理员执行数据库迁移"));
+                                .body(Result.fail(500, "数据库结构不一致: " + rootMsg));
         }
 
         /**
