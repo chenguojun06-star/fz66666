@@ -83,7 +83,7 @@ public class SmartNotificationOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "IN_PROGRESS")
+          .eq("status", "production")
           .le("expected_ship_date", LocalDate.now().plusDays(7))
           .ge("expected_ship_date", LocalDate.now());
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -115,7 +115,7 @@ public class SmartNotificationOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "IN_PROGRESS");
+          .eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(3);
@@ -190,12 +190,12 @@ public class SmartNotificationOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .in("status", Arrays.asList("IN_PROGRESS", "COMPLETED"));
+          .in("status", Arrays.asList("production", "completed", "delayed"));
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         for (ProductionOrder o : orders) {
             int progress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
-            if (progress == 100 || "COMPLETED".equals(o.getStatus())) {
+            if (progress == 100 || "completed".equals(o.getStatus())) {
                 createMilestone(result, o, "🎉 完工", "已全部完成！", "low");
             } else if (progress >= 80) {
                 createMilestone(result, o, "📦 冲刺", String.format("进度 %d%%，进入冲刺阶段", progress), "low");

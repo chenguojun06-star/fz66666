@@ -52,7 +52,7 @@ public class MaterialShortageOrchestrator {
         QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
         orderQw.eq(tenantId != null, "tenant_id", tenantId)
                .eq("delete_flag", 0)
-               .in("status", "PRODUCTION", "IN_PROGRESS", "PENDING", "CUTTING");
+               .in("status", "production", "cutting", "draft");
         List<ProductionOrder> activeOrders = productionOrderMapper.selectList(orderQw);
 
         if (activeOrders.isEmpty()) {

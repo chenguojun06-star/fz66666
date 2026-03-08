@@ -113,7 +113,7 @@ public class BottleneckDetectionOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .in("status", "IN_PROGRESS", "PENDING");
+          .in("status", "production", "cutting");
 
         if (request != null && request.getOrderId() != null
                 && !request.getOrderId().isBlank()) {

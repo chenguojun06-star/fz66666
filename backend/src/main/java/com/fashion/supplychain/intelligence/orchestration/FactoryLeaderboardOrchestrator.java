@@ -112,8 +112,8 @@ public class FactoryLeaderboardOrchestrator {
         r.setFactoryName(factory.getFactoryName());
 
         // 订单统计
-        long active = orders.stream().filter(o -> "IN_PROGRESS".equals(o.getStatus())).count();
-        long completed = orders.stream().filter(o -> "COMPLETED".equals(o.getStatus())).count();
+        long active = orders.stream().filter(o -> "production".equals(o.getStatus())).count();
+        long completed = orders.stream().filter(o -> "completed".equals(o.getStatus())).count();
         r.setActiveOrders((int) active);
         r.setCompletedOrders((int) completed);
 
@@ -126,7 +126,7 @@ public class FactoryLeaderboardOrchestrator {
 
         // 交期分：按期完成率
         long onTime = orders.stream()
-                .filter(o -> "COMPLETED".equals(o.getStatus()) && o.getPlannedEndDate() != null)
+                .filter(o -> "completed".equals(o.getStatus()) && o.getPlannedEndDate() != null)
                 .filter(o -> o.getUpdateTime() != null
                         && !o.getUpdateTime().isAfter(o.getPlannedEndDate()))
                 .count();

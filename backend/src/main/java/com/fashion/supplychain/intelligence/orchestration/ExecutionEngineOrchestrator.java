@@ -126,7 +126,7 @@ public class ExecutionEngineOrchestrator {
 
         // 检查状态是否允许暂停
         String status = order.getStatus();
-        if ("COMPLETED".equals(status) || "CANCELLED".equals(status)) {
+        if ("completed".equals(status) || "cancelled".equals(status)) {
             throw new BusinessException("订单状态 " + status + " 不允许暂停");
         }
 
@@ -178,7 +178,7 @@ public class ExecutionEngineOrchestrator {
         }
 
         // 恢复状态
-        order.setStatus("IN_PROGRESS");
+        order.setStatus("production");
         order.setOperationRemark(null);
 
         productionOrderService.updateById(order);

@@ -85,7 +85,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "IN_PROGRESS");
+          .eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int inconsistent = 0;
@@ -120,8 +120,8 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .ne("status", "COMPLETED")
-          .ne("status", "CANCELLED");
+          .ne("status", "completed")
+          .ne("status", "cancelled");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int abnormal = 0;
@@ -187,7 +187,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "IN_PROGRESS");
+          .eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int overflow = 0;
