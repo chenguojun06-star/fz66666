@@ -110,6 +110,7 @@ export interface StyleProcess extends Record<string, unknown> {
   progressStage?: string; // 进度节点：采购/裁剪/车缝/尾部/入库
   machineType: string;
   difficulty?: string; // 工序难度：易/中/难
+  description?: string; // 制作描述
   standardTime: number;
   price: number;
   sortOrder: number;

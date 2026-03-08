@@ -735,6 +735,22 @@ const StyleProcessTab: React.FC<Props> = ({
           ),
       },
       {
+        title: '制作描述',
+        dataIndex: 'description',
+        width: 160,
+        ellipsis: true,
+        render: (text: string, record: StyleProcess) =>
+          editableMode ? (
+            <Input
+              value={record.description || ''}
+              placeholder="请输入制作描述"
+              onChange={(e) => updateField(record.id!, 'description', e.target.value || null)}
+            />
+          ) : (
+            <span title={text || ''}>{text || '-'}</span>
+          ),
+      },
+      {
         title: '标准工时(秒)',
         dataIndex: 'standardTime',
         width: 140,
