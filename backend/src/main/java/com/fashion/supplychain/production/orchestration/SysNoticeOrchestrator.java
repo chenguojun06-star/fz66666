@@ -6,7 +6,9 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
+import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +43,9 @@ public class SysNoticeOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TenantService tenantService;
 
     // ──────────────────────────────────────────────────────────────────────
     // 发送通知
@@ -155,6 +161,58 @@ public class SysNoticeOrchestrator {
     // ──────────────────────────────────────────────────────────────────────
     // 查询
     // ──────────────────────────────────────────────────────────────────────
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 超级管理员：全租户广播
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * 向所有活跃租户的主账号发送系统公告
+     * 每个租户只写一条 notice（toName = ownerUsername）
+     *
+     * @param type    通知类型标签（upgrade / maintenance / announcement）
+     * @param title   公告标题
+     * @param content 公告正文
+     * @return 发送的租户数量
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int broadcastGlobal(String type, String title, String content) {
+        List<Tenant> tenants = tenantService.lambdaQuery()
+                .eq(Tenant::getStatus, "active")
+                .list();
+
+        List<SysNotice> notices = new ArrayList<>();
+        for (Tenant t : tenants) {
+            String toName = null;
+            if (t.getOwnerUserId() != null) {
+                User owner = userService.lambdaQuery()
+                        .eq(User::getId, t.getOwnerUserId())
+                        .one();
+                if (owner != null) {
+                    toName = owner.getName() != null ? owner.getName() : owner.getUsername();
+                }
+            }
+            if (toName == null) toName = "管理员";
+
+            SysNotice notice = new SysNotice();
+            notice.setTenantId(t.getId());
+            notice.setToName(toName);
+            notice.setFromName("系统");
+            notice.setOrderNo(null);
+            notice.setTitle(title);
+            notice.setContent(content);
+            notice.setNoticeType("system_broadcast");
+            notice.setIsRead(0);
+            notice.setCreatedAt(LocalDateTime.now());
+            notices.add(notice);
+        }
+
+        if (!notices.isEmpty()) {
+            sysNoticeService.saveBatch(notices);
+        }
+        log.info("[SysNotice] 全租户广播已发送 type={} tenantCount={}", type, notices.size());
+        return notices.size();
+    }
 
     /**
      * 获取当前登录用户的通知列表（最近30条）

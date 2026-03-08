@@ -6,6 +6,7 @@ import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.TenantBillingRecord;
 import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RequestMapping("/api/system/tenant")
 @PreAuthorize("isAuthenticated()")
 public class TenantController {
+
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
     @Autowired
     private TenantOrchestrator tenantOrchestrator;
@@ -513,5 +517,27 @@ public class TenantController {
                 .map(Number::longValue).collect(java.util.stream.Collectors.toList()) : null;
         tenantOrchestrator.setUserPermissionOverrides(userId, grantIds, revokeIds);
         return Result.success(true);
+    }
+
+    /**
+     * 超级管理员：向所有活跃租户广播系统通知（升级/维护/公告）
+     * body: { "type": "upgrade", "title": "...", "content": "..." }
+     */
+    @PostMapping("/broadcast")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Map<String, Object>> broadcastToAllTenants(@RequestBody Map<String, String> body) {
+        String type    = body.getOrDefault("type", "announcement");
+        String title   = body.get("title");
+        String content = body.get("content");
+        if (title == null || title.isBlank()) {
+            return Result.fail("公告标题不能为空");
+        }
+        if (content == null || content.isBlank()) {
+            return Result.fail("公告内容不能为空");
+        }
+        int count = sysNoticeOrchestrator.broadcastGlobal(type, title, content);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sentCount", count);
+        return Result.success(result);
     }
 }

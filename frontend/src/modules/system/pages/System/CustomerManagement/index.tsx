@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Badge } from 'antd';
-import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined } from '@ant-design/icons';
+import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined, NotificationOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { appStoreService } from '@/services/system/appStore';
@@ -12,6 +12,7 @@ import RegistrationTab from './components/RegistrationTab';
 import BillingTab from './components/BillingTab';
 import FeedbackTab from './components/FeedbackTab';
 import SystemStatusTab from './components/SystemStatusTab';
+import BroadcastTab from './components/BroadcastTab';
 
 const CustomerManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -102,6 +103,11 @@ const CustomerManagement: React.FC = () => {
             key: 'system-issues',
             label: <span><BugOutlined /> 系统看板</span>,
             children: <SystemIssueBoard />,
+          },
+          {
+            key: 'broadcast',
+            label: <span><NotificationOutlined /> 全局公告</span>,
+            children: <BroadcastTab />,
           },
         ]}
       />
