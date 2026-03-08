@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
  * 实时生产脉搏编排器 — 全工厂心跳监测
  *
  * <p>算法：查询最近2小时扫码记录，按10分钟分桶统计，
- * 生成时序脉搏图 + 识别停滞工厂（30分钟无扫码）。
+ * 生成时序脉搏图 + 识别停滞工厂（60分钟无扫码视为工序卡点）。
  */
 @Service
 @Slf4j
@@ -30,7 +30,8 @@ public class LivePulseOrchestrator {
 
     private static final int PULSE_WINDOW_MINUTES = 120;
     private static final int BUCKET_MINUTES = 10;
-    private static final int STAGNANT_THRESHOLD_MINUTES = 30;
+    /** 60分钟无扫码视为工序卡点（30分钟过于敏感，工人短休/换工序均会误报） */
+    private static final int STAGNANT_THRESHOLD_MINUTES = 60;
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     @Autowired

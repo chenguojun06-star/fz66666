@@ -320,7 +320,7 @@ public class IntelligenceSignalOrchestrator {
 
     // ──────────────────────────────────────────────────────────────
     //  服装专属信号采集（Phase A：统一感知基础层）
-    //  三类信号：BOM工序缺失 / 工序扫码跳序 / 订单停滞无进展
+    //  四类信号：BOM工序缺失 / 工序扫码跳序 / 订单停滞无进展 / 下单后未启动
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -335,6 +335,8 @@ public class IntelligenceSignalOrchestrator {
         catch (Exception e) { log.warn("[服装信号] 扫码跳序检测失败: {}", e.getMessage()); }
         try { items.addAll(collectStagnantOrderSignals(tenantId)); }
         catch (Exception e) { log.warn("[服装信号] 停滞订单检测失败: {}", e.getMessage()); }
+        try { items.addAll(collectNeverStartedSignals(tenantId)); }
+        catch (Exception e) { log.warn("[服装信号] 未启动订单检测失败: {}", e.getMessage()); }
         return items;
     }
 
@@ -487,6 +489,53 @@ public class IntelligenceSignalOrchestrator {
                 }
             } catch (Exception e) {
                 log.debug("[服装信号] 停滞检查订单 {} 失败: {}", order.getOrderNo(), e.getMessage());
+            }
+        }
+        return items;
+    }
+
+    /**
+     * 服装信号⑤：下单后未启动警告（创建1天后尚无任何扫码记录）
+     * 场景：订单已创建超过1天，生产状态为进行中，但工厂从未开始扫码。
+     * 与「停滞订单」区别：停滞 = 扫过后没动；未启动 = 从未扫过一次。
+     */
+    private List<SignalItem> collectNeverStartedSignals(Long tenantId) {
+        List<SignalItem> items = new ArrayList<>();
+        LocalDateTime startThreshold = LocalDateTime.now().minusDays(1);
+
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .in(ProductionOrder::getStatus, List.of("production", "delayed"))
+                .lt(ProductionOrder::getCreateTime, startThreshold)
+                .last("LIMIT 100")
+                .list();
+
+        for (ProductionOrder order : orders) {
+            try {
+                long scanCount = scanRecordService.lambdaQuery()
+                        .eq(ScanRecord::getOrderId, order.getId().toString())
+                        .count();
+                if (scanCount == 0) {
+                    long hours = ChronoUnit.HOURS.between(order.getCreateTime(), LocalDateTime.now());
+                    SignalItem s = new SignalItem();
+                    s.setSignalType("garment_risk");
+                    s.setSignalCode("order_not_started");
+                    s.setSignalLevel(hours >= 48 ? "critical" : "warning");
+                    s.setSourceDomain("production");
+                    s.setSourceId(order.getId().toString());
+                    s.setSignalTitle("订单 " + order.getOrderNo() + " 下单后 " + (hours / 24) + " 天未开始生产");
+                    s.setSignalDetail("订单创建已 " + hours + " 小时，工厂「"
+                            + (order.getFactoryName() != null ? order.getFactoryName() : "未指定工厂")
+                            + "」从未开始扫码。"
+                            + (order.getPlannedEndDate() != null
+                                ? "订单交期：" + order.getPlannedEndDate().toLocalDate() + "，应立即跨单。"
+                                : "建议跟单员立即联系工厂排产。"));
+                    s.setPriorityScore(hours >= 48 ? PRIORITY_CRITICAL : PRIORITY_WARNING);
+                    s.setStatus("open");
+                    items.add(s);
+                }
+            } catch (Exception e) {
+                log.debug("[服装信号] 未启动检查订单 {} 失败: {}", order.getOrderNo(), e.getMessage());
             }
         }
         return items;
