@@ -223,7 +223,21 @@ public class FinishedProductSettlementController {
         TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "结算单");
 
         // 内部工厂结算单通过工资结算审核，禁止在成品结算页重复审核
-        if ("INTERNAL".equals(settlement.getFactoryType())) {
+        // factoryType 是 @TableField(exist=false)，getById 不会填充，需从关联数据推断
+        String resolvedFactoryType = null;
+        if (StringUtils.isNotBlank(settlement.getFactoryId())) {
+            Factory factory = factoryService.getById(settlement.getFactoryId());
+            if (factory != null) {
+                resolvedFactoryType = factory.getFactoryType();
+            }
+        }
+        if (resolvedFactoryType == null && StringUtils.isNotBlank(settlement.getOrderId())) {
+            ProductionOrder order = productionOrderService.getById(settlement.getOrderId());
+            if (order != null) {
+                resolvedFactoryType = order.getFactoryType();
+            }
+        }
+        if ("INTERNAL".equals(resolvedFactoryType)) {
             return Result.fail("内部工厂订单请在「工资结算」中审核");
         }
 
