@@ -138,7 +138,19 @@ public class WeChatMiniProgramAuthOrchestrator {
                 permRange = "own";
             }
         }
+        // 安全兜底：租户主/管理角色必须拥有 "all" 权限，防止 DB 脏数据导致数据不可见
+        if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())) {
+            if (!"all".equals(permRange)) {
+                log.warn("[WxLogin] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
+                        user.getId(), permRange);
+                permRange = "all";
+            }
+        }
         subject.setPermissionRange(permRange);
+        // 设置工厂ID（外发工厂账号隔离）
+        if (StringUtils.hasText(user.getFactoryId())) {
+            subject.setFactoryId(user.getFactoryId());
+        }
         // 设置租户信息
         subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));

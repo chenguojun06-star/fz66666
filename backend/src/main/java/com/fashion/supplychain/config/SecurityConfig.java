@@ -276,6 +276,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                 ctx.setTenantId(subject.getTenantId());
                 ctx.setTenantOwner(subject.isTenantOwner());
                 ctx.setSuperAdmin(subject.isSuperAdmin());
+                if (subject.getFactoryId() != null) {
+                    ctx.setFactoryId(subject.getFactoryId());
+                }
 
             } else {
                 // 回退：从SecurityContext获取基本信息

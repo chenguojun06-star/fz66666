@@ -52,6 +52,9 @@ public class AuthTokenService {
         payload.put("tenantOwner", subject.isTenantOwner()); // 是否租户主账号
         payload.put("superAdmin", subject.isSuperAdmin()); // 平台超级管理员
         payload.put("pwdVer", subject.getPwdVersion() != null ? subject.getPwdVersion() : 0L); // 密码版本号
+        if (subject.getFactoryId() != null) {
+            payload.put("factoryId", subject.getFactoryId()); // 外发工厂ID
+        }
         payload.put("iat", new Date(nowMillis));
         payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
 
@@ -113,6 +116,11 @@ public class AuthTokenService {
             }
         }
         subject.setTenantOwner(Boolean.TRUE.equals(tenantOwnerObj));
+        // 解析工厂ID
+        Object factoryIdObj = jwt.getPayload("factoryId");
+        if (factoryIdObj != null) {
+            subject.setFactoryId(String.valueOf(factoryIdObj));
+        }
         Object superAdminObj = jwt.getPayload("superAdmin");
         subject.setSuperAdmin(Boolean.TRUE.equals(superAdminObj));
         // 解析密码版本号
