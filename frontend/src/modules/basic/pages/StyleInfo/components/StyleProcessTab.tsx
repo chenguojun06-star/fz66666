@@ -713,6 +713,28 @@ const StyleProcessTab: React.FC<Props> = ({
           ),
       },
       {
+        title: '难度',
+        dataIndex: 'difficulty',
+        width: 90,
+        render: (text: string, record: StyleProcess) =>
+          editableMode ? (
+            <Select
+              value={record.difficulty || undefined}
+              style={{ width: '100%' }}
+              allowClear
+              placeholder="-"
+              onChange={(v) => updateField(record.id!, 'difficulty', v ?? null)}
+              options={[
+                { label: '易', value: '易' },
+                { label: '中', value: '中' },
+                { label: '难', value: '难' },
+              ]}
+            />
+          ) : (
+            text || '-'
+          ),
+      },
+      {
         title: '标准工时(秒)',
         dataIndex: 'standardTime',
         width: 140,
