@@ -111,7 +111,7 @@ const OrganizationTreePage: React.FC = () => {
     return departments
       .map((item) => ({
         value: String(item.id ?? '').trim(),
-        label: String(item.pathNames ?? item.nodeName ?? '未命名'),
+        label: String(item.pathNames ?? item.unitName ?? '未命名'),
       }))
       .filter((item) => item.value);
   }, [departments]);
@@ -120,7 +120,7 @@ const OrganizationTreePage: React.FC = () => {
     setDialogMode('create');
     setCurrentRecord(parent || null);
     form.setFieldsValue({
-      nodeName: '',
+      unitName: '',
       parentId: parent?.id ? String(parent.id) : undefined,
       ownerType: parent?.ownerType || 'NONE',
       sortOrder: 0,
@@ -133,7 +133,7 @@ const OrganizationTreePage: React.FC = () => {
     setCurrentRecord(record);
     form.setFieldsValue({
       id: record.id ? String(record.id) : undefined,
-      nodeName: record.nodeName,
+      unitName: record.unitName,
       parentId: record.parentId ? String(record.parentId) : undefined,
       ownerType: record.ownerType || 'NONE',
       sortOrder: record.sortOrder || 0,
@@ -149,13 +149,13 @@ const OrganizationTreePage: React.FC = () => {
 
   const handleDelete = (record: OrganizationUnit) => {
     modal.confirm({
-      title: `删除部门「${record.nodeName}」`,
+      title: `删除部门「${record.unitName}」`,
       content: '仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。',
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
-        const remark = `删除组织节点：${record.nodeName}`;
+        const remark = `删除组织节点：${record.unitName}`;
         await organizationApi.delete(String(record.id), remark);
         message.success('删除成功');
         await loadData();
@@ -278,7 +278,7 @@ const OrganizationTreePage: React.FC = () => {
           <div className="org-tree-container">
             {treeData.map((node) => (
               <OrgNodeCard
-                key={node.id || node.nodeName}
+                key={node.id || node.unitName}
                 node={node}
                 depth={0}
                 membersMap={membersMap}
@@ -307,7 +307,7 @@ const OrganizationTreePage: React.FC = () => {
       >
         <Form form={form} layout="vertical" style={{ padding: '16px 0' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
-          <Form.Item name="nodeName" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
+          <Form.Item name="unitName" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
             <Input placeholder="例如：版房中心 / 外发供应链组" maxLength={50} />
           </Form.Item>
           <Form.Item name="parentId" label="上级部门">
@@ -338,7 +338,7 @@ const OrganizationTreePage: React.FC = () => {
       {/* 分配成员弹窗 */}
       <ResizableModal
         open={assignModal.open}
-        title={`为「${assignModal.node?.nodeName || ''}」添加成员`}
+        title={`为「${assignModal.node?.unitName || ''}」添加成员`}
         onCancel={() => setAssignModal({ open: false, node: null })}
         footer={null}
         width="40vw"
@@ -528,7 +528,7 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
   const hasContent = members.length > 0 || children.length > 0;
 
   // 用自定义 expanded state 替代 Collapse，避免 rc-collapse 对 label 调用
-  // nodeName.toLowerCase() 导致的 TypeError（Ant Design 6.x 已知问题）
+  // unitName 替代 nodeName 以避免 DOM 属性冲突
   const [expanded, setExpanded] = useState(depth < 2);
 
   const nodeIcon = isFactory
@@ -560,7 +560,7 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
             </span>
           )}
           {nodeIcon}
-          <span className="org-node-name">{node.nodeName}</span>
+          <span className="org-node-name">{node.unitName}</span>
           {nodeTag}
           {ownerTag}
           {members.length > 0 && (
@@ -619,7 +619,7 @@ const OrgNodeCard: React.FC<OrgNodeCardProps> = ({
           )}
           {children.map((child) => (
             <OrgNodeCard
-              key={child.id || child.nodeName}
+              key={child.id || child.unitName}
               node={child}
               depth={depth + 1}
               membersMap={membersMap}

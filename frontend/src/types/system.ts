@@ -83,7 +83,9 @@ export interface Factory extends Record<string, unknown> {
 export interface OrganizationUnit extends Record<string, unknown> {
   id?: string;
   parentId?: string;
-  nodeName: string;
+  /** @deprecated Use unitName instead to avoid DOM node collision */
+  nodeName?: string;
+  unitName: string;
   nodeType: 'DEPARTMENT' | 'FACTORY';
   ownerType?: 'INTERNAL' | 'EXTERNAL' | 'NONE';
   factoryId?: string;

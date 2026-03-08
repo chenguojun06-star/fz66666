@@ -32,7 +32,7 @@ export const useOrganizationFilterOptions = () => {
     return [
       { label: '全部部门', value: '' },
       ...departments.map((item) => ({
-        label: item.nodeName,
+        label: item.unitName || item.nodeName,
         value: String(item.id || ''),
       })).filter((item) => item.value),
     ];

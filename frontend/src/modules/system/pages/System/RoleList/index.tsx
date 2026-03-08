@@ -181,7 +181,7 @@ const RoleList: React.FC = () => {
         const units = await organizationApi.departments();
         setDeptOptions(
           (Array.isArray(units) ? units : []).map((u) => ({
-            label: String(u.nodeName || ''),
+            label: String(u.unitName || u.nodeName || ''),
             value: String(u.id || ''),
           }))
         );
