@@ -741,10 +741,14 @@ const StyleProcessTab: React.FC<Props> = ({
         ellipsis: true,
         render: (text: string, record: StyleProcess) =>
           editableMode ? (
-            <Input
+            <DictAutoComplete
+              dictType="process_description"
+              autoCollect
               value={record.description || ''}
-              placeholder="请输入制作描述"
-              onChange={(e) => updateField(record.id!, 'description', e.target.value || null)}
+              placeholder="请选择或输入制作描述"
+              popupMatchSelectWidth={false}
+              dropdownStyle={{ minWidth: 260 }}
+              onChange={(v) => updateField(record.id!, 'description', v || null)}
             />
           ) : (
             <span title={text || ''}>{text || '-'}</span>
