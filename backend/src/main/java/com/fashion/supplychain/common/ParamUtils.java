@@ -48,6 +48,9 @@ public final class ParamUtils {
         }
         String s = String.valueOf(v);
         s = s == null ? null : s.trim();
+        if ("undefined".equalsIgnoreCase(s) || "null".equalsIgnoreCase(s)) {
+            return null;
+        }
         return StringUtils.hasText(s) ? s : null;
     }
 

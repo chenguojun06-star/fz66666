@@ -333,8 +333,8 @@ Page({
           orderNo: normalizeText(f.orderNo),
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
-          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || undefined,
-          factoryType: String(f.factoryType || '').trim() || undefined,
+          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
+          factoryType: String(f.factoryType || '').trim() || '',
         };
 
         // 根据标签页添加当前工序节点过滤
@@ -391,8 +391,8 @@ Page({
           orderNo: normalizeText(f.orderNo),
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
-          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || undefined,
-          factoryType: String(f.factoryType || '').trim() || undefined,
+          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
+          factoryType: String(f.factoryType || '').trim() || '',
         };
         return await api.production.listOrders(params);
       } catch (error) {
@@ -461,8 +461,8 @@ Page({
         page: 1,
         pageSize: 50,
         keyword,
-        parentOrgUnitId: String(this.data.filters.parentOrgUnitId || '').trim() || undefined,
-        factoryType: String(this.data.filters.factoryType || '').trim() || undefined,
+        parentOrgUnitId: String(this.data.filters.parentOrgUnitId || '').trim() || '',
+        factoryType: String(this.data.filters.factoryType || '').trim() || '',
       }).catch(() => ({ records: [] }));
 
       const results = (ordersRes.records || []).map(item => {
