@@ -1,20 +1,73 @@
 .ai-execution-panel {
   .ai-panel-card {
-    margin-bottom: 16px;
+    margin-bottom: 0;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
 
     :deep(.ant-card-head) {
-      background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
-      border: none;
+      background: transparent;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 36px;
+      padding: 0 12px;
 
       .ant-card-head-title {
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
+        color: rgba(255, 255, 255, 0.75);
+        font-weight: 500;
+        font-size: 12px;
+        padding: 8px 0;
       }
 
       .ant-btn-link {
-        color: white;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 11px;
+
+        &:hover {
+          color: rgba(255, 255, 255, 0.75);
+        }
       }
+    }
+
+    :deep(.ant-card-body) {
+      padding: 12px;
+    }
+
+    /* 表格暗色 */
+    :deep(.ant-table) {
+      background: transparent;
+      font-size: 12px;
+    }
+
+    :deep(.ant-table-thead > tr > th) {
+      background: rgba(255, 255, 255, 0.04);
+      color: rgba(255, 255, 255, 0.45);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      padding: 6px 8px;
+    }
+
+    :deep(.ant-table-tbody > tr > td) {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.65);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 6px 8px;
+    }
+
+    :deep(.ant-table-tbody > tr:hover > td) {
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    :deep(.ant-empty-description) {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 12px;
+    }
+
+    :deep(.ant-empty-image) {
+      opacity: 0.25;
+    }
+
+    :deep(.ant-spin-dot-item) {
+      background: #a78bfa;
     }
   }
 
@@ -24,8 +77,8 @@
     h4 {
       margin: 0 0 12px 0;
       font-weight: 600;
-      color: #262626;
-      border-bottom: 2px solid #1890ff;
+      color: rgba(255, 255, 255, 0.8);
+      border-bottom: 1px solid rgba(167, 139, 250, 0.4);
       padding-bottom: 8px;
     }
 
@@ -37,7 +90,7 @@
       .label {
         min-width: 80px;
         font-weight: 500;
-        color: #666;
+        color: rgba(255, 255, 255, 0.35);
       }
     }
 
@@ -47,13 +100,19 @@
 
       li {
         margin-bottom: 8px;
-        color: #262626;
+        color: rgba(255, 255, 255, 0.65);
         line-height: 1.6;
       }
     }
 
     pre {
       margin: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #7dd3fc;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
     }
   }
 
@@ -63,14 +122,9 @@
     h4 {
       margin: 12px 0 8px 0;
       font-weight: 600;
-      color: #262626;
+      color: rgba(255, 255, 255, 0.8);
     }
   }
-}
-
-/* 表格行 hover 效果 */
-:deep(.ant-table tbody > tr:hover > td) {
-  background: #fafafa;
 }
 
 /* 待审批标记 */
@@ -78,12 +132,12 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  background: #fff7e6;
-  border: 1px solid #ffc069;
+  padding: 2px 7px;
+  background: rgba(251, 146, 60, 0.12);
+  border: 1px solid rgba(251, 146, 60, 0.35);
   border-radius: 3px;
-  font-size: 12px;
-  color: #ef8c3f;
+  font-size: 11px;
+  color: #fb923c;
   font-weight: 500;
 }
 
@@ -92,15 +146,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  padding: 10px 14px;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: 4px;
-  color: #52c41a;
-  font-size: 14px;
+  color: #4ade80;
+  font-size: 13px;
 
   .icon {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
@@ -109,44 +163,45 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
+  padding: 10px 14px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: 4px;
-  color: #ff4d4f;
-  font-size: 14px;
+  color: #f87171;
+  font-size: 13px;
 
   .icon {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
 /* 级联任务通知 */
 .cascaded-notification {
-  padding: 12px;
-  background: #e6f7ff;
-  border-left: 4px solid #1890ff;
+  padding: 10px 12px;
+  background: rgba(167, 139, 250, 0.08);
+  border-left: 3px solid rgba(167, 139, 250, 0.5);
   border-radius: 3px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 
   .title {
     font-weight: 600;
-    color: #0050b3;
+    color: #a78bfa;
     margin-bottom: 8px;
+    font-size: 12px;
   }
 
   .tasks {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 
     .task-tag {
-      padding: 2px 8px;
-      background: white;
-      border: 1px solid #91d5ff;
+      padding: 2px 7px;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.25);
       border-radius: 2px;
-      font-size: 12px;
-      color: #1890ff;
+      font-size: 11px;
+      color: #c4b5fd;
     }
   }
 }
