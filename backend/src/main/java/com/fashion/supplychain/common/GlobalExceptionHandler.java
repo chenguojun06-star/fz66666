@@ -3,6 +3,7 @@ package com.fashion.supplychain.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.BadSqlGrammarException;
@@ -154,7 +155,20 @@ public class GlobalExceptionHandler {
         }
 
         /**
-         * 处理DB访问异常（BadSqlGrammarException已单独处理，此处捕获其余DataAccessException）。
+         * 处理DB唯一键冲突（DuplicateKeyException）。
+         * 不暴露原始MySQL错误，返回业务友好消息。
+         */
+        @ExceptionHandler(DuplicateKeyException.class)
+        public ResponseEntity<Result<?>> handleDuplicateKey(DuplicateKeyException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.warn("唯一键冲突: {} {} - {}", method, uri, e.getMessage());
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Result.fail(409, "数据已存在，请勿重复提交"));
+        }
+
+        /**
+         * 处理DB访问异常（BadSqlGrammarException/DuplicateKeyException已单独处理，此处捕获其余DataAccessException）。
          * 将错误信息暴露出来便于诊断列缺失/连接异常等问题。
          */
         @ExceptionHandler(DataAccessException.class)
@@ -163,7 +177,7 @@ public class GlobalExceptionHandler {
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("DB访问异常: {} {} - {}", method, uri, e.getMessage(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据库操作失败：" + e.getMessage()));
+                                .body(Result.fail(500, "数据库操作失败，请稍后重试"));
         }
 
         /**

@@ -196,11 +196,10 @@ export const createApiClient = (): ApiClient => {
       if (config.__retryCount < config.retry) {
         config.__retryCount = (config.__retryCount || 0) + 1;
 
-        // 仅重试 GET 请求或网络错误（status=undefined 或 502/503/504）
-        const isNetworkError = !error.response || (error.response.status >= 502 && error.response.status <= 504);
+        // 仅重试 GET 请求（幂等）；POST/PUT/DELETE 哪怕网络错误也不重试，防止重复创建/结算
         const isGetRequest = config.method === 'get' || config.method === 'GET';
 
-        if (isNetworkError || isGetRequest) {
+        if (isGetRequest) {
           // 指数退避延迟：1s, 2s, 4s...
           const backoff = new Promise((resolve) => {
             setTimeout(() => resolve(true), (1000 * Math.pow(2, config.__retryCount - 1)));
