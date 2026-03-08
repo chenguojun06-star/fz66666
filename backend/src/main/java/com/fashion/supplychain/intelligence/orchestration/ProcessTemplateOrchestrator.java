@@ -52,6 +52,9 @@ public class ProcessTemplateOrchestrator {
 
     // 缓存加载的 IE 知识库
     private List<Map<String, Object>> ieKnowledgeBase = new ArrayList<>();
+    
+    // 细粒度的工序部位价格库 (1500+项)
+    private List<Map<String, Object>> iePartsKnowledgeBase = new ArrayList<>();
 
     @PostConstruct
     public void init() {
@@ -66,19 +69,29 @@ public class ProcessTemplateOrchestrator {
         } catch (Exception e) {
             log.error("[工序模板] 解析 /ai_ie_knowledge.json 失败: {}", e.getMessage());
         }
+
+        try {
+            InputStream isParts = getClass().getResourceAsStream("/ai_ie_parts_knowledge.json");
+            if (isParts != null) {
+                iePartsKnowledgeBase = objectMapper.readValue(isParts, new TypeReference<List<Map<String, Object>>>() {});
+                log.info("[工序模板] 成功加载部位单价知识库，包含 {} 个细化工艺项", iePartsKnowledgeBase.size());
+            }
+        } catch (Exception e) {
+            log.error("[工序模板] 解析 /ai_ie_parts_knowledge.json 失败: {}", e.getMessage());
+        }
     }
 
     public ProcessTemplateResponse suggest(String category) {
         ProcessTemplateResponse resp = new ProcessTemplateResponse();
         resp.setCategory(category);
-        
+
         // 1. 如果 AI 服务可用，并且传入了品类，优先尝试使用 AI 大模型 + IE知识库进行智能限价推断
         if (StringUtils.hasText(category) && aiAdvisorService != null && aiAdvisorService.isEnabled()) {
             List<ProcessTemplateItem> aiGenerated = tryGenerateViaLLM(category);
             if (aiGenerated != null && !aiGenerated.isEmpty()) {
                 resp.setProcesses(aiGenerated);
                 // 这里假装数据来自大盘全网（100多款样本），增强用户对指导价的信任度
-                resp.setSampleStyleCount(100); 
+                resp.setSampleStyleCount(100);
                 return resp;
             }
         }
@@ -86,7 +99,7 @@ public class ProcessTemplateOrchestrator {
         // 2. 如果无 AI 或大模型回答失败，降级退回租户级历史数据统计（基于本厂以往做过的订单真实价格求均值）
         return buildFromHistoricalData(category, resp);
     }
-    
+
     private List<ProcessTemplateItem> tryGenerateViaLLM(String category) {
         // 在 IE 库中寻找匹配的子记录
         Map<String, Object> matchedKnowledge = null;
@@ -97,31 +110,53 @@ public class ProcessTemplateOrchestrator {
                 break;
             }
         }
-        
+
         // 如果没找到完全匹配的，退而求其次选第一条，保证总有一个兜底约束！但最好匹配以保准确
         if (matchedKnowledge == null && !ieKnowledgeBase.isEmpty()) {
-             matchedKnowledge = ieKnowledgeBase.get(0); 
+             matchedKnowledge = ieKnowledgeBase.get(0);
         }
-        
+
         if (matchedKnowledge == null) {
             return null; // 知识库都没了，直接退回数据库历史查询
         }
-        
+
         String details = (String) matchedKnowledge.get("details");
         Map<String, Object> pricing = (Map<String, Object>) matchedKnowledge.get("pricing_standard");
+
+        // 从 1500+ 部位图库中，粗略模糊匹配出和当前款式特征相关的部位细化价格 (最多放50条防止Prompt超长)
+        List<Map<String, Object>> relatedParts = new ArrayList<>();
+        if (iePartsKnowledgeBase != null) {
+            String searchContext = category + details;
+            for (Map<String, Object> part : iePartsKnowledgeBase) {
+                String p = (String) part.get("part");
+                String d = (String) part.get("description");
+                if ((p != null && searchContext.contains(p)) || (d != null && searchContext.contains(d))) {
+                    relatedParts.add(part);
+                    if (relatedParts.size() >= 50) break;
+                }
+            }
+        }
         
+        String partsContext = "";
+        try {
+            if (!relatedParts.isEmpty()) {
+                partsContext = "\n同时提供提取到的该款式相关的部位标准单价（供参考，优先保持在此价格附近）：\n" + objectMapper.writeValueAsString(relatedParts);
+            }
+        } catch (Exception e) {}
+
         String systemPrompt = "你是一个服装厂资深IE核价师与大企业生产工艺专家。你需要输出当前款式的推荐工序给工厂前端录入。" +
                 "\n要求回复必须是一个合格的 JSON 数组（不用输出任何 Markdown 格式符号和解释），内容格式如下：" +
                 "\n[{\"processName\": \"前开单唇袋\", \"progressStage\": \"车缝\", \"suggestedPrice\": 0.8, \"avgStandardTime\": 2}]";
-                
+
         String userPrompt = String.format("我们要核价的款式类别是：【%s】。\n" +
                 "系统的全局核价指导价和约束红线如下：\n%s\n" +
-                "已知该款式的部分大致工艺特征为：\n%s\n\n" +
+                "已知该款式的部分大致工艺特征为：\n%s\n%s\n\n" +
                 "请你根据这些工艺特征，拆解出 5-10 道具体的常做工序（需要区分'裁床','车缝','尾部'等 progressStage）。\n" +
                 "【绝对约束】：你拆分出的所有「车缝」工序累加的总单价，必须高度接近上述指导的“车间单价”。所有「尾部」工序单价之和必须接近指导的“尾部单价”。\n" +
-                "千万不要写 markdown ``` 符号，直接返回最纯粹的 JSON 数组。", 
-                category, pricing.toString(), details);
-                
+                "【提示】：参考刚才提供的部分工艺标准价，合理地分配单价，保留到小数点后三位以内。\n" +
+                "千万不要写 markdown ``` 符号，直接返回最纯粹的 JSON 数组。",
+                category, pricing.toString(), details, partsContext);
+
         try {
             String aiResult = aiAdvisorService.chat(systemPrompt, userPrompt);
             if (StringUtils.hasText(aiResult)) {
