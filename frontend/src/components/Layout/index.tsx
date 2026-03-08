@@ -358,7 +358,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (normalizePath(effectivePathname) === '/login') return;
 
     const basePath = getActivePath || normalizePath(effectivePathname);
-    const title = resolveRecentTitle(basePath, normalizePath(effectivePathname));
+    let title = resolveRecentTitle(basePath, normalizePath(effectivePathname));
+    // 工人名册页面带工厂名动态 tab 标题
+    if (normalizePath(effectivePathname) === '/system/factory-workers') {
+      const sp = new URLSearchParams(effectiveSearch || '');
+      const factoryName = sp.get('factoryName');
+      title = factoryName ? `${factoryName} - 工人名册` : '工人名册';
+    }
     const nextItem: RecentPage = {
       path: effectiveFullPath,
       basePath,
