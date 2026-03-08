@@ -171,9 +171,6 @@ public class OrganizationUnitOrchestrator {
         if (existing == null || existing.getDeleteFlag() != null && existing.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("组织节点不存在");
         }
-        if (!"DEPARTMENT".equalsIgnoreCase(existing.getNodeType())) {
-            throw new IllegalArgumentException("工厂节点请到供应商管理维护");
-        }
         validateDepartment(unit, existing.getId());
         existing.setNodeName(TextUtils.safeText(unit.getNodeName()));
         existing.setParentId(TextUtils.safeText(unit.getParentId()));
@@ -195,9 +192,6 @@ public class OrganizationUnitOrchestrator {
         OrganizationUnit existing = organizationUnitService.getById(id);
         if (existing == null || existing.getDeleteFlag() != null && existing.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("组织节点不存在");
-        }
-        if (!"DEPARTMENT".equalsIgnoreCase(existing.getNodeType())) {
-            throw new IllegalArgumentException("工厂节点请到供应商管理维护");
         }
         long children = organizationUnitService.count(new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getParentId, id)
