@@ -253,6 +253,15 @@ public class UserOrchestrator {
                 permRange = "own";
             }
         }
+        // 安全兜底：租户主/管理角色必须拥有 "all" 权限，防止 DB 脏数据导致数据不可见
+        // 与小程序端 WeChatMiniProgramAuthOrchestrator 保持一致
+        if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())) {
+            if (!"all".equals(permRange)) {
+                log.warn("[PC登录] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
+                        user.getId(), permRange);
+                permRange = "all";
+            }
+        }
         subject.setPermissionRange(permRange);
         // 设置租户信息
         subject.setTenantId(user.getTenantId());
