@@ -187,16 +187,34 @@ public class PermissionDecisionOrchestrator {
 
     /**
      * 检查用户是否拥有指定角色之一
+     *
+     * 角色检查逻辑：
+     *   1. 超级管理员 → 允许所有操作
+     *   2. 租户主账号 → 允许管理级操作
+     *   3. 其他用户   → 检查 roleName 关键字（admin/manager/director/管理）
+     *   4. 无匹配     → 返回 false，进入 REQUIRES_APPROVAL 流程
      */
     private boolean userHasAnyRole(User user, String[] roles) {
         if (user == null || roles == null || roles.length == 0) {
             return false;
         }
-        // 这里简化处理，实际应该查询 user_role 表
-        for (String role : roles) {
-            // TODO: 调用权限系统检查
+        // 超级管理员拥有所有权限
+        if (Boolean.TRUE.equals(user.getIsSuperAdmin())) {
+            return true;
         }
-        return true;  // 默认允许（实际应该严格检查）
+        // 租户主账号拥有管理员权限
+        if (Boolean.TRUE.equals(user.getIsTenantOwner())) {
+            return true;
+        }
+        // 检查 roleName 是否包含管理权限关键字
+        String roleName = user.getRoleName() != null ? user.getRoleName().toLowerCase() : "";
+        if (roleName.contains("admin") || roleName.contains("manager")
+                || roleName.contains("director") || roleName.contains("管理")) {
+            return true;
+        }
+        log.debug("[PermissionDecision] 用户 {} (role={}) 不满足所需角色: {}",
+            user.getId(), user.getRoleName(), String.join(",", roles));
+        return false;
     }
 
     /**

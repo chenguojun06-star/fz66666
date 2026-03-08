@@ -51,7 +51,7 @@ public class RhythmDnaOrchestrator {
         var qw = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .in("status", "COMPLETED", "IN_PROGRESS")
+          .in("status", "completed", "production", "delayed")
           .orderByDesc("update_time")
           .last("LIMIT 20");
         var orders = productionOrderService.list(qw);

@@ -130,8 +130,8 @@ public class ExecutionEngineOrchestrator {
             throw new BusinessException("订单状态 " + status + " 不允许暂停");
         }
 
-        // 执行改状态
-        order.setStatus("HOLD");
+// 执行改状态：暂停 = delayed（系统内建延期状态，避免写入非法 HOLD）
+        order.setStatus("delayed");
         order.setOperationRemark((String) command.getParams().getOrDefault("holdReason",
             "由AI自动暂停: " + command.getReason()));
 
@@ -172,9 +172,9 @@ public class ExecutionEngineOrchestrator {
             throw new BusinessException("订单不存在: " + orderId);
         }
 
-        // 检查是否处于暂停状态
-        if (!"HOLD".equals(order.getStatus())) {
-            throw new BusinessException("订单非暂停状态，无法恢复");
+        // 检查是否处于暂停状态（delayed 是 AI 暂停的标识状态）
+        if (!"delayed".equals(order.getStatus())) {
+            throw new BusinessException("订单当前状态为 " + order.getStatus() + "，不支持恢复（仅 delayed 状态可恢复）");
         }
 
         // 恢复状态

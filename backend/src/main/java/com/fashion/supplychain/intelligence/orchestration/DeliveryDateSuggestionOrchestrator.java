@@ -104,7 +104,7 @@ public class DeliveryDateSuggestionOrchestrator {
             Long tenantId = UserContext.tenantId();
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
                     .eq("tenant_id", tenantId)
-                    .eq("status", "COMPLETED")
+                    .eq("status", "completed")
                     .eq("delete_flag", 0)
                     .isNotNull("planned_end_date")
                     .isNotNull("actual_end_date");
