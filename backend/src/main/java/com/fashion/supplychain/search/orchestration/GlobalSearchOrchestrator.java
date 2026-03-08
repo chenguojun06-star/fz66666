@@ -1,6 +1,7 @@
 package com.fashion.supplychain.search.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.util.PinyinSearchUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.search.dto.GlobalSearchResult;
@@ -85,19 +86,26 @@ public class GlobalSearchOrchestrator {
 
     private List<GlobalSearchResult.OrderItem> searchOrders(String q, Long tenantId) {
         try {
+            boolean pinyin = PinyinSearchUtils.isPinyinQuery(q);
+
             LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
-                .and(w -> w
+                .orderByDesc(ProductionOrder::getId)
+                .last(pinyin ? "LIMIT 200" : "LIMIT 10");
+
+            if (!pinyin) {
+                wrapper.and(w -> w
                     .like(ProductionOrder::getOrderNo, q)
                     .or().like(ProductionOrder::getStyleNo, q)
                     .or().like(ProductionOrder::getStyleName, q)
-                    .or().like(ProductionOrder::getFactoryName, q)
-                )
-                .orderByDesc(ProductionOrder::getId)
-                .last("LIMIT 10");
+                    .or().like(ProductionOrder::getFactoryName, q));
+            }
 
             return productionOrderService.list(wrapper).stream()
+                .filter(o -> !pinyin || PinyinSearchUtils.matchesPinyin(o.getStyleName(), q)
+                        || PinyinSearchUtils.matchesPinyin(o.getFactoryName(), q))
+                .limit(10)
                 .map(o -> GlobalSearchResult.OrderItem.builder()
                     .id(o.getId())
                     .orderNo(o.getOrderNo())
@@ -119,16 +127,22 @@ public class GlobalSearchOrchestrator {
 
     private List<GlobalSearchResult.StyleItem> searchStyles(String q, Long tenantId) {
         try {
+            boolean pinyin = PinyinSearchUtils.isPinyinQuery(q);
+
             LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
                 .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
-                .and(w -> w
-                    .like(StyleInfo::getStyleNo, q)
-                    .or().like(StyleInfo::getStyleName, q)
-                )
                 .orderByDesc(StyleInfo::getId)
-                .last("LIMIT 8");
+                .last(pinyin ? "LIMIT 200" : "LIMIT 8");
+
+            if (!pinyin) {
+                wrapper.and(w -> w
+                    .like(StyleInfo::getStyleNo, q)
+                    .or().like(StyleInfo::getStyleName, q));
+            }
 
             return styleInfoService.list(wrapper).stream()
+                .filter(s -> !pinyin || PinyinSearchUtils.matchesPinyin(s.getStyleName(), q))
+                .limit(8)
                 .map(s -> GlobalSearchResult.StyleItem.builder()
                     .id(s.getId())
                     .styleNo(s.getStyleNo())
@@ -147,17 +161,23 @@ public class GlobalSearchOrchestrator {
 
     private List<GlobalSearchResult.WorkerItem> searchWorkers(String q, Long tenantId) {
         try {
+            boolean pinyin = PinyinSearchUtils.isPinyinQuery(q);
+
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
                 .eq(tenantId != null, User::getTenantId, tenantId)
                 .ne(User::getStatus, "DISABLED")
-                .and(w -> w
-                    .like(User::getName, q)
-                    .or().like(User::getPhone, q)
-                )
                 .orderByDesc(User::getId)
-                .last("LIMIT 6");
+                .last(pinyin ? "LIMIT 100" : "LIMIT 6");
+
+            if (!pinyin) {
+                wrapper.and(w -> w
+                    .like(User::getName, q)
+                    .or().like(User::getPhone, q));
+            }
 
             return userService.list(wrapper).stream()
+                .filter(u -> !pinyin || PinyinSearchUtils.matchesPinyin(u.getName(), q))
+                .limit(6)
                 .map(u -> GlobalSearchResult.WorkerItem.builder()
                     .id(String.valueOf(u.getId()))
                     .name(u.getName())

@@ -4,10 +4,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined, SendOutlined,
   WarningOutlined, CheckCircleOutlined, DashboardOutlined,
-  FullscreenOutlined, FullscreenExitOutlined,
+  FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { NlQueryResponse } from '@/services/production/productionApi';
+import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
@@ -28,6 +29,7 @@ import {
 } from './components/IntelligenceWidgets';
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
+import GlobalSearchModal from './components/GlobalSearchModal';
 import './styles.css';
 
 type KpiMetricSnapshot = {
@@ -40,6 +42,8 @@ type KpiMetricSnapshot = {
   shortageItems: number;
   pendingNotify: number;
   sentToday: number;
+  totalFactories: number;
+  productionOrderCount: number;
 };
 
 type KpiHistoryPoint = {
@@ -59,6 +63,8 @@ const EMPTY_KPI_METRICS: KpiMetricSnapshot = {
   shortageItems: 0,
   pendingNotify: 0,
   sentToday: 0,
+  totalFactories: 0,
+  productionOrderCount: 0,
 };
 
 const EMPTY_KPI_HISTORY = (): KpiHistoryStore => ({
@@ -71,10 +77,20 @@ const EMPTY_KPI_HISTORY = (): KpiHistoryStore => ({
   shortageItems: [],
   pendingNotify: [],
   sentToday: [],
+  totalFactories: [],
+  productionOrderCount: [],
 });
 
 const KPI_HISTORY_WINDOW_MS = 5 * 60 * 1000;
 
+type ChatMessage = {
+  id: string;
+  role: 'user' | 'ai';
+  text?: string;
+  nlResult?: NlQueryResponse;
+  inlineQ?: string;
+  ts: number;
+};
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -82,17 +98,20 @@ const IntelligenceCenter: React.FC = () => {
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
   const [query, setQuery]           = useState('');
-  const [chatA, setChatA]           = useState('');
-  const [nlResult, setNlResult]     = useState<NlQueryResponse | null>(null);
+  const [messages, setMessages]     = useState<ChatMessage[]>([]);
   const [sending, setSending]       = useState(false);
   const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
   const [inlineQuery, setInlineQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [executingTask, setExecutingTask] = useState<string | null>(null);
+  const [executeTaskResult, setExecuteTaskResult] = useState<{ taskCode: string; ok: boolean; msg: string } | null>(null);
   const [kpiFlash, setKpiFlash] = useState(false);
   const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
   const [kpiHistory, setKpiHistory] = useState<KpiHistoryStore>(EMPTY_KPI_HISTORY);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
+  const chatBoxRef = useRef<HTMLDivElement>(null);
   const prevKpiMetricsRef = useRef<KpiMetricSnapshot | null>(null);
 
   /* URL ?q= 参数：从生产页「问AI分析」或「催→AI」跳转时自动预填问题 */
@@ -114,6 +133,18 @@ const IntelligenceCenter: React.FC = () => {
     const t = setTimeout(() => setKpiFlash(false), 900);
     return () => clearTimeout(t);
   }, [data.ts]);
+
+  /* ⌘K / Ctrl+K：打开全局搜索 */
+  useEffect(() => {
+    const handleSearchKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleSearchKey);
+    return () => window.removeEventListener('keydown', handleSearchKey);
+  }, []);
 
   /* 全屏：F 键切换 */
   useEffect(() => {
@@ -156,6 +187,22 @@ const IntelligenceCenter: React.FC = () => {
 
   const handleReload = () => { reload(); setCountdown(30); };
 
+  const handleExecuteTask = useCallback(async (task: any) => {
+    if (!task?.taskCode) return;
+    setExecutingTask(task.taskCode);
+    setExecuteTaskResult(null);
+    try {
+      const result = await execApi.executeCommand(task) as any;
+      const ok = result?.status === 'SUCCESS' || result?.success === true || result?.code === 200;
+      setExecuteTaskResult({ taskCode: task.taskCode, ok, msg: result?.message || (ok ? '执行成功' : '执行失败') });
+      if (ok) reload();
+    } catch (err: any) {
+      setExecuteTaskResult({ taskCode: task.taskCode, ok: false, msg: err?.message || '执行失败' });
+    } finally {
+      setExecutingTask(null);
+    }
+  }, [reload]);
+
   /* ai-advisor 状态预检 */
   useEffect(() => {
     intelligenceApi.getAiAdvisorStatus()
@@ -166,17 +213,28 @@ const IntelligenceCenter: React.FC = () => {
   const handleSend = async (q?: string) => {
     const text = (q ?? query).trim();
     if (!text) return;
-    if (q) setQuery(q);
-    setSending(true); setNlResult(null); setChatA('');
+    setSending(true);
     setInlineQuery(text);
+    setQuery('');
+    setMessages(prev => [
+      ...prev.slice(-9), // 最多保留 9 条历史，加本次共 10 条
+      { id: `u-${Date.now()}`, role: 'user', text, ts: Date.now() },
+    ]);
     try {
       const [nlRes, chatRes] = await Promise.allSettled([
         intelligenceApi.nlQuery({ question: text }) as any,
         aiAdvisorReady ? intelligenceApi.aiAdvisorChat(text) as any : Promise.reject(null),
       ]);
-      if (nlRes.status === 'fulfilled') setNlResult((nlRes.value as any)?.data ?? nlRes.value);
-      if (chatRes.status === 'fulfilled') setChatA((chatRes.value as any)?.data?.answer || (chatRes.value as any)?.answer || '');
-    } finally { setSending(false); }
+      const nl = nlRes.status === 'fulfilled' ? ((nlRes.value as any)?.data ?? nlRes.value) as NlQueryResponse : undefined;
+      const aiTxt = chatRes.status === 'fulfilled' ? String((chatRes.value as any)?.data?.answer || (chatRes.value as any)?.answer || '') : '';
+      setMessages(prev => [
+        ...prev,
+        { id: `a-${Date.now()}`, role: 'ai', text: aiTxt || nl?.answer || '', nlResult: nl, inlineQ: text, ts: Date.now() },
+      ]);
+    } finally {
+      setSending(false);
+      setTimeout(() => chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' }), 80);
+    }
   };
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter } = data;
@@ -191,7 +249,12 @@ const IntelligenceCenter: React.FC = () => {
     shortageItems: Number(shortage?.shortageItems?.length) || 0,
     pendingNotify: Number(notify?.pendingCount) || 0,
     sentToday: Number(notify?.sentToday) || 0,
-  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, pulse?.activeFactories, pulse?.activeWorkers, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, shortage?.shortageItems]);
+    totalFactories: Math.max(Number(pulse?.factoryActivity?.length) || 0, Number(ranking?.rankings?.length) || 0),
+    productionOrderCount: (orders ?? []).filter(o => {
+      const s = String(o.status || '').toUpperCase();
+      return s !== 'COMPLETED' && s !== 'CANCELLED' && s !== 'DRAFT';
+    }).length,
+  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, orders, pulse?.activeFactories, pulse?.activeWorkers, pulse?.factoryActivity?.length, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, ranking?.rankings?.length, shortage?.shortageItems]);
 
   useEffect(() => {
     const prev = prevKpiMetricsRef.current;
@@ -208,6 +271,8 @@ const IntelligenceCenter: React.FC = () => {
         shortageItems: [{ ts: nowTs, value: currentKpiMetrics.shortageItems }],
         pendingNotify: [{ ts: nowTs, value: currentKpiMetrics.pendingNotify }],
         sentToday: [{ ts: nowTs, value: currentKpiMetrics.sentToday }],
+        totalFactories: [{ ts: nowTs, value: currentKpiMetrics.totalFactories }],
+        productionOrderCount: [{ ts: nowTs, value: currentKpiMetrics.productionOrderCount }],
       });
       return;
     }
@@ -221,6 +286,8 @@ const IntelligenceCenter: React.FC = () => {
       shortageItems: currentKpiMetrics.shortageItems - prev.shortageItems,
       pendingNotify: currentKpiMetrics.pendingNotify - prev.pendingNotify,
       sentToday: currentKpiMetrics.sentToday - prev.sentToday,
+      totalFactories: currentKpiMetrics.totalFactories - prev.totalFactories,
+      productionOrderCount: currentKpiMetrics.productionOrderCount - prev.productionOrderCount,
     });
     setKpiHistory((prevHistory) => {
       const nextHistory = { ...prevHistory } as KpiHistoryStore;
@@ -466,6 +533,11 @@ const IntelligenceCenter: React.FC = () => {
                 {data.loading ? '加载中' : `${countdown}s`}
               </button>
             </Tooltip>
+            <Tooltip title="⌘K 全局搜索">
+              <button className="cockpit-fs-btn" onClick={() => setShowSearch(true)} style={{ marginRight: 4 }}>
+                <SearchOutlined />
+              </button>
+            </Tooltip>
             <Tooltip title={isFullscreen ? '退出全屏 (F)' : '全屏投屏 (F)'}>
               <button className="cockpit-fs-btn" onClick={toggleFullscreen}>
                 {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
@@ -643,6 +715,57 @@ const IntelligenceCenter: React.FC = () => {
 
         </div>
         {/* ╔══════════════════════════════════════════════╗
+            ║   补充 KPI：生产中订单数 + 工厂全景         ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="cockpit-grid-2">
+
+          {/* 生产中订单数 */}
+          <div className="c-card c-kpi c-kpi-hoverable">
+            <div className="c-kpi-label"><LiveDot size={7} color="#f7a600" />生产中订单</div>
+            <div className="c-kpi-val" style={{ color: '#f7a600', textShadow: '0 0 14px #f7a60088' }}>
+              <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
+            </div>
+            <div className="c-kpi-unit">单在制</div>
+            <div className="c-kpi-sub">
+              逾期&nbsp;<b style={{ color: '#ff4136' }}>{overdueRisk.overdue.length}</b>
+              &nbsp;/&nbsp;高风险&nbsp;<b style={{ color: '#f7a600' }}>{overdueRisk.highRisk.length}</b>
+            </div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.productionOrderCount, { flatText: '订单稳定', suffix: '单' })}
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('productionOrderCount')} color="#f7a600" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
+            <div className="c-kpi-hover-hint">逾期/高风险 实时更新</div>
+          </div>
+
+          {/* 工厂全景：总数 vs 活跃 vs 停滞 */}
+          <div className="c-card c-kpi c-kpi-hoverable">
+            <div className="c-kpi-label"><LiveDot size={7} color="#00b4ff" />工厂全景</div>
+            <div className="c-kpi-val cyan" style={{ textShadow: '0 0 14px #00b4ff88' }}>
+              <AnimatedNum val={currentKpiMetrics.totalFactories} />
+            </div>
+            <div className="c-kpi-unit">家工厂</div>
+            <div className="c-kpi-sub">
+              在线&nbsp;<b style={{ color: '#39ff14' }}>{pulse?.activeFactories ?? 0}</b>
+              &nbsp;/&nbsp;停滞&nbsp;<b style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' }}>
+                {pulse?.stagnantFactories?.length ?? 0}
+              </b>
+            </div>
+            <div className="c-kpi-delta-row">
+              {renderDeltaBadge(kpiDelta.totalFactories, { flatText: '工厂稳定', suffix: '家' })}
+            </div>
+            <div className="c-kpi-history-wrap">
+              <Sparkline pts={getKpiTrend('totalFactories')} color="#00b4ff" width={88} height={22} />
+              <span className="c-kpi-history-label">5分钟趋势</span>
+            </div>
+            <div className="c-kpi-hover-hint">活跃 / 停滞 实时对比</div>
+          </div>
+
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
             ║   第二行：实时生产脉搏(左) + 人效实时动态(右) ║
             ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
@@ -781,7 +904,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#ff4136' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#ff4136', flexShrink: 0, fontWeight: 600 }}>📞 立即联系</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#ff4136', flexShrink: 0, fontWeight: 600 }}>📞 立即联系</span>
                     </div>
                   );
                 })}
@@ -793,7 +916,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#f7a600' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#f7a600', flexShrink: 0, fontWeight: 600 }}>⚡ 加急协调</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#f7a600', flexShrink: 0, fontWeight: 600 }}>⚡ 加急协调</span>
                     </div>
                   );
                 })}
@@ -805,7 +928,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#3a8aff' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#3a8aff', flexShrink: 0 }}>👁 持续关注</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#3a8aff', flexShrink: 0 }}>👁 持续关注</span>
                     </div>
                   );
                 })}
@@ -1055,11 +1178,47 @@ const IntelligenceCenter: React.FC = () => {
                     <span style={{ color: '#b0c4de', flex: 1 }}>{task.title}</span>
                     {task.relatedOrderNo && <span style={{ color: '#5a7a9a', fontSize: 10 }}>{task.relatedOrderNo}</span>}
                     {task.dueHint && <span style={{ color: '#f7a600', fontSize: 9 }}>{task.dueHint}</span>}
-                    {task.autoExecutable && <Tag style={{ fontSize: 9, background: 'rgba(82,196,26,0.08)', color: '#73d13d', borderColor: '#73d13d33' }}>自动</Tag>}
+                    {task.autoExecutable && (
+                      executeTaskResult?.taskCode === task.taskCode ? (
+                        <span style={{ fontSize: 9, color: executeTaskResult.ok ? '#73d13d' : '#ff4136', fontWeight: 600 }}>
+                          {executeTaskResult.ok ? '✓ 已执行' : '✗ 失败'}
+                        </span>
+                      ) : (
+                        <button
+                          disabled={executingTask === task.taskCode}
+                          onClick={e => { e.stopPropagation(); handleExecuteTask(task); }}
+                          style={{
+                            fontSize: 9, padding: '2px 7px', border: '1px solid rgba(82,196,26,0.4)',
+                            borderRadius: 3, background: executingTask === task.taskCode ? 'rgba(82,196,26,0.04)' : 'rgba(82,196,26,0.08)',
+                            color: '#73d13d', cursor: executingTask === task.taskCode ? 'wait' : 'pointer',
+                          }}
+                        >
+                          {executingTask === task.taskCode ? '执行中…' : '一键执行'}
+                        </button>
+                      )
+                    )}
                   </div>
                 ))}
+                {/* 待审批 AI 命令 — 常驻显示，无需触发聊天 */}
+                <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
+                  <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 6 }}>
+                    <ThunderboltOutlined style={{ marginRight: 4, color: '#a78bfa' }} />待审批 AI 命令
+                  </div>
+                  <AiExecutionPanel />
+                </div>
               </>
-            ) : <div className="c-empty">暂无待办任务</div>}
+            ) : (
+              <div>
+                <div className="c-empty">暂无待办任务</div>
+                {/* 即使无任务也显示待审批命令区 */}
+                <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
+                  <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 6 }}>
+                    <ThunderboltOutlined style={{ marginRight: 4, color: '#a78bfa' }} />待审批 AI 命令
+                  </div>
+                  <AiExecutionPanel />
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
@@ -1074,11 +1233,20 @@ const IntelligenceCenter: React.FC = () => {
           </div>
           {/* 右：AI 智能顾问 */}
           <div style={{ paddingLeft: 6 }}>
-            <div className="c-card c-chat-card" style={{ height: '100%' }}>
+            <div className="c-card c-chat-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div className="c-card-title" style={{ marginBottom: 10 }}>
                 <RobotOutlined style={{ marginRight: 7, color: '#a78bfa', fontSize: 16 }} />
                 <span style={{ fontSize: 14, fontWeight: 700, color: '#c4b5fd' }}>AI 智能顾问</span>
                 <LiveDot size={7} color="#a78bfa" />
+                {messages.length > 0 && (
+                  <button
+                    style={{ marginLeft: 'auto', fontSize: 9, color: '#5a7a9a', background: 'transparent',
+                      border: '1px solid rgba(90,122,154,0.3)', borderRadius: 3, padding: '1px 6px', cursor: 'pointer' }}
+                    onClick={() => setMessages([])}
+                  >
+                    清空对话
+                  </button>
+                )}
               </div>
 
               {/* ai-advisor 服务状态警告 */}
@@ -1090,62 +1258,108 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               )}
 
-              {/* AI 问答区 */}
-              <div style={{ marginBottom: 8 }}>
-                <div className="c-chat-row" style={{ marginBottom: 4 }}>
-                  <Input
-                    size="small"
-                    className="c-chat-input"
-                    placeholder="问任何问题：逾期订单 / 工厂效率 / 面料库存缺口 / 次品分析..."
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onPressEnter={() => handleSend()}
-                  />
-                  <Button size="small" type="primary" icon={<SendOutlined />} loading={sending}
-                    onClick={() => handleSend()} className="c-chat-send">发送</Button>
-                </div>
-                {sending && <div style={{ fontSize: 10, color: '#7aaec8', paddingTop: 4 }}>
-                  <DashboardOutlined spin style={{ marginRight: 4 }} />AI 正在分析…
-                </div>}
-                {/* 统一回复区 */}
-                {/* nlResult 有明确数据意图时不再叠加显示 chatA，避免重复 */}
-                {(nlResult || chatA) && (
-                  <div className="c-chat-answer" style={{ fontSize: 11, marginTop: 5, lineHeight: 1.6 }}>
-                    {nlResult && (
-                      <div style={{ color: '#c4b5fd', marginBottom: (chatA && (nlResult.intent === 'fallback' || nlResult.intent === 'ai_direct')) ? 6 : 0 }}>
-                        {nlResult.intent === 'ai_direct' && (
-                          <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
-                            background: 'rgba(167,139,250,0.15)', padding: '1px 5px',
-                            borderRadius: 3 }}>🤖 AI直接回答</span>
-                        )}
-                        {nlResult.answer}
-                        {nlResult.confidence !== undefined && nlResult.confidence > 0 && (
-                          <span style={{ fontSize: 9, color: '#7a9abc', marginLeft: 6 }}>
-                            置信度 {nlResult.confidence}%
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {/* 仅当 NL查询无命中（fallback）或 AI直接回答模式时，才显示 chatA 补充 */}
-                    {chatA && (!nlResult || nlResult.intent === 'fallback' || nlResult.intent === 'ai_direct') && <div>{chatA}</div>}
-                    {/* 根据问题关键词内联渲染对应智能面板 */}
-                    {(() => {
-                      const q = inlineQuery;
-                      if (/节拍|DNA|工序耗时|节奏/.test(q)) return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
-                      if (/工人效率|工人画像|工人排行/.test(q)) return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
-                      if (/实时成本|成本追踪|成本分析/.test(q)) return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
-                      if (/报价建议|款式估价|估算报价|报价/.test(q)) return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
-                      if (/供应商评分|工厂综合评分|综合评分排行/.test(q)) return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
-                      if (/学习报告|学习效率/.test(q)) return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
-                      if (/次品溯源|缺陷追溯|次品分析/.test(q)) return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
-                      if (/智能派工|派工推荐/.test(q)) return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
-                      if (/智能推送|推送消息/.test(q)) return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
-                      if (/排期建议|AI排程|排程/.test(q)) return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
-                      if (/待审批|AI命令|执行命令|AI建议审批/.test(q)) return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
-                      return null;
-                    })()}
+              {/* 多轮对话历史气泡区 */}
+              <div ref={chatBoxRef} style={{
+                flex: 1,
+                overflowY: 'auto',
+                marginBottom: 8,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                maxHeight: 280,
+                paddingRight: 2,
+              }}>
+                {messages.length === 0 && !sending && (
+                  <div style={{ fontSize: 11, color: '#3a5a7a', textAlign: 'center', marginTop: 12 }}>
+                    💬 向 AI 顾问提问，支持自然语言查询业务数据
                   </div>
                 )}
+                {messages.map(msg => (
+                  <div key={msg.id} style={{
+                    display: 'flex',
+                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                    alignItems: 'flex-start',
+                    gap: 6,
+                  }}>
+                    {/* 头像 */}
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                      background: msg.role === 'user' ? 'rgba(0,229,255,0.25)' : 'rgba(167,139,250,0.25)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11,
+                    }}>
+                      {msg.role === 'user' ? '👤' : '🤖'}
+                    </div>
+                    {/* 气泡 */}
+                    <div style={{
+                      maxWidth: '82%',
+                      background: msg.role === 'user'
+                        ? 'rgba(0,229,255,0.08)'
+                        : 'rgba(167,139,250,0.07)',
+                      border: `1px solid ${msg.role === 'user' ? 'rgba(0,229,255,0.2)' : 'rgba(167,139,250,0.2)'}`,
+                      borderRadius: msg.role === 'user' ? '10px 2px 10px 10px' : '2px 10px 10px 10px',
+                      padding: '6px 10px',
+                      fontSize: 11,
+                      color: msg.role === 'user' ? '#b0d8e8' : '#c4b5fd',
+                      lineHeight: 1.6,
+                    }}>
+                      {msg.role === 'ai' && msg.nlResult?.intent === 'ai_direct' && (
+                        <span style={{ fontSize: 9, color: '#a78bfa', marginRight: 6,
+                          background: 'rgba(167,139,250,0.15)', padding: '1px 5px', borderRadius: 3 }}>
+                          🤖 AI直接回答
+                        </span>
+                      )}
+                      <span>{msg.text}</span>
+                      {msg.role === 'ai' && msg.nlResult?.confidence !== undefined && msg.nlResult.confidence > 0 && (
+                        <span style={{ fontSize: 9, color: '#5a7a9a', marginLeft: 6 }}>
+                          置信度 {msg.nlResult.confidence}%
+                        </span>
+                      )}
+                      {/* 根据问题关键词内联渲染对应智能面板 */}
+                      {msg.role === 'ai' && msg.inlineQ && (() => {
+                        const q = msg.inlineQ;
+                        if (/节拍|DNA|工序耗时|节奏/.test(q)) return <div style={{ marginTop: 8 }}><RhythmDnaPanel /></div>;
+                        if (/工人效率|工人画像|工人排行/.test(q)) return <div style={{ marginTop: 8 }}><WorkerProfilePanel /></div>;
+                        if (/实时成本|成本追踪|成本分析/.test(q)) return <div style={{ marginTop: 8 }}><LiveCostTrackerPanel /></div>;
+                        if (/报价建议|款式估价|估算报价|报价/.test(q)) return <div style={{ marginTop: 8 }}><StyleQuoteSuggestionPanel /></div>;
+                        if (/供应商评分|工厂综合评分|综合评分排行/.test(q)) return <div style={{ marginTop: 8 }}><SupplierScorecardPanel /></div>;
+                        if (/学习报告|学习效率/.test(q)) return <div style={{ marginTop: 8 }}><LearningReportPanel /></div>;
+                        if (/次品溯源|缺陷追溯|次品分析/.test(q)) return <div style={{ marginTop: 8 }}><DefectTracePanel /></div>;
+                        if (/智能派工|派工推荐/.test(q)) return <div style={{ marginTop: 8 }}><SmartAssignmentPanel /></div>;
+                        if (/智能推送|推送消息/.test(q)) return <div style={{ marginTop: 8 }}><MindPushPanel /></div>;
+                        if (/排期建议|AI排程|排程/.test(q)) return <div style={{ marginTop: 8 }}><SchedulingSuggestionPanel /></div>;
+                        if (/待审批|AI命令|执行命令|AI建议审批/.test(q)) return <div style={{ marginTop: 8 }}><AiExecutionPanel /></div>;
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                ))}
+                {sending && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%',
+                      background: 'rgba(167,139,250,0.25)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
+                      🤖
+                    </div>
+                    <div style={{ fontSize: 11, color: '#7aaec8' }}>
+                      <DashboardOutlined spin style={{ marginRight: 4 }} />AI 正在分析…
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 输入行 */}
+              <div className="c-chat-row" style={{ marginBottom: 4 }}>
+                <Input
+                  size="small"
+                  className="c-chat-input"
+                  placeholder="问任何问题：逾期订单 / 工厂效率 / 面料库存缺口 / 次品分析..."
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onPressEnter={() => handleSend()}
+                />
+                <Button size="small" type="primary" icon={<SendOutlined />} loading={sending}
+                  onClick={() => handleSend()} className="c-chat-send">发送</Button>
               </div>
 
               <div className="c-chat-suggestions" style={{ marginTop: 'auto', paddingTop: 8 }}>
@@ -1166,6 +1380,10 @@ const IntelligenceCenter: React.FC = () => {
 
 
       </div>
+
+      {/* ⌘K 全局搜索弹窗 */}
+      <GlobalSearchModal open={showSearch} onClose={() => setShowSearch(false)} />
+
     </Layout>
   );
 };

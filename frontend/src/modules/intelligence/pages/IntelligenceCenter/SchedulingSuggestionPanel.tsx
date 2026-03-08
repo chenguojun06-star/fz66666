@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Input, Tag } from 'antd';
-import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
+import { CalendarOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import type { SchedulingSuggestionResponse, SchedulePlan, GanttItem } from '@/services/production/productionApi';
 
 const GANTT_COLORS = ['#00e5ff', '#39ff14', '#a78bfa', '#f7a600', '#ffd700', '#ff8c00', '#ff4136'];
@@ -14,6 +15,8 @@ const SchedulingSuggestionPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SchedulingSuggestionResponse | null>(null);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [confirmedPlanId, setConfirmedPlanId] = useState<string | null>(null);
 
   // 设置默认 deadline 为 30 天后
   const today = new Date();
@@ -166,6 +169,51 @@ const SchedulingSuggestionPanel: React.FC = () => {
                     ));
                   })()}
                 </>
+              )}
+              {/* 确认按钮：仅最优方案（第一个）显示 */}
+              {pi === 0 && (
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    disabled={confirming || confirmedPlanId === (plan.factoryId ?? String(pi))}
+                    onClick={async () => {
+                      const planKey = plan.factoryId ?? String(pi);
+                      setConfirming(true);
+                      try {
+                        await execApi.executeCommand({
+                          type: 'schedule_plan',
+                          factoryId: plan.factoryId,
+                          factoryName: plan.factoryName,
+                          styleNo,
+                          quantity: Number(quantity),
+                          deadline: deadline || defaultDeadline,
+                          estimatedEnd: plan.estimatedEnd,
+                          totalDays: plan.totalDays,
+                          source: 'scheduling_suggestion_panel',
+                        });
+                        setConfirmedPlanId(planKey);
+                      } catch {
+                        // 执行失败不阻塞 UI，用户可重试
+                      } finally {
+                        setConfirming(false);
+                      }
+                    }}
+                    style={{
+                      padding: '5px 14px', fontSize: 12, fontWeight: 600,
+                      border: confirmedPlanId === (plan.factoryId ?? String(pi))
+                        ? '1px solid rgba(82,196,26,0.6)' : '1px solid rgba(247,166,0,0.5)',
+                      borderRadius: 5,
+                      background: confirmedPlanId === (plan.factoryId ?? String(pi))
+                        ? 'rgba(82,196,26,0.1)' : 'rgba(247,166,0,0.1)',
+                      color: confirmedPlanId === (plan.factoryId ?? String(pi)) ? '#73d13d' : '#f7a600',
+                      cursor: confirming ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {confirmedPlanId === (plan.factoryId ?? String(pi)) ? (
+                      <><CheckCircleOutlined style={{ marginRight: 5 }} />已确认排产</>
+                    ) : confirming ? '确认中…' : '确认此方案'}
+                  </button>
+                  <span style={{ fontSize: 11, color: '#4a6d8a' }}>确认后将创建待执行排产任务</span>
+                </div>
               )}
             </div>
           ))}

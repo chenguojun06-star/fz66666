@@ -2,6 +2,82 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-26 智能驾驶舱三闭环升级：行动中心可执行 + 排产确认 + 扫码推送
+
+### ✨ 新功能
+
+#### 1. 行动中心「一键执行」+ AiExecutionPanel 常驻展示（Gap 1）
+
+**之前**：行动中心的 `autoExecutable` 任务仅显示静态 `Tag：自动`，用户无法直接触发；`AiExecutionPanel`（待审批 AI 命令列表）只在 NL 聊天栏输入特定关键词时才出现。  
+**现在**：
+- 每条 `autoExecutable` 任务显示「**一键执行**」按钮，点击立即调用 `execApi.executeCommand()` 并展示执行结果（✓ 已执行 / ✗ 失败）。
+- `AiExecutionPanel` 作为**常驻区块**固定展示在行动中心卡片底部，无需先打开聊天，全天候可见待审批命令。
+
+| 文件 | 变更 |
+|------|------|
+| `IntelligenceCenter/index.tsx` | 新增 `execApi` 导入、`executingTask`/`executeTaskResult` 状态、`handleExecuteTask()` 异步函数；行动任务行加条件渲染执行按钮；行动卡片底部永久渲染 `<AiExecutionPanel />` |
+
+#### 2. 智能排产「确认此方案」按钮（Gap 2）
+
+**之前**：排产建议面板（甘特图）纯只读，用户看到推荐方案后无法一键确认。  
+**现在**：第一优先方案（最优）下方显示「**确认此方案**」按钮，点击后调用 `execApi.executeCommand({ type: 'schedule_plan', ... })` 将方案转为待执行排产任务；确认后按钮变绿显示 ✓ 已确认排产。
+
+| 文件 | 变更 |
+|------|------|
+| `SchedulingSuggestionPanel.tsx` | 新增 `CheckCircleOutlined` 导入、`execApi` 导入、`confirming`/`confirmedPlanId` 状态、最优方案下方确认按钮 |
+
+#### 3. 扫码完成后工序推进智能推送钩子（Gap 3）
+
+**之前**：扫码成功后系统无任何通知，下道工序团队需人工查看才能知道上道已完成。  
+**现在**：每次扫码成功（质检 / 入库 / 生产三路由）后，`ScanRecordOrchestrator` 自动调用 `SmartNotificationOrchestrator.notifyTeam()`，向下道工序团队发送「工序 XXX 完成扫码 — 订单号」推送。推送失败只记录 `log.warn`，不影响扫码本身业务。
+
+| 文件 | 变更 |
+|------|------|
+| `ScanRecordOrchestrator.java` | 注入 `SmartNotificationOrchestrator`；三条路由返回前包装捕获结果并调用 `tryNotifyNextStage()`；新增私有方法 `tryNotifyNextStage()` |
+
+**架构优势**：无循环依赖——`SmartNotificationOrchestrator` 仅注入 `ProductionOrderService` + `ScanRecordService`，不引用 `ScanRecordOrchestrator`；异常完全隔离，业务主流程不受影响。
+
+---
+
+## [Unreleased] - 2026-03-25 智能驾驶舱双升级：⌘K 全局搜索 + AI 多轮对话历史
+
+### ✨ 新功能
+
+#### 1. ⌘K 全局搜索（拼音支持）
+
+**用户场景**：在驾驶舱任意位置按 `⌘K` / `Ctrl+K`，即可全局搜索订单号、款式名、工人姓名，输入拼音首字母同样命中（如 `hlq` → 红领桥）。
+
+| 组件 / 文件 | 变更说明 |
+|------------|---------|
+| `components/GlobalSearchModal.tsx` | **新增** — ⌘K 搜索弹窗，300ms debounce，↑↓ 键盘导航，Esc 关闭 |
+| `IntelligenceCenter/index.tsx` | 添加 `showSearch` state、fullscreen 后的 ⌘K 快捷键监听、header 搜索按钮、`<GlobalSearchModal>` 渲染 |
+| `GlobalSearchController.java` | 已存在 — `GET /api/search/global?q=xxx` |
+| `GlobalSearchOrchestrator.java` | 已存在 — 并发搜索订单+款式+工人，拼音分支 200 条候选内存过滤 |
+| `PinyinSearchUtils.java` | 已存在 — hutool PinyinUtil 封装，`matchesPinyin()` 支持首字母与全拼两种匹配 |
+
+**搜索结果**：订单（青色）/ 款式（紫色）/ 工人（绿色）三组，点击直接跳转对应页面，匹配数量汇总显示在底部提示栏。
+
+#### 2. AI 对话升级为多轮历史气泡模式
+
+**之前**：单轮问答，每次提问清除上一条回复，无法回顾历史。  
+**现在**：气泡式多轮对话，最多保留 10 条历史，滚动区域自动到底，"清空对话"按钮手动清除。
+
+| 变更 | 说明 |
+|-----|-----|
+| `messages: ChatMessage[]` 替代 `chatA + nlResult` | 每条消息含 `role / text / nlResult / inlineQ / ts` |
+| 用户气泡：右对齐，青色边框 | AI 气泡：左对齐，紫色边框 |
+| 内联智能面板（节拍DNA/工人效率/实时成本等）| 仍在对应 AI 气泡内渲染，不重复 |
+| 卡片 `flexDirection: column` | 气泡区弹性撑满，提问框固定底部 |
+| "清空对话"按钮 | 出现在标题行右侧，有历史时才显示 |
+
+### 🛠 代码质量
+- `GlobalSearchModal.tsx`：246 行，单一职责，无副作用
+- `index.tsx`：各功能通过 `useState` / `useEffect` 精确隔离，无新增全局状态
+- 前端 TS：0 errors (`npx tsc --noEmit`)
+- 后端 Java：BUILD SUCCESS (`mvn clean compile -q`)
+
+---
+
 ## [Unreleased] - 2026-03-23 P0 BUG修复：小程序生产页面暂无数据
 
 ### 🔴 问题描述

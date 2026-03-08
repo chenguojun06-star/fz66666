@@ -188,8 +188,12 @@ public class NlQueryOrchestrator {
         if (aiAdvisorService.isEnabled() && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
             try {
                 String ctxStr = buildBriefContext(ctx.getData(), ctx.getAnswer());
-                String sys = "你是服装供应铳AI助手，以下是当前业务实时数据：\n" + ctxStr
-                        + "\n请用中文简洁地回答用户问题，不超过120字。";
+                String sys = "你是一位专业的服装供应链管理AI助手，服务于服装制造工厂。\n"
+                        + "以下是系统当前实时业务数据（JSON格式）：\n" + ctxStr + "\n"
+                        + "业务背景：订单生产流程为 采购面料→裁剪→车缝→尾部整理→质检→入库，"
+                        + "涉及多家外协工厂、多名工人，按工序计件发放工资。\n"
+                        + "回答要求：用中文简洁回答，不超过150字，优先引用上方数据中的具体数字，"
+                        + "末尾若有合适建议可补充1条操作建议。";
                 String aiAnswer = aiAdvisorService.chat(sys, question);
                 if (aiAnswer != null && !aiAnswer.isBlank()) {
                     NlQueryResponse r = new NlQueryResponse();

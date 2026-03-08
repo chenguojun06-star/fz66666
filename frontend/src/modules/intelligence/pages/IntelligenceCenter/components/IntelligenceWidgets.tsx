@@ -64,7 +64,7 @@ export const LiveDot: React.FC<{ color?: string; size?: number }> = ({ color = '
   <span className="live-dot" style={{ '--dot-color': color, '--dot-size': `${size}px` } as React.CSSProperties} />
 );
 
-/** 折线迷你图 */
+/** 折线迷你图（平滑贝塞尔曲线版） */
 export const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number; height?: number }> = ({
   pts, color = '#00e5ff', width = 160, height = 44,
 }) => {
@@ -80,23 +80,28 @@ export const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number
     const y = height - (v / max) * (height - 4) - 2;
     return isFinite(y) ? y : height - 2;
   });
-  const poly = xs.map((x, i) => `${x},${ys[i]}`).join(' ');
-  const area = `${xs[0]},${height} ${poly} ${xs[xs.length - 1]},${height}`;
+  // 平滑三次贝塞尔路径：控制点偏移 38% 使曲线柔和自然
+  let linePath = `M ${xs[0]},${ys[0]}`;
+  for (let i = 1; i < n; i++) {
+    const dx = (xs[i] - xs[i - 1]) * 0.38;
+    linePath += ` C ${xs[i-1]+dx},${ys[i-1]} ${xs[i]-dx},${ys[i]} ${xs[i]},${ys[i]}`;
+  }
+  const areaPath = `${linePath} L ${xs[n-1]},${height} L ${xs[0]},${height} Z`;
+  // 用颜色哈希生成唯一 gradId，避免多个 Sparkline 使用同一 SVG defs 冲突
+  const gradId = `sg-${color.replace(/[^a-z0-9]/gi, '')}`;
   return (
     <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
       <defs>
-        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polygon points={area} fill="url(#sg)" />
-      <polyline points={poly} fill="none" stroke={color} strokeWidth={2}
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth={1.5}
         strokeLinecap="round" strokeLinejoin="round" />
-      {safe.map((_, i) => (
-        <circle key={i} cx={xs[i]} cy={ys[i]} r={i === n - 1 ? 4 : 2.5}
-          fill={color} opacity={i === n - 1 ? 1 : 0.6} />
-      ))}
+      {/* 仅最后一个点保留圆点，减少视觉干扰 */}
+      <circle cx={xs[n-1]} cy={ys[n-1]} r={2.5} fill={color} />
     </svg>
   );
 };

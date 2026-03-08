@@ -97,6 +97,9 @@ public class ScanRecordOrchestrator {
     @Autowired
     private QrCodeSigner qrCodeSigner;
 
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator smartNotificationOrchestrator;
+
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext(); // 扫码必须有租户上下文
@@ -208,15 +211,21 @@ public class ScanRecordOrchestrator {
 
         // 质检扫码路由
         if ("quality".equals(scanType)) {
-            return executeQualityScan(safeParams, requestId, operatorId, operatorName);
+            Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName);
+            tryNotifyNextStage(safeParams, r);
+            return r;
         }
 
         // 入库扫码路由
         if ("warehouse".equals(scanType)) {
-            return executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
+            Map<String, Object> r = executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
+            tryNotifyNextStage(safeParams, r);
+            return r;
         }
 
-        return executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess);
+        Map<String, Object> r = executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess);
+        tryNotifyNextStage(safeParams, r);
+        return r;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -929,6 +938,29 @@ public class ScanRecordOrchestrator {
             case "production": return "quality";
             case "quality":    return "warehouse";
             default:           return null;
+        }
+    }
+
+    private void tryNotifyNextStage(Map<String, Object> params, Map<String, Object> result) {
+        try {
+            if (result == null || !Boolean.TRUE.equals(result.get("success"))) return;
+            com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+            Long tenantId = ctx != null ? ctx.getTenantId() : null;
+            if (tenantId == null) return;
+            String orderNo = TextUtils.safeText(params.get("orderNo"));
+            if (!hasText(orderNo)) orderNo = TextUtils.safeText(params.get("orderId"));
+            String stage = TextUtils.safeText(params.get("progressStage"));
+            if (!hasText(stage)) stage = TextUtils.safeText(params.get("scanType"));
+            smartNotificationOrchestrator.notifyTeam(
+                "next_stage",
+                String.format("工序 %s 完成扫码 — %s",
+                    hasText(stage) ? stage : "生产扫码",
+                    hasText(orderNo) ? orderNo : ""),
+                "扫码成功，可安排下道工序接单",
+                tenantId
+            );
+        } catch (Exception e) {
+            log.warn("[ScanNotify] 工序推进推送失败，不阻断业务: {}", e.getMessage());
         }
     }
 }
