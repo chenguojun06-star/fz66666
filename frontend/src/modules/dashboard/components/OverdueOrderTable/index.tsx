@@ -178,7 +178,7 @@ const OverdueOrderTable: React.FC = () => {
         return (
           <Button
             size="small"
-            type={urged ? 'default' : 'primary'}
+            type="default"
             danger={!urged}
             disabled={urged}
             onClick={async () => {

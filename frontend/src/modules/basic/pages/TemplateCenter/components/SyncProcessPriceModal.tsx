@@ -29,6 +29,7 @@ interface StyleProcessRow {
   processName: string;
   progressStage: string;
   machineType: string;
+  difficulty?: string;
   standardTime: number;
   price: number;
   sortOrder: number;
@@ -469,6 +470,24 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
               value={v}
               placeholder="请选择或输入机器类型"
               onChange={(value) => updateField(r.id, 'machineType', value as string)}
+            />
+          : (v || '-'),
+      },
+      {
+        title: '工序难度', dataIndex: 'difficulty', width: 90,
+        render: (v: string, r: StyleProcessRow) => em
+          ? <Select
+              size="small"
+              value={v || undefined}
+              allowClear
+              placeholder="选择"
+              style={{ width: '100%' }}
+              onChange={(val) => updateField(r.id, 'difficulty', val)}
+              options={[
+                { value: '易', label: '易' },
+                { value: '中', label: '中' },
+                { value: '难', label: '难' },
+              ]}
             />
           : (v || '-'),
       },

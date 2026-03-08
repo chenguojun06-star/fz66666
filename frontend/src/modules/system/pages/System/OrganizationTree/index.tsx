@@ -7,8 +7,8 @@ import tenantService from '@/services/tenantService';
 import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import {
-  App, Avatar, Button, Card, Checkbox, Empty, Form, Input,
-  InputNumber, QRCode, Select, Space, Table, Tag, Tooltip, Typography,
+  App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input,
+  InputNumber, QRCode, Row, Select, Space, Table, Tag, Tooltip, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import {
@@ -544,30 +544,42 @@ const OrganizationTreePage: React.FC = () => {
         okText="保存"
         cancelText="取消"
         width="30vw"
-        initialHeight={340}
+        initialHeight={260}
       >
         <Form form={form} layout="vertical" style={{ padding: '4px 0' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
-          <Form.Item name="unitName" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
-            <Input placeholder="例如：版房中心 / 外发供应链组" maxLength={50} />
-          </Form.Item>
-          <Form.Item name="parentId" label="上级部门">
-            <Select
-              showSearch
-              allowClear
-              optionFilterProp="label"
-              placeholder="不选则为顶级部门"
-              options={departmentOptions}
-              notFoundContent={departmentOptions.length === 0 ? '暂无部门，可先创建顶级部门' : '无匹配'}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-          <Form.Item name="ownerType" label="内外标签" rules={[{ required: true, message: '请选择' }]}>
-            <Select options={ownerTypeOptions} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="排序">
-            <InputNumber min={0} precision={0} placeholder="默认 0" style={{ width: '100%' }} />
-          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="unitName" label="部门名称" rules={[{ required: true, message: '请输入部门名称' }]}>
+                <Input placeholder="例如：版房中心" maxLength={50} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="parentId" label="上级部门">
+                <Select
+                  showSearch
+                  allowClear
+                  optionFilterProp="label"
+                  placeholder="不选则为顶级部门"
+                  options={departmentOptions}
+                  notFoundContent={departmentOptions.length === 0 ? '暂无部门' : '无匹配'}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="ownerType" label="内外标签" rules={[{ required: true, message: '请选择' }]}>
+                <Select options={ownerTypeOptions} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sortOrder" label="排序">
+                <InputNumber min={0} precision={0} placeholder="默认 0" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
           {currentRecord?.pathNames && (
             <div style={{ color: 'var(--neutral-text-secondary)', padding: '0 16px', marginTop: 8 }}>
               当前路径：{currentRecord.pathNames}

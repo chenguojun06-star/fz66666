@@ -45,6 +45,11 @@ public class StyleProcess {
     private String machineType;
 
     /**
+     * 工序难度（易/中/难）
+     */
+    private String difficulty;
+
+    /**
      * 标准工时(秒)
      */
     private Integer standardTime;

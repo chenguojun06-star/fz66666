@@ -28,6 +28,7 @@ export type ProcessStepRow = {
   processName?: string;
   progressStage?: string; // 进度节点
   machineType?: string;
+  difficulty?: string;   // 工序难度（易/中/难）
   standardTime?: number;
   unitPrice?: number;    // 工价（统一使用 unitPrice）
   price?: number;        // 兼容旧数据

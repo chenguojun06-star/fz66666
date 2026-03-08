@@ -673,6 +673,31 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                         ),
                       },
                       {
+                        title: '工序难度',
+                        dataIndex: 'difficulty',
+                        width: 65,
+                        render: (value: string, _: ProcessStepRow, idx: number) => (
+                          <Select
+                            size="small"
+                            value={value || undefined}
+                            allowClear
+                            placeholder="选择"
+                            onChange={(val) => {
+                              const newData = { ...editTableData, steps: [...editTableData.steps] };
+                              newData.steps[idx] = { ...newData.steps[idx], difficulty: val || '' };
+                              setEditTableData(newData);
+                            }}
+                            options={[
+                              { value: '易', label: '易' },
+                              { value: '中', label: '中' },
+                              { value: '难', label: '难' },
+                            ]}
+                            style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                            variant="borderless"
+                          />
+                        ),
+                      },
+                      {
                         title: '工时(秒)',
                         dataIndex: 'standardTime',
                         width: 55,
