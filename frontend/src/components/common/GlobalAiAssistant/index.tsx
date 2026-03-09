@@ -367,16 +367,20 @@ const GlobalAiAssistant: React.FC = () => {
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
 
-      // 寻找更温柔自然的中文女声（类似豆包“温柔桃子”）
+      // 寻找轻快俏皮的中文女声（小浣熊/卡通风格）
       const voices = window.speechSynthesis.getVoices();
 
+      // 优先选择音色偏年轻、轻快的声音（卡通萌感更强）
       const preferredVoices = [
-        'Xiaoxiao Online (Natural) - Chinese (Mainland)',  // 微软高质量自然声音（Edge浏览器独有）
-        'Google 普通话（中国大陆）',                           // Chrome高质量女声
+        'Xiaoyi',                                          // 微软小艺 — 年轻甜美，最适合呆萌风
+        'Xiaoxiao Online (Natural) - Chinese (Mainland)',  // 微软晓晓 — 自然活泼（Edge）
+        'Microsoft Xiaoyi Online (Natural)',
         'Microsoft Xiaoxiao Online (Natural)',
+        'Google 普通话（中国大陆）',                           // Chrome 高质量女声
+        'Shanshan',                                        // macOS 珊珊 — 偏年轻
+        'Lili',                                            // macOS 丽丽
+        'Ting-Ting',                                       // macOS 婷婷
         'Microsoft Xiaoxiao',
-        'XiaoxiaoNeural',
-        'Ting-Ting'
       ];
 
       let selectedVoice = undefined;
@@ -397,13 +401,13 @@ const GlobalAiAssistant: React.FC = () => {
         utterance.voice = selectedVoice;
       }
 
-      // 呆萌卡通风格调校：
-      // 1. 语速略快，活泼感
-      utterance.rate = 1.05;
-      // 2. 音调拉高，可爱萌感（默认1.0，拉到1.4偏卡通）
-      utterance.pitch = 1.4;
-      // 3. 音量饱满
-      utterance.volume = 0.85;
+      // 小浣熊呆萌卡通风格调校：
+      // 1. 语速稍快，俏皮活力感
+      utterance.rate = 1.12;
+      // 2. 音调拉到很高，挤出卡通小动物的萌音（越高越Q弹）
+      utterance.pitch = 1.7;
+      // 3. 音量饱满清脆
+      utterance.volume = 0.9;
 
       window.speechSynthesis.speak(utterance);
     }

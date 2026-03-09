@@ -35,6 +35,9 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.deepseek.model:deepseek-chat}")
     private String directModel;
 
+    @Value("${ai.deepseek.timeout-seconds:90}")
+    private int directTimeoutSeconds;
+
     @Value("${ai.gateway.litellm.api-key:}")
     private String litellmApiKey;
 
@@ -85,7 +88,7 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     private IntelligenceInferenceResult invokeDirect(List<AiMessage> messages, List<AiTool> tools) {
-        return invokeOpenAiCompatible("direct", directApiUrl, directApiKey, directModel, messages, tools, 30);
+        return invokeOpenAiCompatible("direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds);
     }
 
     private IntelligenceInferenceResult invokeOpenAiCompatible(String provider,
@@ -109,12 +112,13 @@ public class IntelligenceInferenceOrchestrator {
             return result;
         }
 
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        HttpRequest request = null;
         try {
             String body = buildRequestBody(model, messages, tools);
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build();
-            HttpRequest request = HttpRequest.newBuilder()
+            request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
@@ -131,6 +135,26 @@ public class IntelligenceInferenceOrchestrator {
             result.setErrorMessage("http-" + response.statusCode());
             log.warn("[IntelligenceInference] {} 调用失败 status={} body={}", provider, response.statusCode(),
                     response.body().substring(0, Math.min(200, response.body().length())));
+            return result;
+        } catch (java.net.http.HttpTimeoutException e) {
+            // 超时自动重试一次（间隔2秒）
+            log.warn("[IntelligenceInference] {} 首次超时({}s)，即将重试...", provider, timeoutSeconds);
+            try {
+                Thread.sleep(2000);
+                HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (retryResp.statusCode() == 200) {
+                    result.setSuccess(true);
+                    extractResponse(retryResp.body(), result);
+                    log.info("[IntelligenceInference] {} 重试成功", provider);
+                    return result;
+                }
+                result.setSuccess(false);
+                result.setErrorMessage("retry-http-" + retryResp.statusCode());
+            } catch (Exception retryEx) {
+                result.setSuccess(false);
+                result.setErrorMessage("重试仍失败: " + retryEx.getClass().getSimpleName());
+                log.warn("[IntelligenceInference] {} 重试也失败: {}", provider, retryEx.getMessage());
+            }
             return result;
         } catch (Exception e) {
             result.setSuccess(false);

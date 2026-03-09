@@ -2,6 +2,9 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
@@ -9,6 +12,9 @@ import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -147,6 +153,9 @@ public class IntelligenceController {
 
     @Autowired
     private SupplierScorecardOrchestrator supplierScorecardOrchestrator;
+
+    @Autowired
+    private ProfessionalReportOrchestrator professionalReportOrchestrator;
 
     @Autowired
     private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
@@ -498,5 +507,24 @@ public class IntelligenceController {
     @GetMapping("/brain/unified-snapshot")
     public Result<IntelligenceBrainSnapshotResponse> unifiedBrainSnapshot() {
         return Result.success(tenantIntelligenceBrainOrchestrator.unifiedSnapshot());
+    }
+
+    /** 下载专业运营报告（Excel 格式，支持 daily/weekly/monthly） */
+    @GetMapping("/professional-report/download")
+    public ResponseEntity<byte[]> downloadProfessionalReport(
+            @RequestParam(defaultValue = "daily") String type,
+            @RequestParam(required = false) String date) {
+        LocalDate baseDate = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
+        String typeLabel = "daily".equals(type) ? "日报" : "weekly".equals(type) ? "周报" : "月报";
+        String fileName = "运营" + typeLabel + "_" + baseDate + ".xlsx";
+        String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+
+        byte[] data = professionalReportOrchestrator.generateReport(type, baseDate);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(data.length)
+                .body(data);
     }
 }
