@@ -19,7 +19,7 @@ const BroadcastTab: React.FC = () => {
   const handleSend = async (values: Record<string, string>) => {
     setLoading(true);
     try {
-      const res: any = await request.post('/api/system/tenant/broadcast', values);
+      const res: any = await request.post('/system/tenant/broadcast', values);
       const sentCount: number = res?.data?.sentCount ?? res?.sentCount ?? 0;
       setLastResult({ sentCount, time: new Date().toLocaleString() });
       message.success(`已向 ${sentCount} 个租户发送通知`);
