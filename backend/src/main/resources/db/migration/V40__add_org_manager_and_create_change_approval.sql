@@ -1,17 +1,18 @@
 -- V40: 组织架构节点增加管理人字段 + 创建变更审批表
 
 -- 1. t_organization_unit 增加管理人字段 (幂等写法)
+-- 注意：COMMENT子句含单引号，不放在PREPARE字符串内，避免MySQL PREPARE二次解析时截断
 SET @s = IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_organization_unit' AND COLUMN_NAME = 'manager_user_id') = 0,
-    'ALTER TABLE `t_organization_unit` ADD COLUMN `manager_user_id` VARCHAR(64) NULL COMMENT ''该节点的审批负责人userId''',
+    'ALTER TABLE `t_organization_unit` ADD COLUMN `manager_user_id` VARCHAR(64) NULL',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @s = IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_organization_unit' AND COLUMN_NAME = 'manager_user_name') = 0,
-    'ALTER TABLE `t_organization_unit` ADD COLUMN `manager_user_name` VARCHAR(100) NULL COMMENT ''审批负责人姓名''',
+    'ALTER TABLE `t_organization_unit` ADD COLUMN `manager_user_name` VARCHAR(100) NULL',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
