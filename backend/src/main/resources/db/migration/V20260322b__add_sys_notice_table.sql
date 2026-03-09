@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `t_sys_notice` (
     `tenant_id`   BIGINT       NOT NULL                           COMMENT '租户ID',
     `to_name`     VARCHAR(64)  NOT NULL                           COMMENT '收件人（匹配 order.merchandiser，name 或 username 均可）',
     `from_name`   VARCHAR(64)  NOT NULL                           COMMENT '发送人姓名',
-    `order_no`    VARCHAR(64)  NOT NULL                           COMMENT '关联订单号',
+    `order_no`    VARCHAR(64)  DEFAULT NULL                       COMMENT '关联订单号（广播类通知可为空）',
     `title`       VARCHAR(128) NOT NULL                           COMMENT '通知标题',
     `content`     VARCHAR(512) NOT NULL                           COMMENT '通知正文',
     `notice_type` VARCHAR(32)  NOT NULL DEFAULT 'stagnant'        COMMENT '类型：stagnant/deadline/quality/manual',

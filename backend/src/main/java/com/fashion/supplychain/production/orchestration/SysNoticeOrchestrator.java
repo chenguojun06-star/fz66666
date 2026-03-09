@@ -198,7 +198,7 @@ public class SysNoticeOrchestrator {
             notice.setTenantId(t.getId());
             notice.setToName(toName);
             notice.setFromName("系统");
-            notice.setOrderNo(null);
+            notice.setOrderNo("");
             notice.setTitle(title);
             notice.setContent(content);
             notice.setNoticeType("system_broadcast");
