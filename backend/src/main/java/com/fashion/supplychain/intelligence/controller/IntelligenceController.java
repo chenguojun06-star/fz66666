@@ -26,6 +26,9 @@ public class IntelligenceController {
     private SmartPrecheckOrchestrator smartPrecheckOrchestrator;
 
     @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
+
+    @Autowired
     private ProgressPredictOrchestrator progressPredictOrchestrator;
 
     @Autowired
@@ -411,43 +414,18 @@ public class IntelligenceController {
         if (question == null || question.isBlank()) {
             return Result.fail("问题不能为空");
         }
-        // 先用本地规则引擎（快速响应）
-        NlQueryRequest req = new NlQueryRequest();
-        req.setQuestion(question);
-        NlQueryResponse nlResp = nlQueryOrchestrator.query(req);
-        // confidence >= 70：本地规则命中了具体意图，直接返回（快速、免费）
-        // confidence < 70（fallback=40）：没命中关键词，转给 DeepSeek 做深度分析
-        if (nlResp != null && nlResp.getAnswer() != null && nlResp.getConfidence() >= 70) {
-            return Result.success(java.util.Map.of("answer", nlResp.getAnswer(), "source", "local"));
-        }
-        // 规则引擎无法回答 → 调用 AI
-        if (!aiAdvisorService.isEnabled()) {
+        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question);
+        if (!Integer.valueOf(200).equals(agentResult.getCode())) {
             return Result.success(java.util.Map.of(
-                    "answer", "暂未配置 AI 服务，请联系管理员设置 DEEPSEEK_API_KEY",
-                    "source", "none"
+                    "answer", agentResult.getMessage(),
+                    "source", "error"
             ));
         }
-        // 每租户每日配额检查（默认50次/天，防止被滥用或产生意外费用）
-        Long tenantId = UserContext.tenantId();
-        if (!aiAdvisorService.checkAndConsumeQuota(tenantId)) {
-            int used = aiAdvisorService.getTodayUsage(tenantId);
-            return Result.success(java.util.Map.of(
-                    "answer", String.format(
-                            "今日 AI 深度分析次数已达上限（已用 %d 次）。\n" +
-                            "数据查询类问题（产量、逾期、工厂排名等）不受此限制，请直接提问。\n" +
-                            "如需提升配额请联系管理员。", used),
-                    "source", "none"
-            ));
-        }
-        // 构建全系统上下文，让 AI 知道活生订单/健康指数/面料缺口/逾期情况
-        String systemPrompt = aiContextBuilderService.buildSystemPrompt();
-        String aiAnswer = aiAdvisorService.chat(systemPrompt, question);
         return Result.success(java.util.Map.of(
-                "answer", aiAnswer != null ? aiAnswer : "AI 暂时无法回答，请稍后再试",
+                "answer", agentResult.getData(),
                 "source", "ai"
         ));
     }
-
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
     @GetMapping("/supplier-scorecard")
     public Result<SupplierScorecardResponse> supplierScorecard() {

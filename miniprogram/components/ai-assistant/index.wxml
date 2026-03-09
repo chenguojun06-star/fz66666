@@ -1,7 +1,6 @@
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
-  <!-- 顶部固定入口，位于铃铛左侧 -->
+  <!-- 顶部固定入口，位于铃铛左侧，使用CSS背景作为图标展示 -->
   <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
-    <text class="ai-icon">✨</text>
   </view>
 
   <!-- 遮罩层 -->
@@ -22,10 +21,10 @@
             <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
               <view class="recommend-title">猜你想问</view>
               <view class="recommend-pills">
-                <view 
-                  class="recommend-pill" 
-                  wx:for="{{item.recommendPills}}" 
-                  wx:for-item="pill" 
+                <view
+                  class="recommend-pill"
+                  wx:for="{{item.recommendPills}}"
+                  wx:for-item="pill"
                   wx:key="*this"
                   data-question="{{pill}}"
                   catchtap="autoAsk"

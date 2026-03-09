@@ -385,6 +385,9 @@ const intelligence = {
   getScanTips(params) {
     return ok('/api/intelligence/scan-tips', 'GET', params || {});
   },
+  aiAdvisorChat(payload) {
+    return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {});
+  },
 };
 
 const common = {

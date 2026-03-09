@@ -70,7 +70,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
    */
   const collectWord = async (word: string) => {
     if (!enabled || !word || word.trim() === '') return;
-    
+
     const trimmedWord = normalizeWord(word);
     if (trimmedWord.length > 50) return; // 拦截超长乱码或粘贴段落，防止数据库 varchar(100) 溢出报错
 

@@ -6,10 +6,10 @@
 }
 .ai-trigger-btn {
   position: fixed;
-  right: 110rpx; /* 在铃铛左侧，保持合适间距 */
+  right: 180rpx; /* 在铃铛左侧，往中间靠一点 */
   top: 24rpx;
-  width: 72rpx;
-  height: 72rpx;
+  width: 60rpx;
+  height: 60rpx;
   background: #ffffff;
   border: 1rpx solid #e8e8e8;
   border-radius: 50%;
@@ -19,12 +19,17 @@
   box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); /* 更柔和的投影，类似PC */
   pointer-events: auto;
   transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iY2xvdWRHcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZmZmZmZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNkY2YwZmYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsIDUpIj4KICAgIDxwYXRoIGQ9Ik0gMzAgNjUgQSAxNSAxNSAwIDAgMSAzMCAzNSBBIDE4IDE4IDAgMCAxIDYwIDI1IEEgMjIgMjIgMCAwIDEgODUgNTAgQSAxNSAxNSAwIDAgMSA4NSA3NSBMIDMwIDc1IEEgMTUgMTUgMCAwIDEgMzAgNjUgWiIgZmlsbD0idXJsKCNjbG91ZEdyYWQpIiAvPgogICAgPGNpcmNsZSBjeD0iNDYiIGN5PSI1MCIgcj0iNiIgZmlsbD0iIzRCNjY4NSIgLz4KICAgIDxjaXJjbGUgY3g9IjQ0IiBjeT0iNDgiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIC8+CiAgICA8Y2lyY2xlIGN4PSI0NyIgY3k9IjUyIiByPSIxIiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjgiIC8+CiAgICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjUwIiByPSI2IiBmaWxsPSIjNEI2Njg1IiAvPgogICAgPGNpcmNsZSBjeD0iNjgiIGN5PSI0OCIgcj0iMiIgZmlsbD0iI2ZmZmZmZiIgLz4KICAgIDxjaXJjbGUgY3g9IjcxIiBjeT0iNTIiIHI9IjEiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuOCIgLz4KICAgIDxnIG9wYWNpdHk9IjAuOSI+CiAgICAgIDxlbGxpcHNlIGN4PSIzOCIgY3k9IjU4IiByeD0iNiIgcnk9IjMuNSIgZmlsbD0iI0ZGQTVCQiIgLz4KICAgICAgPGVsbGlwc2UgY3g9Ijc4IiBjeT0iNTgiIHJ4PSI2IiByeT0iMy41IiBmaWxsPSIjRkZBNUJCIiAvPgogICAgPC9nPgogICAgPHBhdGggZD0iTSA1NCA1NSBRIDU4IDYwIDYyIDU1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGRjhDQTMiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+CiAgPC9nPgo8L3N2Zz4=");
+
+  background-size: 70%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 .ai-trigger-hover {
   transform: scale(0.95);
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
 }
-.ai-icon { font-size: 36rpx; line-height: 1; }
+/* .ai-icon 移除了，用 background-image 替代 */
 
 .chat-overlay {
   position: fixed;
@@ -36,7 +41,7 @@
 
 .chat-modal {
   position: fixed; bottom: 0; left: 0; right: 0; height: 75vh;
-  background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx;
+  background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx; overflow: hidden; overflow: hidden;
   display: flex; flex-direction: column; pointer-events: auto;
   box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.1);
   animation: slideUp 0.3s ease-out forwards;
@@ -52,7 +57,7 @@
 }
 .chat-title { font-weight: bold; font-size: 32rpx; color: #333; }
 .close-btn { font-size: 40rpx; color: #999; padding: 0 20rpx; }
-.chat-history { flex: 1; padding: 24rpx; background: #f8f9fa; }
+.chat-history { flex: 1; height: 0; box-sizing: border-box; padding: 24rpx; background: #f8f9fa; }
 .message-row { display: flex; margin-bottom: 24rpx; align-items: flex-start; }
 .my-message { flex-direction: row-reverse; }
 .ai-message { flex-direction: row; }
@@ -67,32 +72,3 @@
 .send-btn { margin-left: 16rpx; background: var(--primary-color, #2D7FF9); color: #fff; border-radius: 36rpx; font-size: 28rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; }
 .send-btn[disabled] { background: #ccc; color: #fff; }
 .loading-indicator { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx; }
-
-/* 推荐追问 UI */
-.recommend-wrapper {
-  margin-top: 16rpx;
-  border-top: 1rpx dashed #eee;
-  padding-top: 16rpx;
-}
-.recommend-title {
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 12rpx;
-}
-.recommend-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
-.recommend-pill {
-  padding: 8rpx 16rpx;
-  background: rgba(45, 127, 249, 0.08); /* var(--primary-color) opacified */
-  color: var(--primary-color, #2D7FF9);
-  font-size: 24rpx;
-  border-radius: 20rpx;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.recommend-pill:active {
-  background: rgba(45, 127, 249, 0.15);
-}

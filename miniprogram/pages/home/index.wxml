@@ -108,4 +108,7 @@
       </view>
     </view>
   </view>
+
+  <!-- 智能小云 悬浮入口 -->
+  <ai-assistant />
 </view>

@@ -129,8 +129,8 @@ const SmartAlertBell: React.FC = () => {
     setLoading(true);
     try {
       const [briefRes, eventsRes] = await Promise.allSettled([
-        api.get('/dashboard/daily-brief', { timeout: 5000, signal: ac.signal }) as Promise<ApiResult<BriefData>>,
-        api.get('/dashboard/urgent-events', { timeout: 3000, signal: ac.signal }) as Promise<ApiResult<UrgentEvent[]>>,
+        api.get('/dashboard/daily-brief', { signal: ac.signal }) as Promise<ApiResult<BriefData>>,
+        api.get('/dashboard/urgent-events', { signal: ac.signal }) as Promise<ApiResult<UrgentEvent[]>>,
       ]);
       if (ac.signal.aborted) return;
       if (briefRes.status === 'fulfilled' && briefRes.value.code === 200) {
@@ -211,13 +211,13 @@ const SmartAlertBell: React.FC = () => {
     setAiMessages(prev => [...prev, { role: 'user', content: q }]);
     setAiLoading(true);
     try {
-      const res = await intelligenceApi.nlQuery({ question: q }) as any;
-      const d: NlQueryResponse | null = res?.data ?? null;
-      if (d) {
+      const res = await intelligenceApi.aiAdvisorChat(q) as any;
+      const d = res?.data ?? res ?? null;
+      if (d && d.answer) {
         setAiMessages(prev => [...prev, {
           role: 'ai',
           content: d.answer,
-          suggestions: d.suggestions?.slice(0, 3),
+          suggestions: [],
         }]);
       } else {
         setAiMessages(prev => [...prev, { role: 'ai', content: '抱歉，暂时无法理解该问题。' }]);

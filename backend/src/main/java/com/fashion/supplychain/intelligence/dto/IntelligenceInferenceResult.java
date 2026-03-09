@@ -1,6 +1,8 @@
 package com.fashion.supplychain.intelligence.dto;
 
+import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import lombok.Data;
+import java.util.List;
 
 /**
  * 智能推理结果。
@@ -19,4 +21,5 @@ public class IntelligenceInferenceResult {
     private long latencyMs;
     private int promptChars;
     private int responseChars;
+    private List<AiToolCall> toolCalls;
 }
