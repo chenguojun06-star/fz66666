@@ -6,6 +6,7 @@ import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { withQuery } from '@/utils/api';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -14,12 +15,16 @@ interface StyleCardViewProps {
   pageSize: number;
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
+  onDelete: (id: string) => void;
+  onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
 }
 
 /**
  * 款式信息卡片视图
- * 使用 UniversalCardView 统一组件
+ * 操作与表格视图完全一致：
+ * - 已完成(样衣完成)：详情 + 下单 + 维护(主管+)
+ * - 开发中：详情 + 纸样开发 + 样衣生产 + 打印 + 删除
  */
 const StyleCardView: React.FC<StyleCardViewProps> = ({
   data,
@@ -28,9 +33,18 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   pageSize,
   currentPage,
   onPageChange,
+  onDelete,
+  onPrint,
   onMaintenance
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
+
+  const isStageDoneRow = (record: StyleInfo) => {
+    const node = String((record as any).progressNode || '').trim();
+    return node === '样衣完成';
+  };
 
   return (
     <UniversalCardView
@@ -85,19 +99,52 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         type: 'liquid', // 液体波浪进度条
       }}
       hoverRender={(record) => <SmartStyleHoverCard record={record as StyleInfo} />}
-      actions={(record) => [
-        {
-          key: 'order',
-          label: '下单',
-          onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo })),
-          primary: true,
-        },
-        {
-          key: 'maintenance',
-          label: '维护',
-          onClick: () => onMaintenance(record as StyleInfo),
-        },
-      ]}
+      onCardClick={(record) => navigate(`/style-info/${record.id}`)}
+      actions={(record) => {
+        const r = record as StyleInfo;
+        if (isStageDoneRow(r)) {
+          // 已完成：下单 + 维护(主管+)
+          const items = [
+            {
+              key: 'order',
+              label: '下单',
+              onClick: () => navigate(withQuery('/order-management', { styleNo: (r as any).styleNo })),
+            },
+          ];
+          if (isSupervisorOrAbove) {
+            items.push({
+              key: 'maintenance',
+              label: '维护',
+              onClick: () => onMaintenance(r),
+            });
+          }
+          return items;
+        }
+        // 开发中：纸样开发 + 样衣生产 + 打印 + 删除
+        return [
+          {
+            key: 'pattern',
+            label: '纸样开发',
+            onClick: () => navigate(`/style-info/${r.id}?tab=7&section=files`),
+          },
+          {
+            key: 'sample',
+            label: '样衣生产',
+            onClick: () => navigate(`/style-info/${r.id}?tab=8`),
+          },
+          {
+            key: 'print',
+            label: '打印',
+            onClick: () => onPrint(r),
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: () => onDelete(String(r.id!)),
+          },
+        ];
+      }}
       pagination={{
         total,
         pageSize,

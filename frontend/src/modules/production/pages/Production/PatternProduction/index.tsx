@@ -130,7 +130,10 @@ const PatternProduction: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [statusValue, setStatusValue] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
+    const saved = localStorage.getItem('viewMode_patternProduction');
+    return saved === 'card' ? 'card' : 'list';
+  });
   const [operationLogVisible, setOperationLogVisible] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
@@ -735,14 +738,11 @@ const PatternProduction: React.FC = () => {
             key: 'attachment',
             label: '附件',
             onClick: () => attachmentModal.open(record),
-            disabled: isCompleted,
           },
           {
             key: 'maintenance',
             label: '维护',
             onClick: () => handleMaintenance(record),
-            danger: !isCompleted,
-            disabled: isCompleted,
           },
         ].filter(Boolean) as MenuProps['items'];
 
@@ -820,7 +820,7 @@ const PatternProduction: React.FC = () => {
                 <>
                   <Button
                     icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                    onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+                    onClick={() => { const next = viewMode === 'list' ? 'card' : 'list'; setViewMode(next); localStorage.setItem('viewMode_patternProduction', next); }}
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
                   </Button>
@@ -875,50 +875,27 @@ const PatternProduction: React.FC = () => {
                 type: 'liquid', // 液体波浪进度条
               }}
               actions={(record) => {
-                const isCompleted = record.status === 'COMPLETED';
-
-                return [
+                const items = [
                   {
                     key: 'view',
                     label: '查看',
                     onClick: () => handleOpenDetail(record),
                   },
-                  record.status === 'PENDING' && {
-                    key: 'receive',
-                    label: '领取',
-                    onClick: () => handleReceive(record),
-                  },
-                  record.status === 'IN_PROGRESS' && !isCompleted && {
-                    key: 'progress',
-                    label: '进度',
-                    onClick: () => handleOpenProgress(record),
-                  },
-                  record.status === 'PRODUCTION_COMPLETED' && {
-                    key: 'review',
-                    label: '样衣审核',
-                    onClick: () => handleOpenReview(record),
-                  },
-                  {
-                    key: 'divider1',
-                    type: 'divider' as const,
-                    label: '',
-                  },
-                  {
-                    key: 'attachment',
-                    label: '附件',
-                    onClick: () => attachmentModal.open(record),
-                    disabled: isCompleted,
-                    style: isCompleted ? { color: 'var(--neutral-border)' } : undefined,
-                  },
-                  {
-                    key: 'maintenance',
-                    label: '维护',
-                    onClick: () => handleMaintenance(record),
-                    danger: !isCompleted,
-                    disabled: isCompleted,
-                    style: isCompleted ? { color: 'var(--neutral-border)' } : undefined,
-                  },
-                ] as const;
+                ];
+                if (record.status === 'PENDING') {
+                  items.push({ key: 'receive', label: '领取', onClick: () => handleReceive(record) });
+                }
+                if (record.status === 'IN_PROGRESS') {
+                  items.push({ key: 'progress', label: '进度', onClick: () => handleOpenProgress(record) });
+                }
+                if (record.status === 'PRODUCTION_COMPLETED') {
+                  items.push({ key: 'review', label: '样衣审核', onClick: () => handleOpenReview(record) });
+                }
+                items.push(
+                  { key: 'attachment', label: '附件', onClick: () => attachmentModal.open(record) },
+                  { key: 'maintenance', label: '维护', onClick: () => handleMaintenance(record) },
+                );
+                return items;
               }}
             />
           )}

@@ -49,8 +49,11 @@ const StyleInfoListPage: React.FC = () => {
 
   const { handleDelete, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
-  // 视图模式
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  // 视图模式（持久化）
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
+    const saved = localStorage.getItem('viewMode_styleInfoList');
+    return saved === 'card' ? 'card' : 'list';
+  });
 
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -243,7 +246,7 @@ const StyleInfoListPage: React.FC = () => {
               </Button>
               <Button
                 icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+                onClick={() => { const next = viewMode === 'list' ? 'card' : 'list'; setViewMode(next); localStorage.setItem('viewMode_styleInfoList', next); }}
               >
                 {viewMode === 'list' ? '卡片视图' : '列表视图'}
               </Button>
@@ -279,6 +282,8 @@ const StyleInfoListPage: React.FC = () => {
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
+            onDelete={handleDelete}
+            onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
           />
         )}

@@ -100,8 +100,11 @@ const OrderManagement: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [form] = Form.useForm();
 
-  // 视图切换状态
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  // 视图切换状态（持久化）
+  const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
+    const saved = localStorage.getItem('viewMode_orderManagement');
+    return saved === 'card' ? 'card' : 'table';
+  });
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -1496,7 +1499,7 @@ const OrderManagement: React.FC = () => {
               <Space size={12}>
                 <Button
                   icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                  onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+                  onClick={() => { const next = viewMode === 'table' ? 'card' : 'table'; setViewMode(next); localStorage.setItem('viewMode_orderManagement', next); }}
                 >
                   {viewMode === 'table' ? '卡片视图' : '列表视图'}
                 </Button>
