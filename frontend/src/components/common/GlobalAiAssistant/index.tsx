@@ -85,6 +85,7 @@ interface Message {
   text: string;
   intent?: string;
   hasSpeech?: boolean;
+  reportType?: 'daily' | 'weekly' | 'monthly';
 }
 
 const INITIAL_MSG: Message = {
@@ -350,11 +351,18 @@ const GlobalAiAssistant: React.FC = () => {
       // @ts-ignore
       const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
 
+      // 检查如果涉及到生成报表，加上带下载按钮的标识
+      let reportTypeToDownload: 'daily' | 'weekly' | 'monthly' | undefined = undefined;
+      if (text.includes('日报')) reportTypeToDownload = 'daily';
+      if (text.includes('周报')) reportTypeToDownload = 'weekly';
+      if (text.includes('月报')) reportTypeToDownload = 'monthly';
+
       const aiMsg: Message = {
         id: `a-${Date.now()}`,
         role: 'ai',
         text: resultData?.answer || '抱歉呀😜，小云还在思考中…',
-        intent: resultData?.source || 'ai'
+        intent: resultData?.source || 'ai',
+        reportType: reportTypeToDownload,
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -520,24 +528,6 @@ const GlobalAiAssistant: React.FC = () => {
               </div>
             )}
 
-            {/* 专业报告下载区 — 始终显示，方便随时下载 */}
-            <div className={styles.reportDownloadBar}>
-                <div className={styles.reportDownloadLabel}>📋 专业报告下载</div>
-                <div className={styles.reportDownloadBtns}>
-                  {([['daily', '日报'], ['weekly', '周报'], ['monthly', '月报']] as const).map(([type, label]) => (
-                    <button
-                      key={type}
-                      className={styles.reportDownloadBtn}
-                      disabled={!!downloadingType}
-                      onClick={() => handleDownloadReport(type)}
-                    >
-                      {downloadingType === type ? <LoadingOutlined /> : <DownloadOutlined />}
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
             {messages.map(msg => (
               <div
                 key={msg.id}
@@ -592,6 +582,21 @@ const GlobalAiAssistant: React.FC = () => {
                       onClick={() => jumpToIntelligenceCenter(msg.text)}
                     >
                       <ExportOutlined /> 在智能驾驶舱展开查看完整图表
+                    </div>
+                  )}
+
+                  {/* 针对生成的报表，展示下载按钮 */}
+                  {msg.role === 'ai' && msg.reportType && (
+                    <div style={{ marginTop: 12 }}>
+                      <button
+                        className={styles.reportDownloadBtn}
+                        disabled={!!downloadingType}
+                        onClick={() => handleDownloadReport(msg.reportType!)}
+                        style={{ width: '100%', marginBottom: 0 }}
+                      >
+                        {downloadingType === msg.reportType ? <LoadingOutlined /> : <DownloadOutlined />}
+                        <span>下载{msg.reportType === 'daily' ? '运营日报' : msg.reportType === 'weekly' ? '运营周报' : '运营月报'}</span>
+                      </button>
                     </div>
                   )}
                 </div>

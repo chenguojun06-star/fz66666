@@ -405,6 +405,12 @@ const SmartAlertBell: React.FC = () => {
                     padding: '5px 6px', marginBottom: 2,
                     background: n.isRead ? '#fafafa' : '#fff7e6',
                     borderRadius: 5, borderLeft: `3px solid ${n.isRead ? '#ddd' : '#ffa940'}`,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    if (!n.isRead) {
+                      sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                    }
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
@@ -416,7 +422,8 @@ const SmartAlertBell: React.FC = () => {
                     </div>
                     {!n.isRead && (
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
                         }}
                         style={{

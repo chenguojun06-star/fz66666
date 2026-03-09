@@ -430,7 +430,7 @@ public class ProfessionalReportOrchestrator {
         // 汇总
         rowIdx++;
         QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
-        q.ge("scan_time", range.start).le("scan_time", range.end).isNotNull("scan_cost");
+        q.ge("scan_time", range.start).le("scan_time", range.end);
         List<ScanRecord> scans = scanRecordService.list(q);
 
         BigDecimal totalCost = scans.stream()
@@ -555,13 +555,15 @@ public class ProfessionalReportOrchestrator {
     private List<FactoryRank> buildFactoryRankings(Long tenantId, LocalDateTime start, LocalDateTime end,
                                                    String scopeUserId, String scopeUsername) {
         QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
-        q.ge("scan_time", start).le("scan_time", end).isNotNull("factory_id");
+        q.ge("scan_time", start).le("scan_time", end);
         List<ScanRecord> scans = scanRecordService.list(q);
 
         Map<String, long[]> factoryMap = new LinkedHashMap<>();
         for (ScanRecord scan : scans) {
             String fid = scan.getFactoryId();
-            if (fid == null || fid.isBlank()) continue;
+            if (fid == null || fid.isBlank()) {
+                fid = "UNKNOWN_FACTORY";
+            }
             factoryMap.computeIfAbsent(fid, k -> new long[2]);
             factoryMap.get(fid)[0]++;
             factoryMap.get(fid)[1] += scan.getQuantity() != null ? scan.getQuantity() : 0;
