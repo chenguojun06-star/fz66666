@@ -414,11 +414,16 @@ const IntelligenceCenter: React.FC = () => {
             value: `停滞 ${Math.floor(f.minutesSilent / 60)}h ${Math.round(f.minutesSilent % 60)}m`,
             color: '#ff4136',
           }))
-        : [{ label: '状态', value: '所有工厂正常运转', color: '#39ff14' }]}
-      warning={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '建议 15 分钟内联系工厂确认原因' : undefined}
+        : [{ label: '状态', value: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
+            ? '无工厂活跃，生产可能停滞' : '所有工厂正常运转',
+            color: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? '#f7a600' : '#39ff14' }]}
+      warning={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '建议 15 分钟内联系工厂确认原因'
+        : currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? `有 ${currentKpiMetrics.productionOrderCount} 单在制但无工厂生产动态，建议检查工厂状态` : undefined}
       aiTip={(pulse?.stagnantFactories?.length ?? 0) > 0
         ? `${pulse!.stagnantFactories.length} 家工厂停工，订单交付风险上升，建议立即介入`
-        : '停工率 0%，生产节拍正常，供应链健康'}
+        : currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
+          ? `当前 ${currentKpiMetrics.productionOrderCount} 单在制但无活跃工厂，生产节拍异常，建议检查`
+          : '停工率 0%，生产节拍正常，供应链健康'}
     />
   );
 
@@ -561,13 +566,24 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 活跃工厂 */}
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
-          <div className="c-card c-kpi c-kpi-hoverable">
-            <div className="c-kpi-label"><LiveDot size={7} />活跃工厂</div>
-            <div className="c-kpi-val green neon-green"><AnimatedNum val={pulse?.activeFactories ?? '—'} /></div>
+          <div className={`c-card c-kpi c-kpi-hoverable ${currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? 'c-kpi-danger' : ''}`}>
+            <div className="c-kpi-label">
+              <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? '#ff4136' : undefined} />
+              活跃工厂
+            </div>
+            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#ff4136' } : { color: '#39ff14' }}>
+              <AnimatedNum val={pulse?.activeFactories ?? '—'} />
+            </div>
             <div className="c-kpi-unit">家</div>
-            <div className="c-kpi-sub">员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</div>
+            <div className="c-kpi-sub">
+              {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
+                ? <span style={{ color: '#ff4136' }}>⚠️ 全部离线·{currentKpiMetrics.productionOrderCount}单在制</span>
+                : <>员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
+            </div>
             <div className="c-kpi-delta-row">
-              {renderDeltaBadge(kpiDelta.activeFactories, { flatText: '工厂稳定', suffix: '家' })}
+              {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
+                ? <span className="c-kpi-delta down">生产停滞</span>
+                : renderDeltaBadge(kpiDelta.activeFactories, { flatText: '工厂稳定', suffix: '家' })}
               <span className="c-kpi-delta-note">员工 {formatDeltaText(kpiDelta.activeWorkers, '人')}</span>
             </div>
             <div className="c-kpi-history-wrap">
@@ -613,10 +629,14 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-sub">
               {(pulse?.stagnantFactories?.length ?? 0) > 0
                 ? <span className="blink-text">⚠️ 需立即处理</span>
-                : '生产运转正常'}
+                : currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
+                  ? <span style={{ color: '#f7a600' }}>⚠️ 无工厂活跃·生产停滞</span>
+                  : '生产运转正常'}
             </div>
             <div className="c-kpi-delta-row">
-              {renderDeltaBadge(kpiDelta.stagnantFactories, { flatText: '无新增停滞', suffix: '家' })}
+              {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
+                ? <span className="c-kpi-delta down">生产异常</span>
+                : renderDeltaBadge(kpiDelta.stagnantFactories, { flatText: '无新增停滞', suffix: '家' })}
               <span className="c-kpi-delta-note">异常越少越好</span>
             </div>
             <div className="c-kpi-history-wrap">
@@ -1286,7 +1306,7 @@ const IntelligenceCenter: React.FC = () => {
           <div style={{ paddingRight: 6 }}>
             <ProfitDeliveryPanel />
           </div>
-          
+
         </div>
 
 

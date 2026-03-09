@@ -105,7 +105,12 @@ public class LivePulseOrchestrator {
             }
         }
 
+        // 收集所有有在制订单的工厂（排除 COMPLETED/CANCELLED/DRAFT）
+        Set<String> activeOrderFactories = getActiveOrderFactories(UserContext.tenantId());
+
         List<StagnantFactory> result = new ArrayList<>();
+
+        // 场景1：今天有扫码但超过阈值时间没新扫码的工厂
         for (Map.Entry<String, List<ScanRecord>> entry : byFactory.entrySet()) {
             Optional<LocalDateTime> lastTime = entry.getValue().stream()
                     .map(ScanRecord::getScanTime).filter(Objects::nonNull).max(Comparator.naturalOrder());
@@ -121,8 +126,40 @@ public class LivePulseOrchestrator {
                 result.add(sf);
             }
         }
+
+        // 场景2：有在制订单但今天完全没扫码的工厂（最严重的停工）
+        for (String factory : activeOrderFactories) {
+            if (!byFactory.containsKey(factory)) {
+                long minutesSinceStartOfDay = Duration.between(
+                        now.toLocalDate().atStartOfDay(), now).toMinutes();
+                StagnantFactory sf = new StagnantFactory();
+                sf.setFactoryName(factory);
+                sf.setMinutesSilent(minutesSinceStartOfDay);
+                sf.setLastScanQty(0L);
+                sf.setLastScanTime(null);
+                result.add(sf);
+            }
+        }
+
         result.sort(Comparator.comparingLong(StagnantFactory::getMinutesSilent).reversed());
         return result;
+    }
+
+    /**
+     * 查找所有有在制订单的工厂名称（排除已完成/已取消/草稿状态）
+     */
+    private Set<String> getActiveOrderFactories(Long tenantId) {
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+        qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq("delete_flag", 0)
+          .isNotNull("factory_name")
+          .ne("factory_name", "")
+          .notIn("status", "COMPLETED", "CANCELLED", "DRAFT")
+          .select("factory_name");
+        return productionOrderService.list(qw).stream()
+                .map(ProductionOrder::getFactoryName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     private List<LivePulseResponse.FactoryActivity> buildFactoryActivity(
