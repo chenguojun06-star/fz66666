@@ -24,6 +24,14 @@ export interface FactoryCapacityItem {
 }
 
 export const productionOrderApi = {
+    exportExcel: (params: Record<string, unknown>) => {
+    // 将过滤中的数组参数进行逗号拼接
+    const query = { ...params };
+    if (Array.isArray(query.status)) query.status = query.status.join(',');
+    // 构建 query string
+    const queryString = new URLSearchParams(query as Record<string, string>).toString();
+    window.open(`/api/production/order/export-excel?${queryString}`, '_blank');
+  },
   list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
   close: (id: string, sourceModule: string, remark?: string) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule, remark }),
@@ -45,6 +53,14 @@ export const productionOrderApi = {
 };
 
 export const productionCuttingApi = {
+    exportExcel: (params: Record<string, unknown>) => {
+    // 将过滤中的数组参数进行逗号拼接
+    const query = { ...params };
+    if (Array.isArray(query.status)) query.status = query.status.join(',');
+    // 构建 query string
+    const queryString = new URLSearchParams(query as Record<string, string>).toString();
+    window.open(`/api/production/order/export-excel?${queryString}`, '_blank');
+  },
   list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/cutting/list', { params }),
   getByCode: (qrCode: string) => api.get<{ code: number; data: unknown }>(`/production/cutting/by-code/${encodeURIComponent(String(qrCode || '').trim())}`),
   listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),

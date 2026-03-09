@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { productionOrderApi } from '@/services/production/productionApi';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
@@ -918,6 +919,12 @@ const ProductionList: React.FC = () => {
                     onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
+                  </Button>
+                                    <Button onClick={() => productionOrderApi.exportExcel(queryParams as any)}>
+                    导出明细
+                  </Button>
+                                    <Button onClick={() => productionOrderApi.exportExcel(queryParams as any)}>
+                    导出明细
                   </Button>
                   <Button onClick={() => exportSelected(selectedRows)} disabled={!selectedRowKeys.length}>
                     导出

@@ -7,7 +7,13 @@ import com.fashion.supplychain.production.dto.ProductionOrderDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderDtoConverter;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
+import com.fashion.supplychain.production.orchestration.ProductionOrderExportOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +54,24 @@ public class ProductionOrderController {
 
     @Autowired
     private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
+
+    @Autowired
+    private ProductionOrderExportOrchestrator exportOrchestrator;
+
+    /**
+     * 导出生产订单列表为Excel
+     */
+    @GetMapping("/export-excel")
+    public ResponseEntity<byte[]> exportExcel(@RequestParam Map<String, Object> params) {
+        byte[] data = exportOrchestrator.exportProductionOrders(params);
+        String fileName = "生产订单导出_" + System.currentTimeMillis() + ".xlsx";
+        String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(data.length)
+                .body(data);
+    }
 
     /**
      * 【新版统一查询】分页查询生产订单列表
