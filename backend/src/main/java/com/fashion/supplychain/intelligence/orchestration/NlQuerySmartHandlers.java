@@ -188,6 +188,7 @@ public class NlQuerySmartHandlers {
     // ── 员工效率（增强版） ──
     public NlQueryResponse handleWorkerEfficiencyQuery() {
         NlQueryResponse resp = build("worker");
+        resp.setComponentName("WorkerProfilePanel");
         try {
             WorkerEfficiencyResponse w = workerEfficiencyOrchestrator.evaluate();
             StringBuilder sb = new StringBuilder(String.format("🏆 员工效率评估（共 %d 人）：\n", w.getTotalEvaluated()));
@@ -266,6 +267,7 @@ public class NlQuerySmartHandlers {
     // ── 成本利润（增强版） ──
     public NlQueryResponse handleCostQuery() {
         NlQueryResponse resp = build("cost");
+        resp.setComponentName("LiveCostTrackerPanel");
         try {
             ProfitEstimationResponse p = profitEstimationOrchestrator.estimate(null);
             StringBuilder sb = new StringBuilder("💰 成本利润分析：\n");
@@ -294,6 +296,7 @@ public class NlQuerySmartHandlers {
     // ── 缺陷热力图 ──
     public NlQueryResponse handleDefectQuery() {
         NlQueryResponse resp = build("defect");
+        resp.setComponentName("DefectTracePanel");
         try {
             DefectHeatmapResponse d = defectHeatmapOrchestrator.analyze();
             StringBuilder sb = new StringBuilder(String.format("🔥 缺陷热力分析（累计 %d 件不良）：\n", d.getTotalDefects()));
@@ -321,6 +324,7 @@ public class NlQuerySmartHandlers {
     // ── 生产节拍 ──
     public NlQueryResponse handleRhythmQuery() {
         NlQueryResponse resp = build("rhythm");
+        resp.setComponentName("RhythmDnaPanel");
         try {
             RhythmDnaResponse r = rhythmDnaOrchestrator.analyze();
             List<RhythmDnaResponse.OrderRhythm> orders = r.getOrders();
@@ -432,6 +436,7 @@ public class NlQuerySmartHandlers {
     // ── 学习报告 ──
     public NlQueryResponse handleLearningReportQuery() {
         NlQueryResponse resp = build("learning_report");
+        resp.setComponentName("LearningReportPanel");
         try {
             LearningReportResponse l = learningReportOrchestrator.getReport();
             StringBuilder sb = new StringBuilder("📚 AI 学习报告：\n");

@@ -120,6 +120,8 @@ public class MaterialInboundOrchestrator {
         // 根据到货情况更新状态
         if (totalArrived.equals(purchase.getPurchaseQuantity())) {
             purchase.setStatus("completed"); // 全部到货
+        if (purchase.getTotalAmount() != null) { try { externalAccountingOrchestrator.syncPayableToYonyou(purchase.getPurchaseNo(), purchase.getTotalAmount(), purchase.getSupplierName()); } catch(Exception e) {} }
+        try { supplierScorecardOrchestrator.calculateSupplierScore(purchase.getSupplierName()); } catch(Exception e) {}
         } else {
             purchase.setStatus("partial_arrival"); // 部分到货
         }
