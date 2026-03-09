@@ -11,7 +11,7 @@ Component({
     isOpen: false,
     inputValue: '',
     messages: [
-      { id: Date.now(), role: 'ai', content: '您好！我是智能小云，有什么可以帮您的？' }
+      { id: Date.now(), role: 'ai', content: 'Hi 👋 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！' }
     ],
     isLoading: false,
     scrollTo: ''
@@ -85,6 +85,12 @@ Component({
         });
         this.scrollToBottom();
       }
+    },
+    clearMessages() {
+      this.setData({
+        messages: [{ id: Date.now(), role: 'ai', content: 'Hi 👋 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！' }],
+        inputValue: ''
+      });
     },
     scrollToBottom() {
       setTimeout(() => {

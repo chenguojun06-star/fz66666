@@ -9,8 +9,23 @@
   <!-- 聊天弹窗 -->
   <view class="chat-modal" wx:if="{{isOpen}}">
     <view class="chat-header">
-      <text class="chat-title">智能小云</text>
-      <view class="close-btn" catchtap="toggleChat">×</view>
+      <view class="chat-header-left">
+        <view class="chat-avatar">☁️</view>
+        <view class="chat-header-text">
+          <text class="chat-title">小云 智能助理</text>
+          <text class="chat-subtitle">云裳智链 · 实时数据支持</text>
+        </view>
+      </view>
+      <view class="chat-header-actions">
+        <view class="header-action-btn" catchtap="clearMessages" title="清空对话">🗑</view>
+        <view class="header-action-btn close-btn" catchtap="toggleChat">×</view>
+      </view>
+    </view>
+    <!-- 快捷问题卡片 -->
+    <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
+      <view class="quick-chip" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
+      <view class="quick-chip" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
+      <view class="quick-chip" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
     </view>
     <scroll-view class="chat-history" scroll-y scroll-into-view="{{scrollTo}}">
       <block wx:for="{{messages}}" wx:key="id">
