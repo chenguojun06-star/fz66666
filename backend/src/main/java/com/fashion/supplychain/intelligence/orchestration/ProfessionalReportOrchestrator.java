@@ -53,6 +53,13 @@ public class ProfessionalReportOrchestrator {
         String scopeLabel = isManager ? "全局数据（所有订单）" :
                 "个人数据（跟单员：" + (currentUsername != null ? currentUsername : currentUserId) + "）";
 
+        // 计算时间范围
+        TimeRange range = calcTimeRange(reportType, baseDate);
+
+        // 权限上下文：非管理层则限定到当前用户
+        String scopeUserId = isManager ? null : currentUserId;
+        String scopeUsername = isManager ? null : currentUsername;
+
         // --- AI 智能兜底：针对测试环境，如果选择"今日"但没有扫码/订单数据，自动回溯到最近有数据的一天 ---
         if (baseDate.equals(LocalDate.now())) {
             TimeRange probe = calcTimeRange(reportType, baseDate);
@@ -60,11 +67,11 @@ public class ProfessionalReportOrchestrator {
             // 检查当前区间是否有扫码记录或订单
             long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser);
             long todayOrders = countNewOrders(tenantId, probe.start(), probe.end(), probeUser, scopeUsername);
-            
+
             if (todayScans == 0 && todayOrders == 0) {
                 // 查找最近一次有扫码或建单的日期
                 LocalDate fallbackDate = null;
-                
+
                 QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> sq = new QueryWrapper<>();
                 if (tenantId != null) sq.eq("tenant_id", tenantId);
                 if (probeUser != null) sq.eq("operator_id", probeUser);
@@ -92,11 +99,8 @@ public class ProfessionalReportOrchestrator {
         }
 
         // 计算时间范围
-        TimeRange range = calcTimeRange(reportType, baseDate);
+        range = calcTimeRange(reportType, baseDate);
 
-        // 权限上下文：非管理层则限定到当前用户
-        String scopeUserId = isManager ? null : currentUserId;
-        String scopeUsername = isManager ? null : currentUsername;
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             StyleKit kit = new StyleKit(wb);

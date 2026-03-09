@@ -265,7 +265,6 @@ public class ProductionOrderFinanceOrchestrationService {
         if (!ok) {
             throw new IllegalStateException("完成失败");
         }
-        try { com.fashion.supplychain.production.entity.ProductionOrder orderToSync = productionOrderService.getById(oid); if (orderToSync != null && orderToSync.getCustomerId() != null) { receivableOrchestrator.generateFromOrder(String.valueOf(orderToSync.getCustomerId()), String.valueOf(orderToSync.getId()), orderToSync.getOrderNo(), orderToSync.getTotalAmount(), java.time.LocalDate.now().plusDays(30), "生产订单完结"); externalAccountingOrchestrator.syncReceivableToKingdee(orderToSync.getOrderNo(), orderToSync.getTotalAmount(), String.valueOf(orderToSync.getCustomerId())); } } catch (Exception e) {}
 
         // 【关键】关单时自动创建订单结算（本厂+加工厂统一处理）
         try {
@@ -346,7 +345,6 @@ public class ProductionOrderFinanceOrchestrationService {
         if (!ok) {
             throw new IllegalStateException("完成失败");
         }
-        try { com.fashion.supplychain.production.entity.ProductionOrder orderToSync = productionOrderService.getById(oid); if (orderToSync != null && orderToSync.getCustomerId() != null) { receivableOrchestrator.generateFromOrder(String.valueOf(orderToSync.getCustomerId()), String.valueOf(orderToSync.getId()), orderToSync.getOrderNo(), orderToSync.getTotalAmount(), java.time.LocalDate.now().plusDays(30), "生产订单完结"); externalAccountingOrchestrator.syncReceivableToKingdee(orderToSync.getOrderNo(), orderToSync.getTotalAmount(), String.valueOf(orderToSync.getCustomerId())); } } catch (Exception e) {}
 
         // 自动关单时创建对账单（与手动关单保持一致）
         try {
