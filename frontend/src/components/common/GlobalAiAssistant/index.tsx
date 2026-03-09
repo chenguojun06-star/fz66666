@@ -355,23 +355,24 @@ const GlobalAiAssistant: React.FC = () => {
               <div className={styles.headerTitle}>小云 智能助理</div>
               <div className={styles.headerSubtitle}>云裳智链 · 实时数据支持</div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className={styles.headerActions}>
               {isMuted ? (
                 <AudioMutedOutlined
-                  className={styles.closeButton}
+                  className={styles.headerActionBtn}
                   onClick={() => setIsMuted(false)}
                   title="取消静音"
                 />
               ) : (
                 <SoundOutlined
-                  className={styles.closeButton}
+                  className={styles.headerActionBtn}
                   onClick={() => setIsMuted(true)}
                   title="静音"
                 />
               )}
               <CloseOutlined
-                className={styles.closeButton}
+                className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`}
                 onClick={() => setIsOpen(false)}
+                title="关闭"
               />
             </div>
           </div>

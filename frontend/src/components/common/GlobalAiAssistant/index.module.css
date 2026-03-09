@@ -80,19 +80,45 @@
   color: #1890ff;
 }
 
-.closeButton {
-  position: absolute;
-  top: 12px;
-  right: 16px;
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.headerActionBtn {
   font-size: 16px;
   color: #69c0ff;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.headerActionBtn:hover {
+  color: #0050b3;
+  background: rgba(0, 80, 179, 0.08);
+}
+
+/* 关闭按钮悬停时旋转 */
+.headerActionBtn.closeBtnIcon:hover {
+  transform: rotate(90deg);
+}
+
+/* 保留兼容旧引用，但不再 absolute */
+.closeButton {
+  font-size: 16px;
+  color: #69c0ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px;
+  border-radius: 4px;
 }
 
 .closeButton:hover {
   color: #0050b3;
-  transform: rotate(90deg);
+  background: rgba(0, 80, 179, 0.08);
 }
 
 /* 聊天历史区 */
