@@ -118,6 +118,14 @@ Page({
         if (nameMatch) {
           result.tenantName = decodeURIComponent(nameMatch[1]);
         }
+        const factoryIdMatch = text.match(/[?&]factoryId=([^&]+)/);
+        if (factoryIdMatch) {
+          result.factoryId = decodeURIComponent(factoryIdMatch[1]);
+        }
+        const factoryNameMatch = text.match(/[?&]factoryName=([^&]+)/);
+        if (factoryNameMatch) {
+          result.factoryName = decodeURIComponent(factoryNameMatch[1]);
+        }
       }
     } catch (_e) {
       // 解析失败，返回空

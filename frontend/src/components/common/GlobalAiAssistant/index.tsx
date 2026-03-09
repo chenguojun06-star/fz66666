@@ -399,31 +399,20 @@ const GlobalAiAssistant: React.FC = () => {
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
 
-      // 寻找偏低沉、柔软的中文声音（裸熊熊猫呆萌风）
+      // 寻找好听的中文女声
       const voices = window.speechSynthesis.getVoices();
 
-      // 优先选音色偏低沉、温柔的声音（熊猫懒懒软软感）
       const preferredVoices = [
-        'Ting-Ting',                                       // macOS 婷婷 — 低沉柔和，最接近熊猫声
-        'Lili',                                            // macOS 丽丽 — 厚实稳重
-        'Shanshan',                                        // macOS 珊珊
-        'Microsoft Xiaoxiao Online (Natural)',             // 微软晓晓 — 自然温和（Edge）
-        'Xiaoxiao Online (Natural) - Chinese (Mainland)',
-        'Google 普通话（中国大陆）',
-        'Xiaoyi',
-        'Microsoft Xiaoxiao',
+        'Xiaoxiao', 'Tingting', 'Yaoyao', 'Mei-Jia', 'Lili', 'Shanshan', 'Female', 'female'
       ];
 
       let selectedVoice = undefined;
       for (const vName of preferredVoices) {
-        selectedVoice = voices.find(v => v.name.includes(vName) && v.lang.includes('zh'));
+        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes(vName.toLowerCase()));
         if (selectedVoice) break;
       }
 
-      // 兜底找一个中文女声
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.includes('Female'));
-      }
+      // 兜底找一个中文声音
       if (!selectedVoice) {
         selectedVoice = voices.find(v => v.lang.includes('zh'));
       }
@@ -432,13 +421,10 @@ const GlobalAiAssistant: React.FC = () => {
         utterance.voice = selectedVoice;
       }
 
-      // 裸熊熊猫呆萌风格调校（低沉软糯 + 慢悠悠 = 憨态可掬）：
-      // 1. 语速放慢，憨厚不慌不忙感
-      utterance.rate = 0.88;
-      // 2. 音调压低到 0.78，熊猫那种低沉又软软的呆萌感（默认1.0，越低越憨）
-      utterance.pitch = 0.78;
-      // 3. 音量适中饱满
-      utterance.volume = 0.88;
+      // 调整为呆萌可爱的声音（调高音调更精神/可爱）
+      utterance.rate = 1.05;    // 语速微微加快
+      utterance.pitch = 1.25;   // 音调稍高更可爱
+      utterance.volume = 0.9;
 
       window.speechSynthesis.speak(utterance);
     }

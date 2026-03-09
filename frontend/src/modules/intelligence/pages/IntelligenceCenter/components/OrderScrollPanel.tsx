@@ -41,8 +41,12 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         intelligenceApi.getDefectTrace(String(order.id)),
       ]);
       if (cancelled) return;
-      const bottleneck: BottleneckDetectionResponse | null =
+      const bottleneckRaw: any =
         rB.status === 'fulfilled' ? ((rB.value as any)?.data ?? null) : null;
+      const bottleneck: BottleneckDetectionResponse | null = bottleneckRaw ? {
+        ...bottleneckRaw,
+        items: bottleneckRaw.items || bottleneckRaw.bottlenecks || []
+      } : null;
       const riskData: DeliveryRiskResponse | null =
         rD.status === 'fulfilled' ? ((rD.value as any)?.data ?? null) : null;
       const riskItem = riskData?.items?.find((i: DeliveryRiskItem) => i.orderNo === order.orderNo) ?? null;
@@ -384,13 +388,13 @@ export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item 
         <span className="c-order-factory">{item.factoryName}</span>
         <div className="c-order-center">
           <span className="c-order-no" style={{ color: c }}>
-            卡在 {item.stuckStage}&nbsp;·&nbsp;{item.stuckOrderCount ?? item.worstOrders.length} 单
+            卡在 {item.stuckStage}&nbsp;·&nbsp;{item.stuckOrderCount ?? (item.worstOrders || []).length} 单
           </span>
           <div className="c-order-bar-wrap">
             <div className="c-order-bar" style={{ width: `${item.stuckPct}%`, background: c }} />
           </div>
           <div className="c-order-dates">
-            {item.worstOrders.slice(0, 2).map(w => (
+            {(item.worstOrders || []).slice(0, 2).map(w => (
               <button
                 key={w.orderNo}
                 type="button"

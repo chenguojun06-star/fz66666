@@ -1066,17 +1066,17 @@ const IntelligenceCenter: React.FC = () => {
                   风险工序：<b style={{ color: '#ff4136' }}>{heatmap.worstProcess}</b>
                   &nbsp;·&nbsp;风险工厂：<b style={{ color: '#ff4136' }}>{heatmap.worstFactory}</b>
                 </div>
-                <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${heatmap.factories.length}, 1fr)` }}>
+                <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
                   <div />
-                  {heatmap.factories.map(f => (
+                  {(heatmap.factories || []).map(f => (
                     <Tooltip key={f} title={f} placement="top">
                       <div className="c-heat-head">{f}</div>
                     </Tooltip>
                   ))}
-                  {heatmap.processes.map(proc => (
+                  {(heatmap.processes || []).map(proc => (
                     <React.Fragment key={proc}>
                       <div className="c-heat-row-label">{proc}</div>
-                      {heatmap.factories.map(fac => {
+                      {(heatmap.factories || []).map(fac => {
                         const cell = heatmap.cells.find(c => c.process === proc && c.factory === fac);
                         const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                         return (

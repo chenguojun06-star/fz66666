@@ -23,6 +23,8 @@ const Register: React.FC = () => {
   // 从 URL 参数获取 tenantCode（扫码注册链接带入）
   const urlTenantCode = searchParams.get('tenantCode') || '';
   const urlTenantName = searchParams.get('tenantName') || '';
+  const urlFactoryId = searchParams.get('factoryId') || '';
+  const urlFactoryName = searchParams.get('factoryName') || '';
 
   const [mode, setMode] = useState<RegisterMode>('工厂员工注册');
   const isApplyMode = mode === '工厂入驻申请';
@@ -87,13 +89,18 @@ const Register: React.FC = () => {
 
   // 工厂员工注册
   const handleFactoryRegister = async (values: any) => {
-    const res: any = await tenantService.workerRegister({
+    const payload: Record<string, string> = {
       username: values.username,
       password: values.password,
       name: values.name,
       phone: values.phone,
       tenantCode: values.tenantCode,
-    });
+    };
+    if (urlFactoryId) {
+      payload.factoryId = urlFactoryId;
+    }
+
+    const res: any = await tenantService.workerRegister(payload);
     const data = res?.data || res;
     if (data?.status === 'PENDING' || res?.code === 200) {
       message.success(data?.message || '注册申请已提交，请等待工厂管理员审批');
@@ -240,6 +247,19 @@ const Register: React.FC = () => {
             <Alert
               message="以下账号信息用于审批通过后登录系统"
               type="info"
+              showIcon
+              style={{ marginBottom: 16, borderRadius: 8 }}
+            />
+          )}
+          {!isApplyMode && urlTenantCode && (
+            <Alert
+              message={
+                <div>
+                  正在注册到：<strong>{urlTenantName || urlTenantCode}</strong>
+                  {urlFactoryName && <span style={{ marginLeft: 8 }}>🏭 外发工厂：<strong>{urlFactoryName}</strong></span>}
+                </div>
+              }
+              type="success"
               showIcon
               style={{ marginBottom: 16, borderRadius: 8 }}
             />

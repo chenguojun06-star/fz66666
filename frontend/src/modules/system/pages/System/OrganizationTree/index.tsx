@@ -690,12 +690,7 @@ const OrganizationTreePage: React.FC = () => {
           <QRCode
             value={
               qrModal.unit
-                ? JSON.stringify({
-                    type: 'FACTORY_INVITE',
-                    tenantCode: qrModal.tenantCode,
-                    factoryId: qrModal.unit.factoryId || String(qrModal.unit.id),
-                    factoryName: qrModal.unit.unitName,
-                  })
+                ? `${window.location.origin}/register?type=FACTORY_INVITE&tenantCode=${encodeURIComponent(qrModal.tenantCode)}&factoryId=${encodeURIComponent(qrModal.unit.factoryId || String(qrModal.unit.id))}&factoryName=${encodeURIComponent(qrModal.unit.unitName)}`
                 : ' '
             }
             size={220}

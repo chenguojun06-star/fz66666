@@ -53,20 +53,39 @@ public class ProfessionalReportOrchestrator {
         String scopeLabel = isManager ? "全局数据（所有订单）" :
                 "个人数据（跟单员：" + (currentUsername != null ? currentUsername : currentUserId) + "）";
 
-        // --- AI 智能兜底：针对测试环境，如果选择"今日"但无论什么角色都没有扫码数据，自动回溯到最近有数据的一天 ---
+        // --- AI 智能兜底：针对测试环境，如果选择"今日"但没有扫码/订单数据，自动回溯到最近有数据的一天 ---
         if (baseDate.equals(LocalDate.now())) {
             TimeRange probe = calcTimeRange(reportType, baseDate);
             String probeUser = isManager ? null : currentUserId;
+            // 检查当前区间是否有扫码记录或订单
             long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser);
-            if (todayScans == 0) {
-                // 查找最近一次有数据的日期
-                QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> q = new QueryWrapper<>();
-                if (tenantId != null) q.eq("tenant_id", tenantId);
-                if (probeUser != null) q.eq("operator_id", probeUser);
-                q.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
-                com.fashion.supplychain.production.entity.ScanRecord latest = scanRecordService.getOne(q);
-                if (latest != null && latest.getScanTime() != null) {
-                    baseDate = latest.getScanTime().toLocalDate();
+            long todayOrders = countNewOrders(tenantId, probe.start(), probe.end(), probeUser, scopeUsername);
+            
+            if (todayScans == 0 && todayOrders == 0) {
+                // 查找最近一次有扫码或建单的日期
+                LocalDate fallbackDate = null;
+                
+                QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> sq = new QueryWrapper<>();
+                if (tenantId != null) sq.eq("tenant_id", tenantId);
+                if (probeUser != null) sq.eq("operator_id", probeUser);
+                sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
+                com.fashion.supplychain.production.entity.ScanRecord latestScan = scanRecordService.getOne(sq);
+                if (latestScan != null && latestScan.getScanTime() != null) {
+                    fallbackDate = latestScan.getScanTime().toLocalDate();
+                }
+
+                QueryWrapper<ProductionOrder> oq = baseOrderQuery(tenantId, probeUser, scopeUsername);
+                oq.orderByDesc("create_time").last("LIMIT 1").select("create_time");
+                ProductionOrder latestOrder = productionOrderService.getOne(oq);
+                if (latestOrder != null && latestOrder.getCreateTime() != null) {
+                    LocalDate orderDate = latestOrder.getCreateTime().toLocalDate();
+                    if (fallbackDate == null || orderDate.isAfter(fallbackDate)) {
+                        fallbackDate = orderDate;
+                    }
+                }
+
+                if (fallbackDate != null) {
+                    baseDate = fallbackDate;
                     log.info("[ProfessionalReport] 智能报表兜底：{}今日无数据，自动回溯至最近有效日期 {}", reportType, baseDate);
                 }
             }
