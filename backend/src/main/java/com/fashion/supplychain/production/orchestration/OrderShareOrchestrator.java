@@ -43,7 +43,7 @@ public class OrderShareOrchestrator {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    private static final long SHARE_TTL_MS = 1L * 24 * 60 * 60 * 1000; // 1 天（24 小时）
+    private static final long SHARE_TTL_MS = 30L * 24 * 60 * 60 * 1000; // 30 天
 
     private final byte[] jwtSecret;
 
@@ -186,7 +186,10 @@ public class OrderShareOrchestrator {
         resp.setLatestScanStage(latestScanStage);
 
         Object expObj = jwt.getPayload("exp");
-        long expMs = expObj instanceof Date ? ((Date) expObj).getTime() : ((Number) expObj).longValue();
+        // JWT标准 exp 为秒级时间戳，前端需要毫秒
+        long expMs = expObj instanceof Date
+                ? ((Date) expObj).getTime()
+                : ((Number) expObj).longValue() * 1000;
         resp.setExpiresAt(expMs);
 
         if (order.getPlannedEndDate() != null) {

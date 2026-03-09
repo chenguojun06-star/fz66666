@@ -42,11 +42,11 @@ interface ShareOrderData {
 }
 
 const statusColorMap: Record<string, string> = {
-  '待开始': '#faad14',
-  '生产中': '#1677ff',
-  '已完成': '#52c41a',
-  '延期中': '#ff4d4f',
-  '已关单': '#8c8c8c',
+  '待开始': 'default',
+  '生产中': 'processing',
+  '已完成': 'success',
+  '延期中': 'error',
+  '已关单': 'default',
 };
 
 const ShareOrderPage: React.FC = () => {
@@ -99,8 +99,9 @@ const ShareOrderPage: React.FC = () => {
   }
 
   const progress = Math.min(100, Math.max(0, data.productionProgress ?? 0));
-  const statusColor = statusColorMap[data.statusText] ?? '#1677ff';
+  const statusColor = statusColorMap[data.statusText] ?? 'processing';
   const isCompleted = data.statusText === '已完成';
+  const isDelayed = data.statusText === '延期中';
 
   return (
     <div style={pageStyle}>
@@ -133,7 +134,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <Tag
             color={statusColor}
-            style={{ marginLeft: 'auto', fontSize: 13, padding: '3px 10px', borderRadius: 20 }}
+            style={{ marginLeft: 'auto', fontSize: 14, padding: '4px 14px', borderRadius: 20, fontWeight: 600 }}
           >
             {data.statusText}
           </Tag>
@@ -143,13 +144,13 @@ const ShareOrderPage: React.FC = () => {
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
             <span style={{ fontSize: 12, color: '#888' }}>生产进度</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? '#52c41a' : '#1677ff' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? '#52c41a' : isDelayed ? '#ff4d4f' : '#1677ff' }}>
               {progress}%
             </span>
           </div>
           <Progress
             percent={progress}
-            strokeColor={isCompleted ? '#52c41a' : { '0%': '#1677ff', '100%': '#52c41a' }}
+            strokeColor={isCompleted ? '#52c41a' : isDelayed ? '#ff4d4f' : { '0%': '#1677ff', '100%': '#52c41a' }}
             size={['100%', 10] as any}
             showInfo={false}
           />
