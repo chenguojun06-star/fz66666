@@ -106,6 +106,21 @@ public class DailyBriefOrchestrator {
             brief.put("topPriorityOrder", topOrder);
         }
 
+        // ⑤+ 待办事项详情（前端小云助手展示具体订单内容）
+        List<Map<String, Object>> pendingItems = highRisk.stream()
+            .limit(3)
+            .map(o -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("orderNo", o.getOrderNo());
+                item.put("styleNo", o.getStyleNo() != null ? o.getStyleNo() : "");
+                item.put("factoryName", o.getFactoryName() != null ? o.getFactoryName() : "");
+                item.put("progress", o.getProductionProgress() != null ? o.getProductionProgress() : 0);
+                item.put("daysLeft", ChronoUnit.DAYS.between(today, o.getPlannedEndDate().toLocalDate()));
+                return item;
+            })
+            .collect(Collectors.toList());
+        brief.put("pendingItems", pendingItems);
+
         // ⑥ 智能建议文案
         List<String> suggestions = new ArrayList<>();
         if (overdueCount > 0) {

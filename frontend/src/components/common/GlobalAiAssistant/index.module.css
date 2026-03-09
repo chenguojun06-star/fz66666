@@ -212,6 +212,34 @@
   padding: 0 4px;
 }
 
+/* Pending Items (待办事项卡片) */
+.pendingItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 4px 8px;
+}
+
+.pendingItem {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  border: 1px solid #ffd591;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #874d00;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 6px;
+}
+
+.pendingItem:hover {
+  transform: translateX(2px);
+  box-shadow: 0 1px 4px rgba(250, 173, 20, 0.3);
+  border-color: #ffc53d;
+}
+
 .chip {
   padding: 6px 12px;
   background: #fff;

@@ -6,7 +6,8 @@ import {
   SoundOutlined,
   ExportOutlined,
   DashboardOutlined,
-  AudioMutedOutlined
+  AudioMutedOutlined,
+  ClearOutlined
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import api, { type ApiResult } from '@/utils/api';
@@ -226,6 +227,7 @@ const GlobalAiAssistant: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasFetchedMood, setHasFetchedMood] = useState(false);
+  const [pendingItems, setPendingItems] = useState<Array<{orderNo: string; styleNo: string; factoryName: string; progress: number; daysLeft: number}>>([]);
 
   useEffect(() => {
     if (hasFetchedMood) return;
@@ -236,16 +238,25 @@ const GlobalAiAssistant: React.FC = () => {
         // @ts-ignore
         const actualData = res?.code === 200 ? res.data : (res?.data || res);
         if (actualData) {
-          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = actualData;
+          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, pendingItems: apiPendingItems = [], topPriorityOrder } = actualData;
           let newMood: CloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
 
+          // 存储待办详情供 UI 展示
+          if (apiPendingItems && apiPendingItems.length > 0) {
+            setPendingItems(apiPendingItems);
+          } else if (topPriorityOrder) {
+            setPendingItems([topPriorityOrder]);
+          }
+
           if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
             newMood = 'urgent';
-            greeting = `Hi 👋 紧急告警！发现 ${overdueOrderCount} 个近期待办和异常！小云有点着急，建议优先处理哦！有什么我可以帮您的吗？`;
+            const topHint = topPriorityOrder ? `最紧急：${topPriorityOrder.orderNo}（${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%）` : '';
+            greeting = `Hi 👋 紧急告警！发现 ${overdueOrderCount + highRiskOrderCount} 个待办异常！${topHint}\n小云有点着急，建议优先处理哦！`;
           } else if (overdueOrderCount > 0 || highRiskOrderCount > 0) {
             newMood = 'curious';
-            greeting = `Hi 👋 小云提醒您，目前系统有 ${overdueOrderCount} 个相关待办需要稍微留意下哦！`;
+            const topHint = topPriorityOrder ? `\n📌 ${topPriorityOrder.orderNo}（${topPriorityOrder.styleNo || ''}）${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '还剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%` : '';
+            greeting = `Hi 👋 小云提醒您，有 ${overdueOrderCount + highRiskOrderCount} 个待办需要关注：${topHint}`;
           } else if (todayScanCount > 100) {
             newMood = 'success';
             greeting = `Hi 👋 太棒啦！今天货期大盘非常健康，大家干劲满满呢！小云给您比心🤩 需要看点什么数据吗：`;
@@ -434,6 +445,16 @@ const GlobalAiAssistant: React.FC = () => {
                   title="静音"
                 />
               )}
+              <ClearOutlined
+                className={styles.headerActionBtn}
+                onClick={() => {
+                  setMessages([INITIAL_MSG]);
+                  setPendingItems([]);
+                  setInputValue('');
+                  setHasFetchedMood(false);
+                }}
+                title="清空对话"
+              />
               <CloseOutlined
                 className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`}
                 onClick={() => setIsOpen(false)}
@@ -445,6 +466,23 @@ const GlobalAiAssistant: React.FC = () => {
           {/* Chat List */}
           <div className={styles.chatArea} ref={chatAreaRef}>
             {/* Suggestion Chips - 像原来的智能顾问一样 */}
+            {messages.length === 1 && pendingItems.length > 0 && (
+              <div className={styles.pendingItems}>
+                {pendingItems.map((item: any) => {
+                  const dl = item.daysLeft;
+                  const status = dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`;
+                  return (
+                    <div key={item.orderNo} className={styles.pendingItem}
+                      onClick={() => handleSend(`帮我分析订单 ${item.orderNo} 的详细情况和风险`)}
+                    >
+                      <span>⚠️</span>
+                      <span style={{flex:1}}>{item.orderNo}{item.styleNo ? `（${item.styleNo}）` : ''} — {status}，进度{item.progress}%</span>
+                      <span style={{color:'#1890ff',fontSize:11}}>查看 →</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {messages.length === 1 && (
               <div className={styles.suggestionChips}>
                 {SUGGESTIONS.map(q => (
@@ -492,7 +530,7 @@ const GlobalAiAssistant: React.FC = () => {
                             <div
                               key={idx}
                               className={styles.recommendPill}
-                              onClick={() => setInputValue(question)}
+                              onClick={() => handleSend(question)}
                             >
                               {question}
                             </div>
