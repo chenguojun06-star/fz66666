@@ -1036,4 +1036,28 @@ export const intelligenceApi = {
   /** 实时成本追踪（订单工序成本进度与利润预估） */
   getLiveCostTracker: (orderId: string) =>
     api.get<{ code: number; data: LiveCostResponse }>('/intelligence/live-cost', { params: { orderId } }),
+
+  // ── 专业报告下载 ──
+
+  /** 下载专业运营报告（Excel） */
+  downloadProfessionalReport: async (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) => {
+    const params = new URLSearchParams({ type });
+    if (date) params.append('date', date);
+    const resp = await fetch(`/api/intelligence/professional-report/download?${params}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+    });
+    if (!resp.ok) throw new Error(`下载失败: ${resp.status}`);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cd = resp.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename\*?=(?:UTF-8'')?(.+)/i);
+    a.download = match ? decodeURIComponent(match[1]) : `运营报告_${type}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
 };

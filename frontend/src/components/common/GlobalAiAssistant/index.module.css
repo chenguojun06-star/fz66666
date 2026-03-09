@@ -257,6 +257,55 @@
   box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
 }
 
+/* 专业报告下载区 */
+.reportDownloadBar {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f6ffed 0%, #e6fffb 100%);
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+}
+
+.reportDownloadLabel {
+  font-size: 12px;
+  color: #389e0d;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.reportDownloadBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.reportDownloadBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 0;
+  background: #fff;
+  border: 1px solid #91d5ff;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1890ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reportDownloadBtn:hover:not(:disabled) {
+  background: #e6f7ff;
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+}
+
+.reportDownloadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* intent 链接快捷跳转样式的气泡扩展 */
 .intentWidgetHint {
   margin-top: 8px;

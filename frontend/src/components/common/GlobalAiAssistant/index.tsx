@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
   CloseOutlined,
   SoundOutlined,
   ExportOutlined,
-  DashboardOutlined,
+  DownloadOutlined,
+  LoadingOutlined,
   AudioMutedOutlined,
   ClearOutlined
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import api, { type ApiResult } from '@/utils/api';
-import type { NlQueryResponse } from '@/services/production/productionApi';
+import api from '@/utils/api';
 import styles from './index.module.css';
 
 /** 轻量 Markdown → HTML（仅处理 AI 常用的格式） */
@@ -221,13 +221,14 @@ const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading 
 
 const GlobalAiAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [mood, setMood] = useState<CloudMood>('normal');
+  const [_mood, setMood] = useState<CloudMood>('normal');
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasFetchedMood, setHasFetchedMood] = useState(false);
   const [pendingItems, setPendingItems] = useState<Array<{orderNo: string; styleNo: string; factoryName: string; progress: number; daysLeft: number}>>([]);
+  const [downloadingType, setDownloadingType] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasFetchedMood) return;
@@ -304,6 +305,29 @@ const GlobalAiAssistant: React.FC = () => {
       // 初次打开时不强制播报，留给用户交互，防止扰民
     }
   }, [isOpen]);
+
+  const handleDownloadReport = async (type: 'daily' | 'weekly' | 'monthly') => {
+    if (downloadingType) return;
+    const label = type === 'daily' ? '日报' : type === 'weekly' ? '周报' : '月报';
+    setDownloadingType(type);
+    try {
+      await intelligenceApi.downloadProfessionalReport(type);
+      setMessages(prev => [...prev, {
+        id: `sys-${Date.now()}`,
+        role: 'ai',
+        text: `✅ ${label}已下载完成！Excel 格式的专业运营报告已保存到您的下载目录。`,
+      }]);
+      speak(`${label}已下载完成`);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`,
+        role: 'ai',
+        text: `❌ ${label}下载失败，请稍后重试。`,
+      }]);
+    } finally {
+      setDownloadingType(null);
+    }
+  };
 
   const handleSend = async (manualText?: string) => {
     const text = (manualText || inputValue).trim();
@@ -413,7 +437,7 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  const jumpToIntelligenceCenter = (query: string) => {
+  const jumpToIntelligenceCenter = (_query: string) => {
     setIsOpen(false);
     // 如果已经在智能驾驶舱，不跨路由跳转仅提示
     if (location.pathname !== '/intelligence/center') {
@@ -494,6 +518,26 @@ const GlobalAiAssistant: React.FC = () => {
                     {q}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* 专业报告下载区 */}
+            {messages.length === 1 && (
+              <div className={styles.reportDownloadBar}>
+                <div className={styles.reportDownloadLabel}>📋 专业报告下载</div>
+                <div className={styles.reportDownloadBtns}>
+                  {([['daily', '日报'], ['weekly', '周报'], ['monthly', '月报']] as const).map(([type, label]) => (
+                    <button
+                      key={type}
+                      className={styles.reportDownloadBtn}
+                      disabled={!!downloadingType}
+                      onClick={() => handleDownloadReport(type)}
+                    >
+                      {downloadingType === type ? <LoadingOutlined /> : <DownloadOutlined />}
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

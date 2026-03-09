@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-21 专业运营报告一键下载
+
+### ✨ 新功能
+
+#### **专业运营报告 Excel 一键下载**
+- **需求**：将 AI 助手生成的日报/周报/月报升级为可下载的专业 Excel 工作报告模板，适合直接呈送给上级领导
+- **方案**：后端 Apache POI 生成 5 Sheet 专业报告 + 前端小云助手面板内嵌下载入口
+
+| 分层 | 文件 | 变更说明 |
+|------|------|----------|
+| 后端编排器 | `ProfessionalReportOrchestrator.java` (**新增**) | ~400行，生成专业 Excel 报告（封面、KPI、工厂排名、风险预警、成本分析 5个 Sheet），内含 `StyleKit` 8种专业样式 |
+| 后端接口 | `IntelligenceController.java` | 新增 `GET /api/intelligence/professional-report/download?type=daily\|weekly\|monthly&date=yyyy-MM-dd`，返回 `ResponseEntity<byte[]>` |
+| 前端API | `intelligenceApi.ts` | 新增 `downloadProfessionalReport()` 方法，使用 `fetch + blob` 下载模式 |
+| 前端UI | `GlobalAiAssistant/index.tsx` | 新增「📋 专业报告下载」区域，含日报/周报/月报三个下载按钮，支持加载状态和下载反馈 |
+| 前端样式 | `GlobalAiAssistant/index.module.css` | 新增 `.reportDownloadBar` / `.reportDownloadBtn` 等绿色主题下载区样式 |
+
+**报告内容（5个 Excel Sheet）**：
+1. **封面** — 公司名称（云裳智链）、报告类型、统计周期、生成时间、编制人、保密声明
+2. **核心KPI** — 扫码次数/件数/新建订单/完工订单（含环比）、扫码类型分布、订单状态分布
+3. **工厂排名** — Top 10 工厂产能排行（扫码量+件数）
+4. **风险预警** — 逾期/高风险/停滞订单概览 + Top 10 详情列表
+5. **成本分析** — 总成本汇总、工序维度成本占比明细
+
+**技术要点**：
+- 复用 Apache POI 5.2.5（已有依赖），与 `ExcelImportOrchestrator` 共享 Excel 生成模式
+- 文件名 UTF-8 编码：`运营日报_2026-03-21.xlsx`
+- 前端 Blob 下载，自动解析 `Content-Disposition` 获取文件名
+- 支持自定义日期参数，默认当天
+
+---
+
 ## [Unreleased] - 2026-03-09 AI 智能助手四大体验修复
 
 ### 🐛 Bug 修复 & ✨ 优化
