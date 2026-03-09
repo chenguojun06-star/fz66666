@@ -70,8 +70,9 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
    */
   const collectWord = async (word: string) => {
     if (!enabled || !word || word.trim() === '') return;
-
+    
     const trimmedWord = normalizeWord(word);
+    if (trimmedWord.length > 50) return; // 拦截超长乱码或粘贴段落，防止数据库 varchar(100) 溢出报错
 
     try {
       // 检查是否已存在
@@ -89,8 +90,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
         dictType,
         dictCode,
         dictLabel: trimmedWord,
-        sortOrder: maxSortOrder + 1,
-        remark: '自动收录'
+        sort: maxSortOrder + 1
       });
 
       // 添加到缓存
@@ -178,13 +178,13 @@ async function getMaxSortOrder(dictType: string): Promise<number> {
       params: {
         dictType,
         pageSize: 1,
-        sortField: 'sort_order',
+        sortField: 'sort',
         sortOrder: 'desc'
       }
     });
 
     const maxRecord = response.data?.records?.[0];
-    return maxRecord?.sortOrder || 0;
+    return maxRecord?.sort || maxRecord?.sortOrder || 0;
   } catch (error) {
     return 0;
   }
