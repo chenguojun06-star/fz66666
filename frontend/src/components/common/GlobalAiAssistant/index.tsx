@@ -520,9 +520,8 @@ const GlobalAiAssistant: React.FC = () => {
               </div>
             )}
 
-            {/* 专业报告下载区 */}
-            {messages.length === 1 && (
-              <div className={styles.reportDownloadBar}>
+            {/* 专业报告下载区 — 始终显示，方便随时下载 */}
+            <div className={styles.reportDownloadBar}>
                 <div className={styles.reportDownloadLabel}>📋 专业报告下载</div>
                 <div className={styles.reportDownloadBtns}>
                   {([['daily', '日报'], ['weekly', '周报'], ['monthly', '月报']] as const).map(([type, label]) => (
@@ -538,7 +537,6 @@ const GlobalAiAssistant: React.FC = () => {
                   ))}
                 </div>
               </div>
-            )}
 
             {messages.map(msg => (
               <div

@@ -1045,9 +1045,12 @@ export const intelligenceApi = {
     if (date) params.append('date', date);
     const resp = await fetch(`/api/intelligence/professional-report/download?${params}`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
     });
-    if (!resp.ok) throw new Error(`下载失败: ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error(errText || `下载失败: ${resp.status}`);
+    }
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
