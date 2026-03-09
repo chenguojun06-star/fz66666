@@ -383,6 +383,7 @@ public class DeepAnalysisTool implements AgentTool {
         dto.put("company", o.getCompany());
         dto.put("merchandiser", o.getMerchandiser());
         dto.put("orderQuantity", o.getOrderQuantity());
+        dto.put("completedQuantity", o.getCompletedQuantity());
         dto.put("urgencyLevel", o.getUrgencyLevel());
         return dto;
     }

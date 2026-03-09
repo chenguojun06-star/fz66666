@@ -357,6 +357,8 @@ public class SmartReportTool implements AgentTool {
         dto.put("orderNo", o.getOrderNo());
         dto.put("styleName", o.getStyleName());
         dto.put("factoryName", o.getFactoryName());
+        dto.put("orderQuantity", o.getOrderQuantity());
+        dto.put("completedQuantity", o.getCompletedQuantity());
         dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
         dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
         dto.put("company", o.getCompany());

@@ -986,6 +986,7 @@ export const intelligenceApi = {
     api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' } }>(
       '/intelligence/ai-advisor/chat',
       { question },
+      { timeout: 90000 },
     ),
 
   // ── 第五批：新建订单智能辅助 ──

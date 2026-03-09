@@ -113,17 +113,30 @@ public class SystemOverviewTool implements AgentTool {
         stats.put("totalOrders", totalOrders);
         stats.put("statusBreakdown", statusCounts);
 
+        // 查询所有未删除订单的总件数
+        QueryWrapper<ProductionOrder> allQuery = new QueryWrapper<>();
+        allQuery.eq("delete_flag", 0);
+        if (tenantId != null) allQuery.eq("tenant_id", tenantId);
+        List<ProductionOrder> allOrders = productionOrderService.list(allQuery);
+        int totalOrderQuantity = allOrders.stream()
+                .mapToInt(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
+        int totalCompletedQuantity = allOrders.stream()
+                .mapToInt(o -> o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0).sum();
+        stats.put("totalOrderQuantity", totalOrderQuantity);
+        stats.put("totalCompletedQuantity", totalCompletedQuantity);
+
         // 平均进度（进行中订单）
-        QueryWrapper<ProductionOrder> inProgressQuery = new QueryWrapper<>();
-        inProgressQuery.eq("delete_flag", 0).eq("status", "IN_PROGRESS");
-        if (tenantId != null) inProgressQuery.eq("tenant_id", tenantId);
-        List<ProductionOrder> inProgressOrders = productionOrderService.list(inProgressQuery);
+        List<ProductionOrder> inProgressOrders = allOrders.stream()
+                .filter(o -> "IN_PROGRESS".equals(o.getStatus())).toList();
         if (!inProgressOrders.isEmpty()) {
             double avgProgress = inProgressOrders.stream()
                     .mapToInt(o -> o.getProductionProgress() != null ? o.getProductionProgress() : 0)
                     .average().orElse(0);
             stats.put("avgProgressPercent", Math.round(avgProgress));
             stats.put("inProgressCount", inProgressOrders.size());
+            int inProgressQuantity = inProgressOrders.stream()
+                    .mapToInt(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
+            stats.put("inProgressQuantity", inProgressQuantity);
         }
 
         return stats;
@@ -151,6 +164,8 @@ public class SystemOverviewTool implements AgentTool {
             dto.put("orderNo", o.getOrderNo());
             dto.put("styleName", o.getStyleName());
             dto.put("factoryName", o.getFactoryName());
+            dto.put("orderQuantity", o.getOrderQuantity());
+            dto.put("completedQuantity", o.getCompletedQuantity());
             dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
             dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
             overdueList.add(dto);
@@ -181,6 +196,8 @@ public class SystemOverviewTool implements AgentTool {
             dto.put("orderNo", o.getOrderNo());
             dto.put("styleName", o.getStyleName());
             dto.put("factoryName", o.getFactoryName());
+            dto.put("orderQuantity", o.getOrderQuantity());
+            dto.put("completedQuantity", o.getCompletedQuantity());
             dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
             dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
             highRiskList.add(dto);
@@ -258,6 +275,8 @@ public class SystemOverviewTool implements AgentTool {
             p.put("orderNo", o.getOrderNo());
             p.put("styleName", o.getStyleName());
             p.put("factoryName", o.getFactoryName());
+            p.put("orderQuantity", o.getOrderQuantity());
+            p.put("completedQuantity", o.getCompletedQuantity());
             p.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
             p.put("suggestion", "立即联系工厂催进度，考虑标记为紧急订单");
             priorities.add(p);
@@ -279,6 +298,8 @@ public class SystemOverviewTool implements AgentTool {
             p.put("orderNo", o.getOrderNo());
             p.put("styleName", o.getStyleName());
             p.put("factoryName", o.getFactoryName());
+            p.put("orderQuantity", o.getOrderQuantity());
+            p.put("completedQuantity", o.getCompletedQuantity());
             p.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
             p.put("daysRemaining", java.time.Duration.between(LocalDateTime.now(), o.getPlannedEndDate()).toDays());
             p.put("suggestion", "需加班赶工或协调其他工厂分担产能");
