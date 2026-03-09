@@ -37,6 +37,12 @@ public class OrganizationUnit {
 
     private String pathNames;
 
+    /** 该节点的审批负责人userId（重要操作需此人审批） */
+    private String managerUserId;
+
+    /** 审批负责人姓名（冗余，避免二次查询） */
+    private String managerUserName;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

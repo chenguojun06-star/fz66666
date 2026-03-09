@@ -97,6 +97,15 @@ public class OrganizationUnitController {
     }
 
     /**
+     * 设置组织节点的审批负责人
+     * body: { managerUserId: "xxx" }  传空字符串表示清除
+     */
+    @PostMapping("/{id}/set-manager")
+    public Result<Boolean> setManager(@PathVariable String id, @RequestBody Map<String, String> body) {
+        return Result.success(organizationUnitOrchestrator.setUnitManager(id, body.get("managerUserId")));
+    }
+
+    /**
      * 从模板批量初始化组织架构（仅超管可用）。
      * body: { templateType: "FACTORY" | "INTERNAL", rootName: "xxx" }
      */

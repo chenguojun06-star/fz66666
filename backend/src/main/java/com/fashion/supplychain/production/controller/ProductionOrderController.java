@@ -162,11 +162,15 @@ public class ProductionOrderController {
     }
 
     /**
-     * 根据ID删除生产订单（RESTful标准）
+     * 根据ID删除生产订单（RESTful标准）— 非管理员需审批
      */
     @DeleteMapping("/{id}")
-    public Result<?> deleteById(@PathVariable String id) {
-        productionOrderOrchestrator.deleteById(id);
+    public Result<?> deleteById(@PathVariable String id,
+                                @RequestParam(required = false) String reason) {
+        java.util.Map<String, Object> result = productionOrderOrchestrator.deleteByIdWithApproval(id, reason);
+        if (Boolean.TRUE.equals(result.get("needApproval"))) {
+            return Result.success(result);  // 审批申请已提交，前端展示"等待审批"
+        }
         return Result.successMessage("删除成功");
     }
 

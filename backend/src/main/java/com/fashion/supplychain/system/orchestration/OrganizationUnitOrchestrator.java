@@ -182,9 +182,39 @@ public class OrganizationUnitOrchestrator {
         existing.setOwnerType(resolveOwnerType(unit.getOwnerType()));
         existing.setSortOrder(unit.getSortOrder() == null ? 0 : unit.getSortOrder());
         existing.setStatus(StringUtils.hasText(unit.getStatus()) ? unit.getStatus() : existing.getStatus());
+        // 同步更新管理人（如前端传了该字段）
+        if (unit.getManagerUserId() != null) {
+            existing.setManagerUserId(StringUtils.hasText(unit.getManagerUserId()) ? unit.getManagerUserId() : null);
+            existing.setManagerUserName(StringUtils.hasText(unit.getManagerUserName()) ? unit.getManagerUserName() : null);
+        }
         existing.setUpdateTime(LocalDateTime.now());
         organizationUnitService.updateById(existing);
         bindingHelper.refreshPaths(existing.getTenantId());
+        return true;
+    }
+
+    /**
+     * 设置/更换组织节点的审批负责人。
+     * 负责人将负责审批该节点下成员发起的重要操作（删除/撤回/报废等）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean setUnitManager(String unitId, String managerUserId) {
+        assertAdmin();
+        OrganizationUnit unit = organizationUnitService.getById(unitId);
+        if (unit == null || unit.getDeleteFlag() != null && unit.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("组织节点不存在");
+        }
+        if (StringUtils.hasText(managerUserId)) {
+            User manager = userService.getById(managerUserId);
+            if (manager == null) throw new IllegalArgumentException("指定用户不存在");
+            unit.setManagerUserId(managerUserId);
+            unit.setManagerUserName(manager.getUsername());
+        } else {
+            unit.setManagerUserId(null);
+            unit.setManagerUserName(null);
+        }
+        unit.setUpdateTime(LocalDateTime.now());
+        organizationUnitService.updateById(unit);
         return true;
     }
 

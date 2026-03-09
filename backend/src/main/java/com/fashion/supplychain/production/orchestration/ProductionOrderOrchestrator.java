@@ -21,9 +21,11 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -134,6 +136,10 @@ public class ProductionOrderOrchestrator {
 
     @Autowired(required = false)
     private com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService ecOrderService;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         IPage<ProductionOrder> page = productionOrderQueryService.queryPage(params);
@@ -334,6 +340,38 @@ public class ProductionOrderOrchestrator {
         cascadeCleanupChildTables(oid);
 
         return true;
+    }
+
+    /**
+     * 带审批检查的删除 — 非管理员删除生产订单需组织负责人审批
+     */
+    public Map<String, Object> deleteByIdWithApproval(String id, String reason) {
+        String oid = StringUtils.hasText(id) ? id.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        // 先查出订单号，用于审批记录展示
+        ProductionOrder existed = productionOrderService.getById(oid);
+        if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
+
+        if (changeApprovalOrchestrator != null) {
+            Map<String, Object> opData = new HashMap<>();
+            opData.put("orderId", oid);
+            Map<String, Object> approvalResp = changeApprovalOrchestrator.checkAndCreateIfNeeded(
+                    "ORDER_DELETE", oid, existed.getOrderNo(), opData, reason);
+            if (approvalResp != null) {
+                return approvalResp; // 审批申请已提交
+            }
+        }
+        // 无需审批 → 直接删除
+        deleteById(oid);
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "删除成功");
+        return result;
     }
 
     /**
