@@ -211,6 +211,41 @@
   text-decoration: underline;
 }
 
+.recommendWrapper {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(24, 144, 255, 0.2);
+}
+
+.recommendTitle {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.recommendPills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recommendPill {
+  font-size: 13px;
+  color: #1890ff;
+  background: rgba(24, 144, 255, 0.05);
+  border: 1px solid rgba(24, 144, 255, 0.2);
+  padding: 6px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  word-break: break-all;
+}
+
+.recommendPill:hover {
+  background: rgba(24, 144, 255, 0.1);
+  border-color: #1890ff;
+}
+
 /* 正在输入动画 */
 .typingIndicator {
   display: flex;
@@ -325,15 +360,30 @@
 }
 
 /* 小云专属动画：眨眼 */
-.cloudEye {
-  transform-origin: center;
-  transform-box: fill-box;
-  animation: cloudBlink 4s infinite;
+.cloudEyeLeft .eyeOpen { animation: openLeft 8s infinite; }
+.cloudEyeLeft .eyeClosed { animation: closedLeft 8s infinite; }
+
+.cloudEyeRight .eyeOpen { animation: openRight 8s infinite; }
+.cloudEyeRight .eyeClosed { animation: closedRight 8s infinite; }
+
+@keyframes openLeft {
+  0%, 28%, 32%, 63%, 67%, 100% { opacity: 1; }
+  29%, 31%, 64%, 66% { opacity: 0; }
 }
 
-@keyframes cloudBlink {
-  0%, 92%, 98%, 100% { transform: scaleY(1); }
-  95% { transform: scaleY(0.1); }
+@keyframes closedLeft {
+  0%, 28%, 32%, 63%, 67%, 100% { opacity: 0; }
+  29%, 31%, 64%, 66% { opacity: 1; }
+}
+
+@keyframes openRight {
+  0%, 28%, 32%, 100% { opacity: 1; }
+  29%, 31% { opacity: 0; }
+}
+
+@keyframes closedRight {
+  0%, 28%, 32%, 100% { opacity: 0; }
+  29%, 31% { opacity: 1; }
 }
 
 /* 小云专属动画：张嘴说话/微笑交替 */

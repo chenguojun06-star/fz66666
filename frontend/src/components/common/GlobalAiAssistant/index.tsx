@@ -8,6 +8,7 @@ import {
   DashboardOutlined
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import api, { type ApiResult } from '@/utils/api';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 import styles from './index.module.css';
 
@@ -31,51 +32,178 @@ const SUGGESTIONS = [
   '🔍 成本异常追踪分析', '🤖 智能派工推荐', '🏭 工厂综合表现'
 ];
 
+type CloudMood = 'normal' | 'curious' | 'urgent' | 'error' | 'success';
+
 // 超级可爱的表情云朵组件
-const CuteCloudTrigger = ({ size = 52, active = false }: { size?: number, active?: boolean }) => (
-  <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 6px 12px rgba(24,144,255,0.4))' }}>
-    <defs>
-      <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#ffffff" />
-        <stop offset="100%" stopColor="#dcf0ff" />
-      </linearGradient>
-    </defs>
-    <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
-      {/* 软萌云朵基础层 */}
-      <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill="url(#cloudGrad)" />
-      {/* 左眼组 (带眨眼动画) */}
-      <g className={styles.cloudEye} style={{ transformOrigin: '46px 50px' }}>
-        <circle cx="46" cy="50" r="6" fill="#4B6685" />
-        <circle cx="44" cy="48" r="2" fill="#ffffff" />
-        <circle cx="47" cy="52" r="1" fill="#ffffff" opacity="0.8" />
+const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading = false, interacting = false }: { size?: number, active?: boolean, mood?: CloudMood, loading?: boolean, interacting?: boolean }) => {
+  const isUrgent = mood === 'urgent';
+  const isError = mood === 'error';
+  const isSuccess = mood === 'success';
+  const isCurious = mood === 'curious';
+
+  let bodyAnim = styles.cloudBodyNormal;
+  if (isUrgent) bodyAnim = styles.cloudBodyUrgent;
+  if (isError) bodyAnim = styles.cloudBodyError;
+  if (isSuccess) bodyAnim = styles.cloudBodySuccess;
+  if (active || interacting) bodyAnim = styles.cloudBodyInteract;
+
+  const stop1 = isUrgent ? "#fff0f0" : isError ? "#f2f5f8" : "#ffffff";
+  const stop2 = isUrgent ? "#ffccc7" : isError ? "#d9e2ec" : "#dcf0ff";
+
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 6px 12px rgba(24,144,255,0.4))' }}>
+      <defs>
+        <linearGradient id={`cloudGrad-${mood}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={stop1} style={{ transition: 'stop-color 0.3s' }} />
+          <stop offset="100%" stopColor={stop2} style={{ transition: 'stop-color 0.3s' }} />
+        </linearGradient>
+
+        <clipPath id="leftEyeClip">
+           <rect x="36" y="38" width="20" height="24" className={styles.eyelidLeft} />
+        </clipPath>
+        <clipPath id="rightEyeClip">
+           <rect x="60" y="38" width="20" height="24" className={styles.eyelidRight} />
+        </clipPath>
+      </defs>
+
+      <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
+        <g className={bodyAnim}>
+           {/* 软萌云朵基础层 */}
+           <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill={`url(#cloudGrad-${mood})`} style={{ transition: 'fill 0.3s' }} />
+
+           {isUrgent && (
+             <path d="M 78 35 Q 78 40 76 42 Q 74 40 74 35 Q 74 30 76 28 Q 78 30 78 35 Z" fill="#69c0ff" opacity="0.8" className={styles.sweatAnim} />
+           )}
+           {isSuccess && (
+             <g className={styles.starsAnim}>
+                <path d="M 20 30 L 22 35 L 27 35 L 23 38 L 25 43 L 20 40 L 15 43 L 17 38 L 13 35 L 18 35 Z" fill="#ffdd00" />
+                <path d="M 85 25 L 86 28 L 89 28 L 87 30 L 88 33 L 85 31 L 82 33 L 83 30 L 81 28 L 84 28 Z" fill="#ff7a45" />
+             </g>
+           )}
+
+           {isUrgent && (
+             <g stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round">
+               <path d="M 40 45 L 48 48" />
+               <path d="M 68 48 L 76 45" />
+             </g>
+           )}
+           {isCurious && (
+             <g stroke="#4B6685" strokeWidth="2" strokeLinecap="round">
+               <path d="M 42 46 L 48 45" />
+               <path d="M 68 45 L 74 46" />
+             </g>
+           )}
+
+           {loading ? (
+              <g stroke="#1890ff" strokeWidth="2.5" fill="none" strokeLinecap="round">
+                <path d="M 46 50 A 4 4 0 1 1 45.9 50" className={styles.spinLeft} />
+                <path d="M 70 50 A 4 4 0 1 1 69.9 50" className={styles.spinRight} />
+              </g>
+           ) : isError ? (
+              <g>
+                <path d="M 42 50 Q 46 45 50 50" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M 66 50 Q 70 45 74 50" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
+                <ellipse cx="46" cy="56" rx="2" ry="3" fill="#69c0ff" className={styles.tearTear} />
+                <ellipse cx="70" cy="56" rx="2" ry="3" fill="#69c0ff" className={styles.tearTear} style={{ animationDelay: '0.5s' }} />
+              </g>
+           ) : isSuccess ? (
+              <g fill="#ffbb96">
+                 <path d="M 46 46 L 48 49 L 51 49 L 49 51 L 50 54 L 46 52 L 42 54 L 43 51 L 41 49 L 44 49 Z" />
+                 <path d="M 70 46 L 72 49 L 75 49 L 73 51 L 74 54 L 70 52 L 66 54 L 67 51 L 65 49 L 68 49 Z" />
+              </g>
+           ) : (
+              <g className={(interacting || active) ? styles.eyeFollowMouse : ''}>
+                <g clipPath="url(#leftEyeClip)">
+                  <circle cx={isCurious ? "48" : "46"} cy="50" r={isUrgent ? "5" : "6"} fill="#4B6685" style={{ transition: 'all 0.3s' }} />
+                  <circle cx={isCurious ? "47" : "44"} cy="48" r={isUrgent ? "1.5" : "2"} fill="#ffffff" style={{ transition: 'all 0.3s' }} />
+                  <circle cx={isCurious ? "49" : "47"} cy="52" r="1" fill="#ffffff" opacity="0.8" />
+                </g>
+                <g clipPath="url(#rightEyeClip)">
+                  <circle cx={isCurious ? "68" : "70"} cy="50" r={isUrgent ? "5" : "6"} fill="#4B6685" style={{ transition: 'all 0.3s' }} />
+                  <circle cx={isCurious ? "67" : "68"} cy="48" r={isUrgent ? "1.5" : "2"} fill="#ffffff" style={{ transition: 'all 0.3s' }} />
+                  <circle cx={isCurious ? "69" : "71"} cy="52" r="1" fill="#ffffff" opacity="0.8" />
+                </g>
+              </g>
+           )}
+
+           {(!isError && !loading) && (
+              <g opacity={isCurious ? "0.4" : "0.9"}>
+                <ellipse cx="38" cy="58" rx="6" ry="3.5" fill={isUrgent ? "#ff4d4f" : "#FFA5BB"} className={styles.blushAnim} style={{ transition: 'fill 0.3s' }} />
+                <ellipse cx="78" cy="58" rx="6" ry="3.5" fill={isUrgent ? "#ff4d4f" : "#FFA5BB"} className={styles.blushAnim} style={{ transition: 'fill 0.3s' }} />
+              </g>
+           )}
+
+           <g>
+             {loading ? (
+               <line x1="56" y1="56" x2="60" y2="56" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
+             ) : isUrgent ? (
+               <ellipse cx="58" cy="57" rx="2.5" ry="3.5" fill="none" stroke="#4B6685" strokeWidth="2" />
+             ) : isError ? (
+               <path d="M 55 58 Q 58 55 61 58" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
+             ) : isSuccess ? (
+               <path d="M 54 54 Q 58 62 62 54" fill="#FF8CA3" stroke="#FF8CA3" strokeWidth="1" strokeLinecap="round" />
+             ) : (
+               <path d="M 54 55 Q 58 60 62 55" fill="none" stroke="#FF8CA3" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'all 0.3s' }} />
+             )}
+           </g>
+        </g>
       </g>
-      {/* 右眼组 (带眨眼动画) */}
-      <g className={styles.cloudEye} style={{ transformOrigin: '70px 50px' }}>
-        <circle cx="70" cy="50" r="6" fill="#4B6685" />
-        <circle cx="68" cy="48" r="2" fill="#ffffff" />
-        <circle cx="71" cy="52" r="1" fill="#ffffff" opacity="0.8" />
-      </g>
-      {/* 脸颊红晕 - 更大 */}
-      <ellipse cx="38" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
-      <ellipse cx="78" cy="58" rx="6" ry="3.5" fill="#FFA5BB" opacity="0.9" />
-      {/* 呆萌张开的嘴巴 😯 */}
-      <g className={styles.cloudMouthO}>
-        <ellipse cx="58" cy="56" rx="3.5" ry="4" fill="#FF8CA3" />
-        <ellipse cx="58" cy="55" rx="2.5" ry="2" fill="#802135" opacity="0.3" />
-      </g>
-      {/* 甜蜜微笑的嘴巴 😊 */}
-      <g className={styles.cloudMouthSmile}>
-        <path d="M 54 54 Q 58 60 62 54" fill="none" stroke="#FF8CA3" strokeWidth="2.5" strokeLinecap="round" />
-      </g>
-    </g>
-  </svg>
-);
+    </svg>
+  );
+};
 
 const GlobalAiAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [mood, setMood] = useState<CloudMood>('normal');
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [hasFetchedMood, setHasFetchedMood] = useState(false);
+
+  useEffect(() => {
+    if (hasFetchedMood) return;
+    const fetchStatus = async () => {
+      try {
+        setHasFetchedMood(true);
+        const res = await api.get('/dashboard/daily-brief', { timeout: 5000 });
+        if (res?.data) {
+          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = res.data;
+          let newMood: CloudMood = 'normal';
+          let greeting = INITIAL_MSG.text;
+
+          if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
+            newMood = 'urgent';
+            greeting = `Hi 👋 紧急告警！发现 ${overdueOrderCount} 个近期待办和异常！小云有点着急，建议优先处理哦！有什么我可以帮您的吗？`;
+          } else if (overdueOrderCount > 0 || highRiskOrderCount > 0) {
+            newMood = 'curious';
+            greeting = `Hi 👋 小云提醒您，目前系统有 ${overdueOrderCount} 个相关待办需要稍微留意下哦！`;
+          } else if (todayScanCount > 100) {
+            newMood = 'success';
+            greeting = `Hi 👋 太棒啦！今天货期大盘非常健康，大家干劲满满呢！小云给您比心🤩 需要看点什么数据吗：`;
+          } else {
+            newMood = 'normal';
+            greeting = `Hi 👋 欢迎使用云裳智链！今天货期状态平稳，一切顺利哦！\n您可以随时问我：`;
+            // 时间彩蛋
+            const hour = new Date().getHours();
+            if (hour >= 0 && hour < 6) {
+               greeting = `夜深了，系统仍在运转，小云陪您一起加班 🌙... 辛苦啦，需要帮您查什么吗？`;
+            } else if (hour >= 12 && hour <= 14) {
+               greeting = `中午好 ☀️ 吃过午饭了吗？小云刚刚伸了个懒腰，随时准备为您服务！`;
+            } else if (hour >= 19) {
+               greeting = `晚上好！今天的工作马上要收尾了，小云为您站好最后一班岗 🚀`;
+            }
+          }
+          setMood(newMood);
+          setMessages([{ ...INITIAL_MSG, text: greeting }]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch system mood', err);
+        setMood('normal');
+        setMessages([{ ...INITIAL_MSG, text: `Hi 👋 小云为您服务！网络好像开了个小差，但我依然在哦！\n您可以随时问我：` }]);
+      }
+    };
+    fetchStatus();
+  }, [hasFetchedMood]);
 
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -113,16 +241,16 @@ const GlobalAiAssistant: React.FC = () => {
 
     // 2. 调用后台 AI 接口
     try {
-      // @ts-ignore - any type mismatches will be absorbed
-      const res = await intelligenceApi.nlQuery({ question: text });
       // @ts-ignore
-      const resultData: NlQueryResponse = res?.data || res;
+      const res = await intelligenceApi.aiAdvisorChat(text);
+      // @ts-ignore
+      const resultData = res?.data || res;
 
       const aiMsg: Message = {
         id: `a-${Date.now()}`,
         role: 'ai',
-        text: resultData?.answer || '抱歉呀😜，我还不太懂这个问题，数据好像迷路了😥',
-        intent: resultData?.intent
+        text: resultData?.answer || '抱歉呀😜，小云还在思考中…',
+        intent: resultData?.source || 'ai'
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -253,7 +381,31 @@ const GlobalAiAssistant: React.FC = () => {
                 )}
 
                 <div className={`${styles.messageBubble} ${msg.role === 'ai' ? styles.bubbleAi : styles.bubbleUser}`}>
-                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {msg.text.includes('【推荐追问】：')
+                      ? msg.text.split('【推荐追问】：')[0]
+                      : msg.text}
+                  </div>
+                  {msg.text.includes('【推荐追问】：') && (
+                    <div className={styles.recommendWrapper}>
+                      <div className={styles.recommendTitle}>你可以接着问：</div>
+                      <div className={styles.recommendPills}>
+                        {msg.text.split('【推荐追问】：')[1].split('|').map((q, idx) => {
+                          const question = q.trim();
+                          if (!question) return null;
+                          return (
+                            <div
+                              key={idx}
+                              className={styles.recommendPill}
+                              onClick={() => setInputValue(question)}
+                            >
+                              {question}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* 如果命中高级业务Intent，提示去全屏的太空舱查看完整看板 */}
                   {msg.role === 'ai' && msg.intent && (

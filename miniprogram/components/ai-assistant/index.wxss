@@ -1,0 +1,98 @@
+.ai-assistant-container {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 10000;
+}
+.ai-trigger-btn {
+  position: fixed;
+  right: 110rpx; /* 在铃铛左侧，保持合适间距 */
+  top: 24rpx;
+  width: 72rpx;
+  height: 72rpx;
+  background: #ffffff;
+  border: 1rpx solid #e8e8e8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); /* 更柔和的投影，类似PC */
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+.ai-trigger-hover {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+}
+.ai-icon { font-size: 36rpx; line-height: 1; }
+
+.chat-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  z-index: 10001;
+}
+
+.chat-modal {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 75vh;
+  background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx;
+  display: flex; flex-direction: column; pointer-events: auto;
+  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.1);
+  animation: slideUp 0.3s ease-out forwards;
+  z-index: 10002;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.chat-header {
+  padding: 24rpx; display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1rpx solid #eee;
+}
+.chat-title { font-weight: bold; font-size: 32rpx; color: #333; }
+.close-btn { font-size: 40rpx; color: #999; padding: 0 20rpx; }
+.chat-history { flex: 1; padding: 24rpx; background: #f8f9fa; }
+.message-row { display: flex; margin-bottom: 24rpx; align-items: flex-start; }
+.my-message { flex-direction: row-reverse; }
+.ai-message { flex-direction: row; }
+.avatar { width: 64rpx; height: 64rpx; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-size: 24rpx; margin: 0 16rpx; flex-shrink: 0; }
+.my-message .avatar { background: var(--primary-color, #2D7FF9); color: #fff; }
+.my-message .bubble { background: var(--primary-color, #2D7FF9); color: #fff; border-radius: 16rpx 0 16rpx 16rpx; }
+.ai-message .bubble { background: #fff; color: #333; border-radius: 0 16rpx 16rpx 16rpx; }
+.bubble { padding: 16rpx 24rpx; max-width: 60%; font-size: 28rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05); }
+.message-text { word-break: break-all; white-space: pre-wrap; line-height: 1.5; }
+.chat-input-area { display: flex; padding: 16rpx 24rpx 48rpx; border-top: 1rpx solid #eee; background: #fff; align-items: center; }
+.chat-input { flex: 1; background: #f0f0f0; border-radius: 32rpx; padding: 12rpx 24rpx; font-size: 28rpx; height: 72rpx; box-sizing: border-box; }
+.send-btn { margin-left: 16rpx; background: var(--primary-color, #2D7FF9); color: #fff; border-radius: 36rpx; font-size: 28rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; }
+.send-btn[disabled] { background: #ccc; color: #fff; }
+.loading-indicator { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx; }
+
+/* 推荐追问 UI */
+.recommend-wrapper {
+  margin-top: 16rpx;
+  border-top: 1rpx dashed #eee;
+  padding-top: 16rpx;
+}
+.recommend-title {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 12rpx;
+}
+.recommend-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.recommend-pill {
+  padding: 8rpx 16rpx;
+  background: rgba(45, 127, 249, 0.08); /* var(--primary-color) opacified */
+  color: var(--primary-color, #2D7FF9);
+  font-size: 24rpx;
+  border-radius: 20rpx;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.recommend-pill:active {
+  background: rgba(45, 127, 249, 0.15);
+}

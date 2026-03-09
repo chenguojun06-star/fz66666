@@ -1,0 +1,45 @@
+<view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
+  <!-- 顶部固定入口，位于铃铛左侧 -->
+  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
+    <text class="ai-icon">✨</text>
+  </view>
+
+  <!-- 遮罩层 -->
+  <view class="chat-overlay" wx:if="{{isOpen}}" catchtap="toggleChat"></view>
+
+  <!-- 聊天弹窗 -->
+  <view class="chat-modal" wx:if="{{isOpen}}">
+    <view class="chat-header">
+      <text class="chat-title">智能小云</text>
+      <view class="close-btn" catchtap="toggleChat">×</view>
+    </view>
+    <scroll-view class="chat-history" scroll-y scroll-into-view="{{scrollTo}}">
+      <block wx:for="{{messages}}" wx:key="id">
+        <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
+          <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
+          <view class="bubble">
+            <text class="message-text" user-select>{{item.content}}</text>
+            <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
+              <view class="recommend-title">猜你想问</view>
+              <view class="recommend-pills">
+                <view 
+                  class="recommend-pill" 
+                  wx:for="{{item.recommendPills}}" 
+                  wx:for-item="pill" 
+                  wx:key="*this"
+                  data-question="{{pill}}"
+                  catchtap="autoAsk"
+                >{{pill}}</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
+    </scroll-view>
+    <view class="chat-input-area">
+      <input class="chat-input" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
+      <button class="send-btn" catchtap="sendMessage" disabled="{{isLoading || !inputValue}}">发送</button>
+    </view>
+  </view>
+</view>
