@@ -403,12 +403,12 @@ const GlobalAiAssistant: React.FC = () => {
       const voices = window.speechSynthesis.getVoices();
 
       const preferredVoices = [
-        'Xiaoxiao', 'Tingting', 'Yaoyao', 'Mei-Jia', 'Lili', 'Shanshan', 'Female', 'female'
+        'xiaoxiao', 'ting', 'yaoyao', 'mei-jia', 'lili', 'shanshan', 'female'
       ];
 
       let selectedVoice = undefined;
       for (const vName of preferredVoices) {
-        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes(vName.toLowerCase()));
+        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes(vName));
         if (selectedVoice) break;
       }
 
