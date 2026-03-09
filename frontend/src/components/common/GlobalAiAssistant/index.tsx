@@ -397,13 +397,13 @@ const GlobalAiAssistant: React.FC = () => {
         utterance.voice = selectedVoice;
       }
 
-      // 参照“温柔女生”的真人感调校：
-      // 1. 语速调到 0.9 倍
-      utterance.rate = 0.9;
-      // 2. 音调调低一点，去除尖锐感（默认是 1.0）
-      utterance.pitch = 0.85;
-      // 3. 压低音量，模拟“带点气声、轻柔的声音”
-      utterance.volume = 0.7;
+      // 呆萌卡通风格调校：
+      // 1. 语速略快，活泼感
+      utterance.rate = 1.05;
+      // 2. 音调拉高，可爱萌感（默认1.0，拉到1.4偏卡通）
+      utterance.pitch = 1.4;
+      // 3. 音量饱满
+      utterance.volume = 0.85;
 
       window.speechSynthesis.speak(utterance);
     }
