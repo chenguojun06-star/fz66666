@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.service.CustomerService;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +88,10 @@ public class CrmCustomerTool implements AgentTool {
             }
             if (contactPerson != null && !contactPerson.isBlank()) {
                 query.like("contact_person", contactPerson);
+            }
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                query.eq("tenant_id", tenantId);
             }
 
             // 限制返回条数，避免大对象

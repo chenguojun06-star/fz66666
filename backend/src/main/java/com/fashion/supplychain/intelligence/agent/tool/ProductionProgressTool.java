@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -13,6 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,6 +67,21 @@ public class ProductionProgressTool implements AgentTool {
         queryScanRecordsProp.put("description", "是否查询该订单最新的工序扫码记录");
         properties.put("queryScanRecords", queryScanRecordsProp);
 
+        Map<String, Object> startDateProp = new HashMap<>();
+        startDateProp.put("type", "string");
+        startDateProp.put("description", "创建时间起始日期(yyyy-MM-dd)，用于查询某段时间内的订单，例如查日报用今天日期，查周报用7天前日期");
+        properties.put("startDate", startDateProp);
+
+        Map<String, Object> endDateProp = new HashMap<>();
+        endDateProp.put("type", "string");
+        endDateProp.put("description", "创建时间结束日期(yyyy-MM-dd)，默认到今天");
+        properties.put("endDate", endDateProp);
+
+        Map<String, Object> limitProp = new HashMap<>();
+        limitProp.put("type", "integer");
+        limitProp.put("description", "返回最大条数(默认5，最大20)。生成报告时建议设为20以获取更多数据");
+        properties.put("limit", limitProp);
+
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("type", "object");
         parameters.put("properties", properties);
@@ -94,6 +113,11 @@ public class ProductionProgressTool implements AgentTool {
             String styleNo = (String) args.get("styleNo");
             String status = (String) args.get("status");
             Boolean queryScanRecords = (Boolean) args.get("queryScanRecords");
+            String startDate = (String) args.get("startDate");
+            String endDate = (String) args.get("endDate");
+            Integer limit = args.get("limit") instanceof Number ? ((Number) args.get("limit")).intValue() : 5;
+            if (limit < 1) limit = 1;
+            if (limit > 20) limit = 20;
 
             QueryWrapper<ProductionOrder> query = new QueryWrapper<>();
             if (orderNo != null && !orderNo.isBlank()) {
@@ -105,8 +129,21 @@ public class ProductionProgressTool implements AgentTool {
             if (status != null && !status.isBlank()) {
                 query.eq("status", status);
             }
+            if (startDate != null && !startDate.isBlank()) {
+                LocalDate sd = LocalDate.parse(startDate);
+                query.ge("create_time", LocalDateTime.of(sd, LocalTime.MIN));
+            }
+            if (endDate != null && !endDate.isBlank()) {
+                LocalDate ed = LocalDate.parse(endDate);
+                query.le("create_time", LocalDateTime.of(ed, LocalTime.MAX));
+            }
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                query.eq("tenant_id", tenantId);
+            }
+            query.eq("delete_flag", 0);
             query.orderByDesc("create_time");
-            query.last("LIMIT 5"); // 避免返回过多，最大返回5条
+            query.last("LIMIT " + limit);
 
             List<ProductionOrder> orders = productionOrderService.list(query);
 

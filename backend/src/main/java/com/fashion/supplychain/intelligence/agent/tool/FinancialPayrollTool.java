@@ -8,6 +8,7 @@ import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,11 +98,16 @@ public class FinancialPayrollTool implements AgentTool {
             List<Map<String, Object>> resultList = new ArrayList<>();
 
             // 如果指定了 operatorName 并且通过明细反查结算单
+            Long tenantId = UserContext.tenantId();
+
             if (operatorName != null && !operatorName.isBlank()) {
                 QueryWrapper<PayrollSettlementItem> itemQuery = new QueryWrapper<>();
                 itemQuery.like("operator_name", operatorName);
                 if (orderNo != null && !orderNo.isBlank()) {
                     itemQuery.eq("order_no", orderNo);
+                }
+                if (tenantId != null) {
+                    itemQuery.eq("tenant_id", tenantId);
                 }
                 itemQuery.orderByDesc("create_time");
                 itemQuery.last("LIMIT 15");
@@ -135,6 +141,9 @@ public class FinancialPayrollTool implements AgentTool {
                 }
                 if (status != null && !status.isBlank()) {
                     query.eq("status", status);
+                }
+                if (tenantId != null) {
+                    query.eq("tenant_id", tenantId);
                 }
                 query.orderByDesc("create_time");
                 query.last("LIMIT 5");

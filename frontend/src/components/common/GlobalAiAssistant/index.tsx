@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
@@ -12,6 +12,71 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import api, { type ApiResult } from '@/utils/api';
 import type { NlQueryResponse } from '@/services/production/productionApi';
 import styles from './index.module.css';
+
+/** 轻量 Markdown → HTML（仅处理 AI 常用的格式） */
+function renderSimpleMarkdown(text: string): string {
+  // 先保护代码块
+  const codeBlocks: string[] = [];
+  let s = text.replace(/```([\s\S]*?)```/g, (_, code) => {
+    codeBlocks.push(code.trim());
+    return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+  });
+  // 按行处理
+  const lines = s.split('\n');
+  const html: string[] = [];
+  let inList = false;
+  for (const raw of lines) {
+    const line = raw;
+    // 标题
+    if (/^###\s+(.+)/.test(line)) {
+      if (inList) { html.push('</ul>'); inList = false; }
+      html.push(`<strong style="display:block;margin:8px 0 4px;font-size:14px">${RegExp.$1}</strong>`);
+      continue;
+    }
+    if (/^##\s+(.+)/.test(line)) {
+      if (inList) { html.push('</ul>'); inList = false; }
+      html.push(`<strong style="display:block;margin:10px 0 4px;font-size:15px">${RegExp.$1}</strong>`);
+      continue;
+    }
+    if (/^#\s+(.+)/.test(line)) {
+      if (inList) { html.push('</ul>'); inList = false; }
+      html.push(`<strong style="display:block;margin:12px 0 6px;font-size:16px">${RegExp.$1}</strong>`);
+      continue;
+    }
+    // 无序列表
+    if (/^[-*]\s+(.+)/.test(line)) {
+      if (!inList) { html.push('<ul style="margin:4px 0;padding-left:20px">'); inList = true; }
+      html.push(`<li>${inlineFmt(RegExp.$1)}</li>`);
+      continue;
+    }
+    // 有序列表
+    if (/^\d+\.\s+(.+)/.test(line)) {
+      if (inList) { html.push('</ul>'); inList = false; }
+      html.push(`<div style="margin:2px 0">${inlineFmt(line)}</div>`);
+      continue;
+    }
+    if (inList) { html.push('</ul>'); inList = false; }
+    // 空行
+    if (!line.trim()) { html.push('<br/>'); continue; }
+    // 普通段落
+    html.push(`<div style="margin:2px 0">${inlineFmt(line)}</div>`);
+  }
+  if (inList) html.push('</ul>');
+  let result = html.join('');
+  // 还原代码块
+  result = result.replace(/__CODE_BLOCK_(\d+)__/g, (_, i) =>
+    `<pre style="background:#f5f5f5;padding:8px;border-radius:6px;overflow-x:auto;font-size:12px;margin:6px 0"><code>${escHtml(codeBlocks[Number(i)])}</code></pre>`
+  );
+  return result;
+}
+function inlineFmt(s: string): string {
+  return escHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>');
+}
+function escHtml(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 interface Message {
   id: string;
@@ -402,11 +467,20 @@ const GlobalAiAssistant: React.FC = () => {
                 )}
 
                 <div className={`${styles.messageBubble} ${msg.role === 'ai' ? styles.bubbleAi : styles.bubbleUser}`}>
-                  <div style={{ whiteSpace: 'pre-wrap' }}>
-                    {msg.text.includes('【推荐追问】：')
-                      ? msg.text.split('【推荐追问】：')[0]
-                      : msg.text}
-                  </div>
+                  {msg.role === 'ai' ? (
+                    <div
+                      className={styles.mdContent}
+                      dangerouslySetInnerHTML={{
+                        __html: renderSimpleMarkdown(
+                          msg.text.includes('【推荐追问】：')
+                            ? msg.text.split('【推荐追问】：')[0]
+                            : msg.text
+                        )
+                      }}
+                    />
+                  ) : (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                  )}
                   {msg.text.includes('【推荐追问】：') && (
                     <div className={styles.recommendWrapper}>
                       <div className={styles.recommendTitle}>你可以接着问：</div>

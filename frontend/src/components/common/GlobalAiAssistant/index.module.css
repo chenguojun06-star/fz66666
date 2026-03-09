@@ -193,6 +193,15 @@
   border-top-right-radius: 2px;
 }
 
+.mdContent {
+  line-height: 1.6;
+  font-size: 14px;
+}
+.mdContent ul { margin: 4px 0; padding-left: 20px; }
+.mdContent li { margin: 2px 0; }
+.mdContent strong { font-weight: 600; }
+.mdContent pre { white-space: pre-wrap; word-break: break-word; }
+
 /* Suggestion Chips */
 .suggestionChips {
   display: flex;
