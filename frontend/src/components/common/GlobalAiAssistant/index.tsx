@@ -5,7 +5,8 @@ import {
   CloseOutlined,
   SoundOutlined,
   ExportOutlined,
-  DashboardOutlined
+  DashboardOutlined,
+  AudioMutedOutlined
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import api, { type ApiResult } from '@/utils/api';
@@ -158,6 +159,7 @@ const GlobalAiAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [hasFetchedMood, setHasFetchedMood] = useState(false);
 
   useEffect(() => {
@@ -165,9 +167,11 @@ const GlobalAiAssistant: React.FC = () => {
     const fetchStatus = async () => {
       try {
         setHasFetchedMood(true);
-        const res = await api.get('/dashboard/daily-brief', { timeout: 5000 });
-        if (res?.data) {
-          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = res.data;
+        const res = await api.get('/dashboard/daily-brief');
+        // @ts-ignore
+        const actualData = res?.code === 200 ? res.data : (res?.data || res);
+        if (actualData) {
+          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = actualData;
           let newMood: CloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
 
@@ -244,7 +248,7 @@ const GlobalAiAssistant: React.FC = () => {
       // @ts-ignore
       const res = await intelligenceApi.aiAdvisorChat(text);
       // @ts-ignore
-      const resultData = res?.data || res;
+      const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
 
       const aiMsg: Message = {
         id: `a-${Date.now()}`,
@@ -278,6 +282,7 @@ const GlobalAiAssistant: React.FC = () => {
 
   // 语音播报方法
   const speak = (text: string) => {
+    if (isMuted) return;
     if ('speechSynthesis' in window) {
       // 停止当前播报
       window.speechSynthesis.cancel();
@@ -331,8 +336,8 @@ const GlobalAiAssistant: React.FC = () => {
   const jumpToIntelligenceCenter = (query: string) => {
     setIsOpen(false);
     // 如果已经在智能驾驶舱，不跨路由跳转仅提示
-    if (location.pathname !== '/intelligence/dashboard') {
-      navigate('/intelligence/dashboard');
+    if (location.pathname !== '/intelligence/center') {
+      navigate('/intelligence/center');
     }
   };
 
@@ -350,10 +355,25 @@ const GlobalAiAssistant: React.FC = () => {
               <div className={styles.headerTitle}>小云 智能助理</div>
               <div className={styles.headerSubtitle}>云裳智链 · 实时数据支持</div>
             </div>
-            <CloseOutlined
-              className={styles.closeButton}
-              onClick={() => setIsOpen(false)}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isMuted ? (
+                <AudioMutedOutlined
+                  className={styles.closeButton}
+                  onClick={() => setIsMuted(false)}
+                  title="取消静音"
+                />
+              ) : (
+                <SoundOutlined
+                  className={styles.closeButton}
+                  onClick={() => setIsMuted(true)}
+                  title="静音"
+                />
+              )}
+              <CloseOutlined
+                className={styles.closeButton}
+                onClick={() => setIsOpen(false)}
+              />
+            </div>
           </div>
 
           {/* Chat List */}
