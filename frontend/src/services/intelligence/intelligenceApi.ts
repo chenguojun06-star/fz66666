@@ -1043,24 +1043,17 @@ export const intelligenceApi = {
   downloadProfessionalReport: async (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) => {
     const params = new URLSearchParams({ type });
     if (date) params.append('date', date);
-    const resp = await fetch(`/api/intelligence/professional-report/download?${params}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
-    });
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => '');
-      throw new Error(errText || `下载失败: ${resp.status}`);
+
+    // 如果存在 token，添加到参数中以免缺少权限导致下载失败
+    const token = localStorage.getItem('authToken') || '';
+    if (token) {
+      params.append('token', token);
     }
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const cd = resp.headers.get('Content-Disposition') || '';
-    const match = cd.match(/filename\*?=(?:UTF-8'')?(.+)/i);
-    a.download = match ? decodeURIComponent(match[1]) : `运营报告_${type}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // 使用浏览器原生下载，避免 fetch Blob 可能解析导致的空文件或 0-byte 被视为"没数据"的情况
+    window.location.href = `/api/intelligence/professional-report/download?${params.toString()}`;
+
+    // 给一点时间让浏览器发起下载，然后再结束，让外部的 await 返回
+    await new Promise(r => setTimeout(r, 500));
   },
 };

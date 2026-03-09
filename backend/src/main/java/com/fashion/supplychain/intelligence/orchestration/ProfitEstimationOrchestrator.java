@@ -10,9 +10,11 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 
 /**
  * 订单利润预估编排器 — 成本结构分析 + 毛利率仪表盘
@@ -37,6 +39,9 @@ public class ProfitEstimationOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private OrderPriceFillHelper orderPriceFillHelper;
 
     public ProfitEstimationResponse estimate(ProfitEstimationRequest request) {
         ProfitEstimationResponse resp = new ProfitEstimationResponse();
@@ -66,6 +71,10 @@ public class ProfitEstimationOrchestrator {
             resp.setCostWarning("订单不存在，请确认订单号");
             return resp;
         }
+
+        // 核心修复：单价在系统中是动态计算的（来自款式BOM和工序评估），数据库不直存，需要手动填充
+        orderPriceFillHelper.fillFactoryUnitPrice(Collections.singletonList(order));
+        orderPriceFillHelper.fillQuotationUnitPrice(Collections.singletonList(order));
 
         resp.setOrderId(order.getId());
         resp.setOrderNo(order.getOrderNo());

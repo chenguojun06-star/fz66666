@@ -60,7 +60,7 @@ public class ProductionOrderExportOrchestrator {
                 r.createCell(5).setCellValue(o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
                 r.createCell(6).setCellValue(o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0);
                 r.createCell(7).setCellValue((o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
-                
+
                 String statusLabel = switch (safe(o.getStatus())) {
                     case "PENDING" -> "待开始";
                     case "IN_PROGRESS" -> "进行中";

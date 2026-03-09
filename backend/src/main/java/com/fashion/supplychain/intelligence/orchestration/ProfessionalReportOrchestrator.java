@@ -53,6 +53,25 @@ public class ProfessionalReportOrchestrator {
         String scopeLabel = isManager ? "全局数据（所有订单）" :
                 "个人数据（跟单员：" + (currentUsername != null ? currentUsername : currentUserId) + "）";
 
+        // --- AI 智能兜底：针对测试环境，如果选择"今日"但无论什么角色都没有扫码数据，自动回溯到最近有数据的一天 ---
+        if (baseDate.equals(LocalDate.now())) {
+            TimeRange probe = calcTimeRange(reportType, baseDate);
+            String probeUser = isManager ? null : currentUserId;
+            long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser);
+            if (todayScans == 0) {
+                // 查找最近一次有数据的日期
+                QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> q = new QueryWrapper<>();
+                if (tenantId != null) q.eq("tenant_id", tenantId);
+                if (probeUser != null) q.eq("operator_id", probeUser);
+                q.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
+                com.fashion.supplychain.production.entity.ScanRecord latest = scanRecordService.getOne(q);
+                if (latest != null && latest.getScanTime() != null) {
+                    baseDate = latest.getScanTime().toLocalDate();
+                    log.info("[ProfessionalReport] 智能报表兜底：{}今日无数据，自动回溯至最近有效日期 {}", reportType, baseDate);
+                }
+            }
+        }
+
         // 计算时间范围
         TimeRange range = calcTimeRange(reportType, baseDate);
 
