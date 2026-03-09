@@ -95,7 +95,7 @@ public class ActionCenterOrchestrator {
                     String.format("跟进高风险订单 %s", item.getOrderNo()),
                     item.getRiskDescription(),
                     "交付风险已进入高优先级区间，建议立即核查卡点、产能与物料状态",
-                    "/production/progress",
+                    "/production/progress-detail",
                     item.getOrderNo(),
                     smartEscalationOrchestrator.dueHintByEscalation(escalation),
                     false));
