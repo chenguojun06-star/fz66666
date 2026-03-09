@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-09 AI 智能助手四大体验修复
+
+### 🐛 Bug 修复 & ✨ 优化
+
+#### 1. **修复 AI 拒绝生成日报、周报、月报**
+- **问题**：用户要求 AI 生成报告时被拒绝或执行缓慢
+- **根因**：AI Agent 的系统提示词对报表请求支持不足，缺乏数据工具调用强制
+- **方案**：增强 `AiAgentOrchestrator.java` 的系统提示词，显式要求 AI 不拒绝报表请求，直接调用脚本库存/生产进度/员工等数据工具，并用清晰美观排版输出
+
+| 文件 | 变更 |
+|------|------|
+| `AiAgentOrchestrator.java` | 增加约 50 行提示词规范，强制报表能力与数据抓取流程 |
+
+#### 2. **修复太空舱导航 404 问题**
+- **问题**：点击 AI 助手的「太空舱」按钮导航时显示页面不存在
+- **根因**：前端小助手组件持有过时的路由地址 `/intelligence/dashboard`，系统已将其改为 `/intelligence/center`
+- **方案**：更新 `GlobalAiAssistant/index.tsx` 中的 `jumpToIntelligenceCenter()` 函数到正确的路由
+
+| 文件 | 变更 |
+|------|------|
+| `GlobalAiAssistant/index.tsx` | 将 `/intelligence/dashboard` → `/intelligence/center` |
+
+#### 3. **增加智能小助手全局语音静音开关**
+- **问题**：用户无法关闭 AI 语音播报，容易造成打扰
+- **方案**：在小助手面板顶部右侧增加语音播报开启/关闭切换图标（`SoundOutlined` / `AudioMutedOutlined`）
+
+| 文件 | 变更 |
+|------|------|
+| `GlobalAiAssistant/index.tsx` | 新增 `isMuted` React state，语音播放处加守卫条件 `if (isMuted) return;` |
+
+#### 4. **修复首屏欢迎语缺失问题**
+- **问题**：打开 AI 助手时首屏欢迎语/天气心情为空白
+- **根因**：Axios 拦截器的返回包装结构不一致（`res.data` vs `res`），导致深层拆包时丢失数据
+- **方案**：加强前端的数据拆包容错：`res?.code === 200 ? res.data : (res?.data || res)`，并标注为 `any` 类型避免 TS 报错
+
+| 文件 | 变更 |
+|------|------|
+| `GlobalAiAssistant/index.tsx` | 优化 `fetchStatus()` 和 `sendMessage()` 中的响应数据拆包逻辑（+7 行容错代码） |
+
+### 后续配套
+
+- 新增后端 Agent 底层支撑类（`AiMessage.java`, `AiToolCall.java`, `*/tool/*.java` 工具集）
+- 前端三大配套优化（`SmartAlertBell`、`useAutoCollectDict`、数据拆包容错）
+- 小程序 AI 助手组件升级（UI/交互同步三端一体化）
+
+---
+
 ## [Unreleased] - 2026-03-26 智能驾驶舱三闭环升级：行动中心可执行 + 排产确认 + 扫码推送
 
 ### ✨ 新功能
