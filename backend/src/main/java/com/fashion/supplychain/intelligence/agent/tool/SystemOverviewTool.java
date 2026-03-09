@@ -16,9 +16,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 系统全局概览统计工具 — 提供聚合数据帮助AI回答"系统有什么/状态/进度/卡点"
+ * 增强版：含昨日对比、本周扫码趋势、紧急事项优先级排序
  */
 @Slf4j
 @Component
@@ -74,11 +76,14 @@ public class SystemOverviewTool implements AgentTool {
             // --- 风险与卡点 ---
             overview.put("risk", buildRiskStats(tenantId));
 
-            // --- 今日动态 ---
+            // --- 今日动态（含昨日对比） ---
             overview.put("today", buildTodayStats(tenantId));
 
             // --- 库存概况 ---
             overview.put("stock", buildStockStats(tenantId));
+
+            // --- 当前最需关注事项（优先级排序） ---
+            overview.put("topPriorities", buildTopPriorities(tenantId));
 
             return objectMapper.writeValueAsString(overview);
         } catch (Exception e) {
@@ -188,6 +193,8 @@ public class SystemOverviewTool implements AgentTool {
     private Map<String, Object> buildTodayStats(Long tenantId) {
         Map<String, Object> today = new LinkedHashMap<>();
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime yesterdayStart = todayStart.minusDays(1);
+        LocalDateTime yesterdayEnd = LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MAX);
 
         // 今日扫码量
         QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> scanQuery = new QueryWrapper<>();
@@ -195,6 +202,14 @@ public class SystemOverviewTool implements AgentTool {
         if (tenantId != null) scanQuery.eq("tenant_id", tenantId);
         long todayScanCount = scanRecordService.count(scanQuery);
         today.put("scanCount", todayScanCount);
+
+        // 昨日扫码量（对比）
+        QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> ydScanQ = new QueryWrapper<>();
+        ydScanQ.eq("scan_result", "success").ge("scan_time", yesterdayStart).le("scan_time", yesterdayEnd);
+        if (tenantId != null) ydScanQ.eq("tenant_id", tenantId);
+        long yesterdayScanCount = scanRecordService.count(ydScanQ);
+        today.put("yesterdayScanCount", yesterdayScanCount);
+        today.put("scanTrend", todayScanCount >= yesterdayScanCount ? "↑" : "↓");
 
         // 今日新建订单
         QueryWrapper<ProductionOrder> newOrderQuery = new QueryWrapper<>();
@@ -222,5 +237,69 @@ public class SystemOverviewTool implements AgentTool {
         stock.put("totalMaterialTypes", totalItems);
 
         return stock;
+    }
+
+    /**
+     * 构建当前最需关注事项列表（优先级排序），帮助 AI 直接回答"现在最需要关注什么"
+     */
+    private List<Map<String, Object>> buildTopPriorities(Long tenantId) {
+        List<Map<String, Object>> priorities = new ArrayList<>();
+
+        // 已逾期订单 — 最高优先级
+        QueryWrapper<ProductionOrder> overdueQ = new QueryWrapper<>();
+        overdueQ.eq("delete_flag", 0).ne("status", "COMPLETED").ne("status", "CANCELLED")
+                .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
+        if (tenantId != null) overdueQ.eq("tenant_id", tenantId);
+        List<ProductionOrder> overdue = productionOrderService.list(overdueQ);
+        for (ProductionOrder o : overdue.stream().limit(3).toList()) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("priority", "🔴 紧急");
+            p.put("type", "已逾期");
+            p.put("orderNo", o.getOrderNo());
+            p.put("styleName", o.getStyleName());
+            p.put("factoryName", o.getFactoryName());
+            p.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
+            p.put("suggestion", "立即联系工厂催进度，考虑标记为紧急订单");
+            priorities.add(p);
+        }
+
+        // 3天内到期 进度<80% — 高优先级
+        QueryWrapper<ProductionOrder> urgentQ = new QueryWrapper<>();
+        urgentQ.eq("delete_flag", 0).eq("status", "IN_PROGRESS").isNotNull("planned_end_date")
+                .le("planned_end_date", LocalDateTime.now().plusDays(3))
+                .ge("planned_end_date", LocalDateTime.now());
+        if (tenantId != null) urgentQ.eq("tenant_id", tenantId);
+        List<ProductionOrder> urgentSoon = productionOrderService.list(urgentQ).stream()
+                .filter(o -> o.getProductionProgress() == null || o.getProductionProgress() < 80)
+                .toList();
+        for (ProductionOrder o : urgentSoon.stream().limit(3).toList()) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("priority", "🟠 高");
+            p.put("type", "即将到期");
+            p.put("orderNo", o.getOrderNo());
+            p.put("styleName", o.getStyleName());
+            p.put("factoryName", o.getFactoryName());
+            p.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
+            p.put("daysRemaining", java.time.Duration.between(LocalDateTime.now(), o.getPlannedEndDate()).toDays());
+            p.put("suggestion", "需加班赶工或协调其他工厂分担产能");
+            priorities.add(p);
+        }
+
+        // 零进度进行中订单 — 中优先级
+        QueryWrapper<ProductionOrder> zeroQ = new QueryWrapper<>();
+        zeroQ.eq("delete_flag", 0).eq("status", "IN_PROGRESS")
+                .and(w -> w.isNull("production_progress").or().eq("production_progress", 0));
+        if (tenantId != null) zeroQ.eq("tenant_id", tenantId);
+        long zeroProgressCount = productionOrderService.count(zeroQ);
+        if (zeroProgressCount > 0) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("priority", "🟡 中");
+            p.put("type", "停滞订单");
+            p.put("count", zeroProgressCount);
+            p.put("suggestion", "检查这些订单是否缺面料、缺工人、或未排产");
+            priorities.add(p);
+        }
+
+        return priorities;
     }
 }
