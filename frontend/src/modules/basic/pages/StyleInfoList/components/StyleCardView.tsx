@@ -5,6 +5,7 @@ import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { withQuery } from '@/utils/api';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -13,7 +14,7 @@ interface StyleCardViewProps {
   pageSize: number;
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
-  onDelete: (id: string) => void;
+  onMaintenance: (record: StyleInfo) => void;
 }
 
 /**
@@ -27,7 +28,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   pageSize,
   currentPage,
   onPageChange,
-  onDelete
+  onMaintenance
 }) => {
   const navigate = useNavigate();
 
@@ -86,15 +87,15 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       hoverRender={(record) => <SmartStyleHoverCard record={record as StyleInfo} />}
       actions={(record) => [
         {
-          key: 'view',
-          label: '查看详情',
-          onClick: () => navigate(`/style-info/${record.id}`),
+          key: 'order',
+          label: '下单',
+          onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo })),
+          primary: true,
         },
         {
-          key: 'delete',
-          label: '删除',
-          onClick: () => onDelete(record.id!),
-          danger: true,
+          key: 'maintenance',
+          label: '维护',
+          onClick: () => onMaintenance(record as StyleInfo),
         },
       ]}
       pagination={{

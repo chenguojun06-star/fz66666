@@ -279,7 +279,7 @@ const StyleInfoListPage: React.FC = () => {
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
-            onDelete={handleDelete}
+            onMaintenance={openMaintenance}
           />
         )}
       </Card>
