@@ -386,7 +386,8 @@ const intelligence = {
     return ok('/api/intelligence/scan-tips', 'GET', params || {});
   },
   aiAdvisorChat(payload) {
-    return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {});
+    // AI agent loop 最多调用 5 次 LLM，需要较长超时
+    return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
 };
 

@@ -295,7 +295,7 @@ function request(options) {
       url: `${baseUrl}${url}`,
       method,
       data,
-      timeout: 10000,
+      timeout: (options && options.timeout) || 10000,
       header: headers,
       success(res) {
         handleSuccess(res, { url, method, skipAuthRedirect, token, resolve, reject });
