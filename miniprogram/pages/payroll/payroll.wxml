@@ -1,7 +1,6 @@
 <!-- pages/payroll/payroll.wxml -->
 <view class="page">
   <!-- 通用悬浮铃铛组件 -->
-  <floating-bell />
 
   <!-- 顶部统计卡片 -->
   <view class="summary-card">

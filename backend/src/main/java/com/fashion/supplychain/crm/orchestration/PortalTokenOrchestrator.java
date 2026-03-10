@@ -8,8 +8,10 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import cn.hutool.jwt.JWT;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -24,6 +26,9 @@ import java.util.Map;
 @Slf4j
 @Service
 public class PortalTokenOrchestrator {
+
+    @Value("${app.auth.jwt-secret:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}")
+    private String jwtSecret;
 
     @Autowired
     private PortalTokenService portalTokenService;
@@ -62,14 +67,28 @@ public class PortalTokenOrchestrator {
         if (existing != null) {
             // 续期：刷新过期时间
             existing.setExpireTime(LocalDateTime.now().plusDays(DEFAULT_EXPIRE_DAYS));
+
+            // 重要：由于是 JWT，token 的 exp 在签发时就固定了，必须重新生成一个覆盖旧的记录！
+            String newToken = JWT.create()
+                    .setPayload("orderId", orderId)
+                    .setPayload("customerId", customerId)
+                    .setPayload("exp", System.currentTimeMillis() / 1000 + DEFAULT_EXPIRE_DAYS * 24 * 3600L)
+                    .setKey(jwtSecret.getBytes())
+                    .sign();
+            existing.setToken(newToken);
+
             portalTokenService.updateById(existing);
             log.info("[PortalTokenOrchestrator] 续期令牌 orderId={}", orderId);
             return existing;
         }
 
-        byte[] rawBytes = new byte[32];
-        RANDOM.nextBytes(rawBytes);
-        String token = HexFormat.of().formatHex(rawBytes);
+        // 使用 JWT 签发有时效的 Share Token
+        String token = JWT.create()
+                .setPayload("orderId", orderId)
+                .setPayload("customerId", customerId)
+                .setPayload("exp", System.currentTimeMillis() / 1000 + DEFAULT_EXPIRE_DAYS * 24 * 3600L)
+                .setKey(jwtSecret.getBytes())
+                .sign();
 
         CustomerPortalToken pt = new CustomerPortalToken();
         pt.setToken(token);
@@ -94,13 +113,27 @@ public class PortalTokenOrchestrator {
      * 通过令牌获取订单概况（客户自助查看接口）
      */
     public Map<String, Object> queryByToken(String token) {
+        // 先进行 JWT 签名验证
+        boolean isValidJwt = false;
+        try {
+            isValidJwt = JWT.of(token).setKey(jwtSecret.getBytes()).verify();
+            if (!JWT.of(token).setKey(jwtSecret.getBytes()).validate(0)) {
+                 throw new RuntimeException("链接内的JWT已过期");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("链接格式不正确或已被篡改");
+        }
+        if (!isValidJwt) {
+            throw new RuntimeException("链接签名无效");
+        }
+
         CustomerPortalToken pt = portalTokenService.getOne(
                 new LambdaQueryWrapper<CustomerPortalToken>()
                         .eq(CustomerPortalToken::getToken, token)
                         .last("LIMIT 1"), false);
 
         if (pt == null) {
-            throw new RuntimeException("链接无效或已失效");
+            throw new RuntimeException("链接无效或已由工厂撤回");
         }
         if (pt.getExpireTime() != null && pt.getExpireTime().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("链接已过期，请联系工厂重新获取");

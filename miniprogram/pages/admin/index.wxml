@@ -1,6 +1,5 @@
 <view class="container">
   <!-- 通用悬浮铃铛组件 -->
-  <floating-bell />
 
   <view class="card">
     <view class="title-row">
@@ -188,3 +187,6 @@
     </view>
   </view>
 </view>
+
+<!-- 小云 AI 助手（全页面悬浮） -->
+<ai-assistant />

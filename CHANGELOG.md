@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-22 小程序端小云助理吞并任务铃铛重构
+
+### ✨ 新功能 / 重构
+
+#### **小程序端“小云吞并铃铛”与界面降噪**
+- **业务价值**：消除原有的“冷冰冰”纯菜单铃铛组件（`floating-bell`），全面由“主动式 AI 管家”（小云 `ai-assistant`）接管待办事项。实现界面降噪、消除多入口割裂，在聊天对话中直推任务卡片并支持直接操作。
+- **架构变更**：
+  - 彻底移除了 `miniprogram/components/floating-bell`。
+  - 将原有的铃铛数据获取及响应逻辑层 `bellTaskLoader.js` 和 `bellTaskActions.js` 统一移入 `ai-assistant` 内。
+  - 优化重写 `ai-assistant/index.js`、`ai-assistant/index.wxml`、`ai-assistant/index.wxss`。不再使用过时的双 Tab 结构，将待处理列表作为 AI 对话消息中的“任务卡片”自动精准推送。
+  - **文案优化**：动态获取当前真实登录用户信息（避免再使用硬编码的“主理人”），使得交互更自然。
+
 ## [Unreleased] - 2026-03-21 专业运营报告一键下载
 
 ### ✨ 新功能

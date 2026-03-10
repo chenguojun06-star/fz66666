@@ -132,6 +132,7 @@ public class ProductionOrder {
      * 公司/客户（从样衣开发带入，可修改）
      */
     @TableField("company")
+    private String customerId;
     private String company;
 
     /**

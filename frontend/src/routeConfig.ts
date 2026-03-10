@@ -307,6 +307,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.warehousing]: permissionCodes.warehousing,
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
+  [paths.payrollOperatorSummary]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
   [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.wagePayment]: permissionCodes.wagePayment,

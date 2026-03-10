@@ -1,5 +1,4 @@
 <view class="container">
-  <floating-bell />
 
   <!-- 搜索栏 -->
   <view class="search-row">

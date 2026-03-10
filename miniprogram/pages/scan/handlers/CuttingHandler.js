@@ -58,7 +58,7 @@ function checkPendingCuttingTask(ctx) {
       const task = JSON.parse(taskStr);
       setTimeout(() => {
         handleCuttingTaskFromBell(ctx, task);
-      }, 800);
+      }, 300);
     }
   } catch (e) {
     console.error('检查裁剪任务失败:', e);

@@ -105,14 +105,18 @@ const scanLifecycleMixin = Behavior({
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();
     if (isLogin) {
-      // ✅ 并行加载数据，等待全部完成后再检查待处理任务
-      await Promise.all([
-        this.loadMyPanel(true),
-        this.loadMyProcurementTasks(), // 加载采购任务列表
-        this.loadMyCuttingTasks(),     // 加载裁剪任务列表
-      ]);
+      // ✅ 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
+      try {
+        await Promise.all([
+          this.loadMyPanel(true),
+          this.loadMyProcurementTasks(), // 加载采购任务列表
+          this.loadMyCuttingTasks(),     // 加载裁剪任务列表
+        ]);
+      } catch (err) {
+        console.error('[scanLifecycleMixin] onShow 数据加载异常（不影响待办弹窗）:', err);
+      }
 
-      // ✅ 数据加载完成后，检查是否有待处理任务（从铃铛点击过来）
+      // ✅ 无论数据加载成功与否，都检查待处理任务（从铃铛/小云点击过来）
       this.checkPendingTasks();
       // 检查离线队列，有项目就尝试同步（切回此页时网络可能已恢复）
       const offlineCount = ScanOfflineQueue.count();
@@ -188,7 +192,7 @@ const scanLifecycleMixin = Behavior({
         if (taskStr) {
           wx.removeStorageSync('pending_quality_task');
           const task = JSON.parse(taskStr);
-          // ✅ 延迟弹出质检弹窗，确保页面数据已加载和渲染完成
+          // ✅ 延迟弹出质检弹窗，确保页面渲染完成
           setTimeout(() => {
             this.showQualityModal({
               orderId: task.orderId || '', // 订单ID（warehousing需要）
@@ -202,7 +206,7 @@ const scanLifecycleMixin = Behavior({
               scanCode: task.scanCode || '',
               recordId: task.id || task.scanId,
             });
-          }, 800);
+          }, 300);
         }
       } catch (e) {
         console.error('检查质检任务失败:', e);

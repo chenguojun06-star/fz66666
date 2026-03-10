@@ -88,7 +88,7 @@ function checkPendingProcurementTask(ctx) {
       const task = JSON.parse(taskStr);
       setTimeout(() => {
         handleProcurementTaskFromBell(ctx, task);
-      }, 800);
+      }, 300);
     }
   } catch (e) {
     console.error('检查采购任务失败:', e);

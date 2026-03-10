@@ -1,7 +1,6 @@
 {
   "navigationBarTitleText": "下单管理",
   "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index",
-    "floating-bell": "/components/floating-bell/index"
+    "mp-modal": "/components/common/mp-modal/index"
   }
 }

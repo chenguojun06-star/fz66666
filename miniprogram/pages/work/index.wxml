@@ -1,6 +1,5 @@
 <view class="container">
   <!-- 通用悬浮铃铛组件 -->
-  <floating-bell />
 
   <!-- 智能提醒入口（有未读通知时显示） -->
   <view wx:if="{{unreadNoticeCount > 0}}" class="inbox-banner" bindtap="goInbox" hover-class="inbox-banner-hover" hover-stay-time="100">
@@ -167,6 +166,9 @@
   </view>
 
 </view>
+
+<!-- 小云 AI 助手（全页面悬浮） -->
+<ai-assistant />
 
 <!-- 隐私保护授权弹窗（微信 2023-09-15 强制要求） -->
 <privacy-dialog id="privacyDialog" />

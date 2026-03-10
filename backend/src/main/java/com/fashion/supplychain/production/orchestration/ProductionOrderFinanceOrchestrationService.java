@@ -1,6 +1,9 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
@@ -46,6 +49,9 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
 
     @Autowired
     private CuttingBundleMapper cuttingBundleMapper;
@@ -197,6 +203,8 @@ public class ProductionOrderFinanceOrchestrationService {
             }
         }
 
+        triggerPayrollSettlementGeneration(oid);
+
         return true;
     }
 
@@ -286,6 +294,8 @@ public class ProductionOrderFinanceOrchestrationService {
             }
         }
 
+        triggerPayrollSettlementGeneration(oid);
+
         ProductionOrder detail = productionOrderService.getDetailById(oid);
         if (detail == null) {
             throw new NoSuchElementException("订单不存在");
@@ -368,6 +378,8 @@ public class ProductionOrderFinanceOrchestrationService {
                 log.warn("[智能回填] 自动关单回填失败，不影响流程: orderId={}", oid, ex);
             }
         }
+
+        triggerPayrollSettlementGeneration(oid);
 
         return true;
     }
@@ -818,5 +830,27 @@ public class ProductionOrderFinanceOrchestrationService {
             }
         }
         return true;
+    }
+
+    private void triggerPayrollSettlementGeneration(String orderId) {
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        java.util.Map<String, Object> params = new java.util.HashMap<>();
+                        params.put("orderId", orderId);
+                        payrollSettlementOrchestrator.generate(params);
+                        log.info("[计件薪资] 订单 {} 关单成功，已自动生成相关计件工资结算单", orderId);
+                    } catch (IllegalStateException e) {
+                        log.info("[计件薪资] 订单 {} 无可结算记录，跳过生成工资单 ({})", orderId, e.getMessage());
+                    } catch (Exception e) {
+                        log.error("[计件薪资] 订单 {} 自动生成工资单失败: {}", orderId, e.getMessage(), e);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.error("[计件薪资] 注册后置任务失败 订单 {}", orderId, e);
+        }
     }
 }

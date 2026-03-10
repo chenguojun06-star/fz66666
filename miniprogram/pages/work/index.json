@@ -2,6 +2,6 @@
   "navigationBarTitleText": "生产",
   "usingComponents": {
     "global-search": "/components/common/global-search/index",
-    "floating-bell": "/components/floating-bell/index"
+    "ai-assistant": "/components/ai-assistant/index"
   }
 }

@@ -1,0 +1,17 @@
+.share-tracking-container {
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+.share-tracking-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.share-tracking-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}

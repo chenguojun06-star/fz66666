@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -78,6 +79,7 @@ public class ProductionOrderOrchestrator {
     public static final String CLOSE_SOURCE_PRODUCTION_PROGRESS = "productionProgress";
 
     @Autowired
+    private ReceivableOrchestrator receivableOrchestrator;
     private ProductionOrderService productionOrderService;
 
     @Autowired
@@ -301,6 +303,32 @@ public class ProductionOrderOrchestrator {
                             msg == null ? "generateMaterialDemand failed" : ("generateMaterialDemand failed: " + msg),
                             LocalDateTime.now());
                 }
+            }
+
+// 使用 TransactionSynchronization 在主事务提交成功后执行，保证 CRM 动作独立，异常不回滚、不影响生产主流程
+            if (StringUtils.hasText(productionOrder.getCustomerId()) && productionOrder.getQuotationUnitPrice() != null && productionOrder.getOrderQuantity() != null) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                java.math.BigDecimal amount = productionOrder.getQuotationUnitPrice()
+                                        .multiply(new java.math.BigDecimal(productionOrder.getOrderQuantity()));
+                                receivableOrchestrator.generateFromOrder(
+                                        productionOrder.getCustomerId(),
+                                        productionOrder.getId(),
+                                        productionOrder.getOrderNo(),
+                                        amount,
+                                        productionOrder.getExpectedShipDate(),
+                                        "生产订单自动生成应收款"
+                                );
+                                log.info("CRM 闭环 - 主事务提交后异步/独立生成应收款，订单号: {}", productionOrder.getOrderNo());
+                            } catch (Exception e) {
+                                log.error("主事务后独立生成应收款失败，已隔离异常，不响主流程: orderId={}", productionOrder.getId(), e);
+                            }
+                        }
+                    }
+                );
             }
 
             // PDF自动生成功能已移除

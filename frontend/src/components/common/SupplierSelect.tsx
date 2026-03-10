@@ -68,7 +68,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       setLoading(true);
       try {
         const response = await factoryApi.list({
-          pageSize: 1000
+          pageSize: 1000, supplierType: 'MATERIAL', status: 'active'
         });
         if (mounted && response?.data?.records) {
           setSuppliers(response.data.records);

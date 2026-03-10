@@ -11,6 +11,7 @@ export interface Factory extends Record<string, unknown> {
   businessLicense?: string;
   tenantId: number;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
+  supplierType?: 'MATERIAL' | 'OUTSOURCE';
   orgUnitId?: string;
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
@@ -26,6 +27,7 @@ export interface FactoryListParams {
   factoryCode?: string;
   status?: string;
   factoryType?: string;
+  supplierType?: string;
   parentOrgUnitId?: string;
 }
 

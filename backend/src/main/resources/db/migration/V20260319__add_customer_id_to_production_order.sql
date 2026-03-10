@@ -1,0 +1,5 @@
+-- 生产订单添加客户ID用于关联CRM
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='customer_id')=0,
+    'ALTER TABLE `t_production_order` ADD COLUMN `customer_id` VARCHAR(36) NULL COMMENT \'CRM客户ID\'',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
