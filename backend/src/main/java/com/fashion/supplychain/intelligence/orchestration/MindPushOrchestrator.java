@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -116,6 +117,8 @@ public class MindPushOrchestrator {
                 .pushed7d(pushed7d)
                 .activeRules(activeRules)
                 .build())
+            .notifyTimeStart(extractPushTimeStart(dbRules))
+            .notifyTimeEnd(extractPushTimeEnd(dbRules))
             .build();
     }
 
@@ -138,6 +141,8 @@ public class MindPushOrchestrator {
             rule.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
             rule.setThresholdDays(dto.getThresholdDays() != null ? dto.getThresholdDays() : 3);
             rule.setThresholdProgress(dto.getThresholdProgress() != null ? dto.getThresholdProgress() : 60);
+            rule.setNotifyTimeStart(dto.getNotifyTimeStart() != null ? dto.getNotifyTimeStart() : "08:00");
+            rule.setNotifyTimeEnd(dto.getNotifyTimeEnd() != null ? dto.getNotifyTimeEnd() : "22:00");
             rule.setCreatedAt(LocalDateTime.now());
             rule.setUpdatedAt(LocalDateTime.now());
             mindPushRuleMapper.insert(rule);
@@ -145,8 +150,67 @@ public class MindPushOrchestrator {
             if (dto.getEnabled() != null) existing.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
             if (dto.getThresholdDays() != null) existing.setThresholdDays(dto.getThresholdDays());
             if (dto.getThresholdProgress() != null) existing.setThresholdProgress(dto.getThresholdProgress());
+            if (dto.getNotifyTimeStart() != null) existing.setNotifyTimeStart(dto.getNotifyTimeStart());
+            if (dto.getNotifyTimeEnd() != null) existing.setNotifyTimeEnd(dto.getNotifyTimeEnd());
             existing.setUpdatedAt(LocalDateTime.now());
             mindPushRuleMapper.updateById(existing);
+        }
+    }
+
+    /**
+     * 批量保存推送时段（统一修改该租户所有规则的推送时段）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void savePushTimeWindow(String timeStart, String timeEnd) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MindPushRule> rules = fetchRules(tenantId);
+        if (rules.isEmpty()) {
+            // 没有规则时，初始化全部默认规则并写入时段
+            for (Map.Entry<String, String> entry : DEFAULT_RULES) {
+                MindPushRule r = new MindPushRule();
+                r.setTenantId(tenantId);
+                r.setRuleCode(entry.getKey());
+                r.setRuleName(entry.getValue());
+                r.setEnabled(1);
+                r.setThresholdDays(3);
+                r.setThresholdProgress(60);
+                r.setNotifyTimeStart(timeStart);
+                r.setNotifyTimeEnd(timeEnd);
+                r.setCreatedAt(LocalDateTime.now());
+                r.setUpdatedAt(LocalDateTime.now());
+                mindPushRuleMapper.insert(r);
+            }
+        } else {
+            for (MindPushRule r : rules) {
+                r.setNotifyTimeStart(timeStart);
+                r.setNotifyTimeEnd(timeEnd);
+                r.setUpdatedAt(LocalDateTime.now());
+                mindPushRuleMapper.updateById(r);
+            }
+        }
+    }
+
+    /**
+     * 检查当前时间是否在该租户的推送时段内（供 SmartNotifyJob 调用）
+     */
+    public boolean isWithinPushWindow(Long tenantId) {
+        List<MindPushRule> rules = fetchRules(tenantId);
+        String start = extractPushTimeStart(rules);
+        String end = extractPushTimeEnd(rules);
+        try {
+            LocalTime now = LocalTime.now();
+            LocalTime startTime = LocalTime.parse(start);
+            LocalTime endTime = LocalTime.parse(end);
+            if (startTime.isBefore(endTime)) {
+                return !now.isBefore(startTime) && !now.isAfter(endTime);
+            } else {
+                // 跨午夜：如 22:00 - 06:00
+                return !now.isBefore(startTime) || !now.isAfter(endTime);
+            }
+        } catch (Exception e) {
+            log.warn("[MindPush] 解析推送时段失败 start={} end={}，默认允许推送", start, end);
+            return true;
         }
     }
 
@@ -310,12 +374,32 @@ public class MindPushOrchestrator {
                 dto.setEnabled(Integer.valueOf(1).equals(dbRule.getEnabled()));
                 dto.setThresholdDays(dbRule.getThresholdDays());
                 dto.setThresholdProgress(dbRule.getThresholdProgress());
+                dto.setNotifyTimeStart(dbRule.getNotifyTimeStart());
+                dto.setNotifyTimeEnd(dbRule.getNotifyTimeEnd());
             } else {
                 dto.setEnabled(true);
                 dto.setThresholdDays(3);
                 dto.setThresholdProgress(60);
+                dto.setNotifyTimeStart("08:00");
+                dto.setNotifyTimeEnd("22:00");
             }
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    /** 从规则列表中提取推送开始时间（取第一条非空值，默认 08:00） */
+    private String extractPushTimeStart(List<MindPushRule> rules) {
+        return rules.stream()
+            .map(MindPushRule::getNotifyTimeStart)
+            .filter(t -> t != null && !t.isBlank())
+            .findFirst().orElse("08:00");
+    }
+
+    /** 从规则列表中提取推送结束时间（取第一条非空值，默认 22:00） */
+    private String extractPushTimeEnd(List<MindPushRule> rules) {
+        return rules.stream()
+            .map(MindPushRule::getNotifyTimeEnd)
+            .filter(t -> t != null && !t.isBlank())
+            .findFirst().orElse("22:00");
     }
 }

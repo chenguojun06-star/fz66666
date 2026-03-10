@@ -47,4 +47,16 @@ public class MindPushController {
         int count = mindPushOrchestrator.runPushCheck(tenantId);
         return Result.success(count);
     }
+
+    /**
+     * 保存推送时段（统一设定所有规则的推送窗口）
+     * @param body { "notifyTimeStart": "08:00", "notifyTimeEnd": "22:00" }
+     */
+    @PostMapping("/push-time")
+    public Result<String> savePushTime(@RequestBody java.util.Map<String, String> body) {
+        String start = body.getOrDefault("notifyTimeStart", "08:00");
+        String end = body.getOrDefault("notifyTimeEnd", "22:00");
+        mindPushOrchestrator.savePushTimeWindow(start, end);
+        return Result.success("推送时段已保存");
+    }
 }

@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.intelligence.orchestration.MindPushOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -22,7 +23,7 @@ import java.util.List;
 /**
  * 智能跟单通知定时任务 — AI 自动扫描风险订单，无需人工介入，直接推送给跟单员
  *
- * <p>触发频率：每天 08:00 / 14:00 / 20:00</p>
+ * <p>触发频率：每小时整点检查（结合用户设定的推送时段决定是否推送）</p>
  * <p>两种自动触发条件：</p>
  * <ul>
  *   <li>deadline：距计划完工日期 ≤ 3 天 且 进度 &lt; 80%</li>
@@ -49,7 +50,10 @@ public class SmartNotifyJob {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
-    @Scheduled(cron = "0 0 8,14,20 * * ?")
+    @Autowired
+    private MindPushOrchestrator mindPushOrchestrator;
+
+    @Scheduled(cron = "0 0 * * * ?")
     public void autoDetectAndNotify() {
         log.info("[SmartNotify] 开始自动风险检测...");
         long startMs = System.currentTimeMillis();
@@ -64,6 +68,11 @@ public class SmartNotifyJob {
 
         int totalSent = 0;
         for (Long tenantId : tenantIds) {
+            // ── 推送时段检查：不在用户设定的推送时段内则跳过 ──
+            if (!mindPushOrchestrator.isWithinPushWindow(tenantId)) {
+                log.debug("[SmartNotify] 租户 {} 当前不在推送时段内，跳过", tenantId);
+                continue;
+            }
             TenantAssert.bindTenantForTask(tenantId, "智能通知");
             try {
                 totalSent += processOneTenant(tenantId);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Switch, InputNumber, Button, message, Spin, Tooltip } from 'antd';
+import { Switch, InputNumber, Button, message, Spin, Tooltip, TimePicker } from 'antd';
+import dayjs from 'dayjs';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import type { MindPushRuleDTO, MindPushStatusData } from '../../../../services/intelligence/intelligenceApi';
 
@@ -30,6 +31,8 @@ const MindPushPanel: React.FC = () => {
   const [stats, setStats] = useState<MindPushStatusData['stats'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [pushTimeStart, setPushTimeStart] = useState('08:00');
+  const [pushTimeEnd, setPushTimeEnd] = useState('22:00');
 
   const loadStatus = useCallback(async () => {
     try {
@@ -37,6 +40,8 @@ const MindPushPanel: React.FC = () => {
       if (res?.code === 200 && res.data) {
         setRules(res.data.rules || []);
         setStats(res.data.stats || null);
+        if (res.data.notifyTimeStart) setPushTimeStart(res.data.notifyTimeStart);
+        if (res.data.notifyTimeEnd) setPushTimeEnd(res.data.notifyTimeEnd);
       }
     } catch {
       /* ignore */
@@ -78,6 +83,16 @@ const MindPushPanel: React.FC = () => {
     }
   };
 
+  const savePushTime = async (start: string, end: string) => {
+    setPushTimeStart(start);
+    setPushTimeEnd(end);
+    try {
+      await intelligenceApi.savePushTime(start, end);
+    } catch {
+      message.error('推送时段保存失败');
+    }
+  };
+
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}><Spin size="small" /></div>;
   }
@@ -96,6 +111,30 @@ const MindPushPanel: React.FC = () => {
       <div style={{ marginRight: 16, paddingRight: 16, borderRight: '1px solid rgba(100,130,160,0.2)', flexShrink: 0 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#7eb8f7', lineHeight: 1.2 }}>{stats?.activeRules ?? 0}</div>
         <div style={{ fontSize: 10, color: '#6b7f96', marginTop: 1 }}>已启用</div>
+      </div>
+
+      {/* 推送时段 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 12, paddingRight: 12, borderRight: '1px solid rgba(100,130,160,0.2)', flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: '#6b7f96', whiteSpace: 'nowrap' }}>🕐</span>
+        <TimePicker
+          value={dayjs(pushTimeStart, 'HH:mm')}
+          format="HH:mm"
+          size="small"
+          allowClear={false}
+          minuteStep={30}
+          style={{ width: 68, fontSize: 11 }}
+          onChange={(_, timeStr) => { if (timeStr) savePushTime(timeStr as string, pushTimeEnd); }}
+        />
+        <span style={{ fontSize: 10, color: '#5a6b7e' }}>至</span>
+        <TimePicker
+          value={dayjs(pushTimeEnd, 'HH:mm')}
+          format="HH:mm"
+          size="small"
+          allowClear={false}
+          minuteStep={30}
+          style={{ width: 68, fontSize: 11 }}
+          onChange={(_, timeStr) => { if (timeStr) savePushTime(pushTimeStart, timeStr as string); }}
+        />
       </div>
 
       {/* 4 个规则横向排列 */}

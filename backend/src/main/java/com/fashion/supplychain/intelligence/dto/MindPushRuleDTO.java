@@ -22,4 +22,10 @@ public class MindPushRuleDTO {
 
     /** 触发进度阈值（%，如：进度低于 N% 时触发） */
     private Integer thresholdProgress;
+
+    /** 推送开始时间 HH:mm，如 "08:00" */
+    private String notifyTimeStart;
+
+    /** 推送结束时间 HH:mm，如 "22:00" */
+    private String notifyTimeEnd;
 }

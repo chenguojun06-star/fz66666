@@ -26,6 +26,12 @@ public class MindPushStatusResponse {
     /** 统计汇总 */
     private Stats stats;
 
+    /** 推送时段：开始时间 HH:mm */
+    private String notifyTimeStart;
+
+    /** 推送时段：结束时间 HH:mm */
+    private String notifyTimeEnd;
+
     @Data
     @Builder
     @NoArgsConstructor

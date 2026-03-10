@@ -462,6 +462,8 @@ export interface MindPushRuleDTO {
   enabled: boolean;
   thresholdDays: number;
   thresholdProgress: number;
+  notifyTimeStart?: string;
+  notifyTimeEnd?: string;
 }
 
 export interface MindPushLogItem {
@@ -478,6 +480,8 @@ export interface MindPushStatusData {
   rules: MindPushRuleDTO[];
   recentLog: MindPushLogItem[];
   stats: { pushed24h: number; pushed7d: number; activeRules: number };
+  notifyTimeStart?: string;
+  notifyTimeEnd?: string;
 }
 
 /* ================================================================
@@ -1073,6 +1077,10 @@ export const intelligenceApi = {
   /** 手动触发推送检测，返回触发条数 */
   runMindPushCheck: () =>
     api.post<{ code: number; data: number }>('/intelligence/mind-push/check', {}),
+
+  /** 保存推送时段（所有规则统一时段） */
+  savePushTime: (notifyTimeStart: string, notifyTimeEnd: string) =>
+    api.post<{ code: number; data: string }>('/intelligence/mind-push/push-time', { notifyTimeStart, notifyTimeEnd }),
 
   /** 生成订单分享 token（固定1小时有效） */
   generateShareToken: (orderId: string) =>

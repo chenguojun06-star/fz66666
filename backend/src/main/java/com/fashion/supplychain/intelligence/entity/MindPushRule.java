@@ -30,6 +30,12 @@ public class MindPushRule {
     /** 触发进度阈值（%） */
     private Integer thresholdProgress;
 
+    /** 推送开始时间 HH:mm，如 "08:00" */
+    private String notifyTimeStart;
+
+    /** 推送结束时间 HH:mm，如 "22:00" */
+    private String notifyTimeEnd;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
