@@ -2,8 +2,18 @@
  * 登录页样式 - 一体式深蓝设计 + 天蝎座呼吸灯
  * ========================================== */
 
+/* 登录页专属主题色（品牌沉浸式设计，不使用通用 design-tokens） */
 page {
-  background: #0b2d5c;
+  --login-bg: #0b2d5c;
+  --login-primary: #2d7ff9;
+  --login-primary-alt: #1890ff;
+  --login-text: rgba(255, 255, 255, 0.96);
+  --login-text-muted: rgba(255, 255, 255, 0.82);
+  --login-text-faint: rgba(255, 255, 255, 0.50);
+  --login-input-bg: rgba(246, 248, 255, 0.95);
+  --login-border: rgba(255, 255, 255, 0.14);
+  --login-wechat: #07c160;
+  background: var(--login-bg);
 }
 
 /* 整体页面 - 一体式全屏深蓝 */
@@ -17,7 +27,7 @@ page {
   padding: 80rpx 48rpx calc(40rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow: hidden;
-  background: #0b2d5c;
+  background: var(--login-bg);
 }
 
 .login-lang-corner {
@@ -31,7 +41,7 @@ page {
   height: 56rpx;
   padding: 0 16rpx;
   border-radius: 999rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  border: 1rpx solid var(--login-border);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -41,7 +51,7 @@ page {
 
 .login-lang-text {
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--login-text);
   font-weight: 600;
 }
 
@@ -139,7 +149,7 @@ page {
   display: block;
   font-size: 48rpx;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--login-text);
   letter-spacing: 2rpx;
   text-shadow:
     0 2rpx 0 rgba(255, 255, 255, 0.10),
@@ -161,7 +171,7 @@ page {
 
 .login-label {
   font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--login-text-muted);
   font-weight: 700;
   margin-bottom: 12rpx;
 }
@@ -176,8 +186,8 @@ page {
   display: flex;
   align-items: center;
   height: 88rpx;
-  background: rgba(246, 248, 255, 0.95);
-  border: 1rpx solid rgba(255, 255, 255, 0.14);
+  background: var(--login-input-bg);
+  border: 1rpx solid var(--login-border);
   border-radius: 28rpx;
   padding: 0 24rpx;
 }
@@ -289,7 +299,7 @@ page {
   font-size: 30rpx;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #2d7ff9 0%, #1890ff 100%);
+  background: linear-gradient(135deg, var(--login-primary) 0%, var(--login-primary-alt) 100%);
   border-radius: 999rpx;
   box-shadow: 0 14rpx 30rpx rgba(45, 127, 249, 0.34);
   letter-spacing: 8rpx;
@@ -309,7 +319,7 @@ page {
   font-size: 28rpx;
   font-weight: 500;
   color: #fff;
-  background: #07c160;
+  background: var(--login-wechat);
   border-radius: 999rpx;
   box-shadow: 0 10rpx 24rpx rgba(7, 193, 96, 0.3);
 }
@@ -333,7 +343,7 @@ page {
 
 .login-register-link {
   font-size: 26rpx;
-  color: rgba(45, 127, 249, 0.85);
+  color: var(--login-primary);
   font-weight: 500;
   /* 增大点击区域：解决响应区域过小问题 */
   display: block;
@@ -351,7 +361,7 @@ page {
   margin-top: 16rpx;
   text-align: center;
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.50);
+  color: var(--login-text-faint);
 }
 
 /* ===== 微信身份验证中 loading 状态 ===== */
@@ -365,7 +375,7 @@ page {
 .wechat-checking-icon {
   width: 100rpx;
   height: 100rpx;
-  background: #07c160;
+  background: var(--login-wechat);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -376,6 +386,6 @@ page {
 }
 .wechat-checking-text {
   font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--login-text-muted);
   letter-spacing: 2rpx;
 }

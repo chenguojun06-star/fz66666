@@ -4,29 +4,29 @@
 
 .container {
   height: 100vh;
-  background-color: #f5f6f8;
+  background-color: var(--color-bg-page);
   display: flex;
   flex-direction: column;
 }
 
 .search-bar {
   padding: 20rpx;
-  background-color: #fff;
+  background-color: var(--color-bg-card);
 }
 
 .filter-row {
   display: flex;
   gap: 16rpx;
   padding: 0 20rpx 20rpx;
-  background-color: #fff;
+  background-color: var(--color-bg-card);
 }
 
 .filter-pill {
   min-width: 180rpx;
   padding: 10rpx 18rpx;
-  border-radius: 999rpx;
-  background: #f8f9fa;
-  border: 1rpx solid #e5e7eb;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-gray);
+  border: 1rpx solid var(--color-border);
   display: flex;
   align-items: center;
   gap: 10rpx;
@@ -34,20 +34,20 @@
 
 .filter-pill-label {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .filter-pill-value {
   font-size: 24rpx;
-  color: #333;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .search-input-wrap {
   display: flex;
   align-items: center;
-  background-color: var(--color-bg-gray, #f5f5f5);
-  border-radius: 36rpx;
+  background-color: var(--color-bg-gray);
+  border-radius: var(--radius-full);
   padding: 10rpx 20rpx;
 }
 
@@ -61,8 +61,8 @@
   display: flex;
   padding: 16rpx 20rpx;
   gap: 16rpx;
-  background-color: #fff;
-  border-bottom: 1rpx solid #eee;
+  background-color: var(--color-bg-card);
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .summary-pill {
@@ -71,23 +71,23 @@
   flex-direction: column;
   align-items: center;
   padding: 12rpx 0;
-  border-radius: 12rpx;
-  background-color: #f8f9fa;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-gray);
 }
 
 .summary-pill-active {
-  background-color: #e8f4fd;
+  background-color: var(--color-blue-light);
 }
 
 .summary-label {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .summary-value {
   font-size: 32rpx;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   margin-top: 4rpx;
 }
 
@@ -100,7 +100,7 @@
 
 .wc-meta-text {
   font-size: 22rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .wc-meta-tag {
@@ -111,21 +111,21 @@
 }
 
 .wc-meta-tag-internal {
-  background: #fff7e6;
-  color: #d46b08;
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--color-warning);
 }
 
 .wc-meta-tag-external {
-  background: #f9f0ff;
-  color: #722ed1;
+  background: rgba(114, 46, 209, 0.08);
+  color: var(--color-purple);
 }
 
 .summary-value.green {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .summary-value.red {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .list-container {
@@ -142,13 +142,13 @@
 .sku-section {
   margin: 20rpx 0;
   padding: 16rpx;
-  background-color: #f8f9fa;
+  background-color: var(--color-bg-gray);
   border-radius: 12rpx;
 }
 
 .section-title {
   font-size: 26rpx;
-  color: #333;
+  color: var(--color-text-primary);
   font-weight: 600;
   margin-bottom: 16rpx;
 }
@@ -156,7 +156,7 @@
 .loading-skus, .empty-skus {
   text-align: center;
   padding: 40rpx 0;
-  color: #999;
+  color: var(--color-text-disabled);
   font-size: 24rpx;
 }
 
@@ -170,10 +170,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #fff;
+  background-color: var(--color-bg-card);
   padding: 12rpx 16rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid #e5e7eb;
+  border-radius: var(--radius-sm);
+  border: 1rpx solid var(--color-border);
 }
 
 .sku-info {
@@ -190,8 +190,8 @@
 .sku-color {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1890ff;
-  background-color: #e6f7ff;
+  color: var(--color-primary);
+  background-color: var(--color-blue-light);
   padding: 2rpx 12rpx;
   border-radius: 4rpx;
 }
@@ -199,8 +199,8 @@
 .sku-size {
   font-size: 26rpx;
   font-weight: 600;
-  color: #52c41a;
-  background-color: #f6ffed;
+  color: var(--color-success);
+  background-color: rgba(5, 150, 105, 0.08);
   padding: 2rpx 12rpx;
   border-radius: 4rpx;
 }
@@ -213,13 +213,13 @@
 
 .stock-label {
   font-size: 22rpx;
-  color: #ccc;
+  color: var(--color-text-disabled);
 }
 
 .stock-value {
   font-size: 24rpx;
   font-weight: 700;
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .sku-qty-input {
@@ -233,11 +233,11 @@
   height: 56rpx;
   text-align: center;
   font-size: 26rpx;
-  border: 2rpx solid #1890ff;
-  border-radius: 8rpx;
-  background-color: #fff;
+  border: 2rpx solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-card);
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .max-btn {
@@ -245,9 +245,9 @@
   height: 56rpx;
   line-height: 56rpx;
   text-align: center;
-  border-radius: 8rpx;
-  background-color: #1890ff;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
   font-size: 20rpx;
   font-weight: 600;
 }
@@ -256,9 +256,9 @@
 .summary-section {
   margin: 20rpx 0;
   padding: 16rpx;
-  background-color: #e6f7ff;
-  border-radius: 8rpx;
-  border: 1rpx solid #91d5ff;
+  background-color: var(--color-blue-light);
+  border-radius: var(--radius-sm);
+  border: 1rpx solid var(--color-border-blue);
 }
 
 .summary-row {
@@ -269,11 +269,11 @@
 
 .summary-label {
   font-size: 26rpx;
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .summary-value {
   font-size: 32rpx;
   font-weight: 700;
-  color: #1890ff;
+  color: var(--color-primary);
 }

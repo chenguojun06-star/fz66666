@@ -73,7 +73,7 @@ page {
 
 .error-text {
   font-size: var(--font-size-sm);
-  color: #e53935;
+  color: var(--color-error);
   text-align: center;
   margin-bottom: 16px;
   line-height: 1.5;
@@ -172,7 +172,7 @@ page {
 }
 
 .order-tag-has {
-  color: #047857;
+  color: var(--color-success);
   background: rgba(16, 185, 129, 0.12);
 }
 

@@ -133,6 +133,23 @@ const IntelligenceCenter: React.FC = () => {
       return next;
     });
   }, [ANALYSIS_PANELS]);
+
+  /* ── 主面板折叠/展开（localStorage 持久化） ── */
+  const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('cockpit_main_panel_collapsed');
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return {};
+  });
+  const toggleCollapse = useCallback((key: string) => {
+    setCollapsedPanels(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('cockpit_main_panel_collapsed', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const [executingTask, setExecutingTask] = useState<string | null>(null);
   const [executeTaskResult, setExecuteTaskResult] = useState<{ taskCode: string; ok: boolean; msg: string } | null>(null);
   const [kpiFlash, setKpiFlash] = useState(false);
@@ -497,6 +514,16 @@ const IntelligenceCenter: React.FC = () => {
       ]}
       aiTip={`待处理 ${notify?.pendingCount ?? 0} 条，建议及时下发确保工厂按时接收指令`}
     />
+  );
+
+  /* 面板折叠按钮（chevron 图标，放在 c-card-title 末尾） */
+  const CollapseChevron = ({ panelKey }: { panelKey: string }) => (
+    <span
+      style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsedPanels[panelKey] ? '#a78bfa' : '#5a7a9a', fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+      title={collapsedPanels[panelKey] ? '展开面板' : '收起面板'}
+    >
+      {collapsedPanels[panelKey] ? <DownOutlined /> : <UpOutlined />}
+    </span>
   );
 
   return (
@@ -888,11 +915,13 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 实时生产脉搏 */}
           <div className="c-card c-scanline-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('pulse')}>
               <LiveDot />
               实时生产脉搏
               <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
+              <CollapseChevron panelKey="pulse" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['pulse'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             <div style={{ margin: '6px 0 4px' }}>
               <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.count) || 0)} color="#00e5ff" width={340} height={52} />
               <div className="c-sparkline-label">
@@ -926,14 +955,17 @@ const IntelligenceCenter: React.FC = () => {
               minMinutesSinceLastScan={minFactorySilentMinutes}
               currentScanRatePerHour={Number(pulse?.scanRatePerHour) || 0}
             />
+            </div>
           </div>
 
           {/* 人效实时动态 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('workers')}>
               <LiveDot size={7} />
               人效实时动态
+              <CollapseChevron panelKey="workers" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['workers'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             <table className="c-table">
               <thead>
                 <tr><th>姓名</th><th>速度</th><th>质量</th><th>稳定</th><th>多能</th><th>出勤</th><th>综合</th><th>评级</th></tr>
@@ -966,6 +998,7 @@ const IntelligenceCenter: React.FC = () => {
                 )) ?? <tr><td colSpan={8} className="c-empty-td">暂无数据</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
 
         </div>
@@ -980,21 +1013,24 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 工厂卡点分析 */}
           <div className="c-card c-breathe-cyan">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('bottleneck')}>
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
+              <span style={{ fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
+              <CollapseChevron panelKey="bottleneck" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['bottleneck'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             <AutoScrollBox className="c-orders-scroll">
               {factoryBottleneck.map(f => <BottleneckRow key={f.factoryName} item={f} />)}
               {!factoryBottleneck.length && <div className="c-empty">暂无在制订单</div>}
             </AutoScrollBox>
+            </div>
           </div>
 
           {/* 逾期 & 预计延期订单 */}
           <div className="c-card c-breathe-red">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('overdueRisk')}>
               <LiveDot color={overdueRisk.overdue.length > 0 ? '#ff4136' : '#f7a600'} />
               逾期 &amp; 延期风险订单
               {overdueRisk.overdue.length > 0 && (
@@ -1007,7 +1043,9 @@ const IntelligenceCenter: React.FC = () => {
                   高风险 {overdueRisk.highRisk.length} 单
                 </span>
               )}
+              <CollapseChevron panelKey="overdueRisk" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['overdueRisk'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
               <div className="c-all-ok"><CheckCircleOutlined style={{ marginRight: 6 }} />所有订单均在健康交期内</div>
             ) : (
@@ -1050,6 +1088,7 @@ const IntelligenceCenter: React.FC = () => {
                 })}
               </AutoScrollBox>
             )}
+            </div>
           </div>
 
         </div>
@@ -1061,10 +1100,12 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 面料缺口预警 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('shortage')}>
               <LiveDot color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
               面料 &amp; 辅料缺口预警
+              <CollapseChevron panelKey="shortage" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['shortage'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {shortage?.shortageItems?.length ? (
               shortage.shortageItems.slice(0, 6).map(item => (
                 <div key={item.materialCode} className="c-shortage-row">
@@ -1088,11 +1129,12 @@ const IntelligenceCenter: React.FC = () => {
               </div>
             )}
             {shortage?.summary && <div className="c-summary">{shortage.summary}</div>}
+            </div>
           </div>
 
           {/* 缺陷热力图 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('heatmap')}>
               <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#ff4136' : '#39ff14'} />
               质量缺陷热力图
               {heatmap && (
@@ -1100,7 +1142,9 @@ const IntelligenceCenter: React.FC = () => {
                   总缺陷 {heatmap.totalDefects}
                 </span>
               )}
+              <CollapseChevron panelKey="heatmap" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['heatmap'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {heatmap?.cells?.length ? (
               <>
                 <div className="c-heatmap-meta">
@@ -1132,6 +1176,7 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               </>
             ) : <div className="c-empty">暂无缺陷数据</div>}
+            </div>
           </div>
 
         </div>
@@ -1143,7 +1188,7 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 异常自愈诊断 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('healing')}>
               <LiveDot size={7} color={healing && healing.healthScore < 80 ? '#d48806' : '#73d13d'} />
               系统异常自愈诊断
               {healing && (
@@ -1155,7 +1200,9 @@ const IntelligenceCenter: React.FC = () => {
                   健康 <AnimatedNum val={healing.healthScore} /> 分 · 发现 <AnimatedNum val={healing.issuesFound} /> 项
                 </span>
               )}
+              <CollapseChevron panelKey="healing" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['healing'] ? 0 : 500, transition: 'max-height 0.28s ease' }}>
             {healing?.items?.length ? (
               healing.items.slice(0, 7).map((item, i) => (
                 <div key={i} className="c-heal-item">
@@ -1173,15 +1220,18 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无诊断数据</div>}
+            </div>
           </div>
 
           {/* 工厂绩效排行 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('ranking')}>
               <LiveDot size={7} color="#ffd700" />
               工厂绩效排行榜
               <span className="c-card-badge purple-badge">实时评分</span>
+              <CollapseChevron panelKey="ranking" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['ranking'] ? 0 : 500, transition: 'max-height 0.28s ease' }}>
             {ranking?.rankings?.length ? (
               ranking.rankings.slice(0, 5).map((r, i) => (
                 <div key={r.factoryId} className="c-rank-row">
@@ -1196,6 +1246,7 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无排行数据</div>}
+            </div>
           </div>
 
         </div>
@@ -1207,7 +1258,7 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* AI 大脑快照 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('brain')}>
               <RobotOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
               AI 大脑状态
               {brain && (
@@ -1219,7 +1270,9 @@ const IntelligenceCenter: React.FC = () => {
                   {brain.summary.healthGrade} 级 · {brain.summary.healthIndex} 分
                 </span>
               )}
+              <CollapseChevron panelKey="brain" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['brain'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {brain ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
@@ -1261,11 +1314,12 @@ const IntelligenceCenter: React.FC = () => {
                 )}
               </>
             ) : <div className="c-empty">大脑快照加载中...</div>}
+            </div>
           </div>
 
           {/* 行动中心 */}
           <div className="c-card">
-            <div className="c-card-title">
+            <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('actionCenter')}>
               <ThunderboltOutlined style={{ color: '#ffd700', marginRight: 6 }} />
               行动中心
               {actionCenter?.summary && (
@@ -1273,7 +1327,9 @@ const IntelligenceCenter: React.FC = () => {
                   待处理 {actionCenter.summary.totalTasks} · 紧急 {actionCenter.summary.highPriorityTasks}
                 </span>
               )}
+              <CollapseChevron panelKey="actionCenter" />
             </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['actionCenter'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             {actionCenter?.tasks?.length ? (
               <>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -1335,6 +1391,7 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
 
         </div>
@@ -1342,12 +1399,21 @@ const IntelligenceCenter: React.FC = () => {
         {/* ╔════════════════════════════════════════════╗
             ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
             ╚════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 4px' }}>
+          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('profit')}>
+            <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600 }}>💰 订单利润估算 &amp; 完工预测</span>
+            <span className="c-card-badge purple-badge" style={{ marginLeft: 8 }}>AI 双引擎分析</span>
+            <CollapseChevron panelKey="profit" />
+          </div>
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['profit'] ? 0 : 2000, transition: 'max-height 0.3s ease' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0, padding: '0 24px 28px', alignItems: 'stretch' }}>
           {/* 左：利润估算&完工预测 */}
           <div style={{ paddingRight: 6 }}>
             <ProfitDeliveryPanel />
           </div>
 
+        </div>
         </div>
 
         {/* ╔══════════════════════════════════════════════╗

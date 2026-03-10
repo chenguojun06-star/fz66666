@@ -54,10 +54,12 @@ factory_data = {"factoryName": f"测试工厂_{ts}", "factoryCode": f"TF{ts}", "
 s, b = req("POST", "/api/system/factory", factory_data)
 factory_ok = check("factory-create", s, b)
 factory_id = None
-if factory_ok and b.get("data"):
-    d = b["data"]
-    factory_id = d.get("id") if isinstance(d, dict) else d
-    print(f"    created factory id={factory_id}")
+if factory_ok:
+    # Factory save just returns boolean. Let's find it.
+    s2, b2 = req("POST", "/api/system/factory/list", {"filters": {"factoryCode": f"TF{ts}"}})
+    if s2 == 200 and b2.get("data") and b2["data"].get("records"):
+        factory_id = b2["data"]["records"][0]["id"]
+        print(f"    found created factory id={factory_id}")
 
 if factory_id:
     s, b = req("GET", f"/api/system/factory/{factory_id}")

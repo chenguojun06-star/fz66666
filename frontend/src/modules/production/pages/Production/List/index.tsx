@@ -25,6 +25,7 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
 import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
+import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
 import ExportButton from '@/components/common/ExportButton';
@@ -266,25 +267,8 @@ const ProductionList: React.FC = () => {
     setPendingScrollOrderId(null);
   }, []);
 
-  const stagnantOrderIds = useMemo(() => {
-    return new Set(
-      productionList
-        .filter((record) => {
-          if (record.status === 'completed') return false;
-          const orderId = String(record.id || '').trim();
-          if (!orderId) return false;
-          const nodeTimes = boardTimesByOrder[orderId] || {};
-          const timestamps = Object.values(nodeTimes)
-            .map((value) => dayjs(String(value || '')).valueOf())
-            .filter((value) => Number.isFinite(value) && value > 0);
-          if (timestamps.length === 0) return false;
-          const latestScanTime = Math.max(...timestamps);
-          return dayjs().diff(dayjs(latestScanTime), 'day') >= 3;
-        })
-        .map((record) => String(record.id || '').trim())
-        .filter(Boolean)
-    );
-  }, [boardTimesByOrder, productionList]);
+  // 停滞检测：返回 Map<orderId, stagnantDays>，与生产进度页保持一致
+  const stagnantOrderIds = useStagnantDetection(productionList, boardTimesByOrder);
 
   const {
     smartActionItems,
@@ -583,6 +567,7 @@ const ProductionList: React.FC = () => {
     setRemarkPopoverId, setRemarkText,
     quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
     deliveryRiskMap,
+    stagnantOrderIds,
     handleShareOrder,
   });
 

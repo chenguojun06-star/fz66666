@@ -34,6 +34,7 @@ export interface UseProductionColumnsProps {
   isSupervisorOrAbove: boolean;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
   deliveryRiskMap?: Map<string, DeliveryRiskItem>;
+  stagnantOrderIds?: Map<string, number>;
   handleShareOrder: (record: ProductionOrder) => void;
 }
 
@@ -48,6 +49,7 @@ export function useProductionColumns({
   setPrintModalVisible, setPrintingRecord,
   setRemarkPopoverId, setRemarkText,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
+  stagnantOrderIds,
   handleShareOrder,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
@@ -555,10 +557,21 @@ export function useProductionColumns({
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
-      render: (status: ProductionOrder['status']) => {
+      width: 110,
+      render: (status: ProductionOrder['status'], record: ProductionOrder) => {
         const { text, color } = getStatusConfig(status);
-        return <Tag color={color}>{text}</Tag>;
+        const stagnantDays = stagnantOrderIds?.get(String(record.id));
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Tag color={color} style={{ margin: 0 }}>{text}</Tag>
+            {stagnantDays !== undefined && (
+              <div className="stagnant-pulse-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="stagnant-pulse-dot" />
+                <span>停滞 {stagnantDays} 天</span>
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {

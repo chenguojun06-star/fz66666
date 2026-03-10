@@ -21,7 +21,7 @@ export type SmartActionItem = {
 type UseProductionSmartQueueParams = {
   orders: ProductionOrder[];
   deliveryRiskMap: Map<string, DeliveryRiskItem>;
-  stagnantOrderIds: Set<string>;
+  stagnantOrderIds: Map<string, number> | Set<string>;
   smartQueueFilter: SmartQueueFilter;
   setSmartQueueFilter: Dispatch<SetStateAction<SmartQueueFilter>>;
   triggerOrderFocus: (record: Partial<ProductionOrder> | null | undefined) => void;

@@ -12,8 +12,8 @@
 .summary-card {
   margin: 24rpx;
   padding: 32rpx;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border-radius: var(--border-radius-lg);
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
@@ -39,7 +39,7 @@
   text-align: center;
   padding: 16rpx;
   background: rgba(255, 255, 255, 0.15);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   margin: 0 8rpx;
 }
 
@@ -72,7 +72,7 @@
 .filter-bar {
   margin: 24rpx;
   background: var(--color-bg-card);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-lg);
   padding: 8rpx;
   box-shadow: var(--shadow-sm);
 }
@@ -88,7 +88,7 @@
   padding: 16rpx;
   font-size: 28rpx;
   color: var(--color-text-secondary);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
 }
 
 .filter-tab-hover {
@@ -113,7 +113,7 @@
   flex: 1;
   padding: 20rpx;
   background: var(--color-bg-card);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   text-align: center;
   font-size: 28rpx;
   color: var(--color-text-primary);
@@ -145,7 +145,7 @@
   gap: 8rpx;
   padding: 12rpx 20rpx;
   background: var(--color-primary-light);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   color: var(--color-primary);
 }
 
@@ -168,7 +168,7 @@
 /* 工序记录卡片 */
 .record-item {
   background: var(--color-bg-card);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-lg);
   padding: 24rpx;
   margin-bottom: 16rpx;
   box-shadow: var(--shadow-sm);
@@ -209,7 +209,7 @@
   padding: 4rpx 12rpx;
   background: var(--color-primary-light);
   color: #ffffff;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--radius-sm);
   font-size: 24rpx;
   font-weight: 600;
 }
@@ -266,7 +266,7 @@
     rgba(var(--color-primary-rgb), 0.1) 0%,
     rgba(var(--color-primary-rgb), 0.05) 100%
   );
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-lg);
   border: 2rpx solid var(--color-primary-light);
 }
 
