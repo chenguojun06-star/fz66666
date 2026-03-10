@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/intelligence")
@@ -434,6 +435,46 @@ public class IntelligenceController {
                 "answer", agentResult.getData(),
                 "source", "ai"
         ));
+    }
+
+    /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
+    @GetMapping(value = "/ai-advisor/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter aiAdvisorChatStream(@RequestParam String question) {
+        SseEmitter emitter = new SseEmitter(120_000L);
+        if (question == null || question.isBlank()) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("{\"message\":\"问题不能为空\"}"));
+                emitter.complete();
+            } catch (Exception ignored) {}
+            return emitter;
+        }
+        // 捕获当前线程的用户上下文，传递到异步线程
+        UserContext currentCtx = UserContext.get();
+        UserContext snapshot = new UserContext();
+        if (currentCtx != null) {
+            snapshot.setTenantId(currentCtx.getTenantId());
+            snapshot.setUserId(currentCtx.getUserId());
+            snapshot.setUsername(currentCtx.getUsername());
+            snapshot.setRole(currentCtx.getRole());
+            snapshot.setSuperAdmin(currentCtx.getSuperAdmin());
+            snapshot.setTenantOwner(currentCtx.getTenantOwner());
+            snapshot.setFactoryId(currentCtx.getFactoryId());
+        }
+
+        Thread.startVirtualThread(() -> {
+            try {
+                UserContext.set(snapshot);
+                aiAgentOrchestrator.executeAgentStreaming(question, emitter);
+            } catch (Exception e) {
+                try {
+                    emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));
+                    emitter.complete();
+                } catch (Exception ignored) {}
+            } finally {
+                UserContext.clear();
+            }
+        });
+        return emitter;
     }
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
     @GetMapping("/supplier-scorecard")

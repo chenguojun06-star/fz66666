@@ -1,16 +1,30 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Tag, Tooltip, Popover } from 'antd';
+import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense, lazy } from 'react';
+import { Tag, Tooltip, Popover, Spin } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined,
   WarningOutlined, CheckCircleOutlined,
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
+  DownOutlined, UpOutlined, AppstoreOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
+
+/* ── 智能分析面板 — lazy 加载（11个） ── */
+const DefectTracePanel = lazy(() => import('./DefectTracePanel'));
+const SmartAssignmentPanel = lazy(() => import('./SmartAssignmentPanel'));
+const WorkerProfilePanel = lazy(() => import('./WorkerProfilePanel'));
+const RhythmDnaPanel = lazy(() => import('./RhythmDnaPanel'));
+const SchedulingSuggestionPanel = lazy(() => import('./SchedulingSuggestionPanel'));
+const MindPushPanel = lazy(() => import('./MindPushPanel'));
+const LiveCostTrackerPanel = lazy(() => import('./LiveCostTrackerPanel'));
+const LearningReportPanel = lazy(() => import('./LearningReportPanel'));
+const FinanceAuditPanel = lazy(() => import('./FinanceAuditPanel'));
+const StyleQuoteSuggestionPanel = lazy(() => import('./StyleQuoteSuggestionPanel'));
+const SupplierScorecardPanel = lazy(() => import('./SupplierScorecardPanel'));
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -78,6 +92,7 @@ const IntelligenceCenter: React.FC = () => {
   const [now, setNow]               = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showAnalysisPanels, setShowAnalysisPanels] = useState(false);
   const [executingTask, setExecutingTask] = useState<string | null>(null);
   const [executeTaskResult, setExecuteTaskResult] = useState<{ taskCode: string; ok: boolean; msg: string } | null>(null);
   const [kpiFlash, setKpiFlash] = useState(false);
@@ -1294,6 +1309,54 @@ const IntelligenceCenter: React.FC = () => {
           </div>
 
         </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   智能分析面板（可展开，11个独立分析模块）      ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 12px' }}>
+          <div
+            className="c-card"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => setShowAnalysisPanels(v => !v)}
+          >
+            <div className="c-card-title" style={{ marginBottom: 0 }}>
+              <AppstoreOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
+              智能分析面板
+              <span className="c-card-badge purple-badge">11 个模块</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#5a7a9a' }}>
+                {showAnalysisPanels ? <UpOutlined /> : <DownOutlined />}
+                {showAnalysisPanels ? ' 收起' : ' 展开'}
+              </span>
+            </div>
+          </div>
+        </div>
+        {showAnalysisPanels && (
+          <Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载分析面板…" /></div>}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 24px 16px' }}>
+              <SmartAssignmentPanel />
+              <WorkerProfilePanel />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 24px 16px' }}>
+              <SchedulingSuggestionPanel />
+              <RhythmDnaPanel />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 24px 16px' }}>
+              <LiveCostTrackerPanel />
+              <DefectTracePanel />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 24px 16px' }}>
+              <FinanceAuditPanel />
+              <StyleQuoteSuggestionPanel />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 24px 16px' }}>
+              <SupplierScorecardPanel />
+              <LearningReportPanel />
+            </div>
+            <div style={{ padding: '0 24px 24px' }}>
+              <MindPushPanel />
+            </div>
+          </Suspense>
+        )}
 
 
 

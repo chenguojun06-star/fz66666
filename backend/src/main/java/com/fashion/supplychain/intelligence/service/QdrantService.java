@@ -23,8 +23,8 @@ import org.springframework.web.client.RestTemplate;
  * <p>通过 Qdrant REST API v1.x 实现向量存储与相似检索。
  * 每个租户使用同一个 collection，通过 tenant_id payload 过滤隔离。
  *
- * <p>向量生成：当前使用关键词哈希（pseudoEmbedding）作为占位实现，
- * 生产环境建议替换为 deepseek-embedding 或 text2vec-chinese 实现真实语义向量。
+ * <p>向量生成：优先调用 DeepSeek Embedding API（1024维）生成真实语义向量，
+ * 不可用时降级为关键词哈希（pseudoEmbedding，128维）。
  *
  * <p>配置项（application.yml）：
  * <pre>
@@ -32,7 +32,11 @@ import org.springframework.web.client.RestTemplate;
  *   qdrant:
  *     url: http://localhost:6333
  *     collection: fashion_memory
- *     vector-size: 128
+ *     vector-size: 1024
+ * ai:
+ *   deepseek:
+ *     api-key: sk-xxx
+ *     embedding-model: text-embedding-v2
  * </pre>
  */
 @Service
@@ -40,13 +44,23 @@ import org.springframework.web.client.RestTemplate;
 public class QdrantService {
 
     private static final String COLLECTION_DEFAULT = "fashion_memory";
-    private static final int VECTOR_DIM = 128;
+    private static final int VECTOR_DIM_REAL = 1024;
+    private static final int VECTOR_DIM_PSEUDO = 128;
 
     @Value("${intelligence.qdrant.url:http://localhost:6333}")
     private String qdrantUrl;
 
     @Value("${intelligence.qdrant.collection:" + COLLECTION_DEFAULT + "}")
     private String collectionName;
+
+    @Value("${ai.deepseek.api-key:}")
+    private String deepseekApiKey;
+
+    @Value("${ai.deepseek.embedding-model:text-embedding-v2}")
+    private String embeddingModel;
+
+    @Value("${ai.deepseek.base-url:https://api.deepseek.com}")
+    private String deepseekBaseUrl;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -70,7 +84,7 @@ public class QdrantService {
             java.util.Map<String, Object> payload) {
         try {
             ensureCollectionExists();
-            float[] vector = pseudoEmbedding(content);
+            float[] vector = computeEmbedding(content);
 
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
@@ -110,7 +124,7 @@ public class QdrantService {
     public List<ScoredPoint> search(Long tenantId, String queryText, int topK) {
         List<ScoredPoint> results = new ArrayList<>();
         try {
-            float[] vector = pseudoEmbedding(queryText);
+            float[] vector = computeEmbedding(queryText);
 
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode vec = body.putArray("vector");
@@ -189,7 +203,7 @@ public class QdrantService {
             try {
                 ObjectNode body = objectMapper.createObjectNode();
                 ObjectNode params = body.putObject("vectors");
-                params.put("size", VECTOR_DIM);
+                params.put("size", getVectorDim());
                 params.put("distance", "Cosine");
                 restTemplate.postForEntity(
                         qdrantUrl + "/collections/" + collectionName,
@@ -202,16 +216,73 @@ public class QdrantService {
     }
 
     /**
-     * 伪向量生成（基于字符哈希）。
-     * 生产环境替换为 deepseek-embedding / text2vec-chinese 真实语义向量。
+     * 生成语义向量：优先调用 DeepSeek Embedding API，不可用时降级为伪向量。
+     */
+    private float[] computeEmbedding(String text) {
+        if (text == null || text.isEmpty()) {
+            return new float[getVectorDim()];
+        }
+        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+            try {
+                return callEmbeddingApi(text);
+            } catch (Exception e) {
+                log.warn("[Qdrant] DeepSeek Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
+            }
+        }
+        return pseudoEmbedding(text);
+    }
+
+    /**
+     * 调用 DeepSeek Embedding API 获取真实语义向量。
+     */
+    private float[] callEmbeddingApi(String text) {
+        String url = deepseekBaseUrl + "/v1/embeddings";
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("model", embeddingModel);
+        body.put("input", text);
+        body.put("encoding_format", "float");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(deepseekApiKey);
+        HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
+
+        ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
+        if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+            JsonNode root;
+            try {
+                root = objectMapper.readTree(resp.getBody());
+            } catch (Exception e) {
+                throw new RuntimeException("Embedding response parse failed", e);
+            }
+            JsonNode embedding = root.path("data").path(0).path("embedding");
+            if (embedding.isArray()) {
+                float[] vec = new float[embedding.size()];
+                for (int i = 0; i < embedding.size(); i++) {
+                    vec[i] = (float) embedding.get(i).asDouble();
+                }
+                log.debug("[Qdrant] 真实语义向量生成成功，维度={}", vec.length);
+                return vec;
+            }
+        }
+        throw new RuntimeException("Embedding API returned unexpected response");
+    }
+
+    /** 获取当前使用的向量维度 */
+    private int getVectorDim() {
+        return (deepseekApiKey != null && !deepseekApiKey.isEmpty()) ? VECTOR_DIM_REAL : VECTOR_DIM_PSEUDO;
+    }
+
+    /**
+     * 伪向量生成（基于字符哈希），仅在 Embedding API 不可用时降级使用。
      */
     private float[] pseudoEmbedding(String text) {
-        float[] vec = new float[VECTOR_DIM];
+        float[] vec = new float[VECTOR_DIM_PSEUDO];
         if (text == null || text.isEmpty()) return vec;
         // 对字符串字符进行分组哈希，映射到 [-1, 1]
         for (int i = 0; i < text.length(); i++) {
-            int idx = (text.charAt(i) * 31 + i) % VECTOR_DIM;
-            if (idx < 0) idx += VECTOR_DIM;
+            int idx = (text.charAt(i) * 31 + i) % VECTOR_DIM_PSEUDO;
+            if (idx < 0) idx += VECTOR_DIM_PSEUDO;
             vec[idx] += (float) Math.sin(text.charAt(i) * 0.1);
         }
         // 归一化

@@ -330,6 +330,8 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
+  const streamAbortRef = useRef<AbortController | null>(null);
+
   const handleSend = async (manualText?: string) => {
     const text = (manualText || inputValue).trim();
     if (!text || isTyping) return;
@@ -344,40 +346,96 @@ const GlobalAiAssistant: React.FC = () => {
     if (!manualText) setInputValue('');
     setIsTyping(true);
 
-    // 2. 调用后台 AI 接口
+    // 检查如果涉及到生成报表，加上带下载按钮的标识
+    let reportTypeToDownload: 'daily' | 'weekly' | 'monthly' | undefined = undefined;
+    if (text.includes('日报')) reportTypeToDownload = 'daily';
+    if (text.includes('周报')) reportTypeToDownload = 'weekly';
+    if (text.includes('月报')) reportTypeToDownload = 'monthly';
+
+    const aiMsgId = `a-${Date.now()}`;
+
+    // 2. 尝试流式接口，失败则 fallback 到同步接口
     try {
-      // @ts-ignore
-      const res = await intelligenceApi.aiAdvisorChat(text);
-      // @ts-ignore
-      const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
+      let streamStarted = false;
+      let accumulatedText = '';
+      let toolStatus = '';
 
-      // 检查如果涉及到生成报表，加上带下载按钮的标识
-      let reportTypeToDownload: 'daily' | 'weekly' | 'monthly' | undefined = undefined;
-      if (text.includes('日报')) reportTypeToDownload = 'daily';
-      if (text.includes('周报')) reportTypeToDownload = 'weekly';
-      if (text.includes('月报')) reportTypeToDownload = 'monthly';
-
-      const aiMsg: Message = {
-        id: `a-${Date.now()}`,
-        role: 'ai',
-        text: resultData?.answer || '抱歉呀😜，小云还在思考中…',
-        intent: resultData?.source || 'ai',
-        reportType: reportTypeToDownload,
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-
-      // 可以自动播报简短的回答
-      speak(aiMsg.text);
-
+      const ctrl = intelligenceApi.aiAdvisorChatStream(
+        text,
+        (event) => {
+          streamStarted = true;
+          if (event.type === 'thinking') {
+            toolStatus = `🧠 思考中（第${event.data.iteration || 1}轮）...`;
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              if (existing) {
+                return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
+              }
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
+            });
+          } else if (event.type === 'tool_call') {
+            toolStatus = `🔍 正在调用 ${event.data.tool || '工具'}...`;
+            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
+          } else if (event.type === 'tool_result') {
+            const ok = event.data.success ? '✅' : '❌';
+            toolStatus = `${ok} ${event.data.tool || '工具'}调用完成`;
+            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
+          } else if (event.type === 'answer') {
+            accumulatedText = String(event.data.content || '');
+            setMessages(prev => prev.map(m => m.id === aiMsgId
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload }
+              : m));
+          } else if (event.type === 'error') {
+            accumulatedText = String(event.data.message || '小云遇到了一点问题 🌧️');
+            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
+          }
+        },
+        () => {
+          // done
+          setIsTyping(false);
+          if (accumulatedText) speak(accumulatedText);
+        },
+        async (err) => {
+          // SSE 失败，fallback 到同步接口
+          console.warn('SSE stream failed, falling back to sync:', err);
+          if (streamStarted) {
+            // 流已经开始了部分数据，直接报错
+            setMessages(prev => prev.map(m => m.id === aiMsgId
+              ? { ...m, text: accumulatedText || '网络中断，请重试 🌧️' }
+              : m));
+            setIsTyping(false);
+            return;
+          }
+          try {
+            // @ts-ignore
+            const res = await intelligenceApi.aiAdvisorChat(text);
+            // @ts-ignore
+            const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
+            const answer = resultData?.answer || '抱歉呀😜，小云还在思考中…';
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              if (existing) {
+                return prev.map(m => m.id === aiMsgId ? { ...m, text: answer, intent: resultData?.source, reportType: reportTypeToDownload } : m);
+              }
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: answer, intent: resultData?.source, reportType: reportTypeToDownload }];
+            });
+            speak(answer);
+          } catch (syncErr) {
+            console.error('Sync fallback also failed:', syncErr);
+            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '网络似乎有点小波动，小云暂时连不到数据中心了 🌧️ 请稍后再试！' }]);
+          } finally {
+            setIsTyping(false);
+          }
+        },
+      );
+      streamAbortRef.current = ctrl;
     } catch (error) {
       console.error('AI Query Error:', error);
       setMessages(prev => [...prev, {
-        id: `e-${Date.now()}`,
+        id: aiMsgId,
         role: 'ai',
         text: '网络似乎有点小波动，小云暂时连不到数据中心了 🌧️ 请稍后再试！'
       }]);
-    } finally {
       setIsTyping(false);
     }
   };

@@ -989,6 +989,61 @@ export const intelligenceApi = {
       { timeout: 90000 },
     ),
 
+  /** AI顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
+  aiAdvisorChatStream: (
+    question: string,
+    onEvent: (event: { type: string; data: Record<string, unknown> }) => void,
+    onDone: () => void,
+    onError: (err: string) => void,
+  ) => {
+    const token = localStorage.getItem('token') || '';
+    const url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}`;
+    const ctrl = new AbortController();
+    fetch(url, {
+      headers: { Authorization: token ? `Bearer ${token}` : '' },
+      signal: ctrl.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok || !res.body) {
+          onError(`HTTP ${res.status}`);
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          let eventName = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:') && eventName) {
+              try {
+                const parsed = JSON.parse(line.slice(5).trim());
+                if (eventName === 'done') {
+                  onDone();
+                } else {
+                  onEvent({ type: eventName, data: parsed });
+                }
+              } catch { /* ignore malformed */ }
+              eventName = '';
+            } else if (line.trim() === '') {
+              eventName = '';
+            }
+          }
+        }
+        onDone();
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') onError(err.message || '网络错误');
+      });
+    return ctrl;
+  },
+
   // ── 第五批：新建订单智能辅助 ──
 
   /** 交货期智能建议 */

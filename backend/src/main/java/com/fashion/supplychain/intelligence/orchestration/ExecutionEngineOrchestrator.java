@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class ExecutionEngineOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private MaterialStockService materialStockService;
 
     @Autowired
     private AuditTrailOrchestrator auditTrail;
@@ -76,6 +80,15 @@ public class ExecutionEngineOrchestrator {
                 }
                 case "order:resume" -> {
                     result = executeOrderResume(command, executorId);
+                }
+                case "order:remark" -> {
+                    result = executeOrderRemark(command, executorId);
+                }
+                case "material:safety_stock" -> {
+                    result = executeMaterialSafetyStock(command, executorId);
+                }
+                case "notification:push" -> {
+                    result = executeNotificationPush(command, executorId);
                 }
                 default -> {
                     throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
@@ -185,6 +198,55 @@ public class ExecutionEngineOrchestrator {
 
         log.info("[OrderResume] 订单已恢复: orderId={}, executor={}", orderId, executorId);
         return order;
+    }
+
+    /**
+     * 执行命令：添加订单备注
+     */
+    private ProductionOrder executeOrderRemark(ExecutableCommand command, Long executorId) {
+        String orderId = command.getTargetId();
+        ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在: " + orderId);
+        }
+        String remark = (String) command.getParams().getOrDefault("remark", command.getReason());
+        String existing = order.getOperationRemark();
+        order.setOperationRemark((existing != null && !existing.isBlank() ? existing + "\n" : "") + "[AI] " + remark);
+        productionOrderService.updateById(order);
+        log.info("[OrderRemark] 备注已添加: orderId={}, executor={}", orderId, executorId);
+        return order;
+    }
+
+    /**
+     * 执行命令：调整物料安全库存阈值
+     */
+    private java.util.Map<String, Object> executeMaterialSafetyStock(ExecutableCommand command, Long executorId) {
+        String stockId = command.getTargetId();
+        Object thresholdObj = command.getParams().get("safetyStock");
+        if (thresholdObj == null) {
+            throw new BusinessException("缺少 safetyStock 参数");
+        }
+        int newThreshold = Integer.parseInt(thresholdObj.toString());
+        if (newThreshold < 0) {
+            throw new BusinessException("安全库存不能为负数");
+        }
+        boolean ok = materialStockService.updateSafetyStock(stockId, newThreshold);
+        if (!ok) {
+            throw new BusinessException("库存记录不存在或更新失败: " + stockId);
+        }
+        log.info("[MaterialSafetyStock] 安全库存已更新: stockId={}, newThreshold={}, executor={}", stockId, newThreshold, executorId);
+        return java.util.Map.of("stockId", stockId, "newSafetyStock", newThreshold);
+    }
+
+    /**
+     * 执行命令：推送智能通知
+     */
+    private java.util.Map<String, Object> executeNotificationPush(ExecutableCommand command, Long executorId) {
+        // 触发智能通知生成
+        var resp = smartNotification.generateNotifications();
+        int count = resp.getNotifications() != null ? resp.getNotifications().size() : 0;
+        log.info("[NotificationPush] 推送通知: count={}, pending={}, executor={}", count, resp.getPendingCount(), executorId);
+        return java.util.Map.of("notificationCount", count, "pendingCount", resp.getPendingCount());
     }
 
     /**
