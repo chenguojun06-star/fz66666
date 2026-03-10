@@ -19,5 +19,8 @@ COPY --from=build /app/target/*.jar ./app.jar
 EXPOSE 8088
 # 默认激活 prod 配置（cloudbaserc.json 或 docker run -e 可覆盖）
 ENV SPRING_PROFILES_ACTIVE=prod
-# -Duser.timezone 双保险：确保 JVM 使用正确时区（与容器系统 TZ 一致）
-CMD ["java", "-Duser.timezone=Asia/Shanghai", "-jar", "/app/app.jar"]
+# JVM 启动优化（云端健康检查探针有时间限制，必须加速启动）
+# -XX:TieredStopAtLevel=1  仅使用 C1 编译器，加速启动 30~50%
+# -Duser.timezone          双保险：确保 JVM 使用正确时区（与容器系统 TZ 一致）
+# -Dspring.jmx.enabled=false  禁用 JMX，减少启动扫描时间
+CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-jar", "/app/app.jar"]
