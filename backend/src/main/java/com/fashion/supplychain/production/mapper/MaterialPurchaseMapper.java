@@ -19,7 +19,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  MIN(CASE WHEN p.status = 'completed' OR p.received_time IS NOT NULL THEN COALESCE(p.received_time, p.update_time, p.create_time) END) AS procurementStartTime,",
             "  MAX(CASE WHEN p.status = 'completed' THEN COALESCE(p.actual_arrival_date, p.received_time, p.update_time) END) AS procurementEndTime,",
             "  SUBSTRING_INDEX(",
-            "    MAX(CASE WHEN p.status = 'completed' THEN CONCAT(LPAD(UNIX_TIMESTAMP(COALESCE(p.actual_arrival_date, p.received_time, p.update_time)), 20, '0'), LPAD(UNIX_TIMESTAMP(p.update_time), 20, '0'), '|', IFNULL(p.receiver_name, '')) END),",
+            "    MAX(CASE WHEN p.status = 'completed' THEN CONVERT(CONCAT(LPAD(UNIX_TIMESTAMP(COALESCE(p.actual_arrival_date, p.received_time, p.update_time)), 20, '0'), LPAD(UNIX_TIMESTAMP(p.update_time), 20, '0'), '|', IFNULL(p.receiver_name, '')) USING utf8mb4) END),",
             "    '|', -1",
             "  ) AS procurementOperatorName,",
             "  SUM(IFNULL(p.purchase_quantity, 0)) AS purchaseQuantity,",
