@@ -1,9 +1,12 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.exception.BusinessException;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
@@ -55,6 +58,10 @@ class ProductionProcessTrackingOrchestratorTest {
 
     @BeforeEach
     void setUp() {
+        // 初始化 MBP lambda cache（无 Spring 上下文时必须手动注册）
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, ProductionProcessTracking.class);
+
         UserContext ctx = new UserContext();
         ctx.setTenantId(1L);
         ctx.setUsername("testUser");

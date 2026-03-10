@@ -1,10 +1,13 @@
 package com.fashion.supplychain.production.service;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +40,10 @@ class OrderStockFillServiceTest {
 
     @BeforeEach
     void setUp() {
-        // MockitoExtension会自动初始化Mock
+        // 初始化 MBP lambda cache（无 Spring 上下文时必须手动注册）
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, ProductWarehousing.class);
+        TableInfoHelper.initTableInfo(assistant, ProductOutstock.class);
     }
 
     @Test

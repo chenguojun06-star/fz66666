@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.mapper.StyleBomMapper;
@@ -54,6 +55,9 @@ class IntelligenceCoreOrchestratorTest {
 
     @Mock
     private ScanRecordService scanRecordService;
+
+    @Mock
+    private MaterialStockService materialStockService;
 
     @Mock
     private DashboardQueryService dashboardQueryService;
@@ -130,14 +134,14 @@ class IntelligenceCoreOrchestratorTest {
 
     @Test
     void healthIndex_withNoData_gradeIsA() {
-        // 空数据：productionScore=20, deliveryScore=20, qualityScore=20, inventory=16, finance=15 → 91 → "A"
+        // 空数据：各维度无数据时均兜底满分 20 → 合计 100 → "A"
         when(productionOrderService.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
         when(productionOrderService.count(any())).thenReturn(0L);
 
         HealthIndexResponse resp = healthIndex.calculate();
 
         assertThat(resp.getGrade()).isEqualTo("A");
-        assertThat(resp.getHealthIndex()).isEqualTo(91);
+        assertThat(resp.getHealthIndex()).isEqualTo(100);
     }
 
     @Test

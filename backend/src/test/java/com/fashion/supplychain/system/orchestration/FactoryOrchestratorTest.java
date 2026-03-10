@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.LoginLogService;
 import org.junit.jupiter.api.AfterEach;
@@ -29,6 +30,9 @@ class FactoryOrchestratorTest {
 
     @Mock
     private LoginLogService loginLogService;
+
+    @Mock
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
     @InjectMocks
     private FactoryOrchestrator orchestrator;

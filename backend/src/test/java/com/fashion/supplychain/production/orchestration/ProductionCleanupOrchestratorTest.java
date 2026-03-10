@@ -1,9 +1,16 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -11,6 +18,8 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -60,6 +69,18 @@ class ProductionCleanupOrchestratorTest {
 
     @InjectMocks
     private ProductionCleanupOrchestrator orchestrator;
+
+    @BeforeEach
+    void setUp() {
+        // 初始化 MBP lambda cache（无 Spring 上下文时必须手动注册）
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, ScanRecord.class);
+        TableInfoHelper.initTableInfo(assistant, MaterialPurchase.class);
+        TableInfoHelper.initTableInfo(assistant, CuttingBundle.class);
+        TableInfoHelper.initTableInfo(assistant, ProductWarehousing.class);
+        TableInfoHelper.initTableInfo(assistant, ProductOutstock.class);
+        TableInfoHelper.initTableInfo(assistant, ShipmentReconciliation.class);
+    }
 
     // ---- cleanupFakeProcurementRecords ----
 

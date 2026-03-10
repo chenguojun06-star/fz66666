@@ -41,22 +41,30 @@ public class ProductionOrderScanRecordDomainService {
         return StringUtils.hasText(trimmed) ? trimmed : null;
     }
 
+    /**
+     * 解析操作人显示名称。
+     * "system" 是系统保留词：若存在更具体的真实名称来源，则优先使用真实名称。
+     * 只有当所有来源都找不到真实名称时，才降级返回 "system"（纯自动化记录）。
+     */
     private String resolveOperatorName(String operatorName, String operatorId, String existingOperatorName) {
         String direct = trimToNull(operatorName);
-        if (direct != null) {
+        // "system" 是保留词，不视为真实显示名，跳过继续向下查找
+        boolean directIsSystem = "system".equalsIgnoreCase(direct);
+        if (direct != null && !directIsSystem) {
             return direct;
         }
 
         UserContext ctx = UserContext.get();
         if (ctx != null) {
             String ctxName = trimToNull(ctx.getUsername());
-            if (ctxName != null) {
+            // 同样跳过超管 JWT 里的 "system" username
+            if (ctxName != null && !"system".equalsIgnoreCase(ctxName)) {
                 return ctxName;
             }
         }
 
         String existing = trimToNull(existingOperatorName);
-        if (existing != null) {
+        if (existing != null && !"system".equalsIgnoreCase(existing)) {
             return existing;
         }
 
@@ -65,7 +73,8 @@ public class ProductionOrderScanRecordDomainService {
             return idFallback;
         }
 
-        return UNKNOWN_OPERATOR;
+        // 所有来源都无真实名称，才回退到 direct（"system"）或 UNKNOWN_OPERATOR
+        return directIsSystem ? direct : UNKNOWN_OPERATOR;
     }
 
     public int clampPercent(int progress) {
@@ -327,6 +336,11 @@ public class ProductionOrderScanRecordDomainService {
             sr.setScanResult("success");
             sr.setRemark(processName);
             sr.setScanTime(scanTime == null ? now : scanTime);
+            // 补充租户ID，防止系统自动生成记录出现 tenant_id=NULL
+            Long tidCtx = UserContext.tenantId();
+            if (tidCtx != null) {
+                sr.setTenantId(tidCtx);
+            }
             sr.setCreateTime(now);
             sr.setUpdateTime(now);
             scanRecordMapper.insert(sr);
