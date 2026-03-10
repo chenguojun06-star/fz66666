@@ -29,7 +29,7 @@ page {
   padding: 2px 8px;
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: #ffffff;
+  color: var(--color-text-white);
   background: var(--color-primary);
   border-radius: var(--radius-full);
 }
@@ -122,14 +122,14 @@ page {
   min-width: 18px;
   height: 18px;
   background: var(--color-error);
-  color: #ffffff;
+  color: var(--color-text-white);
   border-radius: 9px;
   font-size: var(--font-size-xs);
   line-height: 18px;
   text-align: center;
   padding: 0 4px;
   font-weight: 600;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--color-bg-card);
 }
 
 /* 提醒面板 */
@@ -533,7 +533,7 @@ page {
 .home-entry {
   border: none;
   background: var(--gradient-action);
-  color: #ffffff;
+  color: var(--color-text-white);
   border-radius: var(--radius-full);
   padding: 3px 8px;
   text-align: center;
@@ -574,23 +574,23 @@ page {
   border-radius: 12rpx;
   font-size: 24rpx;
   flex-shrink: 0;
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
 }
 
 .home-activity-icon--production {
-  background: #e6fffb;
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .home-activity-icon--style {
-  background: #e6f4ff;
+  background: rgba(59, 130, 246, 0.12);
 }
 
 .home-activity-icon--scan {
-  background: #f9f0ff;
+  background: rgba(139, 92, 246, 0.12);
 }
 
 .home-activity-icon--material {
-  background: #f6ffed;
+  background: rgba(34, 197, 94, 0.12);
 }
 
 .home-activity-content {
@@ -631,11 +631,11 @@ page {
   flex: 1;
   font-size: 28rpx;
   font-weight: 600;
-  color: #d46b08;
+  color: var(--color-warning);
 }
 .home-notice-arrow {
   font-size: 34rpx;
-  color: #d46b08;
+  color: var(--color-warning);
   font-weight: 700;
 }
 

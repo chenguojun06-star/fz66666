@@ -231,7 +231,7 @@ page {
   box-sizing: border-box;
   overflow: hidden;
   background: var(--gradient-action);
-  color: #ffffff;
+  color: var(--color-text-white);
   border-radius: var(--radius-full);
   font-size: var(--font-size-lg);
   font-weight: 700;
@@ -298,7 +298,7 @@ page {
 
 .warehouse-chip--active {
   background: var(--primary-color, #2D7FF9);
-  color: #fff;
+  color: var(--color-text-white);
   border-color: var(--primary-color, #2D7FF9);
 }
 
@@ -525,7 +525,7 @@ page {
   width: 16px;
   height: 16px;
   background: rgba(15, 23, 42, 0.7);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: var(--font-size-xs);
   text-align: center;
   line-height: 16px;
@@ -534,13 +534,13 @@ page {
 .df-add {
   width: 40px;
   height: 40px;
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-xl); /* 一级标题/图标 */
-  color: #cbd5e1;
+  color: var(--color-text-disabled);
 }
 .df-add.off {
   opacity: 0.4;
@@ -591,11 +591,11 @@ page {
 }
 .res-tag.ok {
   background: #2e7d32;
-  color: #fff;
+  color: var(--color-text-white);
 }
 .res-tag.err {
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-white);
 }
 .res-msg {
   flex: 1;
@@ -684,7 +684,7 @@ page {
   text-align: center;
   padding: 18rpx 0;
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-white);
   border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -779,7 +779,7 @@ page {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f5f6f8;
+  border-bottom: 1px solid var(--color-border-light);
 }
 .hist:last-of-type {
   border-bottom: none;
@@ -983,7 +983,7 @@ page {
   font-weight: 600;
   padding: 2px 9px;
   background: #e8f0ff;
-  color: #2D7FF9;
+  color: var(--color-primary);
   border-radius: 999px;
 }
 
@@ -1026,7 +1026,7 @@ page {
 }
 
 .delivery-days-tag.days-overdue {
-  color: #dc2626;
+  color: var(--color-error);
   background: #fee2e2;
   font-weight: 700;
 }
@@ -1189,7 +1189,7 @@ page {
   background: rgba(224, 242, 254, 0.8);
 }
 .load-more .no-more {
-  color: #ccc;
+  color: var(--color-text-disabled);
 }
 
 /* ===== 弹窗 ===== */
@@ -1311,8 +1311,8 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
-  border: 1px dashed #d9d9d9;
+  background: var(--color-bg-gray);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-sm);
   padding: 12px;
   margin-bottom: 12px;
@@ -1320,7 +1320,7 @@ page {
 
 .ai-tip-loading-text {
   font-size: 24rpx;
-  color: #8c8c8c;
+  color: var(--color-text-disabled);
   margin-left: 8rpx;
 }
 
@@ -1338,7 +1338,7 @@ page {
 .qc-modal-bar {
   margin-top: 6px;
   padding: 6px 0;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 .qc-modal-label {
   display: block;
@@ -1551,14 +1551,14 @@ page {
 }
 
 .pmi-value.demand {
-  color: #2563eb;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .pmi-input {
   flex: 1;
   background: var(--color-bg-card);
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 2px 6px;
   font-size: var(--font-size-xs);
@@ -1621,7 +1621,7 @@ page {
   display: flex;
   gap: 6px;
   padding: 6px 10px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
   flex-shrink: 0;
 }
 .mbtn {
@@ -1652,7 +1652,7 @@ page {
 }
 .mbtn.sos-btn {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-text-white);
   border: 1px solid rgba(239, 68, 68, 0.5);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
@@ -1728,7 +1728,7 @@ page {
 .modal-footer {
   display: flex;
   padding: 8px 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
   gap: 8px;
 }
 
@@ -1777,7 +1777,7 @@ page {
   align-items: center;
   padding: 4px 0;
   font-size: var(--font-size-xs);
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .qm-label {
@@ -1842,10 +1842,10 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   font-size: var(--font-size-sm);
-  color: #fff;
+  color: var(--color-text-white);
 }
 
 .qm-radio.active .qm-radio-icon {
@@ -1919,7 +1919,7 @@ page {
   width: 20px;
   height: 20px;
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-white);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1932,7 +1932,7 @@ page {
 .qm-image-upload {
   width: 64px;
   height: 64px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--color-border);
   border-radius: 4px;
   display: flex;
   flex-direction: column;
@@ -1969,7 +1969,7 @@ page {
   align-items: center;
   padding: 4px 0;
   font-size: var(--font-size-xs);
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--color-border-light);
   margin-bottom: 8px;
 }
 
@@ -2064,7 +2064,7 @@ page {
 }
 
 .pattern-info-card {
-  background: #f8f9fa;
+  background: var(--color-bg-gray);
   border-radius: 6px;
   padding: 8px;
   margin-bottom: 8px;
@@ -2353,7 +2353,7 @@ page {
 }
 
 .days-overdue {
-  color: #dc2626;
+  color: var(--color-error);
   font-weight: 700;
 }
 
@@ -2366,7 +2366,7 @@ page {
 }
 .res-session-text {
   font-size: 22rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -2388,7 +2388,7 @@ page {
 
 .offline-badge-text {
   font-size: 26rpx;
-  color: #fff;
+  color: var(--color-text-white);
   flex: 1;
   font-weight: 500;
 }
@@ -2411,7 +2411,7 @@ page {
 .qm-ai-title {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1677ff;
+  color: var(--color-primary);
 }
 .qm-ai-badge {
   font-size: 20rpx;
@@ -2433,7 +2433,7 @@ page {
 }
 .qm-ai-checkpoints-label {
   font-size: 24rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   display: block;
   margin-bottom: 8rpx;
 }
@@ -2444,7 +2444,7 @@ page {
 }
 .qm-ai-point {
   font-size: 24rpx;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 1.5;
   padding-left: 8rpx;
 }
@@ -2461,7 +2461,7 @@ page {
 .qm-ai-suggest-text {
   flex: 1;
   font-size: 24rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.4;
 }
 .qm-adopt-btn {

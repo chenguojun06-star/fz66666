@@ -23,7 +23,7 @@ page {
 }
 
 .logout-btn-hover {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .logout-text {
@@ -67,7 +67,7 @@ page {
   height: 18px;
   padding: 0 4px;
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: var(--font-size-xs);
   font-weight: 600;
   line-height: 18px;
@@ -75,7 +75,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--color-bg-card);
 }
 
 /* 用户信息卡片 - 淡蓝色简洁风格 */
@@ -247,7 +247,7 @@ page {
   display: flex;
   align-items: center;
   padding: 14px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%);
   border-radius: var(--radius-sm);
   margin-bottom: 12px;
   position: relative;
@@ -273,7 +273,7 @@ page {
 .admin-card-label {
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text-white);
   margin-bottom: 4px;
 }
 
@@ -285,7 +285,7 @@ page {
 .admin-card-badge {
   padding: 2px 8px;
   background: var(--color-error);
-  color: #ffffff;
+  color: var(--color-text-white);
   font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 10px;
@@ -505,7 +505,7 @@ page {
   padding: 20rpx 0;
   border-radius: 10rpx;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: var(--font-size-base);
   font-weight: 600;
 }
@@ -565,7 +565,7 @@ page {
 .invite-copy-btn {
   padding: 16rpx 24rpx;
   background: var(--color-primary, #2d7ff9);
-  color: #fff;
+  color: var(--color-text-white);
   border-radius: 10rpx;
   font-size: 24rpx;
   font-weight: 600;

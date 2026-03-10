@@ -24,7 +24,7 @@ page {
   padding: 2px 8px;
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: #ffffff;
+  color: var(--color-text-white);
   background: var(--color-primary);
   border-radius: var(--radius-full);
 }
@@ -224,8 +224,8 @@ page {
 }
 
 .bg-soft-indigo {
-  background-color: #ede9fe;
-  color: #6d28d9;
+  background-color: rgba(237, 233, 254, 0.6);
+  color: var(--color-purple);
 }
 
 .menu-name {
@@ -435,7 +435,7 @@ page {
 
 .tag-process {
   background: rgba(16, 185, 129, 0.12);
-  color: #047857; /* 加深绿色，对比度≥4.5:1 */
+  color: var(--color-success); /* 加深绿色，对比度≥4.5:1 */
 }
 
 /* 已完成标签样式 */
@@ -587,12 +587,12 @@ page {
 }
 
 .days-overdue {
-  color: #dc2626;
+  color: var(--color-danger);
   font-weight: 700;
 }
 
 .days-done {
-  color: #52c41a;
+  color: var(--color-success);
   font-weight: 600;
 }
 
@@ -793,7 +793,7 @@ page {
   display: flex;
   gap: 8px;
   padding: 10px 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
   flex-shrink: 0;
 }
 
@@ -846,7 +846,7 @@ page {
 
 /* 延期订单样式 */
 .list-item-overdue {
-  border-left: 4rpx solid #ef4444;
+  border-left: 4rpx solid var(--color-danger);
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.03) 0%, transparent 100%);
 }
 
@@ -855,7 +855,7 @@ page {
   margin-left: 12rpx;
   padding: 4rpx 12rpx;
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
+  color: var(--color-danger);
   font-size: 22rpx;
   font-weight: 600;
   border-radius: 8rpx;
@@ -883,11 +883,11 @@ page {
   flex: 1;
   font-size: 28rpx;
   font-weight: 600;
-  color: #d46b08;
+  color: var(--color-warning);
 }
 .inbox-banner-arrow {
   font-size: 36rpx;
-  color: #d46b08;
+  color: var(--color-warning);
   font-weight: 700;
 }
 

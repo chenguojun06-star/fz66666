@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: #f4f6f9;
+  background: var(--color-bg-page);
   padding: 20rpx 24rpx 100rpx;
   box-sizing: border-box;
 }
@@ -16,23 +16,23 @@
 }
 .stats-total {
   font-size: 26rpx;
-  color: #888;
+  color: var(--color-text-disabled);
 }
 .stats-unread {
   font-size: 26rpx;
-  color: #fa8c16;
+  color: var(--color-warning);
   font-weight: 600;
 }
 .stats-read-all {
   font-size: 26rpx;
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 /* 加载中 */
 .loading-box {
   text-align: center;
   padding: 80rpx 0;
-  color: #aaa;
+  color: var(--color-text-disabled);
   font-size: 28rpx;
 }
 
@@ -46,18 +46,18 @@
 /* 通知卡片 */
 .notice-card {
   position: relative;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
   padding: 28rpx 28rpx 20rpx;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
 }
 
 .notice-unread {
-  border-left: 6rpx solid #fa8c16;
+  border-left: 6rpx solid var(--color-warning);
 }
 
 .notice-read {
-  border-left: 6rpx solid #e8e8e8;
+  border-left: 6rpx solid var(--color-border-light);
   opacity: 0.85;
 }
 
@@ -69,7 +69,7 @@
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: var(--color-error);
 }
 
 /* 通知标题行 */
@@ -86,7 +86,7 @@
 .notice-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   flex: 1;
   line-height: 1.4;
 }
@@ -94,7 +94,7 @@
 /* 通知内容 */
 .notice-content {
   font-size: 26rpx;
-  color: #555;
+  color: var(--color-text-secondary);
   line-height: 1.7;
   display: block;
   margin-bottom: 16rpx;
@@ -108,12 +108,12 @@
 }
 .meta-order {
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 .meta-time {
   font-size: 24rpx;
-  color: #aaa;
+  color: var(--color-text-disabled);
 }
 
 /* 全部标为已读按钮 */
@@ -121,10 +121,10 @@
   margin-top: 28rpx;
   text-align: center;
   padding: 24rpx;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
   font-size: 28rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
 }
