@@ -256,8 +256,13 @@ async function receiveCuttingTask(ctx, detail, userInfo) {
     receiverName,
   );
 
-  toast.success('裁剪任务领取成功，可在"我的裁剪任务"中开始裁剪');
-  ctx.setData({ 'scanConfirm.visible': false, 'scanConfirm.loading': false });
+  toast.success('裁剪任务领取成功，请继续确认并生成裁剪单');
+  // 不要关闭弹窗！将状态直接转换为"提交模式"，实现连贯操作
+  ctx.setData({
+    'scanConfirm.loading': false,
+    'scanConfirm.fromMyTasks': true,
+    'scanConfirm.cuttingTaskReceived': true
+  });
   ctx.loadMyPanel(true);
   loadMyCuttingTasks(ctx);
 }

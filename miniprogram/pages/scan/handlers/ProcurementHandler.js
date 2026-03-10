@@ -354,7 +354,13 @@ async function receiveProcurementTask(ctx, userInfo) {
 
   await Promise.all(updates.map(update => api.production.receivePurchase(update)));
   toast.success(`已领取 ${updates.length} 个面料采购任务`);
-  ctx.setData({ 'scanConfirm.visible': false, 'scanConfirm.loading': false });
+
+  // 不要关闭弹窗！将状态直接转换为"提交模式" (fromMyTasks = true)，实现连贯操作
+  ctx.setData({
+    'scanConfirm.loading': false,
+    'scanConfirm.fromMyTasks': true,
+    'scanConfirm.procurementTaskReceived': true
+  });
   ctx.loadMyPanel(true);
   loadMyProcurementTasks(ctx);
 }
