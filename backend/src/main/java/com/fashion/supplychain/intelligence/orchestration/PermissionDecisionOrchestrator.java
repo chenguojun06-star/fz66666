@@ -161,8 +161,16 @@ public class PermissionDecisionOrchestrator {
      */
     private String[] getRequiredRolesForCommand(String action) {
         return switch (action) {
-            case "order:hold", "order:expedite", "order:resume" ->
+            case "order:hold", "order:expedite", "order:resume", "order:approve", "order:reject" ->
                 new String[]{"PRODUCTION_MANAGER", "ADMIN"};
+            case "style:approve", "style:return" ->
+                new String[]{"STYLE_MANAGER", "ADMIN"};
+            case "quality:reject" ->
+                new String[]{"QC_MANAGER", "PRODUCTION_MANAGER", "ADMIN"};
+            case "settlement:approve" ->
+                new String[]{"FINANCE_MANAGER", "ADMIN"};
+            case "purchase:create" ->
+                new String[]{"PROCUREMENT_MANAGER", "PRODUCTION_MANAGER", "ADMIN"};
             default -> new String[]{"USER"};
         };
     }
@@ -172,8 +180,16 @@ public class PermissionDecisionOrchestrator {
      */
     private String[] getApprovalRoles(String action) {
         return switch (action) {
-            case "order:hold", "order:expedite" ->
+            case "order:hold", "order:expedite", "order:approve", "order:reject" ->
                 new String[]{"PRODUCTION_DIRECTOR"};
+            case "style:approve", "style:return" ->
+                new String[]{"STYLE_DIRECTOR", "ADMIN"};
+            case "quality:reject" ->
+                new String[]{"QC_DIRECTOR", "PRODUCTION_DIRECTOR"};
+            case "settlement:approve" ->
+                new String[]{"FINANCE_DIRECTOR"};
+            case "purchase:create" ->
+                new String[]{"PROCUREMENT_DIRECTOR", "ADMIN"};
             default -> new String[]{"MANAGER"};
         };
     }

@@ -165,7 +165,15 @@ export default function AiExecutionPanel() {
       render: (action: string) => {
         const actionMap: any = {
           'order:hold': '暂停订单',
-          'order:expedite': '加急订单'
+          'order:expedite': '加急订单',
+          'order:approve': '审核通过',
+          'order:reject': '退回订单',
+          'style:approve': '款式通过',
+          'style:return': '退回款式',
+          'quality:reject': '质检退回',
+          'settlement:approve': '结算审批',
+          'purchase:create': '自动采购',
+          'notification:push': '推送通知'
         };
         return actionMap[action] || action;
       }

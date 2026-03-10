@@ -3,12 +3,20 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
+import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 
 /**
@@ -40,6 +48,15 @@ public class ExecutionEngineOrchestrator {
 
     @Autowired
     private MaterialStockService materialStockService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
+    private FinishedProductSettlementService finishedProductSettlementService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     @Autowired
     private AuditTrailOrchestrator auditTrail;
@@ -89,6 +106,27 @@ public class ExecutionEngineOrchestrator {
                 }
                 case "notification:push" -> {
                     result = executeNotificationPush(command, executorId);
+                }
+                case "order:approve" -> {
+                    result = executeOrderApprove(command, executorId);
+                }
+                case "order:reject" -> {
+                    result = executeOrderReject(command, executorId);
+                }
+                case "style:approve" -> {
+                    result = executeStyleApprove(command, executorId);
+                }
+                case "style:return" -> {
+                    result = executeStyleReturn(command, executorId);
+                }
+                case "quality:reject" -> {
+                    result = executeQualityReject(command, executorId);
+                }
+                case "settlement:approve" -> {
+                    result = executeSettlementApprove(command, executorId);
+                }
+                case "purchase:create" -> {
+                    result = executePurchaseCreate(command, executorId);
                 }
                 default -> {
                     throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
@@ -250,6 +288,142 @@ public class ExecutionEngineOrchestrator {
     }
 
     /**
+     * 执行命令：审核通过生产订单
+     */
+    private ProductionOrder executeOrderApprove(ExecutableCommand command, Long executorId) {
+        String orderId = command.getTargetId();
+        ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在: " + orderId);
+        }
+        String status = order.getStatus();
+        if (!"pending".equals(status)) {
+            throw new BusinessException("仅待生产(pending)状态的订单可以审核通过，当前状态: " + status);
+        }
+        order.setStatus("production");
+        order.setOperationRemark("[AI审核] 已审核通过: " + command.getReason());
+        productionOrderService.updateById(order);
+        log.info("[OrderApprove] 订单审核通过: orderId={}, executor={}", orderId, executorId);
+        return order;
+    }
+
+    /**
+     * 执行命令：退回生产订单
+     */
+    private ProductionOrder executeOrderReject(ExecutableCommand command, Long executorId) {
+        String orderId = command.getTargetId();
+        ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在: " + orderId);
+        }
+        String status = order.getStatus();
+        if ("completed".equals(status) || "cancelled".equals(status)) {
+            throw new BusinessException("已完成/已取消的订单不能退回，当前状态: " + status);
+        }
+        String rejectReason = (String) command.getParams().getOrDefault("rejectReason", command.getReason());
+        order.setStatus("pending");
+        order.setOperationRemark("[AI退回] " + rejectReason);
+        productionOrderService.updateById(order);
+        log.info("[OrderReject] 订单已退回: orderId={}, reason={}, executor={}", orderId, rejectReason, executorId);
+        return order;
+    }
+
+    /**
+     * 执行命令：款式开发审核通过
+     */
+    private StyleInfo executeStyleApprove(ExecutableCommand command, Long executorId) {
+        String styleId = command.getTargetId();
+        StyleInfo style = styleInfoService.getById(styleId);
+        if (style == null) {
+            throw new BusinessException("款式不存在: " + styleId);
+        }
+        style.setSampleReviewStatus("PASS");
+        style.setSampleReviewComment("[AI审核] " + command.getReason());
+        style.setSampleReviewTime(LocalDateTime.now());
+        styleInfoService.updateById(style);
+        log.info("[StyleApprove] 款式审核通过: styleId={}, executor={}", styleId, executorId);
+        return style;
+    }
+
+    /**
+     * 执行命令：退回款式重新开发
+     */
+    private StyleInfo executeStyleReturn(ExecutableCommand command, Long executorId) {
+        String styleId = command.getTargetId();
+        StyleInfo style = styleInfoService.getById(styleId);
+        if (style == null) {
+            throw new BusinessException("款式不存在: " + styleId);
+        }
+        String returnReason = (String) command.getParams().getOrDefault("returnReason", command.getReason());
+        style.setSampleReviewStatus("REWORK");
+        style.setSampleReviewComment("[AI退回] " + returnReason);
+        style.setSampleReviewTime(LocalDateTime.now());
+        styleInfoService.updateById(style);
+        log.info("[StyleReturn] 款式已退回: styleId={}, reason={}, executor={}", styleId, returnReason, executorId);
+        return style;
+    }
+
+    /**
+     * 执行命令：质检不合格退回
+     */
+    private ProductionOrder executeQualityReject(ExecutableCommand command, Long executorId) {
+        String orderId = command.getTargetId();
+        ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在: " + orderId);
+        }
+        String rejectReason = (String) command.getParams().getOrDefault("qualityIssue", command.getReason());
+        order.setOperationRemark("[AI质检退回] " + rejectReason);
+        productionOrderService.updateById(order);
+        log.info("[QualityReject] 质检退回: orderId={}, reason={}, executor={}", orderId, rejectReason, executorId);
+        return order;
+    }
+
+    /**
+     * 执行命令：工资对账审批通过
+     */
+    private FinishedProductSettlement executeSettlementApprove(ExecutableCommand command, Long executorId) {
+        String settlementId = command.getTargetId();
+        FinishedProductSettlement settlement = finishedProductSettlementService.getById(settlementId);
+        if (settlement == null) {
+            throw new BusinessException("结算单不存在: " + settlementId);
+        }
+        String status = settlement.getStatus();
+        if ("approved".equals(status)) {
+            throw new BusinessException("结算单已审批，无需重复操作");
+        }
+        settlement.setStatus("approved");
+        finishedProductSettlementService.updateById(settlement);
+        log.info("[SettlementApprove] 结算审批通过: settlementId={}, executor={}", settlementId, executorId);
+        return settlement;
+    }
+
+    /**
+     * 执行命令：AI自动创建采购单
+     */
+    private MaterialPurchase executePurchaseCreate(ExecutableCommand command, Long executorId) {
+        Map<String, Object> params = command.getParams();
+        String materialName = (String) params.getOrDefault("materialName", "");
+        Object qtyObj = params.get("quantity");
+        if (qtyObj == null || materialName.isBlank()) {
+            throw new BusinessException("缺少必要参数: materialName 和 quantity");
+        }
+        int quantity = Integer.parseInt(qtyObj.toString());
+        if (quantity <= 0) {
+            throw new BusinessException("采购数量必须为正数");
+        }
+        MaterialPurchase purchase = new MaterialPurchase();
+        purchase.setMaterialName(materialName);
+        purchase.setPurchaseQuantity(quantity);
+        purchase.setSourceType("AI");
+        purchase.setRemark("[AI创建] " + command.getReason());
+        purchase.setStatus("pending");
+        materialPurchaseService.save(purchase);
+        log.info("[PurchaseCreate] AI创建采购单: materialName={}, qty={}, executor={}", materialName, quantity, executorId);
+        return purchase;
+    }
+
+    /**
      * 触发后续工作流（级联）
      * 例如：订单暂停后，需要生成任务、通知相关部门
      */
@@ -261,12 +435,24 @@ public class ExecutionEngineOrchestrator {
         int cascadedCount = 0;
 
         if ("order:hold".equals(command.getAction())) {
-            // 订单被暂停后 → 生成库存检查任务
             log.info("[Cascade] 生成库存检查任务");
             cascadedCount++;
-
-            // 订单被暂停后 → 通知财务部审查
             log.info("[Cascade] 通知财务部审查");
+            cascadedCount++;
+        }
+
+        if ("order:approve".equals(command.getAction())) {
+            log.info("[Cascade] 订单审核通过 → 通知工厂准备生产");
+            cascadedCount++;
+        }
+
+        if ("quality:reject".equals(command.getAction())) {
+            log.info("[Cascade] 质检退回 → 通知生产部返工");
+            cascadedCount++;
+        }
+
+        if ("purchase:create".equals(command.getAction())) {
+            log.info("[Cascade] 采购单创建 → 通知采购部跟进");
             cascadedCount++;
         }
 
