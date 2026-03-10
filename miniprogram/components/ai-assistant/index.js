@@ -6,8 +6,8 @@ Component({
   properties: {
     visible: {
       type: Boolean,
-      value: true
-    }
+      value: true,
+    },
   },
   data: {
     isOpen: false,
@@ -31,7 +31,7 @@ Component({
     timeoutReminders: [],
     isAdmin: false,
     isTenantOwner: false,
-    taskLoading: false
+    taskLoading: false,
   },
   lifetimes: {
     attached() {
@@ -51,10 +51,10 @@ Component({
         messages: [{
           id: Date.now(),
           role: 'ai',
-          content: greeting
-        }]
+          content: greeting,
+        }],
       });
-    }
+    },
   },
   ready() {
     this.boundLoadTasks = this.loadTasks.bind(this);
@@ -66,7 +66,7 @@ Component({
   pageLifetimes: {
     show() {
       this.loadTasks();
-    }
+    },
   },
   detached() {
     const app = getApp();
@@ -83,25 +83,25 @@ Component({
       this.setData({ taskLoading: true });
       try {
         const mockCtx = {
-           data: { loading: false },
-           setData: (newData) => {
-               if (newData.totalCount !== undefined) {
-                 this.setData({
-                   qualityTasks: newData.qualityTasks || [],
-                   cuttingTasks: newData.cuttingTasks || [],
-                   purchaseTasks: newData.procurementTasks || [],
-                   repairTasks: newData.repairTasks || [],
-                   overdueOrders: newData.overdueOrders || [],
-                   overdueSummary: newData.overdueSummary || null,
-                   pendingUsers: newData.pendingUsers || [],
-                   pendingRegistrations: newData.pendingRegistrations || [],
-                   timeoutReminders: newData.timeoutReminders || [],
-                   isAdmin: newData.isAdmin || false,
-                   isTenantOwner: newData.isTenantOwner || false,
-                   totalTasks: newData.totalCount || 0
-                 });
-               }
-           }
+          data: { loading: false },
+          setData: (newData) => {
+            if (newData.totalCount !== undefined) {
+              this.setData({
+                qualityTasks: newData.qualityTasks || [],
+                cuttingTasks: newData.cuttingTasks || [],
+                purchaseTasks: newData.procurementTasks || [],
+                repairTasks: newData.repairTasks || [],
+                overdueOrders: newData.overdueOrders || [],
+                overdueSummary: newData.overdueSummary || null,
+                pendingUsers: newData.pendingUsers || [],
+                pendingRegistrations: newData.pendingRegistrations || [],
+                timeoutReminders: newData.timeoutReminders || [],
+                isAdmin: newData.isAdmin || false,
+                isTenantOwner: newData.isTenantOwner || false,
+                totalTasks: newData.totalCount || 0,
+              });
+            }
+          },
         };
         await bellTaskLoader.loadAllTasks(mockCtx);
       } catch (err) {
@@ -158,7 +158,7 @@ Component({
       this.setData({
         messages: [...this.data.messages, userMsg],
         inputValue: '',
-        isLoading: true
+        isLoading: true,
       });
       this.scrollToBottom();
 
@@ -185,7 +185,7 @@ Component({
         const aiMsg = { id: Date.now(), role: 'ai', content: aiResponse, recommendPills };
         this.setData({
           messages: [...this.data.messages, aiMsg],
-          isLoading: false
+          isLoading: false,
         });
         this.scrollToBottom();
       } catch (err) {
@@ -193,7 +193,7 @@ Component({
         const errMsg = { id: Date.now(), role: 'ai', content: '网络错误，请稍后再试。' };
         this.setData({
           messages: [...this.data.messages, errMsg],
-          isLoading: false
+          isLoading: false,
         });
         this.scrollToBottom();
       }
@@ -205,7 +205,9 @@ Component({
         if (userInfo.realName) userName = userInfo.realName;
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
-      } catch (err) {}
+      } catch (err) {
+        // ignore: user info read failure is non-critical
+      }
 
       const greeting = userName ? `Hi 👋 ${userName}，我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！` : `Hi 👋 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！`;
 
@@ -213,9 +215,9 @@ Component({
         messages: [{
           id: Date.now(),
           role: 'ai',
-          content: greeting
+          content: greeting,
         }],
-        inputValue: ''
+        inputValue: '',
       });
     },
     scrollToBottom() {
@@ -225,6 +227,6 @@ Component({
           this.setData({ scrollTo: `msg-${this.data.messages[len - 1].id}` });
         }
       }, 100);
-    }
-  }
+    },
+  },
 });

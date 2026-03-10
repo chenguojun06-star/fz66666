@@ -55,10 +55,15 @@ Component({
         return;
       }
 
-      // 不提前改 selected：让目标页 onShow 里的 setTabSelected 来更新，
-      // 避免导航被锁（连续快速点击）时 selected 停在错误 Tab 造成"乱跳"。
+      // 立即更新选中态，给用户即时视觉反馈
+      this.setData({ selected: idx });
       safeNavigate({ url: item.pagePath }, 'switchTab').catch(() => {
-        // 导航失败（通常是重复点击被锁）：不改 selected，保持现有状态
+        // 导航失败（通常是重复点击被锁）：恢复到之前的选中态
+        const prevPages = getCurrentPages();
+        const prevPage = prevPages && prevPages.length ? prevPages[prevPages.length - 1] : null;
+        const prevRoute = prevPage && prevPage.route ? `/${prevPage.route}` : '';
+        const prevIdx = this.data.list.findIndex(t => t.pagePath === prevRoute);
+        if (prevIdx >= 0) this.setData({ selected: prevIdx });
       });
     },
   },

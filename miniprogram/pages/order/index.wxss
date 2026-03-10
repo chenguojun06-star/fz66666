@@ -163,10 +163,10 @@ page {
 
 .order-tag {
   flex-shrink: 0;
-  padding: 2rpx 8rpx;
+  padding: 4rpx 14rpx;
   font-size: 20rpx;
   font-weight: 600;
-  border-radius: 6rpx;
+  border-radius: 999rpx;
   text-align: center;
   line-height: 24rpx;
 }

@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
@@ -68,6 +69,9 @@ public class QualityScanExecutor {
 
     @Autowired(required = false)
     private WxAlertNotifyService wxAlertNotifyService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     /**
      * 执行质检扫码
@@ -126,13 +130,24 @@ public class QualityScanExecutor {
         String qualityStage = parseQualityStageFromParams(params);
 
         // 领取或验收阶段
+        Map<String, Object> result;
         if (!"confirm".equals(qualityStage)) {
-            return handleReceiveOrInspect(params, requestId, operatorId, operatorName, order, bundle, qty,
+            result = handleReceiveOrInspect(params, requestId, operatorId, operatorName, order, bundle, qty,
                                          qualityStage, colorResolver, sizeResolver);
+        } else {
+            // 确认阶段（只录入质检结果，不入库）
+            result = handleConfirm(params, requestId, operatorId, operatorName, order, bundle, qty, colorResolver, sizeResolver);
         }
 
-        // 确认阶段（只录入质检结果，不入库）
-        return handleConfirm(params, requestId, operatorId, operatorName, order, bundle, qty, colorResolver, sizeResolver);
+        // 异步重新计算订单进度，使手机端 productionProgress 随质检进度实时更新
+        try {
+            if (productionOrderService != null) {
+                productionOrderService.recomputeProgressAsync(order.getId());
+            }
+        } catch (Exception e) {
+            log.warn("质检后进度异步重新计算失败: orderId={}", order.getId(), e);
+        }
+        return result;
     }
 
     /**

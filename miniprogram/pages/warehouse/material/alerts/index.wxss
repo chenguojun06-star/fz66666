@@ -99,28 +99,31 @@
   line-height: 40rpx;
 }
 
-/* 充足 / 缺料 状态按钮 — 外圈与字体等大，居中 */
+/* 充足 / 缺料 状态按钮 — 椭圆药丸形，居中 */
 .ri-btn-ok,
 .ri-btn-warn {
-  padding: 2rpx 10rpx;
+  padding: 4rpx 16rpx;
   font-size: 20rpx;
   font-weight: 700;
-  border-radius: 20rpx;
-  line-height: 32rpx;
+  border-radius: 999rpx;
+  line-height: 28rpx;
   text-align: center;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ri-btn-ok {
   background: rgba(209, 250, 229, 0.9);
   color: #059669;
-  border-color: #a7f3d0;
+  border: 1rpx solid #a7f3d0;
 }
 
 .ri-btn-warn {
   background: rgba(254, 243, 199, 0.9);
   color: #d97706;
-  border-color: #fde68a;
+  border: 1rpx solid #fde68a;
 }
 
 /* 底部操作行：左右两按钮并列 */

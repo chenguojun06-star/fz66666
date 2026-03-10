@@ -89,21 +89,25 @@
 
 /* ===== 触发按钮红点徽标 ===== */
 .ai-badge {
-  position: absolute;
-  top: -6rpx;
-  right: -6rpx;
-  min-width: 32rpx;
-  height: 32rpx;
-  line-height: 32rpx;
-  border-radius: 32rpx;
-  background: #ff4d4f;
+  position: fixed;
+  top: 6rpx;
+  right: 6rpx;
+  min-width: 44rpx;
+  height: 44rpx;
+  border-radius: 44rpx;
+  background: #ff3b30;
   color: #fff;
-  font-size: 20rpx;
-  font-weight: 600;
-  text-align: center;
-  padding: 0 8rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10rpx;
   box-sizing: border-box;
-  z-index: 10;
+  border: 3rpx solid #fff;
+  box-shadow: 0 2rpx 8rpx rgba(255,59,48,0.5);
+  z-index: 10001;
+  pointer-events: none;
 }
 
 /* ===== Header Tabs ===== */

@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-22 质检扫码后手机端进度实时更新修复
+
+### 🐛 Bug 修复
+
+#### **质检扫码后手机端进度条不更新——根因修复**
+
+- **问题**：小程序工作台进度条（`productionProgress %`）在质检操作完成后保持不变，直到入库时才更新。
+- **根因定位（三端对比分析）**：
+  - PC 端（进度球）：从扫码记录实时聚合（`boardStats`），质检扫码立即反映 ✅
+  - 手机端进度条：读取 DB `productionProgress` 字段
+  - `productionProgress` 更新路径：`ProductionScanExecutor` ✅、`WarehouseScanExecutor` ✅、`ProductWarehousingOrchestrator` ✅ — 均调用 `recomputeProgressFromRecords()`
+  - **`QualityScanExecutor` ❌**：唯一没有调用 `recompute` 的 Executor
+- **修复内容**（单文件改动）：
+  - 📄 `backend/.../executor/QualityScanExecutor.java`
+    - 新增注入：`@Autowired ProductionOrderService productionOrderService`
+    - 新增 import：`ProductionOrderService`
+    - `execute()` 方法：原先直接 `return handler()`，改为先捕获返回值，最后触发 `recomputeProgressAsync(orderId)` 再返回
+    - `recomputeProgressAsync` 为异步方法（`@Async`），不阻塞质检主流程
+- **影响范围**：
+  - ✅ 质检领取 / 质检验收 / 质检确认三个阶段均触发
+  - ✅ `recomputeProgressFromRecords` 已包含 quality 类型扫码（`in("production","cutting","quality","warehouse")`），计算结果正确
+  - ✅ 不影响 PC 端（boardStats 是前端实时聚合，独立于 DB 字段）
+  - ✅ 编译验证：`mvn clean compile -q` BUILD SUCCESS
+
 ## [Unreleased] - 2026-03-22 小程序端小云助理吞并任务铃铛重构
 
 ### ✨ 新功能 / 重构

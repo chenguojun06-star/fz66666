@@ -545,6 +545,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
                 .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
+                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
+                .isNotNull(ScanRecord::getOperatorId)        // 只统计有真实操作人的记录
                 .isNotNull(ScanRecord::getScanTime)
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
@@ -582,6 +584,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
                 .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
+                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
+                .isNotNull(ScanRecord::getOperatorId)        // 只统计有真实操作人的记录
                 .isNotNull(ScanRecord::getScanTime)
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();

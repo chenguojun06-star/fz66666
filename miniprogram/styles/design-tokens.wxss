@@ -40,6 +40,7 @@ page {
   --color-success: #059669;
   --color-warning: #d97706;
   --color-error: #dc2626;
+  --color-danger: #ef4444;
   --color-info: #2563eb;
 
   /* 中性色 —— 页面背景略带蓝调，与白色卡片形成清晰层次 */

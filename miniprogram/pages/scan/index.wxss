@@ -266,7 +266,7 @@ page {
 .scan-btn-sub {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   white-space: nowrap;
 }
 
