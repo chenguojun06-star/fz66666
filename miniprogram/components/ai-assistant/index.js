@@ -23,6 +23,14 @@ Component({
     cuttingTasks: [],
     warehouseTasks: [],
     purchaseTasks: [],
+    repairTasks: [],
+    overdueOrders: [],
+    overdueSummary: null,
+    pendingUsers: [],
+    pendingRegistrations: [],
+    timeoutReminders: [],
+    isAdmin: false,
+    isTenantOwner: false,
     taskLoading: false
   },
   lifetimes: {
@@ -77,13 +85,22 @@ Component({
         const mockCtx = {
            data: { loading: false },
            setData: (newData) => {
-               this.setData({
+               if (newData.totalCount !== undefined) {
+                 this.setData({
                    qualityTasks: newData.qualityTasks || [],
                    cuttingTasks: newData.cuttingTasks || [],
-                   warehouseTasks: newData.warehouseTasks || [],
                    purchaseTasks: newData.procurementTasks || [],
+                   repairTasks: newData.repairTasks || [],
+                   overdueOrders: newData.overdueOrders || [],
+                   overdueSummary: newData.overdueSummary || null,
+                   pendingUsers: newData.pendingUsers || [],
+                   pendingRegistrations: newData.pendingRegistrations || [],
+                   timeoutReminders: newData.timeoutReminders || [],
+                   isAdmin: newData.isAdmin || false,
+                   isTenantOwner: newData.isTenantOwner || false,
                    totalTasks: newData.totalCount || 0
-               });
+                 });
+               }
            }
         };
         await bellTaskLoader.loadAllTasks(mockCtx);

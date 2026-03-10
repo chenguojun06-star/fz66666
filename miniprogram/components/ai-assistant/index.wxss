@@ -86,3 +86,236 @@
 .loading-indicator { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx; }
 
 .chat-main { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; overflow: hidden; }
+
+/* ===== 触发按钮红点徽标 ===== */
+.ai-badge {
+  position: absolute;
+  top: -6rpx;
+  right: -6rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: 32rpx;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+/* ===== Header Tabs ===== */
+.header-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.tab-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 10rpx 20rpx;
+  font-size: 28rpx;
+  color: #666;
+  border-radius: 24rpx;
+  transition: all 0.2s;
+}
+.tab-item.active {
+  color: #2D7FF9;
+  background: rgba(45, 127, 249, 0.08);
+  font-weight: 600;
+}
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 32rpx;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  margin-left: 6rpx;
+}
+
+/* ===== Tasks Main View ===== */
+.tasks-main {
+  flex: 1;
+  height: 0;
+  padding: 20rpx 24rpx;
+  background: #f8f9fa;
+  box-sizing: border-box;
+}
+
+/* ===== Empty State ===== */
+.tasks-main .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+.tasks-main .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+.tasks-main .empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* ===== Task Section ===== */
+.task-section {
+  margin-bottom: 28rpx;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+.section-title .icon {
+  font-size: 30rpx;
+}
+
+/* ===== Task Card ===== */
+.task-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  border: 1rpx solid #f0f0f0;
+}
+.task-card:active {
+  background: #fafbfc;
+}
+.task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.task-header .order-no {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.task-header .style-no {
+  font-size: 24rpx;
+  color: #666;
+  background: #f5f5f5;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.task-header .status {
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.tag-orange {
+  color: #d46b08;
+  background: rgba(250,173,20,0.12);
+}
+.tag-red {
+  color: #cf1322;
+  background: rgba(255,77,79,0.12);
+}
+.tag-green {
+  color: #389e0d;
+  background: rgba(82,196,26,0.12);
+}
+.tag-blue {
+  color: #096dd9;
+  background: rgba(24,144,255,0.12);
+}
+
+/* ===== Task Content ===== */
+.task-content {
+  margin-bottom: 12rpx;
+}
+.task-desc {
+  font-size: 26rpx;
+  color: #555;
+  line-height: 1.5;
+}
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+.task-meta .qty {
+  font-size: 24rpx;
+  color: #666;
+}
+.task-meta .customer {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* ===== Task Footer ===== */
+.task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f5f5f5;
+}
+.task-footer .time {
+  font-size: 22rpx;
+  color: #bbb;
+}
+.action-btn {
+  font-size: 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  line-height: 1.4;
+}
+.action-btn.primary {
+  background: #2D7FF9;
+  color: #fff;
+}
+.action-btn::after {
+  border: none;
+}
+
+/* ===== Recommend Pills (猜你想问) ===== */
+.recommend-wrapper {
+  margin-top: 16rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid rgba(0,0,0,0.06);
+}
+.recommend-title {
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 10rpx;
+}
+.recommend-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.recommend-pill {
+  background: #f0f7ff;
+  color: #2D7FF9;
+  font-size: 22rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid #d0e8ff;
+}
+.recommend-pill:active {
+  background: #d8edff;
+}
