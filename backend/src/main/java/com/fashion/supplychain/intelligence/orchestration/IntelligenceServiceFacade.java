@@ -20,7 +20,11 @@ import java.time.LocalDateTime;
  *
  * 职责：统一管理 AI 执行引擎与真实业务 Service 之间的桥接，
  * 避免执行引擎直接依赖多个业务 Service。
+ *
+ * @deprecated 当前无调用方。各编排器已直接注入所需 Service，
+ *   此 Facade 仅保留供未来统一入口整合使用。若无需要可安全删除。
  */
+@Deprecated
 @Slf4j
 @Service
 public class IntelligenceServiceFacade {

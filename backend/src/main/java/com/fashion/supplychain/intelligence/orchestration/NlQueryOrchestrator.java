@@ -80,8 +80,19 @@ public class NlQueryOrchestrator {
         return resp;
     }
 
-    /** 意图识别路由（22 种意图，按优先级排列） */
+    /** 意图识别路由（LLM优先 → 关键词兜底） */
     private NlQueryResponse routeIntent(String question, Long tenantId) {
+        // ── 优先尝试 LLM 意图分类（快速超时，失败降级关键词） ──
+        String llmIntent = classifyIntentByLlm(question, tenantId);
+        if (llmIntent != null) {
+            NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId);
+            if (resp != null) {
+                log.info("[NlQuery] LLM意图命中: intent={}", llmIntent);
+                return resp;
+            }
+        }
+
+        // ── 关键词匹配兜底 ──
         // 1) 具体订单查询（含订单号或"订单+进度"）
         if (ORDER_NO_PATTERN.matcher(question).find()
                 || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态"))) {
@@ -611,5 +622,99 @@ public class NlQueryOrchestrator {
         if (diff > 0) return String.format("↑%.1f%%", pct);
         if (diff < 0) return String.format("↓%.1f%%", Math.abs(pct));
         return "持平";
+    }
+
+    // ── LLM 意图分类 ──
+
+    private static final List<String> KNOWN_INTENTS = Arrays.asList(
+            "order_query", "overdue", "compare", "health", "bottleneck", "risk", "anomaly",
+            "production", "defect", "quality", "factory_ranking", "pulse", "worker_efficiency",
+            "warehousing", "cutting", "cost", "rhythm", "scheduling", "notification",
+            "self_healing", "learning", "quote", "supplier_scorecard", "smart_assignment",
+            "execution", "finance_audit", "help", "summary"
+    );
+
+    private static final String LLM_INTENT_PROMPT =
+            "你是一个意图分类器。根据用户问题，从以下意图列表中选择最匹配的一个意图，只返回意图名称（英文），"
+            + "不要解释不要加任何前缀后缀。如果无法匹配任何意图，返回 unknown。\n"
+            + "意图列表：\n"
+            + "order_query - 查询具体订单信息/进度\n"
+            + "overdue - 延期/逾期/超期订单\n"
+            + "compare - 对比/环比/同比/趋势\n"
+            + "health - 健康指数/系统健康/生产健康\n"
+            + "bottleneck - 瓶颈/卡点/堵塞\n"
+            + "risk - 风险/预警/高危\n"
+            + "anomaly - 异常/波动/突变\n"
+            + "production - 今日产量/扫码数量/产出\n"
+            + "defect - 次品/不良/次品率\n"
+            + "quality - 质检/合格率/验收\n"
+            + "factory_ranking - 工厂排名/排行/谁最快\n"
+            + "pulse - 实时脉搏/动态/正在发生\n"
+            + "worker_efficiency - 工人效率/产量最高/谁最快\n"
+            + "warehousing - 入库/出库/库存\n"
+            + "cutting - 裁剪/裁片/分菲\n"
+            + "cost - 成本/费用/单价\n"
+            + "rhythm - 节奏/DNA/生产规律\n"
+            + "scheduling - 排期/排产/调度\n"
+            + "notification - 通知/消息/提醒\n"
+            + "self_healing - 自动修复/自愈/系统修复\n"
+            + "learning - 学习/报告/培训\n"
+            + "quote - 报价/估价/定价\n"
+            + "supplier_scorecard - 供应商评分/供应商排名\n"
+            + "smart_assignment - 智能派工/排班/分配\n"
+            + "execution - 执行/命令/操作\n"
+            + "finance_audit - 财务/资金/对账\n"
+            + "help - 帮助/功能/你能做什么\n"
+            + "summary - 总览/概况/汇总/整体情况\n";
+
+    /** 调用 DeepSeek 进行意图分类，失败返回 null */
+    private String classifyIntentByLlm(String question, Long tenantId) {
+        try {
+            if (!aiAdvisorService.isEnabled()) return null;
+            String reply = aiAdvisorService.chat(LLM_INTENT_PROMPT, "用户问题：" + question);
+            if (reply == null || reply.isBlank()) return null;
+            String intent = reply.trim().toLowerCase().replaceAll("[^a-z_]", "");
+            if (KNOWN_INTENTS.contains(intent)) return intent;
+            log.debug("[NlQuery] LLM返回未知意图: raw={} cleaned={}", reply.trim(), intent);
+            return null;
+        } catch (Exception e) {
+            log.debug("[NlQuery] LLM意图分类失败，降级关键词: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 根据意图名称分发到对应处理方法，不存在返回 null */
+    private NlQueryResponse dispatchByIntent(String intent, String question, Long tenantId) {
+        switch (intent) {
+            case "order_query":       return handleOrderQuery(question, tenantId);
+            case "overdue":           return handleOverdueQuery(tenantId);
+            case "compare":           return handleCompareQuery(tenantId);
+            case "health":            return smartHandlers.handleHealthQuery();
+            case "bottleneck":        return smartHandlers.handleBottleneckQuery();
+            case "risk":              return smartHandlers.handleRiskQuery();
+            case "anomaly":           return smartHandlers.handleAnomalyQuery();
+            case "production":        return handleProductionQuery(tenantId);
+            case "defect":            return smartHandlers.handleDefectQuery();
+            case "quality":           return handleQualityQuery(tenantId);
+            case "factory_ranking":   return smartHandlers.handleFactoryRankingQuery();
+            case "pulse":             return smartHandlers.handlePulseQuery();
+            case "worker_efficiency": return smartHandlers.handleWorkerEfficiencyQuery();
+            case "warehousing":       return handleWarehousingQuery(tenantId);
+            case "cutting":           return handleCuttingQuery(tenantId);
+            case "cost":              return smartHandlers.handleCostQuery();
+            case "rhythm":            return handleDirectWidget("rhythm_dna", "已经打开节奏DNA分析面板：");
+            case "scheduling":        return handleDirectWidget("scheduling", "已经打开智能排期面板：");
+            case "notification":      return handleDirectWidget("mind_push", "已经打开智能推送通知面板：");
+            case "self_healing":      return handleDirectWidget("self_healing", "已经打开自动修复面板：");
+            case "learning":          return handleDirectWidget("learning", "已经打开学习报告面板：");
+            case "quote":             return handleDirectWidget("style_quote", "已经打开智能报价面板：");
+            case "supplier_scorecard":return handleDirectWidget("supplier_scorecard", "已经打开供应商评分卡面板：");
+            case "smart_assignment":  return handleDirectWidget("smart_assignment", "已经打开智能派工面板：");
+            case "execution":         return handleDirectWidget("execution", "已经打开执行引擎面板：");
+            case "finance_audit":     return handleDirectWidget("finance_audit", "已经调出智能异常资金流向监控面板：");
+            case "help":              return handleHelpQuery();
+            case "summary":           return handleSummaryQuery(tenantId);
+            default:                  return null;
+        }
     }
 }

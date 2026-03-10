@@ -73,40 +73,51 @@ public class MindPushOrchestrator {
 
     public MindPushStatusResponse getStatus() {
         Long tenantId = UserContext.tenantId();
-        List<MindPushRule> dbRules = fetchRules(tenantId);
+        List<MindPushRule> dbRules;
+        try {
+            dbRules = fetchRules(tenantId);
+        } catch (Exception e) {
+            log.warn("[MindPush] fetchRules 失败（可能表/列不存在），返回默认: {}", e.getMessage());
+            dbRules = Collections.emptyList();
+        }
 
         // 将 DB 规则转 DTO（未找到的用默认值填充）
         List<MindPushRuleDTO> ruleDtos = mergeWithDefaults(dbRules);
 
         // 近期20条推送日志
-        List<MindPushLog> logs = mindPushLogMapper.selectList(
-            new QueryWrapper<MindPushLog>()
-                .eq("tenant_id", tenantId)
-                .orderByDesc("pushed_at")
-                .last("LIMIT 20")
-        );
-        List<LogItem> logItems = logs.stream().map(l -> LogItem.builder()
-            .id(l.getId())
-            .ruleCode(l.getRuleCode())
-            .orderNo(l.getOrderNo())
-            .pushMessage(l.getTitle() != null ? l.getTitle() : l.getContent())
-            .channel(l.getChannel())
-            .createdAt(l.getPushedAt())
-            .build()
-        ).collect(Collectors.toList());
+        List<LogItem> logItems = Collections.emptyList();
+        long pushed24h = 0, pushed7d = 0;
+        try {
+            List<MindPushLog> logs = mindPushLogMapper.selectList(
+                new QueryWrapper<MindPushLog>()
+                    .eq("tenant_id", tenantId)
+                    .orderByDesc("pushed_at")
+                    .last("LIMIT 20")
+            );
+            logItems = logs.stream().map(l -> LogItem.builder()
+                .id(l.getId())
+                .ruleCode(l.getRuleCode())
+                .orderNo(l.getOrderNo())
+                .pushMessage(l.getTitle() != null ? l.getTitle() : l.getContent())
+                .channel(l.getChannel())
+                .createdAt(l.getPushedAt())
+                .build()
+            ).collect(Collectors.toList());
 
-        // 统计
-        LocalDateTime now = LocalDateTime.now();
-        long pushed24h = mindPushLogMapper.selectCount(
-            new QueryWrapper<MindPushLog>()
-                .eq("tenant_id", tenantId)
-                .ge("pushed_at", now.minusHours(24))
-        );
-        long pushed7d = mindPushLogMapper.selectCount(
-            new QueryWrapper<MindPushLog>()
-                .eq("tenant_id", tenantId)
-                .ge("pushed_at", now.minusDays(7))
-        );
+            LocalDateTime now = LocalDateTime.now();
+            pushed24h = mindPushLogMapper.selectCount(
+                new QueryWrapper<MindPushLog>()
+                    .eq("tenant_id", tenantId)
+                    .ge("pushed_at", now.minusHours(24))
+            );
+            pushed7d = mindPushLogMapper.selectCount(
+                new QueryWrapper<MindPushLog>()
+                    .eq("tenant_id", tenantId)
+                    .ge("pushed_at", now.minusDays(7))
+            );
+        } catch (Exception e) {
+            log.warn("[MindPush] 查询推送日志异常: {}", e.getMessage());
+        }
         long activeRules = ruleDtos.stream().filter(r -> Boolean.TRUE.equals(r.getEnabled())).count();
 
         return MindPushStatusResponse.builder()
@@ -220,16 +231,26 @@ public class MindPushOrchestrator {
     public int runPushCheck(Long tenantId) {
         List<MindPushRule> rules = fetchRules(tenantId);
         Map<String, MindPushRule> ruleMap = rules.stream()
-            .collect(Collectors.toMap(MindPushRule::getRuleCode, r -> r));
+            .collect(Collectors.toMap(MindPushRule::getRuleCode, r -> r, (a, b) -> a));
 
         int totalPushed = 0;
-        totalPushed += checkDeliveryRisk(tenantId, ruleMap);
-        totalPushed += checkStagnant(tenantId, ruleMap);
-        totalPushed += checkMaterialLow(tenantId, ruleMap);
-        totalPushed += checkPayrollReady(tenantId, ruleMap);
+        totalPushed += safeCheck("DELIVERY_RISK", () -> checkDeliveryRisk(tenantId, ruleMap));
+        totalPushed += safeCheck("STAGNANT", () -> checkStagnant(tenantId, ruleMap));
+        totalPushed += safeCheck("MATERIAL_LOW", () -> checkMaterialLow(tenantId, ruleMap));
+        totalPushed += safeCheck("PAYROLL_READY", () -> checkPayrollReady(tenantId, ruleMap));
 
         log.info("[MindPush] tenantId={} 本轮检测写入推送日志 {} 条", tenantId, totalPushed);
         return totalPushed;
+    }
+
+    /** 单项检测隔离：任一检测异常不影响其他检测 */
+    private int safeCheck(String checkName, java.util.function.Supplier<Integer> check) {
+        try {
+            return check.get();
+        } catch (Exception e) {
+            log.warn("[MindPush] {} 检测异常，跳过: {}", checkName, e.getMessage());
+            return 0;
+        }
     }
 
     // ─── 四类检测逻辑 ─────────────────────────────────────────────

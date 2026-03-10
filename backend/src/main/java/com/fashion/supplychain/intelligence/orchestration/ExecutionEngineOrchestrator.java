@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashMap;
 
 
 /**
@@ -64,6 +66,30 @@ public class ExecutionEngineOrchestrator {
     @Autowired
     private SmartNotificationOrchestrator smartNotification;
 
+    @Autowired
+    private SmartWorkflowOrchestrator smartWorkflow;
+
+    // ── 撤回快照存储（executorId → 最近一次命令快照） ──
+    private final ConcurrentHashMap<Long, UndoSnapshot> undoSnapshots = new ConcurrentHashMap<>();
+    private static final int MAX_UNDO_ENTRIES = 500;
+
+    /** 撤回快照 */
+    private static class UndoSnapshot {
+        final String commandId;
+        final String action;
+        final String targetId;
+        final Map<String, Object> originalValues;
+        final LocalDateTime createdAt;
+
+        UndoSnapshot(String commandId, String action, String targetId, Map<String, Object> originalValues) {
+            this.commandId = commandId;
+            this.action = action;
+            this.targetId = targetId;
+            this.originalValues = originalValues;
+            this.createdAt = LocalDateTime.now();
+        }
+    }
+
     /**
      * 执行命令的主入口
      *
@@ -88,7 +114,14 @@ public class ExecutionEngineOrchestrator {
 
             // 2. 根据命令类型分发执行
             Object result = null;
-            switch (command.getAction()) {
+            // 撤回命令特殊处理（不保存快照）
+            if ("undo:last".equals(command.getAction())) {
+                result = executeUndoLast(executorId);
+            } else {
+                // 保存快照供撤回
+                takePreExecutionSnapshot(command, executorId);
+
+                switch (command.getAction()) {
                 case "order:hold" -> {
                     result = executeOrderHold(command, executorId);
                 }
@@ -131,7 +164,8 @@ public class ExecutionEngineOrchestrator {
                 default -> {
                     throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
                 }
-            }
+                }
+            } // end if (not undo)
 
             // 3. 成功：记录审计
             long duration = System.currentTimeMillis() - startTime;
@@ -423,40 +457,102 @@ public class ExecutionEngineOrchestrator {
         return purchase;
     }
 
+    // ── 快照 & 撤回 ──
+
+    private void takePreExecutionSnapshot(ExecutableCommand command, Long executorId) {
+        try {
+            Map<String, Object> original = new LinkedHashMap<>();
+            String targetId = command.getTargetId();
+            switch (command.getAction()) {
+                case "order:hold", "order:expedite", "order:resume", "order:approve",
+                     "order:reject", "order:remark", "quality:reject" -> {
+                    ProductionOrder o = productionOrderService.getByOrderNo(targetId);
+                    if (o != null) {
+                        original.put("status", o.getStatus());
+                        original.put("urgencyLevel", o.getUrgencyLevel());
+                        original.put("operationRemark", o.getOperationRemark());
+                    }
+                }
+                case "style:approve", "style:return" -> {
+                    StyleInfo s = styleInfoService.getById(targetId);
+                    if (s != null) {
+                        original.put("sampleReviewStatus", s.getSampleReviewStatus());
+                        original.put("sampleReviewComment", s.getSampleReviewComment());
+                    }
+                }
+                case "settlement:approve" -> {
+                    FinishedProductSettlement st = finishedProductSettlementService.getById(targetId);
+                    if (st != null) original.put("status", st.getStatus());
+                }
+                default -> { /* material/notification/purchase 等不支持撤回 */ }
+            }
+            if (!original.isEmpty()) {
+                if (undoSnapshots.size() > MAX_UNDO_ENTRIES) undoSnapshots.clear();
+                undoSnapshots.put(executorId, new UndoSnapshot(
+                    command.getCommandId(), command.getAction(), targetId, original));
+            }
+        } catch (Exception e) {
+            log.warn("[Undo] 快照保存失败，不影响主流程: {}", e.getMessage());
+        }
+    }
+
+    private Map<String, Object> executeUndoLast(Long executorId) {
+        UndoSnapshot snap = undoSnapshots.remove(executorId);
+        if (snap == null) {
+            throw new BusinessException("没有可撤回的操作");
+        }
+        // 检查过期（10分钟内可撤回）
+        if (snap.createdAt.plusMinutes(10).isBefore(LocalDateTime.now())) {
+            throw new BusinessException("操作已超过10分钟，无法撤回");
+        }
+
+        switch (snap.action) {
+            case "order:hold", "order:expedite", "order:resume", "order:approve",
+                 "order:reject", "order:remark", "quality:reject" -> {
+                ProductionOrder o = productionOrderService.getByOrderNo(snap.targetId);
+                if (o == null) throw new BusinessException("订单已被删除，无法撤回");
+                o.setStatus((String) snap.originalValues.get("status"));
+                o.setUrgencyLevel((String) snap.originalValues.get("urgencyLevel"));
+                o.setOperationRemark((String) snap.originalValues.get("operationRemark"));
+                productionOrderService.updateById(o);
+            }
+            case "style:approve", "style:return" -> {
+                StyleInfo s = styleInfoService.getById(snap.targetId);
+                if (s == null) throw new BusinessException("款式已被删除，无法撤回");
+                s.setSampleReviewStatus((String) snap.originalValues.get("sampleReviewStatus"));
+                s.setSampleReviewComment((String) snap.originalValues.get("sampleReviewComment"));
+                styleInfoService.updateById(s);
+            }
+            case "settlement:approve" -> {
+                FinishedProductSettlement st = finishedProductSettlementService.getById(snap.targetId);
+                if (st == null) throw new BusinessException("结算单已被删除，无法撤回");
+                st.setStatus((String) snap.originalValues.get("status"));
+                finishedProductSettlementService.updateById(st);
+            }
+            default -> throw new BusinessException("该类型操作不支持撤回: " + snap.action);
+        }
+
+        log.info("[Undo] 已撤回操作: action={}, target={}, executor={}", snap.action, snap.targetId, executorId);
+        return Map.of("undoneAction", snap.action, "targetId", snap.targetId, "commandId", snap.commandId);
+    }
+
     /**
      * 触发后续工作流（级联）
-     * 例如：订单暂停后，需要生成任务、通知相关部门
+     * 调用 SmartWorkflowOrchestrator 生成任务、通知相关部门
      */
     private int triggerPostExecutionWorkflow(
         ExecutableCommand command,
         Object result,
         Long executorId
     ) {
-        int cascadedCount = 0;
-
-        if ("order:hold".equals(command.getAction())) {
-            log.info("[Cascade] 生成库存检查任务");
-            cascadedCount++;
-            log.info("[Cascade] 通知财务部审查");
-            cascadedCount++;
+        try {
+            ExecutionResult<Object> wrappedResult = ExecutionResult.success(result, "");
+            return smartWorkflow.generatePostExecutionWorkflow(command, wrappedResult);
+        } catch (Exception e) {
+            log.warn("[Cascade] 级联工作流执行异常，不影响主命令结果: action={}, error={}",
+                command.getAction(), e.getMessage());
+            return 0;
         }
-
-        if ("order:approve".equals(command.getAction())) {
-            log.info("[Cascade] 订单审核通过 → 通知工厂准备生产");
-            cascadedCount++;
-        }
-
-        if ("quality:reject".equals(command.getAction())) {
-            log.info("[Cascade] 质检退回 → 通知生产部返工");
-            cascadedCount++;
-        }
-
-        if ("purchase:create".equals(command.getAction())) {
-            log.info("[Cascade] 采购单创建 → 通知采购部跟进");
-            cascadedCount++;
-        }
-
-        return cascadedCount;
     }
 
     /**

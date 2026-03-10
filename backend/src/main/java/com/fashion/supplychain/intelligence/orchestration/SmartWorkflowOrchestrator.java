@@ -56,6 +56,9 @@ public class SmartWorkflowOrchestrator {
     private AuditTrailOrchestrator auditTrail;
 
     @Autowired
+    private FollowupTaskOrchestrator followupTaskOrchestrator;
+
+    @Autowired
     private IntelligenceWorkflowLogMapper workflowLogMapper;
 
     @Autowired
@@ -95,8 +98,21 @@ public class SmartWorkflowOrchestrator {
                 cascadedCount = workflowOrderExpedite(command, result);
                 break;
 
+            case "order:approve":
+                cascadedCount = workflowOrderApprove(command, result);
+                break;
 
+            case "quality:reject":
+                cascadedCount = workflowQualityReject(command, result);
+                break;
 
+            case "settlement:approve":
+                cascadedCount = workflowSettlementApprove(command, result);
+                break;
+
+            case "purchase:create":
+                cascadedCount = workflowPurchaseCreate(command, result);
+                break;
 
             default:
                 log.debug("[Workflow] 命令类型 {} 无关联工作流", action);
@@ -194,44 +210,103 @@ public class SmartWorkflowOrchestrator {
     }
 
     /**
-     * 工作流：创建采购单
-     *
-     * 级联规则：
-     *   1. 生成合同草稿
-     *   2. 发起询价流程（3家供应商）
-     *   3. 通知采购经理审批
-     *   4. 通知财务预备预算
+     * 工作流：创建采购单 → 通知采购部跟进、财务预备预算
      */
+    private int workflowPurchaseCreate(ExecutableCommand command, ExecutionResult<?> result) {
+        List<String> createdTasks = new ArrayList<>();
+        List<String> notifiedTeams = new ArrayList<>();
+        try {
+            createFollowupTask(command.getTargetId(), "procurement_followup", "high");
+            createdTasks.add("采购跟进");
+            notifiedTeams.add("procurement_team");
+            notifiedTeams.add("finance_team");
+            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
+            return createdTasks.size();
+        } catch (Exception e) {
+            log.error("[Workflow] 采购创建工作流异常", e);
+            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
+            return createdTasks.size();
+        }
+    }
 
     /**
-     * 工作流：质检升级
-     *
-     * 级联规则：
-     *   1. 生成质检计划（100%检验）
-     *   2. 通知质检部负责人
-     *   3. 通知订单生产方风险预警
+     * 工作流：质检退回 → 通知生产部返工、生成返工任务
      */
+    private int workflowQualityReject(ExecutableCommand command, ExecutionResult<?> result) {
+        List<String> createdTasks = new ArrayList<>();
+        List<String> notifiedTeams = new ArrayList<>();
+        try {
+            createFollowupTask(command.getTargetId(), "rework_task", "urgent");
+            createdTasks.add("返工任务");
+            notifiedTeams.add("production_team");
+            notifiedTeams.add("quality_team");
+            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
+            return createdTasks.size();
+        } catch (Exception e) {
+            log.error("[Workflow] 质检退回工作流异常", e);
+            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
+            return createdTasks.size();
+        }
+    }
 
     /**
-     * 工作流：财务审分
-     *
-     * 级联规则：
-     *   1. 生成财务审核任务
-     *   2. 通知财务主管
-     *   3. 如果审核未通过，通知相关方
+     * 工作流：结算审批通过 → 通知财务出纳、标记订单结算完成
      */
+    private int workflowSettlementApprove(ExecutableCommand command, ExecutionResult<?> result) {
+        List<String> createdTasks = new ArrayList<>();
+        List<String> notifiedTeams = new ArrayList<>();
+        try {
+            createFollowupTask(command.getTargetId(), "payment_dispatch", "high");
+            createdTasks.add("出纳付款");
+            notifiedTeams.add("finance_team");
+            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
+            return createdTasks.size();
+        } catch (Exception e) {
+            log.error("[Workflow] 结算审批工作流异常", e);
+            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
+            return createdTasks.size();
+        }
+    }
 
     /**
-     * 创建后续任务
-     *
-     * @param targetId 目标对象ID
-     * @param taskType 任务类型
-     * @param priority 优先级 (normal/high/urgent)
+     * 工作流：订单审核通过 → 通知工厂准备生产
+     */
+    private int workflowOrderApprove(ExecutableCommand command, ExecutionResult<?> result) {
+        List<String> createdTasks = new ArrayList<>();
+        List<String> notifiedTeams = new ArrayList<>();
+        try {
+            createFollowupTask(command.getTargetId(), "production_prepare", "normal");
+            createdTasks.add("生产准备");
+            notifiedTeams.add("production_team");
+            notifiedTeams.add("warehouse_team");
+            logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
+            return createdTasks.size();
+        } catch (Exception e) {
+            log.error("[Workflow] 订单审核工作流异常", e);
+            logWorkflow(command, createdTasks, notifiedTeams, "PARTIAL_FAILED");
+            return createdTasks.size();
+        }
+    }
+
+    /**
+     * 创建后续任务（通过 FollowupTaskOrchestrator 构建结构化任务）
      */
     private void createFollowupTask(String targetId, String taskType, String priority) {
-        // TODO: 调用任务服务创建任务
-        log.info("[Workflow] 创建任务: targetId={}, type={}, priority={}",
-            targetId, taskType, priority);
+        followupTaskOrchestrator.buildTask(
+            taskType,                        // taskCode
+            "intelligence",                  // domain
+            priority,                        // priority
+            "normal",                        // escalationLevel
+            "system",                        // ownerRole
+            taskType + " - " + targetId,     // title
+            "由智能工作流自动创建",             // summary
+            "级联工作流触发",                  // reason
+            null,                            // routePath
+            targetId,                        // relatedOrderNo
+            "尽快处理",                       // dueHint
+            false                            // autoExecutable
+        );
+        log.info("[Workflow] 创建任务: targetId={}, type={}, priority={}", targetId, taskType, priority);
     }
 
     /**

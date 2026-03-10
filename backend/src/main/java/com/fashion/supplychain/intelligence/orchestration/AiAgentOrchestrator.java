@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,6 +35,11 @@ public class AiAgentOrchestrator {
 
     private Map<String, AgentTool> toolMap;
     private List<AiTool> apiTools;
+
+    /** 对话记忆：userId → 最近 N 轮 user+assistant 消息 */
+    private final ConcurrentHashMap<String, List<AiMessage>> conversationMemory = new ConcurrentHashMap<>();
+    private static final int MAX_MEMORY_TURNS = 6; // 保留最近6轮（12条消息）
+    private static final int MAX_USERS_CACHED = 200; // 超过则清理最早的
 
     @PostConstruct
     public void init() {
@@ -53,8 +59,12 @@ public class AiAgentOrchestrator {
             return Result.fail("智能服务暂未配置或不可用");
         }
 
+        String userId = UserContext.userId();
         List<AiMessage> messages = new ArrayList<>();
         messages.add(AiMessage.system(buildSystemPrompt()));
+        // 加载对话记忆（最近 N 轮）
+        List<AiMessage> history = getConversationHistory(userId);
+        messages.addAll(history);
         messages.add(AiMessage.user(userMessage));
 
         int maxIterations = 5;
@@ -101,6 +111,7 @@ public class AiAgentOrchestrator {
             } else {
                 // Done!
                 log.info("[AiAgent] 完成任务，返回给用户");
+                saveConversationTurn(userId, userMessage, result.getContent());
                 return Result.success(result.getContent());
             }
         }
@@ -122,6 +133,9 @@ public class AiAgentOrchestrator {
 
             List<AiMessage> messages = new ArrayList<>();
             messages.add(AiMessage.system(buildSystemPrompt()));
+            String userId = UserContext.userId();
+            List<AiMessage> history = getConversationHistory(userId);
+            messages.addAll(history);
             messages.add(AiMessage.user(userMessage));
 
             int maxIterations = 5;
@@ -163,6 +177,7 @@ public class AiAgentOrchestrator {
                     }
                 } else {
                     // 最终回答
+                    saveConversationTurn(userId, userMessage, result.getContent());
                     emitSse(emitter, "answer", Map.of("content", result.getContent()));
                     emitSse(emitter, "done", Map.of());
                     emitter.complete();
@@ -180,6 +195,36 @@ public class AiAgentOrchestrator {
                 emitter.complete();
             } catch (Exception ignored) {
                 emitter.completeWithError(e);
+            }
+        }
+    }
+
+    // ── 对话记忆管理 ──
+
+    private List<AiMessage> getConversationHistory(String userId) {
+        if (userId == null || userId.isBlank()) return List.of();
+        List<AiMessage> history = conversationMemory.get(userId);
+        if (history == null || history.isEmpty()) return List.of();
+        synchronized (history) {
+            return new ArrayList<>(history);
+        }
+    }
+
+    private void saveConversationTurn(String userId, String userMsg, String assistantMsg) {
+        if (userId == null || userId.isBlank()) return;
+        // 防止内存膨胀：超过 MAX_USERS_CACHED 时清空最早缓存
+        if (conversationMemory.size() > MAX_USERS_CACHED) {
+            conversationMemory.clear();
+            log.info("[AiAgent] 对话缓存超过{}用户，已清空", MAX_USERS_CACHED);
+        }
+        List<AiMessage> history = conversationMemory.computeIfAbsent(userId, k -> new ArrayList<>());
+        synchronized (history) {
+            history.add(AiMessage.user(userMsg));
+            history.add(AiMessage.assistant(assistantMsg));
+            // 保留最近 MAX_MEMORY_TURNS 轮（每轮2条）
+            int maxMessages = MAX_MEMORY_TURNS * 2;
+            while (history.size() > maxMessages) {
+                history.remove(0);
             }
         }
     }

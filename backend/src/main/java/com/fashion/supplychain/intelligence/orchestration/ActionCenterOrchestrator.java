@@ -259,7 +259,7 @@ public class ActionCenterOrchestrator {
             return healthIndexOrchestrator.calculate();
         } catch (Exception e) {
             log.warn("[ActionCenter] health-index 聚合失败: {}", e.getMessage());
-            return null;
+            return new HealthIndexResponse();
         }
     }
 
@@ -268,7 +268,7 @@ public class ActionCenterOrchestrator {
             return livePulseOrchestrator.pulse();
         } catch (Exception e) {
             log.warn("[ActionCenter] live-pulse 聚合失败: {}", e.getMessage());
-            return null;
+            return new LivePulseResponse();
         }
     }
 
@@ -277,7 +277,7 @@ public class ActionCenterOrchestrator {
             return orderDeliveryRiskOrchestrator.assess(null);
         } catch (Exception e) {
             log.warn("[ActionCenter] delivery-risk 聚合失败: {}", e.getMessage());
-            return null;
+            return new DeliveryRiskResponse();
         }
     }
 
@@ -286,7 +286,7 @@ public class ActionCenterOrchestrator {
             return anomalyDetectionOrchestrator.detect();
         } catch (Exception e) {
             log.warn("[ActionCenter] anomaly 聚合失败: {}", e.getMessage());
-            return null;
+            return new AnomalyDetectionResponse();
         }
     }
 
@@ -295,7 +295,7 @@ public class ActionCenterOrchestrator {
             return smartNotificationOrchestrator.generateNotifications();
         } catch (Exception e) {
             log.warn("[ActionCenter] smart-notification 聚合失败: {}", e.getMessage());
-            return null;
+            return new SmartNotificationResponse();
         }
     }
 
@@ -304,7 +304,7 @@ public class ActionCenterOrchestrator {
             return financeAuditOrchestrator.audit();
         } catch (Exception e) {
             log.warn("[ActionCenter] finance-audit 聚合失败 tenantId={}: {}", UserContext.tenantId(), e.getMessage());
-            return null;
+            return new FinanceAuditResponse();
         }
     }
 }
