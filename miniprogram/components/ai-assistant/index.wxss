@@ -6,10 +6,10 @@
 }
 .ai-trigger-btn {
   position: fixed;
-  right: 180rpx; /* 在铃铛左侧，往中间靠一点 */
+  right: 24rpx; /* 移到右上角，替代原来的铃铛位置 */
   top: 24rpx;
-  width: 60rpx;
-  height: 60rpx;
+  width: 72rpx;
+  height: 72rpx;
   background: #ffffff;
   border: 1rpx solid #e8e8e8;
   border-radius: 50%;
@@ -24,6 +24,7 @@
   background-size: 70%;
   background-position: center;
   background-repeat: no-repeat;
+  z-index: 9999;
 }
 .ai-trigger-hover {
   transform: scale(0.95);
@@ -41,7 +42,7 @@
 
 .chat-modal {
   position: fixed; bottom: 0; left: 0; right: 0; height: 75vh;
-  background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx; overflow: hidden; overflow: hidden;
+  background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx; overflow: hidden;
   display: flex; flex-direction: column; pointer-events: auto;
   box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.1);
   animation: slideUp 0.3s ease-out forwards;
@@ -68,7 +69,7 @@
 .quick-chips { display: flex; flex-direction: row; padding: 16rpx 24rpx 0; gap: 16rpx; flex-wrap: wrap; }
 .quick-chip { background: #f0f7ff; color: #2D7FF9; border-radius: 32rpx; padding: 12rpx 24rpx; font-size: 24rpx; line-height: 1.4; border: 1rpx solid #d0e8ff; }
 .quick-chip:active { background: #d8edff; }
-.chat-history { flex: 1; height: 0; box-sizing: border-box; padding: 24rpx; background: #f8f9fa; }
+.chat-history { flex: 1; height: 0; width: 100%; box-sizing: border-box; padding: 24rpx; background: #f8f9fa; }
 .message-row { display: flex; margin-bottom: 24rpx; align-items: flex-start; }
 .my-message { flex-direction: row-reverse; }
 .ai-message { flex-direction: row; }
@@ -81,5 +82,7 @@
 .chat-input-area { display: flex; padding: 16rpx 24rpx 48rpx; border-top: 1rpx solid #eee; background: #fff; align-items: center; }
 .chat-input { flex: 1; background: #f0f0f0; border-radius: 32rpx; padding: 12rpx 24rpx; font-size: 28rpx; height: 72rpx; box-sizing: border-box; }
 .send-btn { margin-left: 16rpx; background: var(--primary-color, #2D7FF9); color: #fff; border-radius: 36rpx; font-size: 28rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; }
-.send-btn[disabled] { background: #ccc; color: #fff; }
+.send-btn.btn-disabled { background: #ccc; color: #fff; }
 .loading-indicator { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx; }
+
+.chat-main { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; overflow: hidden; }
