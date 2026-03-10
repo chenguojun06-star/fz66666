@@ -8,6 +8,7 @@
  * 注意：services/production/productionApi.ts 已保留 re-export，旧导入路径仍兼容。
  */
 import api from '../../utils/api';
+import { downloadFile } from '../../utils/fileUrl';
 
 // ── 智能化第二批 TS 类型定义 ──
 
@@ -1015,6 +1016,7 @@ export const intelligenceApi = {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -1107,16 +1109,10 @@ export const intelligenceApi = {
     const params = new URLSearchParams({ type });
     if (date) params.append('date', date);
 
-    // 如果存在 token，添加到参数中以免缺少权限导致下载失败
     const token = localStorage.getItem('authToken') || '';
-    if (token) {
-      params.append('token', token);
-    }
+    if (token) params.append('token', token);
 
-    // 使用浏览器原生下载，避免 fetch Blob 可能解析导致的空文件或 0-byte 被视为"没数据"的情况
-    window.location.href = `/api/intelligence/professional-report/download?${params.toString()}`;
-
-    // 给一点时间让浏览器发起下载，然后再结束，让外部的 await 返回
+    downloadFile(`/api/intelligence/professional-report/download?${params.toString()}`);
     await new Promise(r => setTimeout(r, 500));
   },
 };

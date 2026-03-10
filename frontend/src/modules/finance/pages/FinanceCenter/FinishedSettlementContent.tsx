@@ -16,6 +16,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
+import { downloadFile } from '@/utils/fileUrl';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -464,7 +465,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
     const queryParams = new URLSearchParams();
     selectedRowKeys.forEach(id => queryParams.append('orderIds', id));
-    window.open(`/api/finance/finished-settlement/export?${queryParams.toString()}`, '_blank');
+    downloadFile(`/api/finance/finished-settlement/export?${queryParams.toString()}`);
     message.success(`正在导出 ${selectedRowKeys.length} 条数据...`);
   };
 
@@ -529,7 +530,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       const queryString = new URLSearchParams(
         Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
       ).toString();
-      window.open(`/api/finance/finished-settlement/export?${queryString}`, '_blank');
+      downloadFile(`/api/finance/finished-settlement/export?${queryString}`);
 
       message.success({ content: '导出成功', key: 'export', duration: 2 });
     } catch (error: any) {

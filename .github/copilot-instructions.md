@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（134个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-10 | **AI指令版本**：v3.13
+> **最后更新**：2026-03-10 | **AI指令版本**：v3.14
 
 ---
 
@@ -11,14 +11,14 @@
 
 | 优先级 | 规律 | 触发条件 | 后果 | 详见 |
 |--------|------|---------|------|------|
-| 🔴 P0 | **本地测试未通过直接 push** | 代码修改后直接 push 云端 | CI 失败、系统崩溃 | [推送前强制三步验证](#-推送前强制三步验证每次必做) |
-| 🔴 P0 | **git add 漏掉** | push 前未 `git status` 核查 | 本地过 CI 报错 | [推送前三步验证](#-推送前强制三步验证每次必做) |
-| 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | [编排层规划](#第三步编排层规划架构核心不可省略) |
-| 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | [权限控制模式](#权限控制模式强制) |
-| 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | [第三步类型安全核查](#第三步编排层规划架构核心不可省略) |
-| 🔴 P0 | **代码与数据库不同步** | Entity 新增字段无 Flyway / Flyway 新增列无 Entity | Flyway 链断裂 UNknown column 500 | [推送前数据库检查](#推送前强制三步验证每次必做) |
-| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | [文件大小限制](#文件大小限制强制执行不可省略) |
-| 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | [快速判断Orchestrator](#快速判断什么时候新建-orchestrator) |
+| 🔴 P0 | **本地测试未通过直接 push** | 代码修改后直接 push 云端 | CI 失败、系统崩溃 | 见「推送前强制三步验证」 |
+| 🔴 P0 | **git add 漏掉** | push 前未 `git status` 核查 | 本地过 CI 报错 | 见「推送前强制三步验证」 |
+| 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | 见「第三步：编排层规划」 |
+| 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | 见「权限控制模式」 |
+| 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | 见「第三步：编排层规划」 |
+| 🔴 P0 | **代码与数据库不同步** | Entity 新增字段无 Flyway / Flyway 新增列无 Entity | Flyway 链断裂 UNknown column 500 | 见「推送前强制三步验证」 |
+| 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | 见「文件大小限制」 |
+| 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | 见「快速判断：什么时候新建 Orchestrator」 |
 
 > **工作流**：每次开始前，先默念这 8 条。核心是 ✅ **本地测试验证通过** → ✅ **git add 完整** → ✅ **代码与DB一致** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。
 > **废弃代码清理（强制）**：所有代码修改、变更前必须检查：是否有同步修改的旧逻辑、注释代码、兼容逻辑需要删除？废除代码清查确认完毕才能 push。禁止有 TODO/FIXME 标记或未处理的兼容代码直接推送仓库。
@@ -77,11 +77,11 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 ### 第四步：核心文档入口
-- **系统概览**：[系统状态.md](../系统状态.md) - 从这里开始了解系统
-- **完整开发规范**：[开发指南.md](../开发指南.md) - 4255行最重要文档
-- **设计系统**：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md) - 强制执行的设计规范
-- **业务流程**：[业务流程说明.md](../业务流程说明.md) - 理解业务逻辑
-- **测试脚本**：[快速测试指南.md](../快速测试指南.md) - 40+测试脚本
+- **系统概览**：系统状态.md - 从这里开始了解系统
+- **完整开发规范**：开发指南.md - 4255行最重要文档
+- **设计系统**：设计系统完整规范-2026.md - 强制执行的设计规范
+- **业务流程**：业务流程说明.md - 理解业务逻辑
+- **测试脚本**：快速测试指南.md - 40+测试脚本
 
 ### 第五步：运行测试验证环境
 ```bash
@@ -401,15 +401,15 @@ cd frontend && npm run dev
 
 ### 数据库管理（非标准端口）
 - 端口：**3308**（非标准 3306，避免冲突）
-- 管理脚本：[deployment/db-manager.sh](deployment/db-manager.sh)
+- 管理脚本：deployment/db-manager.sh
 - 启动：`./deployment/db-manager.sh start`
 - Docker 容器名：`fashion-mysql-simple`
 
 ### 小程序调试
-- 使用**微信开发者工具**打开 [miniprogram/](miniprogram/) 目录
+- 使用**微信开发者工具**打开 miniprogram/ 目录
 - 扫码调试需真机或模拟扫码输入
 - Mock 模式：开发环境下 `WECHAT_MINI_PROGRAM_MOCK_ENABLED=true` 跳过微信登录验证
-- **完整指南**：[docs/小程序开发完整指南.md](docs/小程序开发完整指南.md) - ESLint、TypeScript、调试技巧
+- **完整指南**：docs/小程序开发完整指南.md - ESLint、TypeScript、调试技巧
 
 ## 🧪 测试工作流
 
@@ -466,7 +466,7 @@ docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e 
 - **变更脚本**：Flyway 自动迁移（`backend/src/main/resources/db/migration/V*.sql`）
 - **备份策略**：定期备份到 `backups/` 目录
 - **数据卷管理**：Docker volume 持久化，删除容器不会丢失数据
-- **详细文档**：[deployment/数据库配置.md](deployment/数据库配置.md)
+- **详细文档**：deployment/数据库配置.md
 
 ---
 
@@ -834,12 +834,12 @@ POST /api/style-info/{id}/stage-action?stage=pattern&action=complete
 
 ## 📚 关键文档入口
 
-- **[系统状态.md](系统状态.md)** - 系统概览与文档索引（从这里开始）
-- **[开发指南.md](开发指南.md)** - 完整开发规范与最佳实践
-- **[快速测试指南.md](快速测试指南.md)** - 业务流程测试脚本
-- **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 前端设计规范 v3.0
-- **[docs/小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序 ESLint、调试、业务优化
-- **[deployment/数据库配置.md](deployment/数据库配置.md)** - 数据库备份、恢复、数据卷管理
+- **系统状态.md** - 系统概览与文档索引（从这里开始）
+- **开发指南.md** - 完整开发规范与最佳实践
+- **快速测试指南.md** - 业务流程测试脚本
+- **设计系统完整规范-2026.md** - 前端设计规范 v3.0
+- **docs/小程序开发完整指南.md** - 小程序 ESLint、调试、业务优化
+- **deployment/数据库配置.md** - 数据库备份、恢复、数据卷管理
 
 **RowActions 规则**：
 - ✅ 最多显示 **1个** 行内按钮（其余自动折叠到"更多"）
@@ -864,7 +864,7 @@ const RiskColorMap = {
 <div style={{ background: 'linear-gradient(...)' }} />  // 禁止渐变
 ```
 
-**设计变量参考**：[设计系统完整规范-2026.md](设计系统完整规范-2026.md)
+**设计变量参考**：设计系统完整规范-2026.md
 
 ---
 
@@ -906,7 +906,7 @@ const RiskColorMap = {
 - **ORDER**：订单扫码（仅订单号，需手动选择工序）
 - **SKU**：SKU 扫码（款式+颜色+尺码）
 
-**核心实现**：[miniprogram/pages/scan/handlers/ScanHandler.js](miniprogram/pages/scan/handlers/ScanHandler.js)
+**核心实现**：miniprogram/pages/scan/handlers/ScanHandler.js
 
 ### 防重复提交算法（业务规则）
 ```javascript
@@ -919,7 +919,7 @@ const minInterval = Math.max(30, expectedTime * 0.5);
 // 最小间隔 = max(30, 6000 × 0.5) = 3000秒（50分钟）
 ```
 
-**实现位置**：[miniprogram/pages/scan/services/StageDetector.js#L610](miniprogram/pages/scan/services/StageDetector.js)
+**实现位置**：miniprogram/pages/scan/services/StageDetector.js#L610
 
 ---
 
@@ -932,8 +932,8 @@ SKU = styleNo + color + size
 ```
 
 ### 验证规则共享
-- PC 端：[frontend/src/utils/validationRules.ts](frontend/src/utils/validationRules.ts)
-- 小程序：[miniprogram/utils/validationRules.js](miniprogram/utils/validationRules.js)
+- PC 端：frontend/src/utils/validationRules.ts
+- 小程序：miniprogram/utils/validationRules.js
 
 **原则**：修改验证规则时必须同步更新两端，避免数据不一致。
 
@@ -982,10 +982,10 @@ SKU = styleNo + color + size
 
 ## 📚 关键文档入口
 
-- **[系统状态.md](系统状态.md)** - 系统概览与文档索引（从这里开始）
-- **[开发指南.md](开发指南.md)** - 完整开发规范与最佳实践
-- **[快速测试指南.md](快速测试指南.md)** - 业务流程测试脚本
-- **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 前端设计规范 v3.0
+- **系统状态.md** - 系统概览与文档索引（从这里开始）
+- **开发指南.md** - 完整开发规范与最佳实践
+- **快速测试指南.md** - 业务流程测试脚本
+- **设计系统完整规范-2026.md** - 前端设计规范 v3.0
 
 ---
 
@@ -1165,12 +1165,12 @@ mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,Product
 
 ## 📚 关键文档入口
 
-- **[系统状态.md](系统状态.md)** - 系统概览与文档索引（从这里开始）
-- **[开发指南.md](开发指南.md)** - 完整开发规范与最佳实践
-- **[快速测试指南.md](快速测试指南.md)** - 业务流程测试脚本
-- **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 前端设计规范 v3.0
-- **[docs/小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序 ESLint、调试、业务优化
-- **[deployment/数据库配置.md](deployment/数据库配置.md)** - 数据库备份、恢复、数据卷管理
+- **系统状态.md** - 系统概览与文档索引（从这里开始）
+- **开发指南.md** - 完整开发规范与最佳实践
+- **快速测试指南.md** - 业务流程测试脚本
+- **设计系统完整规范-2026.md** - 前端设计规范 v3.0
+- **docs/小程序开发完整指南.md** - 小程序 ESLint、调试、业务优化
+- **deployment/数据库配置.md** - 数据库备份、恢复、数据卷管理
 
 ---
 
@@ -1211,7 +1211,7 @@ mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,Product
 **设计原则**：响应式一致性 > 自由度
 - 60vw/40vw/30vw 覆盖 90% 场景
 - 自定义尺寸会破坏跨页面视觉一致性
-- 参考：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md)
+- 参考：设计系统完整规范-2026.md
 
 ---
 
@@ -1454,20 +1454,20 @@ cd frontend && npm run lint
 ## 📖 文档速查表
 
 ### 新手入门（按顺序阅读）
-1. [系统状态.md](../系统状态.md) - 5分钟了解系统（必读）
-2. [开发指南.md](../开发指南.md) - 完整架构和规范（必读）
-3. [业务流程说明.md](../业务流程说明.md) - 理解业务逻辑
-4. [快速测试指南.md](../快速测试指南.md) - 验证环境
+1. 系统状态.md - 5分钟了解系统（必读）
+2. 开发指南.md - 完整架构和规范（必读）
+3. 业务流程说明.md - 理解业务逻辑
+4. 快速测试指南.md - 验证环境
 
 ### 开发规范（写代码前查阅）
-- [设计系统完整规范-2026.md](../设计系统完整规范-2026.md) - UI/UX 强制规范
-- [docs/useModal使用指南.md](../docs/useModal使用指南.md) - Modal 状态管理
-- [docs/ModalContentLayout使用指南.md](../docs/ModalContentLayout使用指南.md) - Modal 布局规范
+- 设计系统完整规范-2026.md - UI/UX 强制规范
+- docs/useModal使用指南.md - Modal 状态管理
+- docs/ModalContentLayout使用指南.md - Modal 布局规范
 
 ### 专题指南（特定功能）
-- [INVENTORY_SYSTEM_GUIDE.md](../INVENTORY_SYSTEM_GUIDE.md) - 进销存操作
-- [docs/小程序开发完整指南.md](../docs/小程序开发完整指南.md) - 小程序开发
-- [deployment/数据库配置.md](../deployment/数据库配置.md) - 数据库管理
+- INVENTORY_SYSTEM_GUIDE.md - 进销存操作
+- docs/小程序开发完整指南.md - 小程序开发
+- deployment/数据库配置.md - 数据库管理
 
 ### 测试脚本索引（40+ 脚本）
 ```bash
@@ -1481,16 +1481,16 @@ ls -1 test-*.sh           # 列出所有测试脚本
 ## 🎓 学习路径建议
 
 ### Day 1：环境搭建（1-2小时）
-1. 阅读 [系统状态.md](../系统状态.md)（10分钟）
+1. 阅读 系统状态.md（10分钟）
 2. 运行 `./dev-public.sh` 启动环境（20分钟）
 3. 运行 `./check-system-status.sh` 验证（5分钟）
 4. 运行 `./test-production-order-creator-tracking.sh` 测试（10分钟）
 
 ### Day 2：理解架构（2-3小时）
-1. 阅读 [开发指南.md](../开发指南.md) 1-3章（1小时）
+1. 阅读 开发指南.md 1-3章（1小时）
 2. 查看 `backend/.../orchestration/` 目录，理解 Orchestrator 模式（30分钟）
 3. 查看 `frontend/src/modules/` 目录，理解模块化架构（30分钟）
-4. 阅读 [业务流程说明.md](../业务流程说明.md)（30分钟）
+4. 阅读 业务流程说明.md（30分钟）
 
 ### Day 3：动手实践（3-4小时）
 1. 修改一个简单的 Service（如添加字段）（1小时）
@@ -1499,9 +1499,9 @@ ls -1 test-*.sh           # 列出所有测试脚本
 4. 编写单元测试（30分钟）
 
 ### Week 2+：深入专题
-- 小程序开发：[docs/小程序开发完整指南.md](../docs/小程序开发完整指南.md)
-- 进销存系统：[INVENTORY_SYSTEM_GUIDE.md](../INVENTORY_SYSTEM_GUIDE.md)
-- 设计系统：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md)
+- 小程序开发：docs/小程序开发完整指南.md
+- 进销存系统：INVENTORY_SYSTEM_GUIDE.md
+- 设计系统：设计系统完整规范-2026.md
 
 ---
 

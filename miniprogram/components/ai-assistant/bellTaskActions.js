@@ -18,6 +18,7 @@ function handleCuttingTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
+
   const pages = getCurrentPages();
   const currentPage = pages[pages.length - 1];
   if (currentPage && currentPage.route === 'pages/scan/index' && typeof currentPage.checkPendingTasks === 'function') {
@@ -41,6 +42,7 @@ function handleProcurementTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
+
   const pages = getCurrentPages();
   const currentPage = pages[pages.length - 1];
   if (currentPage && currentPage.route === 'pages/scan/index' && typeof currentPage.checkPendingTasks === 'function') {
@@ -216,6 +218,7 @@ function handleReminderTask(task) {
   if (type === '采购') {
     wx.setStorageSync('mp_scan_type_index', 2);
   }
+
   const pages = getCurrentPages();
   const currentPage = pages[pages.length - 1];
   if (currentPage && currentPage.route === 'pages/scan/index' && typeof currentPage.checkPendingTasks === 'function') {

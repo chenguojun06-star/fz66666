@@ -1,4 +1,5 @@
 import api from '../../utils/api';
+import { downloadFile } from '../../utils/fileUrl';
 import type { ProductionQueryParams, PatternDevelopmentStats } from '../../types/production';
 import { intelligenceApi } from '../intelligence/intelligenceApi';
 
@@ -28,9 +29,9 @@ export const productionOrderApi = {
     // 将过滤中的数组参数进行逗号拼接
     const query = { ...params };
     if (Array.isArray(query.status)) query.status = query.status.join(',');
-    // 构建 query string
+    // 构建 query string，使用 downloadFile 附加 JWT token
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
-    window.open(`/api/production/order/export-excel?${queryString}`, '_blank');
+    downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
   list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
@@ -57,9 +58,9 @@ export const productionCuttingApi = {
     // 将过滤中的数组参数进行逗号拼接
     const query = { ...params };
     if (Array.isArray(query.status)) query.status = query.status.join(',');
-    // 构建 query string
+    // 构建 query string，使用 downloadFile 附加 JWT token
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
-    window.open(`/api/production/order/export-excel?${queryString}`, '_blank');
+    downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
   list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/cutting/list', { params }),
   getByCode: (qrCode: string) => api.get<{ code: number; data: unknown }>(`/production/cutting/by-code/${encodeURIComponent(String(qrCode || '').trim())}`),

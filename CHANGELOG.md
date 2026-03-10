@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2026-03-22 质检扫码后手机端进度实时更新修复
+## [Unreleased] - 2026-03-10 质检扫码后手机端进度实时更新修复
 
 ### 🐛 Bug 修复
 

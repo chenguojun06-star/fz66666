@@ -27,6 +27,7 @@ import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../Progress
 import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
+import ExportButton from '@/components/common/ExportButton';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSync } from '@/utils/syncManager';
@@ -920,12 +921,11 @@ const ProductionList: React.FC = () => {
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
                   </Button>
-                                    <Button onClick={() => productionOrderApi.exportExcel(queryParams as any)}>
-                    导出明细
-                  </Button>
-                                    <Button onClick={() => productionOrderApi.exportExcel(queryParams as any)}>
-                    导出明细
-                  </Button>
+                                    <ExportButton
+                    label="导出明细"
+                    url="/api/production/order/export-excel"
+                    params={queryParams as unknown as Record<string, string>}
+                  />
                   <Button onClick={() => exportSelected(selectedRows)} disabled={!selectedRowKeys.length}>
                     导出
                   </Button>
