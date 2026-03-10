@@ -6,11 +6,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 供应商能力考评评分卡
+ * 供应商能力考评评分卡（采购模块，区别于 intelligence 模块的智能评分卡）
  */
 @Slf4j
 @Service
-public class SupplierScorecardOrchestrator {
+public class ProcurementSupplierScorecardOrchestrator {
 
     public Map<String, Object> calculateSupplierScore(String supplierId) {
         log.info("[Procurement] 计算供应商 {} 评分卡", supplierId);
