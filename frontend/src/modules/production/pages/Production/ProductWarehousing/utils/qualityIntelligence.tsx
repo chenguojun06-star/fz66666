@@ -162,7 +162,7 @@ const VERDICT_COLOR = { good: '#52c41a', warn: '#fa8c16', critical: '#ff4d4f' } 
 const VERDICT_LABEL = { good: '质量良好', warn: '需关注', critical: '风险预警' } as const;
 
 /** 渲染智能分析 Tooltip 内容 */
-export function renderQualityTooltip(insight: QualityInsight, orderNo: string): React.ReactNode {
+export function renderQualityTooltip(insight: QualityInsight, _orderNo: string): React.ReactNode {
   return (
     <div style={{ fontSize: 12, maxWidth: 340, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态标签 */}

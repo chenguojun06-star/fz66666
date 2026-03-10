@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Descriptions, Divider, Row, Col, Progress, Radio, Alert } from 'antd';
+import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Typography, Descriptions, Divider, Row, Col, Progress, Radio, Alert } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';

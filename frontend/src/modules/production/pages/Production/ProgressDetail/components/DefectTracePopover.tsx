@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Popover, Spin, Tag } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/production/productionApi';
 
 /* ===== 类型定义 ===== */

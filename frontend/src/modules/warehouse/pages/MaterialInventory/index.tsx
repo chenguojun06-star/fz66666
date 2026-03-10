@@ -8,7 +8,6 @@ import {
   Tag,
   Form,
   Select,
-  Image,
   Row,
   Col,
   InputNumber,
@@ -17,7 +16,6 @@ import {
   Tooltip,
 } from 'antd';
 import {
-  WarningOutlined,
   ScanOutlined,
   ExportOutlined,
   CheckCircleOutlined,
@@ -26,9 +24,6 @@ import {
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import { canViewPrice } from '@/utils/sensitiveDataMask';
-import dayjs from 'dayjs';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';

@@ -1,12 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
-import type { MenuProps } from 'antd';
-import { CheckOutlined, CloseOutlined, QrcodeOutlined } from '@ant-design/icons';
+import { QrcodeOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import RowActions from '@/components/common/RowActions';
 import { useUserListColumns } from './hooks/useUserListColumns';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import { Role, User as UserType, UserQueryParams } from '@/types/system';

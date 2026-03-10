@@ -6,7 +6,7 @@
  *  - 未开始 → 按工序顺序前2条，带预测开始日期
  *  - 全无扫码 → 按工序顺序前2条，带预测日期
  */
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 
 import type { ProductionOrder } from '@/types/production';

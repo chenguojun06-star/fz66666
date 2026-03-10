@@ -6,7 +6,6 @@ import { useModal, useTablePagination } from '@/hooks';
 import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
-import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import type { MaterialInventory } from '../types';

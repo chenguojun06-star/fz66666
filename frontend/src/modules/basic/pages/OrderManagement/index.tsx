@@ -26,7 +26,6 @@ import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
 import { SchedulingSuggestionResponse, SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import { generateUniqueId } from '@/utils/idGenerator';
-import OrderFormModal from './components/OrderFormModal';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import SmartStyleInsightCard from './components/SmartStyleInsightCard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -42,16 +41,6 @@ const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
-  const handleFactorySelect = (factoryName: string) => {
-    const factory = factories.find(f => f.factoryName === factoryName);
-    if (factory) {
-      form.setFieldValue('factoryId', factory.id);
-      message.success(`已选择 ${factoryName}`);
-      setShowSchedulingPanel(false);
-    } else {
-      message.warning('请先在系统中维护该工厂');
-    }
-  };
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();

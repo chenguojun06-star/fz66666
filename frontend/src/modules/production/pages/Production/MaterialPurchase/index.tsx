@@ -17,9 +17,8 @@ import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 
 const MaterialPurchase: React.FC = () => {
   const {
-    contextHolder, message,
+    contextHolder,
     user, isMobile, modalWidth, isSupervisorOrAbove,
-    activeTabKey,
     purchaseList, loading, total,
     queryParams, setQueryParams,
     sortField, sortOrder, handleSort,
@@ -48,7 +47,7 @@ const MaterialPurchase: React.FC = () => {
     handleReceiveAll, handleSmartReceiveSuccess, handleBatchReturn,
     openPurchaseSheet, downloadPurchaseSheet,
     openQuickEditSafe, handleQuickEditSave,
-    isSamplePurchaseView, normalizeStatus,
+    isSamplePurchaseView,
   } = useMaterialPurchase();
 
   return (

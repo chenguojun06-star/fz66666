@@ -15,7 +15,7 @@ import {
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
-import type { NlQueryResponse, SysNotice } from '../../services/production/productionApi';
+import type { SysNotice } from '../../services/production/productionApi';
 
 // ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
@@ -57,14 +57,6 @@ const AI_DEFAULT_SUGGESTIONS = ['整体情况怎么样？', '有逾期订单吗�
 const SUGGESTION_NAV: Record<string, string> = {
   '整体情况怎么样？': '/dashboard',
   '有逾期订单吗？': '/production',
-};
-
-// 小统计格子 —— 点击路径映射
-const STAT_NAV: Record<string, string> = {
-  '逆期订单': '/production',
-  '高风险': '/production/progress-detail',
-  '昨日入库': '/production/warehousing',
-  '今日扫码': '/production/progress-detail',
 };
 
 // 根据事件类型获取跳转路径

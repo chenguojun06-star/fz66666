@@ -5,7 +5,6 @@ import { CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOu
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
-import api, { ApiResult } from '../../utils/api';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
 import { APP_LANGUAGE_OPTIONS, type AppLanguage } from '../../i18n/languagePreference';
@@ -33,7 +32,7 @@ type RecentPage = {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const { language, setLanguage } = useAppLanguage();
   const { message } = App.useApp();
   const recentPagesStorageKey = 'layout.header.recentPages';

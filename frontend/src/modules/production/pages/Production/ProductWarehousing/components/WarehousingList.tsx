@@ -15,7 +15,6 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
 interface WarehousingListProps {
   hook: ReturnType<typeof useProductWarehousing>;

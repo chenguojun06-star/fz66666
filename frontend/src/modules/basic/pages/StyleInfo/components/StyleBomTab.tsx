@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Form, Select, Space, Tag, Modal, Tabs } from 'antd';
+import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs } from 'antd';
 import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';

@@ -5,8 +5,8 @@ import {
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
-  ArrowRightOutlined, CheckCircleOutlined, DeleteOutlined, DollarOutlined,
-  EditOutlined, EyeOutlined, LinkOutlined, LockOutlined, PlusOutlined,
+  ArrowRightOutlined, CheckCircleOutlined, DollarOutlined,
+  LinkOutlined, LockOutlined, PlusOutlined,
   RocketOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';

@@ -19,28 +19,18 @@ import {
   Upload,
 } from 'antd';
 import {
-  BankOutlined,
   CheckCircleOutlined,
   DollarOutlined,
   PlusOutlined,
   SearchOutlined,
   UploadOutlined,
-  WalletOutlined,
-  AlipayCircleOutlined,
-  WechatOutlined,
-  CreditCardOutlined,
   DeleteOutlined,
   PayCircleOutlined,
-  TeamOutlined,
-  ShopOutlined,
   AccountBookOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
-import RowActions from '@/components/common/RowActions';
-import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
@@ -60,8 +50,7 @@ import {
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import PaymentAuditPopover from '@/modules/finance/pages/FinanceCenter/PaymentAuditPopover';
-import { usePaymentColumns, methodIconMap, accountTypeIconMap, bizTypeIconMap } from './hooks/usePaymentColumns';
+import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 
 const { RangePicker } = DatePicker;
 

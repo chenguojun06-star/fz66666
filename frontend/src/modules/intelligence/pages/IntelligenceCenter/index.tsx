@@ -6,8 +6,6 @@ import {
   WarningOutlined, CheckCircleOutlined,
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
-import { intelligenceApi } from '@/services/production/productionApi';
-import type { NlQueryResponse } from '@/services/production/productionApi';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
@@ -73,22 +71,11 @@ const EMPTY_KPI_HISTORY = (): KpiHistoryStore => ({
 
 const KPI_HISTORY_WINDOW_MS = 5 * 60 * 1000;
 
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'ai';
-  text?: string;
-  nlResult?: NlQueryResponse;
-  inlineQ?: string;
-  ts: number;
-};
-
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
-  const [query, setQuery]           = useState('');
-  const [aiAdvisorReady, setAiAdvisorReady] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [executingTask, setExecutingTask] = useState<string | null>(null);
@@ -98,7 +85,6 @@ const IntelligenceCenter: React.FC = () => {
   const [kpiHistory, setKpiHistory] = useState<KpiHistoryStore>(EMPTY_KPI_HISTORY);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
-  const chatBoxRef = useRef<HTMLDivElement>(null);
   const prevKpiMetricsRef = useRef<KpiMetricSnapshot | null>(null);
 
   /* URL ?q= 参数：从生产页「问AI分析」或「催→AI」跳转时自动预填问题 */

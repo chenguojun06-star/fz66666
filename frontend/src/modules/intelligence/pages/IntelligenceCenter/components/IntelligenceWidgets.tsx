@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { ProductionOrder } from '@/types/production';
 
 /* ═══════════════════════════════════════════════════
    工具函数

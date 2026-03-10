@@ -30,7 +30,7 @@ export default function ShareTracking() {
           setError(d.message || '获取订单状态失败');
         }
       })
-      .catch(err => {
+      .catch(_err => {
         setError('网络异常，请稍后重试');
       })
       .finally(() => {

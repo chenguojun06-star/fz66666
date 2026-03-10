@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Modal, Table, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
-import { CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { intelligenceApi } from '@/services/intelligenceApi';
 import './AiExecutionPanel.css';

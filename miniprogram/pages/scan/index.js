@@ -767,10 +767,10 @@ Page({
     // 再次点击同一仓库则取消选择
     if (this.data.warehouse === value) {
       this.setData({ warehouse: '' });
-      try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) {}
+      try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) { /* ignore storage errors */ }
     } else {
       this.setData({ warehouse: value });
-      try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) {}
+      try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) { /* ignore storage errors */ }
     }
   },
 
