@@ -1,9 +1,11 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import org.springframework.dao.DataAccessException;
 import com.fashion.supplychain.intelligence.dto.MindPushRuleDTO;
 import com.fashion.supplychain.intelligence.dto.MindPushStatusResponse;
 import com.fashion.supplychain.intelligence.dto.MindPushStatusResponse.LogItem;
@@ -139,32 +141,37 @@ public class MindPushOrchestrator {
     public void saveRule(MindPushRuleDTO dto) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        MindPushRule existing = mindPushRuleMapper.selectOne(
-            new QueryWrapper<MindPushRule>()
-                .eq("tenant_id", tenantId)
-                .eq("rule_code", dto.getRuleCode())
-        );
-        if (existing == null) {
-            MindPushRule rule = new MindPushRule();
-            rule.setTenantId(tenantId);
-            rule.setRuleCode(dto.getRuleCode());
-            rule.setRuleName(dto.getRuleName() != null ? dto.getRuleName() : dto.getRuleCode());
-            rule.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
-            rule.setThresholdDays(dto.getThresholdDays() != null ? dto.getThresholdDays() : 3);
-            rule.setThresholdProgress(dto.getThresholdProgress() != null ? dto.getThresholdProgress() : 60);
-            rule.setNotifyTimeStart(dto.getNotifyTimeStart() != null ? dto.getNotifyTimeStart() : "08:00");
-            rule.setNotifyTimeEnd(dto.getNotifyTimeEnd() != null ? dto.getNotifyTimeEnd() : "22:00");
-            rule.setCreatedAt(LocalDateTime.now());
-            rule.setUpdatedAt(LocalDateTime.now());
-            mindPushRuleMapper.insert(rule);
-        } else {
-            if (dto.getEnabled() != null) existing.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
-            if (dto.getThresholdDays() != null) existing.setThresholdDays(dto.getThresholdDays());
-            if (dto.getThresholdProgress() != null) existing.setThresholdProgress(dto.getThresholdProgress());
-            if (dto.getNotifyTimeStart() != null) existing.setNotifyTimeStart(dto.getNotifyTimeStart());
-            if (dto.getNotifyTimeEnd() != null) existing.setNotifyTimeEnd(dto.getNotifyTimeEnd());
-            existing.setUpdatedAt(LocalDateTime.now());
-            mindPushRuleMapper.updateById(existing);
+        try {
+            MindPushRule existing = mindPushRuleMapper.selectOne(
+                new QueryWrapper<MindPushRule>()
+                    .eq("tenant_id", tenantId)
+                    .eq("rule_code", dto.getRuleCode())
+            );
+            if (existing == null) {
+                MindPushRule rule = new MindPushRule();
+                rule.setTenantId(tenantId);
+                rule.setRuleCode(dto.getRuleCode());
+                rule.setRuleName(dto.getRuleName() != null ? dto.getRuleName() : dto.getRuleCode());
+                rule.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
+                rule.setThresholdDays(dto.getThresholdDays() != null ? dto.getThresholdDays() : 3);
+                rule.setThresholdProgress(dto.getThresholdProgress() != null ? dto.getThresholdProgress() : 60);
+                rule.setNotifyTimeStart(dto.getNotifyTimeStart() != null ? dto.getNotifyTimeStart() : "08:00");
+                rule.setNotifyTimeEnd(dto.getNotifyTimeEnd() != null ? dto.getNotifyTimeEnd() : "22:00");
+                rule.setCreatedAt(LocalDateTime.now());
+                rule.setUpdatedAt(LocalDateTime.now());
+                mindPushRuleMapper.insert(rule);
+            } else {
+                if (dto.getEnabled() != null) existing.setEnabled(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
+                if (dto.getThresholdDays() != null) existing.setThresholdDays(dto.getThresholdDays());
+                if (dto.getThresholdProgress() != null) existing.setThresholdProgress(dto.getThresholdProgress());
+                if (dto.getNotifyTimeStart() != null) existing.setNotifyTimeStart(dto.getNotifyTimeStart());
+                if (dto.getNotifyTimeEnd() != null) existing.setNotifyTimeEnd(dto.getNotifyTimeEnd());
+                existing.setUpdatedAt(LocalDateTime.now());
+                mindPushRuleMapper.updateById(existing);
+            }
+        } catch (DataAccessException ex) {
+            log.error("[MindPush] saveRule 数据库操作失败 ruleCode={}: {}", dto.getRuleCode(), ex.getMessage());
+            throw new BusinessException("推送规则保存失败，请稍后重试（数据库异常）");
         }
     }
 

@@ -29,18 +29,18 @@ test_endpoint() {
     local method=$2
     local body=$3
     local description=$4
-    
+
     echo -n "🔍 $description ... "
-    
+
     if [ -z "$body" ]; then
         response=$(curl -s -w "\n%{http_code}" -X $method "$url")
     else
         response=$(curl -s -w "\n%{http_code}" -X $method "$url" -H "Content-Type: application/json" -d "$body")
     fi
-    
+
     http_code=$(echo "$response" | tail -n 1)
     response_body=$(echo "$response" | head -n -1)
-    
+
     if [[ $http_code == 200 ]] || [[ $http_code == 201 ]]; then
         echo -e "${GREEN}✓${NC} (HTTP $http_code)"
         ((PASS_COUNT++))

@@ -87,10 +87,16 @@ public class IntelligenceObservabilityOrchestrator {
     }
 
     /**
-     * 获取度量概览（按场景聚合最近7天的调用统计）
+     * 获取度量概览（按场景聚合最近N天的调用统计）
+     * 若表尚未创建（V43 未执行）或查询异常，返回空列表而非 500
      */
     public List<Map<String, Object>> getMetricsOverview(Long tenantId, int days) {
-        return metricsMapper.aggregateByScene(tenantId, days);
+        try {
+            return metricsMapper.aggregateByScene(tenantId, days);
+        } catch (Exception e) {
+            log.warn("[AI_OBSERVABILITY] 指标查询失败（表可能尚未就绪，V43/V45 执行后自动恢复）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
     }
 
     public IntelligenceBrainSnapshotResponse.ObservabilitySummary getObservabilitySummary() {

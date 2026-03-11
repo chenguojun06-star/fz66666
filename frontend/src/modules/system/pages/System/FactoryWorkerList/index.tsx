@@ -292,7 +292,7 @@ const FactoryWorkerList: React.FC = () => {
         open={accountModal.visible}
         title={`创建账号 — ${factoryNameFromUrl || '外发工厂'}`}
         defaultWidth="30vw"
-        defaultHeight="auto"
+        defaultHeight="40vh"
         destroyOnHidden
         onCancel={() => { accountModal.close(); accountForm.resetFields(); }}
         footer={

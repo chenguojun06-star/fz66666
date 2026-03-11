@@ -1,5 +1,20 @@
 # 🚀 生产上线前最终检查清单（2026-03-11）
 
+## 🔍 补充核查（2026-03-11 当日复核）
+
+### ✅ 已确认
+- [x] 后端编译通过（JDK21）
+- [x] 前端 TypeScript 类型检查通过（0 errors）
+- [x] 跨端验证规则一致（PC `frontend/src/utils/validationRules.ts` ↔ 小程序 `miniprogram/utils/validationRules.js`）
+- [x] 弹窗尺寸规范补齐：`FactoryWorkerList` 创建账号弹窗高度由 `auto` 调整为 `40vh`
+
+### ⛔ 上线阻断（必须处理）
+- [ ] 数据一致性异常：`check-system-status.sh` 报告存在 8 个订单数量与扫码数量不一致，需先修复并复核
+- [ ] 集成回调存根：支付回调/电商物流回调存在 TODO 占位逻辑，若本次上线包含相关能力需先补齐
+
+### ⚠️ 发布前确认
+- [ ] 工作区清洁：当前仍有未提交改动 `cloud-stress-test.sh`、`stability-quick-check.sh`，需明确是否纳入发布
+
 ## 📊 整体进度
 
 | 阶段 | 状态 | 完成度 | 说明 |
