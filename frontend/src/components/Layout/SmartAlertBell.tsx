@@ -95,19 +95,22 @@ const SmartAlertBell: React.FC = () => {
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
   const [myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(new Set());
   const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   // 过滤掉今天已消除的事件（隔天自动恢复检测）
   const visibleEvents = events.filter(ev => !dismissedIds.has(ev.id));
+  // 过滤掉已消除的我的通知（内存状态，刷新页面后重新检测）
+  const visibleNotices = myNotices.filter(n => !dismissedNoticeIds.has(n.id));
 
   // 总预警数 = 逾期 + 高风险 + 未消除紧急事件 + 个人未读通知
   const alertCount =
     (brief?.overdueOrderCount ?? 0) +
     (brief?.highRiskOrderCount ?? 0) +
     visibleEvents.length +
-    myUnreadCount;
+    visibleNotices.filter(n => !n.isRead).length;
 
   // 拉取「我的通知」
   const fetchMyNotices = useCallback(async () => {
@@ -198,6 +201,12 @@ const SmartAlertBell: React.FC = () => {
   useEffect(() => {
     if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages, open]);
+
+  // 消除单条我的通知（局部状态，刷页重检）
+  const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDismissedNoticeIds(prev => new Set([...prev, id]));
+  }, []);
 
   // 消除单条事件（当天不再显示，隔天重新检测）
   const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
@@ -416,29 +425,29 @@ const SmartAlertBell: React.FC = () => {
             )}
 
             {/* ── 我的通知 ── */}
-            {myNotices.length > 0 && (
+            {visibleNotices.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <span style={{ color: '#d46b08' }}>📤</span> 我的通知
-                  {myUnreadCount > 0 && (
+                  {visibleNotices.filter(n => !n.isRead).length > 0 && (
                     <span style={{ marginLeft: 4, fontSize: 10, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
-                      {myUnreadCount} 未读
+                      {visibleNotices.filter(n => !n.isRead).length} 未读
                     </span>
                   )}
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 关闭该条</span>
                 </div>
-                {myNotices.slice(0, 5).map(n => (
-                  <div key={n.id} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 6,
-                    padding: '5px 6px', marginBottom: 2,
-                    background: n.isRead ? '#fafafa' : '#fff7e6',
-                    borderRadius: 5, borderLeft: `3px solid ${n.isRead ? '#ddd' : '#ffa940'}`,
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => {
-                    if (!n.isRead) {
-                      sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
-                    }
-                  }}>
+                {visibleNotices.slice(0, 8).map(n => (
+                  <div key={n.id} className="sap-notice-row"
+                    style={{
+                      background: n.isRead ? '#fafafa' : '#fff7e6',
+                      borderLeft: `3px solid ${n.isRead ? '#ddd' : '#ffa940'}`,
+                    }}
+                    onClick={() => {
+                      if (!n.isRead) {
+                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                      }
+                    }}
+                  >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
                         {n.title}
@@ -449,19 +458,23 @@ const SmartAlertBell: React.FC = () => {
                     </div>
                     {!n.isRead && (
                       <button
+                        className="sap-notice-read-btn"
                         onClick={(e) => {
                           e.stopPropagation();
                           sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
-                        }}
-                        style={{
-                          flexShrink: 0, fontSize: 10, padding: '1px 5px', cursor: 'pointer',
-                          background: '#fff', border: '1px solid #ffa940', borderRadius: 4,
-                          color: '#d46b08',
+                          setDismissedNoticeIds(prev => new Set([...prev, n.id]));
                         }}
                       >
                         已读
                       </button>
                     )}
+                    <button
+                      className="sap-notice-dismiss-btn"
+                      onClick={(e) => dismissNotice(n.id, e)}
+                      title="关闭该通知"
+                    >
+                      <CloseOutlined style={{ fontSize: 9 }} />
+                    </button>
                   </div>
                 ))}
               </div>
