@@ -51,10 +51,6 @@ public class ChangeApprovalOrchestrator {
     // 延迟注入，防止循环依赖
     @Lazy
     @Autowired(required = false)
-    private com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator scanRecordOrchestrator;
-
-    @Lazy
-    @Autowired(required = false)
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -64,7 +60,7 @@ public class ChangeApprovalOrchestrator {
     /**
      * 检查当前操作是否需要审批，若需要则创建申请记录并返回审批信息。
      *
-     * @param operationType 操作类型（SCAN_UNDO / ORDER_DELETE / STYLE_DELETE / SAMPLE_DELETE）
+     * @param operationType 操作类型（ORDER_DELETE / STYLE_DELETE / SAMPLE_DELETE）
      * @param targetId      被操作记录ID
      * @param targetNo      业务单号（显示用）
      * @param operationData 操作参数（审批通过后执行用）
@@ -311,16 +307,6 @@ public class ChangeApprovalOrchestrator {
         Map<String, Object> result = new HashMap<>();
         try {
             switch (type) {
-                case "SCAN_UNDO": {
-                    if (scanRecordOrchestrator == null) {
-                        result.put("error", "ScanRecordOrchestrator 未加载");
-                        break;
-                    }
-                    Map<String, Object> params = objectMapper.readValue(dataJson,
-                            new TypeReference<Map<String, Object>>() {});
-                    result = scanRecordOrchestrator.undoDirectly(params);
-                    break;
-                }
                 case "ORDER_DELETE": {
                     if (productionOrderOrchestrator == null) {
                         result.put("error", "ProductionOrderOrchestrator 未加载");

@@ -19,7 +19,6 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -101,10 +100,6 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator smartNotificationOrchestrator;
-
-    @Lazy
-    @Autowired(required = false)
-    private ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> execute(Map<String, Object> params) {
@@ -238,22 +233,6 @@ public class ScanRecordOrchestrator {
     public Map<String, Object> undo(Map<String, Object> params) {
         TenantAssert.assertTenantContext(); // 撤销扫码必须有租户上下文
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-
-        // ─── 审批拦截：非管理员撤回扫码需组织负责人审批 ─────────────────────
-        boolean isApprovalBypass = Boolean.TRUE.equals(safeParams.remove("_approvalBypassed"));
-        if (!isApprovalBypass && changeApprovalOrchestrator != null) {
-            String targetKey = TextUtils.safeText(safeParams.get("recordId"));
-            if (!StringUtils.hasText(targetKey)) {
-                targetKey = TextUtils.safeText(safeParams.get("scanCode"));
-            }
-            String reason = TextUtils.safeText(safeParams.get("reason"));
-            Map<String, Object> approvalResp = changeApprovalOrchestrator.checkAndCreateIfNeeded(
-                    "SCAN_UNDO", targetKey, null, safeParams, reason);
-            if (approvalResp != null) {
-                return approvalResp; // 审批申请已提交，等待负责人审批
-            }
-        }
-        // ──────────────────────────────────────────────────────────────────────
 
         String recordId = TextUtils.safeText(safeParams.get("recordId"));
         String requestId = TextUtils.safeText(safeParams.get("requestId"));
@@ -440,16 +419,6 @@ public class ScanRecordOrchestrator {
         resp.put("success", true);
         resp.put("message", "已撤销");
         return resp;
-    }
-
-    /**
-     * 跳过审批检查直接执行撤回（由 ChangeApprovalOrchestrator 审批通过后调用）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> undoDirectly(Map<String, Object> params) {
-        Map<String, Object> p = params == null ? new HashMap<>() : new HashMap<>(params);
-        p.put("_approvalBypassed", true);
-        return undo(p);
     }
 
     /**

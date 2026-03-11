@@ -23,7 +23,6 @@ interface ApprovalRecord {
 }
 
 const OP_TYPE_LABELS: Record<string, string> = {
-  SCAN_UNDO: '撤回扫码',
   ORDER_DELETE: '删除订单',
   ORDER_SCRAP: '报废订单',
   DATA_MODIFY: '修改数据',

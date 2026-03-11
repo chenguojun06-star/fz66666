@@ -192,8 +192,16 @@ public class NlQueryOrchestrator {
             return handleDirectWidget("smart_assignment", "智能派工引擎已启动，为您提供最优人员计算：");
         }
         // 20.4) 待审批执行命令
-        if (containsAny(question, "待审批", "AI命令", "执行命令", "审批", "执行")) {
+        if (containsAny(question, "AI命令", "执行命令", "执行")) {
             return handleDirectWidget("execution", "已为您调取AI命令待审批与执行卡片：");
+        }
+        // 20.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
+        if (containsAny(question, "待审批", "审批")) {
+            NlQueryResponse resp = new NlQueryResponse();
+            resp.setIntent("ai_chat");
+            resp.setAnswer("审批相关操作已集成到小云AI对话中 💬\n\n请在AI对话框中输入「帮我看看审批」，小云会为您列出待审批申请，并支持直接通过或驳回。");
+            resp.setConfidence(90);
+            return resp;
         }
         // 20.5) 财务/资金审核
         if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
