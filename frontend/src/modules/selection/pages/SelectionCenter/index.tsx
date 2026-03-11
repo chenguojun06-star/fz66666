@@ -4,6 +4,7 @@ import {
   Popover, Typography, Divider, message, Progress, Modal, Form,
   InputNumber, Tooltip,
 } from 'antd';
+import Layout from '@/components/Layout';
 import {
   PlusOutlined, RobotOutlined, SendOutlined,
   ThunderboltOutlined, FireOutlined, CheckCircleOutlined,
@@ -269,6 +270,7 @@ export default function SelectionCenter() {
   });
 
   return (
+    <Layout>
     <div style={{ padding: '16px 20px' }}>
       {/* 顶部工具栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -529,5 +531,6 @@ export default function SelectionCenter() {
         </Form>
       </Modal>
     </div>
+    </Layout>
   );
 }
