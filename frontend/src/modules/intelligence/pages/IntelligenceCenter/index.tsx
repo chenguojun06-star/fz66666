@@ -248,7 +248,14 @@ const IntelligenceCenter: React.FC = () => {
     }
   }, [reload]);
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
+
+  /* 工厂产能 Map：factoryName → { totalOrders, totalQuantity } */
+  const factoryCapMap = useMemo(() => {
+    const m = new Map<string, { totalOrders: number; totalQuantity: number }>();
+    (factoryCapacity ?? []).forEach(f => m.set(f.factoryName, { totalOrders: f.totalOrders, totalQuantity: f.totalQuantity }));
+    return m;
+  }, [factoryCapacity]);
 
   const currentKpiMetrics = useMemo<KpiMetricSnapshot>(() => ({
     todayScanQty: Number(pulse?.todayScanQty) || 0,
@@ -845,6 +852,11 @@ const IntelligenceCenter: React.FC = () => {
                 <AnimatedNum val={currentKpiMetrics.totalFactories} />
               </span>
               <span style={{ color: '#7dacc4', fontSize: 12 }}>家工厂&nbsp;共计</span>
+              {factoryCapacity.length > 0 && (
+                <span style={{ color: '#7dacc4', fontSize: 11, marginLeft: 4 }}>
+                  · {factoryCapacity.reduce((s, f) => s + f.totalOrders, 0)} 单 {factoryCapacity.reduce((s, f) => s + f.totalQuantity, 0).toLocaleString()} 件
+                </span>
+              )}
             </div>
 
             {/* 在线 / 停滞 状态 pills */}
@@ -868,11 +880,15 @@ const IntelligenceCenter: React.FC = () => {
               <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
                 <div style={{ color: '#7dacc4', fontSize: 10, marginBottom: 5 }}>在线工厂</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {pulse!.factoryActivity.filter(f => f.active).map(f => (
-                    <span key={f.factoryName} style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.3)', borderRadius: 4, padding: '2px 7px', fontSize: 11, color: '#39ff14' }}>
-                      {f.factoryName}
-                    </span>
-                  ))}
+                  {pulse!.factoryActivity.filter(f => f.active).map(f => {
+                    const cap = factoryCapMap.get(f.factoryName);
+                    return (
+                      <span key={f.factoryName} style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.3)', borderRadius: 4, padding: '2px 7px', fontSize: 11, color: '#39ff14' }}>
+                        {f.factoryName}
+                        {cap && <span style={{ color: '#7dacc4', marginLeft: 4, fontSize: 10 }}>{cap.totalOrders}单·{cap.totalQuantity.toLocaleString()}件</span>}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -885,9 +901,13 @@ const IntelligenceCenter: React.FC = () => {
                   const h = Math.floor(f.minutesSilent / 60);
                   const m = f.minutesSilent % 60;
                   const silentStr = h > 0 ? `${h}h${m}m` : `${m}m`;
+                  const cap = factoryCapMap.get(f.factoryName);
                   return (
                     <div key={f.factoryName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
-                      <span style={{ color: '#e0e0e0' }}>● {f.factoryName}</span>
+                      <span style={{ color: '#e0e0e0' }}>
+                        ● {f.factoryName}
+                        {cap && <span style={{ color: '#7dacc4', marginLeft: 4, fontSize: 10 }}>{cap.totalOrders}单·{cap.totalQuantity.toLocaleString()}件</span>}
+                      </span>
                       <span style={{ color: '#ff6b6b' }}>已 {silentStr} 无扫码</span>
                     </div>
                   );

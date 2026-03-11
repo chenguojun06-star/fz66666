@@ -5,6 +5,7 @@ import type {
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
   IntelligenceBrainSnapshotResponse, ActionCenterResponse,
+  FactoryCapacityItem,
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
@@ -24,6 +25,7 @@ export interface CockpitData {
   brain:        IntelligenceBrainSnapshotResponse | null;
   actionCenter: ActionCenterResponse | null;
   orders:       ProductionOrder[];
+  factoryCapacity: FactoryCapacityItem[];
   loading:      boolean;
   ts:           number;
 }
@@ -32,7 +34,7 @@ const INITIAL: CockpitData = {
   pulse: null, health: null, notify: null, workers: null,
   heatmap: null, ranking: null, shortage: null, healing: null,
   bottleneck: null, brain: null, actionCenter: null,
-  orders: [], loading: true, ts: 0,
+  orders: [], factoryCapacity: [], loading: true, ts: 0,
 };
 
 export function useCockpit() {
@@ -41,7 +43,7 @@ export function useCockpit() {
 
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
@@ -51,17 +53,23 @@ export function useCockpit() {
         productionOrderApi.list({ pageSize: 50 } as any),
         intelligenceApi.getBrainSnapshot(),
         intelligenceApi.getActionCenter(),
+        productionOrderApi.getFactoryCapacity(),
       ]);
     const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
       r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
     const orderResult: ProductionOrder[] = rOrders.status === 'fulfilled'
       ? ((rOrders.value as any)?.data?.records ?? (rOrders.value as any)?.records ?? [])
       : [];
+    const factoryCapResult: FactoryCapacityItem[] = rFactoryCap.status === 'fulfilled'
+      ? ((rFactoryCap.value as any)?.data ?? [])
+      : [];
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
-      orders: orderResult.filter(o => o.status !== 'completed'), loading: false, ts: Date.now(),
+      orders: orderResult.filter(o => o.status !== 'completed'),
+      factoryCapacity: factoryCapResult,
+      loading: false, ts: Date.now(),
     });
   }, []);
 
