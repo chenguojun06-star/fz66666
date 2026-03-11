@@ -1,97 +1,533 @@
-import React, { useEffect } from 'react';
-import { Tabs } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AppstoreOutlined,
-  FileTextOutlined,
-  ThunderboltOutlined,
-  FileSearchOutlined,
+  Row, Col, Tag, Button, Input, Select, Space, Spin, Empty,
+  Popover, Typography, Divider, message, Progress, Modal, Form,
+  InputNumber, Tooltip,
+} from 'antd';
+import {
+  PlusOutlined, RobotOutlined, SendOutlined,
+  ThunderboltOutlined, FireOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
-import SelectionBatchList from '../SelectionBatch';
-import CandidatePool from '../CandidatePool';
-import TrendDashboard from '../TrendDashboard';
-import HistoricalAnalysis from '../HistoricalAnalysis';
+import {
+  candidateList,
+  candidateAiScore,
+  candidateCreateStyle,
+  candidateSave,
+  candidateStageAction,
+} from '@/services/selection/selectionApi';
 
-const TAB_KEYS = ['batch', 'candidates', 'trend', 'history'] as const;
-type TabKey = typeof TAB_KEYS[number];
+const { Text, Paragraph } = Typography;
 
-const TAB_ITEMS = [
-  { key: 'batch' as TabKey, label: '选品批次', icon: <AppstoreOutlined /> },
-  { key: 'candidates' as TabKey, label: '候选款库', icon: <FileTextOutlined /> },
-  { key: 'trend' as TabKey, label: '趋势看板', icon: <ThunderboltOutlined /> },
-  { key: 'history' as TabKey, label: '历史分析', icon: <FileSearchOutlined /> },
-];
+interface Candidate {
+  id: number;
+  candidateNo: string;
+  styleName: string;
+  category: string;
+  colorFamily: string;
+  sourceType: string;
+  referenceImages?: string;
+  costEstimate?: number;
+  targetPrice?: number;
+  targetQty?: number;
+  status: string;
+  trendScore?: number;
+  trendScoreReason?: string;
+  profitEstimate?: number;
+  seasonTags?: string;
+  avgReviewScore?: number;
+  reviewCount?: number;
+  createdStyleId?: number;
+  createdStyleNo?: string;
+  remark?: string;
+}
 
-/**
- * 选品中心 — 统一 Tab 容器
- * Tab 状态通过 URL ?tab= 持久化，刷新不丢失。
- * 跨 Tab 参数（如 batchId），通过额外 query param 透传，子页面直接读取 useSearchParams。
- */
-export default function SelectionCenter() {
-  const [searchParams, setSearchParams] = useSearchParams();
+const STATUS_MAP: Record<string, { color: string; label: string }> = {
+  PENDING:  { color: 'orange', label: '待评审' },
+  APPROVED: { color: 'green',  label: '已通过' },
+  REJECTED: { color: 'red',    label: '已拒绝' },
+  HOLD:     { color: 'blue',   label: '待定'   },
+};
 
-  const activeTab = (searchParams.get('tab') as TabKey) ?? 'batch';
+const SOURCE_MAP: Record<string, string> = {
+  INTERNAL: '自主开发',
+  SUPPLIER: '供应商',
+  CLIENT:   '客户定制',
+};
 
-  // 如果 tab 值非法，重置为 batch
-  useEffect(() => {
-    if (!TAB_KEYS.includes(activeTab as TabKey)) {
-      setSearchParams((prev) => {
-        prev.set('tab', 'batch');
-        return prev;
-      }, { replace: true });
-    }
-  }, [activeTab, setSearchParams]);
-
-  const handleTabChange = (key: string) => {
-    setSearchParams((prev) => {
-      // 切换 tab 时清除跨 Tab 的临时参数（batchId/batchName）
-      // 但只在 tab 真正切换时才清除
-      const newParams = new URLSearchParams(prev);
-      newParams.set('tab', key);
-      if (key !== 'candidates') {
-        newParams.delete('batchId');
-        newParams.delete('batchName');
-      }
-      return newParams;
-    }, { replace: false });
-  };
-
-  const tabItems = TAB_ITEMS.map(({ key, label, icon }) => ({
-    key,
-    label: (
-      <span>
-        {icon}
-        <span style={{ marginLeft: 6 }}>{label}</span>
-      </span>
-    ),
-    children: renderTabContent(key),
-  }));
-
+/** 悬停时显示的 AI 分析浮层 */
+function AiHoverCard({
+  record,
+  onAiScore,
+  aiLoading,
+}: {
+  record: Candidate;
+  onAiScore: (id: number) => void;
+  aiLoading: boolean;
+}) {
+  const hasScore = record.trendScore != null;
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        items={tabItems}
-        style={{ flex: 1, overflow: 'hidden' }}
-        tabBarStyle={{ marginBottom: 0, paddingLeft: 16, paddingRight: 16, background: '#fff', borderBottom: '1px solid #f0f0f0' }}
-        destroyInactiveTabPane={false}
-      />
+    <div style={{ width: 290 }}>
+      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text strong style={{ fontSize: 14 }}>{record.styleName || '未命名'}</Text>
+        <Tag color={STATUS_MAP[record.status]?.color} style={{ margin: 0 }}>
+          {STATUS_MAP[record.status]?.label}
+        </Tag>
+      </div>
+
+      {hasScore ? (
+        <>
+          <div style={{ marginBottom: 4 }}>
+            <Space size={4}>
+              <ThunderboltOutlined style={{ color: '#722ed1' }} />
+              <Text type="secondary" style={{ fontSize: 12 }}>AI 趋势契合度</Text>
+              <Text strong style={{
+                color: record.trendScore! >= 75 ? '#52c41a' :
+                       record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f',
+              }}>
+                {record.trendScore} 分
+              </Text>
+            </Space>
+          </div>
+          <Progress
+            percent={record.trendScore}
+            strokeColor={
+              record.trendScore! >= 75 ? '#52c41a' :
+              record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f'
+            }
+            size="small"
+            style={{ marginBottom: 8 }}
+          />
+          {record.trendScoreReason && (
+            <Paragraph style={{ fontSize: 11, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
+              {record.trendScoreReason.slice(0, 150)}
+              {record.trendScoreReason.length > 150 ? '…' : ''}
+            </Paragraph>
+          )}
+        </>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+          <Button
+            size="small"
+            icon={<RobotOutlined />}
+            loading={aiLoading}
+            type="dashed"
+            onClick={() => onAiScore(record.id)}
+            style={{ fontSize: 12 }}
+          >
+            获取 AI 分析
+          </Button>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+            分析趋势契合度 · 利润空间 · 给出决策建议
+          </div>
+        </div>
+      )}
+
+      <Divider style={{ margin: '8px 0' }} />
+
+      <Row gutter={[8, 6]}>
+        {record.costEstimate != null && (
+          <Col span={12}>
+            <Text type="secondary" style={{ fontSize: 11 }}>成本估算</Text>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>¥{record.costEstimate}</div>
+          </Col>
+        )}
+        {record.targetPrice != null && (
+          <Col span={12}>
+            <Text type="secondary" style={{ fontSize: 11 }}>目标报价</Text>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#52c41a' }}>¥{record.targetPrice}</div>
+          </Col>
+        )}
+        {record.profitEstimate != null && (
+          <Col span={12}>
+            <Text type="secondary" style={{ fontSize: 11 }}>预估利润率</Text>
+            <div style={{
+              fontSize: 13, fontWeight: 600,
+              color: record.profitEstimate >= 30 ? '#52c41a' : '#fa8c16',
+            }}>
+              {record.profitEstimate}%
+            </div>
+          </Col>
+        )}
+        {record.targetQty != null && (
+          <Col span={12}>
+            <Text type="secondary" style={{ fontSize: 11 }}>预计下单</Text>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{record.targetQty} 件</div>
+          </Col>
+        )}
+      </Row>
+
+      {record.seasonTags && (() => {
+        try {
+          const tags: string[] = JSON.parse(record.seasonTags);
+          return tags.length > 0 ? (
+            <div style={{ marginTop: 8 }}>
+              {tags.map(t => <Tag key={t} style={{ fontSize: 11, marginBottom: 2 }}>{t}</Tag>)}
+            </div>
+          ) : null;
+        } catch { return null; }
+      })()}
+
+      {hasScore && (
+        <div style={{
+          marginTop: 10, padding: '6px 10px',
+          background: record.trendScore! >= 70 ? '#f6ffed' : '#fff7e6',
+          borderRadius: 6,
+          border: `1px solid ${record.trendScore! >= 70 ? '#b7eb8f' : '#ffd591'}`,
+          fontSize: 12,
+        }}>
+          {record.trendScore! >= 70
+            ? '✅ 建议通过 — 趋势契合度高，可下版到样衣'
+            : record.trendScore! >= 50
+            ? '⚠️ 待定 — 趋势中等，建议补充市场调研'
+            : '❌ 谨慎 — 趋势契合度偏低，需重新评估'}
+        </div>
+      )}
     </div>
   );
 }
 
-function renderTabContent(key: TabKey): React.ReactNode {
-  switch (key) {
-    case 'batch':
-      return <SelectionBatchList />;
-    case 'candidates':
-      return <CandidatePool />;
-    case 'trend':
-      return <TrendDashboard />;
-    case 'history':
-      return <HistoricalAnalysis />;
-    default:
-      return null;
-  }
+export default function SelectionCenter() {
+  const [loading, setLoading] = useState(false);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [aiLoadingIds, setAiLoadingIds] = useState<Set<number>>(new Set());
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm] = Form.useForm();
+
+  const fetchList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await candidateList({ page: 1, pageSize: 100 });
+      const data = res?.records ?? res?.list ?? res ?? [];
+      setCandidates(Array.isArray(data) ? data : []);
+    } catch {
+      message.error('加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchList(); }, [fetchList]);
+
+  const handleAiScore = async (id: number) => {
+    setAiLoadingIds(prev => new Set(prev).add(id));
+    try {
+      const res = await candidateAiScore(id);
+      setCandidates(prev => prev.map(c => c.id === id ? { ...c, ...(res ?? {}) } : c));
+      message.success('AI 评分完成');
+    } catch {
+      message.error('AI 评分失败');
+    } finally {
+      setAiLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await candidateStageAction(id, 'approve');
+      message.success('已通过评审');
+      fetchList();
+    } catch {
+      message.error('操作失败');
+    }
+  };
+
+  const handleCreateStyle = (id: number, styleName: string) => {
+    Modal.confirm({
+      title: '下版到样衣',
+      content: `确认将「${styleName}」生成正式款式，进入样衣开发流程？`,
+      okText: '确认下版',
+      onOk: async () => {
+        try {
+          await candidateCreateStyle(id);
+          message.success('已生成款式，请在「样衣管理」中查看');
+          fetchList();
+        } catch (e: unknown) {
+          message.error((e as { message?: string })?.message ?? '下版失败');
+        }
+      },
+    });
+  };
+
+  const getFirstImage = (images?: string): string | null => {
+    if (!images) return null;
+    try {
+      const arr = JSON.parse(images);
+      return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
+    } catch { return images || null; }
+  };
+
+  const categories = [...new Set(candidates.map(c => c.category).filter(Boolean))];
+
+  const filtered = candidates.filter(c => {
+    if (search && !c.styleName?.includes(search) && !c.candidateNo?.includes(search)) return false;
+    if (statusFilter && c.status !== statusFilter) return false;
+    if (categoryFilter && c.category !== categoryFilter) return false;
+    return true;
+  });
+
+  return (
+    <div style={{ padding: '16px 20px' }}>
+      {/* 顶部工具栏 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <Space wrap>
+          <Input.Search
+            placeholder="搜索款式名 / 候选款号"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: 220 }}
+            allowClear
+          />
+          <Select
+            placeholder="全部状态"
+            value={statusFilter || undefined}
+            onChange={v => setStatusFilter(v ?? '')}
+            allowClear
+            style={{ width: 120 }}
+            options={[
+              { value: 'PENDING',  label: '待评审' },
+              { value: 'APPROVED', label: '已通过' },
+              { value: 'HOLD',     label: '待定'   },
+              { value: 'REJECTED', label: '已拒绝' },
+            ]}
+          />
+          {categories.length > 0 && (
+            <Select
+              placeholder="全部品类"
+              value={categoryFilter || undefined}
+              onChange={v => setCategoryFilter(v ?? '')}
+              allowClear
+              style={{ width: 120 }}
+              options={categories.map(c => ({ value: c, label: c }))}
+            />
+          )}
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            共 {filtered.length} 款 · 鼠标悬停查看 AI 分析
+          </Text>
+        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
+          新增候选款
+        </Button>
+      </div>
+
+      {/* 卡片墙 */}
+      <Spin spinning={loading}>
+        {filtered.length === 0 && !loading ? (
+          <Empty
+            description="暂无候选款，点击「新增候选款」开始选品"
+            style={{ marginTop: 80 }}
+          />
+        ) : (
+          <Row gutter={[16, 16]}>
+            {filtered.map(item => {
+              const img = getFirstImage(item.referenceImages);
+              const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: item.status };
+              const aiLoading = aiLoadingIds.has(item.id);
+              return (
+                <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4}>
+                  <Popover
+                    content={
+                      <AiHoverCard
+                        record={item}
+                        onAiScore={handleAiScore}
+                        aiLoading={aiLoading}
+                      />
+                    }
+                    title={null}
+                    trigger="hover"
+                    placement="right"
+                    mouseEnterDelay={0.4}
+                    overlayStyle={{ maxWidth: 320 }}
+                  >
+                    <div
+                      style={{
+                        border: '1px solid #e8e8e8',
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        transition: 'box-shadow 0.2s',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
+                      onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
+                    >
+                      {/* 图片区 */}
+                      <div style={{ position: 'relative', height: 210, background: '#f7f7f7', overflow: 'hidden' }}>
+                        {img ? (
+                          <img
+                            src={img}
+                            alt={item.styleName}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            height: '100%', flexDirection: 'column', color: '#ccc',
+                          }}>
+                            <FireOutlined style={{ fontSize: 36 }} />
+                            <div style={{ fontSize: 11, marginTop: 6 }}>暂无参考图</div>
+                          </div>
+                        )}
+                        {/* 状态角标 */}
+                        <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                          <Tag color={color} style={{ margin: 0, fontSize: 11 }}>{label}</Tag>
+                        </div>
+                        {/* AI 分角标 */}
+                        {item.trendScore != null && (
+                          <div style={{
+                            position: 'absolute', top: 8, left: 8,
+                            background: 'rgba(114,46,209,0.88)', borderRadius: 4,
+                            padding: '2px 8px', color: '#fff', fontSize: 12, fontWeight: 700,
+                          }}>
+                            <ThunderboltOutlined /> {item.trendScore}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 信息区 */}
+                      <div style={{ padding: '10px 12px' }}>
+                        <div style={{
+                          fontWeight: 600, fontSize: 13, marginBottom: 2,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {item.styleName || '未命名'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#999', marginBottom: 10 }}>
+                          {[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType]
+                            .filter(Boolean).join(' · ')}
+                        </div>
+
+                        {/* 操作按钮 */}
+                        <Space size={6} style={{ width: '100%' }}>
+                          {item.status === 'PENDING' && (
+                            <Tooltip title="AI 分析趋势契合度 · 利润空间 · 给出决策建议">
+                              <Button
+                                size="small"
+                                icon={<RobotOutlined />}
+                                loading={aiLoading}
+                                onClick={() => handleAiScore(item.id)}
+                                style={{ borderColor: '#722ed1', color: '#722ed1', fontSize: 11 }}
+                              >
+                                AI 评分
+                              </Button>
+                            </Tooltip>
+                          )}
+                          {item.status === 'PENDING' && item.trendScore != null && item.trendScore >= 60 && (
+                            <Tooltip title="通过评审，可下版到样衣">
+                              <Button
+                                size="small"
+                                icon={<CheckCircleOutlined />}
+                                onClick={() => handleApprove(item.id)}
+                                style={{ borderColor: '#52c41a', color: '#52c41a', fontSize: 11 }}
+                              >
+                                通过
+                              </Button>
+                            </Tooltip>
+                          )}
+                          {item.status === 'APPROVED' && !item.createdStyleId && (
+                            <Tooltip title="生成正式款式，进入样衣开发流程">
+                              <Button
+                                size="small"
+                                type="primary"
+                                icon={<SendOutlined />}
+                                onClick={() => handleCreateStyle(item.id, item.styleName)}
+                                style={{ fontSize: 11 }}
+                              >
+                                下版到样衣
+                              </Button>
+                            </Tooltip>
+                          )}
+                          {item.createdStyleId && (
+                            <Tag color="green" style={{ fontSize: 11, margin: 0 }}>
+                              ✓ 已下版 {item.createdStyleNo}
+                            </Tag>
+                          )}
+                        </Space>
+                      </div>
+                    </div>
+                  </Popover>
+                </Col>
+              );
+            })}
+          </Row>
+        )}
+      </Spin>
+
+      {/* 新增候选款弹窗 */}
+      <Modal
+        title="新增候选款"
+        open={addOpen}
+        onCancel={() => { setAddOpen(false); addForm.resetFields(); }}
+        onOk={async () => {
+          try {
+            const values = await addForm.validateFields();
+            await candidateSave(values);
+            message.success('已添加');
+            setAddOpen(false);
+            addForm.resetFields();
+            fetchList();
+          } catch (e) {
+            if ((e as { errorFields?: unknown })?.errorFields) return;
+            message.error('添加失败');
+          }
+        }}
+        width={480}
+        okText="确认添加"
+      >
+        <Form form={addForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item name="styleName" label="款式名称" rules={[{ required: true, message: '请填写款式名称' }]}>
+            <Input placeholder="如：春季碎花连衣裙" />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="category" label="品类">
+                <Input placeholder="如：连衣裙" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="colorFamily" label="主色系">
+                <Input placeholder="如：蓝色系" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="sourceType" label="来源" initialValue="INTERNAL">
+                <Select
+                  options={[
+                    { value: 'INTERNAL', label: '自主开发' },
+                    { value: 'SUPPLIER', label: '供应商' },
+                    { value: 'CLIENT',   label: '客户定制' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="targetQty" label="预计下单量">
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="件" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="costEstimate" label="成本估算 (¥)">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="targetPrice" label="目标报价 (¥)">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
 }

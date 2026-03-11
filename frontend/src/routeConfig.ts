@@ -176,12 +176,7 @@ export const menuConfig: MenuSection[] = [
     title: '选品中心',
     key: 'selection',
     icon: React.createElement(FireOutlined),
-    items: [
-      { label: '选品批次', path: `${paths.selectionBatch}?tab=batch`, icon: React.createElement(AppstoreOutlined) },
-      { label: '候选款库', path: `${paths.selectionBatch}?tab=candidates`, icon: React.createElement(FileTextOutlined) },
-      { label: '趋势看板', path: `${paths.selectionBatch}?tab=trend`, icon: React.createElement(ThunderboltOutlined) },
-      { label: '历史分析', path: `${paths.selectionBatch}?tab=history`, icon: React.createElement(FileSearchOutlined) },
-    ],
+    path: paths.selectionBatch,
   },
   {
     title: '样衣管理',
