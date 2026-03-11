@@ -61,6 +61,10 @@ export const paths = {
   wagePayment: '/finance/wage-payment',
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
+  invoiceManagement: '/finance/invoice',
+  payableManagement: '/finance/payable',
+  taxConfig: '/finance/tax-config',
+  financialReport: '/finance/reports',
 
   warehouseDashboard: '/warehouse/dashboard',
   materialInventory: '/warehouse/material',
@@ -141,6 +145,10 @@ export const permissionCodes = {
   intelligenceCenter: 'MENU_DASHBOARD', // 智能中心复用仪表盘权限码
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
+  invoiceManagement: 'MENU_FINANCE_EXPORT',
+  payableManagement: 'MENU_FINANCE_EXPORT',
+  taxConfig: 'MENU_FINANCE_EXPORT',
+  financialReport: 'MENU_FINANCE_EXPORT',
   crm: 'MENU_CRM',
   crmReceivables: 'MENU_CRM',
   procurement: 'MENU_PROCUREMENT',
@@ -216,6 +224,10 @@ export const menuConfig: MenuSection[] = [
       { label: '付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
+      { label: '发票管理', path: paths.invoiceManagement, icon: React.createElement(FileTextOutlined) },
+      { label: '应付账款', path: paths.payableManagement, icon: React.createElement(DollarOutlined) },
+      { label: '税率配置', path: paths.taxConfig, icon: React.createElement(SettingOutlined) },
+      { label: '财务报表', path: paths.financialReport, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -332,6 +344,10 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.procurement]: permissionCodes.procurement,
+  [paths.invoiceManagement]: permissionCodes.invoiceManagement,
+  [paths.payableManagement]: permissionCodes.payableManagement,
+  [paths.taxConfig]: permissionCodes.taxConfig,
+  [paths.financialReport]: permissionCodes.financialReport,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */

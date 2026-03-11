@@ -206,7 +206,7 @@ Controller → Orchestrator → Service → Mapper
 
 **关键约束**（代码审查必查项）：
 - ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（134个编排器）
-  - **分布**：intelligence(60) + production(23) + system(15) + finance(13) + style(6) + integration(3) + crm(3) + warehouse(2) + template(2) + procurement(2) + dashboard(2) + wechat(1) + search(1) + datacenter(1) = **134个**（+27 vs v3.12）
+  - **分布**：intelligence(60) + production(23) + system(15) + finance(17) + style(6) + integration(3) + crm(3) + warehouse(2) + template(2) + procurement(2) + dashboard(2) + wechat(1) + search(1) + datacenter(1) = **138个**（+31 vs v3.12）
   - **核心编排器**：ScanRecordOrchestrator、ProductionOrderOrchestrator、PayrollSettlementOrchestrator、MaterialStockOrchestrator、ReconciliationStatusOrchestrator 等
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator

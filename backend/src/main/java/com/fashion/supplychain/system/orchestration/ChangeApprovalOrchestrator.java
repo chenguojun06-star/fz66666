@@ -10,6 +10,7 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.ChangeApprovalService;
 import com.fashion.supplychain.system.service.OrganizationUnitService;
 import com.fashion.supplychain.system.service.UserService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
@@ -48,10 +49,29 @@ public class ChangeApprovalOrchestrator {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private WebSocketService webSocketService;
+
     // 延迟注入，防止循环依赖
     @Lazy
     @Autowired(required = false)
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator styleInfoOrchestrator;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator payrollSettlementOrchestrator;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.orchestration.ReconciliationStatusOrchestrator reconciliationStatusOrchestrator;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.orchestration.ExpenseReimbursementOrchestrator expenseReimbursementOrchestrator;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 公共入口：提交审批申请
@@ -143,6 +163,15 @@ public class ChangeApprovalOrchestrator {
         log.info("[ChangeApproval] 创建审批申请 id={} type={} target={} applicant={} approver={}",
                 approval.getId(), operationType, targetId, ctx.getUserId(), approver.getId());
 
+        // 实时推送给审批人
+        try {
+            webSocketService.notifyApprovalPending(
+                    String.valueOf(approver.getId()), approver.getUsername(),
+                    ctx.getUsername(), operationType, targetNo, reason);
+        } catch (Exception e) {
+            log.warn("[ChangeApproval] 推送审批通知失败（不影响审批创建）: {}", e.getMessage());
+        }
+
         Map<String, Object> resp = new HashMap<>();
         resp.put("needApproval", true);
         resp.put("approvalId", approval.getId());
@@ -173,6 +202,10 @@ public class ChangeApprovalOrchestrator {
 
         // 执行真实操作
         Map<String, Object> execResult = executeApprovedOperation(approval);
+
+        // 通知申请人审批已通过
+        notifyApplicant(approval, true, remark);
+
         Map<String, Object> resp = new HashMap<>();
         resp.put("approved", true);
         resp.put("executeResult", execResult);
@@ -194,6 +227,9 @@ public class ChangeApprovalOrchestrator {
         changeApprovalService.updateById(approval);
 
         log.info("[ChangeApproval] 审批驳回 id={} reason={}", approvalId, reason);
+
+        // 通知申请人审批已驳回
+        notifyApplicant(approval, false, reason);
     }
 
     /**
@@ -256,6 +292,18 @@ public class ChangeApprovalOrchestrator {
     // 内部辅助方法
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    /** 通知申请人审批结果（通过/驳回） */
+    private void notifyApplicant(ChangeApproval approval, boolean approved, String remark) {
+        try {
+            String approverName = UserContext.get() != null ? UserContext.get().getUsername() : approval.getApproverName();
+            webSocketService.notifyApprovalResult(
+                    approval.getApplicantId(), approval.getOperationType(),
+                    approval.getTargetNo(), approved, approverName, remark);
+        } catch (Exception e) {
+            log.warn("[ChangeApproval] 推送审批结果通知失败（不影响审批操作）: {}", e.getMessage());
+        }
+    }
+
     /**
      * 沿组织层级向上查找审批人（有 managerUserId 的最近祖先节点的管理人）。
      * 若找到的 manager 就是操作人自己，则继续往上找（管理人自己操作不需要自己审批）。
@@ -306,16 +354,58 @@ public class ChangeApprovalOrchestrator {
         String dataJson = approval.getOperationData();
         Map<String, Object> result = new HashMap<>();
         try {
+            Map<String, Object> params = objectMapper.readValue(dataJson,
+                    new TypeReference<Map<String, Object>>() {});
             switch (type) {
                 case "ORDER_DELETE": {
                     if (productionOrderOrchestrator == null) {
                         result.put("error", "ProductionOrderOrchestrator 未加载");
                         break;
                     }
-                    Map<String, Object> params = objectMapper.readValue(dataJson,
-                            new TypeReference<Map<String, Object>>() {});
                     String orderId = (String) params.get("orderId");
                     productionOrderOrchestrator.deleteById(orderId);
+                    result.put("success", true);
+                    break;
+                }
+                case "STYLE_DELETE": {
+                    if (styleInfoOrchestrator == null) {
+                        result.put("error", "StyleInfoOrchestrator 未加载");
+                        break;
+                    }
+                    Object sid = params.get("styleId");
+                    Long styleId = sid instanceof Number ? ((Number) sid).longValue() : Long.parseLong(String.valueOf(sid));
+                    styleInfoOrchestrator.delete(styleId);
+                    result.put("success", true);
+                    break;
+                }
+                case "SETTLEMENT_DELETE": {
+                    if (payrollSettlementOrchestrator == null) {
+                        result.put("error", "PayrollSettlementOrchestrator 未加载");
+                        break;
+                    }
+                    String settlementId = (String) params.get("settlementId");
+                    payrollSettlementOrchestrator.delete(settlementId);
+                    result.put("success", true);
+                    break;
+                }
+                case "RECONCILIATION_REJECT": {
+                    if (reconciliationStatusOrchestrator == null) {
+                        result.put("error", "ReconciliationStatusOrchestrator 未加载");
+                        break;
+                    }
+                    String reconId = (String) params.get("reconciliationId");
+                    reconciliationStatusOrchestrator.updateStatusCompat(reconId, "rejected");
+                    result.put("success", true);
+                    break;
+                }
+                case "EXPENSE_APPROVE": {
+                    if (expenseReimbursementOrchestrator == null) {
+                        result.put("error", "ExpenseReimbursementOrchestrator 未加载");
+                        break;
+                    }
+                    String expenseId = (String) params.get("expenseId");
+                    String action = (String) params.getOrDefault("action", "approve");
+                    expenseReimbursementOrchestrator.approveReimbursement(expenseId, action, approval.getReviewRemark());
                     result.put("success", true);
                     break;
                 }

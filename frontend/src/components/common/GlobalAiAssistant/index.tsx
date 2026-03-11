@@ -446,45 +446,36 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  // 语音播报方法
+  // 语音播报方法（固定使用 xiaoxiao 呆萌中文女声）
   const speak = (text: string) => {
     if (isMuted) return;
-    if ('speechSynthesis' in window) {
-      // 停止当前播报
-      window.speechSynthesis.cancel();
-      // 提取纯文本（过滤掉表情和特殊符号以便播报）
-      const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '');
+    if (!('speechSynthesis' in window)) return;
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '');
+    if (!cleanText.trim()) return;
+
+    const doSpeak = (voices: SpeechSynthesisVoice[]) => {
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
-
-      // 寻找好听的中文女声
-      const voices = window.speechSynthesis.getVoices();
-
-      const preferredVoices = [
-        'xiaoxiao', 'ting', 'yaoyao', 'mei-jia', 'lili', 'shanshan', 'female'
-      ];
-
-      let selectedVoice = undefined;
-      for (const vName of preferredVoices) {
-        selectedVoice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes(vName));
-        if (selectedVoice) break;
-      }
-
-      // 兜底找一个中文声音
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.includes('zh'));
-      }
-
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-
-      // 调整为呆萌可爱的声音（调高音调更精神/可爱）
-      utterance.rate = 1.05;    // 语速微微加快
-      utterance.pitch = 1.25;   // 音调稍高更可爱
+      // 固定用 xiaoxiao 呆萌女声，找不到则兜底任意中文声音
+      const voice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes('xiaoxiao'))
+        ?? voices.find(v => v.lang.includes('zh'));
+      if (voice) utterance.voice = voice;
+      utterance.rate = 1.05;
+      utterance.pitch = 1.25;
       utterance.volume = 0.9;
-
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      doSpeak(voices);
+    } else {
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        doSpeak(window.speechSynthesis.getVoices());
+      }, { once: true });
     }
   };
 

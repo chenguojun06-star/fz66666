@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -30,6 +31,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 @Service
 @Slf4j
@@ -55,6 +57,10 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
+
+    @Lazy
+    @Autowired(required = false)
+    private ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     /**
      * 实时计算款式的开发成本（BOM用料成本 + 工序成本 + 二次工艺成本）
@@ -222,6 +228,26 @@ public class StyleInfoOrchestrator {
 
     public boolean resetSample(Long id, Map<String, Object> body) {
         return styleStageHelper.resetSample(id, body);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Object deleteWithApproval(Long id, String reason) {
+        StyleInfo style = styleInfoService.getById(id);
+        if (style == null) {
+            throw new NoSuchElementException("款式不存在");
+        }
+        String styleNo = style.getStyleNo() != null ? style.getStyleNo() : String.valueOf(id);
+
+        if (changeApprovalOrchestrator != null) {
+            Map<String, Object> opData = new HashMap<>();
+            opData.put("styleId", id);
+            Map<String, Object> approvalResp = changeApprovalOrchestrator.checkAndCreateIfNeeded(
+                    "STYLE_DELETE", String.valueOf(id), styleNo, opData, reason);
+            if (approvalResp != null) {
+                return approvalResp;
+            }
+        }
+        return delete(id);
     }
 
     @Transactional(rollbackFor = Exception.class)

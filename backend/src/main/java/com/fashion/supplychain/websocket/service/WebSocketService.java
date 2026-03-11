@@ -263,6 +263,72 @@ public class WebSocketService {
                 superAdminId, tenantName, appName, orderNo);
     }
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 审批流推送
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * 通知审批人有新的待审批申请
+     *
+     * @param approverId    审批人 userId
+     * @param approverName  审批人姓名
+     * @param applicantName 申请人姓名
+     * @param operationType 操作类型（ORDER_DELETE / STYLE_DELETE 等）
+     * @param targetNo      业务单号
+     * @param reason        申请原因
+     */
+    public void notifyApprovalPending(String approverId, String approverName,
+                                       String applicantName, String operationType,
+                                       String targetNo, String reason) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.APPROVAL_PENDING,
+            Map.of(
+                "applicantName", applicantName != null ? applicantName : "",
+                "operationType", operationType != null ? operationType : "",
+                "targetNo", targetNo != null ? targetNo : "",
+                "reason", reason != null ? reason : "",
+                "message", "【" + (applicantName != null ? applicantName : "员工") + "】提交了"
+                    + (operationType != null ? operationType : "操作") + "审批申请，请及时处理",
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.sendToUser(approverId, message);
+        log.info("[WebSocket] 审批通知→审批人: approverId={}, applicant={}, type={}, target={}",
+                approverId, applicantName, operationType, targetNo);
+    }
+
+    /**
+     * 通知申请人审批结果（通过/驳回）
+     *
+     * @param applicantId   申请人 userId
+     * @param operationType 操作类型
+     * @param targetNo      业务单号
+     * @param approved      是否通过
+     * @param approverName  审批人姓名
+     * @param remark        审批备注
+     */
+    public void notifyApprovalResult(String applicantId, String operationType,
+                                      String targetNo, boolean approved,
+                                      String approverName, String remark) {
+        String resultText = approved ? "通过" : "驳回";
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.APPROVAL_RESULT,
+            Map.of(
+                "operationType", operationType != null ? operationType : "",
+                "targetNo", targetNo != null ? targetNo : "",
+                "approved", approved,
+                "approverName", approverName != null ? approverName : "",
+                "remark", remark != null ? remark : "",
+                "message", "您的" + (operationType != null ? operationType : "操作")
+                    + "申请已被【" + (approverName != null ? approverName : "主管") + "】" + resultText,
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.sendToUser(applicantId, message);
+        log.info("[WebSocket] 审批结果→申请人: applicantId={}, type={}, target={}, approved={}",
+                applicantId, operationType, targetNo, approved);
+    }
+
     /**
      * 广播 AI 质检异常预警（租户内广播）
      */

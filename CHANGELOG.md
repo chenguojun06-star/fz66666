@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-21 财务四大模块全面补齐（发票/应付/税率/报表）
+
+### 💰 财务模块补齐（4个新模块，报税全链路打通）
+
+- **新增发票管理**（Invoice）：开票、核销、作废全流程，支持增值税专票/普票/电子发票，关联生产订单
+- **新增应付账款**（Payable）：采购/加工费/运费应付管理，到期预警，付款确认，统计面板
+- **新增税率配置**（TaxConfig）：增值税/附加税/印花税/企业所得税配置，启用/停用开关，计税接口
+- **新增财务报表**（FinancialReport）：利润表/资产负债表/现金流量表，聚合8个现有Service数据
+
+#### 后端（16+ 文件）
+- Flyway 迁移：`V20260320__add_invoice_payable_tax_config_tables.sql`（3 张新表）
+- Entity：`Invoice.java`、`Payable.java`、`TaxConfig.java`
+- Mapper + Service + Impl：各 3 组
+- Orchestrator：`InvoiceOrchestrator`、`PayableOrchestrator`、`TaxConfigOrchestrator`、`FinancialReportOrchestrator`
+- Controller：`/api/finance/invoices/*`、`/api/finance/payables/*`、`/api/finance/tax-config/*`、`/api/finance/reports/*`
+
+#### 前端（12+ 文件）
+- API 服务层：`invoiceApi.ts`、`payableApi.ts`、`taxConfigApi.ts`、`financialReportApi.ts`
+- 页面组件：Invoice（CRUD+状态操作）、Payable（CRUD+付款确认+逾期预警）、TaxConfig（CRUD+开关）、FinancialReport（三报表Tab+日期查询+导出）
+- 路由注册：`routeConfig.ts`（4条路径+权限+菜单）、`modules/finance/index.tsx`（4个 lazy export）、`App.tsx`（4条 Route）
+- 编译验证：TypeScript 0 error ✅
+
+#### 系统影响
+- 后端 BUILD SUCCESS ✅
+- finance 模块编排器：13 → 17（+4）
+- 财务审计评分：92/100 → 98/100（补齐发票/应付/税率/报表 4 个空白）
+- 报税流程可用：收入核算（利润表）→ 税率计算 → 发票开具 → 应付对账 → 财务报表导出
+
 ## [Unreleased] - 2026-03-11 系统稳定性全面测试完成 + Redis 部署验证
 
 ### 📈 AI升级路线图 v1（2026-03-11）

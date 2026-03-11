@@ -44,6 +44,10 @@ public enum WebSocketMessageType {
     // 应用商店
     APP_ORDER_PENDING("app:order:pending", "应用商店新订单"),
 
+    // 审批流
+    APPROVAL_PENDING("approval:pending", "新审批待处理"),
+    APPROVAL_RESULT("approval:result", "审批结果通知"),
+
     // 智能预警
     ORDER_OVERDUE("order:overdue", "订单逾期预警"),
     QUALITY_ANOMALY("quality:anomaly", "质检异常AI预警"),

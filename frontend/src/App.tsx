@@ -21,6 +21,10 @@ import {
   WagePayment,
   EcSalesRevenue,
   TaxExport,
+  InvoicePage,
+  PayablePage,
+  TaxConfigPage,
+  FinancialReportPage,
 } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 // 客户门户（公开页，无需登录）
@@ -248,6 +252,10 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.wagePayment} element={<Suspense fallback={<Spin />}><WagePayment /></Suspense>} />
           <Route path={paths.ecSalesRevenue} element={<Suspense fallback={<Spin />}><EcSalesRevenue /></Suspense>} />
           <Route path={paths.financeTaxExport} element={<Suspense fallback={<Spin />}><TaxExport /></Suspense>} />
+          <Route path={paths.invoiceManagement} element={<Suspense fallback={<Spin />}><InvoicePage /></Suspense>} />
+          <Route path={paths.payableManagement} element={<Suspense fallback={<Spin />}><PayablePage /></Suspense>} />
+          <Route path={paths.taxConfig} element={<Suspense fallback={<Spin />}><TaxConfigPage /></Suspense>} />
+          <Route path={paths.financialReport} element={<Suspense fallback={<Spin />}><FinancialReportPage /></Suspense>} />
           <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
           <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.procurement} element={<Suspense fallback={<Spin />}><ProcurementDashboard /></Suspense>} />
