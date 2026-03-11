@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceO
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -106,9 +107,14 @@ public class AiAdvisorService {
     /**
      * 智能建议：给定业务数据摘要，返回简短建议文案（用于运营日报）
      *
+     * <p>结果按 contextSummary 内容缓存 5 分钟，相同摘要（同一租户当日数据未变化）
+     * 直接返回缓存值，避免重复调用 DeepSeek API（每次约 2~3 秒延迟）。
+     * Redis 不可用时自动降级为直接调用 AI（见 RedisConfig.errorHandler）。</p>
+     *
      * @param contextSummary 业务摘要（如：今日逾期3单，高风险2单，停滞1单）
      * @return 1~3句建议文案，未启用时返回 null
      */
+    @Cacheable(value = "daily-brief", key = "#contextSummary")
     public String getDailyAdvice(String contextSummary) {
         String systemPrompt = "你是一名服装供应链管理顾问，根据工厂今日生产数据，" +
                 "用简洁中文给出1~3条可执行的管理建议。每条建议一行，不超过30字。不要废话。";
