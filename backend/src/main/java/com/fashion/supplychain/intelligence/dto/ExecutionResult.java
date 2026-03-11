@@ -117,4 +117,16 @@ public class ExecutionResult<T> implements Serializable {
             .executedAt(LocalDateTime.now())
             .build();
     }
+
+    /**
+     * 工厂方法：待审批（命令已接收但需人工确认）
+     */
+    public static <T> ExecutionResult<T> pending(String reason) {
+        return ExecutionResult.<T>builder()
+            .success(false)
+            .message(reason)
+            .errorMessage("REQUIRES_APPROVAL")
+            .executedAt(LocalDateTime.now())
+            .build();
+    }
 }

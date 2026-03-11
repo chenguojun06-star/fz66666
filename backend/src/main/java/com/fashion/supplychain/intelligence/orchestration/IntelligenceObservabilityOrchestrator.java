@@ -2,7 +2,13 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.entity.IntelligenceMetrics;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -10,7 +16,7 @@ import org.springframework.stereotype.Service;
  * AI 可观测编排器。
  *
  * <p>职责：统一暴露 AI 可观测与评估层的配置状态，
- * 作为 OpenLIT / Langfuse / OTel 类能力的独立接入边界。</p>
+ * 记录每次AI调用的度量指标到数据库，并提供聚合查询。</p>
  */
 @Service
 @Slf4j
@@ -31,14 +37,36 @@ public class IntelligenceObservabilityOrchestrator {
     @Value("${ai.observability.sample-rate:100}")
     private int sampleRate;
 
+    @Autowired
+    private IntelligenceMetricsMapper metricsMapper;
+
     public void recordInvocation(String scene,
                                  IntelligenceInferenceResult result,
                                  Long tenantId,
                                  String userId) {
-        if (!shouldRecord()) {
-            return;
+        // 持久化到数据库（不受 enabled 开关影响，始终记录）
+        try {
+            IntelligenceMetrics metrics = new IntelligenceMetrics();
+            metrics.setTenantId(tenantId);
+            metrics.setScene(scene);
+            metrics.setProvider(result.getProvider());
+            metrics.setModel(result.getModel());
+            metrics.setSuccess(result.isSuccess());
+            metrics.setFallbackUsed(result.isFallbackUsed());
+            metrics.setLatencyMs((int) result.getLatencyMs());
+            metrics.setPromptChars(result.getPromptChars());
+            metrics.setResponseChars(result.getResponseChars());
+            metrics.setErrorMessage(result.getErrorMessage());
+            metrics.setUserId(userId);
+            metrics.setCreateTime(LocalDateTime.now());
+            metrics.setDeleteFlag(0);
+            metricsMapper.insert(metrics);
+        } catch (Exception e) {
+            log.warn("[AI_OBSERVABILITY] 度量持久化失败（不影响业务）: {}", e.getMessage());
         }
-        if (!hitSample()) {
+
+        // 结构化日志（受 enabled + sample-rate 控制）
+        if (!shouldRecord() || !hitSample()) {
             return;
         }
         String promptNote = capturePrompts
@@ -56,6 +84,13 @@ public class IntelligenceObservabilityOrchestrator {
                 resolveStatus(),
                 promptNote,
                 result.getErrorMessage());
+    }
+
+    /**
+     * 获取度量概览（按场景聚合最近7天的调用统计）
+     */
+    public List<Map<String, Object>> getMetricsOverview(Long tenantId, int days) {
+        return metricsMapper.aggregateByScene(tenantId, days);
     }
 
     public IntelligenceBrainSnapshotResponse.ObservabilitySummary getObservabilitySummary() {

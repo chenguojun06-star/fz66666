@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 权限决策编排器
@@ -36,8 +37,9 @@ public class PermissionDecisionOrchestrator {
     @Autowired
     private UserService userService;
 
-    // 租户级别的自动化设置缓存
-    private final Map<Long, TenantAutoConfig> autoConfigCache = new HashMap<>();
+    // 租户级别的自动化设置缓存（带5分钟TTL）
+    private final ConcurrentHashMap<Long, CachedConfig> autoConfigCache = new ConcurrentHashMap<>();
+    private static final long CONFIG_CACHE_TTL_MS = 5 * 60 * 1000L;
 
     /**
      * 核心方法：决定命令执行方式
@@ -143,17 +145,30 @@ public class PermissionDecisionOrchestrator {
     }
 
     /**
-     * 获取租户的自动化配置
+     * 获取租户的自动化配置（5分钟缓存TTL）
      */
     private TenantAutoConfig getTenantConfig(Long tenantId) {
-        // 这里应该从数据库读取，这里用默认值示例
-        return autoConfigCache.computeIfAbsent(tenantId, key ->
-            TenantAutoConfig.builder()
+        CachedConfig cached = autoConfigCache.get(tenantId);
+        if (cached != null && (System.currentTimeMillis() - cached.cachedAt) < CONFIG_CACHE_TTL_MS) {
+            return cached.config;
+        }
+        TenantAutoConfig config = TenantAutoConfig.builder()
                 .tenantId(tenantId)
                 .autoExecutionEnabled(true)
-                .autoExecutionThreshold(2)  // 风险等级 <= 2 可自动执行
-                .build()
-        );
+                .autoExecutionThreshold(2)
+                .build();
+        autoConfigCache.put(tenantId, new CachedConfig(config, System.currentTimeMillis()));
+        return config;
+    }
+
+    /** 带时间戳的缓存条目 */
+    private static class CachedConfig {
+        final TenantAutoConfig config;
+        final long cachedAt;
+        CachedConfig(TenantAutoConfig config, long cachedAt) {
+            this.config = config;
+            this.cachedAt = cachedAt;
+        }
     }
 
     /**

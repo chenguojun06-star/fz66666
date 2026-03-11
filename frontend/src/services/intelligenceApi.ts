@@ -281,7 +281,24 @@ export const intelligenceApi = {
   submitFeedback,
   queryWorkflowHistory,
   getExecutionConfig,
-  updateExecutionConfig
+  updateExecutionConfig,
+  getMetricsOverview
 };
+
+export interface MetricsSceneStat {
+  scene: string;
+  total_calls: number;
+  success_count: number;
+  avg_latency_ms: number;
+  fallback_count: number;
+}
+
+export async function getMetricsOverview(days = 7): Promise<MetricsSceneStat[]> {
+  const response = await api.get<ApiResult<MetricsSceneStat[]>>(
+    '/intelligence/metrics/overview',
+    { params: { days } }
+  );
+  return response.data;
+}
 
 export default intelligenceApi;

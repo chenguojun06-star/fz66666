@@ -170,6 +170,9 @@ public class IntelligenceController {
     @Autowired
     private ScanTipsOrchestrator scanTipsOrchestrator;
 
+    @Autowired
+    private IntelligenceObservabilityOrchestrator observabilityOrchestrator;
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {
@@ -567,5 +570,15 @@ public class IntelligenceController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(data.length)
                 .body(data);
+    }
+
+    // ── 第五批：AI 可观测性指标 ──
+
+    /** AI 调用指标概览 — 按场景聚合调用次数/成功率/平均延迟 */
+    @GetMapping("/metrics/overview")
+    public Result<List<java.util.Map<String, Object>>> metricsOverview(
+            @RequestParam(defaultValue = "7") int days) {
+        return Result.success(observabilityOrchestrator.getMetricsOverview(
+                UserContext.tenantId(), days));
     }
 }

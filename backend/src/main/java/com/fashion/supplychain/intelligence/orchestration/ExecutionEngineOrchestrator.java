@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
+import com.fashion.supplychain.intelligence.dto.ExecutionDecision;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -64,6 +65,9 @@ public class ExecutionEngineOrchestrator {
     private AuditTrailOrchestrator auditTrail;
 
     @Autowired
+    private PermissionDecisionOrchestrator permissionDecision;
+
+    @Autowired
     private SmartNotificationOrchestrator smartNotification;
 
     @Autowired
@@ -111,6 +115,19 @@ public class ExecutionEngineOrchestrator {
 
             // 1. 记录审计 - 开始
             auditTrail.logCommandStart(command, executorId);
+
+            // 1.5 权限决策 — 判断是否可自动执行
+            ExecutionDecision decision = permissionDecision.decide(command, executorId);
+            if (decision.isDenied()) {
+                auditTrail.logCommandCancelled(command, "权限不足: " + decision.getReason(), executorId);
+                log.warn("[ExecutionEngine] 命令被拒绝: action={}, reason={}", command.getAction(), decision.getReason());
+                return (ExecutionResult<T>) ExecutionResult.failure("权限不足: " + decision.getReason());
+            }
+            if (decision.needsApproval()) {
+                auditTrail.logCommandCancelled(command, "需人工审批: " + decision.getReason(), executorId);
+                log.info("[ExecutionEngine] 命令需人工审批: action={}, reason={}", command.getAction(), decision.getReason());
+                return (ExecutionResult<T>) ExecutionResult.pending(decision.getReason());
+            }
 
             // 2. 根据命令类型分发执行
             Object result = null;

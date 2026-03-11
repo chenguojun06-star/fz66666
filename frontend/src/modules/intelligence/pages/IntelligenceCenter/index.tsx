@@ -26,6 +26,7 @@ const LearningReportPanel = lazy(() => import('./LearningReportPanel'));
 const FinanceAuditPanel = lazy(() => import('./FinanceAuditPanel'));
 const StyleQuoteSuggestionPanel = lazy(() => import('./StyleQuoteSuggestionPanel'));
 const SupplierScorecardPanel = lazy(() => import('./SupplierScorecardPanel'));
+const AiMetricsPanel = lazy(() => import('./AiMetricsPanel'));
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -108,6 +109,7 @@ const IntelligenceCenter: React.FC = () => {
     { key: 'supplierScorecard',  label: '供应商评分' },
     { key: 'learningReport',     label: '学习报告' },
     { key: 'mindPush',           label: '智能推送' },
+    { key: 'aiMetrics',          label: 'AI 调用指标' },
   ] as const, []);
 
   const [visiblePanels, setVisiblePanels] = useState<Record<string, boolean>>(() => {
@@ -1516,9 +1518,10 @@ const IntelligenceCenter: React.FC = () => {
                   {visiblePanels.learningReport && <LearningReportPanel />}
                 </div>
               )}
-              {visiblePanels.mindPush && (
-                <div style={{ padding: '0 24px 24px' }}>
-                  <MindPushPanel />
+              {(visiblePanels.mindPush || visiblePanels.aiMetrics) && (
+                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.mindPush && visiblePanels.aiMetrics ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 24px' }}>
+                  {visiblePanels.mindPush && <MindPushPanel />}
+                  {visiblePanels.aiMetrics && <AiMetricsPanel />}
                 </div>
               )}
             </Suspense>
