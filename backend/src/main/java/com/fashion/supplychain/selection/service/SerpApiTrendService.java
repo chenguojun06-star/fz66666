@@ -2,6 +2,7 @@ package com.fashion.supplychain.selection.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -84,6 +85,16 @@ public class SerpApiTrendService {
 
     // 统一缓存：key → CachedResult（趋势/购物数据共用）
     private final ConcurrentHashMap<String, CachedResult> cache = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    void init() {
+        boolean keyOk = apiKey != null && !apiKey.isEmpty() && !apiKey.startsWith("{{");
+        log.info("[SerpApi] 服务初始化 enabled={} keyConfigured={} keyLen={}",
+                enabled, keyOk, apiKey == null ? 0 : apiKey.length());
+        if (!keyOk && enabled) {
+            log.warn("[SerpApi] SERPAPI_ENABLED=true 但 SERPAPI_KEY 未配置或为占位符，已自动置为不可用");
+        }
+    }
 
     // ─────────────── Google Trends ───────────────
 
@@ -297,7 +308,8 @@ public class SerpApiTrendService {
     }
 
     public boolean isReady() {
-        return enabled && apiKey != null && !apiKey.isEmpty();
+        // 额外过滤：拒绝 CI 未替换的模板占位符 {{SERPAPI_KEY}}
+        return enabled && apiKey != null && !apiKey.isEmpty() && !apiKey.startsWith("{{");
     }
 
     /** 清空本地缓存（测试/调试用） */
