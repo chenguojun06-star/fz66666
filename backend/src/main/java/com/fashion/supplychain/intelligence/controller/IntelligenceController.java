@@ -572,9 +572,10 @@ public class IntelligenceController {
                 .body(data);
     }
 
-    // ── 第五批：AI 可观测性指标 ──
+    // ── 第五批：AI 可观测性指标（仅超管可见） ──
 
-    /** AI 调用指标概览 — 按场景聚合调用次数/成功率/平均延迟 */
+    /** AI 调用指标概览 — 按场景聚合调用次数/成功率/平均延迟（超管专属） */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @GetMapping("/metrics/overview")
     public Result<List<java.util.Map<String, Object>>> metricsOverview(
             @RequestParam(defaultValue = "7") int days) {

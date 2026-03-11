@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
+import { useAuth } from '@/utils/AuthContext';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
@@ -92,11 +93,13 @@ const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
+  const { isSuperAdmin } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showAnalysisPanels, setShowAnalysisPanels] = useState(false);
 
   /* ── 每个分析面板独立显示/隐藏（localStorage 持久化） ── */
+  /* aiMetrics 仅超管可见 — 租户不需要看 AI 调度指标 */
   const ANALYSIS_PANELS = useMemo(() => [
     { key: 'smartAssignment',    label: '智能派工' },
     { key: 'workerProfile',      label: '工人画像' },
@@ -109,8 +112,8 @@ const IntelligenceCenter: React.FC = () => {
     { key: 'supplierScorecard',  label: '供应商评分' },
     { key: 'learningReport',     label: '学习报告' },
     { key: 'mindPush',           label: '智能推送' },
-    { key: 'aiMetrics',          label: 'AI 调用指标' },
-  ] as const, []);
+    ...(isSuperAdmin ? [{ key: 'aiMetrics' as const, label: 'AI 调用指标' }] : []),
+  ] as const, [isSuperAdmin]);
 
   const [visiblePanels, setVisiblePanels] = useState<Record<string, boolean>>(() => {
     try {
@@ -1518,10 +1521,14 @@ const IntelligenceCenter: React.FC = () => {
                   {visiblePanels.learningReport && <LearningReportPanel />}
                 </div>
               )}
-              {(visiblePanels.mindPush || visiblePanels.aiMetrics) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.mindPush && visiblePanels.aiMetrics ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 24px' }}>
-                  {visiblePanels.mindPush && <MindPushPanel />}
-                  {visiblePanels.aiMetrics && <AiMetricsPanel />}
+              {visiblePanels.mindPush && (
+                <div style={{ padding: '0 24px 16px' }}>
+                  <MindPushPanel />
+                </div>
+              )}
+              {isSuperAdmin && visiblePanels.aiMetrics && (
+                <div style={{ padding: '0 24px 24px' }}>
+                  <AiMetricsPanel />
                 </div>
               )}
             </Suspense>
