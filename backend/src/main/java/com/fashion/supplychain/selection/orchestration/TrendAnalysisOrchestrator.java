@@ -8,6 +8,7 @@ import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
 import com.fashion.supplychain.selection.entity.SelectionCandidate;
 import com.fashion.supplychain.selection.entity.TrendSnapshot;
 import com.fashion.supplychain.selection.service.SelectionCandidateService;
+import com.fashion.supplychain.selection.service.SerpApiTrendService;
 import com.fashion.supplychain.selection.service.TrendSnapshotService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class TrendAnalysisOrchestrator {
 
     @Autowired
     private SelectionApprovalOrchestrator approvalOrchestrator;
+
+    @Autowired(required = false)
+    private SerpApiTrendService serpApiTrendService;
 
     /** 查询趋势快照列表 */
     public List<TrendSnapshot> listTrends(String trendType, String dataSource, int days) {
@@ -73,7 +77,9 @@ public class TrendAnalysisOrchestrator {
 
     /**
      * AI给候选款打趋势契合分
-     * 复用 DeepSeek 推理器
+     * 1. 先从 SerpApi 拉取该款式关键词的 Google Trends 实时热度（缓存24h）
+     * 2. 将实时热度注入 AI Prompt，提升评分准确性
+     * 3. 复用 DeepSeek 推理器进行综合评分
      */
     public Map<String, Object> scoreCandidateByAi(Long candidateId) {
         Long tenantId = UserContext.tenantId();
@@ -82,7 +88,19 @@ public class TrendAnalysisOrchestrator {
             throw new RuntimeException("候选款不存在");
         }
 
-        // 获取近期趋势摘要
+        // ① SerpApi：拉取该款式关键词的 Google Trends 实时热度
+        String serpKeyword = buildTrendKeyword(candidate);
+        int serpTrendScore = serpApiTrendService != null ? serpApiTrendService.fetchTrendScore(serpKeyword) : -1;
+        String serpTrendContext = "";
+        if (serpTrendScore >= 0) {
+            serpTrendContext = "\nGoogle Trends 实时指数（近3个月, geo=CN）: "
+                    + serpKeyword + " = " + serpTrendScore + "/100";
+            // 自动保存为 TrendSnapshot 记录，供趋势看板展示
+            saveSerpTrendSnapshot(serpKeyword, serpTrendScore, tenantId);
+            log.info("[TrendAnalysis] SerpApi 趋势分获取成功 keyword={} score={}", serpKeyword, serpTrendScore);
+        }
+
+        // ② 获取近期趋势摘要（含刚写入的 SerpApi 快照）
         List<TrendSnapshot> recentTrends = snapshotService.list(
                 new LambdaQueryWrapper<TrendSnapshot>()
                         .eq(TrendSnapshot::getTenantId, tenantId)
@@ -105,7 +123,7 @@ public class TrendAnalysisOrchestrator {
                 candidate.getStyleTags() != null ? candidate.getStyleTags() : "无");
 
         String prompt = "你是一名专业的服装买手，请对以下候选款式进行趋势契合度评分。\n\n"
-                + "当前趋势热词: " + trendContext + "\n\n"
+                + "当前趋势热词: " + trendContext + serpTrendContext + "\n\n"
                 + "候选款信息: " + styleDesc + "\n\n"
                 + "请从以下4个维度打分(每项0-100)，并给出总分和建议：\n"
                 + "1. 趋势契合度（与当前流行方向的契合程度）\n"
@@ -117,22 +135,33 @@ public class TrendAnalysisOrchestrator {
         Map<String, Object> result = new HashMap<>();
         result.put("candidateId", candidateId);
         result.put("candidateNo", candidate.getCandidateNo());
+        // 将 SerpApi 趋势分透传给前端
+        if (serpTrendScore >= 0) {
+            result.put("serpTrendScore", serpTrendScore);
+            result.put("serpKeyword", serpKeyword);
+        }
 
         if (inferenceOrchestrator == null || !inferenceOrchestrator.isAnyModelEnabled()) {
-            // AI未配置时，基于规则给出基础分
-            int baseScore = 70;
-            if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) {
-                baseScore += 5;
-            }
-            if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) {
-                baseScore += 5;
+            // AI未配置时：优先用 SerpApi 真实分数，否则基于规则
+            int baseScore;
+            String reason;
+            if (serpTrendScore >= 0) {
+                baseScore = serpTrendScore;
+                // 利润率和数量加成（最多+10）
+                if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore = Math.min(100, baseScore + 5);
+                if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore = Math.min(100, baseScore + 5);
+                reason = "Google Trends 实时热度指数: " + serpTrendScore + "/100";
+            } else {
+                baseScore = 70;
+                if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore += 5;
+                if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore += 5;
+                reason = "AI模型未配置，基于规则评分。利润率和数量综合评估。";
             }
             result.put("score", baseScore);
-            result.put("reason", "AI模型未配置，基于规则评分。利润率和数量综合评估。");
+            result.put("reason", reason);
             result.put("aiEnabled", false);
-            // 回写分数
             candidate.setTrendScore(baseScore);
-            candidate.setTrendScoreReason("规则评分: 利润率和批量综合评估");
+            candidate.setTrendScoreReason(reason);
             candidateService.updateById(candidate);
             return result;
         }
@@ -184,6 +213,48 @@ public class TrendAnalysisOrchestrator {
             result.put("aiEnabled", false);
         }
         return result;
+    }
+
+    // ─────────────── SerpApi 辅助方法 ───────────────
+
+    /**
+     * 从候选款信息提取 Google Trends 搜索关键词
+     * 优先用 styleName，超长时截取前 15 字；无名称时用 category
+     */
+    private String buildTrendKeyword(SelectionCandidate candidate) {
+        String name = candidate.getStyleName();
+        if (name != null && !name.isBlank()) {
+            return name.length() > 15 ? name.substring(0, 15) : name;
+        }
+        return candidate.getCategory() != null ? candidate.getCategory() : "服装";
+    }
+
+    /**
+     * 将 SerpApi 趋势分保存为 TrendSnapshot 记录，避免重复（同一天同关键词只保存一条）
+     */
+    private void saveSerpTrendSnapshot(String keyword, int score, Long tenantId) {
+        try {
+            long existCount = snapshotService.count(
+                    new LambdaQueryWrapper<TrendSnapshot>()
+                            .eq(TrendSnapshot::getTenantId, tenantId)
+                            .eq(TrendSnapshot::getKeyword, keyword)
+                            .eq(TrendSnapshot::getDataSource, "SERPAPI")
+                            .eq(TrendSnapshot::getSnapshotDate, LocalDate.now()));
+            if (existCount > 0) return; // 今日已有记录，无需重复写入
+
+            TrendSnapshot snap = new TrendSnapshot();
+            snap.setSnapshotDate(LocalDate.now());
+            snap.setDataSource("SERPAPI");
+            snap.setTrendType("KEYWORD");
+            snap.setKeyword(keyword);
+            snap.setHeatScore(score);
+            snap.setAiSummary("Google Trends 近3个月热度指数（geo=CN）: " + score + "/100");
+            snap.setPeriod("3-month");
+            snap.setTenantId(tenantId);
+            snapshotService.save(snap);
+        } catch (Exception e) {
+            log.warn("[TrendAnalysis] 保存 SerpApi 趋势快照失败 keyword={}", keyword, e);
+        }
     }
 
     /**
