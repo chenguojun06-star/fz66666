@@ -80,14 +80,16 @@ jobs:
       run: |
         sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=${{ env.BUILD_DATE }}/" frontend/Dockerfile
 
+    - name: 注入 SERPAPI_KEY 到 cloudbaserc.json
+      run: |
+        sed -i "s/{{SERPAPI_KEY}}/${{ secrets.SERPAPI_KEY }}/g" cloudbaserc.json
+
     - name: 部署到腾讯云 CloudBase
       uses: TencentCloudBase/cloudbase-action@v2
       with:
         secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
         secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
         envId: ${{ secrets.CLOUDBASE_ENV_ID }}
-      env:
-        SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
 
   create-release-tag:
     name: 创建发布标签
