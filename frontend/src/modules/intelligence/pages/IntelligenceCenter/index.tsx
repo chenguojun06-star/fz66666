@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense, lazy } from 'react';
-import { Tag, Tooltip, Popover, Spin } from 'antd';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined, RobotOutlined,
   WarningOutlined, CheckCircleOutlined,
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
-  DownOutlined, UpOutlined, AppstoreOutlined,
-  EyeOutlined, EyeInvisibleOutlined,
+  DownOutlined, UpOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import Layout from '@/components/Layout';
@@ -15,25 +14,6 @@ import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
 
-/* ── 智能分析面板 — lazy 加载（17个） ── */
-const DefectTracePanel = lazy(() => import('./DefectTracePanel'));
-const SmartAssignmentPanel = lazy(() => import('./SmartAssignmentPanel'));
-const WorkerProfilePanel = lazy(() => import('./WorkerProfilePanel'));
-const RhythmDnaPanel = lazy(() => import('./RhythmDnaPanel'));
-const SchedulingSuggestionPanel = lazy(() => import('./SchedulingSuggestionPanel'));
-const MindPushPanel = lazy(() => import('./MindPushPanel'));
-const LiveCostTrackerPanel = lazy(() => import('./LiveCostTrackerPanel'));
-const LearningReportPanel = lazy(() => import('./LearningReportPanel'));
-const FinanceAuditPanel = lazy(() => import('./FinanceAuditPanel'));
-const StyleQuoteSuggestionPanel = lazy(() => import('./StyleQuoteSuggestionPanel'));
-const SupplierScorecardPanel = lazy(() => import('./SupplierScorecardPanel'));
-const AiMetricsPanel = lazy(() => import('./AiMetricsPanel'));
-const MaterialShortagePanel = lazy(() => import('./MaterialShortagePanel'));
-const CapacityGapPanel = lazy(() => import('./CapacityGapPanel'));
-const StagnantAlertPanel = lazy(() => import('./StagnantAlertPanel'));
-const ReconciliationAnomalyPanel = lazy(() => import('./ReconciliationAnomalyPanel'));
-const ApprovalAdvisorPanel = lazy(() => import('./ApprovalAdvisorPanel'));
-const ReplenishmentAdvisorPanel = lazy(() => import('./ReplenishmentAdvisorPanel'));
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -102,54 +82,6 @@ const IntelligenceCenter: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [showAnalysisPanels, setShowAnalysisPanels] = useState(false);
-
-  /* ── 每个分析面板独立显示/隐藏（localStorage 持久化） ── */
-  /* aiMetrics 仅超管可见 — 租户不需要看 AI 调度指标 */
-  const ANALYSIS_PANELS = useMemo(() => [
-    { key: 'smartAssignment',    label: '智能派工' },
-    { key: 'workerProfile',      label: '工人画像' },
-    { key: 'scheduling',         label: '排产建议' },
-    { key: 'rhythmDna',          label: '工序节奏DNA' },
-    { key: 'liveCost',           label: '实时成本' },
-    { key: 'defectTrace',        label: '缺陷追溯' },
-    { key: 'financeAudit',       label: '财务审计' },
-    { key: 'styleQuote',         label: '报价建议' },
-    { key: 'supplierScorecard',  label: '供应商评分' },
-    { key: 'learningReport',     label: '学习报告' },
-    { key: 'mindPush',           label: '智能推送' },
-    { key: 'materialShortage',   label: '缺料预警' },
-    { key: 'capacityGap',        label: '产能缺口' },
-    { key: 'stagnantAlert',      label: '停滞预警' },
-    { key: 'reconciliationAnomaly', label: '对账异常' },
-    { key: 'approvalAdvisor',    label: '审批建议' },
-    { key: 'replenishmentAdvisor', label: '补料建议' },
-    ...(isSuperAdmin ? [{ key: 'aiMetrics' as const, label: 'AI 调用指标' }] : []),
-  ] as const, [isSuperAdmin]);
-
-  const [visiblePanels, setVisiblePanels] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem('intelligence_panel_visibility');
-      if (saved) return JSON.parse(saved);
-    } catch { /* ignore */ }
-    return Object.fromEntries(ANALYSIS_PANELS.map(p => [p.key, true]));
-  });
-
-  const togglePanel = useCallback((key: string) => {
-    setVisiblePanels(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('intelligence_panel_visibility', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const toggleAllPanels = useCallback((show: boolean) => {
-    setVisiblePanels(() => {
-      const next = Object.fromEntries(ANALYSIS_PANELS.map(p => [p.key, show]));
-      localStorage.setItem('intelligence_panel_visibility', JSON.stringify(next));
-      return next;
-    });
-  }, [ANALYSIS_PANELS]);
 
   /* ── 主面板折叠/展开（localStorage 持久化） ── */
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>(() => {
@@ -1452,120 +1384,6 @@ const IntelligenceCenter: React.FC = () => {
 
         </div>
         </div>
-
-        {/* ╔══════════════════════════════════════════════╗
-            ║   智能分析面板（可展开，11个独立分析模块）      ║
-            ╚══════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 12px' }}>
-          <div
-            className="c-card"
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => setShowAnalysisPanels(v => !v)}
-          >
-            <div className="c-card-title" style={{ marginBottom: 0 }}>
-              <AppstoreOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
-              智能分析面板
-              <span className="c-card-badge purple-badge">
-                {ANALYSIS_PANELS.filter(p => visiblePanels[p.key]).length} / {ANALYSIS_PANELS.length} 已启用
-              </span>
-              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#5a7a9a' }}>
-                {showAnalysisPanels ? <UpOutlined /> : <DownOutlined />}
-                {showAnalysisPanels ? ' 收起' : ' 展开'}
-              </span>
-            </div>
-          </div>
-        </div>
-        {showAnalysisPanels && (
-          <>
-            {/* ── 面板开关栏 ── */}
-            <div style={{ padding: '0 24px 12px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              {ANALYSIS_PANELS.map(p => {
-                const on = !!visiblePanels[p.key];
-                return (
-                  <Tag
-                    key={p.key}
-                    style={{
-                      cursor: 'pointer', fontSize: 12, padding: '2px 10px',
-                      borderColor: on ? '#a78bfa' : '#d9d9d9',
-                      color: on ? '#a78bfa' : '#999',
-                      background: on ? 'rgba(167,139,250,0.08)' : '#fafafa',
-                    }}
-                    onClick={() => togglePanel(p.key)}
-                  >
-                    {on ? <EyeOutlined style={{ marginRight: 4 }} /> : <EyeInvisibleOutlined style={{ marginRight: 4 }} />}
-                    {p.label}
-                  </Tag>
-                );
-              })}
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                <Tag style={{ cursor: 'pointer', fontSize: 11 }} onClick={() => toggleAllPanels(true)}>全部显示</Tag>
-                <Tag style={{ cursor: 'pointer', fontSize: 11 }} onClick={() => toggleAllPanels(false)}>全部隐藏</Tag>
-              </span>
-            </div>
-            <Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载分析面板…" /></div>}>
-              {(visiblePanels.smartAssignment || visiblePanels.workerProfile) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.smartAssignment && visiblePanels.workerProfile ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.smartAssignment && <SmartAssignmentPanel />}
-                  {visiblePanels.workerProfile && <WorkerProfilePanel />}
-                </div>
-              )}
-              {(visiblePanels.scheduling || visiblePanels.rhythmDna) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.scheduling && visiblePanels.rhythmDna ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.scheduling && <SchedulingSuggestionPanel />}
-                  {visiblePanels.rhythmDna && <RhythmDnaPanel />}
-                </div>
-              )}
-              {(visiblePanels.liveCost || visiblePanels.defectTrace) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.liveCost && visiblePanels.defectTrace ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.liveCost && <LiveCostTrackerPanel />}
-                  {visiblePanels.defectTrace && <DefectTracePanel />}
-                </div>
-              )}
-              {(visiblePanels.financeAudit || visiblePanels.styleQuote) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.financeAudit && visiblePanels.styleQuote ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.financeAudit && <FinanceAuditPanel />}
-                  {visiblePanels.styleQuote && <StyleQuoteSuggestionPanel />}
-                </div>
-              )}
-              {(visiblePanels.supplierScorecard || visiblePanels.learningReport) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.supplierScorecard && visiblePanels.learningReport ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.supplierScorecard && <SupplierScorecardPanel />}
-                  {visiblePanels.learningReport && <LearningReportPanel />}
-                </div>
-              )}
-              {visiblePanels.mindPush && (
-                <div style={{ padding: '0 24px 16px' }}>
-                  <MindPushPanel />
-                </div>
-              )}
-              {(visiblePanels.materialShortage || visiblePanels.capacityGap) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.materialShortage && visiblePanels.capacityGap ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.materialShortage && <MaterialShortagePanel />}
-                  {visiblePanels.capacityGap && <CapacityGapPanel />}
-                </div>
-              )}
-              {(visiblePanels.stagnantAlert || visiblePanels.reconciliationAnomaly) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.stagnantAlert && visiblePanels.reconciliationAnomaly ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.stagnantAlert && <StagnantAlertPanel />}
-                  {visiblePanels.reconciliationAnomaly && <ReconciliationAnomalyPanel />}
-                </div>
-              )}
-              {(visiblePanels.approvalAdvisor || visiblePanels.replenishmentAdvisor) && (
-                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.approvalAdvisor && visiblePanels.replenishmentAdvisor ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
-                  {visiblePanels.approvalAdvisor && <ApprovalAdvisorPanel />}
-                  {visiblePanels.replenishmentAdvisor && <ReplenishmentAdvisorPanel />}
-                </div>
-              )}
-              {isSuperAdmin && visiblePanels.aiMetrics && (
-                <div style={{ padding: '0 24px 24px' }}>
-                  <AiMetricsPanel />
-                </div>
-              )}
-            </Suspense>
-          </>
-        )}
-
-
 
       </div>
 
