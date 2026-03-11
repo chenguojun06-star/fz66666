@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Row, Col, Tag, Button, Input, Select, Space, Spin, Empty,
   Popover, Typography, Divider, message, Progress, Modal, Form,
-  InputNumber, Tooltip,
+  InputNumber, Tooltip, Tabs,
 } from 'antd';
 import Layout from '@/components/Layout';
 import {
@@ -16,6 +16,7 @@ import {
   candidateSave,
   candidateStageAction,
 } from '@/services/selection/selectionApi';
+import MarketHotItems from './MarketHotItems';
 
 const { Text, Paragraph } = Typography;
 
@@ -196,6 +197,7 @@ export default function SelectionCenter() {
   const [aiLoadingIds, setAiLoadingIds] = useState<Set<number>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addForm] = Form.useForm();
+  const [activeTab, setActiveTab] = useState<string>('market');
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -272,6 +274,23 @@ export default function SelectionCenter() {
   return (
     <Layout>
     <div style={{ padding: '16px 20px' }}>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        style={{ marginBottom: 16 }}
+        items={[
+          { key: 'market', label: <span><FireOutlined style={{ color: '#ff4d4f' }} /> 市场热品发现</span> },
+          { key: 'mine',   label: <span><CheckCircleOutlined /> 我的选品库</span> },
+        ]}
+      />
+
+      {/* 市场热品 Tab */}
+      {activeTab === 'market' && (
+        <MarketHotItems onAdded={() => setActiveTab('mine')} />
+      )}
+
+      {/* 我的选品库 Tab */}
+      {activeTab === 'mine' && (<>
       {/* 顶部工具栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Space wrap>
@@ -530,6 +549,7 @@ export default function SelectionCenter() {
           </Form.Item>
         </Form>
       </Modal>
+      </>)}
     </div>
     </Layout>
   );
