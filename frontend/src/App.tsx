@@ -21,15 +21,12 @@ import {
   WagePayment,
   EcSalesRevenue,
   TaxExport,
-  InvoicePage,
-  PayablePage,
-  TaxConfigPage,
-  FinancialReportPage,
 } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 // 客户门户（公开页，无需登录）
 const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
 import { ProcurementDashboard } from './modules/procurement';
+import { SelectionBatchList, CandidatePool, TrendDashboard, HistoricalAnalysis } from './modules/selection';
 import {
   WarehouseDashboard,
   MaterialInventory,
@@ -252,13 +249,13 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.wagePayment} element={<Suspense fallback={<Spin />}><WagePayment /></Suspense>} />
           <Route path={paths.ecSalesRevenue} element={<Suspense fallback={<Spin />}><EcSalesRevenue /></Suspense>} />
           <Route path={paths.financeTaxExport} element={<Suspense fallback={<Spin />}><TaxExport /></Suspense>} />
-          <Route path={paths.invoiceManagement} element={<Suspense fallback={<Spin />}><InvoicePage /></Suspense>} />
-          <Route path={paths.payableManagement} element={<Suspense fallback={<Spin />}><PayablePage /></Suspense>} />
-          <Route path={paths.taxConfig} element={<Suspense fallback={<Spin />}><TaxConfigPage /></Suspense>} />
-          <Route path={paths.financialReport} element={<Suspense fallback={<Spin />}><FinancialReportPage /></Suspense>} />
           <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
           <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.procurement} element={<Suspense fallback={<Spin />}><ProcurementDashboard /></Suspense>} />
+          <Route path={paths.selectionBatch} element={<Suspense fallback={<Spin />}><SelectionBatchList /></Suspense>} />
+          <Route path={paths.selectionCandidates} element={<Suspense fallback={<Spin />}><CandidatePool /></Suspense>} />
+          <Route path={paths.selectionTrend} element={<Suspense fallback={<Spin />}><TrendDashboard /></Suspense>} />
+          <Route path={paths.selectionHistory} element={<Suspense fallback={<Spin />}><HistoricalAnalysis /></Suspense>} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
           <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />

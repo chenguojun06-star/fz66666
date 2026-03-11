@@ -1,45 +1,45 @@
-import api from '../../utils/api';
+import api from '@/utils/api';
+
+// ============================================================
+// 类型定义
+// ============================================================
 
 export interface TaxConfig {
   id?: string;
   taxName: string;
-  taxType: 'VAT' | 'SURCHARGE' | 'STAMP' | 'CORPORATE';
+  taxCode: string;
   taxRate: number;
+  appScope?: string;
   description?: string;
-  effectiveDate?: string;
-  enabled?: boolean;
-  tenantId?: number;
+  isActive?: boolean;
   createTime?: string;
   updateTime?: string;
 }
 
-export const TAX_TYPES = [
-  { value: 'VAT', label: '增值税' },
-  { value: 'SURCHARGE', label: '附加税' },
-  { value: 'STAMP', label: '印花税' },
-  { value: 'CORPORATE', label: '企业所得税' },
-];
+// ============================================================
+// API 方法（注意：list/active 均为 GET 请求，不可用 POST）
+// ============================================================
 
-export const taxConfigApi = {
-  getList: async (params?: Record<string, unknown>) => {
-    return await api.post('/finance/tax-config/list', params);
-  },
-  listEnabled: async () => {
-    return await api.get('/finance/tax-config/enabled');
-  },
-  getById: async (id: string) => {
-    return await api.get(`/finance/tax-config/${id}`);
-  },
-  create: async (data: Partial<TaxConfig>) => {
-    return await api.post('/finance/tax-config', data);
-  },
-  update: async (data: Partial<TaxConfig>) => {
-    return await api.put('/finance/tax-config', data);
-  },
-  delete: async (id: string) => {
-    return await api.delete(`/finance/tax-config/${id}`);
-  },
-  calculateTax: async (amount: number, taxConfigId: string) => {
-    return await api.get('/finance/tax-config/calculate', { params: { amount, taxConfigId } });
-  },
+const taxConfigApi = {
+  /** 全量列表（GET） */
+  list: () =>
+    api.get<TaxConfig[]>('/finance/tax-config/list'),
+
+  /** 仅启用项（GET） */
+  active: () =>
+    api.get<TaxConfig[]>('/finance/tax-config/active'),
+
+  /** 新增税率 */
+  create: (data: Omit<TaxConfig, 'id'>) =>
+    api.post<TaxConfig>('/finance/tax-config/create', data),
+
+  /** 更新税率 */
+  update: (data: TaxConfig) =>
+    api.put<TaxConfig>('/finance/tax-config/update', data),
+
+  /** 删除税率 */
+  remove: (id: string) =>
+    api.delete<void>(`/finance/tax-config/${id}`),
 };
+
+export default taxConfigApi;

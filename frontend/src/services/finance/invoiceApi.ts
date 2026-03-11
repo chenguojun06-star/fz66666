@@ -1,68 +1,63 @@
-import api from '../../utils/api';
+import api from '@/utils/api';
+
+// ============================================================
+// 类型定义
+// ============================================================
+
+export type InvoiceType = 'VAT_SPECIAL' | 'VAT_GENERAL' | 'ELECTRONIC' | 'RECEIPT';
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'CANCELLED';
 
 export interface Invoice {
   id?: string;
   invoiceNo?: string;
-  invoiceType: 'ORDINARY' | 'SPECIAL' | 'ELECTRONIC';
-  invoiceCode?: string;
-  amount: number;
-  taxRate: number;
-  taxAmount: number;
-  totalAmount: number;
-  buyerName?: string;
+  invoiceType: InvoiceType;
+  buyerName: string;
   buyerTaxNo?: string;
-  buyerAddress?: string;
-  buyerPhone?: string;
-  buyerBank?: string;
-  buyerBankAccount?: string;
   sellerName?: string;
   sellerTaxNo?: string;
-  relatedOrderNo?: string;
-  relatedSettlementId?: string;
-  status?: 'DRAFT' | 'ISSUED' | 'VERIFIED' | 'CANCELLED';
-  issueDate?: string;
+  totalAmount: number;
+  taxAmount?: number;
+  invoiceDate?: string;
+  status?: InvoiceStatus;
   remark?: string;
-  tenantId?: number;
   createTime?: string;
   updateTime?: string;
 }
 
-export const INVOICE_TYPES = [
-  { value: 'ORDINARY', label: '普通发票' },
-  { value: 'SPECIAL', label: '增值税专用发票' },
-  { value: 'ELECTRONIC', label: '电子发票' },
-];
+export interface InvoiceListReq {
+  page?: number;
+  size?: number;
+  status?: InvoiceStatus;
+  buyerName?: string;
+  invoiceType?: InvoiceType;
+  startDate?: string;
+  endDate?: string;
+}
 
-export const INVOICE_STATUS = [
-  { value: 'DRAFT', label: '草稿', color: 'default' },
-  { value: 'ISSUED', label: '已开票', color: 'blue' },
-  { value: 'VERIFIED', label: '已核销', color: 'green' },
-  { value: 'CANCELLED', label: '已作废', color: 'red' },
-];
+// ============================================================
+// API 方法
+// ============================================================
 
-export const invoiceApi = {
-  getList: async (params?: Record<string, unknown>) => {
-    return await api.post('/finance/invoices/list', params);
-  },
-  getById: async (id: string) => {
-    return await api.get(`/finance/invoices/${id}`);
-  },
-  create: async (data: Partial<Invoice>) => {
-    return await api.post('/finance/invoices', data);
-  },
-  update: async (data: Partial<Invoice>) => {
-    return await api.put('/finance/invoices', data);
-  },
-  issue: async (id: string) => {
-    return await api.post(`/finance/invoices/${id}/issue`);
-  },
-  verify: async (id: string) => {
-    return await api.post(`/finance/invoices/${id}/verify`);
-  },
-  cancel: async (id: string) => {
-    return await api.post(`/finance/invoices/${id}/cancel`);
-  },
-  delete: async (id: string) => {
-    return await api.delete(`/finance/invoices/${id}`);
-  },
+const invoiceApi = {
+  /** 分页列表 */
+  list: (params: InvoiceListReq) =>
+    api.post<any>('/finance/invoice/list', params),
+
+  /** 新建发票 */
+  create: (data: Omit<Invoice, 'id'>) =>
+    api.post<Invoice>('/finance/invoice/create', data),
+
+  /** 更新发票 */
+  update: (data: Invoice) =>
+    api.put<Invoice>('/finance/invoice/update', data),
+
+  /** 标记已开票 */
+  issue: (id: string) =>
+    api.post<void>(`/finance/invoice/${id}/issue`),
+
+  /** 作废发票 */
+  cancel: (id: string) =>
+    api.post<void>(`/finance/invoice/${id}/cancel`),
 };
+
+export default invoiceApi;

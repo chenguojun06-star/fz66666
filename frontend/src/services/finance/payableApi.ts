@@ -1,62 +1,62 @@
-import api from '../../utils/api';
+import api from '@/utils/api';
+
+// ============================================================
+// 类型定义
+// ============================================================
+
+export type PayableStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIAL';
 
 export interface Payable {
   id?: string;
   payableNo?: string;
+  supplierName: string;
   supplierId?: string;
-  supplierName?: string;
   amount: number;
   paidAmount?: number;
-  unpaidAmount?: number;
   dueDate?: string;
-  paymentDate?: string;
-  description?: string;
-  relatedOrderNo?: string;
-  relatedPurchaseId?: string;
-  status?: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+  status?: PayableStatus;
+  bizType?: string;
+  bizId?: string;
   remark?: string;
-  tenantId?: number;
   createTime?: string;
-  updateTime?: string;
 }
 
 export interface PayableStats {
-  totalPending: number;
-  totalOverdue: number;
-  overdueCount: number;
-  newThisMonth: number;
+  pendingAmount: number;
+  overdueAmount: number;
+  paidAmount: number;
+  totalCount: number;
 }
 
-export const PAYABLE_STATUS = [
-  { value: 'PENDING', label: '待付款', color: 'orange' },
-  { value: 'PARTIAL', label: '部分付款', color: 'blue' },
-  { value: 'PAID', label: '已付清', color: 'green' },
-  { value: 'OVERDUE', label: '已逾期', color: 'red' },
-];
+export interface PayableListReq {
+  page?: number;
+  size?: number;
+  status?: PayableStatus;
+  supplierName?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
-export const payableApi = {
-  getList: async (params?: Record<string, unknown>) => {
-    return await api.post('/finance/payables/list', params);
-  },
-  getStats: async () => {
-    return await api.get('/finance/payables/stats');
-  },
-  getById: async (id: string) => {
-    return await api.get(`/finance/payables/${id}`);
-  },
-  create: async (data: Partial<Payable>) => {
-    return await api.post('/finance/payables', data);
-  },
-  confirmPayment: async (id: string, amount: number) => {
-    return await api.post(`/finance/payables/${id}/confirm-payment`, null, { params: { amount } });
-  },
-  update: async (data: Partial<Payable>) => {
-    return await api.put('/finance/payables', data);
-  },
-  delete: async (id: string) => {
-    return await api.delete(`/finance/payables/${id}`);
-  },
-  markOverdue: async () => {
-    return await api.post('/finance/payables/mark-overdue');
-  },
+// ============================================================
+// API 方法
+// ============================================================
+
+const payableApi = {
+  /** 分页列表 */
+  list: (params: PayableListReq) =>
+    api.post<any>('/finance/payable/list', params),
+
+  /** 汇总统计 */
+  stats: () =>
+    api.get<PayableStats>('/finance/payable/stats'),
+
+  /** 新建应付单 */
+  create: (data: Omit<Payable, 'id'>) =>
+    api.post<Payable>('/finance/payable/create', data),
+
+  /** 标记已付款 */
+  markPaid: (id: string) =>
+    api.post<void>(`/finance/payable/${id}/mark-paid`),
 };
+
+export default payableApi;

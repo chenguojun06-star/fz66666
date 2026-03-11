@@ -8,7 +8,3 @@ export const ExpenseReimbursement = React.lazy(() => import('./pages/Finance/Exp
 export const WagePayment = React.lazy(() => import('./pages/Finance/WagePayment'));
 export const EcSalesRevenue = React.lazy(() => import('./pages/EcSalesRevenue'));
 export const TaxExport = React.lazy(() => import('./pages/TaxExport'));
-export const InvoicePage = React.lazy(() => import('./pages/Invoice'));
-export const PayablePage = React.lazy(() => import('./pages/Payable'));
-export const TaxConfigPage = React.lazy(() => import('./pages/TaxConfig'));
-export const FinancialReportPage = React.lazy(() => import('./pages/FinancialReport'));
