@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（134个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-11 | **AI指令版本**：v3.15（ViewMigrator 视图 Collation NONE 修复）
+> **最后更新**：2026-03-12 | **AI指令版本**：v3.16（ViewMigrator 视图 Collation NONE — Flyway 修复路径修正）
 
 ---
 
@@ -1005,7 +1005,10 @@ SKU = styleNo + color + size
 12. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
 13. **git push = 云端自动重新部署**：`.github/workflows/ci.yml` 的 `deploy` job 通过腾讯云 `cloudbase-action` 触发部署，push 到 main 后 3~5 分钟自动生效。**需要** GitHub Actions Secrets（`CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` / `CLOUDBASE_ENV_ID`，已在仓库 Settings 中配置），**无需**手动上传 JAR。
 14. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
-15. **【2026-03-11】ViewMigrator 视图 Collation NONE 错误**：`v_production_order_flow_stage_snapshot` 等视图中 `CONVERT(... USING utf8mb4)` 产生 NONE 可强制性，MAX() 比较报错 `Illegal mix of collations ... for operation 'max'`。已修复：ViewMigrator.java 所有 11 处 CONVERT 加 `COLLATE utf8mb4_bin`（commit 375c307f）。云端容器重启后自动生效（ViewMigrator 仅在启动时执行），若仍有错误需等 3~5 分钟或手动重启容器。此错误的根本原因是代码中 SQL 字符串处理导致的字符集可强制性问题，不影响旧版本云端数据（自动修复）。
+15. **【2026-03-11/12】ViewMigrator 视图 Collation NONE 错误（已通过 Flyway 彻底修复）**：`v_production_order_flow_stage_snapshot` 等视图中 `CONVERT(... USING utf8mb4)` 不加 `COLLATE` 会产生 NONE 可强制性（coercibility 6），`MAX()` 对多行聚合时 MySQL 8.0 抛出 `Illegal mix of collations (utf8mb4_bin,NONE) for operation 'max'`。
+   - ⚠️ **v3.15 描述有误**：ViewMigrator 在云端从不执行。根因：`cloudbaserc.json` 设置 `FASHION_DB_INITIALIZER_ENABLED=false` + `application-prod.yml` 设置 `initializer-enabled: false`，导致 `DataInitializer` Bean 在云端从未实例化，ViewMigrator.initialize() 从未运行。单独修复 ViewMigrator.java（commit 375c307f）对云端无效。
+   - ✅ **正确修复路径（Flyway）**：新增 `V20260312001__fix_view_collation_none.sql`，包含三个视图的完整 `CREATE OR REPLACE VIEW`，所有 CONVERT 表达式均加 `COLLATE utf8mb4_bin`。Flyway（云端 `FLYWAY_ENABLED=true`）在下次部署时自动执行，一次性修复所有租户的视图定义。
+   - **永久规律**：凡是修改这三个视图（`v_production_order_flow_stage_snapshot`、`v_production_order_stage_done_agg`、`v_production_order_procurement_snapshot`），必须同时新增 Flyway 迁移脚本，仅更新 ViewMigrator.java 对云端无效。Flyway 脚本内容与 ViewMigrator fallback SQL 保持一致（同步维护）。
 
 ---
 
