@@ -8,6 +8,12 @@ server:
       enabled: true
       force: true
   shutdown: graceful
+  tomcat:
+    threads:
+      max: 400        # 支持500+ VU（默认200，高并发时不足）
+      min-spare: 50   # 预热50个线程，减少冷启动延迟
+    accept-count: 500 # 等待队列增至500（默认100）
+    max-connections: 6000 # 最大连接数（NIO默认8192，适当限制）
 
 spring:
   main:
@@ -23,9 +29,9 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initialization-fail-timeout: 0
-      connection-timeout: 10000 # 优化：10秒连接超时（原5秒可能在网络抖动时过短）
-      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20} # 优化：云端数据库通常有连接数限制，30可能过多
-      minimum-idle: ${HIKARI_MIN_IDLE:5} # 优化：保持5个活跃连接，避免冷启动延迟
+      connection-timeout: 15000 # 15秒连接超时（支持高并发队列等待）
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:50} # 支持500+ VU并发（原20在500并发时连接耗尽）
+      minimum-idle: ${HIKARI_MIN_IDLE:10} # 保持10个活跃连接，减少高峰期连接创建延迟
       idle-timeout: 300000 # 优化：空闲5分钟释放（原10分钟）
       max-lifetime: 1800000
       connection-test-query: SELECT 1
