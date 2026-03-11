@@ -161,6 +161,19 @@ public class OrderDeliveryRiskOrchestrator {
         item.setCurrentProgress(currentProgress);
         item.setRequiredDailyOutput(requiredDaily);
         item.setRiskDescription(riskDesc);
+        // 逃期概率分：overdue=1.0, danger=0.85, warning=0.60, safe 按剩余天数线性
+        double riskScore;
+        if ("overdue".equals(riskLevel)) {
+            riskScore = 1.0;
+        } else if ("danger".equals(riskLevel)) {
+            riskScore = 0.85;
+        } else if ("warning".equals(riskLevel)) {
+            riskScore = 0.60;
+        } else {
+            // safe：daysLeft 越大分越低，30天以上归为 0.1
+            riskScore = Math.max(0.05, 0.55 - Math.min(daysLeft, 30) / 30.0 * 0.5);
+        }
+        item.setRiskScore(riskScore);
         return item;
     }
 

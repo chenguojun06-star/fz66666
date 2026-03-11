@@ -762,6 +762,108 @@ export interface IntelligenceBrainSnapshotResponse {
   actions: IntelligenceBrainAction[];
 }
 
+// ── B阶段新增：智能驾驶舱扩展接口 ──
+
+export interface FactoryCapacityGap {
+  factoryName: string;
+  pendingQuantity: number;
+  dailyCapacity: number;
+  estimatedDaysToComplete: number;
+  nearestDueDate: string;
+  daysToNearestDue: number;
+  gapDays: number;
+  gapLevel: 'safe' | 'tight' | 'gap' | 'critical';
+  advice: string;
+}
+export interface CapacityGapResponse {
+  totalFactories: number;
+  gapFactoryCount: number;
+  factories: FactoryCapacityGap[];
+}
+
+export interface StagnantOrderAlert {
+  orderId: string;
+  orderNo: string;
+  styleNo: string;
+  factoryName: string;
+  lastScanTime: string;
+  stagnantDays: number;
+  currentProgress: number;
+  plannedEndDate: string;
+  daysToDeadline: number;
+  severity: 'watch' | 'alert' | 'urgent';
+  actionAdvice: string;
+}
+export interface StagnantAlertResponse {
+  checkedOrders: number;
+  stagnantCount: number;
+  alerts: StagnantOrderAlert[];
+}
+
+export interface ReconciliationAnomalyItem {
+  reconciliationId: string;
+  reconciliationNo: string;
+  orderNo: string;
+  styleNo: string;
+  factoryName: string;
+  anomalyType: 'high_deduction' | 'low_profit' | 'overdue_pending';
+  anomalyDesc: string;
+  deductionAmount: number;
+  profitMarginPct: number;
+  status: string;
+  createTime: string;
+  pendingDays: number;
+  priorityScore: number;
+  advice: string;
+}
+export interface ReconciliationAnomalyResponse {
+  totalChecked: number;
+  anomalyCount: number;
+  items: ReconciliationAnomalyItem[];
+}
+
+export interface ApprovalAdvice {
+  approvalId: string;
+  operationType: string;
+  targetNo: string;
+  applicantName: string;
+  orgUnitName: string;
+  applyReason: string;
+  applyTime: string;
+  pendingHours: number;
+  verdict: 'APPROVE' | 'REJECT' | 'ESCALATE';
+  verdictReason: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  priorityScore: number;
+}
+export interface ApprovalAdvisorResponse {
+  pendingCount: number;
+  highRiskCount: number;
+  items: ApprovalAdvice[];
+}
+
+export interface ReplenishmentItem {
+  materialCode: string;
+  materialName: string;
+  spec: string;
+  unit: string;
+  currentStock: number;
+  demandQuantity: number;
+  shortageQuantity: number;
+  urgencyLevel: 'urgent' | 'warning' | 'watch';
+  recommendedSupplier: string;
+  supplierContact: string;
+  supplierPhone: string;
+  affectedOrders: number;
+  advice: string;
+  urgencyScore: number;
+}
+export interface ReplenishmentAdvisorResponse {
+  shortageCount: number;
+  urgentCount: number;
+  items: ReplenishmentItem[];
+}
+
 /* ================================================================
    intelligenceApi — 全部智能运营接口
 ================================================================ */
@@ -1115,4 +1217,26 @@ export const intelligenceApi = {
     downloadFile(`/api/intelligence/professional-report/download?${params.toString()}`);
     await new Promise(r => setTimeout(r, 500));
   },
+
+  // ── 第八批：B阶段新增智能驾驶舱能力 ──
+
+  /** B2 - 产能缺口分析 */
+  getCapacityGap: () =>
+    api.get<{ code: number; data: CapacityGapResponse }>('/intelligence/capacity-gap'),
+
+  /** B3 - 停滞订单预警 */
+  getStagnantAlert: () =>
+    api.get<{ code: number; data: StagnantAlertResponse }>('/intelligence/stagnant-alert'),
+
+  /** B5 - 对账异常优先级 */
+  getReconciliationAnomalyPriority: () =>
+    api.get<{ code: number; data: ReconciliationAnomalyResponse }>('/intelligence/reconciliation/anomaly-priority'),
+
+  /** B6 - 审批 AI 建议 */
+  getApprovalAiAdvice: () =>
+    api.get<{ code: number; data: ApprovalAdvisorResponse }>('/intelligence/approval/ai-advice'),
+
+  /** B8 - 补料采购建议 */
+  getReplenishmentSuggestion: () =>
+    api.get<{ code: number; data: ReplenishmentAdvisorResponse }>('/intelligence/replenishment/suggest'),
 };

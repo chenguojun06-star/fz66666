@@ -35,5 +35,7 @@ public class DeliveryRiskResponse {
         private int currentDailyOutput;
         /** 一句话风险描述 */
         private String riskDescription;
+        /** 逃期概率评分 0.0（安全）~ 1.0（已逾期） */
+        private double riskScore;
     }
 }

@@ -15,7 +15,7 @@ import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
 import AiExecutionPanel from '../../components/AiExecutionPanel';
 
-/* ── 智能分析面板 — lazy 加载（11个） ── */
+/* ── 智能分析面板 — lazy 加载（17个） ── */
 const DefectTracePanel = lazy(() => import('./DefectTracePanel'));
 const SmartAssignmentPanel = lazy(() => import('./SmartAssignmentPanel'));
 const WorkerProfilePanel = lazy(() => import('./WorkerProfilePanel'));
@@ -28,6 +28,12 @@ const FinanceAuditPanel = lazy(() => import('./FinanceAuditPanel'));
 const StyleQuoteSuggestionPanel = lazy(() => import('./StyleQuoteSuggestionPanel'));
 const SupplierScorecardPanel = lazy(() => import('./SupplierScorecardPanel'));
 const AiMetricsPanel = lazy(() => import('./AiMetricsPanel'));
+const MaterialShortagePanel = lazy(() => import('./MaterialShortagePanel'));
+const CapacityGapPanel = lazy(() => import('./CapacityGapPanel'));
+const StagnantAlertPanel = lazy(() => import('./StagnantAlertPanel'));
+const ReconciliationAnomalyPanel = lazy(() => import('./ReconciliationAnomalyPanel'));
+const ApprovalAdvisorPanel = lazy(() => import('./ApprovalAdvisorPanel'));
+const ReplenishmentAdvisorPanel = lazy(() => import('./ReplenishmentAdvisorPanel'));
 import {
   risk2color, grade2color, LiveDot, Sparkline,
   KpiPop, AnimatedNum, medalColor,
@@ -112,6 +118,12 @@ const IntelligenceCenter: React.FC = () => {
     { key: 'supplierScorecard',  label: '供应商评分' },
     { key: 'learningReport',     label: '学习报告' },
     { key: 'mindPush',           label: '智能推送' },
+    { key: 'materialShortage',   label: '缺料预警' },
+    { key: 'capacityGap',        label: '产能缺口' },
+    { key: 'stagnantAlert',      label: '停滞预警' },
+    { key: 'reconciliationAnomaly', label: '对账异常' },
+    { key: 'approvalAdvisor',    label: '审批建议' },
+    { key: 'replenishmentAdvisor', label: '补料建议' },
     ...(isSuperAdmin ? [{ key: 'aiMetrics' as const, label: 'AI 调用指标' }] : []),
   ] as const, [isSuperAdmin]);
 
@@ -1524,6 +1536,24 @@ const IntelligenceCenter: React.FC = () => {
               {visiblePanels.mindPush && (
                 <div style={{ padding: '0 24px 16px' }}>
                   <MindPushPanel />
+                </div>
+              )}
+              {(visiblePanels.materialShortage || visiblePanels.capacityGap) && (
+                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.materialShortage && visiblePanels.capacityGap ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
+                  {visiblePanels.materialShortage && <MaterialShortagePanel />}
+                  {visiblePanels.capacityGap && <CapacityGapPanel />}
+                </div>
+              )}
+              {(visiblePanels.stagnantAlert || visiblePanels.reconciliationAnomaly) && (
+                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.stagnantAlert && visiblePanels.reconciliationAnomaly ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
+                  {visiblePanels.stagnantAlert && <StagnantAlertPanel />}
+                  {visiblePanels.reconciliationAnomaly && <ReconciliationAnomalyPanel />}
+                </div>
+              )}
+              {(visiblePanels.approvalAdvisor || visiblePanels.replenishmentAdvisor) && (
+                <div style={{ display: 'grid', gridTemplateColumns: visiblePanels.approvalAdvisor && visiblePanels.replenishmentAdvisor ? '1fr 1fr' : '1fr', gap: 16, padding: '0 24px 16px' }}>
+                  {visiblePanels.approvalAdvisor && <ApprovalAdvisorPanel />}
+                  {visiblePanels.replenishmentAdvisor && <ReplenishmentAdvisorPanel />}
                 </div>
               )}
               {isSuperAdmin && visiblePanels.aiMetrics && (

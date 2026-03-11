@@ -173,6 +173,21 @@ public class IntelligenceController {
     @Autowired
     private IntelligenceObservabilityOrchestrator observabilityOrchestrator;
 
+    @Autowired
+    private CapacityGapOrchestrator capacityGapOrchestrator;
+
+    @Autowired
+    private StagnantAlertOrchestrator stagnantAlertOrchestrator;
+
+    @Autowired
+    private ReconciliationAnomalyOrchestrator reconciliationAnomalyOrchestrator;
+
+    @Autowired
+    private ApprovalAdvisorOrchestrator approvalAdvisorOrchestrator;
+
+    @Autowired
+    private ReplenishmentAdvisorOrchestrator replenishmentAdvisorOrchestrator;
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {
@@ -581,5 +596,37 @@ public class IntelligenceController {
             @RequestParam(defaultValue = "7") int days) {
         return Result.success(observabilityOrchestrator.getMetricsOverview(
                 UserContext.tenantId(), days));
+    }
+
+    // ── 第六批：B阶段新增智能驾驶舱能力 ──
+
+    /** B2 - 产能缺口分析：按工厂展示排期缺口与风险级别 */
+    @GetMapping("/capacity-gap")
+    public Result<CapacityGapResponse> capacityGap() {
+        return Result.success(capacityGapOrchestrator.analyze());
+    }
+
+    /** B3 - 停滞订单预警：识别3天无扫码的在产订单并给出行动建议 */
+    @GetMapping("/stagnant-alert")
+    public Result<StagnantAlertResponse> stagnantAlert() {
+        return Result.success(stagnantAlertOrchestrator.detect());
+    }
+
+    /** B5 - 对账异常优先级：扫描挂单对账单，按优先分降序输出异常列表 */
+    @GetMapping("/reconciliation/anomaly-priority")
+    public Result<ReconciliationAnomalyResponse> reconciliationAnomalyPriority() {
+        return Result.success(reconciliationAnomalyOrchestrator.analyze());
+    }
+
+    /** B6 - 审批建议：对所有PENDING变更申请给出 APPROVE/REJECT/ESCALATE 建议 */
+    @GetMapping("/approval/ai-advice")
+    public Result<ApprovalAdvisorResponse> approvalAiAdvice() {
+        return Result.success(approvalAdvisorOrchestrator.advise());
+    }
+
+    /** B8 - 补料建议：基于缺料预测生成采购优先级与供应商推荐 */
+    @GetMapping("/replenishment/suggest")
+    public Result<ReplenishmentAdvisorResponse> replenishmentSuggest() {
+        return Result.success(replenishmentAdvisorOrchestrator.suggest());
     }
 }
