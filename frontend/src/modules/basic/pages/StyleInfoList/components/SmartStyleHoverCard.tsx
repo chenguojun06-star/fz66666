@@ -41,13 +41,24 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
 
   const doneCount = stages.filter(s => s.done).length;
   const nextStage  = stages.find(s => !s.done);
+  // 已完成判断（三重保险）：
+  //   1. sampleStatus=COMPLETED（最可靠，真实DB字段，永远存在）
+  //   2. progressNode=样衣完成（虚拟字段，列表接口填充时有效）
+  //   3. doneCount=6（6个时间戳全部有值）
+  // 任意一个成立 => 已完成，不显示逾期
+  const sampleStatus = record.sampleStatus;
+  const isCompleted = (!!sampleStatus && sampleStatus.toUpperCase() === 'COMPLETED')
+    || progressNode === '样衣完成'
+    || doneCount === STAGES.length;
 
-  const riskColor = daysLeft === null ? '#888'
+  const riskColor = isCompleted ? '#52c41a'
+    : daysLeft === null ? '#888'
     : daysLeft <= 0 ? '#ff4d4f'
     : daysLeft <= 3 ? '#fa8c16'
     : '#52c41a';
 
-  const riskLabel = daysLeft === null ? null
+  const riskLabel = isCompleted ? null
+    : daysLeft === null ? null
     : daysLeft <= 0 ? `已逾期 ${Math.abs(daysLeft)} 天`
     : daysLeft <= 3 ? `${daysLeft} 天后截止`
     : `剩 ${daysLeft} 天`;
