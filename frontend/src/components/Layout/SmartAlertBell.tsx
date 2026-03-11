@@ -67,6 +67,18 @@ const getEventNav = (ev: UrgentEvent): string => {
   if (ev.type === 'material')  return '/warehouse/material';
   return '/dashboard';
 };
+// ─── localStorage 每日 dismiss 辅助 ─────────────────────────
+const _sapDismissKey = () => `sap_dismissed_${new Date().toISOString().slice(0, 10)}`;
+const loadDismissed = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(_sapDismissKey());
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch { return new Set(); }
+};
+const saveDismissed = (ids: Set<string>) => {
+  try { localStorage.setItem(_sapDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
+};
+
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
@@ -82,15 +94,19 @@ const SmartAlertBell: React.FC = () => {
   const [fetchedToday, setFetchedToday] = useState('');
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
   const [myUnreadCount, setMyUnreadCount] = useState(0);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
   const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // 总预警数 = 逾期 + 高风险 + 紧急事件 + 个人未读通知
+  // 过滤掉今天已消除的事件（隔天自动恢复检测）
+  const visibleEvents = events.filter(ev => !dismissedIds.has(ev.id));
+
+  // 总预警数 = 逾期 + 高风险 + 未消除紧急事件 + 个人未读通知
   const alertCount =
     (brief?.overdueOrderCount ?? 0) +
     (brief?.highRiskOrderCount ?? 0) +
-    events.length +
+    visibleEvents.length +
     myUnreadCount;
 
   // 拉取「我的通知」
@@ -182,6 +198,17 @@ const SmartAlertBell: React.FC = () => {
   useEffect(() => {
     if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages, open]);
+
+  // 消除单条事件（当天不再显示，隔天重新检测）
+  const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDismissedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      saveDismissed(next);
+      return next;
+    });
+  }, []);
 
   // 跳转辅助：关闭面板并导航
   const goTo = (path: string) => {
@@ -347,12 +374,13 @@ const SmartAlertBell: React.FC = () => {
             )}
 
             {/* ── 紧急事件列表 ── */}
-            {events.length > 0 && (
+            {visibleEvents.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒，明日自动重检</span>
                 </div>
-                {events.slice(0, 4).map(ev => (
+                {visibleEvents.slice(0, 6).map(ev => (
                   <div
                     key={ev.id}
                     className="sap-event-row"
@@ -363,6 +391,13 @@ const SmartAlertBell: React.FC = () => {
                     <span className="sap-event-dot" />
                     <span className="sap-event-title">{ev.title}</span>
                     <span className="sap-event-time">{ev.time}</span>
+                    <button
+                      className="sap-event-dismiss-btn"
+                      onClick={(e) => dismissEvent(ev.id, e)}
+                      title="今日不再提醒（明天会重新检测）"
+                    >
+                      <CloseOutlined style={{ fontSize: 9 }} />
+                    </button>
                   </div>
                 ))}
               </div>

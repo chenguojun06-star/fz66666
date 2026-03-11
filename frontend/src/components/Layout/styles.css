@@ -926,6 +926,17 @@
 }
 .sap-event-title { font-size: 12px; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sap-event-time  { font-size: 10px; color: #d1d5db; white-space: nowrap; }
+.sap-event-dismiss-btn {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; cursor: pointer;
+  border-radius: 50%; color: #9ca3af;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+  padding: 0;
+}
+.sap-event-row:hover .sap-event-dismiss-btn { opacity: 1; }
+.sap-event-dismiss-btn:hover { background: #fee2e2; color: #ef4444; }
 
 /* 智能建议 */
 .sap-suggestion {
