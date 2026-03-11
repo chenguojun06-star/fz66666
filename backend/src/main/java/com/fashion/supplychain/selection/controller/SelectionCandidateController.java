@@ -50,15 +50,13 @@ public class SelectionCandidateController {
         return Result.success(candidateOrchestrator.listCandidates(page, size, filters));
     }
 
-    /** 新增候选款 */
+    /** 新增候选款（batchId 可选，不传时自动归入「市场热品导入」批次） */
     @PostMapping("/save")
     public Result<SelectionCandidate> save(@RequestBody SelectionCandidateRequest req) {
         if (req.getStyleName() == null || req.getStyleName().isEmpty()) {
             return Result.fail("款式名称不能为空");
         }
-        if (req.getBatchId() == null) {
-            return Result.fail("批次ID不能为空");
-        }
+        // batchId 为空时，Orchestrator 层会自动获取或创建默认批次，无需在此拦截
         return Result.success(candidateOrchestrator.createCandidate(req));
     }
 

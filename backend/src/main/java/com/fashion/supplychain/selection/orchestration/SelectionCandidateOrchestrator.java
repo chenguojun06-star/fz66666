@@ -82,10 +82,14 @@ public class SelectionCandidateOrchestrator {
         }
     }
 
-    /** 创建候选款 */
+    /** 创建候选款（batchId 为空时自动归入「市场热品导入」批次） */
     @Transactional(rollbackFor = Exception.class)
     public SelectionCandidate createCandidate(SelectionCandidateRequest req) {
         Long tenantId = UserContext.tenantId();
+        // 市场热品一键加入时 batchId 为空，自动获取或创建默认批次
+        if (req.getBatchId() == null) {
+            req.setBatchId(getOrCreateQuickImportBatch(tenantId));
+        }
         validateBatchEditable(req.getBatchId(), tenantId);
 
         String candidateNo = "CAND-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
@@ -298,5 +302,49 @@ public class SelectionCandidateOrchestrator {
         if ("APPROVED".equals(batch.getStatus()) || "CLOSED".equals(batch.getStatus())) {
             throw new RuntimeException("该批次已锁定，不可新增候选款");
         }
+    }
+
+    /**
+     * 获取或创建「市场热品导入」默认批次。
+     * 当用户在市场热品页直接点「加入选品」/「一键下版」且未选批次时调用。
+     * 按年份+品季复用同名 DRAFT/REVIEWING 批次，避免重复建批。
+     */
+    private Long getOrCreateQuickImportBatch(Long tenantId) {
+        int year  = LocalDateTime.now().getYear();
+        int month = LocalDateTime.now().getMonthValue();
+        String season    = (month >= 3 && month <= 8) ? "spring_summer" : "autumn_winter";
+        String seasonCn  = season.equals("spring_summer") ? "春夏" : "秋冬";
+        String batchName = "市场热品导入-" + year + seasonCn;
+
+        // 查找同名可编辑批次（DRAFT 或 REVIEWING）
+        LambdaQueryWrapper<SelectionBatch> q = new LambdaQueryWrapper<SelectionBatch>()
+                .eq(SelectionBatch::getTenantId, tenantId)
+                .eq(SelectionBatch::getBatchName, batchName)
+                .eq(SelectionBatch::getDeleteFlag, 0)
+                .in(SelectionBatch::getStatus, "DRAFT", "REVIEWING")
+                .orderByDesc(SelectionBatch::getCreateTime)
+                .last("LIMIT 1");
+        SelectionBatch existing = batchService.getOne(q);
+        if (existing != null) {
+            return existing.getId();
+        }
+
+        // 不存在则自动创建
+        SelectionBatch batch = new SelectionBatch();
+        batch.setBatchNo("SEL-MKT-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                + "-" + String.format("%04d", (int) (Math.random() * 9000) + 1000));
+        batch.setBatchName(batchName);
+        batch.setSeason(season);
+        batch.setYear(year);
+        batch.setStatus("DRAFT");
+        batch.setFinalizedQty(0);
+        batch.setDeleteFlag(0);
+        batch.setTenantId(tenantId);
+        batch.setCreatedById(UserContext.userId());
+        batch.setCreatedByName(UserContext.username());
+        batchService.save(batch);
+        log.info("[Selection] 自动创建市场热品默认批次: batchName={}, tenantId={}, batchId={}",
+                batchName, tenantId, batch.getId());
+        return batch.getId();
     }
 }
