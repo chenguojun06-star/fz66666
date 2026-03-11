@@ -23,7 +23,6 @@
             "SPRING_DATASOURCE_PASSWORD": "{{MYSQL_PASSWORD}}",
             "SPRING_REDIS_HOST": "dgfbkffb.my-redis.j6jq9qgw.o7t59w4f.com",
             "SPRING_REDIS_PORT": "6379",
-            "SPRING_REDIS_PASSWORD": "{{REDIS_PASSWORD}}",
             "APP_AUTH_JWT_SECRET": "{{JWT_SECRET}}",
             "WECHAT_MP_APPID": "{{WECHAT_APPID}}",
             "WECHAT_MP_SECRET": "{{WECHAT_SECRET}}",
