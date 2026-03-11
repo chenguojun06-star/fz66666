@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Row, Col, Button, Tag, Space, message, Typography, Tooltip, Spin, Input, Empty, Popover, Rate } from 'antd';
-import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined } from '@ant-design/icons';
-import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket } from '@/services/selection/selectionApi';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Row, Col, Button, Tag, Space, message, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs } from 'antd';
+import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
+import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket, fetchDailyHotItems, refreshDailyHotItems } from '@/services/selection/selectionApi';
 
 const { Text } = Typography;
 const { Search } = Input;
@@ -20,6 +20,20 @@ interface ShoppingItem {
   delivery: string;
 }
 
+interface DailyHotGroup {
+  keyword: string;
+  heatScore: number;
+  products: ShoppingItem[];
+}
+
+interface DailyHotResponse {
+  date: string;
+  cached: boolean;
+  serpApiEnabled: boolean;
+  groups: DailyHotGroup[];
+  total: number;
+}
+
 interface SearchResult {
   items: ShoppingItem[];
   trendScore: number;
@@ -33,6 +47,31 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   const [lastKeyword, setLastKeyword] = useState('');
   const [addLoading, setAddLoading] = useState<Record<number, boolean>>({});
   const [deployLoading, setDeployLoading] = useState<Record<number, boolean>>({});
+  const [dailyHot, setDailyHot] = useState<DailyHotResponse | null>(null);
+  const [dailyHotLoading, setDailyHotLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  /* 页面打开时自动加载今日热榜 */
+  useEffect(() => { loadDailyHot(); }, []);
+
+  const loadDailyHot = useCallback(async () => {
+    setDailyHotLoading(true);
+    try {
+      const data = await fetchDailyHotItems() as DailyHotResponse;
+      setDailyHot(data);
+    } catch { /* 静默失败，不影响手动搜索 */ }
+    finally { setDailyHotLoading(false); }
+  }, []);
+
+  const handleRefreshDailyHot = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const res = await refreshDailyHotItems() as { success: number; failed: number };
+      message.success(`热榜已刺激更新：${res.success} 个关键词成功`);
+      await loadDailyHot();
+    } catch { message.error('刺激失败'); }
+    finally { setRefreshing(false); }
+  }, [loadDailyHot]);
 
   /* 搜索 */
   const doSearch = useCallback(async (kw: string) => {
@@ -137,6 +176,61 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
 
   return (
     <div>
+      {/* 今日热榜 */}
+      <div style={{ marginBottom: 16, border: '1px solid #f0f0f0', borderRadius: 8, padding: '12px 16px', background: '#fffbf0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <Space size={6}>
+            <FireOutlined style={{ color: '#fa8c16' }} />
+            <Text strong style={{ fontSize: 14 }}>今日热榜</Text>
+            {dailyHot?.date && <Text type="secondary" style={{ fontSize: 11 }}>（{dailyHot.date} 数据）</Text>}
+            {dailyHot?.cached && <Tag color="green" style={{ fontSize: 10 }}>已缓存</Tag>}
+          </Space>
+          <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
+        </div>
+        <Spin spinning={dailyHotLoading} size="small">
+          {dailyHot && dailyHot.cached && dailyHot.groups.length > 0 ? (
+            <Tabs size="small" type="card"
+              items={dailyHot.groups.map(g => ({
+                key: g.keyword,
+                label: <span>{g.keyword}{g.heatScore > 0 && <Tag color={g.heatScore >= 70 ? 'red' : 'orange'} style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.heatScore}</Tag>}</span>,
+                children: (
+                  <Row gutter={[10, 10]}>
+                    {g.products.map((item, i) => (
+                      <Col key={i} xs={24} sm={8}>
+                        <div style={{ border: '1px solid #f0f0f0', borderRadius: 6, background: '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                          {item.thumbnail
+                            ? <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: 120, objectFit: 'cover' }} loading="lazy" referrerPolicy="no-referrer" />
+                            : <div style={{ height: 80, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 12 }}>暂无图片</div>}
+                          <div style={{ padding: '8px 10px' }}>
+                            <Tooltip title={item.title}><div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              {item.price && <Text strong style={{ fontSize: 14, color: '#ff4d4f' }}>{item.price}</Text>}
+                              {item.source && <Tag style={{ fontSize: 10, margin: 0 }}>{item.source}</Tag>}
+                            </div>
+                            <Space size={4}>
+                              <Button size="small" icon={<PlusOutlined />} onClick={() => handleAdd(item, i + 1000)} loading={addLoading[i + 1000]} style={{ fontSize: 11 }}>加入选品</Button>
+                              <Button size="small" type="primary" icon={<SendOutlined />} onClick={() => handleDeploy(item, i + 2000)} loading={deployLoading[i + 2000]} style={{ fontSize: 11 }}>下版</Button>
+                            </Space>
+                          </div>
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                ),
+              }))}
+            />
+          ) : (
+            !dailyHotLoading && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {dailyHot?.serpApiEnabled === false
+                  ? 'SerpApi 未配置，热榜暂不可用'
+                  : '今日热榜暂未生成，点击「刷新」立即拉取'}
+              </Text>
+            )
+          )}
+        </Spin>
+      </div>
+
       {/* 搜索栏 */}
       <div style={{ marginBottom: 12 }}>
         <Search

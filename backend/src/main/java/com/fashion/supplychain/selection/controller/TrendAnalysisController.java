@@ -3,6 +3,7 @@ package com.fashion.supplychain.selection.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
 import com.fashion.supplychain.selection.entity.TrendSnapshot;
+import com.fashion.supplychain.selection.job.DailyHotItemsJob;
 import com.fashion.supplychain.selection.orchestration.SelectionApprovalOrchestrator;
 import com.fashion.supplychain.selection.orchestration.TrendAnalysisOrchestrator;
 import com.fashion.supplychain.selection.service.SerpApiTrendService;
@@ -33,6 +34,9 @@ public class TrendAnalysisController {
 
     @Autowired
     private SerpApiTrendService serpApiTrendService;
+
+    @Autowired
+    private DailyHotItemsJob dailyHotItemsJob;
 
     /** 趋势快照列表 */
     @GetMapping("/latest")
@@ -101,5 +105,17 @@ public class TrendAnalysisController {
         String season = (String) body.getOrDefault("season", "");
         if (year == null) year = java.time.LocalDate.now().getYear();
         return Result.success(trendOrchestrator.generateSelectionSuggestion(year, season));
+    }
+
+    /** 今日热榜（系统每日自动拉取，打开页面可直接查看） */
+    @GetMapping("/market/daily-hot")
+    public Result<Map<String, Object>> dailyHotItems() {
+        return Result.success(trendOrchestrator.getDailyHotItems());
+    }
+
+    /** 手动刺激拉取今日热榜（管理员用，可立即预热） */
+    @PostMapping("/market/daily-hot/refresh")
+    public Result<Map<String, Integer>> refreshDailyHot() {
+        return Result.success(dailyHotItemsJob.execute());
     }
 }

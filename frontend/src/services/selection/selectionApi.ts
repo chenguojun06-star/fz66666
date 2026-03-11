@@ -74,3 +74,11 @@ export const aiSuggestion = (data: Record<string, unknown>) =>
 /** 外部市场搜索（SerpApi Google Shopping 真实数据） */
 export const searchExternalMarket = (keyword: string, limit = 20) =>
   request.get(`/selection/trend/market/external?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
+
+/** 今日热榜（系统凌晨 2 点自动拉取，打开页面可直接查看，无需搜索） */
+export const fetchDailyHotItems = () =>
+  request.get('/selection/trend/market/daily-hot');
+
+/** 手动刷新今日热榜（管理员/测试用，立即触发拉取） */
+export const refreshDailyHotItems = () =>
+  request.post('/selection/trend/market/daily-hot/refresh');

@@ -2,6 +2,8 @@ package com.fashion.supplychain.selection.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
@@ -42,6 +44,9 @@ public class TrendAnalysisOrchestrator {
 
     @Autowired(required = false)
     private SerpApiTrendService serpApiTrendService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /** 查询趋势快照列表 */
     public List<TrendSnapshot> listTrends(String trendType, String dataSource, int days) {
@@ -319,6 +324,42 @@ public class TrendAnalysisOrchestrator {
                     + "，建议重点跟进高潜力返单款。");
             result.put("aiEnabled", false);
         }
+        return result;
+    }
+
+    /** 获取今日热榜（系统级快照，不区分租户，打开页面直接可见） */
+    public Map<String, Object> getDailyHotItems() {
+        LocalDate today = LocalDate.now();
+        List<TrendSnapshot> snapshots = snapshotService.list(
+                new LambdaQueryWrapper<TrendSnapshot>()
+                        .eq(TrendSnapshot::getTenantId, 0L)
+                        .eq(TrendSnapshot::getDataSource, "GOOGLE_SHOPPING")
+                        .eq(TrendSnapshot::getTrendType, "DAILY_HOT")
+                        .eq(TrendSnapshot::getSnapshotDate, today)
+                        .orderByDesc(TrendSnapshot::getHeatScore));
+
+        List<Map<String, Object>> groups = new ArrayList<>();
+        for (TrendSnapshot snap : snapshots) {
+            try {
+                List<Map<String, Object>> items = objectMapper.readValue(
+                        snap.getTrendData(), new TypeReference<>() {});
+                Map<String, Object> group = new HashMap<>();
+                group.put("keyword", snap.getKeyword());
+                group.put("heatScore", snap.getHeatScore());
+                group.put("products", items);
+                groups.add(group);
+            } catch (Exception e) {
+                log.warn("[DailyHot] 解析 {} 商品数据失败", snap.getKeyword());
+            }
+        }
+
+        boolean serpReady = serpApiTrendService != null && serpApiTrendService.isReady();
+        Map<String, Object> result = new HashMap<>();
+        result.put("date", today.toString());
+        result.put("cached", !snapshots.isEmpty());
+        result.put("serpApiEnabled", serpReady);
+        result.put("groups", groups);
+        result.put("total", groups.stream().mapToInt(g -> ((List<?>) g.get("products")).size()).sum());
         return result;
     }
 }
