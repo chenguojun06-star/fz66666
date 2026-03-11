@@ -40,7 +40,8 @@ public class PayableController {
     }
 
     @PostMapping("/{id}/mark-paid")
-    public Result<Payable> markPaid(@PathVariable String id, @RequestParam BigDecimal amount) {
+    public Result<Payable> markPaid(@PathVariable String id,
+                                    @RequestParam(required = false) BigDecimal amount) {
         return Result.success(payableOrchestrator.markPaid(id, amount));
     }
 

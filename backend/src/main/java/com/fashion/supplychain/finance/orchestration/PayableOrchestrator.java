@@ -70,20 +70,26 @@ public class PayableOrchestrator {
                         .eq(Payable::getDeleteFlag, 0)
                         .eq(tenantId != null, Payable::getTenantId, tenantId));
 
-        BigDecimal totalPending = BigDecimal.ZERO;
-        BigDecimal totalOverdue = BigDecimal.ZERO;
+        BigDecimal pendingAmount = BigDecimal.ZERO;
+        BigDecimal overdueAmount = BigDecimal.ZERO;
+        BigDecimal paidAmount = BigDecimal.ZERO;
         long overdueCount = 0;
         LocalDate today = LocalDate.now();
         LocalDate firstOfMonth = today.withDayOfMonth(1);
 
         for (Payable p : all) {
-            BigDecimal remaining = p.getAmount().subtract(
-                    p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO);
+            BigDecimal remaining = (p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                    .subtract(p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO);
             if ("PENDING".equals(p.getStatus()) || "PARTIAL".equals(p.getStatus())) {
-                totalPending = totalPending.add(remaining);
+                pendingAmount = pendingAmount.add(remaining);
                 if (p.getDueDate() != null && p.getDueDate().isBefore(today)) {
-                    totalOverdue = totalOverdue.add(remaining);
+                    overdueAmount = overdueAmount.add(remaining);
                     overdueCount++;
+                }
+            } else if ("PAID".equals(p.getStatus())) {
+                if (p.getCreateTime() != null
+                        && p.getCreateTime().toLocalDate().compareTo(firstOfMonth) >= 0) {
+                    paidAmount = paidAmount.add(p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO);
                 }
             }
         }
@@ -94,9 +100,10 @@ public class PayableOrchestrator {
                 .count();
 
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalPending", totalPending);
-        stats.put("totalOverdue", totalOverdue);
+        stats.put("pendingAmount", pendingAmount);
+        stats.put("overdueAmount", overdueAmount);
         stats.put("overdueCount", overdueCount);
+        stats.put("paidAmount", paidAmount);
         stats.put("newThisMonth", newThisMonth);
         return stats;
     }
@@ -146,6 +153,15 @@ public class PayableOrchestrator {
         Payable p = payableService.getById(id);
         if (p == null) throw new RuntimeException("应付单不存在");
         if ("PAID".equals(p.getStatus())) throw new RuntimeException("该应付单已结清，无法重复付款");
+
+        // amount为null时默认结清全部剩余款项
+        if (paymentAmount == null) {
+            BigDecimal paid = p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO;
+            paymentAmount = p.getAmount().subtract(paid);
+            if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("该应付单已结清，无法重复付款");
+            }
+        }
 
         BigDecimal newPaid = (p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO)
                 .add(paymentAmount);

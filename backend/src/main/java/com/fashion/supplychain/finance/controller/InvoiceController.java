@@ -38,6 +38,11 @@ public class InvoiceController {
         return Result.success(invoiceOrchestrator.create(invoice));
     }
 
+    @PutMapping("/update")
+    public Result<Invoice> update(@RequestBody Invoice invoice) {
+        return Result.success(invoiceOrchestrator.update(invoice));
+    }
+
     @PostMapping("/{id}/issue")
     public Result<Invoice> issue(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.issue(id));

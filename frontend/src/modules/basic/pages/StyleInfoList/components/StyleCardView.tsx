@@ -76,6 +76,13 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           return Math.round((completedSteps / totalSteps) * 100);
         },
         getStatus: (record) => {
+          // 已完成状态直接返回 success，不参与逾期判断
+          const node = String((record as any).progressNode || '').trim();
+          const sampleStatus = String((record as any).sampleStatus || '').trim().toUpperCase();
+          if (node === '样衣完成' || sampleStatus === 'COMPLETED') {
+            return 'normal'; // 绿色（完成，不再标危险色）
+          }
+
           // 根据交板日期判断状态颜色
           if (!record.deliveryDate) {
             return 'normal'; // 没有交期，显示正常颜色

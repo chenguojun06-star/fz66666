@@ -69,7 +69,7 @@ const InvoiceTab: React.FC = () => {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await invoiceApi.list({ page, size: 20 });
+      const data = await invoiceApi.list({ page, pageSize: 20 });
       const records = (data as any)?.records || data || [];
       setList(records);
       setTotal((data as any)?.total || records.length);
@@ -110,10 +110,10 @@ const InvoiceTab: React.FC = () => {
   const columns = [
     { title: '发票号', dataIndex: 'invoiceNo', width: 140 },
     { title: '发票类型', dataIndex: 'invoiceType', width: 130, render: (v: string) => INVOICE_TYPES.find(t => t.value === v)?.label || v },
-    { title: '购方名称', dataIndex: 'buyerName', ellipsis: true },
+    { title: '购方名称', dataIndex: 'titleName', ellipsis: true },
     { title: '金额(元)', dataIndex: 'totalAmount', width: 110, render: (v: number) => v?.toFixed(2) },
     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => { const s = INVOICE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{v}</Tag>; } },
-    { title: '开票日期', dataIndex: 'invoiceDate', width: 100 },
+    { title: '开票日期', dataIndex: 'issueDate', width: 100 },
     {
       title: '操作', width: 120,
       render: (_: any, r: any) => (
@@ -160,8 +160,13 @@ const InvoiceTab: React.FC = () => {
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="购方名称">
-            <Form.Item name="buyerName" noStyle rules={[{ required: true }]}>
+            <Form.Item name="titleName" noStyle rules={[{ required: true }]}>
               <Input />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="购方税号">
+            <Form.Item name="titleTaxNo" noStyle>
+              <Input placeholder="91XXXXXXXXXXXXXX" />
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="金额(元)">
@@ -170,7 +175,7 @@ const InvoiceTab: React.FC = () => {
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="开票日期">
-            <Form.Item name="invoiceDate" noStyle>
+            <Form.Item name="issueDate" noStyle>
               <Input placeholder="YYYY-MM-DD" />
             </Form.Item>
           </ModalFieldRow>
@@ -197,7 +202,7 @@ const PayableTab: React.FC = () => {
     setLoading(true);
     try {
       const [listData, statsData] = await Promise.all([
-        payableApi.list({ page, size: 20 }),
+        payableApi.list({ page, pageSize: 20 }),
         payableApi.stats(),
       ]);
       setList((listData as any)?.records || listData || []);
@@ -273,10 +278,12 @@ const TaxConfigTab: React.FC = () => {
   const handleSave = async (vals: any) => {
     setSubmitting(true);
     try {
+      // taxRate: 用户输入 % 整数，小数存入库（除以 100）
+      const payload = { ...vals, taxRate: vals.taxRate / 100 };
       if (editRecord?.id) {
-        await taxConfigApi.update({ ...editRecord, ...vals });
+        await taxConfigApi.update({ ...editRecord, ...payload });
       } else {
-        await taxConfigApi.create(vals);
+        await taxConfigApi.create(payload);
       }
       message.success('保存成功');
       setFormOpen(false);
@@ -296,14 +303,18 @@ const TaxConfigTab: React.FC = () => {
   const columns = [
     { title: '税种名称', dataIndex: 'taxName', width: 150 },
     { title: '税种代码', dataIndex: 'taxCode', width: 120 },
-    { title: '税率(%)', dataIndex: 'taxRate', width: 100, render: (v: number) => `${v}%` },
-    { title: '适用范围', dataIndex: 'appScope', ellipsis: true },
-    { title: '状态', dataIndex: 'isActive', width: 80, render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? '启用' : '停用'}</Tag> },
+    { title: '税率(%)', dataIndex: 'taxRate', width: 100, render: (v: number) => v != null ? `${(v * 100).toFixed(2)}%` : '-' },
+    { title: '描述', dataIndex: 'description', ellipsis: true },
+    { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <Tag color={v === 'ACTIVE' ? 'green' : 'default'}>{v === 'ACTIVE' ? '启用' : '停用'}</Tag> },
     {
       title: '操作', width: 120,
       render: (_: any, r: any) => (
         <Space>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); form.setFieldsValue(r); setFormOpen(true); }}>编辑</Button>
+          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => {
+            setEditRecord(r);
+            form.setFieldsValue({ ...r, taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined });
+            setFormOpen(true);
+          }}>编辑</Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r.id)}>
             <Button size="small" type="link" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
@@ -339,11 +350,13 @@ const TaxConfigTab: React.FC = () => {
           <ModalFieldRow label="税率(%)">
             <Form.Item name="taxRate" noStyle rules={[{ required: true }]}><InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} /></Form.Item>
           </ModalFieldRow>
-          <ModalFieldRow label="适用范围">
-            <Form.Item name="appScope" noStyle><Input placeholder="如：一般纳税人、小规模纳税人" /></Form.Item>
+          <ModalFieldRow label="描述">
+            <Form.Item name="description" noStyle><Input placeholder="如：适用一般纳税人" /></Form.Item>
           </ModalFieldRow>
-          <ModalFieldRow label="是否启用">
-            <Form.Item name="isActive" noStyle><Select options={[{ value: true, label: '启用' }, { value: false, label: '停用' }]} /></Form.Item>
+          <ModalFieldRow label="状态">
+            <Form.Item name="status" noStyle initialValue="ACTIVE">
+              <Select options={[{ value: 'ACTIVE', label: '启用' }, { value: 'INACTIVE', label: '停用' }]} />
+            </Form.Item>
           </ModalFieldRow>
         </Form>
       </ResizableModal>

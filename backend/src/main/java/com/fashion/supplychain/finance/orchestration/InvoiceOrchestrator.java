@@ -131,6 +131,27 @@ public class InvoiceOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public Invoice update(Invoice invoice) {
+        TenantAssert.assertTenantContext();
+        Invoice existing = invoiceService.getById(invoice.getId());
+        if (existing == null) throw new RuntimeException("发票不存在");
+        if (!"DRAFT".equals(existing.getStatus())) throw new RuntimeException("只有草稿状态的发票可以编辑");
+
+        // 保护不可修改的字段
+        invoice.setInvoiceNo(existing.getInvoiceNo());
+        invoice.setTenantId(existing.getTenantId());
+        invoice.setDeleteFlag(existing.getDeleteFlag());
+        invoice.setCreatorId(existing.getCreatorId());
+        invoice.setCreatorName(existing.getCreatorName());
+        invoice.setCreateTime(existing.getCreateTime());
+
+        autoCalcTax(invoice);
+        invoiceService.updateById(invoice);
+        log.info("[InvoiceOrchestrator] 更新发票草稿 id={}", invoice.getId());
+        return invoice;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public Invoice issue(String id) {
         TenantAssert.assertTenantContext();
         Invoice inv = invoiceService.getById(id);
