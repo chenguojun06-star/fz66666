@@ -179,21 +179,21 @@ public class NlQueryOrchestrator {
             return smartHandlers.handleLearningReportQuery();
         }
 
-        // 20.1) 报价建议
+        // 20.1) 报价建议 → 成本查询（报价核心数据源相同）
         if (containsAny(question, "报价", "估价", "估算")) {
-            return handleDirectWidget("quote", "已经为您调取智能款式报价分析：");
+            return smartHandlers.handleCostQuery();
         }
-        // 20.2) 供应商评分/综合评分
+        // 20.2) 供应商评分/综合评分 → 工厂排名（同一数据域）
         if (containsAny(question, "供应商评分", "综合评分", "评分排行")) {
-            return handleDirectWidget("supplier_scorecard", "已经为您生成供应商与工厂多维综合评分，详情如下：");
+            return smartHandlers.handleFactoryRankingQuery();
         }
-        // 20.3) 智能派工
+        // 20.3) 智能派工 → 员工效率（派工依据）
         if (containsAny(question, "派工", "派单")) {
-            return handleDirectWidget("smart_assignment", "智能派工引擎已启动，为您提供最优人员计算：");
+            return smartHandlers.handleWorkerEfficiencyQuery();
         }
-        // 20.4) 待审批执行命令
+        // 20.4) 待审批执行命令 → 风险订单（最需要执行操作的）
         if (containsAny(question, "AI命令", "执行命令", "执行")) {
-            return handleDirectWidget("execution", "已为您调取AI命令待审批与执行卡片：");
+            return smartHandlers.handleRiskQuery();
         }
         // 20.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
         if (containsAny(question, "待审批", "审批")) {
@@ -203,9 +203,9 @@ public class NlQueryOrchestrator {
             resp.setConfidence(90);
             return resp;
         }
-        // 20.5) 财务/资金审核
+        // 20.5) 财务/资金审核 → 成本分析（财务核心查询）
         if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
-            return handleDirectWidget("finance_audit", "已经调出智能异常资金流向监控面板：");
+            return smartHandlers.handleCostQuery();
         }
 
         // 21) 帮助
@@ -710,16 +710,16 @@ public class NlQueryOrchestrator {
             case "warehousing":       return handleWarehousingQuery(tenantId);
             case "cutting":           return handleCuttingQuery(tenantId);
             case "cost":              return smartHandlers.handleCostQuery();
-            case "rhythm":            return handleDirectWidget("rhythm_dna", "已经打开节奏DNA分析面板：");
-            case "scheduling":        return handleDirectWidget("scheduling", "已经打开智能排期面板：");
-            case "notification":      return handleDirectWidget("mind_push", "已经打开智能推送通知面板：");
-            case "self_healing":      return handleDirectWidget("self_healing", "已经打开自动修复面板：");
-            case "learning":          return handleDirectWidget("learning", "已经打开学习报告面板：");
-            case "quote":             return handleDirectWidget("style_quote", "已经打开智能报价面板：");
-            case "supplier_scorecard":return handleDirectWidget("supplier_scorecard", "已经打开供应商评分卡面板：");
-            case "smart_assignment":  return handleDirectWidget("smart_assignment", "已经打开智能派工面板：");
-            case "execution":         return handleDirectWidget("execution", "已经打开执行引擎面板：");
-            case "finance_audit":     return handleDirectWidget("finance_audit", "已经调出智能异常资金流向监控面板：");
+            case "rhythm":            return smartHandlers.handlePulseQuery();
+            case "scheduling":        return smartHandlers.handleRiskQuery();
+            case "notification":      return smartHandlers.handleHealthQuery();
+            case "self_healing":      return smartHandlers.handleSelfHealingQuery();
+            case "learning":          return smartHandlers.handleLearningReportQuery();
+            case "quote":             return smartHandlers.handleCostQuery();
+            case "supplier_scorecard":return smartHandlers.handleFactoryRankingQuery();
+            case "smart_assignment":  return smartHandlers.handleWorkerEfficiencyQuery();
+            case "execution":         return smartHandlers.handleRiskQuery();
+            case "finance_audit":     return smartHandlers.handleCostQuery();
             case "help":              return handleHelpQuery();
             case "summary":           return handleSummaryQuery(tenantId);
             default:                  return null;

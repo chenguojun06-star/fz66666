@@ -10,6 +10,7 @@ import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import WebSocketNotification from './components/common/WebSocketNotification';
 import CommandPalette from './components/common/CommandPalette';
+import FloatingAiChat from './components/common/FloatingAiChat';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
@@ -210,6 +211,7 @@ const AppRoutes: React.FC = () => {
     <>
       <WebSocketNotification />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <FloatingAiChat />
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
         <Route path={paths.login} element={<LoginGate />} />
