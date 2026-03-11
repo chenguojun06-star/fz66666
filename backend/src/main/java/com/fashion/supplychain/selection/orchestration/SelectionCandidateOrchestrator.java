@@ -55,7 +55,9 @@ public class SelectionCandidateOrchestrator {
                 .orderByDesc(SelectionCandidate::getCreateTime);
 
         Object batchId = filters.get("batchId");
-        if (batchId != null) wrapper.eq(SelectionCandidate::getBatchId, Long.valueOf(batchId.toString()));
+        if (batchId != null && !batchId.toString().trim().isEmpty()) {
+            wrapper.eq(SelectionCandidate::getBatchId, Long.valueOf(batchId.toString()));
+        }
 
         String status = (String) filters.get("status");
         if (status != null && !status.isEmpty()) wrapper.eq(SelectionCandidate::getStatus, status);
@@ -66,7 +68,25 @@ public class SelectionCandidateOrchestrator {
         String keyword = (String) filters.get("keyword");
         if (keyword != null && !keyword.isEmpty()) wrapper.like(SelectionCandidate::getStyleName, keyword);
 
-        return candidateService.page(new Page<>(page, size), wrapper);
+        try {
+            return candidateService.page(new Page<>(page, size), wrapper);
+        } catch (Exception ex) {
+            // 云端历史库可能存在字段漂移，兜底降级避免列表直接 500
+            log.error("[Selection] listCandidates 主查询失败，尝试降级查询: tenantId={}, err={}", tenantId, ex.getMessage(), ex);
+
+            LambdaQueryWrapper<SelectionCandidate> fallback = new LambdaQueryWrapper<SelectionCandidate>()
+                    .eq(SelectionCandidate::getTenantId, tenantId)
+                    .orderByDesc(SelectionCandidate::getId);
+
+            if (batchId != null && !batchId.toString().trim().isEmpty()) {
+                fallback.eq(SelectionCandidate::getBatchId, Long.valueOf(batchId.toString()));
+            }
+            if (status != null && !status.isEmpty()) fallback.eq(SelectionCandidate::getStatus, status);
+            if (category != null && !category.isEmpty()) fallback.eq(SelectionCandidate::getCategory, category);
+            if (keyword != null && !keyword.isEmpty()) fallback.like(SelectionCandidate::getStyleName, keyword);
+
+            return candidateService.page(new Page<>(page, size), fallback);
+        }
     }
 
     /** 创建候选款 */

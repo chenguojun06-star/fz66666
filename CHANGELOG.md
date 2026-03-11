@@ -7,6 +7,12 @@
 - 同步：`ViewMigrator` 内联 fallback SQL 同步为 BINARY 聚合，保持本地/云端定义一致。
 - 效果：避免因视图聚合报错导致接口 500（含选品页面列表加载失败场景）。
 
+## 修复补充：SelectionCandidate 列表查询容错（云端历史库兼容）
+
+- 处理：`SelectionCandidateOrchestrator.listCandidates()` 增加参数空值保护（`batchId` 空串不再转 Long）。
+- 处理：主查询异常时自动降级为按 `id` 倒序查询，避免因历史库字段漂移导致接口直接 500。
+- 效果：在不影响正常库结构的前提下，确保选品中心列表页优先可用。
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

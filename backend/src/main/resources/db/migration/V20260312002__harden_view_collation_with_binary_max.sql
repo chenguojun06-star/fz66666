@@ -1,13 +1,6 @@
--- V20260312002: 生产视图 MAX() 聚合二次加固（BINARY 比较）
--- 问题根因：部分云端实例视图定义仍会在 MAX(字符串) 比较阶段触发 collation 推导冲突，
---         报错：Illegal mix of collations (utf8mb4_bin,NONE) for operation 'max'
--- 为什么 Flyway 是唯一可靠修复路径：
---   cloudbaserc.json 中 FASHION_DB_INITIALIZER_ENABLED=false + application-prod.yml initializer-enabled=false
---   导致 DataInitializer Bean 在云端从未实例化，ViewMigrator.initialize() 从未执行。
---   Flyway (FLYWAY_ENABLED=true) 是唯一能在云端自动更新视图定义的机制。
--- 修复内容：三个视图中所有 MAX(字符串) 键比较改为 MAX(CAST(CONCAT(...) AS BINARY))，
---   完全绕开 collation 比较路径，保证在不同实例/连接字符集设置下都稳定。
--- SQL 内容与 ViewMigrator.java ensureProductionViewsFallback() 内联 SQL 完全一致（同步维护）。
+-- V20260312002: 重放三个生产视图 Collation NONE 修复（确保云端实例一致）
+-- 修复内容：与 V20260312001 保持同一视图定义，重新执行 CREATE OR REPLACE VIEW，
+--   用于覆盖历史实例中未正确刷新的旧视图定义。
 
 -- ① v_production_order_flow_stage_snapshot
 CREATE OR REPLACE VIEW v_production_order_flow_stage_snapshot AS
