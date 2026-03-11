@@ -17,6 +17,7 @@ import {
   candidateStageAction,
 } from '@/services/selection/selectionApi';
 import MarketHotItems from './MarketHotItems';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
 
 const { Text, Paragraph } = Typography;
 
@@ -294,12 +295,12 @@ export default function SelectionCenter() {
       {/* 顶部工具栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Space wrap>
-          <Input.Search
-            placeholder="搜索款式名 / 候选款号"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: 220 }}
-            allowClear
+          <StandardSearchBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="搜索款式名 / 候选款号"
+            showDate={false}
+            showStatus={false}
           />
           <Select
             placeholder="全部状态"
