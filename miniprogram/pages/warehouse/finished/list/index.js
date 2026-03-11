@@ -240,7 +240,8 @@ Page({
           color: item.color || '-',
           size: item.size || '-',
           availableQty: Number(item.availableQty) || 0,
-          outboundQty: 0  // 初始出库数量为0
+          outboundQty: 0,  // 初始出库数量为0
+          orderId: item.orderId || ''  // 每个SKU对应的生产订单ID（UUID），用于出库验证
         }));
 
       this.setData({
@@ -342,7 +343,7 @@ Page({
       // 批量创建出库单（为每个SKU创建一条出库记录）
       const promises = outboundSkus.map(sku =>
         api.production.createOutstock({
-          orderId: order.id,
+          orderId: sku.orderId || order.orderId,  // 优先使用每个SKU自己的订单ID，兜底用父级orderId
           orderNo: order.orderNo,
           styleNo: order.styleNo,
           styleName: order.styleName,

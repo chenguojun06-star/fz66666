@@ -1,12 +1,16 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialRoll;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialRollService;
+import com.fashion.supplychain.production.service.MaterialStockService;
+import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,9 @@ public class MaterialRollOrchestrator {
 
     @Autowired
     private MaterialInboundService materialInboundService;
+
+    @Autowired
+    private MaterialStockService materialStockService;
 
     // ----------------------------------------------------------------
     // 1. 生成料卷 QR 标签（PC端调用）
@@ -172,6 +179,9 @@ public class MaterialRollOrchestrator {
             roll.setUpdateTime(LocalDateTime.now());
             materialRollService.updateById(roll);
 
+            // 同步扣减面辅料库存数量
+            decreaseStockForRoll(roll);
+
             result.put("action", "issue");
             result.put("newStatus", "ISSUED");
             result.put("message", "发料成功！" + roll.getMaterialName() + " × " + roll.getQuantity() + roll.getUnit() + " 已出库");
@@ -193,6 +203,9 @@ public class MaterialRollOrchestrator {
                   .set(MaterialRoll::getUpdateTime, LocalDateTime.now());
             materialRollService.update(rollUw);
 
+            // 退料归还库存数量
+            increaseStockForRoll(roll);
+
             result.put("action", "return");
             result.put("newStatus", "IN_STOCK");
             result.put("message", "退回成功！" + roll.getMaterialName() + " 已重新入库");
@@ -213,8 +226,62 @@ public class MaterialRollOrchestrator {
     }
 
     // ----------------------------------------------------------------
-    // 私有工具
+    // 私有工具 & 库存同步
     // ----------------------------------------------------------------
+
+    /** 发料时扣减 material_stock 库存 */
+    private void decreaseStockForRoll(MaterialRoll roll) {
+        if (roll.getQuantity() == null || roll.getQuantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        MaterialStock stock = findStockForRoll(roll);
+        if (stock != null) {
+            int qty = roll.getQuantity().intValue();
+            if (qty > 0) {
+                materialStockService.decreaseStockById(stock.getId(), qty);
+                log.info("发料扣减面辅料库存: stockId={}, materialCode={}, qty={}",
+                        stock.getId(), roll.getMaterialCode(), qty);
+            }
+        } else {
+            log.warn("发料未找到对应库存记录，跳过扣减: materialCode={}, color={}",
+                    roll.getMaterialCode(), roll.getColor());
+        }
+    }
+
+    /** 退料时归还 material_stock 库存 */
+    private void increaseStockForRoll(MaterialRoll roll) {
+        if (roll.getQuantity() == null || roll.getQuantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        MaterialStock stock = findStockForRoll(roll);
+        if (stock != null) {
+            int qty = roll.getQuantity().intValue();
+            if (qty > 0) {
+                materialStockService.update(
+                        new LambdaUpdateWrapper<MaterialStock>()
+                                .eq(MaterialStock::getId, stock.getId())
+                                .setSql("quantity = quantity + " + qty)
+                );
+                log.info("退料归还面辅料库存: stockId={}, materialCode={}, qty={}",
+                        stock.getId(), roll.getMaterialCode(), qty);
+            }
+        } else {
+            log.warn("退料未找到对应库存记录，跳过归还: materialCode={}, color={}",
+                    roll.getMaterialCode(), roll.getColor());
+        }
+    }
+
+    /** 通过料卷的 materialCode + color + tenantId 查找库存记录 */
+    private MaterialStock findStockForRoll(MaterialRoll roll) {
+        LambdaQueryWrapper<MaterialStock> qw = new LambdaQueryWrapper<MaterialStock>()
+                .eq(MaterialStock::getDeleteFlag, 0)
+                .eq(MaterialStock::getMaterialCode, roll.getMaterialCode())
+                .eq(MaterialStock::getTenantId, roll.getTenantId());
+        if (StringUtils.hasText(roll.getColor())) {
+            qw.eq(MaterialStock::getColor, roll.getColor());
+        }
+        return materialStockService.getOne(qw, false);
+    }
 
     private String statusLabel(String status) {
         return switch (status) {
