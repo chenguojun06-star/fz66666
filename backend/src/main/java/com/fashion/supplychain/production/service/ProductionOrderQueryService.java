@@ -83,6 +83,7 @@ public class ProductionOrderQueryService {
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
         String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
         String includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
+        String excludeTerminal = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "excludeTerminal"));
         String orgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orgUnitId"));
         String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
@@ -107,6 +108,11 @@ public class ProductionOrderQueryService {
                 .eq("delete_flag", 0)
                 // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤
                 .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
+
+        // 小程序生产页传 excludeTerminal=true 时，过滤掉已完成/已取消订单，减少数据量提升性能
+        if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
+            wrapper.notIn("status", java.util.List.of("completed", "cancelled"));
+        }
 
         // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
         if ("true".equalsIgnoreCase(delayedOnly)) {

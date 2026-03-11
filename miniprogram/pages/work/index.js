@@ -335,6 +335,7 @@ Page({
           factoryName: normalizeText(f.factoryName),
           parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
           factoryType: String(f.factoryType || '').trim() || '',
+          excludeTerminal: 'true', // 生产页仅显示进行中订单，过滤已完成/已取消，减少数据量
         };
 
         // 根据标签页添加当前工序节点过滤
@@ -393,6 +394,7 @@ Page({
           factoryName: normalizeText(f.factoryName),
           parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
           factoryType: String(f.factoryType || '').trim() || '',
+          excludeTerminal: 'true', // 同步也只取进行中订单
         };
         return await api.production.listOrders(params);
       } catch (error) {
