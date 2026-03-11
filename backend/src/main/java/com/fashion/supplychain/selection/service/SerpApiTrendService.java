@@ -216,6 +216,66 @@ public class SerpApiTrendService {
         }
     }
 
+    // ─────────────── Google Shopping 搜索 ───────────────
+
+    /**
+     * 搜索 Google Shopping 商品列表（支持自定义关键词和数量）。
+     * 返回真实商品：标题、价格、图片、来源、评分等。
+     * 缓存 24h。
+     */
+    public List<Map<String, Object>> searchShopping(String keyword, int limit) {
+        if (!isReady() || keyword == null || keyword.isBlank()) return List.of();
+        int realLimit = Math.min(Math.max(limit, 1), 40);
+
+        String cacheKey = "search:" + keyword.trim() + ":" + realLimit;
+        CachedResult cached = cache.get(cacheKey);
+        if (cached != null && !cached.isExpired() && cached.shoppingData != null) {
+            log.debug("[SerpApi] 缓存命中 search={}, 共{}条", keyword, cached.shoppingData.size());
+            return cached.shoppingData;
+        }
+
+        try {
+            String url = BASE_URL
+                    + "?engine=google_shopping"
+                    + "&q=" + URLEncoder.encode(keyword.trim(), StandardCharsets.UTF_8)
+                    + "&gl=cn&hl=zh-cn"
+                    + "&num=" + realLimit
+                    + "&api_key=" + apiKey;
+
+            String body = doGet(url);
+            if (body == null) return List.of();
+
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode results = root.path("shopping_results");
+
+            List<Map<String, Object>> items = new ArrayList<>();
+            if (results.isArray()) {
+                for (JsonNode node : results) {
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("title", node.path("title").asText(""));
+                    entry.put("price", node.path("price").asText(""));
+                    entry.put("extractedPrice", node.has("extracted_price") ? node.get("extracted_price").asDouble() : null);
+                    entry.put("thumbnail", node.path("thumbnail").asText(""));
+                    entry.put("source", node.path("source").asText(""));
+                    entry.put("link", node.path("link").asText(""));
+                    entry.put("rating", node.has("rating") ? node.get("rating").asDouble() : null);
+                    entry.put("reviews", node.has("reviews") ? node.get("reviews").asInt() : null);
+                    entry.put("delivery", node.path("delivery").asText(""));
+                    items.add(entry);
+                    if (items.size() >= realLimit) break;
+                }
+            }
+
+            log.info("[SerpApi] Shopping search keyword={} 获取到 {} 条", keyword, items.size());
+            cache.put(cacheKey, new CachedResult(items));
+            return items;
+
+        } catch (Exception e) {
+            log.error("[SerpApi] Shopping search失败 keyword={}", keyword, e);
+            return List.of();
+        }
+    }
+
     // ─────────────── 工具方法 ───────────────
 
     /**

@@ -70,3 +70,7 @@ export const searchMarketStyles = (params: { keyword?: string; category?: string
 
 export const aiSuggestion = (data: Record<string, unknown>) =>
   request.post('/selection/trend/ai-suggestion', data);
+
+/** 外部市场搜索（SerpApi Google Shopping 真实数据） */
+export const searchExternalMarket = (keyword: string, limit = 20) =>
+  request.get(`/selection/trend/market/external?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);

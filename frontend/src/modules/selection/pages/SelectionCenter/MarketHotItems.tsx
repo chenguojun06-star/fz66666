@@ -1,281 +1,240 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Row, Col, Button, Tag, Select, Space, message, Typography, Tooltip, Spin, Input, Empty, Image } from 'antd';
-import { FireOutlined, SendOutlined, PlusOutlined, SearchOutlined, ShopOutlined } from '@ant-design/icons';
-import { candidateSave, candidateStageAction, candidateCreateStyle, searchMarketStyles } from '@/services/selection/selectionApi';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Row, Col, Button, Tag, Space, message, Typography, Tooltip, Spin, Input, Empty, Popover, Rate } from 'antd';
+import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined } from '@ant-design/icons';
+import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket } from '@/services/selection/selectionApi';
 
 const { Text } = Typography;
 const { Search } = Input;
 
-const CATEGORIES = ['全部', '连衣裙', '外套', '卫衣', '裤子', '衬衫', 'T恤', '半身裙', '针织', '长裙', '背心', '上衣'];
+const HOT_KEYWORDS = ['连衣裙', '卫衣', '外套', '牛仔裤', 'T恤', '衬衫', '半身裙', '针织衫', '风衣', '西装'];
 
-// 品类 emoji 映射（用于无封面图时的占位）
-const CATEGORY_EMOJI: Record<string, string> = {
-  '连衣裙': '👗', '外套': '🧥', '卫衣': '🩱', '裤子': '👖', '衬衫': '👔',
-  'T恤': '👕', '半身裙': '🌸', '针织': '🧶', '长裙': '✨', '背心': '🦺', '上衣': '👚',
-};
+interface ShoppingItem {
+  title: string;
+  price: string;
+  extractedPrice: number | null;
+  thumbnail: string;
+  source: string;
+  link: string;
+  rating: number | null;
+  reviews: number | null;
+  delivery: string;
+}
 
-interface MarketItem {
-  id: number;
-  styleNo: string;
-  styleName: string;
-  category: string;
-  color: string;
-  season: string;
-  price: number;
-  cover: string;
-  description: string;
-  year: number;
-  customer: string;
-  orderCount: number;
-  totalQuantity: number;
-  totalWarehoused: number;
-  repeatOrderCount: number;
+interface SearchResult {
+  items: ShoppingItem[];
+  trendScore: number;
+  keyword: string;
+  serpApiEnabled: boolean;
 }
 
 export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
-  const [items, setItems] = useState<MarketItem[]>([]);
+  const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState('');
-  const [category, setCategory] = useState('全部');
-  const [searched, setSearched] = useState(false);
+  const [lastKeyword, setLastKeyword] = useState('');
   const [addLoading, setAddLoading] = useState<Record<number, boolean>>({});
   const [deployLoading, setDeployLoading] = useState<Record<number, boolean>>({});
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const doSearch = useCallback(async (kw?: string, cat?: string) => {
+  /* 搜索 */
+  const doSearch = useCallback(async (kw: string) => {
+    const trimmed = kw.trim();
+    if (!trimmed) { message.warning('请输入搜索关键词'); return; }
     setLoading(true);
-    setSearched(true);
+    setLastKeyword(trimmed);
     try {
-      const data = await searchMarketStyles({
-        keyword: kw ?? keyword,
-        category: cat ?? category,
-        limit: 50,
-      });
-      const arr = (data as MarketItem[]) ?? [];
-      setItems(arr);
+      const data = await searchExternalMarket(trimmed, 20) as SearchResult;
+      setResult(data);
+      if (!data.serpApiEnabled) {
+        message.warning('SerpApi 未启用，请联系管理员配置 SERPAPI_KEY');
+      } else if (!data.items?.length) {
+        message.info('未搜索到相关商品，请换个关键词试试');
+      }
     } catch {
-      message.error('查询失败，请检查网络');
-      setItems([]);
+      message.error('搜索失败，请检查网络');
     } finally {
       setLoading(false);
     }
-  }, [keyword, category]);
+  }, []);
 
-  // 首次加载：搜索全部款式
-  useEffect(() => { doSearch('', '全部'); }, []);
+  /* AI 趋势分析（汇总） */
+  const aiAnalysis = useMemo(() => {
+    if (!result?.items?.length) return null;
+    const prices = result.items.map(i => i.extractedPrice).filter((p): p is number => p != null && p > 0);
+    const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+    const sources = [...new Set(result.items.map(i => i.source).filter(Boolean))];
+    const ratedCount = result.items.filter(i => i.rating != null && i.rating > 0).length;
+    return { avgPrice, minPrice, maxPrice, sources, ratedCount, trendScore: result.trendScore, total: result.items.length };
+  }, [result]);
 
-  const handleSearch = (value: string) => {
-    setKeyword(value);
-    doSearch(value, category);
-  };
-
-  const handleCategoryChange = (val: string) => {
-    setCategory(val);
-    doSearch(keyword, val);
-  };
-
-  const handleAdd = async (item: MarketItem) => {
-    setAddLoading(p => ({ ...p, [item.id]: true }));
+  /* 加入选品 */
+  const handleAdd = async (item: ShoppingItem, idx: number) => {
+    setAddLoading(p => ({ ...p, [idx]: true }));
     try {
       await candidateSave({
-        styleName: item.styleName,
-        category: item.category,
-        colorFamily: item.color,
-        sourceType: 'INTERNAL',
-        costEstimate: item.price ? Math.round(item.price * 0.6) : undefined,
-        targetPrice: item.price,
-        remark: `来源：系统款式库 ${item.styleNo || ''}`,
-        seasonTags: item.season || undefined,
+        styleName: item.title?.slice(0, 80) || lastKeyword,
+        category: lastKeyword,
+        sourceType: 'EXTERNAL',
+        targetPrice: item.extractedPrice || undefined,
+        remark: `来源：${item.source || 'Google Shopping'}｜${item.link || ''}`,
+        seasonTags: lastKeyword,
       });
-      message.success(`「${item.styleName}」已加入选品库`);
+      message.success('已加入选品库');
       onAdded?.();
     } catch { message.error('添加失败'); }
-    finally { setAddLoading(p => ({ ...p, [item.id]: false })); }
+    finally { setAddLoading(p => ({ ...p, [idx]: false })); }
   };
 
-  const handleDeploy = async (item: MarketItem) => {
-    setDeployLoading(p => ({ ...p, [item.id]: true }));
+  /* 一键下版 */
+  const handleDeploy = async (item: ShoppingItem, idx: number) => {
+    setDeployLoading(p => ({ ...p, [idx]: true }));
     try {
       const res = await candidateSave({
-        styleName: item.styleName,
-        category: item.category,
-        colorFamily: item.color,
-        sourceType: 'INTERNAL',
-        costEstimate: item.price ? Math.round(item.price * 0.6) : undefined,
-        targetPrice: item.price,
-        remark: `来源：系统款式库 ${item.styleNo || ''}`,
+        styleName: item.title?.slice(0, 80) || lastKeyword,
+        category: lastKeyword,
+        sourceType: 'EXTERNAL',
+        targetPrice: item.extractedPrice || undefined,
+        remark: `来源：${item.source || 'Google Shopping'}`,
       }) as { id?: number };
       if (!res?.id) throw new Error('保存失败');
       await candidateStageAction(res.id, 'approve');
       await candidateCreateStyle(res.id);
-      message.success(`「${item.styleName}」已一键下版！到「样衣管理」查看`);
+      message.success('已一键下版！到「款式管理」查看');
       onAdded?.();
     } catch (e: unknown) {
       message.error((e as { message?: string })?.message ?? '下版失败');
-    } finally { setDeployLoading(p => ({ ...p, [item.id]: false })); }
+    } finally { setDeployLoading(p => ({ ...p, [idx]: false })); }
+  };
+
+  /* 单个商品的 AI Popover 内容 */
+  const renderItemPopover = (item: ShoppingItem) => {
+    const price = item.extractedPrice;
+    const avg = aiAnalysis?.avgPrice || 0;
+    const priceTag = price && avg > 0
+      ? price < avg * 0.8 ? '低于均价20%+（高性价比）'
+        : price > avg * 1.2 ? '高于均价20%+（高端定位）'
+        : '接近市场均价（主流价位）'
+      : '暂无价格数据';
+    const ts = aiAnalysis?.trendScore ?? -1;
+    const trendLabel = ts >= 70 ? '高热度' : ts >= 40 ? '中等热度' : '低热度';
+    return (
+      <div style={{ maxWidth: 280, fontSize: 13 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>AI 趋势分析</div>
+        <div style={{ marginBottom: 6 }}>
+          <Text type="secondary">Google 趋势：</Text>
+          <Tag color={ts >= 70 ? 'red' : ts >= 40 ? 'orange' : 'default'}>{ts >= 0 ? `${ts}/100 ${trendLabel}` : '未获取'}</Tag>
+        </div>
+        <div style={{ marginBottom: 6 }}><Text type="secondary">价格定位：</Text><span>{priceTag}</span></div>
+        {avg > 0 && <div style={{ marginBottom: 6 }}><Text type="secondary">价格区间：</Text><span>¥{aiAnalysis?.minPrice?.toFixed(0)} ~ ¥{aiAnalysis?.maxPrice?.toFixed(0)}（均价 ¥{avg.toFixed(0)}）</span></div>}
+        <div style={{ marginBottom: 6 }}><Text type="secondary">竞品数量：</Text><span>{aiAnalysis?.total || 0} 款在售</span></div>
+        <div style={{ marginBottom: 6 }}><Text type="secondary">销售渠道：</Text><span>{aiAnalysis?.sources?.slice(0, 5).join('、') || '—'}</span></div>
+        {item.rating != null && item.rating > 0 && (
+          <div><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 12 }} /><span style={{ marginLeft: 4, fontSize: 11 }}>({item.reviews ?? 0}条)</span></div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div>
-      {/* 顶部搜索栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-        <ShopOutlined style={{ color: '#1890ff', fontSize: 18 }} />
-        <Text strong style={{ fontSize: 15 }}>系统款式库</Text>
-        <Tag color="blue" style={{ fontSize: 11 }}>真实数据 · 来自您的款式和生产记录</Tag>
-        <div style={{ flex: 1 }} />
+      {/* 搜索栏 */}
+      <div style={{ marginBottom: 12 }}>
         <Search
-          placeholder="搜索款式名 / 款号 / 品类 / 颜色"
+          placeholder="输入关键词搜索市场真实商品（如：连衣裙、卫衣、牛仔外套）"
           allowClear
-          enterButton={<><SearchOutlined /> 搜索</>}
-          onSearch={handleSearch}
-          style={{ maxWidth: 360 }}
-          size="middle"
+          enterButton={<><SearchOutlined /> 搜索市场</>}
+          onSearch={doSearch}
+          size="large"
+          style={{ maxWidth: 520 }}
         />
       </div>
 
-      {/* 品类筛选 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        <Text type="secondary" style={{ fontSize: 12 }}>品类：</Text>
-        {CATEGORIES.map(c => (
-          <Button
-            key={c}
-            size="small"
-            type={category === c ? 'primary' : 'default'}
-            onClick={() => handleCategoryChange(c)}
-            style={{ borderRadius: 16, fontSize: 12 }}
-          >
-            {c !== '全部' && (CATEGORY_EMOJI[c] || '📦')} {c}
-          </Button>
+      {/* 热门关键词 */}
+      <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>热门搜索：</Text>
+        {HOT_KEYWORDS.map(kw => (
+          <Tag key={kw} style={{ cursor: 'pointer', borderRadius: 12, fontSize: 12 }} onClick={() => doSearch(kw)}>{kw}</Tag>
         ))}
       </div>
 
-      {/* 结果计数 */}
-      {searched && !loading && (
-        <div style={{ marginBottom: 10 }}>
+      {/* 搜索结果头部 */}
+      {result && !loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <GoogleOutlined style={{ color: '#4285f4' }} />
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {items.length > 0
-              ? `共找到 ${items.length} 款真实款式${keyword ? `（关键词：${keyword}）` : ''}`
-              : ''}
+            「{result.keyword}」共 {result.items?.length || 0} 件真实商品
+            {result.trendScore >= 0 && (
+              <> · Google 趋势热度 <Tag color={result.trendScore >= 70 ? 'red' : result.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 10, marginLeft: 4 }}>{result.trendScore}/100</Tag></>
+            )}
           </Text>
         </div>
       )}
 
       <Spin spinning={loading}>
-        {items.length > 0 ? (
+        {result?.items?.length ? (
           <Row gutter={[12, 14]}>
-            {items.map(item => (
-              <Col key={item.id} xs={24} sm={12} md={8} lg={6}>
-                <div
-                  style={{
-                    border: '1px solid #f0f0f0', borderRadius: 10, background: '#fff',
-                    overflow: 'hidden', transition: 'box-shadow .2s, transform .2s',
-                    display: 'flex', flexDirection: 'column', height: '100%',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
-                >
-                  {/* 封面图 / 品类占位 */}
-                  <div style={{
-                    height: 120, background: item.cover ? '#fafafa' : 'linear-gradient(135deg,#f0f0f0,#e8e8e8)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden',
-                  }}>
-                    {item.cover ? (
-                      <Image
-                        src={item.cover}
-                        alt={item.styleName}
-                        style={{ width: '100%', height: 120, objectFit: 'cover' }}
-                        preview={false}
-                        fallback="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>"
-                      />
-                    ) : (
-                      <span style={{ fontSize: 48, opacity: 0.5 }}>{CATEGORY_EMOJI[item.category] || '👗'}</span>
-                    )}
-                    {/* 品类角标 */}
-                    <Tag color="blue" style={{ position: 'absolute', top: 6, left: 6, fontSize: 10, borderRadius: 4 }}>
-                      {item.category || '未分类'}
-                    </Tag>
-                    {/* 生产数据角标 */}
-                    {item.orderCount > 0 && (
-                      <Tag color="volcano" style={{ position: 'absolute', top: 6, right: 6, fontSize: 10, borderRadius: 4 }}>
-                        <FireOutlined /> {item.orderCount}次下单
-                      </Tag>
-                    )}
-                  </div>
-
-                  {/* 内容区 */}
-                  <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {/* 款式名 + 款号 */}
-                    <Tooltip title={`${item.styleName}${item.styleNo ? ` (${item.styleNo})` : ''}`}>
-                      <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.styleName}
+            {result.items.map((item, idx) => (
+              <Col key={idx} xs={24} sm={12} md={8} lg={6}>
+                <Popover content={renderItemPopover(item)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3}>
+                  <div
+                    style={{
+                      border: '1px solid #f0f0f0', borderRadius: 8, background: '#fff',
+                      overflow: 'hidden', transition: 'box-shadow .2s, transform .15s',
+                      display: 'flex', flexDirection: 'column', height: '100%', cursor: 'default',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                  >
+                    {/* 商品图片 */}
+                    {item.thumbnail ? (
+                      <div style={{ height: 160, overflow: 'hidden', background: '#fafafa' }}>
+                        <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
-                    </Tooltip>
-                    {item.styleNo && (
-                      <Text type="secondary" style={{ fontSize: 11 }}>款号：{item.styleNo}</Text>
+                    ) : (
+                      <div style={{ height: 100, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13 }}>暂无图片</div>
                     )}
-
-                    {/* 基本信息 */}
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {item.color && <Tag style={{ fontSize: 10, margin: 0, padding: '0 5px' }}>{item.color}</Tag>}
-                      {item.season && <Tag style={{ fontSize: 10, margin: 0, padding: '0 5px' }}>{item.season}</Tag>}
-                      {item.customer && <Tag color="cyan" style={{ fontSize: 10, margin: 0, padding: '0 5px' }}>{item.customer}</Tag>}
-                    </div>
-
-                    {/* 价格 + 生产数据 */}
-                    <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '6px 8px', marginTop: 'auto' }}>
-                      {item.price != null && item.price > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                          <Text strong style={{ fontSize: 16, color: '#ff4d4f' }}>¥{item.price}</Text>
-                          <Text type="secondary" style={{ fontSize: 10 }}>单价</Text>
+                    {/* 内容区 */}
+                    <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <Tooltip title={item.title}>
+                        <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                      </Tooltip>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {item.price && <Text strong style={{ fontSize: 16, color: '#ff4d4f' }}>{item.price}</Text>}
+                        {item.source && <Tag style={{ fontSize: 10, margin: 0 }}>{item.source}</Tag>}
+                      </div>
+                      {item.rating != null && item.rating > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 11 }} />
+                          {item.reviews != null && <Text type="secondary" style={{ fontSize: 10 }}>({item.reviews})</Text>}
                         </div>
                       )}
-                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#595959' }}>
-                        {item.totalQuantity > 0 && <span>累计 <b>{item.totalQuantity}</b> 件</span>}
-                        {item.totalWarehoused > 0 && <span>入库 <b>{item.totalWarehoused}</b> 件</span>}
-                        {item.repeatOrderCount > 0 && <span style={{ color: '#fa8c16' }}>返单 <b>{item.repeatOrderCount}</b> 次</span>}
-                      </div>
-                      {item.orderCount === 0 && (
-                        <Text type="secondary" style={{ fontSize: 10 }}>尚无生产记录</Text>
-                      )}
-                    </div>
-
-                    {item.description && (
-                      <Text type="secondary" style={{ fontSize: 10, lineHeight: 1.4 }} ellipsis={{ tooltip: item.description }}>
-                        {item.description}
-                      </Text>
-                    )}
-
-                    {/* 操作按钮 */}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                      <Tooltip title="加入选品库，走评审流程">
-                        <Button block size="small" icon={<PlusOutlined />} loading={addLoading[item.id]} onClick={() => handleAdd(item)} style={{ flex: 1, fontSize: 11 }}>
-                          加入选品
-                        </Button>
-                      </Tooltip>
-                      <Tooltip title="直接创建款式进入开发">
-                        <Button block size="small" type="primary" icon={<SendOutlined />} loading={deployLoading[item.id]} onClick={() => handleDeploy(item)} style={{ flex: 1, fontSize: 11 }}>
-                          一键下版
-                        </Button>
-                      </Tooltip>
+                      {item.delivery && <Text type="secondary" style={{ fontSize: 10 }}>{item.delivery}</Text>}
+                      <Space style={{ marginTop: 'auto', paddingTop: 6 }} size={6}>
+                        <Button size="small" icon={<PlusOutlined />} loading={addLoading[idx]} onClick={() => handleAdd(item, idx)} style={{ fontSize: 11 }}>加入选品</Button>
+                        <Button size="small" type="primary" icon={<SendOutlined />} loading={deployLoading[idx]} onClick={() => handleDeploy(item, idx)} style={{ fontSize: 11 }}>一键下版</Button>
+                      </Space>
                     </div>
                   </div>
-                </div>
+                </Popover>
               </Col>
             ))}
           </Row>
         ) : (
-          !loading && searched && (
+          !loading && (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
-                <div>
-                  <p style={{ margin: '8px 0', fontSize: 14 }}>
-                    {keyword ? `未找到包含「${keyword}」的款式` : '暂无款式数据'}
-                  </p>
-                  <p style={{ margin: 0, color: '#999', fontSize: 12 }}>
-                    此处显示的是您系统中的真实款式数据。请先在「款式管理」中录入款式，或调整搜索条件。
-                  </p>
-                </div>
+                result && result.items?.length === 0 ? (
+                  <div>
+                    <p style={{ margin: '8px 0', fontSize: 14 }}>未搜索到「{lastKeyword}」的相关商品</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>请换一个关键词，或检查 SerpApi 是否配置正确</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ margin: '8px 0', fontSize: 14 }}>输入关键词，搜索 Google Shopping 真实市场数据</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>数据来源：Google Shopping · 包含真实图片、真实价格、真实来源店铺</p>
+                  </div>
+                )
               }
             />
           )

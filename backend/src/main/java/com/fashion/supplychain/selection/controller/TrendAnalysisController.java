@@ -5,6 +5,7 @@ import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
 import com.fashion.supplychain.selection.entity.TrendSnapshot;
 import com.fashion.supplychain.selection.orchestration.SelectionApprovalOrchestrator;
 import com.fashion.supplychain.selection.orchestration.TrendAnalysisOrchestrator;
+import com.fashion.supplychain.selection.service.SerpApiTrendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,9 @@ public class TrendAnalysisController {
 
     @Autowired
     private SelectionApprovalOrchestrator approvalOrchestrator;
+
+    @Autowired
+    private SerpApiTrendService serpApiTrendService;
 
     /** 趋势快照列表 */
     @GetMapping("/latest")
@@ -72,6 +76,22 @@ public class TrendAnalysisController {
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "30") int limit) {
         return Result.success(approvalOrchestrator.searchMarketStyles(keyword, category, limit));
+    }
+
+    /** 外部市场搜索（SerpApi Google Shopping 真实数据） */
+    @GetMapping("/market/external")
+    public Result<Map<String, Object>> externalMarketSearch(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "20") int limit) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        List<Map<String, Object>> items = serpApiTrendService.searchShopping(keyword, limit);
+        int trendScore = serpApiTrendService.fetchTrendScore(keyword);
+        result.put("items", items);
+        result.put("trendScore", trendScore);
+        result.put("keyword", keyword);
+        result.put("source", "google_shopping");
+        result.put("serpApiEnabled", serpApiTrendService.isReady());
+        return Result.success(result);
     }
 
     /** AI选品策略建议 */
