@@ -16,6 +16,10 @@ RUN npm ci --legacy-peer-deps
 # 复制源码并构建
 COPY . .
 
+# 注入构建时间戳（强制破坏 Docker 层缓存，确保每次 CI 都重新构建最新代码）
+ARG BUILD_DATE=unknown
+RUN echo "Build date: $BUILD_DATE"
+
 # 构建生产包（去掉 console/debugger，代码分割）
 RUN npm run build
 

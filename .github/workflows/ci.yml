@@ -70,6 +70,13 @@ jobs:
     - name: 检出代码
       uses: actions/checkout@v4
 
+    - name: 注入构建时间戳（强制前端容器缓存失效）
+      run: echo "BUILD_DATE=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+
+    - name: 写入构建时间到前端Dockerfile构建参数
+      run: |
+        sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=${{ env.BUILD_DATE }}/" frontend/Dockerfile
+
     - name: 部署到腾讯云 CloudBase
       uses: TencentCloudBase/cloudbase-action@v2
       with:
