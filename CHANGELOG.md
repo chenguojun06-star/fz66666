@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-21 选品中心 Tab 统一 + AI趋势分析功能完善
+
+### 🏷️ 选品中心 UX 重构：4子菜单 → 单Tab页（刷新持久）
+
+**改进**：将选品中心 4 个独立子页面（选品批次/候选款库/趋势看板/历史分析）合并为一个统一的 Tab 页面，通过 URL `?tab=` 参数持久化当前 Tab，任何刷新、浏览器前进后退均不丢失当前 Tab 状态。
+
+#### 前端变更（TypeScript 0 errors ✅）
+- **新增 `SelectionCenter/index.tsx`**：统一 Tab 容器，`useSearchParams` 读写 `?tab=` 保证刷新持久；非法 tab 值自动重置为 `batch`；切换 Tab 时清除 `batchId/batchName` 临时参数
+- **`App.tsx`**：4 条独立 Route → 1 条 `<Route path="/selection" element={<SelectionCenter/>} />`
+- **`routeConfig.ts`**：路径表删除 3 个子路径（`selectionCandidates/Trend/History`）；菜单子项路径改为 `?tab=batch/candidates/trend/history` 查询参数；权限 map 仅保留 `selectionBatch`
+- **`SelectionBatch/index.tsx`**：批次名称点击跳转改为 `/selection?tab=candidates&batchId=xxx&batchName=xxx`（之前为 `/selection/candidates?...`）
+- **`selection/index.ts`**：新增 `SelectionCenter` 导出
+
+#### 趋势看板 AI 功能完善
+- **`TrendDashboard/index.tsx` 新增「AI 趋势分析」按钮**：
+  - 调用 `aiSuggestion({ year, season })` → 后端 `TrendAnalysisOrchestrator.generateSelectionSuggestion()`（DeepSeek 联网分析）
+  - 结果在 Modal 中展示，支持切换年份/季节重新分析，AI 生成中显示 loading 状态
+  - 后端能力：聚合 Top20 历史款式 + 品类分布 + 高潜力复单款 → DeepSeek 生成战略选款建议（AI 关闭时自动退化为规则兜底）
+
+#### AI 功能完整性说明
+| 功能 | 状态 | 位置 |
+|------|------|------|
+| 候选款 AI 评分（4维度+总分） | ✅ 已有 | CandidatePool → `candidateAiScore()` |
+| 趋势历史 AI 选款建议 | ✅ 已有 | HistoricalAnalysis → `aiSuggestion()` |
+| 趋势看板 AI 分析 | ✅ 本次新增 | TrendDashboard → `aiSuggestion()` |
+| 外部趋势实时抓取 | ⚠️ 标签展示 | BAIDU/GOOGLE/WEIBO 作为手动录入来源标签，无 API 调用（需对接实际数据源合约） |
+
+---
+
 ## [Unreleased] - 2026-03-21 选品中心模块全面上线（AI趋势+历史分析+审批流）
 
 ### 🛍️ 选品中心（独立新模块，位于样衣管理上方）

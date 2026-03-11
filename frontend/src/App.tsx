@@ -26,7 +26,7 @@ import { CrmDashboard, ReceivableList } from './modules/crm';
 // 客户门户（公开页，无需登录）
 const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
 import { ProcurementDashboard } from './modules/procurement';
-import { SelectionBatchList, CandidatePool, TrendDashboard, HistoricalAnalysis } from './modules/selection';
+import { SelectionCenter } from './modules/selection';
 import {
   WarehouseDashboard,
   MaterialInventory,
@@ -252,10 +252,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
           <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.procurement} element={<Suspense fallback={<Spin />}><ProcurementDashboard /></Suspense>} />
-          <Route path={paths.selectionBatch} element={<Suspense fallback={<Spin />}><SelectionBatchList /></Suspense>} />
-          <Route path={paths.selectionCandidates} element={<Suspense fallback={<Spin />}><CandidatePool /></Suspense>} />
-          <Route path={paths.selectionTrend} element={<Suspense fallback={<Spin />}><TrendDashboard /></Suspense>} />
-          <Route path={paths.selectionHistory} element={<Suspense fallback={<Spin />}><HistoricalAnalysis /></Suspense>} />
+          <Route path={paths.selectionBatch} element={<SelectionCenter />} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
           <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />

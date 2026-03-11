@@ -93,9 +93,6 @@ export const paths = {
   crmReceivables: '/crm/receivables',
   procurement: '/procurement',
   selectionBatch: '/selection',
-  selectionCandidates: '/selection/candidates',
-  selectionTrend: '/selection/trend',
-  selectionHistory: '/selection/history',
 } as const;
 
 export const permissionCodes = {
@@ -180,10 +177,10 @@ export const menuConfig: MenuSection[] = [
     key: 'selection',
     icon: React.createElement(FireOutlined),
     items: [
-      { label: '选品批次', path: paths.selectionBatch, icon: React.createElement(AppstoreOutlined) },
-      { label: '候选款库', path: paths.selectionCandidates, icon: React.createElement(FileTextOutlined) },
-      { label: '趋势看板', path: paths.selectionTrend, icon: React.createElement(ThunderboltOutlined) },
-      { label: '历史分析', path: paths.selectionHistory, icon: React.createElement(FileSearchOutlined) },
+      { label: '选品批次', path: `${paths.selectionBatch}?tab=batch`, icon: React.createElement(AppstoreOutlined) },
+      { label: '候选款库', path: `${paths.selectionBatch}?tab=candidates`, icon: React.createElement(FileTextOutlined) },
+      { label: '趋势看板', path: `${paths.selectionBatch}?tab=trend`, icon: React.createElement(ThunderboltOutlined) },
+      { label: '历史分析', path: `${paths.selectionBatch}?tab=history`, icon: React.createElement(FileSearchOutlined) },
     ],
   },
   {
@@ -350,9 +347,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.procurement]: permissionCodes.procurement,
   [paths.selectionBatch]: permissionCodes.selection,
-  [paths.selectionCandidates]: permissionCodes.selection,
-  [paths.selectionTrend]: permissionCodes.selection,
-  [paths.selectionHistory]: permissionCodes.selection,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */

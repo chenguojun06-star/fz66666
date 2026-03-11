@@ -138,7 +138,7 @@ export default function SelectionBatchList() {
     { title: '批次号', dataIndex: 'batchNo', width: 160, fixed: 'left' },
     { title: '批次名称', dataIndex: 'batchName', width: 160,
       render: (v, r) => (
-        <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`${paths.selectionCandidates}?batchId=${r.id}&batchName=${encodeURIComponent(r.batchName)}`)}>
+        <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`${paths.selectionBatch}?tab=candidates&batchId=${r.id}&batchName=${encodeURIComponent(r.batchName)}`)}>
           {v}
         </Button>
       ),

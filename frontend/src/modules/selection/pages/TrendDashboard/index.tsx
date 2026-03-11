@@ -15,10 +15,20 @@ import {
   Col,
   Statistic,
   Tooltip,
+  Alert,
+  Spin,
+  Typography,
 } from 'antd';
-import { PlusOutlined, ReloadOutlined, FireOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, FireOutlined, RobotOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { trendLatest, trendAddManual } from '@/services/selection/selectionApi';
+import { trendLatest, trendAddManual, aiSuggestion } from '@/services/selection/selectionApi';
+
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_SEASON = (() => {
+  const m = new Date().getMonth() + 1;
+  if (m >= 3 && m <= 8) return '春夏';
+  return '秋冬';
+})();
 
 interface Trend {
   id: number;
@@ -64,6 +74,11 @@ export default function TrendDashboard() {
   const [days, setDays] = useState(30);
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiText, setAiText] = useState('');
+  const [aiYear, setAiYear] = useState(CURRENT_YEAR);
+  const [aiSeason, setAiSeasonState] = useState(CURRENT_SEASON);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +112,25 @@ export default function TrendDashboard() {
       const err = e as { response?: { data?: { message?: string } } };
       message.error(err?.response?.data?.message ?? '录入失败');
     }
+  };
+
+  const handleAiAnalysis = async () => {
+    setAiLoading(true);
+    setAiText('');
+    try {
+      const res = await aiSuggestion({ year: aiYear, season: aiSeason });
+      setAiText(res?.data ?? '未收到 AI 分析结果');
+    } catch {
+      message.error('AI 分析失败，请稍后重试');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const openAiModal = () => {
+    setAiText('');
+    setAiModalOpen(true);
+    handleAiAnalysis();
   };
 
   // 统计热度分布
@@ -206,6 +240,7 @@ export default function TrendDashboard() {
             ]}
           />
           <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
+          <Button icon={<RobotOutlined />} onClick={openAiModal} style={{ borderColor: '#722ed1', color: '#722ed1' }}>AI 趋势分析</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>手动录入</Button>
         </Space>
       </div>
@@ -252,6 +287,59 @@ export default function TrendDashboard() {
         pagination={{ pageSize: 20, showSizeChanger: true }}
         size="small"
       />
+
+      <Modal
+        title={<Space><RobotOutlined style={{ color: '#722ed1' }} /><span>AI 趋势分析</span></Space>}
+        open={aiModalOpen}
+        onCancel={() => setAiModalOpen(false)}
+        footer={[
+          <Space key="footer">
+            <Select
+              size="small"
+              value={aiYear}
+              onChange={setAiYear}
+              options={Array.from({ length: 3 }, (_, i) => ({ label: `${CURRENT_YEAR + i - 1}年`, value: CURRENT_YEAR + i - 1 }))}
+              style={{ width: 90 }}
+            />
+            <Select
+              size="small"
+              value={aiSeason}
+              onChange={setAiSeasonState}
+              options={[{ label: '春夏', value: '春夏' }, { label: '秋冬', value: '秋冬' }, { label: '全年', value: '全年' }]}
+              style={{ width: 80 }}
+            />
+            <Button onClick={handleAiAnalysis} loading={aiLoading} icon={<RobotOutlined />}>重新分析</Button>
+            <Button onClick={() => setAiModalOpen(false)}>关闭</Button>
+          </Space>,
+        ]}
+        width="60vw"
+        destroyOnClose
+      >
+        {aiLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Spin size="large" />
+            <div style={{ marginTop: 16, color: '#888' }}>AI 正在分析趋势数据，请稍候…</div>
+          </div>
+        ) : aiText ? (
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <Alert
+              type="info"
+              message={`${aiYear}年 ${aiSeason} 选品趋势分析`}
+              description={
+                <Typography.Paragraph
+                  style={{ whiteSpace: 'pre-wrap', marginBottom: 0, lineHeight: 1.8 }}
+                >
+                  {aiText}
+                </Typography.Paragraph>
+              }
+              icon={<RobotOutlined />}
+              showIcon
+            />
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#888' }}>点击「重新分析」获取 AI 趋势建议</div>
+        )}
+      </Modal>
 
       <Modal
         title="手动录入趋势数据"
