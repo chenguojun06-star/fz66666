@@ -40,10 +40,13 @@ public class SelectionCandidateController {
     @PostMapping("/list")
     public Result<IPage<SelectionCandidate>> list(@RequestBody Map<String, Object> params) {
         int page = params.get("page") != null ? Integer.parseInt(params.get("page").toString()) : 1;
-        int size = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 10;
+        // 兼容前端 pageSize 和 size 两种参数名
+        Object sizeObj = params.get("pageSize") != null ? params.get("pageSize") : params.get("size");
+        int size = sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 10;
         Map<String, Object> filters = new HashMap<>(params);
         filters.remove("page");
         filters.remove("size");
+        filters.remove("pageSize");
         return Result.success(candidateOrchestrator.listCandidates(page, size, filters));
     }
 

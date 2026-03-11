@@ -71,21 +71,14 @@ public class SelectionCandidateOrchestrator {
         try {
             return candidateService.page(new Page<>(page, size), wrapper);
         } catch (Exception ex) {
-            // 云端历史库可能存在字段漂移，兜底降级避免列表直接 500
-            log.error("[Selection] listCandidates 主查询失败，尝试降级查询: tenantId={}, err={}", tenantId, ex.getMessage(), ex);
-
-            LambdaQueryWrapper<SelectionCandidate> fallback = new LambdaQueryWrapper<SelectionCandidate>()
-                    .eq(SelectionCandidate::getTenantId, tenantId)
-                    .orderByDesc(SelectionCandidate::getId);
-
-            if (batchId != null && !batchId.toString().trim().isEmpty()) {
-                fallback.eq(SelectionCandidate::getBatchId, Long.valueOf(batchId.toString()));
+            String msg = ex.getMessage() != null ? ex.getMessage() : "";
+            // 表不存在 → Flyway 迁移未执行，返回空页避免 500
+            if (msg.contains("doesn't exist") || msg.contains("does not exist") || msg.contains("Table") || msg.contains("t_selection_candidate")) {
+                log.error("[Selection] t_selection_candidate 表不存在，Flyway 迁移可能未执行: {}", msg);
+                return new Page<>(page, size);
             }
-            if (status != null && !status.isEmpty()) fallback.eq(SelectionCandidate::getStatus, status);
-            if (category != null && !category.isEmpty()) fallback.eq(SelectionCandidate::getCategory, category);
-            if (keyword != null && !keyword.isEmpty()) fallback.like(SelectionCandidate::getStyleName, keyword);
-
-            return candidateService.page(new Page<>(page, size), fallback);
+            log.error("[Selection] listCandidates 查询失败: tenantId={}, err={}", tenantId, msg, ex);
+            return new Page<>(page, size);
         }
     }
 
