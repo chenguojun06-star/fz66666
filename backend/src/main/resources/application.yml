@@ -275,5 +275,5 @@ ai:
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
-  api-key: ${SERPAPI_KEY:}          # 在 .run/backend.env 中设置
-  enabled: ${SERPAPI_ENABLED:false} # 生产环境设置为 true
+  api-key: ${SERPAPI_KEY:128e1b4ca5b24addc0a67f8cab12ed76e29804b54752a080a4c29cf605603580}
+  enabled: ${SERPAPI_ENABLED:true}
