@@ -29,10 +29,43 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li>fetchMarketImages(keyword) → Google Shopping 同类商品图片 + 市场价（最多8条）</li>
  *
  * <p>缓存：本地 ConcurrentHashMap + 24h TTL，保护 250次/月 免费配额
+ *
+ * <p>关键词策略：中文关键词自动映射到英文，不使用 geo=CN（全球数据更稳定）
  */
 @Service
 @Slf4j
 public class SerpApiTrendService {
+
+    /**
+     * 中文→英文关键词映射（Google Trends 中文+geo=CN 经常返回空数据，英文全球查询更稳定）
+     */
+    private static final Map<String, String> ZH_TO_EN = Map.ofEntries(
+        Map.entry("牛仔外套", "denim jacket"),
+        Map.entry("牛仔裤", "jeans"),
+        Map.entry("连衣裙", "dress"),
+        Map.entry("卫衣", "hoodie"),
+        Map.entry("西装", "blazer suit"),
+        Map.entry("T恤", "t-shirt"),
+        Map.entry("衬衫", "shirt"),
+        Map.entry("羽绒服", "down jacket"),
+        Map.entry("风衣", "trench coat"),
+        Map.entry("毛衣", "sweater"),
+        Map.entry("裤子", "pants"),
+        Map.entry("短裙", "mini skirt"),
+        Map.entry("半裙", "skirt"),
+        Map.entry("棉衣", "cotton coat"),
+        Map.entry("夹克", "jacket"),
+        Map.entry("外套", "coat"),
+        Map.entry("上衣", "top"),
+        Map.entry("裙子", "skirt"),
+        Map.entry("短裤", "shorts"),
+        Map.entry("运动服", "sportswear"),
+        Map.entry("睡衣", "pajamas"),
+        Map.entry("内衣", "underwear"),
+        Map.entry("皮草", "fur coat"),
+        Map.entry("皮衣", "leather jacket"),
+        Map.entry("冲锋衣", "outdoor jacket")
+    );
 
     @Value("${serpapi.api-key:}")
     private String apiKey;
@@ -57,8 +90,9 @@ public class SerpApiTrendService {
     /**
      * 获取关键词近3个月 Google Trends 热度均值（0-100）。
      * 缓存 24h，同一关键词不重复消耗配额。
+     * 中文关键词自动翻译为英文再查询（Google Trends geo=CN 对中文支持差）。
      *
-     * @param keyword 搜索关键词（建议中文+品类，如"牛仔外套"）
+     * @param keyword 搜索关键词（支持中文，如"牛仔外套"）
      * @return 0-100 热度均值，-1 表示不可用（服务未启用或请求失败）
      */
     public int fetchTrendScore(String keyword) {
@@ -67,22 +101,26 @@ public class SerpApiTrendService {
             return -1;
         }
 
-        String cacheKey = "trend:" + keyword;
+        // 中文→英文映射：先精确匹配，再尝试包含匹配
+        String searchKeyword = translateToEnglish(keyword);
+
+        String cacheKey = "trend:" + searchKeyword;
         CachedResult cached = cache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
-            log.debug("[SerpApi] 缓存命中 trend={}, score={}", keyword, cached.intValue);
+            log.debug("[SerpApi] 缓存命中 trend={}, score={}", searchKeyword, cached.intValue);
             return cached.intValue;
         }
 
         try {
+            // 不加 geo 参数，使用全球数据（比 geo=CN 稳定得多）
             String url = BASE_URL
                     + "?engine=google_trends"
-                    + "&q=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8)
-                    + "&geo=CN"
-                    + "&hl=zh-CN"
+                    + "&q=" + URLEncoder.encode(searchKeyword, StandardCharsets.UTF_8)
                     + "&date=today+3-m"
                     + "&data_type=TIMESERIES"
                     + "&api_key=" + apiKey;
+
+            log.debug("[SerpApi] Trends 查询: 原词={} → 搜索词={}", keyword, searchKeyword);
 
             String body = doGet(url);
             if (body == null) return -1;
@@ -91,7 +129,7 @@ public class SerpApiTrendService {
             JsonNode timelineData = root.path("interest_over_time").path("timeline_data");
 
             if (timelineData.isMissingNode() || !timelineData.isArray() || timelineData.isEmpty()) {
-                log.warn("[SerpApi] Trends 无数据，关键词: {}", keyword);
+                log.warn("[SerpApi] Trends 无数据，关键词: {} (原: {})", searchKeyword, keyword);
                 return -1;
             }
 
@@ -106,7 +144,7 @@ public class SerpApiTrendService {
             }
 
             int score = count > 0 ? Math.min(100, sum / count) : -1;
-            log.info("[SerpApi] Trends keyword={} 数据点={} 热度均值={}", keyword, count, score);
+            log.info("[SerpApi] Trends 原词={} 搜索词={} 数据点={} 热度均值={}", keyword, searchKeyword, count, score);
 
             if (score >= 0) cache.put(cacheKey, new CachedResult(score));
             return score;
@@ -179,6 +217,22 @@ public class SerpApiTrendService {
     }
 
     // ─────────────── 工具方法 ───────────────
+
+    /**
+     * 将中文关键词翻译为英文（精确匹配 → 包含匹配 → 原词）
+     */
+    private String translateToEnglish(String keyword) {
+        if (keyword == null || keyword.isEmpty()) return keyword;
+        // 1. 精确匹配
+        String exact = ZH_TO_EN.get(keyword.trim());
+        if (exact != null) return exact;
+        // 2. 包含匹配（关键词包含词典键）
+        for (Map.Entry<String, String> entry : ZH_TO_EN.entrySet()) {
+            if (keyword.contains(entry.getKey())) return entry.getValue();
+        }
+        // 3. 原词（若已是英文等则直接用）
+        return keyword;
+    }
 
     public boolean isReady() {
         return enabled && apiKey != null && !apiKey.isEmpty();
