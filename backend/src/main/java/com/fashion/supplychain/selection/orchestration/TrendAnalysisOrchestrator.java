@@ -1,0 +1,253 @@
+package com.fashion.supplychain.selection.orchestration;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
+import com.fashion.supplychain.intelligence.agent.AiMessage;
+import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
+import com.fashion.supplychain.selection.entity.SelectionCandidate;
+import com.fashion.supplychain.selection.entity.TrendSnapshot;
+import com.fashion.supplychain.selection.service.SelectionCandidateService;
+import com.fashion.supplychain.selection.service.TrendSnapshotService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 趋势分析 + AI打分编排器
+ * — 拉取/展示趋势快照
+ * — AI给候选款打趋势契合分（复用 IntelligenceInferenceOrchestrator）
+ * — 基于内部历史数据生成AI选品建议
+ */
+@Service
+@Slf4j
+public class TrendAnalysisOrchestrator {
+
+    @Autowired
+    private TrendSnapshotService snapshotService;
+
+    @Autowired
+    private SelectionCandidateService candidateService;
+
+    @Autowired(required = false)
+    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    @Autowired
+    private SelectionApprovalOrchestrator approvalOrchestrator;
+
+    /** 查询趋势快照列表 */
+    public List<TrendSnapshot> listTrends(String trendType, String dataSource, int days) {
+        Long tenantId = UserContext.tenantId();
+        LocalDate since = LocalDate.now().minusDays(days);
+        LambdaQueryWrapper<TrendSnapshot> wrapper = new LambdaQueryWrapper<TrendSnapshot>()
+                .eq(TrendSnapshot::getTenantId, tenantId)
+                .ge(TrendSnapshot::getSnapshotDate, since)
+                .orderByDesc(TrendSnapshot::getSnapshotDate)
+                .orderByDesc(TrendSnapshot::getHeatScore);
+
+        if (trendType != null && !trendType.isEmpty()) wrapper.eq(TrendSnapshot::getTrendType, trendType);
+        if (dataSource != null && !dataSource.isEmpty()) wrapper.eq(TrendSnapshot::getDataSource, dataSource);
+
+        return snapshotService.list(wrapper);
+    }
+
+    /** 手动录入趋势数据 */
+    public TrendSnapshot addManualTrend(String trendType, String keyword, Integer heatScore, String summary) {
+        Long tenantId = UserContext.tenantId();
+        TrendSnapshot snap = new TrendSnapshot();
+        snap.setSnapshotDate(LocalDate.now());
+        snap.setDataSource("MANUAL");
+        snap.setTrendType(trendType);
+        snap.setKeyword(keyword);
+        snap.setHeatScore(heatScore);
+        snap.setAiSummary(summary);
+        snap.setPeriod("day");
+        snap.setTenantId(tenantId);
+        snapshotService.save(snap);
+        return snap;
+    }
+
+    /**
+     * AI给候选款打趋势契合分
+     * 复用 DeepSeek 推理器
+     */
+    public Map<String, Object> scoreCandidateByAi(Long candidateId) {
+        Long tenantId = UserContext.tenantId();
+        SelectionCandidate candidate = candidateService.getById(candidateId);
+        if (candidate == null || !candidate.getTenantId().equals(tenantId)) {
+            throw new RuntimeException("候选款不存在");
+        }
+
+        // 获取近期趋势摘要
+        List<TrendSnapshot> recentTrends = snapshotService.list(
+                new LambdaQueryWrapper<TrendSnapshot>()
+                        .eq(TrendSnapshot::getTenantId, tenantId)
+                        .ge(TrendSnapshot::getSnapshotDate, LocalDate.now().minusDays(30))
+                        .orderByDesc(TrendSnapshot::getHeatScore)
+                        .last("LIMIT 10"));
+
+        String trendContext = recentTrends.stream()
+                .map(t -> t.getKeyword() + "(热度:" + t.getHeatScore() + ")")
+                .collect(Collectors.joining(", "));
+        if (trendContext.isEmpty()) trendContext = "暂无最新趋势数据，请基于通用服装行业2026年趋势判断";
+
+        String styleDesc = String.format(
+                "款式名：%s，品类：%s，颜色系：%s，面料：%s，预计报价：%s元，风格标签：%s",
+                candidate.getStyleName(),
+                candidate.getCategory() != null ? candidate.getCategory() : "未知",
+                candidate.getColorFamily() != null ? candidate.getColorFamily() : "未知",
+                candidate.getFabricType() != null ? candidate.getFabricType() : "未知",
+                candidate.getTargetPrice() != null ? candidate.getTargetPrice().toString() : "未定",
+                candidate.getStyleTags() != null ? candidate.getStyleTags() : "无");
+
+        String prompt = "你是一名专业的服装买手，请对以下候选款式进行趋势契合度评分。\n\n"
+                + "当前趋势热词: " + trendContext + "\n\n"
+                + "候选款信息: " + styleDesc + "\n\n"
+                + "请从以下4个维度打分(每项0-100)，并给出总分和建议：\n"
+                + "1. 趋势契合度（与当前流行方向的契合程度）\n"
+                + "2. 市场竞争力（在OEM/ODM市场的潜力）\n"
+                + "3. 生产可行性（工艺难度与稳定性）\n"
+                + "4. 客户接受度（买家/终端消费者接受程度）\n\n"
+                + "请以JSON格式返回：{\"trend\":85,\"market\":78,\"craft\":90,\"acceptance\":82,\"total\":84,\"suggestion\":\"建议意见\"}";
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("candidateId", candidateId);
+        result.put("candidateNo", candidate.getCandidateNo());
+
+        if (inferenceOrchestrator == null || !inferenceOrchestrator.isAnyModelEnabled()) {
+            // AI未配置时，基于规则给出基础分
+            int baseScore = 70;
+            if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) {
+                baseScore += 5;
+            }
+            if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) {
+                baseScore += 5;
+            }
+            result.put("score", baseScore);
+            result.put("reason", "AI模型未配置，基于规则评分。利润率和数量综合评估。");
+            result.put("aiEnabled", false);
+            // 回写分数
+            candidate.setTrendScore(baseScore);
+            candidate.setTrendScoreReason("规则评分: 利润率和批量综合评估");
+            candidateService.updateById(candidate);
+            return result;
+        }
+
+        try {
+            List<AiMessage> messages = new ArrayList<>();
+            messages.add(AiMessage.user(prompt));
+            var inferResult = inferenceOrchestrator.chat("selection-score", messages, null);
+            String content = inferResult.getContent();
+
+            // 尝试解析JSON得到总分
+            int totalScore = 75; // 默认分
+            String suggestion = content;
+            if (content != null && content.contains("\"total\"")) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                    // 提取JSON片段
+                    int jsonStart = content.indexOf('{');
+                    int jsonEnd = content.lastIndexOf('}');
+                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                        String json = content.substring(jsonStart, jsonEnd + 1);
+                        Map<?, ?> parsed = om.readValue(json, Map.class);
+                        if (parsed.get("total") instanceof Number) {
+                            totalScore = ((Number) parsed.get("total")).intValue();
+                        }
+                        if (parsed.get("suggestion") != null) {
+                            suggestion = parsed.get("suggestion").toString();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[TrendAnalysis] AI分数JSON解析失败，使用原始内容", e);
+                }
+            }
+
+            result.put("score", totalScore);
+            result.put("reason", suggestion);
+            result.put("rawContent", content);
+            result.put("aiEnabled", true);
+
+            // 回写
+            candidate.setTrendScore(totalScore);
+            candidate.setTrendScoreReason(suggestion);
+            candidateService.updateById(candidate);
+
+        } catch (Exception e) {
+            log.error("[TrendAnalysis] AI打分失败", e);
+            result.put("score", 70);
+            result.put("reason", "AI分析暂时不可用");
+            result.put("aiEnabled", false);
+        }
+        return result;
+    }
+
+    /**
+     * AI基于历史数据生成本季选品建议（整合内部畅销分析）
+     */
+    public Map<String, Object> generateSelectionSuggestion(Integer year, String season) {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("limit", 20);
+        List<StyleHistoryAnalysisDTO> topStyles = approvalOrchestrator.analyzeHistory(filters);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("year", year);
+        result.put("season", season);
+
+        if (topStyles.isEmpty()) {
+            result.put("suggestion", "暂无历史数据，建议先录入历史生产订单数据后再生成选品建议。");
+            return result;
+        }
+
+        // 品类分布统计
+        Map<String, Long> categoryDist = topStyles.stream()
+                .filter(s -> s.getCategory() != null)
+                .collect(Collectors.groupingBy(StyleHistoryAnalysisDTO::getCategory, Collectors.counting()));
+
+        // 高潜力款列表
+        List<String> highPotentialStyles = topStyles.stream()
+                .filter(StyleHistoryAnalysisDTO::getHighPotential)
+                .map(s -> s.getStyleNo() + "(" + s.getStyleName() + ")")
+                .limit(5).collect(Collectors.toList());
+
+        String historyContext = "历史畅销品类分布: " + categoryDist.toString()
+                + "\n高潜力返单款: " + String.join(", ", highPotentialStyles)
+                + "\n最高下单量款式: " + topStyles.get(0).getStyleNo()
+                + " 共" + topStyles.get(0).getTotalOrderQty() + "件";
+
+        result.put("historyContext", historyContext);
+        result.put("categoryDistribution", categoryDist);
+        result.put("highPotentialStyles", highPotentialStyles);
+        result.put("topStyleCount", topStyles.size());
+
+        if (inferenceOrchestrator != null && inferenceOrchestrator.isAnyModelEnabled()) {
+            String prompt = "你是一名专业的服装买手顾问，基于以下历史销售数据，为" + year + "年" + season
+                    + "季选品提供策略建议：\n\n" + historyContext
+                    + "\n\n请从以下角度给出建议（200字以内）：\n"
+                    + "1. 主推品类方向\n2. 避免的品类或款式特征\n3. 建议选款数量和结构\n4. 特别关注点";
+            try {
+                List<AiMessage> messages = new ArrayList<>();
+                messages.add(AiMessage.user(prompt));
+                var inferResult = inferenceOrchestrator.chat("selection-strategy", messages, null);
+                result.put("aiSuggestion", inferResult.getContent());
+                result.put("aiEnabled", true);
+            } catch (Exception e) {
+                log.error("[TrendAnalysis] 生成选品建议失败", e);
+                result.put("aiSuggestion", "AI建议生成失败，请稍后重试");
+                result.put("aiEnabled", false);
+            }
+        } else {
+            result.put("aiSuggestion", "基于历史数据：主推品类为 "
+                    + (categoryDist.isEmpty() ? "暂无数据" : categoryDist.entrySet().stream()
+                    .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("—"))
+                    + "，建议重点跟进高潜力返单款。");
+            result.put("aiEnabled", false);
+        }
+        return result;
+    }
+}

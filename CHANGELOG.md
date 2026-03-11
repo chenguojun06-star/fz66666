@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-03-21 选品中心模块全面上线（AI趋势+历史分析+审批流）
+
+### 🛍️ 选品中心（独立新模块，位于样衣管理上方）
+
+- **新增选品中心**：完整的选品研究工作台，支持 OEM/ODM + 买手制选款两种场景
+- **选品批次**（SelectionBatch）：创建/管理选品批次，跟踪状态流转（草稿→进行中→已完成）
+- **候选款库**（CandidatePool）：款式候选池管理，多人评审打分，AI 智能评分，一键转创款/样衣
+- **趋势看板**（TrendDashboard）：手动录入趋势数据 + AI 行业趋势分析（DeepSeek 联网）
+- **历史分析**（HistoricalAnalysis）：基于现有生产/销售数据的历史款式表现分析 + AI 选款建议
+
+#### 后端（20+ 文件，全部已验证编译 ✅）
+- Flyway 迁移：`V20260311001__create_selection_module.sql`（4 张新表）
+  - `t_selection_batch`、`t_selection_candidate`、`t_selection_review`、`t_trend_snapshot`
+- Entity：`SelectionBatch`、`SelectionCandidate`、`SelectionReview`、`TrendSnapshot`
+- Mapper + Service：各 4 组
+- Orchestrator（4个）：`SelectionBatchOrchestrator`（163L）、`SelectionCandidateOrchestrator`（289L）、`SelectionApprovalOrchestrator`（177L）、`TrendAnalysisOrchestrator`（253L）
+- Controller：`/api/selection/batch/*`、`/api/selection/candidate/*`、`/api/selection/trend/*`
+- **修复**：3 个 Controller 中 `Result.error()` → `Result.fail()`（符合 Result 类实际 API）
+
+#### 前端（6+ 文件）
+- API 服务层：`services/selection/selectionApi.ts`（16 个接口函数）
+- 页面组件：`SelectionBatch`（251L）、`CandidatePool`（451L）、`TrendDashboard`（287L）、`HistoricalAnalysis`（247L）
+- 路由注册：`routeConfig.ts`（`FireOutlined` 图标 + 4条路径 + `MENU_SELECTION` 权限码 + 菜单 + routeMap）
+- `App.tsx`：导入 4 个组件 + 4 条 `<Route>` 注册
+- **修复**：`SelectionBatch/index.tsx` 中旧路径 `selectionCandidatePool` → `selectionCandidates`
+- 编译验证：TypeScript 0 error ✅，后端 BUILD SUCCESS ✅
+
+#### 系统影响
+- 全局编排器数量：138 → 142（+4）
+- 导航菜单：选品中心位于仪表盘与样衣管理之间（第2位）
+- DB 新增 4 张表，全部带 `tenant_id` 租户隔离 + 索引
+
+---
+
 ## [Unreleased] - 2026-03-21 财务四大模块全面补齐（发票/应付/税率/报表）
 
 ### 💰 财务模块补齐（4个新模块，报税全链路打通）
