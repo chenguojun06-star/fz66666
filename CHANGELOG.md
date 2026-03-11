@@ -1,3 +1,12 @@
+# 2026-03-12（线上紧急修复）
+
+## 修复：Selection 页面 `POST /api/selection/candidate/list` 500
+
+- 根因：云端数据库视图在 `MAX()` 字符串聚合时触发 `Illegal mix of collations (utf8mb4_bin,NONE)`。
+- 处理：新增 Flyway 脚本 `V20260312002__harden_view_collation_with_binary_max.sql`，将三个生产视图的聚合键改为 `MAX(CAST(CONCAT(...) AS BINARY))`，彻底规避 collation 比较。
+- 同步：`ViewMigrator` 内联 fallback SQL 同步为 BINARY 聚合，保持本地/云端定义一致。
+- 效果：避免因视图聚合报错导致接口 500（含选品页面列表加载失败场景）。
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
