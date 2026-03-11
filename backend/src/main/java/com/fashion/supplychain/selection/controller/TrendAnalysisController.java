@@ -65,6 +65,15 @@ public class TrendAnalysisController {
         return Result.success(approvalOrchestrator.getTopStyles(top));
     }
 
+    /** 搜索系统款式库（市场热品真实数据） */
+    @GetMapping("/market/search")
+    public Result<List<Map<String, Object>>> searchMarket(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "30") int limit) {
+        return Result.success(approvalOrchestrator.searchMarketStyles(keyword, category, limit));
+    }
+
     /** AI选品策略建议 */
     @PostMapping("/ai-suggestion")
     public Result<Map<String, Object>> aiSuggestion(@RequestBody Map<String, Object> body) {

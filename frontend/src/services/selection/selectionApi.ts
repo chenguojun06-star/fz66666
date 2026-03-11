@@ -59,5 +59,14 @@ export const historyList = (data?: Record<string, unknown>) =>
 export const topStyles = (top = 20) =>
   request.get(`/selection/trend/top-styles?top=${top}`);
 
+/** 搜索系统真实款式数据（市场热品数据源） */
+export const searchMarketStyles = (params: { keyword?: string; category?: string; limit?: number }) => {
+  const qs = new URLSearchParams();
+  if (params.keyword) qs.set('keyword', params.keyword);
+  if (params.category && params.category !== '全部') qs.set('category', params.category);
+  if (params.limit) qs.set('limit', String(params.limit));
+  return request.get(`/selection/trend/market/search?${qs.toString()}`);
+};
+
 export const aiSuggestion = (data: Record<string, unknown>) =>
   request.post('/selection/trend/ai-suggestion', data);

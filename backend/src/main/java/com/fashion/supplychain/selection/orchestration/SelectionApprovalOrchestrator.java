@@ -174,4 +174,83 @@ public class SelectionApprovalOrchestrator {
         filters.put("limit", top);
         return analyzeHistory(filters);
     }
+
+    /**
+     * 搜索系统真实款式库（市场热品数据源）
+     * 从 t_style_info 查询真实款式 + t_production_order 聚合生产数据
+     */
+    public List<Map<String, Object>> searchMarketStyles(String keyword, String category, int limit) {
+        Long tenantId = UserContext.tenantId();
+
+        LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
+                .eq(StyleInfo::getTenantId, tenantId)
+                .orderByDesc(StyleInfo::getCreateTime);
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w
+                    .like(StyleInfo::getStyleName, kw)
+                    .or().like(StyleInfo::getStyleNo, kw)
+                    .or().like(StyleInfo::getCategory, kw)
+                    .or().like(StyleInfo::getColor, kw)
+                    .or().like(StyleInfo::getDescription, kw));
+        }
+        if (category != null && !category.trim().isEmpty() && !"全部".equals(category)) {
+            wrapper.eq(StyleInfo::getCategory, category);
+        }
+
+        wrapper.last("LIMIT " + Math.min(limit, 100));
+        List<StyleInfo> styles = styleInfoService.list(wrapper);
+        if (styles.isEmpty()) return Collections.emptyList();
+
+        // 批量查询关联的生产订单（避免 N+1）
+        List<String> styleNos = styles.stream()
+                .map(StyleInfo::getStyleNo)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, List<ProductionOrder>> ordersByStyle = Collections.emptyMap();
+        if (!styleNos.isEmpty()) {
+            List<ProductionOrder> orders = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .in(ProductionOrder::getStyleNo, styleNos));
+            ordersByStyle = orders.stream()
+                    .filter(o -> o.getStyleNo() != null)
+                    .collect(Collectors.groupingBy(ProductionOrder::getStyleNo));
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (StyleInfo style : styles) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", style.getId());
+            item.put("styleNo", style.getStyleNo());
+            item.put("styleName", style.getStyleName());
+            item.put("category", style.getCategory());
+            item.put("color", style.getColor());
+            item.put("season", style.getSeason());
+            item.put("price", style.getPrice());
+            item.put("cover", style.getCover());
+            item.put("description", style.getDescription());
+            item.put("year", style.getYear());
+            item.put("customer", style.getCustomer());
+            item.put("createTime", style.getCreateTime());
+
+            List<ProductionOrder> styleOrders = (style.getStyleNo() != null)
+                    ? ordersByStyle.getOrDefault(style.getStyleNo(), Collections.emptyList())
+                    : Collections.emptyList();
+            int totalQty = styleOrders.stream()
+                    .mapToInt(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
+            int warehoused = styleOrders.stream()
+                    .mapToInt(o -> o.getWarehousingQualifiedQuantity() != null ? o.getWarehousingQualifiedQuantity() : 0).sum();
+            item.put("orderCount", styleOrders.size());
+            item.put("totalQuantity", totalQty);
+            item.put("totalWarehoused", warehoused);
+            item.put("repeatOrderCount", Math.max(0, styleOrders.size() - 1));
+            result.add(item);
+        }
+        return result;
+    }
 }
