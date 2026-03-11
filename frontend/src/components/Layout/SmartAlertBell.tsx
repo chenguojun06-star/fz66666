@@ -79,6 +79,17 @@ const saveDismissed = (ids: Set<string>) => {
   try { localStorage.setItem(_sapDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
 };
 
+const _sapNoticeDismissKey = () => `sap_dismissed_notices_${new Date().toISOString().slice(0, 10)}`;
+const loadDismissedNotices = (): Set<number> => {
+  try {
+    const raw = localStorage.getItem(_sapNoticeDismissKey());
+    return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
+  } catch { return new Set(); }
+};
+const saveDismissedNotices = (ids: Set<number>) => {
+  try { localStorage.setItem(_sapNoticeDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
+};
+
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
@@ -95,7 +106,7 @@ const SmartAlertBell: React.FC = () => {
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
   const [myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
-  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(new Set());
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
   const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -202,10 +213,14 @@ const SmartAlertBell: React.FC = () => {
     if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages, open]);
 
-  // 消除单条我的通知（局部状态，刷页重检）
+  // 消除单条我的通知（localStorage 每日持久化，隔天重新检测）
   const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDismissedNoticeIds(prev => new Set([...prev, id]));
+    setDismissedNoticeIds(prev => {
+      const next = new Set([...prev, id]);
+      saveDismissedNotices(next);
+      return next;
+    });
   }, []);
 
   // 消除单条事件（当天不再显示，隔天重新检测）
@@ -462,7 +477,11 @@ const SmartAlertBell: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
-                          setDismissedNoticeIds(prev => new Set([...prev, n.id]));
+                          setDismissedNoticeIds(prev => {
+                            const next = new Set([...prev, n.id]);
+                            saveDismissedNotices(next);
+                            return next;
+                          });
                         }}
                       >
                         已读
