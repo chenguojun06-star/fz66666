@@ -235,11 +235,13 @@ public class SerpApiTrendService {
         }
 
         try {
+            // Shopping 搜索使用英文关键词效果更好，且 gl=cn 不被支持
+            String searchKeyword = translateToEnglish(keyword);
             String url = BASE_URL
                     + "?engine=google_shopping"
-                    + "&q=" + URLEncoder.encode(keyword.trim(), StandardCharsets.UTF_8)
-                    + "&gl=cn&hl=zh-cn"
-                    + "&num=" + realLimit
+                    + "&q=" + URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8)
+                    + "&hl=zh-cn"
+                    + "&num=" + Math.max(realLimit, 10)
                     + "&api_key=" + apiKey;
 
             String body = doGet(url);
@@ -266,7 +268,7 @@ public class SerpApiTrendService {
                 }
             }
 
-            log.info("[SerpApi] Shopping search keyword={} 获取到 {} 条", keyword, items.size());
+            log.info("[SerpApi] Shopping keyword={} → en={}, 获取到 {} 条", keyword, searchKeyword, items.size());
             cache.put(cacheKey, new CachedResult(items));
             return items;
 
