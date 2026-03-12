@@ -1,3 +1,9 @@
+## 2026-03-12
+
+### fix: 云端样衣来源字段缺失自动修复
+- 扩展 `DbColumnRepairRunner`，启动时自动检查并补齐 `t_style_info.development_source_type` 与 `t_style_info.development_source_detail`
+- 即使云端 Flyway 因部署时序或环境原因未及时执行，后端启动后也会自动补列，避免 `/api/style/info/list` 与 `/api/style/info/development-stats` 因缺列直接返回 500
+- 与已有来源清洗迁移配套，优先保证线上可用性，再由 Flyway 持续维护正式迁移历史
 # 2026-03-12（本地开发环境修复）
 
 ## 修复：样衣开发“来源”列显示乱码和超长脏文案

@@ -13,7 +13,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 /**
- * 启动时自动修复 t_user 表可能缺失的列。
+ * 启动时自动修复关键业务表可能缺失的列。
  * 独立于 Flyway 运行——即使 Flyway 迁移被阻塞/跳过，本 Runner 也能保证关键列存在。
  * 所有操作均为幂等（先查 INFORMATION_SCHEMA，不存在才 ALTER TABLE）。
  */
@@ -44,10 +44,15 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_user", "avatar_url",
                     "VARCHAR(255) DEFAULT NULL COMMENT '用户头像URL'");
 
+            repaired += ensureColumn(conn, schema, "t_style_info", "development_source_type",
+                    "VARCHAR(32) DEFAULT NULL COMMENT '开发来源类型：SELF_DEVELOPED / SELECTION_CENTER'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "development_source_detail",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             } else {
-                log.info("[DbRepair] t_user 表结构完整，无需修复");
+                log.info("[DbRepair] 关键表结构完整，无需修复");
             }
         } catch (Exception e) {
             log.error("[DbRepair] 列修复失败，应用继续启动。原因: {}", e.getMessage());
