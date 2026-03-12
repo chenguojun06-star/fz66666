@@ -59,8 +59,17 @@ public class IntelligencePredictionLog {
     /** 预测时使用的样本量（快照，便于离线分析） */
     private Integer sampleCount;
 
-    /** 算法版本标识（rule_v1=规则引擎 / ml_v1=机器学习模型） */
+    /** 算法版本标识（rule_v1=规则引擎 / rule_v2_calibrated=校准版规则引擎） */
     private String algorithmVersion;
+
+    /** 预测时的工厂名，用于工厂级历史偏差校准（V20260401001 新增） */
+    private String factoryName;
+
+    /** 预测时的 WMA 日均速度快照（件/天），供离线分析（V20260401001 新增） */
+    private Double dailyVelocity;
+
+    /** 预测时的剩余件数快照（V20260401001 新增） */
+    private Long remainingQty;
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

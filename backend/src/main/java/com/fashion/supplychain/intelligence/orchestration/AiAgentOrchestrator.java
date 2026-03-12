@@ -37,6 +37,9 @@ public class AiAgentOrchestrator {
     @Autowired
     private AiContextBuilderService aiContextBuilderService;
 
+    @Autowired
+    private AiMemoryOrchestrator aiMemoryOrchestrator;
+
     private Map<String, AgentTool> toolMap;
     private List<AiTool> apiTools;
 
@@ -270,10 +273,20 @@ public class AiAgentOrchestrator {
                     "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
         }
 
+        // ── 历史对话记忆注入 ──
+        String memoryContext = "";
+        try {
+            memoryContext = aiMemoryOrchestrator.getMemoryContext(
+                    UserContext.tenantId(), UserContext.userId());
+        } catch (Exception e) {
+            log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
+        }
+
         return "你是「小云」—— 服装供应链管理系统里的经营协作助手。你的角色不是陪聊，不是卖萌，也不是泛泛而谈的AI大脑；你要像一名真正懂业务、懂现场、懂数据的运营搭档，和老板、跟单、生产主管、采购、财务一起判断问题、拆解原因、推进动作，并在明确时直接调用工具完成执行。\n\n" +
                 contextBlock + "\n" +
                 workerRestriction +
                 intelligenceContext + "\n" +
+                memoryContext +
                 "【你的核心能力 — 12 大工具】\n" +
                 "① tool_system_overview — 系统全局总览：订单统计、风险概况、今日数据（含昨日对比）、最需关注事项排名\n" +
                 "② tool_query_production_progress — 生产进度查询：按订单号/款式/状态/日期范围/工厂筛选，返回详细进度\n" +
@@ -334,6 +347,14 @@ public class AiAgentOrchestrator {
                 "C) 用户要求催单/跟进出货/催出货日期时，为每个相关订单生成催单卡片（type=urge_order）：\n" +
                 "【ACTIONS】[{\"title\":\"催单通知\",\"desc\":\"请尽快填写最新预计出货日期并备注情况\",\"orderNo\":\"真实单号\",\"responsiblePerson\":\"订单跟单员或工厂老板姓名\",\"factoryName\":\"工厂名\",\"currentExpectedShipDate\":\"当前预计出货日期(如有,格式YYYY-MM-DD)\",\"actions\":[{\"label\":\"填写出货日期\",\"type\":\"urge_order\"}]}]【/ACTIONS】\n" +
                 "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。订单号必须是数据库中真实存在的。";
+    }
+
+    /** 将当前用户的会话记忆异步持久化（由 Controller 在会话结束时调用） */
+    public void saveCurrentConversationToMemory() {
+        String userId = UserContext.userId();
+        Long tenantId = UserContext.tenantId();
+        List<AiMessage> msgs = getConversationHistory(userId);
+        aiMemoryOrchestrator.saveConversation(tenantId, userId, msgs);
     }
 
     private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {

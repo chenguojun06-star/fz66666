@@ -37,6 +37,9 @@ public class IntelligenceController {
     private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
 
     @Autowired
+    private AiMemoryOrchestrator aiMemoryOrchestrator;
+
+    @Autowired
     private ProgressPredictOrchestrator progressPredictOrchestrator;
 
     @Autowired
@@ -530,6 +533,16 @@ public class IntelligenceController {
                 "filename", safeFilename,
                 "parsedContent", parsedContent
         ));
+    }
+
+    /**
+     * AI 对话记忆保存 — 小程序 onHide / 会话结束时调用。
+     * 触发异步 LLM 摘要并持久化到 t_ai_conversation_memory。
+     */
+    @PostMapping("/ai-advisor/memory/save")
+    public Result<Void> saveAiConversationMemory() {
+        aiAgentOrchestrator.saveCurrentConversationToMemory();
+        return Result.success(null);
     }
 
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */

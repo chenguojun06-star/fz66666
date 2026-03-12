@@ -54,4 +54,24 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
     int backfillByOrderId(
             @Param("orderId")     String orderId,
             @Param("finishTime")  LocalDateTime finishTime);
+
+    /**
+     * 查询指定工厂的历史预测平均偏差（天）。
+     *
+     * <p>仅统计已有实际完成时间（即用户反馈或自动回填后）的记录，
+     * 取最近 90 天数据。当历史样本不足 {@code minSamples} 时返回 NULL，
+     * 调用方据此决定是否应用校准。
+     * 正值=预测偏早（实际比预测晚），负值=预测偏晚。
+     */
+    @Select("SELECT IF(COUNT(*) >= #{minSamples}, AVG(deviation_minutes) / 1440.0, NULL) "
+            + "FROM t_intelligence_prediction_log "
+            + "WHERE tenant_id    = #{tenantId} "
+            + "  AND factory_name = #{factoryName} "
+            + "  AND deviation_minutes IS NOT NULL "
+            + "  AND delete_flag  = 0 "
+            + "  AND create_time  > DATE_SUB(NOW(), INTERVAL 90 DAY)")
+    Double getAvgBiasDays(
+            @Param("tenantId")     Long tenantId,
+            @Param("factoryName")  String factoryName,
+            @Param("minSamples")   int minSamples);
 }

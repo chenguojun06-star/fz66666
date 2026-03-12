@@ -4,14 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionResponse;
+import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
+import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,9 @@ public class DeliveryPredictionOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private IntelligencePredictionLogMapper predictionLogMapper;
 
     public DeliveryPredictionResponse predict(DeliveryPredictionRequest request) {
         DeliveryPredictionResponse resp = new DeliveryPredictionResponse();
@@ -107,24 +113,67 @@ public class DeliveryPredictionOrchestrator {
 
         LocalDate today = LocalDate.now();
         long optDays = Math.max(1, Math.round(remaining / (velocity * 1.2)));
-        long mlDays = Math.max(1, Math.round(remaining / velocity));
+        long mlDays  = Math.max(1, Math.round(remaining / velocity));
         long pesDays = Math.max(1, Math.round(remaining / (velocity * 0.7)));
 
+        // ── 自我校准：基于工厂历史偏差修正 mlDays ──
+        long correctedMlDays = mlDays;
+        if (order.getFactoryName() != null && !order.getFactoryName().isBlank()) {
+            try {
+                Double avgBiasDays = predictionLogMapper.getAvgBiasDays(
+                        UserContext.tenantId(), order.getFactoryName(), 3);
+                if (avgBiasDays != null && Math.abs(avgBiasDays) <= 30) {
+                    long correction = Math.round(avgBiasDays);
+                    correctedMlDays = Math.max(1, mlDays + correction);
+                    if (correction != 0) {
+                        log.debug("[交期预测] 工厂 {} 历史偏差 {:.1f}天，mlDays {} -> {}",
+                                order.getFactoryName(), avgBiasDays, mlDays, correctedMlDays);
+                    }
+                }
+            } catch (Exception ce) {
+                log.debug("[交期预测] 校准查询失败，使用原始预测: {}", ce.getMessage());
+            }
+        }
+
         resp.setOptimisticDate(today.plusDays(optDays).format(DATE_FMT));
-        resp.setMostLikelyDate(today.plusDays(mlDays).format(DATE_FMT));
+        resp.setMostLikelyDate(today.plusDays(correctedMlDays).format(DATE_FMT));
         resp.setPessimisticDate(today.plusDays(pesDays).format(DATE_FMT));
 
         // 是否延期
         if (order.getPlannedEndDate() != null) {
-            resp.setLikelyDelayed(today.plusDays(mlDays).isAfter(
+            resp.setLikelyDelayed(today.plusDays(correctedMlDays).isAfter(
                     order.getPlannedEndDate().toLocalDate()));
         }
 
         // 置信度（数据量越多越高）
-        resp.setConfidence(Math.min(90, 40 + (int) velocity));
+        int confidence = Math.min(90, 40 + (int) velocity);
+        resp.setConfidence(confidence);
         resp.setRationale(String.format(
                 "基于近7天加权日均产量 %.1f 件/天，剩余 %d 件，预计 %d ~ %d 天完成",
                 velocity, remaining, optDays, pesDays));
+
+        // ── 保存预测日志（数据飞轮）──
+        try {
+            IntelligencePredictionLog plog = new IntelligencePredictionLog();
+            plog.setPredictionId("PRED-" + java.util.UUID.randomUUID().toString()
+                    .replace("-", "").substring(0, 16).toUpperCase());
+            plog.setTenantId(UserContext.tenantId());
+            plog.setOrderId(String.valueOf(order.getId()));
+            plog.setOrderNo(order.getOrderNo());
+            plog.setFactoryName(order.getFactoryName());
+            plog.setCurrentProgress(order.getProductionProgress());
+            plog.setPredictedFinishTime(LocalDateTime.of(
+                    today.plusDays(correctedMlDays), LocalTime.NOON));
+            plog.setDailyVelocity(velocity);
+            plog.setRemainingQty(remaining);
+            plog.setConfidence(BigDecimal.valueOf(confidence).movePointLeft(2));
+            plog.setAlgorithmVersion("rule_v2_calibrated");
+            plog.setSampleCount(7);
+            plog.setCreateTime(LocalDateTime.now());
+            predictionLogMapper.insert(plog);
+        } catch (Exception le) {
+            log.warn("[交期预测] 保存预测日志失败（不影响响应）: {}", le.getMessage());
+        }
 
         } catch (Exception e) {
             log.error("[交期预测] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
