@@ -17,10 +17,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * SerpApi 趋势数据服务
@@ -28,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>功能：
  * <li>fetchTrendScore(keyword) → Google Trends 近3个月热度均值（0-100）</li>
  * <li>fetchMarketImages(keyword) → Google Shopping 同类商品图片 + 市场价（最多8条）</li>
+ * <li>searchAcrossSources(keyword, limit) → Google Shopping / Amazon / eBay / Walmart 多源商品聚合</li>
  *
  * <p>缓存：本地 ConcurrentHashMap + 24h TTL，保护 250次/月 免费配额
  *
@@ -36,6 +42,28 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @Slf4j
 public class SerpApiTrendService {
+
+    private static final class MarketSource {
+        final String dataSource;
+        final String engine;
+        final String label;
+
+        private MarketSource(String dataSource, String engine, String label) {
+            this.dataSource = dataSource;
+            this.engine = engine;
+            this.label = label;
+        }
+    }
+
+    private static final List<MarketSource> MARKET_SOURCES = List.of(
+            new MarketSource("GOOGLE_SHOPPING", "google_shopping", "Google Shopping"),
+            new MarketSource("AMAZON_SEARCH", "amazon", "Amazon"),
+            new MarketSource("EBAY_SEARCH", "ebay", "eBay"),
+            new MarketSource("WALMART_SEARCH", "walmart", "Walmart")
+    );
+
+    private static final Map<String, MarketSource> MARKET_SOURCE_INDEX = MARKET_SOURCES.stream()
+            .collect(Collectors.toMap(source -> source.dataSource, source -> source));
 
     /**
      * 中文→英文关键词映射（Google Trends 中文+geo=CN 经常返回空数据，英文全球查询更稳定）
@@ -235,58 +263,190 @@ public class SerpApiTrendService {
      * 缓存 24h。
      */
     public List<Map<String, Object>> searchShopping(String keyword, int limit) {
+        return searchBySource("GOOGLE_SHOPPING", keyword, limit);
+    }
+
+    public List<Map<String, Object>> searchBySource(String dataSource, String keyword, int limit) {
+        MarketSource source = MARKET_SOURCE_INDEX.get(dataSource);
+        if (source == null) {
+            log.warn("[SerpApi] 未知数据源 dataSource={}", dataSource);
+            return List.of();
+        }
+        return searchSourceInternal(source, keyword, limit);
+    }
+
+    public List<Map<String, Object>> searchAcrossSources(String keyword, int limit) {
+        if (!isReady() || keyword == null || keyword.isBlank()) return List.of();
+        int realLimit = Math.min(Math.max(limit, 1), 40);
+        int perSourceLimit = Math.max(2, (int) Math.ceil(realLimit / (double) MARKET_SOURCES.size()));
+
+        List<Map<String, Object>> merged = new ArrayList<>();
+        Set<String> seen = new java.util.HashSet<>();
+        for (MarketSource source : MARKET_SOURCES) {
+            List<Map<String, Object>> items = searchSourceInternal(source, keyword, perSourceLimit);
+            for (Map<String, Object> item : items) {
+                String dedupeKey = Objects.toString(item.get("link"), "") + "|" + Objects.toString(item.get("title"), "");
+                if (seen.add(dedupeKey)) {
+                    merged.add(item);
+                }
+            }
+        }
+
+        merged.sort(Comparator
+                .comparing((Map<String, Object> item) -> toComparableDouble(item.get("rating"))).reversed()
+                .thenComparing(item -> toComparableInteger(item.get("reviews")), Comparator.reverseOrder()));
+
+        if (merged.size() > realLimit) {
+            return new ArrayList<>(merged.subList(0, realLimit));
+        }
+        return merged;
+    }
+
+    public List<Map<String, String>> getMarketSourceSummaries() {
+        return MARKET_SOURCES.stream().map(source -> {
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("dataSource", source.dataSource);
+            summary.put("label", source.label);
+            return summary;
+        }).collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> searchSourceInternal(MarketSource source, String keyword, int limit) {
         if (!isReady() || keyword == null || keyword.isBlank()) return List.of();
         int realLimit = Math.min(Math.max(limit, 1), 40);
 
-        String cacheKey = "search:" + keyword.trim() + ":" + realLimit;
+        String cacheKey = "search:" + source.dataSource + ":" + keyword.trim() + ":" + realLimit;
         CachedResult cached = cache.get(cacheKey);
         if (cached != null && !cached.isExpired() && cached.shoppingData != null) {
-            log.debug("[SerpApi] 缓存命中 search={}, 共{}条", keyword, cached.shoppingData.size());
+            log.debug("[SerpApi] 缓存命中 source={} keyword={} 共{}条", source.dataSource, keyword, cached.shoppingData.size());
             return cached.shoppingData;
         }
 
         try {
-            // Shopping 搜索使用英文关键词效果更好，且 gl=cn 不被支持
             String searchKeyword = translateToEnglish(keyword);
-            String url = BASE_URL
-                    + "?engine=google_shopping"
-                    + "&q=" + URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8)
-                    + "&hl=zh-cn"
-                    + "&num=" + Math.max(realLimit, 10)
-                    + "&api_key=" + apiKey;
-
+            String url = buildSearchUrl(source, searchKeyword, realLimit);
             String body = doGet(url);
             if (body == null) return List.of();
 
             JsonNode root = objectMapper.readTree(body);
-            JsonNode results = root.path("shopping_results");
+            JsonNode results = extractResultNodes(root, source);
 
             List<Map<String, Object>> items = new ArrayList<>();
             if (results.isArray()) {
                 for (JsonNode node : results) {
-                    Map<String, Object> entry = new HashMap<>();
-                    entry.put("title", node.path("title").asText(""));
-                    entry.put("price", node.path("price").asText(""));
-                    entry.put("extractedPrice", node.has("extracted_price") ? node.get("extracted_price").asDouble() : null);
-                    entry.put("thumbnail", node.path("thumbnail").asText(""));
-                    entry.put("source", node.path("source").asText(""));
-                    entry.put("link", node.path("link").asText(""));
-                    entry.put("rating", node.has("rating") ? node.get("rating").asDouble() : null);
-                    entry.put("reviews", node.has("reviews") ? node.get("reviews").asInt() : null);
-                    entry.put("delivery", node.path("delivery").asText(""));
-                    items.add(entry);
+                    Map<String, Object> entry = normalizeMarketItem(node, source);
+                    if (entry != null) {
+                        items.add(entry);
+                    }
                     if (items.size() >= realLimit) break;
                 }
             }
 
-            log.info("[SerpApi] Shopping keyword={} → en={}, 获取到 {} 条", keyword, searchKeyword, items.size());
+            log.info("[SerpApi] source={} keyword={} → en={} 获取到 {} 条", source.dataSource, keyword, searchKeyword, items.size());
             cache.put(cacheKey, new CachedResult(items));
             return items;
-
         } catch (Exception e) {
-            log.error("[SerpApi] Shopping search失败 keyword={}", keyword, e);
+            log.error("[SerpApi] source={} search失败 keyword={}", source.dataSource, keyword, e);
             return List.of();
         }
+    }
+
+    private String buildSearchUrl(MarketSource source, String searchKeyword, int limit) {
+        StringBuilder url = new StringBuilder(BASE_URL)
+                .append("?engine=").append(source.engine)
+                .append("&q=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8))
+                .append("&num=").append(Math.max(limit, 10))
+                .append("&api_key=").append(apiKey);
+
+        if ("google_shopping".equals(source.engine)) {
+            url.append("&hl=zh-cn");
+        } else {
+            url.append("&hl=en");
+        }
+        return url.toString();
+    }
+
+    private JsonNode extractResultNodes(JsonNode root, MarketSource source) {
+        if ("google_shopping".equals(source.engine) && root.path("shopping_results").isArray()) {
+            return root.path("shopping_results");
+        }
+        if (root.path("organic_results").isArray()) {
+            return root.path("organic_results");
+        }
+        if (root.path("shopping_results").isArray()) {
+            return root.path("shopping_results");
+        }
+        if (root.path("results").isArray()) {
+            return root.path("results");
+        }
+        if (root.path("items").isArray()) {
+            return root.path("items");
+        }
+        return objectMapper.createArrayNode();
+    }
+
+    private Map<String, Object> normalizeMarketItem(JsonNode node, MarketSource source) {
+        String title = firstNonBlank(
+                node.path("title").asText(""),
+                node.path("name").asText(""),
+                node.path("product_title").asText(""));
+        if (title.isBlank()) {
+            return null;
+        }
+
+        String thumbnail = firstNonBlank(
+                node.path("thumbnail").asText(""),
+                node.path("image").asText(""),
+                node.path("image_url").asText(""));
+        if (thumbnail.isBlank() && node.path("thumbnails").isArray() && !node.path("thumbnails").isEmpty()) {
+            thumbnail = node.path("thumbnails").get(0).asText("");
+        }
+
+        Double extractedPrice = null;
+        if (node.has("extracted_price") && node.get("extracted_price").isNumber()) {
+            extractedPrice = node.get("extracted_price").asDouble();
+        } else if (node.has("price") && node.get("price").isNumber()) {
+            extractedPrice = node.get("price").asDouble();
+        }
+
+        String price = firstNonBlank(
+                node.path("price").asText(""),
+                node.path("price_string").asText(""),
+                extractedPrice != null ? String.valueOf(extractedPrice) : "");
+
+        String sourceText = firstNonBlank(node.path("source").asText(""), source.label);
+        String link = firstNonBlank(
+                node.path("link").asText(""),
+                node.path("product_link").asText(""),
+                node.path("product_url").asText(""));
+
+        Double rating = null;
+        if (node.has("rating") && node.get("rating").isNumber()) {
+            rating = node.get("rating").asDouble();
+        } else if (node.has("reviews_rating") && node.get("reviews_rating").isNumber()) {
+            rating = node.get("reviews_rating").asDouble();
+        }
+
+        Integer reviews = null;
+        if (node.has("reviews") && node.get("reviews").isNumber()) {
+            reviews = node.get("reviews").asInt();
+        } else if (node.has("ratings_total") && node.get("ratings_total").isNumber()) {
+            reviews = node.get("ratings_total").asInt();
+        }
+
+        Map<String, Object> entry = new LinkedHashMap<>();
+        entry.put("title", title);
+        entry.put("price", price);
+        entry.put("extractedPrice", extractedPrice);
+        entry.put("thumbnail", thumbnail);
+        entry.put("source", sourceText);
+        entry.put("sourceLabel", source.label);
+        entry.put("dataSource", source.dataSource);
+        entry.put("link", link);
+        entry.put("rating", rating);
+        entry.put("reviews", reviews);
+        entry.put("delivery", firstNonBlank(node.path("delivery").asText(""), node.path("shipping").asText("")));
+        return entry;
     }
 
     // ─────────────── 工具方法 ───────────────
@@ -316,6 +476,29 @@ public class SerpApiTrendService {
     public void clearCache() {
         cache.clear();
         log.info("[SerpApi] 缓存已清空");
+    }
+
+    private Double toComparableDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return -1D;
+    }
+
+    private Integer toComparableInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return -1;
+    }
+
+    private String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return "";
     }
 
     private String doGet(String url) {

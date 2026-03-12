@@ -1,5 +1,11 @@
 ## 2026-03-12
 
+### feat: 选品中心外部热榜升级为多源聚合
+- 将选品外部市场搜索从单一 Google Shopping 扩展为多源聚合，统一接入 Google Shopping、Amazon、eBay、Walmart 四路 SerpApi 引擎
+- 改造今日热榜生成任务，按关键词写入多来源快照，前端打开页面即可看到按关键词聚合后的多渠道商品结果，不再只依赖单一路源
+- 扩大热词覆盖面，前后端同步补充 `夹克`、`羽绒服` 两个高频品类，并在页面上明确展示多渠道来源数量
+- 这次改造不新增数据库表结构，直接复用 `t_trend_snapshot`，降低云端发布和回滚成本
+
 ### fix: 云端样衣来源字段缺失自动修复
 - 扩展 `DbColumnRepairRunner`，启动时自动检查并补齐 `t_style_info.development_source_type` 与 `t_style_info.development_source_detail`
 - 即使云端 Flyway 因部署时序或环境原因未及时执行，后端启动后也会自动补列，避免 `/api/style/info/list` 与 `/api/style/info/development-stats` 因缺列直接返回 500

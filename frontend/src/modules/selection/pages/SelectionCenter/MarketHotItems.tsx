@@ -6,7 +6,7 @@ import { candidateSave, candidateStageAction, candidateCreateStyle, searchExtern
 const { Text } = Typography;
 const { Search } = Input;
 
-const HOT_KEYWORDS = ['连衣裙', '卫衣', '外套', '牛仔裤', 'T恤', '衬衫', '半身裙', '针织衫', '风衣', '西装'];
+const HOT_KEYWORDS = ['连衣裙', '卫衣', '外套', '牛仔裤', 'T恤', '衬衫', '半身裙', '针织衫', '风衣', '西装', '夹克', '羽绒服'];
 const SEARCH_HISTORY_STORAGE_KEY = 'selection-market-search-history';
 
 interface ShoppingItem {
@@ -25,6 +25,8 @@ interface DailyHotGroup {
   keyword: string;
   heatScore: number;
   products: ShoppingItem[];
+  sourceCount?: number;
+  sources?: string[];
 }
 
 interface DailyHotResponse {
@@ -33,6 +35,7 @@ interface DailyHotResponse {
   serpApiEnabled: boolean;
   groups: DailyHotGroup[];
   total: number;
+  sources?: Array<{ dataSource: string; label: string }>;
 }
 
 interface SearchResult {
@@ -40,6 +43,8 @@ interface SearchResult {
   trendScore: number;
   keyword: string;
   serpApiEnabled: boolean;
+  sourceCount?: number;
+  sources?: Array<{ dataSource: string; label: string }>;
 }
 
 export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
@@ -242,6 +247,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
             <Text strong style={{ fontSize: 14 }}>今日热榜</Text>
             {dailyHot?.date && <Text type="secondary" style={{ fontSize: 11 }}>（{dailyHot.date} 数据）</Text>}
             {dailyHot?.cached && <Tag color="green" style={{ fontSize: 10 }}>已缓存</Tag>}
+            {dailyHot?.sources?.length ? <Tag color="blue" style={{ fontSize: 10 }}>多渠道 {dailyHot.sources.length} 源</Tag> : null}
           </Space>
           <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
         </div>
@@ -250,7 +256,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
             <Tabs size="small" type="card"
               items={dailyHot.groups.map(g => ({
                 key: g.keyword,
-                label: <span>{g.keyword}{g.heatScore > 0 && <Tag color={g.heatScore >= 70 ? 'red' : 'orange'} style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.heatScore}</Tag>}</span>,
+                label: <span>{g.keyword}{g.heatScore > 0 && <Tag color={g.heatScore >= 70 ? 'red' : 'orange'} style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.heatScore}</Tag>}{g.sourceCount ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.sourceCount}源</Tag> : null}</span>,
                 children: (
                   <Row gutter={[10, 10]}>
                     {g.products.map((item, i) => (
@@ -339,6 +345,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                     <GoogleOutlined style={{ color: '#4285f4' }} />
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       「{section.keyword}」共 {section.items?.length || 0} 件真实商品
+                      {section.sourceCount ? <> · 覆盖 {section.sourceCount} 个外部渠道</> : null}
                       {section.trendScore >= 0 && (
                         <> · Google 趋势热度 <Tag color={section.trendScore >= 70 ? 'red' : section.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 10, marginLeft: 4 }}>{section.trendScore}/100</Tag></>
                       )}
@@ -407,8 +414,8 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                   </div>
                 ) : (
                   <div>
-                    <p style={{ margin: '8px 0', fontSize: 14 }}>输入关键词，搜索 Google Shopping 真实市场数据</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>数据来源：Google Shopping · 包含真实图片、真实价格、真实来源店铺</p>
+                    <p style={{ margin: '8px 0', fontSize: 14 }}>输入关键词，搜索多渠道真实市场数据</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>数据来源：Google Shopping / Amazon / eBay / Walmart · 包含真实图片、真实价格、真实来源店铺</p>
                   </div>
                 )
               }

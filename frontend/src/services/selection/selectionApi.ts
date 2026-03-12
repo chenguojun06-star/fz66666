@@ -89,13 +89,13 @@ export const searchMarketStyles = (params: { keyword?: string; category?: string
 export const aiSuggestion = (data: Record<string, unknown>) =>
   request.post('/selection/trend/ai-suggestion', data);
 
-/** 外部市场搜索（SerpApi Google Shopping 真实数据） */
+/** 外部市场搜索（SerpApi 多源真实数据聚合） */
 export const searchExternalMarket = async (keyword: string, limit = 20) => {
   const result = await request.get(`/selection/trend/market/external?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
   return unwrapApiData(result, '外部市场搜索失败');
 };
 
-/** 今日热榜（系统凌晨 2 点自动拉取，打开页面可直接查看，无需搜索） */
+/** 今日热榜（系统凌晨 2 点自动拉取多渠道快照，打开页面可直接查看，无需搜索） */
 export const fetchDailyHotItems = async () => {
   const result = await request.get('/selection/trend/market/daily-hot');
   return unwrapApiData(result, '获取今日热榜失败');

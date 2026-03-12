@@ -333,25 +333,45 @@ public class TrendAnalysisOrchestrator {
         List<TrendSnapshot> snapshots = snapshotService.list(
                 new LambdaQueryWrapper<TrendSnapshot>()
                         .eq(TrendSnapshot::getTenantId, 0L)
-                        .eq(TrendSnapshot::getDataSource, "GOOGLE_SHOPPING")
                         .eq(TrendSnapshot::getTrendType, "DAILY_HOT")
                         .eq(TrendSnapshot::getSnapshotDate, today)
-                        .orderByDesc(TrendSnapshot::getHeatScore));
+                        .orderByDesc(TrendSnapshot::getHeatScore)
+                        .orderByAsc(TrendSnapshot::getKeyword));
 
-        List<Map<String, Object>> groups = new ArrayList<>();
+        Map<String, Map<String, Object>> groupMap = new LinkedHashMap<>();
         for (TrendSnapshot snap : snapshots) {
             try {
                 List<Map<String, Object>> items = objectMapper.readValue(
                         snap.getTrendData(), new TypeReference<>() {});
-                Map<String, Object> group = new HashMap<>();
-                group.put("keyword", snap.getKeyword());
-                group.put("heatScore", snap.getHeatScore());
-                group.put("products", items);
-                groups.add(group);
+                Map<String, Object> group = groupMap.computeIfAbsent(snap.getKeyword(), keyword -> {
+                    Map<String, Object> g = new LinkedHashMap<>();
+                    g.put("keyword", keyword);
+                    g.put("heatScore", snap.getHeatScore());
+                    g.put("products", new ArrayList<Map<String, Object>>());
+                    g.put("sources", new ArrayList<String>());
+                    g.put("sourceCount", 0);
+                    return g;
+                });
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> products = (List<Map<String, Object>>) group.get("products");
+                @SuppressWarnings("unchecked")
+                List<String> sources = (List<String>) group.get("sources");
+                products.addAll(items);
+                if (!sources.contains(snap.getDataSource())) {
+                    sources.add(snap.getDataSource());
+                }
+                group.put("sourceCount", sources.size());
+                group.put("heatScore", Math.max((Integer) group.get("heatScore"), Optional.ofNullable(snap.getHeatScore()).orElse(0)));
             } catch (Exception e) {
-                log.warn("[DailyHot] 解析 {} 商品数据失败", snap.getKeyword());
+                log.warn("[DailyHot] 解析 {} {} 商品数据失败", snap.getDataSource(), snap.getKeyword());
             }
         }
+
+        List<Map<String, Object>> groups = new ArrayList<>(groupMap.values());
+        groups.sort((left, right) -> Integer.compare(
+                Optional.ofNullable((Integer) right.get("heatScore")).orElse(0),
+                Optional.ofNullable((Integer) left.get("heatScore")).orElse(0)));
 
         boolean serpReady = serpApiTrendService != null && serpApiTrendService.isReady();
         Map<String, Object> result = new HashMap<>();
@@ -359,6 +379,7 @@ public class TrendAnalysisOrchestrator {
         result.put("cached", !snapshots.isEmpty());
         result.put("serpApiEnabled", serpReady);
         result.put("groups", groups);
+        result.put("sources", serpApiTrendService != null ? serpApiTrendService.getMarketSourceSummaries() : List.of());
         result.put("total", groups.stream().mapToInt(g -> ((List<?>) g.get("products")).size()).sum());
         return result;
     }

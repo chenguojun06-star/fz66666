@@ -91,12 +91,14 @@ public class TrendAnalysisController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "20") int limit) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
-        List<Map<String, Object>> items = serpApiTrendService.searchShopping(keyword, limit);
+        List<Map<String, Object>> items = serpApiTrendService.searchAcrossSources(keyword, limit);
         int trendScore = serpApiTrendService.fetchTrendScore(keyword);
         result.put("items", items);
         result.put("trendScore", trendScore);
         result.put("keyword", keyword);
-        result.put("source", "google_shopping");
+        result.put("source", "multi_source");
+        result.put("sources", serpApiTrendService.getMarketSourceSummaries());
+        result.put("sourceCount", serpApiTrendService.getMarketSourceSummaries().size());
         result.put("serpApiEnabled", serpApiTrendService.isReady());
         return Result.success(result);
     }
@@ -128,7 +130,7 @@ public class TrendAnalysisController {
         });
         Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("started", true);
-        resp.put("message", "热榜刷新任务已启动，约1分钟后完成（10个关键词），请稍后刷新页面查看");
+        resp.put("message", "热榜刷新任务已启动，约1分钟后完成（多外部渠道聚合），请稍后刷新页面查看");
         return Result.success(resp);
     }
 }

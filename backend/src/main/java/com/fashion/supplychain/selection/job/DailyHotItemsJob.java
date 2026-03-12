@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * 今日热榜定时任务
- * 每天凌晨 2 点自动从 Google Shopping 拉取 10 大品类各 3 件热门商品（≈30件），
+ * 每天凌晨 2 点自动从多外部渠道拉取热门商品快照，
  * 写入 t_trend_snapshot（tenantId=0 系统级），供"今日热榜"接口读取。
  */
 @Component
@@ -26,9 +26,10 @@ public class DailyHotItemsJob {
     /** 与前端 HOT_KEYWORDS 保持一致 */
     static final List<String> HOT_KEYWORDS = List.of(
             "连衣裙", "卫衣", "外套", "牛仔裤", "T恤",
-            "衬衫", "半身裙", "针织衫", "风衣", "西装");
+            "衬衫", "半身裙", "针织衫", "风衣", "西装",
+            "夹克", "羽绒服");
 
-    static final int ITEMS_PER_KEYWORD = 3;
+        static final int ITEMS_PER_SOURCE = 2;
     static final Long SYSTEM_TENANT_ID = 0L;
 
     @Autowired
@@ -60,30 +61,37 @@ public class DailyHotItemsJob {
         // 幂等：先清除当天旧数据，确保重跑安全
         snapshotService.remove(new LambdaQueryWrapper<TrendSnapshot>()
                 .eq(TrendSnapshot::getTenantId, SYSTEM_TENANT_ID)
-                .eq(TrendSnapshot::getDataSource, "GOOGLE_SHOPPING")
                 .eq(TrendSnapshot::getTrendType, "DAILY_HOT")
                 .eq(TrendSnapshot::getSnapshotDate, today));
 
         int success = 0, failed = 0;
         for (String keyword : HOT_KEYWORDS) {
             try {
-                List<Map<String, Object>> items = serpApiTrendService.searchShopping(keyword, ITEMS_PER_KEYWORD);
                 int heatScore = serpApiTrendService.fetchTrendScore(keyword);
+                for (Map<String, String> source : serpApiTrendService.getMarketSourceSummaries()) {
+                    String dataSource = source.get("dataSource");
+                    List<Map<String, Object>> items = serpApiTrendService.searchBySource(dataSource, keyword, ITEMS_PER_SOURCE);
+                    if (items.isEmpty()) {
+                        failed++;
+                        continue;
+                    }
 
-                TrendSnapshot snap = new TrendSnapshot();
-                snap.setSnapshotDate(today);
-                snap.setDataSource("GOOGLE_SHOPPING");
-                snap.setTrendType("DAILY_HOT");
-                snap.setKeyword(keyword);
-                snap.setHeatScore(heatScore >= 0 ? heatScore : 50);
-                snap.setTrendData(objectMapper.writeValueAsString(items));
-                snap.setPeriod("day");
-                snap.setTenantId(SYSTEM_TENANT_ID);
-                snapshotService.save(snap);
+                    TrendSnapshot snap = new TrendSnapshot();
+                    snap.setSnapshotDate(today);
+                    snap.setDataSource(dataSource);
+                    snap.setTrendType("DAILY_HOT");
+                    snap.setKeyword(keyword);
+                    snap.setHeatScore(heatScore >= 0 ? heatScore : 50);
+                    snap.setTrendData(objectMapper.writeValueAsString(items));
+                    snap.setAiSummary(source.get("label"));
+                    snap.setPeriod("day");
+                    snap.setTenantId(SYSTEM_TENANT_ID);
+                    snapshotService.save(snap);
 
-                log.info("[DailyHotJob] {} → {}条商品, 热度={}", keyword, items.size(), heatScore);
-                success++;
-                Thread.sleep(1200);  // 避免 SerpApi 限流
+                    log.info("[DailyHotJob] {} {} → {}条商品, 热度={}", source.get("label"), keyword, items.size(), heatScore);
+                    success++;
+                    Thread.sleep(900);  // 避免 SerpApi 限流
+                }
             } catch (Exception e) {
                 log.warn("[DailyHotJob] 关键词 {} 失败: {}", keyword, e.getMessage());
                 failed++;
