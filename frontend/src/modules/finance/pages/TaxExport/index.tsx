@@ -36,6 +36,8 @@ const FORMAT_OPTIONS = [
 const EXPORT_TYPES = [
   { key: 'payroll', title: '工资结算汇总', desc: '导出指定周期内所有结算单数据，含结算金额、操作工姓名、工序明细', icon: '💰', color: '#52c41a' },
   { key: 'material', title: '物料对账单', desc: '导出面辅料采购、出入库、对账数据，与供应商对账一目了然', icon: '📦', color: '#1890ff' },
+  { key: 'supplier-payment', title: '供应商付款汇总', desc: '导出应付账款、已付款、逾期明细，便于对账审计及供应商信用评估', icon: '🏭', color: '#722ed1' },
+  { key: 'tax-summary', title: '月度税务汇总', desc: '导出本期开票金额、税种税率、税额合计，可直接用于月度税务申报附表', icon: '📋', color: '#fa8c16' },
 ];
 
 const INVOICE_TYPES = [
@@ -71,10 +73,7 @@ const RELATED_BIZ_TYPE_MAP: Record<string, string> = {
 };
 
 const pageShellStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 'min(1600px, calc(100vw - 72px))',
-  margin: '0 auto',
-  padding: '24px 16px 32px',
+  padding: '12px 0 32px',
 };
 
 const formatCurrency = (value?: number) => (Number(value || 0)).toFixed(2);
@@ -91,6 +90,10 @@ const InvoiceTab: React.FC = () => {
   const [editRecord, setEditRecord] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
+  const watchAmount = Form.useWatch<number>('amount', form);
+  const watchTaxRate = Form.useWatch<number>('taxRate', form);
+  const calcTaxAmount = (watchAmount && watchTaxRate) ? parseFloat(((watchAmount || 0) * (watchTaxRate || 0) / 100).toFixed(2)) : 0;
+  const calcTotal = parseFloat(((watchAmount || 0) + calcTaxAmount).toFixed(2));
   const [stats, setStats] = useState({ draftCount: 0, issuedCount: 0, monthAmount: 0, totalIssued: 0 });
   const [filters, setFilters] = useState<{
     status?: InvoiceStatus;
@@ -124,9 +127,14 @@ const InvoiceTab: React.FC = () => {
   const handleSave = async (vals: any) => {
     setSubmitting(true);
     try {
+      const taxRateDecimal = vals.taxRate != null ? vals.taxRate / 100 : 0;
+      const taxAmountVal = parseFloat(((vals.amount || 0) * taxRateDecimal).toFixed(2));
+      const totalAmountVal = parseFloat(((vals.amount || 0) + taxAmountVal).toFixed(2));
       const payload = {
         ...vals,
-        taxRate: vals.taxRate != null ? vals.taxRate / 100 : undefined,
+        taxRate: vals.taxRate != null ? taxRateDecimal : undefined,
+        taxAmount: taxAmountVal,
+        totalAmount: totalAmountVal,
         issueDate: vals.issueDate ? dayjs(vals.issueDate).format('YYYY-MM-DD') : undefined,
       };
       if (editRecord?.id) {
@@ -300,6 +308,17 @@ const InvoiceTab: React.FC = () => {
               <InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} placeholder="留空则按默认 VAT 税率" />
             </Form.Item>
           </ModalFieldRow>
+          <ModalFieldRow label="税额(自动计算)">
+            <div style={{ lineHeight: '32px', color: '#595959' }}>
+              {calcTaxAmount.toFixed(2)} 元
+              <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>(未税金额 × 税率)</Text>
+            </div>
+          </ModalFieldRow>
+          <ModalFieldRow label="价税合计">
+            <div style={{ lineHeight: '32px', fontWeight: 600, color: '#1890ff', fontSize: 15 }}>
+              {calcTotal.toFixed(2)} 元
+            </div>
+          </ModalFieldRow>
           <ModalFieldRow label="开票日期">
             <Form.Item name="issueDate" noStyle>
               <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
@@ -332,8 +351,15 @@ const PayableTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [stats, setStats] = useState<any>({ pendingAmount: 0, overdueAmount: 0, paidAmount: 0 });
+  const [stats, setStats] = useState<any>({ pendingAmount: 0, overdueAmount: 0, paidAmount: 0, overdueCount: 0, newThisMonth: 0 });
   const [filters, setFilters] = useState<{ status?: PayableStatus; keyword: string }>({ status: undefined, keyword: '' });
+  // 新建应付款
+  const [formOpen, setFormOpen] = useState(false);
+  const [createForm] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+  // 部分付款弹窗
+  const [payRecord, setPayRecord] = useState<any>(null);
+  const [payAmount, setPayAmount] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -352,12 +378,34 @@ const PayableTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleMarkPaid = async (id: string) => {
+  const handleMarkPaid = async (id: string, amount?: number) => {
     try {
-      await payableApi.markPaid(id);
-      message.success('已标记为已付款');
+      await payableApi.markPaid(id, amount ?? undefined);
+      message.success(amount != null ? `已付款 ${amount.toFixed(2)} 元` : '已标记全额付款');
+      setPayRecord(null);
       fetchData();
     } catch { message.error('操作失败'); }
+  };
+
+  const handleCreate = async (vals: any) => {
+    setSubmitting(true);
+    try {
+      await payableApi.create({
+        ...vals,
+        dueDate: vals.dueDate ? dayjs(vals.dueDate).format('YYYY-MM-DD') : undefined,
+      });
+      message.success('应付款已新建');
+      setFormOpen(false);
+      createForm.resetFields();
+      fetchData();
+    } catch { message.error('新建失败'); }
+    finally { setSubmitting(false); }
+  };
+
+  // 剩余天数：正数=未到期天数，负数=已逾期天数，null=无到期日
+  const getRemainDays = (dueDate?: string) => {
+    if (!dueDate) return null;
+    return dayjs(dueDate).diff(dayjs().startOf('day'), 'day');
   };
 
   const columns = [
@@ -367,34 +415,55 @@ const PayableTab: React.FC = () => {
     { title: '业务说明', dataIndex: 'description', ellipsis: true },
     { title: '应付金额(元)', dataIndex: 'amount', width: 120, render: (v: number) => v?.toFixed(2) },
     { title: '已付金额(元)', dataIndex: 'paidAmount', width: 120, render: (v: number) => (v || 0).toFixed(2) },
-    { title: '到期日', dataIndex: 'dueDate', width: 100 },
+    {
+      title: '到期/剩余', dataIndex: 'dueDate', width: 150,
+      render: (v: string, r: any) => {
+        if (!v) return <Text type="secondary">-</Text>;
+        if (r.status === 'PAID') return <Text type="secondary">{v}</Text>;
+        const days = getRemainDays(v);
+        if (days === null) return <span>{v}</span>;
+        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 11 }}>逾期{Math.abs(days)}天</Tag></span>;
+        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 11 }}>今日到期</Tag></span>;
+        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 11 }}>剩{days}天</Tag></span>;
+        return <span>{v} <Text type="secondary" style={{ fontSize: 11 }}>({days}天后)</Text></span>;
+      },
+    },
     {
       title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => { const s = PAYABLE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{v}</Tag>; }
     },
     {
-      title: '操作', width: 90,
-      render: (_: any, r: any) => r.status === 'PENDING' && (
-        <Popconfirm title="确认标记为已付款？" onConfirm={() => handleMarkPaid(r.id)}>
-          <Button size="small" type="link" icon={<CheckCircleOutlined />}>付款</Button>
-        </Popconfirm>
+      title: '操作', width: 140,
+      render: (_: any, r: any) => r.status !== 'PAID' && (
+        <Space>
+          <Popconfirm title="全额付款？" onConfirm={() => handleMarkPaid(r.id)}>
+            <Button size="small" type="link" icon={<CheckCircleOutlined />}>全额</Button>
+          </Popconfirm>
+          <Button size="small" type="link" onClick={() => { setPayRecord(r); setPayAmount(null); }}>部分付</Button>
+        </Space>
       ),
     },
   ];
 
+  const rowClassName = (record: any) => {
+    if (record.status === 'PAID') return '';
+    const days = record.dueDate ? getRemainDays(record.dueDate) : null;
+    if (days !== null && days < 0) return 'ap-row-overdue';
+    if (days !== null && days <= 3) return 'ap-row-warning';
+    return '';
+  };
+
   return (
     <>
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="应付账款已接真实待付款与付款回写链路"
-        description="当前页管理的是 AP 台账；付款中心里的待付款记录会持续回写上游业务状态。现阶段已确认和工资付款中心联动，供应商应付仍以台账管理为主。"
-      />
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={8}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
-        <Col xs={24} md={8}><Card size="small"><Statistic title="已逾期(元)" value={(stats.overdueAmount || 0).toFixed(2)} valueStyle={{ color: '#f5222d' }} /></Card></Col>
-        <Col xs={24} md={8}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+      <style>{`
+        .ap-row-overdue td { background: #fff1f0 !important; }
+        .ap-row-warning td { background: #fffbe6 !important; }
+      `}</style>
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} valueStyle={{ color: '#f5222d' }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>
       <Card size="small" style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
@@ -418,12 +487,86 @@ const PayableTab: React.FC = () => {
             />
           </Col>
           <Col xs={12} md={12} style={{ textAlign: 'right' }}>
-            <Button onClick={() => { setFilters({ status: undefined, keyword: '' }); setPage(1); }}>重置</Button>
+            <Space>
+              <Button onClick={() => { setFilters({ status: undefined, keyword: '' }); setPage(1); }}>重置</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setFormOpen(true); }}>新建应付款</Button>
+            </Space>
           </Col>
         </Row>
       </Card>
-      <Table rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
-        pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }} />
+      <Alert type="info" showIcon icon={<DollarOutlined />} style={{ marginBottom: 12 }}
+        message="应付账款与业务系统深度联动"
+        description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
+      />
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={list}
+        loading={loading}
+        size="small"
+        rowClassName={rowClassName}
+        pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
+      />
+      {/* 新建应付款 */}
+      <ResizableModal
+        title="新建应付款"
+        open={formOpen}
+        onCancel={() => setFormOpen(false)}
+        defaultWidth="40vw"
+        defaultHeight="50vh"
+        footer={[
+          <Button key="cancel" onClick={() => setFormOpen(false)}>取消</Button>,
+          <Button key="ok" type="primary" loading={submitting} onClick={() => createForm.validateFields().then(handleCreate)}>保存</Button>,
+        ]}
+      >
+        <Form form={createForm} layout="vertical" style={{ padding: '16px 0' }}>
+          <ModalFieldRow label="供应商名称">
+            <Form.Item name="supplierName" noStyle rules={[{ required: true }]}><Input /></Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="来源单号">
+            <Form.Item name="orderNo" noStyle><Input placeholder="关联对账单号/采购单号（选填）" /></Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="业务说明">
+            <Form.Item name="description" noStyle><Input placeholder="如：1月面料采购货款" /></Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="应付金额(元)">
+            <Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="付款到期日">
+            <Form.Item name="dueDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item>
+          </ModalFieldRow>
+        </Form>
+      </ResizableModal>
+      {/* 部分付款弹窗 */}
+      <Modal
+        title={`部分付款 — ${payRecord?.supplierName || ''}`}
+        open={!!payRecord}
+        onCancel={() => setPayRecord(null)}
+        onOk={() => {
+          if (!payAmount || payAmount <= 0) { message.warning('请输入付款金额'); return; }
+          handleMarkPaid(payRecord.id, payAmount);
+        }}
+        okText="确认付款"
+      >
+        <div style={{ padding: '12px 0' }}>
+          <p style={{ marginBottom: 4 }}>应付金额：<strong>{payRecord?.amount?.toFixed(2)}</strong> 元</p>
+          <p style={{ marginBottom: 4 }}>已付金额：<strong>{(payRecord?.paidAmount || 0).toFixed(2)}</strong> 元</p>
+          <p style={{ marginBottom: 16 }}>剩余未付：<strong style={{ color: '#fa8c16' }}>{((payRecord?.amount || 0) - (payRecord?.paidAmount || 0)).toFixed(2)}</strong> 元</p>
+          <div>
+            <span style={{ marginRight: 8 }}>本次付款金额：</span>
+            <InputNumber
+              min={0.01}
+              max={(payRecord?.amount || 0) - (payRecord?.paidAmount || 0)}
+              precision={2}
+              style={{ width: 160 }}
+              value={payAmount ?? undefined}
+              onChange={(v) => setPayAmount(v)}
+              placeholder="输入付款金额"
+            />
+            <span style={{ marginLeft: 8, color: '#888' }}>元</span>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

@@ -75,6 +75,56 @@ public class FinanceTaxExportController {
                 .body(data);
     }
 
+    /**
+     * 导出供应商付款汇总 Excel
+     * 含应付账款、已付款、逾期应付明细，适用于对账审计及供应商信用评估
+     */
+    @GetMapping("/supplier-payment")
+    public ResponseEntity<byte[]> exportSupplierPayment(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+
+        String start = (startDate != null && !startDate.isBlank()) ? startDate
+                : LocalDate.now().withDayOfMonth(1).toString();
+        String end = (endDate != null && !endDate.isBlank()) ? endDate
+                : LocalDate.now().toString();
+
+        byte[] data = taxExportOrchestrator.exportSupplierPaymentExcel(start, end, format);
+        String filename = buildFilename("供应商付款汇总", format, start, end);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodeFilename(filename))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(data);
+    }
+
+    /**
+     * 导出月度税务汇总 Excel
+     * 含开票金额、税种税率、税额合计，可直接用于月度税务申报
+     */
+    @GetMapping("/tax-summary")
+    public ResponseEntity<byte[]> exportTaxSummary(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+
+        String start = (startDate != null && !startDate.isBlank()) ? startDate
+                : LocalDate.now().withDayOfMonth(1).toString();
+        String end = (endDate != null && !endDate.isBlank()) ? endDate
+                : LocalDate.now().toString();
+
+        byte[] data = taxExportOrchestrator.exportTaxSummaryExcel(start, end, format);
+        String filename = buildFilename("月度税务汇总", format, start, end);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodeFilename(filename))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(data);
+    }
+
     private String buildFilename(String prefix, String format, String start, String end) {
         String suffix = "KINGDEE".equalsIgnoreCase(format) ? "_金蝶KIS"
                 : "UFIDA".equalsIgnoreCase(format) ? "_用友T3" : "";

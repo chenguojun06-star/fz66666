@@ -2,10 +2,14 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.finance.entity.PayrollSettlement;
+import com.fashion.supplychain.finance.entity.Invoice;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
-import com.fashion.supplychain.finance.service.PayrollSettlementService;
+import com.fashion.supplychain.finance.entity.Payable;
+import com.fashion.supplychain.finance.entity.PayrollSettlement;
+import com.fashion.supplychain.finance.service.InvoiceService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
+import com.fashion.supplychain.finance.service.PayableService;
+import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -31,6 +35,12 @@ public class FinanceTaxExportOrchestrator {
 
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
+
+    @Autowired
+    private PayableService payableService;
+
+    @Autowired
+    private InvoiceService invoiceService;
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -262,6 +272,163 @@ public class FinanceTaxExportOrchestrator {
 
             return toBytes(wb);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // 供应商付款汇总导出
+    // -----------------------------------------------------------------------
+
+    public byte[] exportSupplierPaymentExcel(String startDate, String endDate, String format) throws IOException {
+        Long tenantId = UserContext.tenantId();
+        QueryWrapper<Payable> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId);
+        qw.eq("delete_flag", 0);
+        if (startDate != null && !startDate.isBlank()) {
+            qw.ge("create_time", startDate + " 00:00:00");
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            qw.le("create_time", endDate + " 23:59:59");
+        }
+        qw.orderByDesc("due_date");
+        List<Payable> list = payableService.list(qw);
+
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("供应商付款汇总");
+            CellStyle headerStyle = createHeaderStyle(wb);
+            CellStyle moneyStyle = createMoneyStyle(wb);
+
+            String[] headers = {"应付单号", "供应商", "关联订单", "描述",
+                    "应付金额(元)", "已付金额(元)", "未付金额(元)", "到期日", "状态"};
+            Row hRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell c = hRow.createCell(i);
+                c.setCellValue(headers[i]);
+                c.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 18 * 256);
+            }
+
+            int rowIdx = 1;
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            BigDecimal totalPaid = BigDecimal.ZERO;
+            BigDecimal totalUnpaid = BigDecimal.ZERO;
+            for (Payable p : list) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(safeStr(p.getPayableNo()));
+                row.createCell(1).setCellValue(safeStr(p.getSupplierName()));
+                row.createCell(2).setCellValue(safeStr(p.getOrderNo()));
+                row.createCell(3).setCellValue(safeStr(p.getDescription()));
+                BigDecimal amt = p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO;
+                BigDecimal paid = p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO;
+                BigDecimal unpaid = amt.subtract(paid);
+                Cell amtCell = row.createCell(4);
+                amtCell.setCellValue(amt.doubleValue());
+                amtCell.setCellStyle(moneyStyle);
+                Cell paidCell = row.createCell(5);
+                paidCell.setCellValue(paid.doubleValue());
+                paidCell.setCellStyle(moneyStyle);
+                Cell unpaidCell = row.createCell(6);
+                unpaidCell.setCellValue(unpaid.doubleValue());
+                unpaidCell.setCellStyle(moneyStyle);
+                row.createCell(7).setCellValue(p.getDueDate() != null ? p.getDueDate().toString() : "");
+                row.createCell(8).setCellValue(translateStatus(p.getStatus()));
+                totalAmount = totalAmount.add(amt);
+                totalPaid = totalPaid.add(paid);
+                totalUnpaid = totalUnpaid.add(unpaid);
+            }
+
+            Row sumRow = sheet.createRow(rowIdx);
+            Cell sumLabel = sumRow.createCell(0);
+            sumLabel.setCellValue("合计 (" + list.size() + " 条)");
+            sumLabel.setCellStyle(headerStyle);
+            Cell s4 = sumRow.createCell(4); s4.setCellValue(totalAmount.doubleValue()); s4.setCellStyle(moneyStyle);
+            Cell s5 = sumRow.createCell(5); s5.setCellValue(totalPaid.doubleValue()); s5.setCellStyle(moneyStyle);
+            Cell s6 = sumRow.createCell(6); s6.setCellValue(totalUnpaid.doubleValue()); s6.setCellStyle(moneyStyle);
+
+            return toBytes(wb);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 月度税务汇总导出
+    // -----------------------------------------------------------------------
+
+    public byte[] exportTaxSummaryExcel(String startDate, String endDate, String format) throws IOException {
+        Long tenantId = UserContext.tenantId();
+        QueryWrapper<Invoice> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId);
+        qw.eq("delete_flag", 0);
+        if (startDate != null && !startDate.isBlank()) {
+            qw.ge("create_time", startDate + " 00:00:00");
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            qw.le("create_time", endDate + " 23:59:59");
+        }
+        qw.orderByDesc("issue_date");
+        List<Invoice> list = invoiceService.list(qw);
+
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("月度税务汇总");
+            CellStyle headerStyle = createHeaderStyle(wb);
+            CellStyle moneyStyle = createMoneyStyle(wb);
+
+            String[] headers = {"发票号", "发票类型", "购方名称", "购方税号",
+                    "销方名称", "未税金额(元)", "税率(%)", "税额(元)", "价税合计(元)", "开票日期", "状态"};
+            Row hRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell c = hRow.createCell(i);
+                c.setCellValue(headers[i]);
+                c.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 20 * 256);
+            }
+
+            int rowIdx = 1;
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            BigDecimal totalTax = BigDecimal.ZERO;
+            BigDecimal totalWithTax = BigDecimal.ZERO;
+            for (Invoice inv : list) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(safeStr(inv.getInvoiceNo()));
+                row.createCell(1).setCellValue(translateInvoiceType(inv.getInvoiceType()));
+                row.createCell(2).setCellValue(safeStr(inv.getTitleName()));
+                row.createCell(3).setCellValue(safeStr(inv.getTitleTaxNo()));
+                row.createCell(4).setCellValue(safeStr(inv.getSellerName()));
+                BigDecimal amt = inv.getAmount() != null ? inv.getAmount() : BigDecimal.ZERO;
+                BigDecimal tax = inv.getTaxAmount() != null ? inv.getTaxAmount() : BigDecimal.ZERO;
+                BigDecimal total = inv.getTotalAmount() != null ? inv.getTotalAmount() : amt.add(tax);
+                // taxRate 存储为小数（如 0.13），显示为百分比
+                double taxRatePct = inv.getTaxRate() != null ? inv.getTaxRate().multiply(new BigDecimal("100")).doubleValue() : 0.0;
+                Cell amtCell = row.createCell(5); amtCell.setCellValue(amt.doubleValue()); amtCell.setCellStyle(moneyStyle);
+                row.createCell(6).setCellValue(taxRatePct);
+                Cell taxCell = row.createCell(7); taxCell.setCellValue(tax.doubleValue()); taxCell.setCellStyle(moneyStyle);
+                Cell totalCell = row.createCell(8); totalCell.setCellValue(total.doubleValue()); totalCell.setCellStyle(moneyStyle);
+                row.createCell(9).setCellValue(inv.getIssueDate() != null ? inv.getIssueDate().toString() : "");
+                row.createCell(10).setCellValue(translateStatus(inv.getStatus()));
+                totalAmount = totalAmount.add(amt);
+                totalTax = totalTax.add(tax);
+                totalWithTax = totalWithTax.add(total);
+            }
+
+            Row sumRow = sheet.createRow(rowIdx);
+            Cell sumLabel = sumRow.createCell(0);
+            sumLabel.setCellValue("合计 (" + list.size() + " 条)");
+            sumLabel.setCellStyle(headerStyle);
+            Cell s5 = sumRow.createCell(5); s5.setCellValue(totalAmount.doubleValue()); s5.setCellStyle(moneyStyle);
+            Cell s7 = sumRow.createCell(7); s7.setCellValue(totalTax.doubleValue()); s7.setCellStyle(moneyStyle);
+            Cell s8 = sumRow.createCell(8); s8.setCellValue(totalWithTax.doubleValue()); s8.setCellStyle(moneyStyle);
+
+            return toBytes(wb);
+        }
+    }
+
+    private String translateInvoiceType(String type) {
+        if (type == null) return "";
+        return switch (type) {
+            case "SPECIAL" -> "增值税专用发票";
+            case "NORMAL" -> "增值税普通发票";
+            case "ELECTRONIC" -> "电子普通发票";
+            case "ELECTRONIC_SPECIAL" -> "电子专用发票";
+            default -> type;
+        };
     }
 
     // -----------------------------------------------------------------------
