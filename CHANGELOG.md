@@ -6,6 +6,11 @@
 - 扩大热词覆盖面，前后端同步补充 `夹克`、`羽绒服` 两个高频品类，并在页面上明确展示多渠道来源数量
 - 这次改造不新增数据库表结构，直接复用 `t_trend_snapshot`，降低云端发布和回滚成本
 
+### fix: 选品候选款评分来源透明化
+- 候选款悬浮卡与卡片标签不再笼统显示“AI”，而是明确区分 `模型分析`、`规则评分`、`规则兜底`
+- 当模型未启用时，后端会把评分原因明确写成规则结论，避免把 Google Trends 分数或本地兜底规则伪装成 AI 结果
+- 市场热榜增加渠道筛选和权重排序，页面结果更接近正式榜单而不是简单合并
+
 ### fix: 云端样衣来源字段缺失自动修复
 - 扩展 `DbColumnRepairRunner`，启动时自动检查并补齐 `t_style_info.development_source_type` 与 `t_style_info.development_source_detail`
 - 即使云端 Flyway 因部署时序或环境原因未及时执行，后端启动后也会自动补列，避免 `/api/style/info/list` 与 `/api/style/info/development-stats` 因缺列直接返回 500

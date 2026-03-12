@@ -38,6 +38,8 @@ interface Candidate {
   status: string;
   trendScore?: number;
   trendScoreReason?: string;
+  aiEnabled?: boolean;
+  scoringMode?: string;
   profitEstimate?: number;
   seasonTags?: string;
   avgReviewScore?: number;
@@ -49,6 +51,25 @@ interface Candidate {
   updateTime?: string;
   remark?: string;
 }
+
+const getScoreMeta = (record: Candidate) => {
+  if (record.scoringMode === 'AI_MODEL') {
+    return { label: '模型分析', color: 'purple' as const, title: '当前分数来自已启用的 AI 模型分析' };
+  }
+  if (record.scoringMode === 'RULE_GOOGLE_TRENDS') {
+    return { label: '规则评分', color: 'geekblue' as const, title: '当前分数来自 Google Trends 热度 + 本地规则加权，不是大模型结论' };
+  }
+  if (record.scoringMode === 'RULE_LOCAL_FALLBACK') {
+    return { label: '规则兜底', color: 'orange' as const, title: '当前分数来自本地规则兜底，不应当作 AI 结论' };
+  }
+  if (record.aiEnabled === true || record.trendScoreReason?.startsWith('AI模型分析：')) {
+    return { label: '模型分析', color: 'purple' as const, title: '当前分数来自已启用的 AI 模型分析' };
+  }
+  if (record.trendScoreReason?.startsWith('规则评分：')) {
+    return { label: '规则评分', color: 'geekblue' as const, title: '当前分数来自规则计算，不是大模型结论' };
+  }
+  return { label: '待分析', color: 'default' as const, title: '当前还没有评分来源信息' };
+};
 
 interface CandidateReviewItem {
   id: number;
@@ -89,6 +110,7 @@ function AiHoverCard({
   latestReview?: CandidateReviewItem | null;
 }) {
   const hasScore = record.trendScore != null;
+  const scoreMeta = getScoreMeta(record);
   return (
     <div style={{ width: 290 }}>
       <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -120,7 +142,10 @@ function AiHoverCard({
           <div style={{ marginBottom: 4 }}>
             <Space size={4}>
               <ThunderboltOutlined style={{ color: '#722ed1' }} />
-              <Text type="secondary" style={{ fontSize: 12 }}>AI 趋势契合度</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>趋势评分</Text>
+              <Tooltip title={scoreMeta.title}>
+                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 10 }}>{scoreMeta.label}</Tag>
+              </Tooltip>
               <Text strong style={{
                 color: record.trendScore! >= 75 ? '#52c41a' :
                        record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f',
@@ -436,8 +461,8 @@ export default function SelectionCenter() {
               options={categories.map(c => ({ value: c, label: c }))}
             />
           )}
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            共 {filtered.length} 款 · 鼠标悬停查看 AI 分析与审核意见
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+            共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见
           </Text>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
@@ -460,6 +485,7 @@ export default function SelectionCenter() {
                 const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: item.status };
                 const aiLoading = aiLoadingIds.has(item.id);
                 const latestReview = reviewMap[item.id] ?? null;
+                const scoreMeta = getScoreMeta(item);
                 return (
                   <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4}>
                     <Popover
@@ -551,6 +577,7 @@ export default function SelectionCenter() {
                             {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
                             {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
                             {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
+                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 11 }}>{scoreMeta.label}</Tag>}
                           </div>
                           <div style={{ fontSize: 11, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}

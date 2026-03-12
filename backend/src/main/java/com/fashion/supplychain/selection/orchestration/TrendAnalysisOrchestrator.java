@@ -150,21 +150,25 @@ public class TrendAnalysisOrchestrator {
             // AI未配置时：优先用 SerpApi 真实分数，否则基于规则
             int baseScore;
             String reason;
+            String scoringMode;
             if (serpTrendScore >= 0) {
                 baseScore = serpTrendScore;
                 // 利润率和数量加成（最多+10）
                 if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore = Math.min(100, baseScore + 5);
                 if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore = Math.min(100, baseScore + 5);
-                reason = "Google Trends 实时热度指数: " + serpTrendScore + "/100";
+                reason = "规则评分：基于 Google Trends 实时热度指数 " + serpTrendScore + "/100，并结合利润率、预计数量做加权。";
+                scoringMode = "RULE_GOOGLE_TRENDS";
             } else {
                 baseScore = 70;
                 if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore += 5;
                 if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore += 5;
-                reason = "AI模型未配置，基于规则评分。利润率和数量综合评估。";
+                reason = "规则评分：AI模型未配置，当前仅按利润率和预计数量做基础评估。";
+                scoringMode = "RULE_LOCAL_FALLBACK";
             }
             result.put("score", baseScore);
             result.put("reason", reason);
             result.put("aiEnabled", false);
+            result.put("scoringMode", scoringMode);
             candidate.setTrendScore(baseScore);
             candidate.setTrendScoreReason(reason);
             candidateService.updateById(candidate);
@@ -202,20 +206,25 @@ public class TrendAnalysisOrchestrator {
             }
 
             result.put("score", totalScore);
-            result.put("reason", suggestion);
+                String normalizedSuggestion = suggestion != null && suggestion.startsWith("AI模型分析：")
+                    ? suggestion
+                    : "AI模型分析：" + suggestion;
+                result.put("reason", normalizedSuggestion);
             result.put("rawContent", content);
             result.put("aiEnabled", true);
+                result.put("scoringMode", "AI_MODEL");
 
             // 回写
             candidate.setTrendScore(totalScore);
-            candidate.setTrendScoreReason(suggestion);
+                candidate.setTrendScoreReason(normalizedSuggestion);
             candidateService.updateById(candidate);
 
         } catch (Exception e) {
             log.error("[TrendAnalysis] AI打分失败", e);
             result.put("score", 70);
-            result.put("reason", "AI分析暂时不可用");
+            result.put("reason", "规则评分：AI分析暂时不可用，当前结果不应视为模型结论。\n");
             result.put("aiEnabled", false);
+            result.put("scoringMode", "RULE_LOCAL_FALLBACK");
         }
         return result;
     }

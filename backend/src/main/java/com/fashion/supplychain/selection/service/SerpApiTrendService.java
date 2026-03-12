@@ -65,6 +65,13 @@ public class SerpApiTrendService {
     private static final Map<String, MarketSource> MARKET_SOURCE_INDEX = MARKET_SOURCES.stream()
             .collect(Collectors.toMap(source -> source.dataSource, source -> source));
 
+        private static final Map<String, Double> SOURCE_WEIGHT = Map.of(
+            "GOOGLE_SHOPPING", 18D,
+            "AMAZON_SEARCH", 16D,
+            "EBAY_SEARCH", 14D,
+            "WALMART_SEARCH", 12D
+        );
+
     /**
      * 中文→英文关键词映射（Google Trends 中文+geo=CN 经常返回空数据，英文全球查询更稳定）
      */
@@ -293,8 +300,9 @@ public class SerpApiTrendService {
         }
 
         merged.sort(Comparator
-                .comparing((Map<String, Object> item) -> toComparableDouble(item.get("rating"))).reversed()
-                .thenComparing(item -> toComparableInteger(item.get("reviews")), Comparator.reverseOrder()));
+            .comparing((Map<String, Object> item) -> toComparableDouble(item.get("rankScore"))).reversed()
+            .thenComparing(item -> toComparableDouble(item.get("rating")), Comparator.reverseOrder())
+            .thenComparing(item -> toComparableInteger(item.get("reviews")), Comparator.reverseOrder()));
 
         if (merged.size() > realLimit) {
             return new ArrayList<>(merged.subList(0, realLimit));
@@ -446,7 +454,17 @@ public class SerpApiTrendService {
         entry.put("rating", rating);
         entry.put("reviews", reviews);
         entry.put("delivery", firstNonBlank(node.path("delivery").asText(""), node.path("shipping").asText("")));
+        entry.put("rankScore", calculateRankScore(source, extractedPrice, rating, reviews, entry.get("delivery")));
         return entry;
+    }
+
+    private double calculateRankScore(MarketSource source, Double extractedPrice, Double rating, Integer reviews, Object delivery) {
+        double sourceWeight = SOURCE_WEIGHT.getOrDefault(source.dataSource, 10D);
+        double ratingScore = rating != null ? rating * 12D : 0D;
+        double reviewScore = reviews != null ? Math.min(18D, Math.log10(reviews + 1D) * 8D) : 0D;
+        double priceScore = extractedPrice != null && extractedPrice > 0 ? 6D : 0D;
+        double deliveryScore = delivery != null && !delivery.toString().isBlank() ? 3D : 0D;
+        return Math.round((sourceWeight + ratingScore + reviewScore + priceScore + deliveryScore) * 10D) / 10D;
     }
 
     // ─────────────── 工具方法 ───────────────
