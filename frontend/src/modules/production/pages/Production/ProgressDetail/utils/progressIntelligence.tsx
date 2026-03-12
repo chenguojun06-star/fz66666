@@ -35,7 +35,7 @@ export interface StageSnapshot {
 }
 
 export interface ProgressInsight {
-  bottleneck: { stage: string; reason: string; gap: number } | null;
+  bottleneck: { stage: string; reason: string; gap: number; stageQty: number; upstreamQty: number; total: number } | null;
   personnelNotes: string[];
   resourceSuggestions: string[];
   followUpPoints: string[];
@@ -86,11 +86,12 @@ export function analyzeProgress(
     if (gap > maxGap && gap >= 20) {
       maxGap = gap;
       bnStage = current.name;
-      bnReason = `${upstream.name} ${upstream.pct}% → ${current.name} ${current.pct}%，落差 ${gap}%`;
+      bnReason = `${upstream.name} ${upstream.qty}/${total}件(${upstream.pct}%) → ${current.name} ${current.qty}/${total}件(${current.pct}%)，落差 ${gap}%`;
     }
   }
   if (bnStage) {
-    bottleneck = { stage: bnStage, reason: bnReason, gap: maxGap };
+    const bnSnapshot = allStages.find(s => s.name === bnStage);
+    bottleneck = { stage: bnStage, reason: bnReason, gap: maxGap, stageQty: bnSnapshot?.qty ?? 0, upstreamQty: allStages[allStages.findIndex(s => s.name === bnStage) - 1]?.qty ?? 0, total };
     if (maxGap >= 50) verdict = 'critical';
     else if (maxGap >= 30) verdict = 'warn';
   }
@@ -266,11 +267,11 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
     ? '当前不是立即爆雷，但已经出现会拖慢交付的信号。'
     : '整体推进还算顺，但仍要盯住关键节点别突然掉速。';
   const painPoint = bottleneck
-    ? `${bottleneck.stage} 是当前主卡点，前后工序节奏已经拉开。`
+    ? `${bottleneck.stage} 是当前主卡点(${bottleneck.stageQty}/${bottleneck.total}件)，前后工序节奏已经拉开。`
     : riskPredictions[0] || personnelNotes[0] || followUpPoints[0] || '当前未发现明显主卡点。';
   const execute = resourceSuggestions[0] || followUpPoints[0] || '继续按当前节奏推进，并保持对关键节点的抽查。';
   const evidence = [
-    bottleneck ? `瓶颈 ${bottleneck.stage}，落差 ${bottleneck.gap}%` : null,
+    bottleneck ? `瓶颈 ${bottleneck.stage}，${bottleneck.stageQty}/${bottleneck.total}件，落差 ${bottleneck.gap}%` : null,
     personnelNotes[0] || null,
     riskPredictions[0] || null,
   ].filter(Boolean) as string[];
