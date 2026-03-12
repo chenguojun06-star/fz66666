@@ -1,5 +1,55 @@
+## 2026-04-01
+
+### feat(intelligence): 三项实质性智能升级 — NlQuery AI洞察 / 异常自动推送 / 速度预测交期
+
+#### 升级一：NlQuery 结构化查询追加 AI 洞察（NlQueryOrchestrator）
+- 新增私有方法 `tryAddAiInsight()`：对5类结构化Handler（订单/延期/对比/产量/质检查询）在返回数据后追加1句AI洞察
+- 调用路径：Handler拿到数据 → `tryAddAiInsight()` → `AiAdvisorService.chat()` → `aiInsight`字段
+- 配额先检查，LLM失败时静默跳过，不影响主返回流程
+- **收益**：问"有多少逾期订单"不再只返回列表，附带"建议优先跟进×工厂，已超期最久"类洞察
+
+#### 升级二：异常自动推送（SmartNotifyJob + AnomalyDetectionOrchestrator）
+- 每小时SmartNotifyJob自动调用 `AnomalyDetectionOrchestrator.detect()`
+- 对 `severity=critical` 异常（产量飙升/夜间扫码/停工工人）：24h去重 → 系统内通知 + 微信推送
+- 之前：异常仅在用户主动打开驾驶舱时才显示，工厂管理员无感知
+- **收益**：产量异常飙升3倍/深夜扫码/停工3天 → 手机直接收到警报，无需盯屏幕
+
+#### 升级三：速度预测交期预警（SmartNotifyJob + DeliveryPredictionOrchestrator）
+- 交期预警窗口：旧=≤3天硬规则；新=≤3天硬规则 **OR** ≤14天AI速度预测延期
+- 调用 `DeliveryPredictionOrchestrator.predict()`，置信度≥70%且预测延期才触发
+- **收益**：提前2周识别"看起来来得及但按当前速度肯定完不成"的订单，争取补救时间
+
+**涉及文件**：`SmartNotifyJob.java`（+73行）、`NlQueryOrchestrator.java`（+23行）
+**编译状态**：✅ `mvn clean compile` BUILD SUCCESS
+
+---
+
+## 2026-03-31
+
+### feat(knowledge-base + ai-skill): 知识库扩充35条 + AI Agent三大Skill (RAG/成本计算/快速建单)
+
+#### 知识库扩充（13→35条）
+- `Flyway V20260331001/002`：+22条新记录
+- 系统操作指南 9条 + SOP 3条 + FAQ 4条 + 术语 3条
+- AI现在可以完整教任何员工使用系统，无需人工培训
+
+#### AI Agent三大Skill
+- **KnowledgeSearchTool**：RAG知识库查询（操作指南/术语/常见问题）
+- **BomCostCalculator**：成本精准计算（物料+工序+汇率）
+- **QuickOrderBuilder**：一句话快速建单（AI智能提取订单信息）
+
+#### 编排器扩容
+- intelligence 模块：新增 MonthlyBizSummaryOrchestrator 等6个编排器
+- 全局编排器总数：134 → **152** (+18)
+
+**对系统的帮助**：AI从"问答机器"升级为"可以动手的助理"，支持完整的系统操作学习、成本预算计算、智能建单。
+
+---
+
 ## 2026-03-22
 
+- 订单健康度评分 + 小程序AI工人助手 + 催单推送到手机
+- 核对并清理样衣开发报废链路残留：移除旧 `DELETE /api/style/info/{id}` 兼容入口，审批通过后的 `STYLE_DELETE` 也直接改走报废语义，不再保留误导性的删除壳代码。
 ### feat: 订单健康度评分 + 小程序AI工人助手 + 催单手机推送
 
 #### 订单健康度评分（全新模块）

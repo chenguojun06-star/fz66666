@@ -19,6 +19,12 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import com.fashion.supplychain.intelligence.dto.AnomalyDetectionResponse;
+import com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest;
+import com.fashion.supplychain.intelligence.dto.DeliveryPredictionResponse;
+import com.fashion.supplychain.intelligence.orchestration.AnomalyDetectionOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.DeliveryPredictionOrchestrator;
+import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 
 /**
  * 智能跟单通知定时任务 — AI 自动扫描风险订单，无需人工介入，直接推送给跟单员
@@ -52,6 +58,15 @@ public class SmartNotifyJob {
 
     @Autowired
     private MindPushOrchestrator mindPushOrchestrator;
+
+    @Autowired
+    private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
+
+    @Autowired
+    private DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
+
+    @Autowired
+    private WxAlertNotifyService wxAlertNotifyService;
 
     @Scheduled(cron = "0 0 * * * ?")
     public void autoDetectAndNotify() {
@@ -104,6 +119,12 @@ public class SmartNotifyJob {
                 log.debug("[SmartNotify] 订单 {} 跳过: {}", order.getOrderNo(), e.getMessage());
             }
         }
+        // ── 异常检测：产量飙升/夜间扫码/停工工人 → 紧急推送 ──
+        try {
+            detectAndAlertAnomalies(tenantId);
+        } catch (Exception e) {
+            log.warn("[SmartNotify] 租户 {} 异常检测失败: {}", tenantId, e.getMessage());
+        }
         return sent;
     }
 
@@ -116,14 +137,28 @@ public class SmartNotifyJob {
         int prog = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
         LocalDateTime now = LocalDateTime.now();
 
-        // ① 截止临期：计划完工 ≤ 3 天且进度 < 80%
+        // ① 截止临期：≤3天硬规则 OR ≤14天AI速度预测延期
         if (order.getPlannedEndDate() != null) {
             long daysLeft = ChronoUnit.DAYS.between(now, order.getPlannedEndDate());
-            if (daysLeft <= 3 && prog < 80) {
-                if (noRecentNotice(tenantId, order.getOrderNo(), "deadline")) {
-                    sysNoticeOrchestrator.sendAuto(tenantId, order, "deadline");
-                    return true;
+            boolean shouldAlert = (daysLeft <= 3 && prog < 80);
+            // AI速度预测：提前预警14天内可能延期的订单
+            if (!shouldAlert && daysLeft > 3 && daysLeft <= 14 && prog < 90) {
+                try {
+                    DeliveryPredictionRequest req = new DeliveryPredictionRequest();
+                    req.setOrderId(order.getOrderNo());
+                    DeliveryPredictionResponse pred = deliveryPredictionOrchestrator.predict(req);
+                    shouldAlert = pred.isLikelyDelayed() && pred.getConfidence() >= 70;
+                    if (shouldAlert) {
+                        log.info("[SmartNotify] AI速度预测延期预警: order={}, velocity={}/天, 预测完工={}",
+                                order.getOrderNo(), pred.getDailyVelocity(), pred.getMostLikelyDate());
+                    }
+                } catch (Exception e) {
+                    log.debug("[SmartNotify] 速度预测跳过 {}: {}", order.getOrderNo(), e.getMessage());
                 }
+            }
+            if (shouldAlert && noRecentNotice(tenantId, order.getOrderNo(), "deadline")) {
+                sysNoticeOrchestrator.sendAuto(tenantId, order, "deadline");
+                return true;
             }
         }
 
@@ -153,6 +188,34 @@ public class SmartNotifyJob {
         }
 
         return false;
+    }
+
+    /**
+     * 扫描当前租户的异常信号（产量飙升/夜间扫码/停工工人），
+     * 对 critical 级别异常进行系统通知 + 微信推送，并做 24h 去重。
+     */
+    private void detectAndAlertAnomalies(Long tenantId) {
+        AnomalyDetectionResponse result = anomalyDetectionOrchestrator.detect();
+        for (AnomalyDetectionResponse.AnomalyItem item : result.getAnomalies()) {
+            if (!"critical".equals(item.getSeverity())) continue;
+            String dedupKey = "anomaly_" + item.getType()
+                    + (item.getTargetName() != null ? "_" + item.getTargetName() : "");
+            if (!noRecentNotice(tenantId, dedupKey, "anomaly")) continue;
+            SysNotice notice = new SysNotice();
+            notice.setTenantId(tenantId);
+            notice.setFromName("AI检测");
+            notice.setOrderNo(dedupKey);
+            notice.setTitle("⚠️ " + item.getTitle());
+            notice.setContent(item.getDescription());
+            notice.setNoticeType("anomaly");
+            notice.setIsRead(0);
+            notice.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.save(notice);
+            wxAlertNotifyService.notifyAlert(tenantId, item.getTitle(),
+                    item.getDescription(), null, "pages/index/index");
+            log.info("[SmartNotify] 异常推送: tenant={}, type={}, target={}",
+                    tenantId, item.getType(), item.getTargetName());
+        }
     }
 
     /**

@@ -264,6 +264,24 @@ public class NlQueryOrchestrator {
         return sb.toString();
     }
 
+    /**
+     * 为结构化查询结果追加 AI 洞察（1句话，≤80字），
+     * 配额不足或 AI 不可用时静默跳过，不影响主流程。
+     */
+    private void tryAddAiInsight(NlQueryResponse resp, Long tenantId) {
+        if (resp.getAiInsight() != null) return;
+        if (!aiAdvisorService.isEnabled() || !aiAdvisorService.checkAndConsumeQuota(tenantId)) return;
+        try {
+            String sys = "你是服装供应链分析师。根据以下业务数据，用1句话（不超过50字）指出最关键的风险或建议。直接给出结论，不要引言。";
+            String insight = aiAdvisorService.chat(sys, "当前业务数据：\n" + resp.getAnswer());
+            if (insight != null && !insight.isBlank()) {
+                resp.setAiInsight(insight.length() > 80 ? insight.substring(0, 80) : insight);
+            }
+        } catch (Exception e) {
+            log.debug("[NlQuery-insight] AI洞察生成失败（非阻断）: {}", e.getMessage());
+        }
+    }
+
     // ── 订单查询 ──
     private NlQueryResponse handleOrderQuery(String question, Long tenantId) {
         NlQueryResponse resp = new NlQueryResponse();
@@ -316,6 +334,7 @@ public class NlQueryOrchestrator {
             resp.setAnswer(String.format("当前有 %d 个进行中订单。请提供具体订单号（如PO20260301001）以查看详情。", inProgress));
             resp.setConfidence(70);
         }
+        tryAddAiInsight(resp, tenantId);
         resp.setSuggestions(Arrays.asList("有哪些延期订单？", "今日扫码数量是多少？", "整体情况怎么样？"));
         return resp;
     }
@@ -349,6 +368,7 @@ public class NlQueryOrchestrator {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("overdueCount", (int) count);
         resp.setData(data);
+        tryAddAiInsight(resp, tenantId);
         resp.setSuggestions(Arrays.asList("今日产量如何？", "哪个工厂延期最多？", "整体情况怎么样？"));
         return resp;
     }
@@ -389,6 +409,7 @@ public class NlQueryOrchestrator {
         data.put("todayWarehouse", todayWarehouse);
         data.put("yesterdayWarehouse", yesterdayWarehouse);
         resp.setData(data);
+        tryAddAiInsight(resp, tenantId);
         resp.setSuggestions(Arrays.asList("这周产量怎么样？", "哪个工厂产量最高？", "有多少延期订单？"));
         return resp;
     }
@@ -430,6 +451,7 @@ public class NlQueryOrchestrator {
         data.put("todayScanQty", todayScan);
         data.put("activeWorkers", activeWorkers);
         resp.setData(data);
+        tryAddAiInsight(resp, tenantId);
         resp.setSuggestions(Arrays.asList("和昨天比怎么样？", "哪个工厂产量最高？", "有多少延期订单？"));
         return resp;
     }
@@ -457,6 +479,7 @@ public class NlQueryOrchestrator {
             resp.setAnswer("暂无质检数据记录");
             resp.setConfidence(70);
         }
+        tryAddAiInsight(resp, tenantId);
         resp.setSuggestions(Arrays.asList("今日产量多少？", "有延期订单吗？", "整体情况怎么样？"));
         return resp;
     }
