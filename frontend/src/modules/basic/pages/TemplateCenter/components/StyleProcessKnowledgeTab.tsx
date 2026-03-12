@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Input, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
 import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined, RobotOutlined } from '@ant-design/icons';
 import type { ColumnsType, TableProps } from 'antd/es/table';
-import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeStyleRecord } from '@/services/production/productionApi';
+import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/production/productionApi';
 
 // ───────────────────────────────────── 子表（展开明细）──────────────────────
 const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = ({ records }) => {
@@ -85,13 +85,14 @@ const StyleProcessKnowledgeTab: React.FC = () => {
     setError(null);
     try {
       const res = await intelligenceApi.getProcessKnowledge(kw || undefined);
-      const data = (res as unknown as { data: { code: number; data: { items: ProcessKnowledgeItem[]; totalProcessTypes: number; totalStyles: number; totalRecords: number } } }).data;
-      if (data.code === 200 && data.data) {
-        setItems(data.data.items || []);
+      // api.get() 经 axios 拦截器后直接返回 { code, data }，无需再取 .data
+      const result = res as unknown as { code: number; data: ProcessKnowledgeResponse };
+      if (result.code === 200 && result.data) {
+        setItems(result.data.items || []);
         setStats({
-          totalProcessTypes: data.data.totalProcessTypes,
-          totalStyles: data.data.totalStyles,
-          totalRecords: data.data.totalRecords,
+          totalProcessTypes: result.data.totalProcessTypes,
+          totalStyles: result.data.totalStyles,
+          totalRecords: result.data.totalRecords,
         });
       }
     } catch {
