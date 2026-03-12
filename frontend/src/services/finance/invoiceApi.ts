@@ -46,6 +46,13 @@ export interface InvoiceListReq {
   keyword?: string;
 }
 
+export interface InvoiceStats {
+  totalIssued: number;
+  issuedCount: number;
+  draftCount: number;
+  monthAmount: number;
+}
+
 // ============================================================
 // API 方法
 // ============================================================
@@ -54,6 +61,10 @@ const invoiceApi = {
   /** 分页列表 */
   list: (params: InvoiceListReq) =>
     api.post<any>('/finance/invoice/list', params),
+
+  /** 统计 */
+  stats: () =>
+    api.get<InvoiceStats>('/finance/invoice/stats'),
 
   /** 新建发票 */
   create: (data: Omit<Invoice, 'id'>) =>

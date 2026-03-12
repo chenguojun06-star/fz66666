@@ -71,6 +71,9 @@ public class Tenant {
     /** 套餐类型: TRIAL/BASIC/PRO/ENTERPRISE */
     private String planType = "TRIAL";
 
+    /** 已启用的菜单路径列表（JSON数组字符串），null=全部开放，有值则按路径白名单过滤侧边栏 */
+    private String enabledModules;
+
     /** 月费(元) */
     private BigDecimal monthlyFee = BigDecimal.ZERO;
 

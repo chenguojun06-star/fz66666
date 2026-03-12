@@ -5,8 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.helper.OperationLogTargetNameResolver;
 import com.fashion.supplychain.system.mapper.OperationLogMapper;
 import com.fashion.supplychain.system.service.OperationLogService;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -19,6 +22,9 @@ import java.time.LocalTime;
  */
 @Service
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
+
+    @Autowired(required = false)
+    private OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     @Override
     public Page<OperationLog> getOperationLogPage(
@@ -75,7 +81,9 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         // 按时间倒序排列
         wrapper.orderByDesc(OperationLog::getOperationTime);
 
-        return this.page(logPage, wrapper);
+        Page<OperationLog> result = this.page(logPage, wrapper);
+        fillMissingTargetNames(result.getRecords());
+        return result;
     }
 
     @Override
@@ -89,5 +97,20 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         }
 
         return this.save(operationLog);
+    }
+
+    private void fillMissingTargetNames(List<OperationLog> records) {
+        if (records == null || records.isEmpty() || operationLogTargetNameResolver == null) {
+            return;
+        }
+        for (OperationLog record : records) {
+            if (record == null || StringUtils.hasText(record.getTargetName())) {
+                continue;
+            }
+            String resolvedName = operationLogTargetNameResolver.resolveForStoredLog(record);
+            if (StringUtils.hasText(resolvedName)) {
+                record.setTargetName(resolvedName);
+            }
+        }
     }
 }

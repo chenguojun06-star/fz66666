@@ -312,7 +312,7 @@ public class TenantOrchestrator {
      * @param trialDays 免费试用天数（可选，默认 30，0 表示永不过期）
      */
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> approveApplication(Long tenantId, String planType, Integer trialDays) {
+    public Map<String, Object> approveApplication(Long tenantId, String planType, Integer trialDays, String enabledModules) {
         assertSuperAdmin();
         // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
         Map<String, Object> result = doApproveApplication(tenantId);
@@ -343,9 +343,14 @@ public class TenantOrchestrator {
                 tenant.setBillingCycle("MONTHLY");
                 tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
             }
+            // 保存模块白名单（null=全部开放，非空串=按列表过滤菜单）
+            if (enabledModules != null && !enabledModules.isBlank()) {
+                tenant.setEnabledModules(enabledModules);
+            }
             tenant.setUpdateTime(LocalDateTime.now());
             tenantService.updateById(tenant);
-            log.info("[审批套餐] tenantId={} 套餐={} 试用天数={}", tenantId, plan, trialDays);
+            log.info("[审批套餐] tenantId={} 套餐={} 试用天数={} 模块白名单={}", tenantId, plan, trialDays,
+                    enabledModules != null ? "已设置" : "全部开放");
         }
 
         return result;

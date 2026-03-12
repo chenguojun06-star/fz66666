@@ -227,6 +227,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
   const isFactoryAccount = !!(user as any)?.factoryId;
 
+  // 租户模块白名单（undefined/空数组=全部开放，有值则按路径白名单过滤侧边栏）
+  const tenantModules = (user as any)?.tenantModules as string[] | undefined;
+  const isTenantModuleEnabled = (path: string) =>
+    !tenantModules || tenantModules.length === 0 || tenantModules.includes(path);
+
   // 工厂账号可见的菜单分组键（其余整组隐藏）
   const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system']);
   // 工厂账号可见的具体路径白名单
@@ -247,6 +252,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       .filter((section) => {
         // 外发工厂账号：只显示指定分组，其余整组隐藏
         if (isFactoryAccount && !FACTORY_VISIBLE_SECTIONS.has(section.key)) return false;
+        // 租户模块白名单：若设置了白名单，则隐藏整个无启用项的分组
+        if (tenantModules && tenantModules.length > 0) {
+          if (section.path && !tenantModules.includes(section.path)) return false;
+          if (section.items && !section.items.some(item => isTenantModuleEnabled(item.path))) return false;
+        }
         // 超管专属菜单：非超管不可见
         if (section.superAdminOnly && !isSuperAdmin) return false;
         if (section.items) {
@@ -261,6 +271,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               if ((item as any).superAdminOnly && !isSuperAdmin) return false;
               // 外发工厂账号：只显示白名单内的页面
               if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(item.path)) return false;
+              // 租户模块白名单：路径不在白名单内则隐藏
+              if (!isTenantModuleEnabled(item.path)) return false;
               return hasPermissionForPath(item.path);
             })
             .map((item) => ({

@@ -35,6 +35,8 @@ const TenantListTab: React.FC = () => {
   const [grantAppCodes, setGrantAppCodes] = useState<string[]>(['CRM_MODULE', 'PROCUREMENT', 'FINANCE_TAX']);
   const [grantDuration, setGrantDuration] = useState<number>(0);
   const [granting, setGranting] = useState(false);
+  // null=全部开放，空数组=全不选，有值=白名单
+  const [approveEnabledModules, setApproveEnabledModules] = useState<string[] | null>(null);
 
   const MODULE_OPTIONS = [
     { value: 'CRM_MODULE', label: 'CRM 客户管理' },
@@ -91,6 +93,73 @@ const TenantListTab: React.FC = () => {
     { value: 30, label: '30天' },
     { value: 90, label: '90天' },
     { value: 0, label: '永久免费' },
+  ];
+
+  // 基础版预设模块路径（仪表盘 + 单价维护 + 下单管理 + 工资/付款/报销 + 系统设置（无组织架构）+ 应用商店）
+  const BASIC_PRESET_MODULES = [
+    '/dashboard', '/basic/template-center', '/order-management',
+    '/finance/payroll-operator-summary', '/finance/wage-payment', '/finance/expense-reimbursement',
+    '/system/profile', '/system/user', '/system/role', '/system/factory',
+    '/system/dict', '/system/logs', '/system/tutorial', '/system/data-import', '/system/app-store',
+  ];
+
+  // 全量可配置模块（按业务分组，用于审批时勾选侧边栏白名单）
+  const MODULE_SECTIONS = [
+    { key: 'dashboard', title: '仪表盘', paths: [{ path: '/dashboard', label: '仪表盘' }] },
+    { key: 'selection', title: '选品中心', paths: [{ path: '/selection', label: '选品批次' }] },
+    { key: 'basic', title: '样衣管理', paths: [
+      { path: '/style-info', label: '样衣开发' },
+      { path: '/pattern-production', label: '样板生产' },
+      { path: '/data-center', label: '资料中心' },
+      { path: '/basic/template-center', label: '单价维护' },
+      { path: '/order-management', label: '下单管理' },
+    ]},
+    { key: 'production', title: '生产管理', paths: [
+      { path: '/production', label: '我的订单' },
+      { path: '/production/material', label: '面辅料采购' },
+      { path: '/production/cutting', label: '裁剪管理' },
+      { path: '/production/progress-detail', label: '生产进度' },
+      { path: '/production/warehousing', label: '质检入库' },
+    ]},
+    { key: 'warehouse', title: '仓库管理', paths: [
+      { path: '/warehouse/dashboard', label: '数据看板' },
+      { path: '/warehouse/material', label: '面辅料进销存' },
+      { path: '/warehouse/material-database', label: '面辅料数据库' },
+      { path: '/warehouse/finished', label: '成品进销存' },
+      { path: '/warehouse/sample', label: '样衣出入库' },
+      { path: '/warehouse/ecommerce', label: '电商订单' },
+    ]},
+    { key: 'finance', title: '财务管理', paths: [
+      { path: '/finance/material-reconciliation', label: '物料对账' },
+      { path: '/finance/payroll-operator-summary', label: '工资结算(内)' },
+      { path: '/finance/center', label: '订单结算(外)' },
+      { path: '/finance/expense-reimbursement', label: '费用报销' },
+      { path: '/finance/wage-payment', label: '付款中心' },
+      { path: '/finance/ec-revenue', label: 'EC销售收入' },
+      { path: '/finance/tax-export', label: '财税导出' },
+    ]},
+    { key: 'crm', title: 'CRM客户管理', paths: [
+      { path: '/crm', label: '客户档案' },
+      { path: '/crm/receivables', label: '应收账款' },
+    ]},
+    { key: 'procurement', title: '供应商采购', paths: [
+      { path: '/procurement', label: '供应商采购' },
+    ]},
+    { key: 'system', title: '系统设置', paths: [
+      { path: '/system/profile', label: '个人中心' },
+      { path: '/system/user', label: '人员管理' },
+      { path: '/system/role', label: '角色管理' },
+      { path: '/system/organization', label: '组织架构' },
+      { path: '/system/approval-center', label: '审批中心' },
+      { path: '/system/factory', label: '供应商管理' },
+      { path: '/system/dict', label: '字典管理' },
+      { path: '/system/logs', label: '系统日志' },
+      { path: '/system/tutorial', label: '系统教学' },
+      { path: '/system/data-import', label: '数据导入' },
+    ]},
+    { key: 'appStore', title: '应用商店', paths: [{ path: '/system/app-store', label: '应用商店' }] },
+    { key: 'intelligence', title: '智能运营中心', paths: [{ path: '/intelligence/center', label: '智能运营中心' }] },
+    { key: 'integration', title: '集成对接中心', paths: [{ path: '/integration/center', label: '集成对接中心' }] },
   ];
 
   const fetchData = useCallback(async () => {
@@ -162,6 +231,7 @@ const TenantListTab: React.FC = () => {
 
   const handleApproveApplication = (record: TenantInfo) => {
     approveForm.setFieldsValue({ planType: 'TRIAL', trialDays: 30 });
+    setApproveEnabledModules(null);
     approveModal.open(record);
   };
 
@@ -171,9 +241,12 @@ const TenantListTab: React.FC = () => {
     try {
       const values = await approveForm.validateFields();
       setProcessingId(record.id);
+      const enabledModules = approveEnabledModules !== null && approveEnabledModules.length > 0
+        ? JSON.stringify(approveEnabledModules) : undefined;
       await tenantService.approveApplication(record.id, {
         planType: values.planType,
         trialDays: values.planType === 'TRIAL' ? values.trialDays : undefined,
+        enabledModules,
       });
       message.success('审批通过，工厂账户已激活');
       approveModal.close();
@@ -647,14 +720,15 @@ const TenantListTab: React.FC = () => {
         </div>
       </ResizableModal>
 
-      {/* 审批通过弹窗（含套餐选择） */}      <ResizableModal
+      {/* 审批通过弹窗（含套餐选择 + 模块白名单配置） */}
+      <ResizableModal
         open={approveModal.visible}
         title={`审批通过 - ${approveModal.data?.tenantName || ''}`}
-        onCancel={() => { approveModal.close(); approveForm.resetFields(); }}
-        width="40vw"
+        onCancel={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }}
+        width="60vw"
         footer={
           <Space>
-            <Button onClick={() => { approveModal.close(); approveForm.resetFields(); }}>取消</Button>
+            <Button onClick={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }}>取消</Button>
             <Button type="primary" loading={processingId === approveModal.data?.id} onClick={handleConfirmApprove}>确认审批</Button>
           </Space>
         }
@@ -694,6 +768,81 @@ const TenantListTab: React.FC = () => {
             )}
           </Form.Item>
         </Form>
+
+        {/* 菜单模块配置区 */}
+        <div style={{ marginTop: 16, borderTop: '1px dashed #e8e8e8', paddingTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>
+              菜单模块配置
+              <span style={{ fontSize: 12, color: '#999', fontWeight: 400, marginLeft: 8 }}>
+                （不勾选 = 全部开放；勾选后只显示已配置模块）
+              </span>
+            </span>
+            <Space size={4}>
+              <Button size="small" onClick={() => setApproveEnabledModules(null)}>全部开放</Button>
+              <Button size="small" onClick={() => setApproveEnabledModules([...BASIC_PRESET_MODULES])}>基础版预设</Button>
+              <Button size="small" onClick={() => setApproveEnabledModules(MODULE_SECTIONS.flatMap(s => s.paths.map(p => p.path)))}>全选</Button>
+              <Button size="small" onClick={() => setApproveEnabledModules([])}>全不选</Button>
+            </Space>
+          </div>
+          {approveEnabledModules === null ? (
+            <Alert message="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
+          ) : approveEnabledModules.length === 0 ? (
+            <Alert message="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
+          ) : (
+            <Alert message={`已配置 ${approveEnabledModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 340, overflowY: 'auto', padding: 2 }}>
+            {MODULE_SECTIONS.map(section => {
+              const sectionPaths = section.paths.map(p => p.path);
+              const checkedCount = approveEnabledModules === null ? 0 : sectionPaths.filter(p => approveEnabledModules.includes(p)).length;
+              const allChecked = approveEnabledModules !== null && checkedCount === sectionPaths.length;
+              const someChecked = checkedCount > 0 && !allChecked;
+              return (
+                <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '8px 10px', background: '#fafafa' }}>
+                  <Checkbox
+                    checked={allChecked}
+                    indeterminate={someChecked}
+                    style={{ fontWeight: 600, marginBottom: 4 }}
+                    onChange={(e) => {
+                      setApproveEnabledModules(prev => {
+                        const base = prev === null ? [] : [...prev];
+                        if (e.target.checked) {
+                          return [...new Set([...base, ...sectionPaths])];
+                        } else {
+                          return base.filter(p => !sectionPaths.includes(p));
+                        }
+                      });
+                    }}
+                  >
+                    {section.title}
+                  </Checkbox>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4 }}>
+                    {section.paths.map(item => (
+                      <Checkbox
+                        key={item.path}
+                        checked={approveEnabledModules !== null && approveEnabledModules.includes(item.path)}
+                        style={{ fontSize: 12, marginLeft: 0 }}
+                        onChange={(e) => {
+                          setApproveEnabledModules(prev => {
+                            const base = prev === null ? [] : [...prev];
+                            if (e.target.checked) {
+                              return [...new Set([...base, item.path])];
+                            } else {
+                              return base.filter(p => p !== item.path);
+                            }
+                          });
+                        }}
+                      >
+                        {item.label}
+                      </Checkbox>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </ResizableModal>
     </div>
   );

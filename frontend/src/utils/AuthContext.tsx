@@ -34,6 +34,12 @@ export interface UserInfo extends Record<string, unknown> {
    * 用于前端菜单裁剪提示（已由后端权限控制实际访问）
    */
   tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
+  /**
+   * 租户已启用的菜单路径列表。
+   * - undefined / null / 空数组 → 全部开放（向后兼容）
+   * - 有值 → 仅显示列表内的菜单项，其余全部隐藏
+   */
+  tenantModules?: string[];
 }
 
 export type WorkspaceRole = 'boss' | 'management' | 'merchandiser';
@@ -200,6 +206,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isSuperAdmin: u.isSuperAdmin === true,
               factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
               tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
+              tenantModules: (() => {
+                try {
+                  const raw = u.tenantEnabledModules;
+                  if (!raw) return undefined;
+                  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                  return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : undefined;
+                } catch { return undefined; }
+              })(),
             };
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
@@ -292,6 +306,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isSuperAdmin: u.isSuperAdmin === true,
           factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
           tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
+          tenantModules: (() => {
+            try {
+              const raw = u.tenantEnabledModules;
+              if (!raw) return undefined;
+              const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : undefined;
+            } catch { return undefined; }
+          })(),
         };
 
         localStorage.setItem(tokenStorageKey, token);

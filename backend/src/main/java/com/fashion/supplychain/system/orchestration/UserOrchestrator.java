@@ -360,6 +360,10 @@ public class UserOrchestrator {
                     if (StringUtils.hasText(currentTenant.getTenantType())) {
                         result.put("tenantType", currentTenant.getTenantType());
                     }
+                    // 返回模块白名单（null=全部开放，有值=前端按列表过滤菜单）
+                    if (StringUtils.hasText(currentTenant.getEnabledModules())) {
+                        result.put("tenantEnabledModules", currentTenant.getEnabledModules());
+                    }
                 }
             } catch (Exception ignored) {
                 // 查询租户信息失败不影响主流程

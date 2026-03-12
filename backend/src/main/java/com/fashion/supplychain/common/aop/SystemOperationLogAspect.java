@@ -1,6 +1,7 @@
 package com.fashion.supplychain.common.aop;
 
 import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.helper.OperationLogTargetNameResolver;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -50,6 +51,9 @@ public class SystemOperationLogAspect {
 
     @Autowired(required = false)
     private CuttingBundleService cuttingBundleService;
+
+    @Autowired(required = false)
+    private OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -123,6 +127,9 @@ public class SystemOperationLogAspect {
         String prefetchedTargetName = resolveTargetName(pjp.getArgs());
         if (prefetchedTargetName == null) {
             prefetchedTargetName = resolveEntityNameFromUri(uri, pjp.getArgs(), targetId);
+        }
+        if (prefetchedTargetName == null && operationLogTargetNameResolver != null) {
+            prefetchedTargetName = operationLogTargetNameResolver.resolveByTarget(targetType, targetId);
         }
 
         // 纯 POST fallback 成"新增"但 URL 无法识别目标类型 → 非核心业务操作，跳过不记录（避免噪音日志）

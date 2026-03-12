@@ -332,7 +332,8 @@ public class TenantController {
         String planType = params != null ? (String) params.get("planType") : null;
         Integer trialDays = params != null && params.get("trialDays") != null
                 ? Integer.valueOf(params.get("trialDays").toString()) : null;
-        return Result.success(tenantOrchestrator.approveApplication(id, planType, trialDays));
+        String enabledModules = params != null ? (String) params.get("enabledModules") : null;
+        return Result.success(tenantOrchestrator.approveApplication(id, planType, trialDays, enabledModules));
     }
 
     /**

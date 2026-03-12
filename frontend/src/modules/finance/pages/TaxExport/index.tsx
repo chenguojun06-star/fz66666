@@ -6,7 +6,7 @@ import {
 import {
   DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined,
   UnlockOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined, FileTextOutlined,
-  DollarOutlined,
+  DollarOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,9 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ModalFieldRow } from '@/components/common/ModalContentLayout';
 import invoiceApi from '@/services/finance/invoiceApi';
+import type { InvoiceStatus, InvoiceType } from '@/services/finance/invoiceApi';
 import payableApi from '@/services/finance/payableApi';
+import type { PayableStatus } from '@/services/finance/payableApi';
 import taxConfigApi from '@/services/finance/taxConfigApi';
 
 const { Title, Text, Paragraph } = Typography;
@@ -54,6 +56,31 @@ const PAYABLE_STATUS = [
   { value: 'PARTIAL', label: '部分付款', color: 'blue' },
 ];
 
+const RELATED_BIZ_TYPE_OPTIONS = [
+  { value: 'SETTLEMENT', label: '结算单' },
+  { value: 'RECONCILIATION', label: '对账单' },
+  { value: 'REIMBURSEMENT', label: '报销单' },
+  { value: 'ORDER', label: '订单' },
+];
+
+const RELATED_BIZ_TYPE_MAP: Record<string, string> = {
+  SETTLEMENT: '结算单',
+  RECONCILIATION: '对账单',
+  REIMBURSEMENT: '报销单',
+  ORDER: '订单',
+};
+
+const pageShellStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 'min(1600px, calc(100vw - 72px))',
+  margin: '0 auto',
+  padding: '24px 16px 32px',
+};
+
+const formatCurrency = (value?: number) => (Number(value || 0)).toFixed(2);
+
+const formatBizType = (value?: string) => RELATED_BIZ_TYPE_MAP[value || ''] || value || '-';
+
 // ========== 发票台账 Tab ==========
 const InvoiceTab: React.FC = () => {
   const [list, setList] = useState<any[]>([]);
@@ -64,33 +91,47 @@ const InvoiceTab: React.FC = () => {
   const [editRecord, setEditRecord] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
-  const [stats, setStats] = useState({ draft: 0, issued: 0, totalAmount: 0 });
+  const [stats, setStats] = useState({ draftCount: 0, issuedCount: 0, monthAmount: 0, totalIssued: 0 });
+  const [filters, setFilters] = useState<{
+    status?: InvoiceStatus;
+    invoiceType?: InvoiceType;
+    keyword: string;
+  }>({ status: undefined, invoiceType: undefined, keyword: '' });
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await invoiceApi.list({ page, pageSize: 20 });
+      const [data, statsData] = await Promise.all([
+        invoiceApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
+        invoiceApi.stats(),
+      ]);
       const records = (data as any)?.records || data || [];
       setList(records);
       setTotal((data as any)?.total || records.length);
       setStats({
-        draft: records.filter((r: any) => r.status === 'DRAFT').length,
-        issued: records.filter((r: any) => r.status === 'ISSUED').length,
-        totalAmount: records.reduce((s: number, r: any) => s + (r.totalAmount || 0), 0),
+        draftCount: Number((statsData as any)?.draftCount || 0),
+        issuedCount: Number((statsData as any)?.issuedCount || 0),
+        monthAmount: Number((statsData as any)?.monthAmount || 0),
+        totalIssued: Number((statsData as any)?.totalIssued || 0),
       });
     } catch { message.error('加载发票列表失败'); }
     finally { setLoading(false); }
-  }, [page]);
+  }, [filters, page]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
   const handleSave = async (vals: any) => {
     setSubmitting(true);
     try {
+      const payload = {
+        ...vals,
+        taxRate: vals.taxRate != null ? vals.taxRate / 100 : undefined,
+        issueDate: vals.issueDate ? dayjs(vals.issueDate).format('YYYY-MM-DD') : undefined,
+      };
       if (editRecord?.id) {
-        await invoiceApi.update({ ...editRecord, ...vals });
+        await invoiceApi.update({ ...editRecord, ...payload });
       } else {
-        await invoiceApi.create(vals);
+        await invoiceApi.create(payload);
       }
       message.success('保存成功');
       setFormOpen(false);
@@ -107,19 +148,44 @@ const InvoiceTab: React.FC = () => {
     } catch { message.error('操作失败'); }
   };
 
+  const handleCancel = async (id: string) => {
+    try {
+      await invoiceApi.cancel(id);
+      message.success('已作废');
+      fetchList();
+    } catch { message.error('操作失败'); }
+  };
+
   const columns = [
     { title: '发票号', dataIndex: 'invoiceNo', width: 140 },
     { title: '发票类型', dataIndex: 'invoiceType', width: 130, render: (v: string) => INVOICE_TYPES.find(t => t.value === v)?.label || v },
+    { title: '关联业务', dataIndex: 'relatedBizType', width: 110, render: (v: string) => formatBizType(v) },
+    { title: '关联单号', dataIndex: 'relatedBizNo', width: 160, ellipsis: true, render: (v: string) => v || '-' },
     { title: '购方名称', dataIndex: 'titleName', ellipsis: true },
-    { title: '金额(元)', dataIndex: 'totalAmount', width: 110, render: (v: number) => v?.toFixed(2) },
+    { title: '未税金额', dataIndex: 'amount', width: 110, render: (v: number) => formatCurrency(v) },
+    { title: '税额', dataIndex: 'taxAmount', width: 100, render: (v: number) => formatCurrency(v) },
+    { title: '价税合计', dataIndex: 'totalAmount', width: 110, render: (v: number) => formatCurrency(v) },
     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => { const s = INVOICE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{v}</Tag>; } },
     { title: '开票日期', dataIndex: 'issueDate', width: 100 },
     {
-      title: '操作', width: 120,
+      title: '操作', width: 160,
       render: (_: any, r: any) => (
         <Space>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); form.setFieldsValue(r); setFormOpen(true); }}>编辑</Button>
+          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => {
+            setEditRecord(r);
+            form.setFieldsValue({
+              ...r,
+              taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined,
+              issueDate: r.issueDate ? dayjs(r.issueDate) : undefined,
+            });
+            setFormOpen(true);
+          }}>编辑</Button>
           {r.status === 'DRAFT' && <Button size="small" type="link" onClick={() => handleIssue(r.id)}>开票</Button>}
+          {r.status === 'ISSUED' && (
+            <Popconfirm title="确认作废该发票？" onConfirm={() => handleCancel(r.id)}>
+              <Button size="small" type="link" danger>作废</Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -127,14 +193,58 @@ const InvoiceTab: React.FC = () => {
 
   return (
     <>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="发票台账已接真实发票表与税额计算"
+        description="当前为业务台账管理，不是税控盘/电子发票平台直连。适合先把开票信息、业务来源、税额和状态管起来；若要直连税盘或第三方开票平台，需要后续再接外部接口。"
+      />
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}><Card size="small"><Statistic title="草稿" value={stats.draft} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="已开票" value={stats.issued} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-        <Col span={12}><Card size="small"><Statistic title="总金额(元)" value={stats.totalAmount.toFixed(2)} /></Card></Col>
+        <Col xs={24} md={6}><Card size="small"><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
+        <Col xs={24} md={6}><Card size="small"><Statistic title="已开票" value={stats.issuedCount} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col xs={24} md={6}><Card size="small"><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
+        <Col xs={24} md={6}><Card size="small"><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
-      <div style={{ marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新建发票</Button>
-      </div>
+      <Card size="small" style={{ marginBottom: 12 }}>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={6}>
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder="搜发票号 / 购方 / 关联单号"
+              value={filters.keyword}
+              onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
+            />
+          </Col>
+          <Col xs={12} md={4}>
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: '100%' }}
+              options={INVOICE_STATUS.map(item => ({ value: item.value, label: item.label }))}
+              value={filters.status}
+              onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            />
+          </Col>
+          <Col xs={12} md={4}>
+            <Select
+              allowClear
+              placeholder="发票类型"
+              style={{ width: '100%' }}
+              options={INVOICE_TYPES}
+              value={filters.invoiceType}
+              onChange={(value) => setFilters(prev => ({ ...prev, invoiceType: value }))}
+            />
+          </Col>
+          <Col xs={24} md={10} style={{ textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => { setFilters({ status: undefined, invoiceType: undefined, keyword: '' }); setPage(1); }}>重置</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新建发票</Button>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
       <Table rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }} />
       <ResizableModal
@@ -156,7 +266,17 @@ const InvoiceTab: React.FC = () => {
           </ModalFieldRow>
           <ModalFieldRow label="发票号">
             <Form.Item name="invoiceNo" noStyle>
-              <Input placeholder="开票后填入" />
+              <Input placeholder="系统默认生成，可手工调整" />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="关联业务类型">
+            <Form.Item name="relatedBizType" noStyle>
+              <Select allowClear options={RELATED_BIZ_TYPE_OPTIONS} placeholder="如：结算单 / 对账单" />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="关联单号">
+            <Form.Item name="relatedBizNo" noStyle>
+              <Input placeholder="如结算单号、对账单号、订单号" />
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="购方名称">
@@ -169,14 +289,29 @@ const InvoiceTab: React.FC = () => {
               <Input placeholder="91XXXXXXXXXXXXXX" />
             </Form.Item>
           </ModalFieldRow>
-          <ModalFieldRow label="金额(元)">
-            <Form.Item name="totalAmount" noStyle rules={[{ required: true }]}>
+          <ModalFieldRow label="未税金额(元)">
+            <Form.Item name="amount" noStyle rules={[{ required: true }]}>
               <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="税率(%)">
+            <Form.Item name="taxRate" noStyle>
+              <InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} placeholder="留空则按默认 VAT 税率" />
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="开票日期">
             <Form.Item name="issueDate" noStyle>
-              <Input placeholder="YYYY-MM-DD" />
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="销方名称">
+            <Form.Item name="sellerName" noStyle>
+              <Input placeholder="本公司抬头" />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="销方税号">
+            <Form.Item name="sellerTaxNo" noStyle>
+              <Input />
             </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="备注">
@@ -197,12 +332,13 @@ const PayableTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<any>({ pendingAmount: 0, overdueAmount: 0, paidAmount: 0 });
+  const [filters, setFilters] = useState<{ status?: PayableStatus; keyword: string }>({ status: undefined, keyword: '' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [listData, statsData] = await Promise.all([
-        payableApi.list({ page, pageSize: 20 }),
+        payableApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
         payableApi.stats(),
       ]);
       setList((listData as any)?.records || listData || []);
@@ -210,7 +346,7 @@ const PayableTab: React.FC = () => {
       setStats(statsData || {});
     } catch { message.error('加载应付账款失败'); }
     finally { setLoading(false); }
-  }, [page]);
+  }, [filters, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -225,6 +361,8 @@ const PayableTab: React.FC = () => {
   const columns = [
     { title: '应付单号', dataIndex: 'payableNo', width: 140 },
     { title: '供应商', dataIndex: 'supplierName', ellipsis: true },
+    { title: '来源单号', dataIndex: 'orderNo', width: 160, ellipsis: true, render: (v: string) => v || '-' },
+    { title: '业务说明', dataIndex: 'description', ellipsis: true },
     { title: '应付金额(元)', dataIndex: 'amount', width: 120, render: (v: number) => v?.toFixed(2) },
     { title: '已付金额(元)', dataIndex: 'paidAmount', width: 120, render: (v: number) => (v || 0).toFixed(2) },
     { title: '到期日', dataIndex: 'dueDate', width: 100 },
@@ -244,11 +382,44 @@ const PayableTab: React.FC = () => {
 
   return (
     <>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="应付账款已接真实待付款与付款回写链路"
+        description="当前页管理的是 AP 台账；付款中心里的待付款记录会持续回写上游业务状态。现阶段已确认和工资付款中心联动，供应商应付仍以台账管理为主。"
+      />
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
-        <Col span={8}><Card size="small"><Statistic title="已逾期(元)" value={(stats.overdueAmount || 0).toFixed(2)} valueStyle={{ color: '#f5222d' }} /></Card></Col>
-        <Col span={8}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col xs={24} md={8}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
+        <Col xs={24} md={8}><Card size="small"><Statistic title="已逾期(元)" value={(stats.overdueAmount || 0).toFixed(2)} valueStyle={{ color: '#f5222d' }} /></Card></Col>
+        <Col xs={24} md={8}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
       </Row>
+      <Card size="small" style={{ marginBottom: 12 }}>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={8}>
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder="搜应付单号 / 供应商 / 来源单号"
+              value={filters.keyword}
+              onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
+            />
+          </Col>
+          <Col xs={12} md={4}>
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: '100%' }}
+              options={PAYABLE_STATUS.map(item => ({ value: item.value, label: item.label }))}
+              value={filters.status}
+              onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            />
+          </Col>
+          <Col xs={12} md={12} style={{ textAlign: 'right' }}>
+            <Button onClick={() => { setFilters({ status: undefined, keyword: '' }); setPage(1); }}>重置</Button>
+          </Col>
+        </Row>
+      </Card>
       <Table rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }} />
     </>
@@ -279,7 +450,12 @@ const TaxConfigTab: React.FC = () => {
     setSubmitting(true);
     try {
       // taxRate: 用户输入 % 整数，小数存入库（除以 100）
-      const payload = { ...vals, taxRate: vals.taxRate / 100 };
+      const payload = {
+        ...vals,
+        taxRate: vals.taxRate / 100,
+        effectiveDate: vals.effectiveDate ? dayjs(vals.effectiveDate).format('YYYY-MM-DD') : undefined,
+        expiryDate: vals.expiryDate ? dayjs(vals.expiryDate).format('YYYY-MM-DD') : undefined,
+      };
       if (editRecord?.id) {
         await taxConfigApi.update({ ...editRecord, ...payload });
       } else {
@@ -304,6 +480,9 @@ const TaxConfigTab: React.FC = () => {
     { title: '税种名称', dataIndex: 'taxName', width: 150 },
     { title: '税种代码', dataIndex: 'taxCode', width: 120 },
     { title: '税率(%)', dataIndex: 'taxRate', width: 100, render: (v: number) => v != null ? `${(v * 100).toFixed(2)}%` : '-' },
+    { title: '默认', dataIndex: 'isDefault', width: 80, render: (v: number) => v === 1 ? <Tag color="blue">默认</Tag> : '-' },
+    { title: '生效日期', dataIndex: 'effectiveDate', width: 110, render: (v: string) => v || '-' },
+    { title: '失效日期', dataIndex: 'expiryDate', width: 110, render: (v: string) => v || '长期有效' },
     { title: '描述', dataIndex: 'description', ellipsis: true },
     { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <Tag color={v === 'ACTIVE' ? 'green' : 'default'}>{v === 'ACTIVE' ? '启用' : '停用'}</Tag> },
     {
@@ -312,7 +491,12 @@ const TaxConfigTab: React.FC = () => {
         <Space>
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => {
             setEditRecord(r);
-            form.setFieldsValue({ ...r, taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined });
+            form.setFieldsValue({
+              ...r,
+              taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined,
+              effectiveDate: r.effectiveDate ? dayjs(r.effectiveDate) : undefined,
+              expiryDate: r.expiryDate ? dayjs(r.expiryDate) : undefined,
+            });
             setFormOpen(true);
           }}>编辑</Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r.id)}>
@@ -325,6 +509,13 @@ const TaxConfigTab: React.FC = () => {
 
   return (
     <>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="税率配置会参与真实税额计算"
+        description="发票台账默认 VAT 税额来自这里的默认税率；建议至少维护默认 VAT、附加税等常用税码，并标清生效时间。"
+      />
       <div style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新增税率</Button>
       </div>
@@ -349,6 +540,21 @@ const TaxConfigTab: React.FC = () => {
           </ModalFieldRow>
           <ModalFieldRow label="税率(%)">
             <Form.Item name="taxRate" noStyle rules={[{ required: true }]}><InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} /></Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="默认税率">
+            <Form.Item name="isDefault" noStyle initialValue={0}>
+              <Select options={[{ value: 1, label: '是' }, { value: 0, label: '否' }]} />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="生效日期">
+            <Form.Item name="effectiveDate" noStyle>
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </ModalFieldRow>
+          <ModalFieldRow label="失效日期">
+            <Form.Item name="expiryDate" noStyle>
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
           </ModalFieldRow>
           <ModalFieldRow label="描述">
             <Form.Item name="description" noStyle><Input placeholder="如：适用一般纳税人" /></Form.Item>
@@ -449,7 +655,7 @@ const TaxExport: React.FC = () => {
   const selectedFormatInfo = FORMAT_OPTIONS.find(f => f.value === format);
 
   const exportTabContent = (
-    <div style={{ maxWidth: 860 }}>
+    <div style={{ width: '100%' }}>
       {!subscribed && (
         <Alert type="info" showIcon icon={<UnlockOutlined />} style={{ marginBottom: 16 }}
           message="通用标准格式永久免费"
@@ -464,13 +670,20 @@ const TaxExport: React.FC = () => {
           message={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
           description={subscriptionType === 'FREE' ? '恭喜！金蝶 KIS / 用友 T3 专用格式均已为您解锁，有效期1年。' : '金蝶 KIS / 用友 T3 专用格式均已解锁。'} />
       )}
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="当前导出能力说明"
+        description="这里导出的是真实业务数据，不是展示假按钮；但现阶段属于 Excel 凭证导入模板，不是税控盘、电子发票平台、金蝶/用友开放平台 API 直连。已接数据源：工资结算、物料对账。"
+      />
       <Card title="第一步：选择导出格式" style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]}>
           {FORMAT_OPTIONS.map(opt => {
             const locked = !opt.free && !subscribed;
             const selected = format === opt.value;
             return (
-              <Col span={8} key={opt.value}>
+              <Col xs={24} md={8} key={opt.value}>
                 <div onClick={() => handleFormatClick(opt)} style={{
                   border: `2px solid ${selected ? '#1890ff' : locked ? '#f0f0f0' : '#d9d9d9'}`,
                   borderRadius: 8, padding: '12px 16px',
@@ -510,7 +723,7 @@ const TaxExport: React.FC = () => {
       <Card title={<span>第三步：选择导出内容 <Tag color="blue" style={{ marginLeft: 8 }}>{selectedFormatInfo?.label}</Tag></span>}>
         <Row gutter={[16, 16]}>
           {EXPORT_TYPES.map(type => (
-            <Col span={12} key={type.key}>
+            <Col xs={24} md={12} key={type.key}>
               <Card size="small" style={{ border: `1px solid ${type.color}30`, background: `${type.color}06` }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
@@ -530,7 +743,7 @@ const TaxExport: React.FC = () => {
         <Divider style={{ margin: '20px 0 12px' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <FileExcelOutlined style={{ color: '#52c41a', fontSize: 16 }} />
-          <Text type="secondary" style={{ fontSize: 12 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式支持直接在凭证录入界面粘贴导入</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
         </div>
       </Card>
     </div>
@@ -545,7 +758,7 @@ const TaxExport: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
+      <div style={pageShellStyle}>
         <Title level={4} style={{ marginBottom: 4 }}>
           <FileExcelOutlined style={{ marginRight: 8, color: '#52c41a' }} />
           财税管理
