@@ -105,9 +105,10 @@ const InvoiceTab: React.FC = () => {
         invoiceApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
         invoiceApi.stats(),
       ]);
-      const records = (data as any)?.records || data || [];
+      const _r0 = (data as any)?.records;
+      const records = Array.isArray(_r0) ? _r0 : (Array.isArray(data) ? data : []);
       setList(records);
-      setTotal((data as any)?.total || records.length);
+      setTotal((data as any)?.total ?? records.length);
       setStats({
         draftCount: Number((statsData as any)?.draftCount || 0),
         issuedCount: Number((statsData as any)?.issuedCount || 0),
@@ -341,8 +342,9 @@ const PayableTab: React.FC = () => {
         payableApi.list({ page, pageSize: 20, ...filters, keyword: filters.keyword || undefined }),
         payableApi.stats(),
       ]);
-      setList((listData as any)?.records || listData || []);
-      setTotal((listData as any)?.total || 0);
+      const _pr = (listData as any)?.records;
+      setList(Array.isArray(_pr) ? _pr : (Array.isArray(listData) ? listData : []));
+      setTotal((listData as any)?.total ?? 0);
       setStats(statsData || {});
     } catch { message.error('加载应付账款失败'); }
     finally { setLoading(false); }
@@ -439,7 +441,7 @@ const TaxConfigTab: React.FC = () => {
     setLoading(true);
     try {
       const data = await taxConfigApi.list();
-      setList(data || []);
+      setList(Array.isArray(data) ? data : []);
     } catch { message.error('加载税率配置失败'); }
     finally { setLoading(false); }
   }, []);
