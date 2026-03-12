@@ -16,12 +16,12 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 设置 JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'temurin'
@@ -41,12 +41,12 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 设置 Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20'
         cache: 'npm'
@@ -61,7 +61,7 @@ jobs:
       run: npm run build
 
     - name: 上传构建产物
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-dist
         path: frontend/dist
@@ -75,7 +75,7 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -84,7 +84,7 @@ jobs:
 
     - name: 写入构建时间到前端Dockerfile构建参数
       run: |
-        sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=${{ env.BUILD_DATE }}/" frontend/Dockerfile
+        sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=$BUILD_DATE/" frontend/Dockerfile
 
     - name: 部署到腾讯云 CloudBase
       uses: TencentCloudBase/cloudbase-action@v2
@@ -103,7 +103,7 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
