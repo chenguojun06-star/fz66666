@@ -254,6 +254,20 @@ export function analyzeProgress(
 const V_COLOR = { good: '#52c41a', warn: '#fa8c16', critical: '#ff4d4f' } as const;
 const V_LABEL = { good: '进展良好', warn: '需关注', critical: '风险预警' } as const;
 
+function hashSeed(input: string): number {
+  let h = 0;
+  for (let i = 0; i < input.length; i++) {
+    h = (h << 5) - h + input.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function chooseBySeed(seed: number, variants: string[]): string {
+  if (!variants.length) return '';
+  return variants[seed % variants.length];
+}
+
 /** 渲染智能分析区块（嵌入 SmartOrderHoverCard 底部） */
 export function renderProgressInsight(insight: ProgressInsight): React.ReactNode | null {
   const { bottleneck, personnelNotes, resourceSuggestions, followUpPoints, riskPredictions, verdict } = insight;
@@ -261,15 +275,51 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
     || followUpPoints.length || riskPredictions.length;
   if (!hasContent) return null;
 
+  const seed = hashSeed([
+    verdict,
+    bottleneck?.stage || '',
+    String(bottleneck?.gap || 0),
+    personnelNotes[0] || '',
+    riskPredictions[0] || '',
+    followUpPoints[0] || '',
+  ].join('|'));
+
   const summary = verdict === 'critical'
-    ? '当前这张单不是普通跟进问题，而是已经进入需要优先干预的状态。'
+    ? chooseBySeed(seed, [
+      '这张单已经不是催一下就能恢复的节奏，必须马上介入处理。',
+      '目前这单处在明显失速区间，继续观望只会让交付压力更大。',
+      '现在最怕的是问题继续堆，建议立即把这单提到优先处理队列。',
+    ])
     : verdict === 'warn'
-    ? '当前不是立即爆雷，但已经出现会拖慢交付的信号。'
-    : '整体推进还算顺，但仍要盯住关键节点别突然掉速。';
+    ? chooseBySeed(seed, [
+      '整体还没失控，但已经出现会拖慢交付的信号。',
+      '这单表面能跑，实际上节奏开始变慢，需要提前纠偏。',
+      '先不算爆雷，不过几个关键环节已经在拉开差距。',
+    ])
+    : chooseBySeed(seed, [
+      '当前推进比较平稳，按这个节奏大概率能跟上计划。',
+      '这单整体节奏还可以，重点是别让后段突然掉速。',
+      '目前看交付链条是顺的，保持节奏比大幅调整更重要。',
+    ]);
+
   const painPoint = bottleneck
-    ? `${bottleneck.stage} 是当前主卡点(${bottleneck.stageQty}/${bottleneck.total}件)，前后工序节奏已经拉开。`
-    : riskPredictions[0] || personnelNotes[0] || followUpPoints[0] || '当前未发现明显主卡点。';
-  const execute = resourceSuggestions[0] || followUpPoints[0] || '继续按当前节奏推进，并保持对关键节点的抽查。';
+    ? chooseBySeed(seed + 3, [
+      `${bottleneck.stage} 是眼下最慢的一段（${bottleneck.stageQty}/${bottleneck.total}件），上下游进度差已到 ${bottleneck.gap}%。`,
+      `最明显的压力点在 ${bottleneck.stage}，当前仅 ${bottleneck.stageQty}/${bottleneck.total} 件，和前一段节奏已经拉开。`,
+      `${bottleneck.stage} 这段开始堆积，当前落差 ${bottleneck.gap}%，继续拖会把后续交付一起带慢。`,
+    ])
+    : riskPredictions[0] || personnelNotes[0] || followUpPoints[0] || chooseBySeed(seed + 7, [
+      '暂时没看到单一爆点，主要是保持连续推进，避免阶段性停摆。',
+      '当前没有绝对卡死点，更像是多处小风险叠加，需要持续盯盘。',
+      '目前主问题不在某一个节点，而在于整体节奏稳定性。',
+    ]);
+
+  const execute = resourceSuggestions[0] || followUpPoints[0] || chooseBySeed(seed + 11, [
+    '建议先把最慢环节的人手补齐，再按半天频率复盘一次进度变化。',
+    '先盯关键节点把积压降下来，再同步后段工序接续安排。',
+    '保持当前主节奏，同时给关键环节设置更密的扫码回传频率。',
+  ]);
+
   const evidence = [
     bottleneck ? `瓶颈 ${bottleneck.stage}，${bottleneck.stageQty}/${bottleneck.total}件，落差 ${bottleneck.gap}%` : null,
     personnelNotes[0] || null,
@@ -279,7 +329,7 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
   return (
     <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 6, paddingTop: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 11 }}>
-        <span>🤖 智能判断</span>
+        <span>🤖 小云实时推演</span>
         <span style={{
           fontSize: 9, padding: '0 5px', borderRadius: 3,
           background: V_COLOR[verdict], color: '#fff',
@@ -289,14 +339,22 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
         compact
         insight={{
           level: verdict === 'critical' ? 'danger' : verdict === 'warn' ? 'warning' : 'success',
-          title: verdict === 'critical' ? '这单要优先干预' : verdict === 'warn' ? '这单要重点盯' : '这单节奏正常',
+          title: verdict === 'critical' ? '这单要先处理' : verdict === 'warn' ? '这单要盯紧节奏' : '这单推进顺畅',
           summary,
           painPoint,
           evidence,
           execute,
-          source: '进度判断',
-          confidence: verdict === 'critical' ? '中高置信' : '中置信',
+          source: '实时数据推演',
+          confidence: verdict === 'critical' ? '把握较高' : '建议复核',
           note: bottleneck?.reason,
+          labels: {
+            summary: '现状',
+            painPoint: '卡点',
+            execute: '下一步',
+            evidence: '数据',
+            note: '补充',
+            action: '操作',
+          },
         }}
       />
     </div>

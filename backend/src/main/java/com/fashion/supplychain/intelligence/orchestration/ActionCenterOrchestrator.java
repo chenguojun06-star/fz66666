@@ -9,6 +9,8 @@ import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse;
 import com.fashion.supplychain.intelligence.dto.LivePulseResponse;
 import com.fashion.supplychain.intelligence.dto.SmartNotificationResponse;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +51,9 @@ public class ActionCenterOrchestrator {
     @Autowired
     private FollowupTaskOrchestrator followupTaskOrchestrator;
 
+    @Autowired
+    private ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
+
     public ActionCenterResponse getCenter() {
         HealthIndexResponse health = safeHealth();
         LivePulseResponse pulse = safePulse();
@@ -58,7 +63,14 @@ public class ActionCenterOrchestrator {
         FinanceAuditResponse financeAudit = safeFinanceAudit();
 
         ActionCenterResponse response = new ActionCenterResponse();
-        response.setTasks(buildTasks(health, pulse, risks, anomalies, notifications, financeAudit));
+        List<ActionCenterResponse.ActionTask> tasks = buildTasks(health, pulse, risks, anomalies, notifications, financeAudit);
+        actionTaskFeedbackOrchestrator.applyTaskFeedbackState(tasks);
+        appendOverdueReviewTasks(tasks);
+        rankTasks(tasks);
+        if (tasks.size() > 8) {
+            tasks = new ArrayList<>(tasks.subList(0, 8));
+        }
+        response.setTasks(tasks);
         fillSummary(response);
         return response;
     }
@@ -192,11 +204,75 @@ public class ActionCenterOrchestrator {
                     false));
         }
 
-        tasks.sort((left, right) -> priorityOrder(left.getPriority()) - priorityOrder(right.getPriority()));
+        rankTasks(tasks);
         if (tasks.size() > 8) {
             return new ArrayList<>(tasks.subList(0, 8));
         }
         return tasks;
+    }
+
+    private void rankTasks(List<ActionCenterResponse.ActionTask> tasks) {
+        for (ActionCenterResponse.ActionTask task : tasks) {
+            int score = calcCoordinationScore(task);
+            task.setCoordinationScore(score);
+            if (task.getNextReviewAt() == null || task.getNextReviewAt().isBlank()) {
+                task.setNextReviewAt(defaultReviewAt(task.getEscalationLevel()));
+            }
+        }
+        tasks.sort((left, right) -> {
+            int scoreCompare = Integer.compare(
+                    right.getCoordinationScore() == null ? 0 : right.getCoordinationScore(),
+                    left.getCoordinationScore() == null ? 0 : left.getCoordinationScore());
+            if (scoreCompare != 0) {
+                return scoreCompare;
+            }
+            return priorityOrder(left.getPriority()) - priorityOrder(right.getPriority());
+        });
+    }
+
+    private int calcCoordinationScore(ActionCenterResponse.ActionTask task) {
+        int score = 0;
+        String priority = safeUpper(task.getPriority());
+        String escalation = safeUpper(task.getEscalationLevel());
+        String domain = safeUpper(task.getDomain());
+        String taskCode = safeUpper(task.getTaskCode());
+
+        score += switch (priority) {
+            case "HIGH" -> 45;
+            case "MEDIUM" -> 28;
+            default -> 14;
+        };
+        score += switch (escalation) {
+            case "L3" -> 35;
+            case "L2" -> 22;
+            default -> 10;
+        };
+        score += switch (domain) {
+            case "PRODUCTION" -> 12;
+            case "FACTORY" -> 10;
+            case "FINANCE" -> 8;
+            default -> 5;
+        };
+        if (task.getRelatedOrderNo() != null && !task.getRelatedOrderNo().isBlank()) {
+            score += 8;
+        }
+        if (taskCode.contains("RISK") || taskCode.contains("FOLLOW") || taskCode.contains("ANOMALY")) {
+            score += 6;
+        }
+        return score;
+    }
+
+    private String defaultReviewAt(String escalationLevel) {
+        LocalDateTime reviewAt = switch (safeUpper(escalationLevel)) {
+            case "L3" -> LocalDateTime.now().plusHours(1);
+            case "L2" -> LocalDateTime.now().plusHours(4);
+            default -> LocalDateTime.now().plusHours(24);
+        };
+        return reviewAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    private String safeUpper(String value) {
+        return value == null ? "" : value.toUpperCase();
     }
 
     private void fillSummary(ActionCenterResponse response) {
@@ -215,6 +291,77 @@ public class ActionCenterOrchestrator {
             if ("factory".equalsIgnoreCase(task.getDomain())) {
                 summary.setFactoryTasks(summary.getFactoryTasks() + 1);
             }
+            String feedbackStatus = safeUpper(task.getFeedbackStatus());
+            if ("PROCESSING".equals(feedbackStatus)) {
+                summary.setProcessingTasks(summary.getProcessingTasks() + 1);
+                if (isReviewOverdue(task.getNextReviewAt())) {
+                    summary.setOverdueReviewTasks(summary.getOverdueReviewTasks() + 1);
+                }
+            } else if ("COMPLETED".equals(feedbackStatus)) {
+                summary.setCompletedTasks(summary.getCompletedTasks() + 1);
+            } else if ("REJECTED".equals(feedbackStatus)) {
+                summary.setRejectedTasks(summary.getRejectedTasks() + 1);
+            }
+        }
+
+        int feedbackTotal = summary.getProcessingTasks() + summary.getCompletedTasks() + summary.getRejectedTasks();
+        if (feedbackTotal > 0) {
+            summary.setClosureRate((summary.getCompletedTasks() + summary.getRejectedTasks()) * 100 / feedbackTotal);
+        } else {
+            summary.setClosureRate(0);
+        }
+
+        int decisionTotal = summary.getCompletedTasks() + summary.getRejectedTasks();
+        if (decisionTotal > 0) {
+            summary.setAdoptionRate(summary.getCompletedTasks() * 100 / decisionTotal);
+        } else {
+            summary.setAdoptionRate(0);
+        }
+    }
+
+    private void appendOverdueReviewTasks(List<ActionCenterResponse.ActionTask> tasks) {
+        List<ActionCenterResponse.ActionTask> escalations = new ArrayList<>();
+        for (ActionCenterResponse.ActionTask task : tasks) {
+            if (!"PROCESSING".equalsIgnoreCase(task.getFeedbackStatus())) {
+                continue;
+            }
+            if (!isReviewOverdue(task.getNextReviewAt())) {
+                continue;
+            }
+            ActionCenterResponse.ActionTask escalation = followupTaskOrchestrator.buildTask(
+                    "feedback-review-overdue",
+                    task.getDomain(),
+                    "high",
+                    "L3",
+                    task.getOwnerRole(),
+                    "复核超时任务：" + task.getTitle(),
+                    "该任务已超过复盘时点仍未闭环，需立即复核处理状态",
+                    "回执状态为处理中，但 nextReviewAt 已超时，需升级跟进避免风险扩散",
+                    task.getRoutePath(),
+                    task.getRelatedOrderNo(),
+                    "30分钟内复核",
+                    false
+            );
+            escalation.setSourceSignal("feedback_review_overdue");
+            escalation.setFeedbackStatus(task.getFeedbackStatus());
+            escalation.setFeedbackReason(task.getFeedbackReason());
+            escalation.setCompletionNote(task.getCompletionNote());
+            escalation.setFeedbackTime(task.getFeedbackTime());
+            escalation.setNextReviewAt(task.getNextReviewAt());
+            escalations.add(escalation);
+        }
+        tasks.addAll(escalations);
+    }
+
+    private boolean isReviewOverdue(String nextReviewAt) {
+        if (nextReviewAt == null || nextReviewAt.isBlank()) {
+            return false;
+        }
+        try {
+            LocalDateTime reviewAt = LocalDateTime.parse(nextReviewAt, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            return reviewAt.isBefore(LocalDateTime.now());
+        } catch (Exception ignored) {
+            return false;
         }
     }
 

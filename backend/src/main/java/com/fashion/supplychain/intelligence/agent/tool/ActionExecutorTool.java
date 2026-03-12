@@ -9,6 +9,8 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
+import com.fashion.supplychain.intelligence.dto.ActionCenterResponse;
+import com.fashion.supplychain.intelligence.orchestration.FollowupTaskOrchestrator;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,8 @@ public class ActionExecutorTool implements AgentTool {
     private SysNoticeService sysNoticeService;
     @Autowired
     private OperationLogService operationLogService;
+    @Autowired
+    private FollowupTaskOrchestrator followupTaskOrchestrator;
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -149,6 +153,20 @@ public class ActionExecutorTool implements AgentTool {
         result.put("previousLevel", oldLevel);
         result.put("currentLevel", newLevel);
         result.put("message", urgent ? "已标记为紧急订单" : "已取消紧急标记");
+        result.put("collaborationTask", buildCollaborationTask(
+            urgent ? "ai_mark_urgent_followup" : "ai_remove_urgent_review",
+            "production",
+            urgent ? "high" : "medium",
+            urgent ? "L3" : "L2",
+            "跟单",
+            urgent ? "跟进紧急订单" : "复核已取消紧急订单",
+            urgent ? "订单已升为紧急，需立即推进排产和产能协调" : "订单紧急标记已取消，需确认节奏是否恢复",
+            urgent ? "核查工厂排产、缺料和关键工序节拍" : "确认交期风险下降并维持稳定",
+            "/production/progress-detail",
+            orderNo,
+            urgent ? "1小时内复核" : "今日内复核",
+            false
+        ));
     }
 
     private void executeAddRemark(Map<String, Object> args, Long tenantId, Map<String, Object> result) {
@@ -187,6 +205,20 @@ public class ActionExecutorTool implements AgentTool {
         result.put("success", true);
         result.put("orderNo", orderNo);
         result.put("message", "备注已添加");
+        result.put("collaborationTask", buildCollaborationTask(
+            "ai_remark_followup",
+            "production",
+            "medium",
+            "L2",
+            "跟单",
+            "确认备注事项落实",
+            "AI已追加备注，需要确认备注涉及问题已被处理",
+            "按备注内容跟进处理并回写处理结果",
+            "/production/progress-detail",
+            orderNo,
+            "4小时内复核",
+            false
+        ));
     }
 
     private void executeSendNotification(Map<String, Object> args, Long tenantId, Map<String, Object> result) {
@@ -225,7 +257,51 @@ public class ActionExecutorTool implements AgentTool {
         result.put("toUser", toUser);
         result.put("title", title);
         result.put("message", "通知已发送给 " + toUser);
+        result.put("collaborationTask", buildCollaborationTask(
+            "ai_notification_ack",
+            "system",
+            "medium",
+            "L2",
+            "负责人",
+            "确认通知已读并回应",
+            "关键通知已发送，需要确认接收人与处理状态",
+            "确认通知对象已读并反馈处理结果",
+            "/intelligence",
+            orderNo,
+            "今日内复核",
+            false
+        ));
     }
+
+        private ActionCenterResponse.ActionTask buildCollaborationTask(String taskCode,
+                                       String domain,
+                                       String priority,
+                                       String escalation,
+                                       String ownerRole,
+                                       String title,
+                                       String summary,
+                                       String reason,
+                                       String routePath,
+                                       String relatedOrderNo,
+                                       String dueHint,
+                                       boolean autoExecutable) {
+        ActionCenterResponse.ActionTask task = followupTaskOrchestrator.buildTask(
+            taskCode,
+            domain,
+            priority,
+            escalation,
+            ownerRole,
+            title,
+            summary,
+            reason,
+            routePath,
+            relatedOrderNo,
+            dueHint,
+            autoExecutable
+        );
+        task.setSourceSignal("tool_action_executor");
+        return task;
+        }
 
     // ---- helpers ----
     private ProductionOrder findOrder(Long tenantId, String orderNo) {

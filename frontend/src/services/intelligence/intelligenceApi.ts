@@ -728,6 +728,12 @@ export interface ActionCenterTaskSummary {
   productionTasks: number;
   financeTasks: number;
   factoryTasks: number;
+  processingTasks?: number;
+  completedTasks?: number;
+  rejectedTasks?: number;
+  overdueReviewTasks?: number;
+  closureRate?: number;
+  adoptionRate?: number;
 }
 
 export interface ActionCenterTask {
@@ -735,14 +741,47 @@ export interface ActionCenterTask {
   domain: string;
   priority: string;
   escalationLevel: string;
+  coordinationScore?: number;
   ownerRole: string;
   title: string;
   summary: string;
   reason: string;
+  ownerAction?: string;
+  completionCheck?: string;
+  expectedOutcome?: string;
+  nextReviewAt?: string;
+  sourceSignal?: string;
+  feedbackStatus?: string;
+  feedbackReason?: string;
+  completionNote?: string;
+  feedbackTime?: string;
   routePath: string;
   relatedOrderNo: string;
   dueHint: string;
   autoExecutable: boolean;
+}
+
+export interface ActionTaskFeedbackRequest {
+  taskCode: string;
+  relatedOrderNo?: string;
+  feedbackStatus: 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+  feedbackReason?: string;
+  completionNote?: string;
+  sourceSignal?: string;
+  nextReviewAt?: string;
+}
+
+export interface ActionTaskFeedbackItem {
+  taskCode: string;
+  relatedOrderNo?: string;
+  feedbackStatus: string;
+  feedbackReason?: string;
+  completionNote?: string;
+  sourceSignal?: string;
+  nextReviewAt?: string;
+  operatorId?: string;
+  operatorName?: string;
+  feedbackTime?: string;
 }
 
 export interface ActionCenterResponse {
@@ -875,6 +914,12 @@ export const intelligenceApi = {
   /** 行动中心：多域风险转可执行任务 */
   getActionCenter: () =>
     api.get<{ code: number; data: ActionCenterResponse }>('/intelligence/action-center'),
+
+  submitActionTaskFeedback: (payload: ActionTaskFeedbackRequest) =>
+    api.post<{ code: number; data: ActionTaskFeedbackItem }>('/intelligence/action-center/task-feedback', payload),
+
+  listActionTaskFeedback: (limit = 20) =>
+    api.get<{ code: number; data: ActionTaskFeedbackItem[] }>('/intelligence/action-center/task-feedback/list', { params: { limit } }),
 
   /** 服务端租户级智能开关，优先级应高于前端 localStorage */
   getTenantSmartFeatureFlags: () =>

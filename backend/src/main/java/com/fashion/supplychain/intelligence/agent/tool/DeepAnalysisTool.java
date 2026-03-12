@@ -103,7 +103,148 @@ public class DeepAnalysisTool implements AgentTool {
             default -> result.put("error", "不支持的分析类型: " + analysisType);
         }
 
+        if (!result.containsKey("error")) {
+            result.put("managementBrief", buildManagementBrief(analysisType, result.get("data")));
+        }
+
         return mapper.writeValueAsString(result);
+    }
+
+    private Map<String, Object> buildManagementBrief(String analysisType, Object data) {
+        Map<String, Object> brief = new LinkedHashMap<>();
+        switch (analysisType) {
+            case "factory_ranking" -> fillFactoryRankingBrief(brief, castList(data));
+            case "bottleneck" -> fillBottleneckBrief(brief, castMap(data));
+            case "merchandiser_load" -> fillMerchandiserBrief(brief, castList(data));
+            case "delivery_risk" -> fillDeliveryRiskBrief(brief, castList(data));
+            case "cost_analysis" -> fillCostBrief(brief, castMap(data));
+            case "order_type_breakdown" -> fillOrderTypeBrief(brief, castMap(data));
+            default -> {
+                brief.put("riskLevel", "YELLOW");
+                brief.put("headline", "分析已完成，但暂未生成管理简报。");
+                brief.put("ownerRoles", List.of("跟单"));
+                brief.put("recommendedActions", List.of("请结合原始数据进一步确认处理动作。"));
+            }
+        }
+        return brief;
+    }
+
+    private void fillFactoryRankingBrief(Map<String, Object> brief, List<Map<String, Object>> rows) {
+        if (rows.isEmpty()) {
+            brief.put("riskLevel", "YELLOW");
+            brief.put("headline", "当前没有足够工厂数据形成排名。\n");
+            brief.put("ownerRoles", List.of("生产主管"));
+            brief.put("recommendedActions", List.of("先补齐工厂订单和进度数据后再分析。"));
+            return;
+        }
+        Map<String, Object> best = rows.get(0);
+        Map<String, Object> worst = rows.get(rows.size() - 1);
+        brief.put("riskLevel", toLong(worst.get("overdueCount")) > 0 ? "ORANGE" : "GREEN");
+        brief.put("headline", String.format("当前工厂效率分化明显，%s领先，%s需要重点跟进。",
+                best.get("factoryName"), worst.get("factoryName")));
+        brief.put("ownerRoles", List.of("生产主管", "跟单", "工厂负责人"));
+        brief.put("recommendedActions", List.of(
+                String.format("优先复盘%s的排产和交付节奏，复制可复用做法。", best.get("factoryName")),
+                String.format("重点追踪%s的逾期和低进度订单，确认是产能不足还是现场执行问题。", worst.get("factoryName")),
+                "对效率垫底工厂重新评估派单占比，避免继续放大交期风险。"
+        ));
+    }
+
+    private void fillBottleneckBrief(Map<String, Object> brief, Map<String, Object> data) {
+        List<Map<String, Object>> stageDistribution = castList(data.get("stageDistribution"));
+        Map<String, Object> progressDistribution = castMap(data.get("progressDistribution"));
+        String stage = stageDistribution.isEmpty() ? "未识别" : String.valueOf(stageDistribution.get(0).get("stage"));
+        long earlyStageCount = toLong(progressDistribution.get("0-20%")) + toLong(progressDistribution.get("21-40%"));
+        brief.put("riskLevel", earlyStageCount > 0 ? "ORANGE" : "YELLOW");
+        brief.put("headline", String.format("当前主要瓶颈集中在%s，前中段订单积压偏多。", stage));
+        brief.put("ownerRoles", List.of("生产主管", "工厂负责人", "跟单"));
+        brief.put("recommendedActions", List.of(
+                String.format("先核查%s阶段的人手、设备和返工情况，确认瓶颈是真缺产能还是节拍失衡。", stage),
+                "把0-40%进度订单按工厂和交期分组，优先处理临期订单所在批次。",
+                "必要时做工序前移备料或临时调线，避免前段堵住后段。"
+        ));
+    }
+
+    private void fillMerchandiserBrief(Map<String, Object> brief, List<Map<String, Object>> rows) {
+        if (rows.isEmpty()) {
+            brief.put("riskLevel", "YELLOW");
+            brief.put("headline", "当前没有可用的跟单负载数据。\n");
+            brief.put("ownerRoles", List.of("老板"));
+            brief.put("recommendedActions", List.of("先补齐订单跟单员字段，再做负载均衡。"));
+            return;
+        }
+        Map<String, Object> top = rows.get(0);
+        brief.put("riskLevel", "ORANGE");
+        brief.put("headline", String.format("当前%s负载最高，继续叠单会放大跟单失控风险。", top.get("merchandiser")));
+        brief.put("ownerRoles", List.of("老板", "跟单主管"));
+        brief.put("recommendedActions", List.of(
+                String.format("先复核%s手上的紧急单和逾期单，确认是否需要拆单给其他跟单员。", top.get("merchandiser")),
+                "按订单数、急单数、逾期数重新平衡人员分工，而不是只看订单总量。",
+                "负载持续超载的跟单员，需要减少新增复杂订单承接。"
+        ));
+    }
+
+    private void fillDeliveryRiskBrief(Map<String, Object> brief, List<Map<String, Object>> rows) {
+        long overdue = rows.stream().filter(row -> "已逾期".equals(row.get("riskLevel"))).count();
+        long extreme = rows.stream().filter(row -> "极高".equals(row.get("riskLevel"))).count();
+        brief.put("riskLevel", overdue > 0 ? "RED" : extreme > 0 ? "ORANGE" : "YELLOW");
+        brief.put("headline", overdue > 0
+                ? String.format("交期风险已经落地，当前有%s张订单逾期。", overdue)
+                : String.format("交期风险正在积聚，当前有%s张极高风险订单。", extreme));
+        brief.put("ownerRoles", List.of("跟单", "生产主管", "工厂负责人"));
+        brief.put("recommendedActions", List.of(
+                "把逾期和极高风险订单单独列清单，逐张确认剩余天数、差异进度和现场卡点。",
+                "对临期但进度偏低的订单，优先争取加班、插单或产能转移。",
+                "同步给客户和内部团队预警，避免最后一天才暴露交期问题。"
+        ));
+    }
+
+    private void fillCostBrief(Map<String, Object> brief, Map<String, Object> data) {
+        Map<String, Object> costByStage = castMap(data.get("costByStage"));
+        String topStage = costByStage.isEmpty() ? "未识别" : String.valueOf(costByStage.keySet().iterator().next());
+        brief.put("riskLevel", costByStage.isEmpty() ? "YELLOW" : "ORANGE");
+        brief.put("headline", String.format("当前成本压力主要集中在%s阶段，需要确认是单价问题还是返工问题。", topStage));
+        brief.put("ownerRoles", List.of("财务", "IE", "生产主管"));
+        brief.put("recommendedActions", List.of(
+                String.format("先拆解%s阶段的金额构成，区分正常工价、返工和异常补贴。", topStage),
+                "把高成本工厂与高返工工序交叉比对，找出异常成本来源。",
+                "把异常成本订单拉出来做复盘，避免同类问题重复发生。"
+        ));
+    }
+
+    private void fillOrderTypeBrief(Map<String, Object> brief, Map<String, Object> data) {
+        brief.put("riskLevel", "GREEN");
+        brief.put("headline", String.format("当前订单结构已完成拆分，共统计%s张订单，可用于判断接单结构是否健康。", data.getOrDefault("totalOrders", 0)));
+        brief.put("ownerRoles", List.of("老板", "业务", "生产主管"));
+        brief.put("recommendedActions", List.of(
+                "先看新单、翻单、急单占比是否失衡，再决定排产和工厂分配策略。",
+                "结合工厂类型和业务类型，判断哪些订单该优先内配，哪些该外发。",
+                "如果急单占比持续偏高，要回头检查接单节奏和客户承诺策略。"
+        ));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> castList(Object value) {
+        return value instanceof List<?> list ? (List<Map<String, Object>>) list : List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Object value) {
+        return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
+    }
+
+    private long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
     }
 
     private List<Map<String, Object>> analyzeFactoryRanking(Long tenantId, LocalDateTime since) {

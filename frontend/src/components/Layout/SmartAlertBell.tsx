@@ -53,12 +53,17 @@ interface AiMessage {
   suggestions?: string[];
 }
 
-const AI_WELCOME = '👋 我是内置AI助手，可回答整体情况、逾期预警、工厂进度等问题。';
-const AI_DEFAULT_SUGGESTIONS = ['整体情况怎么样？', '有逾期订单吗？', '工厂进度怎么样？', '有瓶颈吗？'];
+const AI_WELCOME = '我是小云。你可以直接让我基于实时数据说清楚：现在最该先处理哪件事、为什么、先做什么。';
+const AI_DEFAULT_SUGGESTIONS = ['先帮我排今天处理顺序', '哪些单今天最危险', '哪个工厂正在拖节奏', '先动哪一步最有效'];
 // 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
 const SUGGESTION_NAV: Record<string, string> = {
   '整体情况怎么样？': '/dashboard',
   '有逾期订单吗？': '/production',
+};
+
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
 };
 
 // 根据事件类型获取跳转路径
@@ -265,10 +270,10 @@ const SmartAlertBell: React.FC = () => {
           suggestions: [],
         }]);
       } else {
-        setAiMessages(prev => [...prev, { role: 'ai', content: '抱歉，暂时无法理解该问题。' }]);
+        setAiMessages(prev => [...prev, { role: 'ai', content: '这句我还没拿到足够上下文。你可以换成“先看哪几单最急”这种问法。' }]);
       }
     } catch {
-      setAiMessages(prev => [...prev, { role: 'ai', content: 'AI 暂时不可用，请稍后再试。' }]);
+      setAiMessages(prev => [...prev, { role: 'ai', content: '我这边暂时连不到分析服务，稍后再问一次就好。' }]);
     } finally {
       setAiLoading(false);
     }
@@ -443,6 +448,21 @@ const SmartAlertBell: React.FC = () => {
                         compact
                         insight={{
                           ...card,
+                          source: card.source || '实时数据推演',
+                          confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
+                          summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
+                            '当前风险点已经出现，建议先处理影响面最大的事项。',
+                            '现在更适合先做优先级收口，再展开细项处理。',
+                            '先把关键风险压下来，后续执行会顺很多。',
+                          ]),
+                          labels: {
+                            summary: '现状',
+                            painPoint: '关注点',
+                            execute: '下一步',
+                            evidence: '数据',
+                            note: '补充',
+                            ...card.labels,
+                          },
                           onAction: card.actionPath ? () => goTo(card.actionPath!) : undefined,
                         }}
                       />
@@ -570,7 +590,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-ai-input-row">
                 <Input
                   size="small"
-                  placeholder="问今日风险、订单进度…"
+                  placeholder="直接问风险、瓶颈、进度或处理动作"
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
                   onPressEnter={() => askAi()}

@@ -26,11 +26,18 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
       .then((res: any) => {
         const records: any[] = res?.data?.records || res?.records || [];
         if (records.length > 0) {
+          const raw = records
+            .filter((r: any) => r.dictCode && r.dictLabel)
+            .sort((a: any, b: any) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
+            .map((r: any) => ({ value: r.dictCode, label: r.dictLabel }));
+          // 按 label 去重，保留第一个（sort 最小值已在前）
+          const seenLabels = new Set<string>();
           setOptions(
-            records
-              .filter((r: any) => r.dictCode && r.dictLabel)
-              .sort((a: any, b: any) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
-              .map((r: any) => ({ value: r.dictCode, label: r.dictLabel }))
+            raw.filter((opt: { value: string; label: string }) => {
+              if (seenLabels.has(opt.label)) return false;
+              seenLabels.add(opt.label);
+              return true;
+            })
           );
         }
         // 空列表时保持 fallback 不变

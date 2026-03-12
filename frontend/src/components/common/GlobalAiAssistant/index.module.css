@@ -204,12 +204,12 @@
 
 /* Suggestion Chips */
 .suggestionChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-  justify-content: flex-start;
-  padding: 0 4px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  align-items: start;
+  padding: 0 2px;
 }
 
 /* Pending Items (待办事项卡片) */
@@ -241,14 +241,17 @@
 }
 
 .chip {
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: #fff;
   border: 1px solid #91d5ff;
   border-radius: 16px;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.3;
   color: #1890ff;
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .chip:hover {

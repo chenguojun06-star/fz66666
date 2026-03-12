@@ -85,6 +85,9 @@ public class SystemOverviewTool implements AgentTool {
             // --- 当前最需关注事项（优先级排序） ---
             overview.put("topPriorities", buildTopPriorities(tenantId));
 
+            // --- 管理简报：给 AI 一个更像经营会议底稿的摘要 ---
+            overview.put("managementBrief", buildManagementBrief(overview));
+
             return objectMapper.writeValueAsString(overview);
         } catch (Exception e) {
             log.error("SystemOverviewTool execution failed", e);
@@ -322,5 +325,117 @@ public class SystemOverviewTool implements AgentTool {
         }
 
         return priorities;
+    }
+
+    private Map<String, Object> buildManagementBrief(Map<String, Object> overview) {
+        Map<String, Object> brief = new LinkedHashMap<>();
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> production = (Map<String, Object>) overview.getOrDefault("production", Map.of());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> risk = (Map<String, Object>) overview.getOrDefault("risk", Map.of());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> today = (Map<String, Object>) overview.getOrDefault("today", Map.of());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> priorities = (List<Map<String, Object>>) overview.getOrDefault("topPriorities", List.of());
+
+        long overdueCount = toLong(risk.get("overdueCount"));
+        long highRiskCount = toLong(risk.get("highRiskCount"));
+        long totalOrders = toLong(production.get("totalOrders"));
+        long todayScanCount = toLong(today.get("scanCount"));
+        String avgProgress = String.valueOf(production.getOrDefault("avgProgressPercent", 0)) + "%";
+
+        String riskLevel;
+        if (overdueCount > 0) {
+            riskLevel = "RED";
+        } else if (highRiskCount >= 3) {
+            riskLevel = "ORANGE";
+        } else if (highRiskCount > 0) {
+            riskLevel = "YELLOW";
+        } else {
+            riskLevel = "GREEN";
+        }
+
+        String headline;
+        if (overdueCount > 0) {
+            headline = String.format("当前最紧急的问题是交期失守，已有%s张订单逾期。", overdueCount);
+        } else if (highRiskCount > 0) {
+            headline = String.format("当前需要优先压降交期风险，近7天内有%s张高风险订单。", highRiskCount);
+        } else {
+            headline = String.format("当前整体运行相对平稳，总订单%s张，进行中平均进度%s，今日扫码%s次。", totalOrders, avgProgress, todayScanCount);
+        }
+
+        brief.put("riskLevel", riskLevel);
+        brief.put("headline", headline);
+        brief.put("focusSummary", priorities.isEmpty()
+                ? "当前没有突出优先事项，建议继续关注进度和缺料变化。"
+                : buildPrioritySummary(priorities));
+        brief.put("ownerRoles", buildOwnerRoles(overdueCount, highRiskCount, priorities));
+        brief.put("recommendedActions", buildRecommendedActions(overdueCount, highRiskCount, priorities));
+        brief.put("expectedOutcome", overdueCount > 0
+                ? "先处理逾期与临期订单，可优先止住客户与交期风险扩散。"
+                : highRiskCount > 0
+                ? "先压降高风险订单，可把本周货期失守概率往下压。"
+                : "保持当前节奏，同时持续监控风险订单、缺料和停滞情况。"
+        );
+        return brief;
+    }
+
+    private String buildPrioritySummary(List<Map<String, Object>> priorities) {
+        return priorities.stream().limit(3)
+                .map(item -> String.format("%s-%s%s",
+                        String.valueOf(item.getOrDefault("priority", "")),
+                        String.valueOf(item.getOrDefault("type", "")),
+                        item.get("orderNo") != null ? "(" + item.get("orderNo") + ")" : ""))
+                .collect(Collectors.joining("；"));
+    }
+
+    private List<String> buildOwnerRoles(long overdueCount, long highRiskCount, List<Map<String, Object>> priorities) {
+        LinkedHashSet<String> roles = new LinkedHashSet<>();
+        if (overdueCount > 0 || highRiskCount > 0) {
+            roles.add("跟单");
+            roles.add("生产主管");
+            roles.add("工厂负责人");
+        }
+        boolean hasStagnant = priorities.stream().anyMatch(item -> "停滞订单".equals(item.get("type")));
+        if (hasStagnant) {
+            roles.add("采购");
+        }
+        if (roles.isEmpty()) {
+            roles.add("跟单");
+        }
+        return new ArrayList<>(roles);
+    }
+
+    private List<String> buildRecommendedActions(long overdueCount, long highRiskCount, List<Map<String, Object>> priorities) {
+        List<String> actions = new ArrayList<>();
+        if (overdueCount > 0) {
+            actions.add("先逐张确认逾期订单的卡点原因，优先处理已逾期订单的工厂排产与交付承诺。");
+        }
+        if (highRiskCount > 0) {
+            actions.add("把7天内到期且进度偏低的订单拉清单，按剩余天数和进度差排序，安排加急跟进。");
+        }
+        boolean hasStagnant = priorities.stream().anyMatch(item -> "停滞订单".equals(item.get("type")));
+        if (hasStagnant) {
+            actions.add("排查停滞订单是缺料、缺人还是未排产，分别交给采购、生产主管和工厂负责人处理。");
+        }
+        if (actions.isEmpty()) {
+            actions.add("继续盯住临期订单、扫码波动和库存缺口，避免平稳状态被突发问题打断。");
+        }
+        return actions.stream().limit(3).collect(Collectors.toList());
+    }
+
+    private long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
     }
 }

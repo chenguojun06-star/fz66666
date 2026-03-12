@@ -3,6 +3,11 @@ import { Popover, Progress, Tag, Divider } from 'antd';
 import { RobotOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
+};
+
 interface FactorySummaryRow {
   factoryId: string;
   factoryName: string;
@@ -67,6 +72,56 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
     return { auditedCount, totalCount, auditRate, profitRate, defectRate, suggestions, topSuggestion };
   }, [record, auditedOrderNos]);
 
+  const narrative = useMemo(() => {
+    const seed = Math.round(analysis.profitRate * 10)
+      + Math.round(analysis.defectRate * 10)
+      + analysis.auditRate
+      + analysis.totalCount;
+    const summary = analysis.auditRate === 100
+      ? choose(seed, [
+        '审核覆盖已闭环，当前重点是确认利润与质量波动是否可接受。',
+        '订单审核已经收口，接下来主要看利润和次品风险有没有隐藏波动。',
+        '这家工厂审核进度已到位，可以把精力放在利润质量的最终确认上。',
+      ])
+      : choose(seed, [
+        '还有订单没审核完，建议先补齐再做终审放行。',
+        '审核链还没闭合，现在推进终审风险会偏高。',
+        '当前不建议直接终审，先把未审核订单处理完更稳。',
+      ]);
+
+    const painPoint = analysis.profitRate < 0
+      ? choose(seed + 3, [
+        '利润已经转负，说明成本结构或损耗环节需要立即复盘。',
+        '当前最需要警惕的是负利润继续扩大。',
+        '这批数据里利润为负，核心问题不在流程而在成本失衡。',
+      ])
+      : analysis.defectRate > 3
+      ? choose(seed + 5, [
+        '次品率偏高，返修和损耗会持续侵蚀利润。',
+        '质量波动已经明显，后续结算风险会上升。',
+        '次品控制没压住，利润端会被持续拖慢。',
+      ])
+      : analysis.auditRate < 100
+      ? choose(seed + 7, [
+        '审核链未闭合是当前最大不确定项。',
+        '未审核订单是现阶段最主要的风险源。',
+        '先把审核闭环做完，再谈终审效率更合适。',
+      ])
+      : choose(seed + 11, [
+        '当前主要关注利润和质量是否继续稳定。',
+        '目前没有单点爆雷，重点是守住利润和质量底线。',
+        '这批单看起来平稳，核心是防止质量回摆。',
+      ]);
+
+    const execute = analysis.auditRate < 100
+      ? '先把未审核订单补齐，再进入终审。'
+      : analysis.defectRate > 3
+      ? '先和工厂复盘质量波动，再决定是否放行。'
+      : '按当前口径推进终审，并持续盯利润与次品率。';
+
+    return { summary, painPoint, execute };
+  }, [analysis]);
+
   const content = (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -122,24 +177,25 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
           compact
           insight={{
             level: analysis.profitRate < 0 || analysis.defectRate > 3 ? 'danger' : analysis.profitRate < 5 || analysis.auditRate < 100 ? 'warning' : 'success',
-            title: analysis.auditRate === 100 ? '可以进入终审' : '先补审核再终审',
-            summary: analysis.auditRate === 100 ? '当前审核覆盖已经到位，可以把注意力放在利润和次品风险。' : '这家工厂还有订单没审完，终审前不要急着放行。',
-            painPoint: analysis.profitRate < 0
-              ? '利润已经转负，最大痛点是成本结构失真。'
-              : analysis.defectRate > 3
-              ? '次品率偏高，利润会继续被返修和损耗吞掉。'
-              : analysis.auditRate < 100
-              ? '审核链没闭合，后面出错会直接放大财务风险。'
-              : '当前主要看利润和质量是否还稳。',
+            title: analysis.auditRate === 100 ? '这家可进入终审' : '先补齐审核更稳',
+            summary: narrative.summary,
+            painPoint: narrative.painPoint,
             evidence: [
               `审核 ${analysis.auditedCount}/${analysis.totalCount}`,
               `利润率 ${analysis.profitRate.toFixed(1)}%`,
               `次品率 ${analysis.defectRate.toFixed(1)}%`,
             ],
-            execute: analysis.auditRate < 100 ? '先把未审核订单补齐，再做终审。' : analysis.defectRate > 3 ? '先找工厂复盘质量，再决定是否放行。' : '按当前口径推进终审，同时盯利润。',
-            source: '财务规则',
-            confidence: '中高置信',
+            execute: narrative.execute,
+            source: '财务数据推演',
+            confidence: analysis.auditRate === 100 ? '可执行建议' : '建议先复核',
             note: analysis.suggestions.slice(1, 3).join('；') || undefined,
+            labels: {
+              summary: '现状',
+              painPoint: '关注点',
+              execute: '下一步',
+              evidence: '数据',
+              note: '补充',
+            },
           }}
         />
       </div>

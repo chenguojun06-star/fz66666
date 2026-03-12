@@ -168,6 +168,9 @@ public class IntelligenceController {
     private ActionCenterOrchestrator actionCenterOrchestrator;
 
     @Autowired
+    private ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
+
+    @Autowired
     private ScanTipsOrchestrator scanTipsOrchestrator;
 
     @Autowired
@@ -202,6 +205,16 @@ public class IntelligenceController {
     @GetMapping("/action-center")
     public Result<ActionCenterResponse> getActionCenter() {
         return Result.success(actionCenterOrchestrator.getCenter());
+    }
+
+    @PostMapping("/action-center/task-feedback")
+    public Result<ActionTaskFeedbackItem> submitActionTaskFeedback(@RequestBody(required = false) ActionTaskFeedbackRequest request) {
+        return actionTaskFeedbackOrchestrator.submitFeedback(request);
+    }
+
+    @GetMapping("/action-center/task-feedback/list")
+    public Result<List<ActionTaskFeedbackItem>> listActionTaskFeedback(@RequestParam(defaultValue = "20") Integer limit) {
+        return Result.success(actionTaskFeedbackOrchestrator.listRecent(limit));
     }
 
     @PostMapping("/precheck/scan")

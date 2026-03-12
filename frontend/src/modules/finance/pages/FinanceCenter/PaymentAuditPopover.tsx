@@ -3,6 +3,11 @@ import { Popover, Tag } from 'antd';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 import type { PayableItem } from '@/services/finance/wagePaymentApi';
 
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
+};
+
 /* ===== 类型定义 ===== */
 interface CheckItem {
   label: string;
@@ -312,21 +317,61 @@ function buildPaymentInsight(record: PayableItem, analysis: AnalysisResult): Dec
   const amount = Number(record.amount) || 0;
   const bizType = record.bizType || 'UNKNOWN';
   const primaryIssue = abnormalChecks[0]?.detail;
+  const seed = amount + abnormalChecks.length * 13 + analysis.checks.length * 7;
+
+  const summary = analysis.suggestion === 'APPROVE'
+    ? choose(seed, [
+      '这笔付款整体风险较低，按流程核对后可以继续推进。',
+      '当前看不到关键异常项，可以进入正常付款流程。',
+      '这笔单据数据比较顺，付款动作可按计划执行。',
+    ])
+    : analysis.suggestion === 'REJECT'
+      ? choose(seed, [
+        '这笔款存在明显异常，建议先暂停并回到源单据复核。',
+        '当前风险已经超出可放行范围，不建议直接付款。',
+        '关键指标异常较多，先止付再查原因更安全。',
+      ])
+      : choose(seed, [
+        '这笔付款不是不能付，但建议先把异常项核清再放行。',
+        '存在需要人工确认的点，先复核再付款更稳。',
+        '建议先做一轮快速复核，确认后再执行付款。',
+      ]);
+
+  const execute = analysis.suggestion === 'APPROVE'
+    ? choose(seed + 3, [
+      '确认付款对象、金额和附件后直接推进。',
+      '完成最终金额核对即可发起付款。',
+      '按现有口径执行付款，并保留复核记录。',
+    ])
+    : analysis.suggestion === 'REJECT'
+      ? choose(seed + 5, [
+        '先暂停付款，回查业务单据、成本项和审批附件。',
+        '先止付并锁定异常明细，确认后再决定是否重提。',
+        '建议先回到源数据核查，再重新提交付款申请。',
+      ])
+      : choose(seed + 7, [
+        '优先复核异常项和附件一致性，再决定是否付款。',
+        '先把异常点逐条核清，确认无误后再放行。',
+        '建议先做人工复核，再进入付款动作。',
+      ]);
 
   return {
     level: mapRiskLevel(analysis.risk),
     title: '付款审核建议',
-    summary: analysis.suggestionText,
+    summary,
     painPoint: primaryIssue || (analysis.risk === 'LOW' ? '当前未发现明显异常项，可按流程推进' : undefined),
-    execute: analysis.suggestion === 'APPROVE'
-      ? '核对付款对象与金额后可直接推进付款。'
-      : analysis.suggestion === 'REJECT'
-        ? '先暂停付款，回到业务单据核对异常来源，再决定是否重提。'
-        : '先复核异常项、明细和附件，再决定是否付款。',
+    execute,
     evidence: focusChecks.map((item) => `${item.label}：${item.detail}`),
     note: `业务类型 ${bizType} · 本次应付 ¥${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-    source: '规则审核',
-    confidence: suggestionLabel[analysis.suggestion],
+    source: '付款数据推演',
+    confidence: analysis.risk === 'HIGH' ? '建议人工确认' : '可执行建议',
+    labels: {
+      summary: '现状',
+      painPoint: '关注点',
+      execute: '下一步',
+      evidence: '数据',
+      note: '补充',
+    },
   };
 }
 

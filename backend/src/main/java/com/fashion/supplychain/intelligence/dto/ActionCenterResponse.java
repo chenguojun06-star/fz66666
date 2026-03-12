@@ -22,6 +22,12 @@ public class ActionCenterResponse {
         private int productionTasks;
         private int financeTasks;
         private int factoryTasks;
+        private int processingTasks;
+        private int completedTasks;
+        private int rejectedTasks;
+        private int overdueReviewTasks;
+        private int closureRate;
+        private int adoptionRate;
     }
 
     @Data
@@ -30,10 +36,20 @@ public class ActionCenterResponse {
         private String domain;
         private String priority;
         private String escalationLevel;
+        private Integer coordinationScore;
         private String ownerRole;
         private String title;
         private String summary;
         private String reason;
+        private String ownerAction;
+        private String completionCheck;
+        private String expectedOutcome;
+        private String nextReviewAt;
+        private String sourceSignal;
+        private String feedbackStatus;
+        private String feedbackReason;
+        private String completionNote;
+        private String feedbackTime;
         private String routePath;
         private String relatedOrderNo;
         private String dueHint;

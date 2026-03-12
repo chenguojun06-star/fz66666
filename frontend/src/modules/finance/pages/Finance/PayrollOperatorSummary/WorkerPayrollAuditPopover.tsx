@@ -2,6 +2,11 @@ import React, { useMemo } from 'react';
 import { Popover, Tag } from 'antd';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
+};
+
 /* ===== 类型 ===== */
 export interface WorkerSummaryRow {
   operatorName: string;
@@ -111,19 +116,49 @@ function buildWorkerInsight(record: WorkerSummaryRow, analysis: AnalysisResult):
   const abnormalChecks = analysis.checks.filter((item) => item.status !== 'ok');
   const focusChecks = (abnormalChecks.length > 0 ? abnormalChecks : analysis.checks).slice(0, 3);
   const primaryIssue = abnormalChecks[0]?.detail;
+  const seed = Math.round(record.totalAmount || 0) + (record.recordCount || 0) * 9 + abnormalChecks.length * 17;
+
+  const summary = analysis.suggestion === 'APPROVE'
+    ? choose(seed, [
+      '这位员工的工资与产量关系基本合理，可以继续提审。',
+      '当前数据没有明显冲突，审核可按流程推进。',
+      '这条工资汇总整体稳定，适合进入通过流程。',
+    ])
+    : choose(seed, [
+      '这条工资记录需要再看一眼关键指标，直接放行风险偏高。',
+      '当前存在需要人工确认的异常点，建议先复核再决定。',
+      '先把异常项核清，再做通过或驳回更稳。',
+    ]);
+
+  const execute = analysis.suggestion === 'APPROVE'
+    ? choose(seed + 3, [
+      '核对员工身份和统计区间后即可提审。',
+      '完成最终金额确认后可直接推进。',
+      '按当前口径提交审核，并保留复核记录。',
+    ])
+    : choose(seed + 7, [
+      '先核对件均工资、扫码密度和团队占比，再决定是否通过。',
+      '建议先复核异常指标，再继续流程。',
+      '先做人工复核，确认后再提审。',
+    ]);
 
   return {
     level: mapRiskLevel(analysis.risk),
     title: '工资审核建议',
-    summary: analysis.suggestionText,
+    summary,
     painPoint: primaryIssue || '当前工资与产量关系未见明显异常。',
-    execute: analysis.suggestion === 'APPROVE'
-      ? '核对员工身份与汇总区间后可继续提审。'
-      : '先复核件均工资、扫码密度和团队占比，再决定是否通过。',
+    execute,
     evidence: focusChecks.map((item) => `${item.label}：${item.detail}`),
     note: `${record.operatorName || '员工'} · 总工资 ¥${(record.totalAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-    source: '规则审核',
-    confidence: suggestionLabel[analysis.suggestion],
+    source: '工资数据推演',
+    confidence: analysis.risk === 'HIGH' ? '建议人工确认' : '可执行建议',
+    labels: {
+      summary: '现状',
+      painPoint: '关注点',
+      execute: '下一步',
+      evidence: '数据',
+      note: '补充',
+    },
   };
 }
 

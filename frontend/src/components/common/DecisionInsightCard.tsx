@@ -15,6 +15,14 @@ export interface DecisionInsight {
   note?: string;
   execute?: string;
   actionLabel?: string;
+  labels?: {
+    summary?: string;
+    painPoint?: string;
+    execute?: string;
+    evidence?: string;
+    note?: string;
+    action?: string;
+  };
   onAction?: () => void;
 }
 
@@ -32,6 +40,14 @@ const DecisionInsightCard: React.FC<{
   const tone = paletteMap[insight.level ?? 'info'];
   const evidence = (insight.evidence ?? []).filter(Boolean).slice(0, compact ? 2 : 3);
   const labelWidth = compact ? 30 : 38;
+  const lineLabels = {
+    summary: insight.labels?.summary ?? '现在',
+    painPoint: insight.labels?.painPoint ?? '重点',
+    execute: insight.labels?.execute ?? '建议',
+    evidence: insight.labels?.evidence ?? '数据',
+    note: insight.labels?.note ?? '补充',
+    action: insight.labels?.action ?? '操作',
+  };
 
   const renderLine = (label: string, value?: string, color = '#262626') => {
     if (!value) return null;
@@ -66,14 +82,14 @@ const DecisionInsightCard: React.FC<{
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: evidence.length > 0 || insight.note || insight.actionLabel || insight.execute ? 6 : 0 }}>
-        {renderLine('判断', insight.summary)}
-        {renderLine('痛点', insight.painPoint, tone.title)}
-        {renderLine('执行', insight.execute, '#595959')}
+        {renderLine(lineLabels.summary, insight.summary)}
+        {renderLine(lineLabels.painPoint, insight.painPoint, tone.title)}
+        {renderLine(lineLabels.execute, insight.execute, '#595959')}
       </div>
 
       {evidence.length > 0 ? (
         <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6, marginBottom: insight.note || insight.actionLabel ? 6 : 0 }}>
-          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>依据</div>
+          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.evidence}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
             {evidence.map((item, index) => (
               <div key={`${item}-${index}`} style={{ fontSize: compact ? 10 : 11, color: '#595959', lineHeight: 1.5, wordBreak: 'break-word' }}>
@@ -86,7 +102,7 @@ const DecisionInsightCard: React.FC<{
 
       {insight.note ? (
         <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6, marginBottom: insight.actionLabel ? 6 : 0 }}>
-          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>说明</div>
+          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.note}</div>
           <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.5, wordBreak: 'break-word' }}>
             {insight.note}
           </div>
@@ -96,14 +112,14 @@ const DecisionInsightCard: React.FC<{
       {insight.actionLabel ? (
         insight.onAction ? (
           <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6 }}>
-            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>动作</div>
+            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.action}</div>
             <Button type="link" size="small" onClick={insight.onAction} style={{ padding: 0, height: 'auto', fontSize: 12, justifyContent: 'flex-start' }}>
               {insight.actionLabel}
             </Button>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6 }}>
-            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>动作</div>
+            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.action}</div>
             <div style={{ fontSize: 11, fontWeight: 600, color: tone.title, lineHeight: 1.6 }}>{insight.actionLabel}</div>
           </div>
         )

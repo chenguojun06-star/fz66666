@@ -33,6 +33,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { organizationApi } from '@/services/system/organizationApi';
 import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -967,7 +968,16 @@ const OrderManagement: React.FC = () => {
     try {
       const res = await api.get<{ code: number; data: Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }> }>('/system/organization/departments');
       if (res.code === 200) {
-        setDepartments((res.data || []).filter((d: any) => d.nodeType === 'DEPARTMENT'));
+        setDepartments(
+          (res.data || [])
+            .filter((d: any) => d.nodeType === 'DEPARTMENT')
+            // 只显示生产相关部门（节点名或完整路径含"生产"）
+            .filter((d: any) => {
+              const name = (d.nodeName || '') as string;
+              const path = (d.pathNames || '') as string;
+              return name.includes('生产') || path.includes('生产');
+            })
+        );
       }
     } catch {
       setDepartments([]);
@@ -978,13 +988,28 @@ const OrderManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      // 优先从组织架构加载（含真实姓名），fallback 到系统用户列表
+      const orgUsers = await organizationApi.assignableUsers();
+      if (orgUsers.length > 0) {
+        const mapped = orgUsers
+          .filter(u => u.name || u.username)
+          .map(u => ({ id: Number(u.id) || 0, name: u.name || u.username, username: u.username }));
+        // 按 name 去重
+        const seen = new Set<string>();
+        setUsers(mapped.filter(u => {
+          if (seen.has(u.name)) return false;
+          seen.add(u.name);
+          return true;
+        }));
+        return;
+      }
+    } catch { /* 组织成员加载失败，回退到用户列表 */ }
+    try {
       const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } });
       if (response.code === 200) {
         setUsers(response.data.records || []);
       }
     } catch {
-      // Intentionally empty
-      // 忽略错误
       setUsers([]);
     }
   };

@@ -147,7 +147,7 @@ INSERT IGNORE INTO `t_knowledge_base` (`id`,`tenant_id`,`category`,`title`,`cont
 
 **创建后自动触发**：
 - 采购提醒：若面辅料库存不足，系统推送缺料警告
-- 产能预估：系统自动计算预计完工时间', 
+- 产能预估：系统自动计算预计完工时间',
 '新建订单 生产订单 创建 下单 款式', 'system'),
 
 ('kb-guide-002', NULL, 'system_guide', '工厂扫码操作完整流程',

@@ -78,17 +78,35 @@ const trimReason = (reason?: string) => {
   return normalized.length > 78 ? `${normalized.slice(0, 78)}…` : normalized;
 };
 
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
+};
+
 const buildCandidateInsight = (record: Candidate): DecisionInsight | null => {
   if (record.trendScore == null) return null;
   const scoreMeta = getScoreMeta(record);
   const score = record.trendScore;
+  const seed = score + Math.round((record.profitEstimate || 0) * 10) + (record.targetQty || 0);
   const level = score >= 70 ? 'success' : score >= 50 ? 'warning' : 'danger';
   const title = score >= 70 ? '可推进下版' : score >= 50 ? '建议补证后再审' : '暂不建议推进';
   const summary = score >= 70
-    ? '当前趋势分和利润空间都具备推进价值，更适合直接转入样衣打版验证。'
+    ? choose(seed, [
+      '这款在热度和利润空间上都比较扎实，可以进入下版验证。',
+      '当前信号偏正向，适合从观察阶段进入打版阶段。',
+      '这款的推进价值比较明确，可以继续往样衣验证走。',
+    ])
     : score >= 50
-    ? '当前分数处在中位区间，说明方向不差，但证据还不够硬，先补渠道和价格带判断更稳。'
-    : '当前趋势契合度偏弱，贸然下版更容易占用样衣与跟单资源。';
+    ? choose(seed, [
+      '方向是对的，但证据还不够硬，先补渠道和价格带对比更稳。',
+      '这款不差，但还没到“马上下版”的确定性，建议先补证。',
+      '目前属于可关注区间，先把关键证据补齐再推进。',
+    ])
+    : choose(seed, [
+      '当前趋势契合度偏弱，直接下版会占用样衣资源。',
+      '这款更适合先观察，不建议现在就投入下版。',
+      '眼下推进性价比不高，建议先作为参考样本保留。',
+    ]);
   const evidence = [
     `趋势评分 ${score} 分（${scoreMeta.label}）`,
     record.profitEstimate != null ? `预估利润率 ${record.profitEstimate}%` : null,
@@ -100,16 +118,39 @@ const buildCandidateInsight = (record: Candidate): DecisionInsight | null => {
     title,
     summary,
     painPoint: score >= 70
-      ? '真正的风险不在趋势，而在后续是否能快速验证样衣。'
+      ? choose(seed + 3, [
+        '真正的风险不在热度，而在后续样衣验证是否能跟上。',
+        '关键不在“要不要做”，而在“能不能快速验证”。',
+        '这款的主要挑战在执行速度，不在方向本身。',
+      ])
       : score >= 50
-      ? '方向不差，但证据还不够硬，容易出现拍脑袋推进。'
-      : '趋势、利润或需求预期都不够强，推进后容易占资源。',
+      ? choose(seed + 5, [
+        '方向不差，但证据强度还不够，容易变成拍脑袋推进。',
+        '现在缺的是关键佐证，而不是想法。',
+        '中位分的主要问题是确定性不足。',
+      ])
+      : choose(seed + 7, [
+        '趋势、利润或需求预期都不够强，推进后容易占资源。',
+        '当前信号偏弱，贸然推进会增加无效试错。',
+        '这款暂时不具备优先推进条件。',
+      ]),
     source: scoreMeta.label,
-    confidence: score >= 70 ? '中高置信' : '中置信',
+    confidence: score >= 70 ? '把握较高' : '建议复核',
     evidence,
     note: trimReason(record.trendScoreReason),
-    execute: score >= 70 ? '继续走审核与下版。' : score >= 50 ? '先补市场对比，再决定是否推进。' : '先保留观察，不要直接下版。',
+    execute: score >= 70
+      ? choose(seed + 11, ['继续走审核并下版验证。', '按流程推进到打版环节。', '可进入下版与审款联动流程。'])
+      : score >= 50
+      ? choose(seed + 13, ['先补市场对比，再决定是否推进。', '先补证据再做推进决策。', '建议先核实渠道与价格带后再审。'])
+      : choose(seed + 17, ['先保留观察，不要直接下版。', '先进入观察池，暂不投样衣资源。', '建议先观望，等待更强信号。']),
     actionLabel: score >= 70 ? '建议继续走审核与下版' : score >= 50 ? '建议补充市场对比后再决策' : '建议先保留观察',
+    labels: {
+      summary: '现状',
+      painPoint: '关注点',
+      execute: '下一步',
+      evidence: '数据',
+      note: '补充',
+    },
   };
 };
 
