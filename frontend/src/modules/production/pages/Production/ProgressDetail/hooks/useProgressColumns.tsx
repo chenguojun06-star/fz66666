@@ -18,6 +18,25 @@ import { stageAliasMap } from '@/utils/productionStage';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
 import { usePredictFinishHint } from './usePredictFinishHint';
+
+// ── 订单健康度评分（客户端实时计算，无需额外API）─────────────────────────────
+function calcHealthScore(record: ProductionOrder): { score: number; level: 'good'|'warn'|'danger' } {
+  const prog = record.productionProgress ?? 0;
+  let score = Math.round(prog * 0.40);
+  if (record.expectedShipDate) {
+    const days = dayjs(record.expectedShipDate as string).diff(dayjs(), 'day');
+    if (days > 14)     score += 35;
+    else if (days > 7) score += 26;
+    else if (days > 3) score += 16;
+    else if (days > 0) score += 8;
+  } else {
+    score += 20;
+  }
+  const proc = (record as any).procurementCompletionRate ?? null;
+  score += proc != null ? Math.round(proc * 0.25) : 18;
+  score = Math.max(0, Math.min(100, score));
+  return { score, level: score >= 75 ? 'good' : score >= 50 ? 'warn' : 'danger' };
+}
 import {
   stripWarehousingNode,
   formatTime,
@@ -155,6 +174,20 @@ export const useProgressColumns = ({
             {String(record.plateType || '').toUpperCase() === 'REORDER' && (
               <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
             )}
+            {(() => {
+              const { score, level } = calcHealthScore(record);
+              if (level === 'good') return null;
+              return (
+                <Tooltip title={`健康度 ${score}分`} placement="top">
+                  <Tag
+                    color={level === 'warn' ? 'orange' : 'red'}
+                    style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}
+                  >
+                    {level === 'warn' ? '注' : '危'}
+                  </Tag>
+                </Tooltip>
+              );
+            })()}
           </div>
         </Popover>
       ),

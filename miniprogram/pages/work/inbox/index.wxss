@@ -128,3 +128,88 @@
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
 }
+
+/* ─────────── 催单回复编辑表单 ─────────── */
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+.edit-card {
+  width: 100%;
+  background: var(--color-bg-card, #fff);
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 36rpx 32rpx 60rpx;
+  box-sizing: border-box;
+}
+.edit-card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--color-text-primary, #1a1a2e);
+  display: block;
+  margin-bottom: 6rpx;
+}
+.edit-card-hint {
+  font-size: 24rpx;
+  color: var(--color-text-secondary, #666);
+  display: block;
+  margin-bottom: 28rpx;
+}
+.edit-field {
+  margin-bottom: 24rpx;
+}
+.edit-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary, #555);
+  display: block;
+  margin-bottom: 8rpx;
+}
+.edit-input {
+  width: 100%;
+  background: var(--color-bg-page, #f5f7fa);
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+  color: var(--color-text-primary, #1a1a2e);
+}
+.edit-textarea {
+  width: 100%;
+  background: var(--color-bg-page, #f5f7fa);
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+  color: var(--color-text-primary, #1a1a2e);
+  min-height: 120rpx;
+}
+.edit-btns {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+.edit-btn-cancel {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: 14rpx;
+  font-size: 28rpx;
+  background: var(--color-bg-page, #f0f0f0);
+  color: var(--color-text-secondary, #666);
+}
+.edit-btn-submit {
+  flex: 2;
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: 14rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  background: var(--color-primary, #5B6AF0);
+  color: #fff;
+}
+.edit-btn-disabled {
+  opacity: 0.5;
+}

@@ -272,10 +272,11 @@ public class SysNoticeOrchestrator {
 
     private String buildTitle(String noticeType, ProductionOrder order) {
         return switch (noticeType) {
-            case "stagnant" -> "⏸ 停滞预警 — 订单 " + order.getOrderNo();
-            case "deadline" -> "⏰ 临期提醒 — 订单 " + order.getOrderNo();
-            case "quality"  -> "🔴 质量问题 — 订单 " + order.getOrderNo();
-            default         -> "📢 通知 — 订单 " + order.getOrderNo();
+            case "stagnant"   -> "⏸ 停滞预警 — 订单 " + order.getOrderNo();
+            case "deadline"   -> "⏰ 临期提醒 — 订单 " + order.getOrderNo();
+            case "quality"    -> "🔴 质量问题 — 订单 " + order.getOrderNo();
+            case "urge_order" -> "📦 催单提醒 — 订单 " + order.getOrderNo();
+            default           -> "📢 通知 — 订单 " + order.getOrderNo();
         };
     }
 
@@ -298,8 +299,13 @@ public class SysNoticeOrchestrator {
             }
             case "quality"  -> String.format(
                     "订单 %s（%s）存在质量问题需关注，当前进度 %d%%，工厂：%s。请及时处理。",
-                    order.getOrderNo(), order.getStyleNo(), prog, factory);
-            default         -> String.format(
+                    order.getOrderNo(), order.getStyleNo(), prog, factory);            case "urge_order" -> {
+                String shipDate = order.getExpectedShipDate() != null
+                        ? order.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd")) : "未定";
+                yield String.format(
+                        "订单 %s（%s）已更新预计出货日期为 %s，当前进度 %d%%，请确认排期并及时回复。",
+                        order.getOrderNo(), order.getStyleNo(), shipDate, prog);
+            }            default         -> String.format(
                     "订单 %s（%s）需要您关注，当前进度 %d%%。",
                     order.getOrderNo(), order.getStyleNo(), prog);
         };

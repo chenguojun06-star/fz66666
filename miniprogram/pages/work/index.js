@@ -194,6 +194,10 @@ Page({
     wx.navigateTo({ url: '/pages/work/inbox/index' });
   },
 
+  navToAiAssistant() {
+    wx.navigateTo({ url: '/pages/work/ai-assistant/index' });
+  },
+
   navTo(e) {
     const url = e.currentTarget.dataset.url;
     safeNavigate({ url }).catch(() => {});

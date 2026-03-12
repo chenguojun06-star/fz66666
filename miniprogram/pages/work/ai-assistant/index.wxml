@@ -1,0 +1,54 @@
+<view class="chat-wrapper">
+
+  <!-- 快捷提问芯片（只在无消息时显示，或始终置顶） -->
+  <view class="quick-chips">
+    <view
+      wx:for="{{quickPrompts}}"
+      wx:key="label"
+      class="chip"
+      bindtap="onQuickPrompt"
+      data-text="{{item.text}}"
+    >{{item.label}}</view>
+  </view>
+
+  <!-- 对话气泡区 -->
+  <view class="msg-list">
+    <view
+      wx:for="{{messages}}"
+      wx:key="id"
+      class="msg-row {{item.role === 'user' ? 'row-user' : 'row-ai'}}"
+    >
+      <!-- AI 头像 -->
+      <view wx:if="{{item.role === 'ai'}}" class="avatar avatar-ai">🤖</view>
+
+      <!-- 气泡 -->
+      <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+        <view wx:if="{{item.loading}}" class="typing-dots">
+          <view class="dot"></view><view class="dot"></view><view class="dot"></view>
+        </view>
+        <text wx:else decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
+      </view>
+
+      <!-- 用户头像 -->
+      <view wx:if="{{item.role === 'user'}}" class="avatar avatar-user">我</view>
+    </view>
+  </view>
+
+  <!-- 底部输入栏 -->
+  <view class="input-bar">
+    <input
+      class="msg-input"
+      placeholder="输入问题，如：今天做了多少件…"
+      value="{{inputText}}"
+      bindinput="onInputChange"
+      confirm-type="send"
+      bindconfirm="onSend"
+      disabled="{{sending}}"
+      adjust-position
+    />
+    <view
+      class="send-btn {{(!inputText || sending) ? 'send-disabled' : ''}}"
+      bindtap="onSend"
+    >发送</view>
+  </view>
+</view>

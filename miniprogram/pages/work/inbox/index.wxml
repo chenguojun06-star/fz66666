@@ -52,4 +52,43 @@
   <view wx:if="{{unreadCount > 0}}" class="mark-all-btn" bindtap="markAllRead">
     <text>全部标为已读</text>
   </view>
+
+  <!-- 催单回复编辑表单（蒙层+弹出卡片）-->
+  <view wx:if="{{editFormVisible}}" class="edit-overlay" catchtap="onEditFormCancel">
+    <view class="edit-card" catchtap="_noop">
+      <text class="edit-card-title">📦 催单回复 — {{editForm.orderNo}}</text>
+      <text class="edit-card-hint">请确认排期并回复跟单员</text>
+
+      <view class="edit-field">
+        <text class="edit-label">预计出货日期</text>
+        <input
+          class="edit-input"
+          type="text"
+          placeholder="如：2026-05-20"
+          value="{{editForm.expectedShipDate}}"
+          data-field="expectedShipDate"
+          bindinput="onEditFormInput"
+        />
+      </view>
+      <view class="edit-field">
+        <text class="edit-label">工厂备注</text>
+        <textarea
+          class="edit-textarea"
+          placeholder="说明当前排期情况或问题..."
+          value="{{editForm.remarks}}"
+          data-field="remarks"
+          bindinput="onEditFormInput"
+          maxlength="200"
+        />
+      </view>
+
+      <view class="edit-btns">
+        <view class="edit-btn-cancel" bindtap="onEditFormCancel">取消</view>
+        <view
+          class="edit-btn-submit {{editForm.submitting ? 'edit-btn-disabled' : ''}}"
+          bindtap="onEditFormSubmit"
+        >{{editForm.submitting ? '提交中...' : '确认回复'}}</view>
+      </view>
+    </view>
+  </view>
 </view>

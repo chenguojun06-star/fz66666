@@ -165,6 +165,20 @@
       </view>
   </view>
 
+  <!-- AI 工人助手入口卡片 -->
+  <view class="card ai-assistant-card" bindtap="navToAiAssistant" hover-class="card-hover" hover-stay-time="100">
+    <view class="ai-card-inner">
+      <view class="icon-box bg-soft-purple" style="width:80rpx;height:80rpx;">
+        <text class="iconfont" style="font-size:38rpx;">🤖</text>
+      </view>
+      <view class="ai-card-text">
+        <text class="ai-card-title">AI 工人助手</text>
+        <text class="ai-card-subtitle">查产量 · 估工资 · 问订单</text>
+      </view>
+      <text class="ai-card-arrow">›</text>
+    </view>
+  </view>
+
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->

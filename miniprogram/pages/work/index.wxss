@@ -891,3 +891,36 @@ page {
   font-weight: 700;
 }
 
+/* ── AI 助手入口卡片 ── */
+.ai-assistant-card {
+  margin-top: 20rpx;
+}
+.ai-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.ai-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.ai-card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-text-primary, #1a1a2e);
+}
+.ai-card-subtitle {
+  font-size: 24rpx;
+  color: var(--color-text-secondary, #888);
+}
+.ai-card-arrow {
+  font-size: 40rpx;
+  color: var(--color-text-disabled, #ccc);
+  font-weight: 700;
+}
+.bg-soft-purple {
+  background: #ede9ff;
+}
+

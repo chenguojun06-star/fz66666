@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
+import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
+import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +59,12 @@ public class ProductionOrderController {
 
     @Autowired
     private ProductionOrderExportOrchestrator exportOrchestrator;
+
+    @Autowired
+    private OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
+
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
     /**
      * 导出生产订单列表为Excel
@@ -259,7 +267,23 @@ public class ProductionOrderController {
             }
         }
 
+        // 催单通知：告知跟单员/工厂更新了预计出货日期
+        if (success && Boolean.TRUE.equals(payload.get("sendUrgeNotice"))) {
+            try { sysNoticeOrchestrator.send(order.getOrderNo(), "urge_order"); }
+            catch (Exception e) { log.warn("[quickEdit] 催单通知发送失败: {}", e.getMessage()); }
+        }
+
         return success ? Result.success("更新成功") : Result.fail("更新失败");
+    }
+
+    /**
+     * 批量查询订单健康度评分（0-100，三维度加权：进度/交期/物料）
+     */
+    @PostMapping("/health-scores")
+    public Result<List<Map<String, Object>>> healthScores(@RequestBody Map<String, Object> payload) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) payload.get("orderIds");
+        return Result.success(orderHealthScoreOrchestrator.batchScores(ids));
     }
 
     private Result<?> upsert(ProductionOrder productionOrder) {

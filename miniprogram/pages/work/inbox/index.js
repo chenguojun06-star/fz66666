@@ -8,6 +8,7 @@ function typeIcon(noticeType) {
     quality: '🔴',
     worker_alert: '⚠️',
     manual: '📢',
+    urge_order: '📦',
   };
   return map[noticeType] || '🔔';
 }
@@ -31,6 +32,8 @@ Page({
     notices: [],
     unreadCount: 0,
     loading: false,
+    editForm: null,          // { noticeIndex, orderNo, expectedShipDate, remarks, submitting }
+    editFormVisible: false,
   },
 
   onShow() {
@@ -71,10 +74,56 @@ Page({
       } catch (_) { /* 静默忽略 */ }
     }
 
+    // 催单类型：弹出内联编辑表单
+    if (notice.noticeType === 'urge_order' && notice.orderNo) {
+      this.setData({
+        editFormVisible: true,
+        editForm: {
+          noticeIndex: index,
+          orderNo: notice.orderNo,
+          expectedShipDate: '',
+          remarks: '',
+          submitting: false,
+        },
+      });
+      return;
+    }
+
     // 有订单号则跳转到工作台并高亮订单
     if (notice.orderNo) {
       wx.setStorageSync('pending_order_hint', notice.orderNo);
       wx.navigateBack({ delta: 1 });
+    }
+  },
+
+  onEditFormInput(e) {
+    const { field } = e.currentTarget.dataset;
+    const { editForm } = this.data;
+    this.setData({ editForm: { ...editForm, [field]: e.detail.value } });
+  },
+
+  onEditFormCancel() {
+    this.setData({ editFormVisible: false, editForm: null });
+  },
+
+  async onEditFormSubmit() {
+    const { editForm } = this.data;
+    if (!editForm || editForm.submitting) return;
+    if (!editForm.expectedShipDate && !editForm.remarks) {
+      wx.showToast({ title: '请填写出货日期或备注', icon: 'none' });
+      return;
+    }
+    this.setData({ editForm: { ...editForm, submitting: true } });
+    try {
+      const payload = { orderNo: editForm.orderNo };
+      if (editForm.expectedShipDate) payload.expectedShipDate = editForm.expectedShipDate;
+      if (editForm.remarks) payload.remarks = editForm.remarks;
+      await api.production.quickEditOrder(payload);
+      wx.showToast({ title: '已确认回复', icon: 'success' });
+      this.setData({ editFormVisible: false, editForm: null });
+    } catch (_) {
+      wx.showToast({ title: '提交失败，请重试', icon: 'none' });
+      this.setData({ editForm: { ...editForm, submitting: false } });
     }
   },
 
