@@ -535,11 +535,11 @@ page {
   background: var(--gradient-action);
   color: var(--color-text-white);
   border-radius: var(--radius-full);
-  padding: 8px 8px;
+  padding: 4px 8px;
   text-align: center;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 600;
-  min-height: 44px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
