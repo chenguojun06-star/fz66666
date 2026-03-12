@@ -1,5 +1,6 @@
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
+const { eventBus } = require('../../../../utils/eventBus');
 
 Page({
   data: {
@@ -66,6 +67,18 @@ Page({
     // 如果不是首次加载（page > 1表示已加载过数据），则刷新列表
     if (this.data.page > 1 || this.data.list.length > 0) {
       this.loadData(true);
+    }
+    // 订阅隐私授权弹窗事件（微信审核必须）
+    if (this._unsubPrivacy) this._unsubPrivacy();
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
+        try {
+          const dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') {
+            dialog.showDialog(resolve);
+          }
+        } catch (_) { /* 静默忽略 */ }
+      });
     }
   },
 

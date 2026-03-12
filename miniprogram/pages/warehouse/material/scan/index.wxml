@@ -108,5 +108,6 @@
     </view>
 
   </view>
-
+  <!-- 微信隐私授权弹窗（审核必须） -->
+  <privacy-dialog id="privacyDialog" />
 </view>

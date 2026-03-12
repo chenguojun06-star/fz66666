@@ -8,6 +8,7 @@
  *  2. 直接进入，手动扫码
  */
 const api = require('../../../../../utils/api');
+const { eventBus } = require('../../../../../utils/eventBus');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
@@ -43,6 +44,24 @@ Page({
     if (rollCode) {
       this.setData({ rollCode });
       this.queryRoll(rollCode);
+    }
+    // 订阅隐私授权弹窗事件（微信审核必须）
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
+        try {
+          const dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') {
+            dialog.showDialog(resolve);
+          }
+        } catch (_) { /* 静默忽略 */ }
+      });
+    }
+  },
+
+  onUnload() {
+    if (this._unsubPrivacy) {
+      this._unsubPrivacy();
+      this._unsubPrivacy = null;
     }
   },
 

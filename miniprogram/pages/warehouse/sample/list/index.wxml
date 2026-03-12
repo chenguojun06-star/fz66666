@@ -260,4 +260,6 @@
       <view class="mf-btn cancel" style="flex: unset; width: 100%;" bindtap="closeLoanModal">关闭</view>
     </view>
   </mp-modal>
+  <!-- 微信隐私授权弹窗（审核必须） -->
+  <privacy-dialog id="privacyDialog" />
 </view>
