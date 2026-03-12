@@ -37,6 +37,10 @@ import java.time.LocalDateTime;
 @Service
 public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo> implements StyleInfoService {
 
+    private static final String STYLE_STATUS_ENABLED = "ENABLED";
+    private static final String STYLE_STATUS_DISABLED = "DISABLED";
+    private static final String STYLE_STATUS_SCRAPPED = "SCRAPPED";
+
     @Autowired
     private StyleOperationLogService styleOperationLogService;
 
@@ -84,11 +88,14 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
-                .eq(StyleInfo::getStatus, "ENABLED");
+                .and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
+                    .or()
+                    .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED));
 
         if (StringUtils.hasText(progressNode)) {
             String node = progressNode.trim();
             switch (node) {
+                case "开发样报废" -> wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED);
                 case "样衣完成" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED").or().eq(StyleInfo::getSampleStatus, "Completed"));
                 case "样衣制作中" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "IN_PROGRESS").or().eq(StyleInfo::getSampleStatus, "In_Progress"));
                 case "纸样完成" -> wrapper
@@ -376,6 +383,12 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             style.setLatestOrderStatus(null);
             style.setLatestProductionProgress(null);
 
+            if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+                style.setProgressNode("开发样报废");
+                style.setCompletedTime(null);
+                continue;
+            }
+
             if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
                 style.setProgressNode("样衣完成");
                 style.setCompletedTime(style.getSampleCompletedTime());
@@ -410,7 +423,9 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         StyleInfo style = baseMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
                         .eq(StyleInfo::getId, id)
-                        .eq(StyleInfo::getStatus, "ENABLED"));
+                .and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
+                    .or()
+                    .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED)));
         if (style == null) {
             return null;
         }
@@ -476,7 +491,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
         String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
 
-        if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            style.setProgressNode("开发样报废");
+            style.setCompletedTime(null);
+        } else if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
             style.setProgressNode("样衣完成");
             style.setCompletedTime(style.getSampleCompletedTime());
         } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
@@ -515,7 +533,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
             styleInfo.setUpdateTime(now);
             if (!StringUtils.hasText(styleInfo.getStatus())) {
-                styleInfo.setStatus("ENABLED");
+                styleInfo.setStatus(STYLE_STATUS_ENABLED);
             }
             // 品类默认值（数据库NOT NULL约束要求）
             if (!StringUtils.hasText(styleInfo.getCategory())) {
@@ -561,7 +579,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     public boolean deleteById(Long id) {
         StyleInfo styleInfo = new StyleInfo();
         styleInfo.setId(id);
-        styleInfo.setStatus("DISABLED");
+        styleInfo.setStatus(STYLE_STATUS_DISABLED);
         styleInfo.setUpdateTime(LocalDateTime.now());
 
         return this.updateById(styleInfo);
@@ -611,7 +629,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         }
 
         String st = style.getStatus() == null ? "" : style.getStatus().trim();
-        if (StringUtils.hasText(st) && !"ENABLED".equalsIgnoreCase(st)) {
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(st)) {
+            throw new IllegalStateException("开发样已报废，无法下单");
+        }
+        if (StringUtils.hasText(st) && !STYLE_STATUS_ENABLED.equalsIgnoreCase(st)) {
             throw new IllegalStateException("款号已禁用，无法下单");
         }
 

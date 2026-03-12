@@ -17,7 +17,7 @@ export interface StyleInfo extends Record<string, unknown> {
   sampleQuantity?: number;
   deliveryDate?: string;
   cover?: string;
-  status?: string;
+  status?: 'ENABLED' | 'DISABLED' | 'SCRAPPED' | string;
   createTime?: string;
   updateTime?: string;
   deleteFlag?: number;

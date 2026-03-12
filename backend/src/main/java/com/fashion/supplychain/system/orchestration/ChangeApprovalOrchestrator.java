@@ -374,7 +374,11 @@ public class ChangeApprovalOrchestrator {
                     }
                     Object sid = params.get("styleId");
                     Long styleId = sid instanceof Number ? ((Number) sid).longValue() : Long.parseLong(String.valueOf(sid));
-                    styleInfoOrchestrator.delete(styleId);
+                        String scrapReason = approval.getApplyReason();
+                        if (scrapReason == null || scrapReason.isBlank()) {
+                            scrapReason = approval.getReviewRemark();
+                        }
+                        styleInfoOrchestrator.scrap(styleId, scrapReason);
                     result.put("success", true);
                     break;
                 }

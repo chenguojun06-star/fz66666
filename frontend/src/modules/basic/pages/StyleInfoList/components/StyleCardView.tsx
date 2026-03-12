@@ -1,4 +1,5 @@
 import React from 'react';
+import { Tag } from 'antd';
 
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
@@ -16,7 +17,7 @@ interface StyleCardViewProps {
   pageSize: number;
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
-  onDelete: (id: string) => void;
+  onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
 }
@@ -25,7 +26,7 @@ interface StyleCardViewProps {
  * 款式信息卡片视图
  * 操作与表格视图完全一致：
  * - 已完成(样衣完成)：详情 + 下单 + 维护(主管+)
- * - 开发中：详情 + 纸样开发 + 样衣生产 + 打印 + 删除
+ * - 开发中：详情 + 纸样开发 + 样衣生产 + 打印 + 报废
  */
 const StyleCardView: React.FC<StyleCardViewProps> = ({
   data,
@@ -34,7 +35,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   pageSize,
   currentPage,
   onPageChange,
-  onDelete,
+  onScrap,
   onPrint,
   onMaintenance
 }) => {
@@ -49,6 +50,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
 
   const renderSourceText = (record: StyleInfo) => {
     return getStyleSourceText(record);
+  };
+
+  const isScrappedRow = (record: StyleInfo) => {
+    return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
+      || String((record as any).progressNode || '').trim() === '开发样报废';
   };
 
   return (
@@ -82,6 +88,9 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           return Math.round((completedSteps / totalSteps) * 100);
         },
         getStatus: (record) => {
+          if (isScrappedRow(record as StyleInfo)) {
+            return 'warning';
+          }
           // 已完成状态直接返回 success，不参与逾期判断
           const node = String((record as any).progressNode || '').trim();
           const sampleStatus = String((record as any).sampleStatus || '').trim().toUpperCase();
@@ -112,9 +121,30 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         type: 'liquid', // 液体波浪进度条
       }}
       hoverRender={(record) => <SmartStyleHoverCard record={record as StyleInfo} />}
+      titleTags={(record) => {
+        const node = String((record as StyleInfo).progressNode || '').trim();
+        if (!node) return null;
+        const color = node === '开发样报废'
+          ? 'error'
+          : /完成/.test(node)
+            ? 'default'
+            : /(制作中|开发中|进行中)/.test(node)
+              ? 'success'
+              : 'processing';
+        return <Tag color={color}>{node}</Tag>;
+      }}
       onCardClick={(record) => navigate(`/style-info/${record.id}`)}
       actions={(record) => {
         const r = record as StyleInfo;
+        if (isScrappedRow(r)) {
+          return [
+            {
+              key: 'print',
+              label: '打印',
+              onClick: () => onPrint(r),
+            },
+          ];
+        }
         if (isStageDoneRow(r)) {
           // 已完成：下单 + 维护(主管+)
           const items = [
@@ -133,7 +163,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           }
           return items;
         }
-        // 开发中：纸样开发 + 样衣生产 + 打印 + 删除
+        // 开发中：纸样开发 + 样衣生产 + 打印 + 报废
         return [
           {
             key: 'pattern',
@@ -152,9 +182,9 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           },
           {
             key: 'delete',
-            label: '删除',
+            label: '报废',
             danger: true,
-            onClick: () => onDelete(String(r.id!)),
+            onClick: () => onScrap(String(r.id!)),
           },
         ];
       }}

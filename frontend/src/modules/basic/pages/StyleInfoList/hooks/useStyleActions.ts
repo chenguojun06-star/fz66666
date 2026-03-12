@@ -1,37 +1,58 @@
-import { App } from 'antd';
+import React from 'react';
+import { App, Input } from 'antd';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 
 /**
  * 款式列表操作 Hook
- * 提供删除、置顶、打印等行操作
+ * 提供报废、置顶、打印等行操作
  */
 export const useStyleActions = (refreshCallback?: () => void) => {
   const { message, modal } = App.useApp();
 
   /**
-   * 删除款式
+   * 报废款式
    */
-  const handleDelete = async (id: string) => {
+  const handleScrap = async (id: string) => {
     return new Promise((resolve, reject) => {
+      let scrapReason = '';
       modal.confirm({
-        title: '确认删除',
-        content: '删除后无法恢复，确定要删除这个款式吗？',
-        okText: '确定',
+        title: '确认报废',
+        content: React.createElement(
+          'div',
+          null,
+          React.createElement(
+            'div',
+            { style: { marginBottom: 12 } },
+            '报废后记录会保留在当前页面，进度停止，并显示为开发样报废。'
+          ),
+          React.createElement(Input.TextArea, {
+            rows: 4,
+            placeholder: '请输入报废原因',
+            onChange: (e) => {
+              scrapReason = e.target.value;
+            },
+          })
+        ),
+        okText: '确认报废',
         cancelText: '取消',
         onOk: async () => {
           try {
-            const res = await api.delete(`/style/info/${id}`);
+            if (!scrapReason.trim()) {
+              reject(new Error('请输入报废原因'));
+              return Promise.reject(new Error('请输入报废原因'));
+            }
+            const res = await api.post(`/style/info/${id}/scrap`, { reason: scrapReason.trim() });
             if (res.code === 200) {
-              message.success('删除成功');
+              message.success('报废成功');
               refreshCallback?.();
               resolve(true);
             } else {
-              message.error(res.message || '删除失败');
-              reject(new Error(res.message || '删除失败'));
+              message.error(res.message || '报废失败');
+              reject(new Error(res.message || '报废失败'));
             }
           } catch (error: any) {
-            message.error(error?.message || '删除失败');
+            message.error(error?.message || '报废失败');
             reject(error);
           }
         },
@@ -76,7 +97,7 @@ export const useStyleActions = (refreshCallback?: () => void) => {
   };
 
   return {
-    handleDelete,
+    handleScrap,
     handleToggleTop,
     handlePrint
   };

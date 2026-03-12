@@ -22,6 +22,7 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.HandlerMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.annotation.Resource;
 
@@ -118,6 +119,11 @@ public class SystemOperationLogAspect {
 
         String module       = resolveModule(uri);
         String targetType   = resolveTargetType(uri);
+        String targetId     = resolveTargetId(pjp.getArgs());
+        String prefetchedTargetName = resolveTargetName(pjp.getArgs());
+        if (prefetchedTargetName == null) {
+            prefetchedTargetName = resolveEntityNameFromUri(uri, pjp.getArgs(), targetId);
+        }
 
         // 纯 POST fallback 成"新增"但 URL 无法识别目标类型 → 非核心业务操作，跳过不记录（避免噪音日志）
         if ("新增".equals(operation) && (targetType == null || targetType.isBlank())) {
@@ -127,16 +133,13 @@ public class SystemOperationLogAspect {
         String operatorName = resolveOperator();
         String ip           = request == null ? null : request.getRemoteAddr();
         String reason       = extractReason(pjp.getArgs());
-        String details      = buildDetails(method, pjp.getArgs());
+        String details      = buildDetails(method, pjp.getArgs(), request);
         LocalDateTime now   = LocalDateTime.now();
         try {
             Object result = pjp.proceed();
             // 优先从返回值取 orderNo（关单/报废/更新都有完整对象返回）
             String targetName = extractTargetNameFromResult(result);
-            if (targetName == null) targetName = resolveTargetName(pjp.getArgs());
-            // fallback：stage-action 等返回 Boolean 时从数据库取实体名称
-            if (targetName == null) targetName = resolveEntityNameFromUri(uri, pjp.getArgs());
-            String targetId = resolveTargetId(pjp.getArgs());
+            if (targetName == null) targetName = prefetchedTargetName;
             OperationLog log = new OperationLog();
             log.setModule(module);
             log.setOperation(operation);
@@ -152,9 +155,7 @@ public class SystemOperationLogAspect {
             operationLogService.save(log);
             return result;
         } catch (Throwable e) {
-            String targetName = resolveTargetName(pjp.getArgs());
-            if (targetName == null) targetName = resolveEntityNameFromUri(uri, pjp.getArgs());
-            String targetId   = resolveTargetId(pjp.getArgs());
+            String targetName = prefetchedTargetName;
             OperationLog log = new OperationLog();
             log.setModule(module);
             log.setOperation(operation);
@@ -251,9 +252,9 @@ public class SystemOperationLogAspect {
     /**
      * 构建详细操作信息（记录修改内容）
      */
-    private String buildDetails(String method, Object[] args) {
+    private String buildDetails(String method, Object[] args, HttpServletRequest request) {
         if (args == null || args.length == 0) {
-            return null;
+            return buildRequestDetails(request);
         }
 
         try {
@@ -288,15 +289,25 @@ public class SystemOperationLogAspect {
                     if (arg instanceof Map) {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> map = (Map<String, Object>) arg;
-                        String[] keyFields = {"id", "orderNo", "styleNo", "name", "code"};
+                        String[] keyFields = {
+                            "id", "orderId", "styleId", "purchaseId", "pickingId", "cuttingBundleId",
+                            "orderNo", "styleNo", "purchaseNo", "pickingNo", "bundleNo",
+                            "name", "code", "materialName", "status", "expectedShipDate",
+                            "reason", "remark", "remarks", "quantity"
+                        };
                         for (String key : keyFields) {
                             if (map.containsKey(key)) {
-                                detailMap.put(key, map.get(key));
+                                Object value = map.get(key);
+                                if (value != null) {
+                                    detailMap.put(key, value);
+                                }
                             }
                         }
                     }
                 }
             }
+
+            enrichDetailsFromRequest(detailMap, request);
 
             if (detailMap.isEmpty()) {
                 return null;
@@ -317,7 +328,9 @@ public class SystemOperationLogAspect {
             "id", "orderNo", "styleNo", "name", "code", "status",
             "price", "unitPrice", "quantity", "amount", "totalAmount",
             "oldPrice", "newPrice", "oldStatus", "newStatus",
-            "reason", "remark", "approvalStatus"
+            "reason", "remark", "remarks", "approvalStatus", "expectedShipDate",
+            "purchaseId", "purchaseNo", "pickingId", "pickingNo", "bundleNo",
+            "orderId", "styleId", "materialName", "factoryName"
         };
 
         for (String field : importantFields) {
@@ -477,7 +490,7 @@ public class SystemOperationLogAspect {
         if (u.contains("/pattern-revision") || u.contains("/pattern-production") || u.contains("/sample-production")) return "样衣开发";
         if (u.contains("/style"))             return "样衣开发";
         // 大货生产（含裁剪、扫码、面料）
-        if (u.contains("/production/order") || u.contains("/production/cutting") || u.contains("/production/scan") || u.contains("/production/warehousing")) return "大货生产";
+        if (u.contains("/production/order") || u.contains("/production/orders") || u.contains("/production/cutting") || u.contains("/production/scan") || u.contains("/production/warehousing")) return "大货生产";
         if (u.contains("/material-purchase") || u.contains("/material-inbound") || u.contains("/material-picking") || u.contains("/material-roll")) return "大货生产";
         if (u.contains("/production"))        return "大货生产";
         // 仓库管理
@@ -505,7 +518,7 @@ public class SystemOperationLogAspect {
         if (u.contains("/scan"))      return "扫码记录";
         if (u.contains("/warehousing")) return "入库单";
         if (u.contains("/outstock"))  return "出货单";
-        if (u.contains("/order"))     return "订单";
+        if (u.contains("/order") || u.contains("/orders"))     return "订单";
         if (u.contains("/warehouse")) return "仓库单";
         if (u.contains("/style"))     return "款式";
         if (u.contains("/material"))  return "物料";
@@ -541,7 +554,8 @@ public class SystemOperationLogAspect {
         if (map == null || map.isEmpty()) return null;
         String[] keys = new String[]{
             "id","orderId","styleId","templateId","factoryId","userId",
-            "purchaseId","pickingId","cuttingBundleId","cuttingTaskId","warehouseId","inboundId"
+            "purchaseId","pickingId","cuttingBundleId","cuttingTaskId","warehouseId","inboundId",
+            "orderNo","purchaseNo","pickingNo","bundleNo","cuttingNo"
         };
         for (String k : keys) {
             if (map.containsKey(k)) {
@@ -555,7 +569,8 @@ public class SystemOperationLogAspect {
     private Object pickIdByGetter(Object obj) throws Exception {
         String[] keys = new String[]{
             "getId","getOrderId","getStyleId","getTemplateId","getFactoryId","getUserId",
-            "getPurchaseId","getPickingId","getCuttingBundleId","getCuttingTaskId"
+            "getPurchaseId","getPickingId","getCuttingBundleId","getCuttingTaskId",
+            "getOrderNo","getPurchaseNo","getPickingNo","getBundleNo","getCuttingNo"
         };
         Class<?> c = obj.getClass();
         for (String k : keys) {
@@ -572,13 +587,19 @@ public class SystemOperationLogAspect {
      * fallback：当前两步均未取到名称时，用 ID 查库获取实体名称。
      * 覆盖范围：款式开发、生产订单、裁剪任务、菲号、采购单、出库单
      */
-    private String resolveEntityNameFromUri(String uri, Object[] args) {
+    private String resolveEntityNameFromUri(String uri, Object[] args, String resolvedTargetId) {
         if (uri == null) return null;
         // 优先从 body Map 的 ID 类字段反查
-        String entityId = extractEntityId(args);
+        String entityId = resolvedTargetId;
+        if (entityId == null) {
+            entityId = extractEntityId(args);
+        }
         // 也尝试从 body Map 中专用ID字段查（purchaseId, pickingId 等）
+        String orderNo    = extractFieldFromArgs(args, "orderNo");
         String purchaseId = extractFieldFromArgs(args, "purchaseId");
+        String purchaseNo = extractFieldFromArgs(args, "purchaseNo");
         String pickingId  = extractFieldFromArgs(args, "pickingId");
+        String pickingNo  = extractFieldFromArgs(args, "pickingNo");
         String bundleId   = extractFieldFromArgs(args, "cuttingBundleId");
         try {
             // 款式开发
@@ -589,9 +610,11 @@ public class SystemOperationLogAspect {
                 }
             }
             // 生产订单
-            if ((uri.contains("/production/order") || uri.contains("/production/cutting-task")) && entityId != null) {
+            if (uri.contains("/production/order") || uri.contains("/production/orders") || uri.contains("/production/cutting-task")) {
                 if (productionOrderService != null) {
-                    var order = productionOrderService.getById(entityId);
+                    var order = org.springframework.util.StringUtils.hasText(orderNo)
+                            ? productionOrderService.getByOrderNo(orderNo)
+                            : (entityId == null ? null : productionOrderService.getById(entityId));
                     if (order != null) {
                         String on = order.getOrderNo(), sn = order.getStyleNo();
                         return (on != null && sn != null) ? on + " (" + sn + ")" : (on != null ? on : sn);
@@ -602,13 +625,13 @@ public class SystemOperationLogAspect {
             if (uri.contains("/material-purchase") || uri.contains("/purchase")) {
                 if (materialPurchaseService != null) {
                     String id = purchaseId != null ? purchaseId : entityId;
-                    if (id != null) {
-                        var p = materialPurchaseService.getById(id);
-                        if (p != null) {
-                            String pno = p.getPurchaseNo();
-                            String mn  = p.getMaterialName();
-                            return pno != null ? pno + (mn != null ? " [" + mn + "]" : "") : mn;
-                        }
+                    var p = org.springframework.util.StringUtils.hasText(purchaseNo)
+                            ? materialPurchaseService.lambdaQuery().eq(com.fashion.supplychain.production.entity.MaterialPurchase::getPurchaseNo, purchaseNo).last("LIMIT 1").one()
+                            : (id == null ? null : materialPurchaseService.getById(id));
+                    if (p != null) {
+                        String pno = p.getPurchaseNo();
+                        String mn  = p.getMaterialName();
+                        return pno != null ? pno + (mn != null ? " [" + mn + "]" : "") : mn;
                     }
                 }
             }
@@ -616,11 +639,11 @@ public class SystemOperationLogAspect {
             if (uri.contains("/picking") || uri.contains("/cancel-picking")) {
                 if (materialPickingService != null) {
                     String id = pickingId != null ? pickingId : entityId;
-                    if (id != null) {
-                        var pk = materialPickingService.getById(id);
-                        if (pk != null) {
-                            try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) {}
-                        }
+                    var pk = org.springframework.util.StringUtils.hasText(pickingNo)
+                            ? materialPickingService.lambdaQuery().eq(com.fashion.supplychain.production.entity.MaterialPicking::getPickingNo, pickingNo).last("LIMIT 1").one()
+                            : (id == null ? null : materialPickingService.getById(id));
+                    if (pk != null) {
+                        try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) {}
                     }
                 }
             }
@@ -709,6 +732,46 @@ public class SystemOperationLogAspect {
             return value;
         }
         return value.substring(0, max);
+    }
+
+    private void enrichDetailsFromRequest(Map<String, Object> detailMap, HttpServletRequest request) {
+        if (detailMap == null || request == null) {
+            return;
+        }
+
+        Object pathVariableAttr = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (pathVariableAttr instanceof Map) {
+            Map<?, ?> pathVariables = (Map<?, ?>) pathVariableAttr;
+            for (String key : new String[]{"id", "orderId", "transferId", "trackingId", "productionOrderId"}) {
+                Object value = pathVariables.get(key);
+                if (value != null) {
+                    detailMap.putIfAbsent(key, value);
+                }
+            }
+        }
+
+        for (String key : new String[]{
+                "reason", "remark", "action", "stage", "orderNo", "purchaseId",
+                "purchaseNo", "pickingId", "pickingNo", "expectedShipDate"
+        }) {
+            String value = request.getParameter(key);
+            if (value != null && !value.isBlank()) {
+                detailMap.putIfAbsent(key, value.trim());
+            }
+        }
+    }
+
+    private String buildRequestDetails(HttpServletRequest request) {
+        try {
+            Map<String, Object> detailMap = new LinkedHashMap<>();
+            enrichDetailsFromRequest(detailMap, request);
+            if (detailMap.isEmpty()) {
+                return null;
+            }
+            return objectMapper.writeValueAsString(detailMap);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }
 

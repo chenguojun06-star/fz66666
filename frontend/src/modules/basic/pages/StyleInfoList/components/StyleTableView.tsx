@@ -21,7 +21,7 @@ interface StyleTableViewProps {
   pageSize: number;
   currentPage: number;
   onPageChange: (page: number, pageSize: number) => void;
-  onDelete: (id: string) => void;
+  onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   categoryOptions: { label: string; value: string }[];
@@ -37,7 +37,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   pageSize,
   currentPage,
   onPageChange,
-  onDelete,
+  onScrap,
   onPrint,
   onMaintenance,
   categoryOptions
@@ -90,6 +90,11 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const renderSourceTag = (record: StyleInfo) => {
     const source = getStyleSourceMeta(record);
     return <Tag color={source.color}>{source.label}</Tag>;
+  };
+
+  const isScrappedRow = (record: StyleInfo) => {
+    return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
+      || String((record as any).progressNode || '').trim() === '开发样报废';
   };
 
   const columns = [
@@ -244,7 +249,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         const text = showProgress ? `${node} ${progress}%` : node;
         const tone = node.trim();
         const color =
-          /紧急/.test(tone)
+          /报废/.test(tone)
+            ? 'error'
+            : /紧急/.test(tone)
             ? 'warning'
             : /(错误|失败|异常|次品)/.test(tone)
               ? 'error'
@@ -296,6 +303,15 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         const moreItems: MenuProps['items'] = (() => {
           const items: MenuProps['items'] = [];
 
+          if (isScrappedRow(record)) {
+            items.push({
+              key: 'print',
+              label: '打印',
+              onClick: () => onPrint(record),
+            });
+            return items;
+          }
+
           if (isStageDoneRow(record)) {
             items.push({
               key: 'order',
@@ -333,8 +349,8 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           items.push({
             key: 'delete',
             danger: true,
-            label: '删除',
-            onClick: () => onDelete(String(record.id!)),
+            label: '报废',
+            onClick: () => onScrap(String(record.id!)),
           });
           return items;
         })();

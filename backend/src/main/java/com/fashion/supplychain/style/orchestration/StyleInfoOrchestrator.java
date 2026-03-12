@@ -15,6 +15,7 @@ import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.helper.StyleLogHelper;
 import com.fashion.supplychain.style.helper.StyleStageHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
@@ -43,6 +44,7 @@ public class StyleInfoOrchestrator {
 
     private static final String SOURCE_TYPE_SELF = "SELF_DEVELOPED";
     private static final String SOURCE_TYPE_SELECTION = "SELECTION_CENTER";
+    private static final String STYLE_STATUS_SCRAPPED = "SCRAPPED";
     private static final Set<String> SELECTION_SOURCE_DETAILS = Set.of("外部市场", "供应商", "客户定制", "内部选品", "选品中心");
 
     @Autowired
@@ -50,6 +52,9 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private StyleStageHelper styleStageHelper;
+
+    @Autowired
+    private StyleLogHelper styleLogHelper;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -174,6 +179,10 @@ public class StyleInfoOrchestrator {
         normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
         try {
+            if (styleInfo.getId() != null) {
+                StyleInfo existing = styleInfoService.getById(styleInfo.getId());
+                ensureNotScrapped(existing);
+            }
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
                 // 同步更新样板生产记录的颜色和数量
@@ -197,50 +206,62 @@ public class StyleInfoOrchestrator {
     }
 
     public boolean updateProductionRequirements(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.updateProductionRequirements(id, body);
     }
 
     public boolean rollbackProductionRequirements(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.rollbackProductionRequirements(id, body);
     }
 
     public boolean startProductionStage(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startProductionStage(id);
     }
 
     public boolean completeProductionStage(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeProductionStage(id);
     }
 
     public boolean resetProductionStage(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetProductionStage(id, body);
     }
 
     public boolean startPattern(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startPattern(id);
     }
 
     public boolean completePattern(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completePattern(id);
     }
 
     public boolean resetPattern(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetPattern(id, body);
     }
 
     public boolean startSample(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startSample(id);
     }
 
     public boolean updateSampleProgress(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.updateSampleProgress(id, body);
     }
 
     public boolean completeSample(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeSample(id);
     }
 
     public boolean resetSample(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetSample(id, body);
     }
 
@@ -261,38 +282,53 @@ public class StyleInfoOrchestrator {
                 return approvalResp;
             }
         }
-        return delete(id);
+        return scrap(id, reason);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean delete(Long id) {
+    public boolean scrap(Long id, String reason) {
+        StyleInfo style = styleInfoService.getById(id);
+        if (style == null) {
+            throw new NoSuchElementException("款式不存在");
+        }
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            throw new IllegalStateException("该开发样已报废，无需重复操作");
+        }
+
+        String remark = StringUtils.hasText(reason) ? reason.trim() : "未填写报废原因";
+
         // 检查是否存在关联的未删除生产订单
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
                         .eq(ProductionOrder::getDeleteFlag, 0));
         if (activeOrders > 0) {
-            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个生产订单，无法删除");
+            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个生产订单，无法报废");
         }
 
-        // 先删除关联的样板生产记录
-        try {
-            boolean removed = patternProductionService.lambdaUpdate()
-                    .eq(PatternProduction::getStyleId, String.valueOf(id))
-                    .remove();
-            if (removed) {
-                log.info("删除款式时，级联删除了样板生产记录: styleId={}", id);
-            }
-        } catch (Exception e) {
-            log.warn("删除关联的样板生产记录失败: styleId={}", id, e);
-            // 继续删除款式信息，不因为样板生产记录删除失败而中断
-        }
-
-        // 删除款式信息
-        boolean result = styleInfoService.deleteById(id);
+        boolean result = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
         if (!result) {
-            throw new IllegalStateException("删除失败");
+            throw new IllegalStateException("报废失败");
         }
+
+        if (patternProductionService != null) {
+            try {
+                patternProductionService.lambdaUpdate()
+                        .eq(PatternProduction::getStyleId, String.valueOf(id))
+                        .eq(PatternProduction::getDeleteFlag, 0)
+                        .set(PatternProduction::getStatus, "SCRAPPED")
+                        .update();
+            } catch (Exception e) {
+                log.warn("同步样板生产报废状态失败: styleId={}", id, e);
+            }
+        }
+
+        styleLogHelper.saveMaintenanceLog(id, "STYLE_SCRAPPED", remark);
+        log.info("开发样已报废留档: styleId={}, styleNo={}, reason={}", id, style.getStyleNo(), remark);
         return true;
     }
 
@@ -616,6 +652,7 @@ public class StyleInfoOrchestrator {
      * 开始配置尺寸表
      */
     public boolean startSize(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startSize(id);
     }
 
@@ -623,59 +660,86 @@ public class StyleInfoOrchestrator {
      * 完成尺寸表配置
      */
     public boolean completeSize(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeSize(id);
     }
 
     public boolean startBom(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startBom(id);
     }
 
     public boolean completeBom(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeBom(id);
     }
 
     public boolean resetBom(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetBom(id, body);
     }
 
     public boolean startProcess(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startProcess(id);
     }
 
     public boolean completeProcess(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeProcess(id);
     }
 
     public boolean resetProcess(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetProcess(id, body);
     }
 
     public boolean startSizePrice(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startSizePrice(id);
     }
 
     public boolean completeSizePrice(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeSizePrice(id);
     }
 
     public boolean resetSizePrice(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetSizePrice(id, body);
     }
 
     public boolean startSecondary(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.startSecondary(id);
     }
 
     public boolean completeSecondary(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.completeSecondary(id);
     }
 
     public boolean skipSecondary(Long id) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.skipSecondary(id);
     }
 
     public boolean resetSecondary(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
         return styleStageHelper.resetSecondary(id, body);
+    }
+
+    private void ensureStyleNotScrapped(Long id) {
+        ensureNotScrapped(styleInfoService.getById(id));
+    }
+
+    private void ensureNotScrapped(StyleInfo style) {
+        if (style == null) {
+            throw new NoSuchElementException("款式不存在");
+        }
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            throw new IllegalStateException("该开发样已报废，无法继续流转");
+        }
     }
 
     /**

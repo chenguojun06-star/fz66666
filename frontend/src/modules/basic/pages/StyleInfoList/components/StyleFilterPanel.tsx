@@ -28,6 +28,7 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
     { label: '纸样完成', value: '纸样完成' },
     { label: '样衣制作中', value: '样衣制作中' },
     { label: '样衣完成', value: '样衣完成' },
+    { label: '开发样报废', value: '开发样报废' },
   ];
 
   return (

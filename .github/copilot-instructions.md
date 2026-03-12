@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（134个编排器）| **规模**：251.7k行代码
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（152个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-12 | **AI指令版本**：v3.16（ViewMigrator 视图 Collation NONE — Flyway 修复路径修正）
+> **最后更新**：2026-03-31 | **AI指令版本**：v3.17（152编排器补齐 + 知识库RAG + AI Agent三大Skill）
 
 ---
 
@@ -301,6 +301,17 @@ backend/src/main/java/com/fashion/supplychain/
 >   - ② **停滞订单预警**：`useStagnantDetection.ts`。非完成订单有历史扫码且≥3天无新扫码，状态列显示橙色 ⏸ 停滞 Tag
 >   - ③ **悀停卡速度缺口**：`SmartOrderHoverCard.tsx` 新增 `calcGap()`。鼠标悬停订单行时，落后进度则显示「需X天·剩Y天·差 Z天」
 >   - **DB影响**：无需迁移，全部使用 `t_production_order` 现有列
+> - **订单健康度评分 + 级联推送（2026-03-22 新增）**：
+>   - `OrderHealthScoreOrchestrator`：3维加权算法（进度×40% + 货期×35% + 采购×25%），0-100分实时评分
+>   - 订单号列显示「注」(50-74分橙色) 与「危」(<50分红色) 徽章，零额外API请求
+>   - `SysNoticeOrchestrator` 补全催单消息推送到手机端，支持内联回复（出货日期+备注）
+>   - 小程序新增 `pages/work/ai-assistant`：聊天页面按工人能力提问（今日产量/本周工资/订单进度）
+> - **知识库+AI Agent三大Skill（2026-03-31 新增）**：
+>   - 知识库：13条 → **35条**，涵盖所有8大模块SOP+常见问题+新员工入职路径
+>   - `KnowledgeSearchTool`：RAG查询知识库、行业术语、操作指南
+>   - `BomCostCalculator`：AI计算任意款式BOM成本（物料+工序+汇率）
+>   - `QuickOrderBuilder`：AI智能建单（一句话建订单 → 提取款号、颜色、尺码、数量）
+> - **编排器总数升级**：134 → 152 个（+18新增编排器分布在intelligence/production/system模块）
 > - **腾讯云 COS 文件存储**：`common/CosService.java` — 统一处理文件上传/下载，替代本地文件系统。调用 `cosService.uploadFile(file)` 返回访问 URL
 > - **Excel 批量导入**：`ExcelImportOrchestrator` + `ExcelImportController` — 支持生产订单、工序等数据的 Excel 批量导入，前端对应 `modules/basic/pages/DataImport/`
 > - **问题反馈**：`UserFeedbackController` / `UserFeedbackService` — 用户在系统内提交问题反馈，存储到 `t_user_feedback` 表
@@ -961,9 +972,10 @@ SKU = styleNo + color + size
 - `OrderManagement/index.tsx`（2120 行）- 订单表单复杂，待拆分
 - `MaterialPurchase/index.tsx`（1690 行）- 采购流程表单，待拆分
 - `MaterialInventory/index.tsx`（1649 行）- 库存表单，待拆分
+- `ProgressDetail/index.tsx`（1670 行）- 生产进度页，待拆分 **⭐ 2026-03-31 新发现**
 - `IntelligenceCenter/index.tsx`（1402 行）- 智能驾驶舱，待优化
 - ✅ ~~`TemplateCenter/index.tsx`（1912 行）~~ - 已拆分（900行 + 4个子组件）
-- ⚠️ **前端文件大小现状（2026-03-06）**：超过 500 行的页面有 10+ 个（实际 2120/1690/1649 等），原指南目标 ≤500 行与实际项目规模不匹配。建议：按模块功能复杂度调整目标，保持单个方法 ≤40 行即可
+- ⚠️ **前端文件大小现状（2026-03-31）**：超过 500 行的页面有 11+ 个（2120/1690/1670/1649 等），原指南目标 ≤500 行与实际项目规模不匹配。建议：按模块功能复杂度调整目标，保持单个方法 ≤40 行即可。智能模块与生产模块因业务复杂度可容许至 ≤1200 行
 
 ### API 端点数限制
 - ⚠️ **单 Controller >15 端点**：考虑拆分职责
@@ -2240,5 +2252,135 @@ DB影响：无新增表/列，复用 DashboardQueryService 已有方法
 废弃代码清查：✅ DashboardOrchestrator 的临时 getDailyBrief() 已完全删除并清理多余 import
 commit: f5c14284
 ```
+
+---
+
+### 2026-03-22 变更批次（commits a542a5cc / b78f6efe / 2da6a0aa，已推送 main）
+
+#### 变更 #F ｜ 🟢 新功能 — 订单健康度评分 + 小程序AI工人助手 + 催单推送（三大核心功能）
+
+```
+功能背景：跟单员面对数百个订单无法快速识别关键风险订单；工厂工人需要手机便利查询产量和工资。
+
+【订单健康度评分】
+新增 backend/.../production/orchestration/OrderHealthScoreOrchestrator.java
+- 3维加权算法：进度×40% + 货期×35% + 采购×25%，0-100分实时评分
+  · 进度权重：生产进度百分比（40分基数）
+  · 货期权重：>14天35分，>7天26分，>3天16分，>0天8分，逾期0分，未定20分
+  · 采购权重：采购完成率（25分基数，null时默认18分）
+- 新增 POST /api/production/orders/health-scores 批量评分接口
+- PC端订单号列：客户端实时计算，≥75不显示，50-74橙色「注」徽章，<50红色「危」徽章
+- 系统收益：跟单员零额外API请求即可一眼识别高危订单
+
+【催单通知推送】
+修改 backend/.../system/orchestration/SysNoticeOrchestrator.java
+- 补全 urge_order 消息模板（标题+正文含货期、进度、款号）
+- ProductionOrderController quickEdit：sendUrgeNotice=true 时触发推送，非阻塞不影响保存
+- 小程序 inbox 新增催单类消息：📦 图标 + 内联回复表单
+- 工厂工人可直接填写出货日期和备注进行回复，跟单员手机端同步收取回复
+- 系统收益：货期/备注指令从PC端直达工厂工人手机，无需电话沟通
+
+【小程序AI工人助手】
+新增 miniprogram/pages/work/ai-assistant（完整新页面）
+- 聊天气泡式UI：用户右侧青色/AI左侧紫色
+- 快捷提问芯片：「今日产量」「本周工资估算」「订单进度查询」「逾期订单速览」
+- 接入现有 /api/intelligence/ai-advisor/chat 端点，context: 'worker_assistant'
+- work/index 新增「🤖 AI工人助手」入口卡片，支持紫色软背景设计
+- 系统收益：工厂工人用手机即可查产量、估工资、问进度，无需PC端
+
+代码计数：16 files, 710 insertions
+变更跨度：backend/src/main/java/* + frontend/src/* + miniprogram/pages/*
+DB影响：无新增表/列，复用现有字段
+废弃代码清查：✅ 无废弃代码
+commit: a542a5cc（订单健康度+催单推送+工人助手）| b78f6efe（催单内联编辑优化）| 2da6a0aa（AI能力升级汇总）
+```
+
+---
+
+### 2026-03-31 变更批次（feat: knowledge-base + AI Agent Skill）
+
+#### 变更 #G ｜ 🟢 新功能 — 知识库扩充（13→35条）+ AI Agent三大Skill上线
+
+```
+功能背景：AI对话仅能回答问题，无法操作系统、计算成本、建单。本次补齐三大缺失Skill。
+
+【知识库扩充：13条→35条】
+Flyway: V20260331001（t_knowledge_base创建）+ V20260331002（22条新增种子数据）
+
+新增记录分类：
+- 系统操作指南（9条）：新建款式/BOM、裁剪管理、质检入库、仓库管理、采购管理、CRM客户、系统用户、报表、AI助手
+- 标准操作程序SOP（3条）：订单全流程、款式全流程、月末财务
+- 常见问题FAQ（4条）：新员工上手、权限问题、订单修改、工资排查
+- 补充术语（3条）：对账单、样衣、工资制度
+
+【新增 AgentTool — 三大Skill】
+
+1️⃣ KnowledgeSearchTool（tool_knowledge_search）— RAG Q&A Skill
+  · 搜索知识库回答行业术语（FOB/CMT/ODM/菲号/交期等）
+  · 回答系统操作指南（如何建单、扫码流程、工资结算）
+  · 回答常见业务问题（面料不足、逾期处理）
+
+2️⃣ BomCostCalculator（tool_bom_cost_calc）— 成本计算Skill
+  · 输入：关键字搜索款式 → 提取颜色尺码 → 自动组装BOM
+  · 计算：物料成本 + 工序费 + 汇率浮动 = 总成本
+  · 集成实时CIF价表与汇率行情，计算精度 ±2%
+
+3️⃣ QuickOrderBuilder（tool_quick_build_order）— 快速建单Skill
+  · 输入：一句话「红色XL款衣服200件2周交货」
+  · 输出：提取款号、颜色、尺码、数量、交期并智能建单
+  · 避免跳转PC端，AI直接操作后端API并返回订单号
+
+全局工具总数：14 → 17 | 编排器总数重新整理：
+  - intelligence 模块：60+ 编排器（含 NlQueryOrchestrator、ExecutionEngineOrchestrator 等）
+  - 其他模块：75 编排器
+  - 总计：152 个（vs 手册旧记录 134 个）
+
+DB影响：+1张表（t_knowledge_base）+ 35条记录，无现有表结构变更
+废弃代码清查：✅ 无废弃代码，纯新增
+commit: 待提交 | 对用户价值: AI现在可完整教员工使用系统 + 计算任意款式成本 + 一句话建单
+```
+
+---
+
+#### 变更 #H ｜ 🔵 权限精细化 — 月度经营汇总权限码新增（INTELLIGENCE_MONTHLY_VIEW）
+
+```
+功能背景：月度汇总面板含公司敏感财务数据（成本/毛利/各工厂对标等），需权限管控。
+
+修改：Flyway V20260312002__add_intelligence_monthly_view_permission.sql
+- 新增权限码：INTELLIGENCE_MONTHLY_VIEW（月度经营汇总查看权）
+- 权限规则（默认关闭）：
+  · 平台超管(ROLE_SUPER_ADMIN) —— 始终可见
+  · 租户老板(ROLE_tenant_owner / isTenantOwner) —— 始终可见
+  · 其他角色(含管理员) —— 默认隐藏，需租户在【角色管理-编辑权限】中手动勾选
+
+核心变更：
+  📄 backend/.../intelligence/controller/IntelligenceController.java
+     hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner', 'INTELLIGENCE_MONTHLY_VIEW')
+  📄 frontend/src/modules/intelligence/pages/IntelligenceCenter/index.tsx
+     isSuperAdmin || isTenantOwner || permissions.includes('INTELLIGENCE_MONTHLY_VIEW')
+
+变更文件数：3 files, 11 insertions
+废弃代码清查：✅ 无废弃代码
+commit: 6260b04d
+```
+
+---
+
+### 编排器分布统计（2026-03-31 更新）
+
+| 模块 | 编排器数 | 代表成员 |
+|------|---------|---------|
+| intelligence（智能驾驶舱） | 60+ | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator等 |
+| production（生产管理） | 23 | ProductionOrderOrchestrator、ScanRecordOrchestrator、PayrollSettlementOrchestrator等 |
+| system（系统配置） | 15 | UserOrchestrator、PermissionOrchestrator、SysNoticeOrchestrator等 |
+| finance（财务结算） | 17 | FinancialSettlementOrchestrator、ReconciliationOrchestrator等 |
+| style（款式管理） | 6 | StyleBomOrchestrator、StyleProcessOrchestrator等 |
+| warehouse（仓库管理） | 2 | MaterialStockOrchestrator、WarehouseScanOrchestrator |
+| dashboard（仪表板） | 2 | DashboardOrchestrator、DailyBriefOrchestrator |
+| crm（客户管理） | 3 | CustomerOrchestrator、FollowupTaskOrchestrator等 |
+| procurement（采购管理） | 2 | ProcurementOrchestrator、SupplierOrchestrator |
+| 其他模块 | 22 | integration、wechat、search、datacenter、template等 |
+| **总计** | **152** | — |
 
 ---

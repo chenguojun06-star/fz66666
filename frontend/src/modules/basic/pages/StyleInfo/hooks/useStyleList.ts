@@ -13,7 +13,6 @@ interface UseStyleListReturn {
   queryParams: StyleQueryParams;
   setQueryParams: React.Dispatch<React.SetStateAction<StyleQueryParams>>;
   fetchList: (params?: StyleQueryParams) => Promise<void>;
-  handleDelete: (id: string) => Promise<boolean>;
   handleToggleTop: (record: StyleInfo) => Promise<void>;
 }
 
@@ -45,24 +44,6 @@ export const useStyleList = (): UseStyleListReturn => {
     }
   }, [queryParams]);
 
-  const handleDelete = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      const response = await api.delete(`/style/info/${id}`);
-      if (response.code === 200) {
-        message.success('删除成功');
-        await fetchList();
-        return true;
-      } else {
-        message.error(response.msg || '删除失败');
-        return false;
-      }
-    } catch (error) {
-      console.error('删除样衣失败:', error);
-      message.error('删除失败');
-      return false;
-    }
-  }, [fetchList]);
-
   const handleToggleTop = useCallback(async (record: StyleInfo) => {
     try {
       const newTopStatus = record.isTop === 1 ? 0 : 1;
@@ -92,7 +73,6 @@ export const useStyleList = (): UseStyleListReturn => {
     queryParams,
     setQueryParams,
     fetchList,
-    handleDelete,
     handleToggleTop
   };
 };

@@ -47,7 +47,7 @@ const StyleInfoListPage: React.FC = () => {
     loadDevelopmentStats
   } = useStyleStats();
 
-  const { handleDelete, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
+  const { handleScrap, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
   // 视图模式（持久化）
   const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
@@ -176,10 +176,11 @@ const StyleInfoListPage: React.FC = () => {
 
   const activeStyles = useMemo(() => {
     return data.filter((item) => {
-      if (String(item.status || '').trim().toLowerCase() === 'archived') return false;
+      const status = String(item.status || '').trim().toLowerCase();
+      if (status === 'archived' || status === 'scrapped') return false;
       const progressNode = String(item.progressNode || '').trim();
       const sampleStatus = String(item.sampleStatus || '').trim().toUpperCase();
-      return progressNode !== '样衣完成' && sampleStatus !== 'COMPLETED';
+      return progressNode !== '样衣完成' && progressNode !== '开发样报废' && sampleStatus !== 'COMPLETED';
     });
   }, [data]);
 
@@ -269,7 +270,7 @@ const StyleInfoListPage: React.FC = () => {
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
-            onDelete={handleDelete}
+            onScrap={handleScrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
@@ -282,7 +283,7 @@ const StyleInfoListPage: React.FC = () => {
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
-            onDelete={handleDelete}
+            onScrap={handleScrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
           />

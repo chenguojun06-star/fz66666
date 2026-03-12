@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Table, Input, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Table, Input, Button, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
 import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined, RobotOutlined } from '@ant-design/icons';
 import type { ColumnsType, TableProps } from 'antd/es/table';
+import type { TableRowSelection } from 'antd/es/table/interface';
 import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/production/productionApi';
 
 // ───────────────────────────────────── 子表（展开明细）──────────────────────
@@ -73,18 +74,45 @@ interface ProcessStats {
   totalRecords: number;
 }
 
-const StyleProcessKnowledgeTab: React.FC = () => {
+export interface StyleProcessKnowledgeTabProps {
+  /** 父层持久化关键字（Tab 切换不丢失） */
+  keyword: string;
+  onKeywordChange: (kw: string) => void;
+  /** 父层持久化页码 */
+  currentPage: number;
+  /** 父层持久化每页条数 */
+  pageSize: number;
+  onPageChange: (page: number, size: number) => void;
+  /** 父层持久化已选行 */
+  selectedKeys: React.Key[];
+  onSelectionChange: (keys: React.Key[]) => void;
+}
+
+const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
+  keyword,
+  onKeywordChange,
+  currentPage,
+  pageSize,
+  onPageChange,
+  selectedKeys,
+  onSelectionChange,
+}) => {
   const [items, setItems] = useState<ProcessKnowledgeItem[]>([]);
   const [stats, setStats] = useState<ProcessStats>({ totalProcessTypes: 0, totalStyles: 0, totalRecords: 0 });
   const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState('');
+  /** 搜索框草稿值（Enter/点击搜索才真正触发请求） */
+  const [inputDraft, setInputDraft] = useState(keyword);
   const [error, setError] = useState<string | null>(null);
+
+  // 保证 fetchData 内能读到最新关键字，但不把 keyword 加入依赖
+  const keywordRef = useRef(keyword);
+  useEffect(() => { keywordRef.current = keyword; }, [keyword]);
 
   const fetchData = useCallback(async (kw?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await intelligenceApi.getProcessKnowledge(kw || undefined);
+      const res = await intelligenceApi.getProcessKnowledge((kw ?? keywordRef.current) || undefined);
       // api.get() 经 axios 拦截器后直接返回 { code, data }，无需再取 .data
       const result = res as unknown as { code: number; data: ProcessKnowledgeResponse };
       if (result.code === 200 && result.data) {
@@ -103,13 +131,25 @@ const StyleProcessKnowledgeTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    void fetchData(keyword || undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchData]); // 仅首次挂载执行；带入父层持久关键字
 
-  const handleSearch = useCallback((value: string) => {
-    setKeyword(value);
-    void fetchData(value);
-  }, [fetchData]);
+  /** 触发搜索：关键字同步到父层，页码归 1 */
+  const handleSearch = useCallback(() => {
+    const kw = inputDraft.trim();
+    onKeywordChange(kw);
+    onPageChange(1, pageSize);
+    void fetchData(kw || undefined);
+  }, [inputDraft, onKeywordChange, onPageChange, pageSize, fetchData]);
+
+  /** 清空搜索 */
+  const handleClear = useCallback(() => {
+    setInputDraft('');
+    onKeywordChange('');
+    onPageChange(1, pageSize);
+    void fetchData(undefined);
+  }, [onKeywordChange, onPageChange, pageSize, fetchData]);
 
   // ─── 主表列定义 ──────────────────────────────────────────────────────────
   const columns: ColumnsType<ProcessKnowledgeItem> = [
@@ -221,6 +261,13 @@ const StyleProcessKnowledgeTab: React.FC = () => {
     rowExpandable: (record) => (record.recentStyles?.length ?? 0) > 0,
   };
 
+  // ─── 行选择配置 ───────────────────────────────────────────────────────────
+  const rowSelection: TableRowSelection<ProcessKnowledgeItem> = {
+    selectedRowKeys: selectedKeys,
+    onChange: (keys) => onSelectionChange(keys),
+    preserveSelectedRowKeys: true,
+  };
+
   return (
     <div style={{ padding: '12px 0' }}>
       {/* 顶部统计条 */}
@@ -235,16 +282,23 @@ const StyleProcessKnowledgeTab: React.FC = () => {
           <Col>
             <Statistic title="历史记录" value={stats.totalRecords} suffix="条" />
           </Col>
-          <Col flex="1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <Input.Search
-              placeholder="搜索工序名称…"
+          <Col flex="1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+            {/* 标准 Input 组件，与模板列表 Tab 保持一致 */}
+            <Input
+              placeholder="搜索工序名称"
               allowClear
               prefix={<SearchOutlined />}
-              style={{ width: 240 }}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onSearch={handleSearch}
+              style={{ width: 200 }}
+              value={inputDraft}
+              onChange={(e) => {
+                setInputDraft(e.target.value);
+                if (!e.target.value) handleClear();
+              }}
+              onPressEnter={handleSearch}
             />
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+              搜索
+            </Button>
           </Col>
         </Row>
       </Card>
@@ -253,7 +307,7 @@ const StyleProcessKnowledgeTab: React.FC = () => {
         <Alert type="warning" message={error} style={{ marginBottom: 12 }} showIcon />
       )}
 
-      {/* 主表 */}
+      {/* 主表 — 受控分页 + 行选择 */}
       <Table<ProcessKnowledgeItem>
         size="middle"
         loading={loading}
@@ -261,8 +315,16 @@ const StyleProcessKnowledgeTab: React.FC = () => {
         dataSource={items}
         rowKey="processName"
         expandable={expandable}
+        rowSelection={rowSelection}
         scroll={{ x: 1000 }}
-        pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 种工序` }}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          showSizeChanger: true,
+          pageSizeOptions: ['20', '50', '100'],
+          showTotal: (t) => `共 ${t} 种工序`,
+          onChange: (page, size) => onPageChange(page, size),
+        }}
         footer={() => (
           <span style={{ color: '#999', fontSize: 12 }}>
             💡 数据实时聚合自所有款式工序表，点击行左侧展开查看最近 5 款历史记录。AI 建议价 = 最近 3 条权重 ×2 的加权均价，这里作为工序智能库持续为开发、生产与财务联动提供基线。
@@ -274,3 +336,4 @@ const StyleProcessKnowledgeTab: React.FC = () => {
 };
 
 export default StyleProcessKnowledgeTab;
+

@@ -191,12 +191,13 @@ public class StyleInfoController {
     }
 
     /**
-     * 根据ID删除款号资料
+         * 报废开发样，保留记录不删除
      */
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/scrap")
     @PreAuthorize("hasAuthority('STYLE_DELETE')")
-    public Result<?> delete(@PathVariable Long id) {
-        return Result.success(styleInfoOrchestrator.delete(id));
+    public Result<?> scrap(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body != null && body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
+        return Result.success(styleInfoOrchestrator.scrap(id, reason));
     }
 
     /**

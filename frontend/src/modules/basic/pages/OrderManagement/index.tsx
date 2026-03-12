@@ -741,10 +741,11 @@ const OrderManagement: React.FC = () => {
       return;
     }
     const deadlineStr = deadline ? (deadline.format?.('YYYY-MM-DD') ?? String(deadline)) : '';
+    const productCategory = form.getFieldValue('productCategory') || selectedStyle?.category || '';
     setSchedulingLoading(true);
     setShowSchedulingPanel(true);
     try {
-      const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr });
+      const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr, productCategory });
       if ((res as any).code === 200 && (res as any).data) {
         setSchedulingResult((res as any).data as SchedulingSuggestionResponse);
       }

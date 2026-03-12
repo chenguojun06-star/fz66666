@@ -73,6 +73,12 @@ const TemplateCenter: React.FC = () => {
   const [viewObj, _setViewObj] = useState<unknown>(null);
   const [cardTab, setCardTab] = useState<'list' | 'knowledge'>('list');
 
+  // 工序智能库 Tab — 持久化状态（Tab 切换后返回不丢失）
+  const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
+  const [knowledgePage, setKnowledgePage] = useState(1);
+  const [knowledgePageSize, setKnowledgePageSize] = useState(20);
+  const [knowledgeSelectedKeys, setKnowledgeSelectedKeys] = useState<React.Key[]>([]);
+
   // 多码单价相关状态
 
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
@@ -776,7 +782,15 @@ const TemplateCenter: React.FC = () => {
           </Card>
         ) : null}
         {cardTab === 'knowledge' ? (
-          <StyleProcessKnowledgeTab />
+          <StyleProcessKnowledgeTab
+            keyword={knowledgeKeyword}
+            onKeywordChange={setKnowledgeKeyword}
+            currentPage={knowledgePage}
+            pageSize={knowledgePageSize}
+            onPageChange={(page, size) => { setKnowledgePage(page); setKnowledgePageSize(size); }}
+            selectedKeys={knowledgeSelectedKeys}
+            onSelectionChange={setKnowledgeSelectedKeys}
+          />
         ) : (
           <>
         <Card size="small" className="filter-card mb-sm">

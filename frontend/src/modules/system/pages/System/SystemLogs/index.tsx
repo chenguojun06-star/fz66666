@@ -135,11 +135,11 @@ const SystemLogs: React.FC = () => {
 
   // 查看操作详情
   const handleViewDetails = (record: OperationLog) => {
-    let detailsObj: any = {};
+    let detailsText = '未记录到详细字段';
     try {
-      detailsObj = record.details ? JSON.parse(record.details) : {};
+      detailsText = record.details ? JSON.stringify(JSON.parse(record.details), null, 2) : '未记录到详细字段';
     } catch (e) {
-      detailsObj = { raw: record.details };
+      detailsText = record.details || '未记录到详细字段';
     }
 
     modal.info({
@@ -152,6 +152,7 @@ const SystemLogs: React.FC = () => {
             <div><strong>操作：</strong>{record.operation}</div>
             <div><strong>操作人：</strong>{record.operatorName}</div>
             <div><strong>目标类型：</strong>{record.targetType}</div>
+            <div><strong>目标ID：</strong>{record.targetId || '-'}</div>
             <div><strong>目标名称：</strong>{record.targetName || '-'}</div>
             <div><strong>操作时间：</strong>{formatDateTimeSecond(record.operationTime)}</div>
             {record.reason && <div><strong>操作原因：</strong>{record.reason}</div>}
@@ -164,7 +165,7 @@ const SystemLogs: React.FC = () => {
             fontSize: 12
           }}>
             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {JSON.stringify(detailsObj, null, 2)}
+              {detailsText}
             </pre>
           </div>
         </div>
@@ -184,7 +185,15 @@ const SystemLogs: React.FC = () => {
     },
     { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 110, resizable: true },
     { title: '目标类型', dataIndex: 'targetType', key: 'targetType', width: 110, resizable: true },
-    { title: '目标名称', dataIndex: 'targetName', key: 'targetName', width: 160, resizable: true, ellipsis: true },
+    {
+      title: '目标名称',
+      dataIndex: 'targetName',
+      key: 'targetName',
+      width: 160,
+      resizable: true,
+      ellipsis: true,
+      render: (_: string, record: OperationLog) => record.targetName || record.targetId || '-',
+    },
     {
       title: '时间',
       dataIndex: 'operationTime',

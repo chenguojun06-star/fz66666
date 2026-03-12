@@ -58,4 +58,5 @@ public class StyleLogHelper {
         String r = remark == null ? null : remark.trim();
         saveLog(styleId, "maintenance", action, r != null && !r.isEmpty() ? r : null);
     }
+
 }

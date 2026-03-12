@@ -1,8 +1,19 @@
+## 2026-03-12
+
+- 核对并移除 StyleInfo 旧删除兼容壳：删除 `DELETE /api/style/info/{id}`，审批流改为直接调用 `scrap(...)`，避免仓内继续保留误导性的删除语义。
+- StyleInfo 删除改为报废留档，使用 `SCRAPPED` 状态保留开发样记录，不再级联清除样板生产数据。
+- StyleInfo 列表与详情查询已纳入 `SCRAPPED` 状态，并把进度节点统一显示为“开发样报废”。
+- StyleInfo 各阶段流转在 Orchestrator 层增加报废冻结校验，避免报废记录继续被修改推进。
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - 2026-03-07
+
+### 🐛 Operation Log Capture Fixed
+- Fixed the unified operation-log aspect so destructive actions resolve target names before controller execution, preventing deleted orders and cancelled documents from losing order numbers, style numbers, and business document numbers.
+- Expanded captured detail fields for `POST`/`PUT`/`DELETE` operations to include reasons, remarks, expected ship dates, business IDs, and path variables, reducing empty `{}` detail payloads in the system log UI.
+- Added route recognition for both `/production/order` and `/production/orders` patterns so production actions no longer fall back to ambiguous module detection as often.
 
 ### 🧭 Action Center Enabled
 - Added `ActionCenterOrchestrator` to aggregate production, factory, anomaly, notification, and finance-audit signals into one unified action queue.
