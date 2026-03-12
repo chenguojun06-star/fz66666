@@ -57,8 +57,12 @@ function checkIsAdmin() {
     if (!userInfo) {
       return false;
     }
+    // 租户主账号拥有管理员权限
+    if (userInfo.isTenantOwner === true) {
+      return true;
+    }
     const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
-    return ['admin', 'supervisor', 'super_admin', 'manager'].includes(role);
+    return ['admin', 'supervisor', 'super_admin', 'manager', 'tenant_admin', 'tenant_manager'].includes(role);
   } catch (e) {
     return false;
   }

@@ -26,11 +26,20 @@
     </view>
 
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
-    <!-- 快捷问题卡片 -->
+    <!-- 快捷问题卡片（角色差异化） -->
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
-      <view class="quick-chip" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
-      <view class="quick-chip" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
-      <view class="quick-chip" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
+      <!-- 管理员/老板/跟单 -->
+      <block wx:if="{{isManager}}">
+        <view class="quick-chip" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
+        <view class="quick-chip" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
+        <view class="quick-chip" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
+      </block>
+      <!-- 普通生产员工 -->
+      <block wx:else>
+        <view class="quick-chip" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？">📋 我的任务</view>
+        <view class="quick-chip" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录">🔍 扫码记录</view>
+        <view class="quick-chip" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？">📦 订单进度</view>
+      </block>
     </view>
     <scroll-view class="chat-history" scroll-y scroll-into-view="{{scrollTo}}">
       <block wx:for="{{messages}}" wx:key="id">

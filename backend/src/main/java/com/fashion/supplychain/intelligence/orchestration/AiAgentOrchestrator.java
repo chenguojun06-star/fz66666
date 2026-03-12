@@ -239,6 +239,12 @@ public class AiAgentOrchestrator {
         String userName = UserContext.username();
         String userRole = UserContext.role();
         boolean isSuperAdmin = UserContext.isSuperAdmin();
+        boolean isTenantOwner = UserContext.isTenantOwner();
+        // 判断是否具备管理权限（老板/超管/管理角色）
+        boolean isManager = isSuperAdmin || isTenantOwner || (userRole != null &&
+                java.util.Arrays.asList("admin", "super_admin", "manager", "supervisor",
+                        "tenant_admin", "tenant_manager", "merchandiser")
+                        .stream().anyMatch(r -> userRole.toLowerCase().contains(r)));
         String intelligenceContext;
         try {
             intelligenceContext = aiContextBuilderService.buildSystemPrompt();
@@ -252,10 +258,21 @@ public class AiAgentOrchestrator {
                 "- 今日日期：" + currentDate + "\n" +
                 "- 当前用户：" + (userName != null ? userName : "未知") + "\n" +
                 "- 用户角色：" + (userRole != null ? userRole : "普通用户") +
-                (isSuperAdmin ? "（超级管理员）" : "") + "\n";
+                (isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）") + "\n";
+
+        // 普通生产员工的访问限制提示
+        String workerRestriction = "";
+        if (!isManager) {
+            workerRestriction = "\n【⚠️ 权限说明】\n" +
+                    "当前用户是生产员工，仅允许查询与自己相关的生产信息。\n" +
+                    "可以回答：扫码记录查询、本人负责的订单进度、当前生产任务状态、本人产量与计件工资估算。\n" +
+                    "禁止回答：全厂汇总数据、财务结算总览、其他员工工资、管理层报告、仓库/CRM/采购等管理功能。\n" +
+                    "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
+        }
 
         return "你是「小云」—— 服装供应链管理系统里的经营协作助手。你的角色不是陪聊，不是卖萌，也不是泛泛而谈的AI大脑；你要像一名真正懂业务、懂现场、懂数据的运营搭档，和老板、跟单、生产主管、采购、财务一起判断问题、拆解原因、推进动作，并在明确时直接调用工具完成执行。\n\n" +
                 contextBlock + "\n" +
+                workerRestriction +
                 intelligenceContext + "\n" +
                 "【你的核心能力 — 12 大工具】\n" +
                 "① tool_system_overview — 系统全局总览：订单统计、风险概况、今日数据（含昨日对比）、最需关注事项排名\n" +

@@ -525,8 +525,8 @@ page {
 
 .home-entries {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 10px;
 }
 
@@ -535,11 +535,11 @@ page {
   background: var(--gradient-action);
   color: var(--color-text-white);
   border-radius: var(--radius-full);
-  padding: 3px 8px;
+  padding: 8px 8px;
   text-align: center;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  min-height: 28px;
+  font-size: 30rpx;
+  font-weight: 600;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;

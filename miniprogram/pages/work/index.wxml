@@ -11,13 +11,6 @@
   <view class="card">
     <view class="title-row">
       <view class="title">生产</view>
-      <view class="title-stats">
-        <text>订单</text>
-        <text class="title-stat-value title-stat-primary">{{orderStats.orderCount}}</text>
-        <text class="title-stat-sep">｜</text>
-        <text>总量</text>
-        <text class="title-stat-value title-stat-accent">{{orderStats.totalQuantity}}</text>
-      </view>
     </view>
 
     <!-- 搜索组件放在最上面 -->
@@ -39,6 +32,15 @@
       <view class="tab {{activeTab === 'cutting' ? 'tab-active' : ''}}" data-tab="cutting" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">裁剪</view>
       <view class="tab {{activeTab === 'sewing' ? 'tab-active' : ''}}" data-tab="sewing" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">车缝</view>
       <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" hover-class="tab-hover" hover-stay-time="100" bindtap="onTab">入库</view>
+    </view>
+
+    <!-- 订单统计行（tab栏下方） -->
+    <view class="order-stats-bar">
+      <text class="stats-bar-label">订单</text>
+      <text class="stats-bar-value stats-primary">{{orderStats.orderCount}}</text>
+      <text class="stats-bar-sep">｜</text>
+      <text class="stats-bar-label">总量</text>
+      <text class="stats-bar-value stats-accent">{{orderStats.totalQuantity}}</text>
     </view>
 
     <view class="org-filter-row">
@@ -134,19 +136,7 @@
       </view>
   </view>
 
-  <!-- AI 工人助手入口卡片 -->
-  <view class="card ai-assistant-card" bindtap="navToAiAssistant" hover-class="card-hover" hover-stay-time="100">
-    <view class="ai-card-inner">
-      <view class="icon-box bg-soft-purple" style="width:80rpx;height:80rpx;">
-        <text class="iconfont" style="font-size:38rpx;">🤖</text>
-      </view>
-      <view class="ai-card-text">
-        <text class="ai-card-title">AI 工人助手</text>
-        <text class="ai-card-subtitle">查产量 · 估工资 · 问订单</text>
-      </view>
-      <text class="ai-card-arrow">›</text>
-    </view>
-  </view>
+
 
 </view>
 

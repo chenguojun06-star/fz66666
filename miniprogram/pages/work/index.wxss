@@ -240,28 +240,35 @@ page {
   gap: 12rpx;
 }
 
-.title-stats {
+/* 订单统计栏（移至 tab 下方）*/
+.order-stats-bar {
   display: flex;
   align-items: center;
-  gap: 6rpx;
+  gap: 8rpx;
+  padding: 10rpx 4rpx 4rpx;
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
-.title-stat-value {
+.stats-bar-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.stats-bar-value {
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
 }
 
-.title-stat-primary {
+.stats-primary {
   color: var(--color-primary);
 }
 
-.title-stat-accent {
+.stats-accent {
   color: var(--color-warning);
 }
 
-.title-stat-sep {
+.stats-bar-sep {
   color: var(--color-text-disabled);
 }
 

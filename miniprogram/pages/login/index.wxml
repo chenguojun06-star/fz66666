@@ -1,8 +1,10 @@
 <view class="login-page">
+  <!-- 语言切换（暂隐藏，后续上线）
   <view class="login-lang-corner" bindtap="onLanguageSwitchTap">
     <text class="login-lang-icon">🌐</text>
     <text class="login-lang-text">{{currentLanguageLabel}}</text>
   </view>
+  -->
 
   <!-- 天蝎座星座呼吸灯装饰 -->
   <view class="login-constellation" aria-hidden="true">

@@ -8,8 +8,8 @@
   position: fixed;
   right: 24rpx; /* 移到右上角，替代原来的铃铛位置 */
   top: 24rpx;
-  width: 72rpx;
-  height: 72rpx;
+  width: 92rpx;
+  height: 92rpx;
   background: #ffffff;
   border: 1rpx solid #e8e8e8;
   border-radius: 50%;
