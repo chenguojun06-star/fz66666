@@ -6,6 +6,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -193,6 +194,9 @@ public class IntelligenceController {
 
     @Autowired
     private ReplenishmentAdvisorOrchestrator replenishmentAdvisorOrchestrator;
+
+    @Autowired
+    private MonthlyBizSummaryOrchestrator monthlyBizSummaryOrchestrator;
 
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
@@ -662,5 +666,16 @@ public class IntelligenceController {
     @GetMapping("/replenishment/suggest")
     public Result<ReplenishmentAdvisorResponse> replenishmentSuggest() {
         return Result.success(replenishmentAdvisorOrchestrator.suggest());
+    }
+
+    /** 月度经营汇总：生产完成/次品返修率/各工厂产量/面辅料/成品进出/人工成本/利润 */
+    @GetMapping("/monthly-biz-summary")
+    public Result<Map<String, Object>> monthlyBizSummary(
+            @RequestParam(defaultValue = "0") int year,
+            @RequestParam(defaultValue = "0") int month) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        int y = year > 0 ? year : now.getYear();
+        int m = month > 0 ? month : now.getMonthValue();
+        return Result.success(monthlyBizSummaryOrchestrator.getMonthly(y, m));
     }
 }

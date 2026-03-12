@@ -21,6 +21,7 @@ import {
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
 import GlobalSearchModal from './components/GlobalSearchModal';
+import MonthlyBizSummary from './MonthlyBizSummary';
 import './styles.css';
 
 type KpiMetricSnapshot = {
@@ -1383,6 +1384,28 @@ const IntelligenceCenter: React.FC = () => {
           </div>
 
         </div>
+        </div>
+
+        {/* ╔════════════════════════════════════════════╝
+            ║ 月度经营汇总                               ║
+            ╚════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 4px' }}>
+          <div
+            className="c-card-title"
+            style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }}
+            onClick={() => toggleCollapse('monthly')}
+          >
+            <span style={{ fontSize: 13, color: '#34d399', fontWeight: 600 }}>📊 月度经营汇总</span>
+            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
+              全维度报告
+            </span>
+            <CollapseChevron panelKey="monthly" />
+          </div>
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['monthly'] ? 0 : 3000, transition: 'max-height 0.4s ease' }}>
+          <div style={{ padding: '0 24px 28px' }}>
+            <MonthlyBizSummary />
+          </div>
         </div>
 
       </div>
