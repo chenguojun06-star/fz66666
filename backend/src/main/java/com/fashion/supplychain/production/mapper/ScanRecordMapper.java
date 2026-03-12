@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
@@ -223,4 +224,39 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         ") t"
         })
         Map<String, Object> selectBundlePendingStats();
+
+        /**
+         * 批量查询订单最后一次成功扫码时间（用于AI巡检停滞检测）
+         */
+        @Select({
+                "<script>",
+                "SELECT sr.order_id AS orderId, MAX(sr.scan_time) AS lastScanTime",
+                "FROM t_scan_record sr",
+                "WHERE sr.order_id IN",
+                "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
+                "  AND sr.scan_result='success'",
+                "GROUP BY sr.order_id",
+                "</script>"
+        })
+        List<Map<String, Object>> selectLastScanTimeByOrderIds(@Param("orderIds") List<String> orderIds);
+
+        /**
+         * 按时间段统计各工人扫码产量与金额（用于工资异常检测）
+         */
+        @Select("SELECT sr.operator_id AS operatorId, sr.operator_name AS operatorName, " +
+                "  COUNT(*) AS scanCount, " +
+                "  COALESCE(SUM(sr.quantity), 0) AS totalQty, " +
+                "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount,0), NULLIF(sr.scan_cost,0), sr.unit_price*sr.quantity, 0)), 0) AS totalAmount " +
+                "FROM t_scan_record sr " +
+                "WHERE sr.tenant_id=#{tenantId} AND sr.scan_result='success' AND sr.quantity>0 " +
+                "  AND sr.scan_time >= #{startTime} AND sr.scan_time < #{endTime} " +
+                "  AND NOT EXISTS (SELECT 1 FROM t_production_order po " +
+                "    WHERE po.id=sr.order_id AND (po.status='cancelled' OR po.delete_flag=1)) " +
+                "GROUP BY sr.operator_id, sr.operator_name " +
+                "ORDER BY totalQty DESC " +
+                "LIMIT 200")
+        List<Map<String, Object>> selectOperatorStatsBetween(
+                @Param("tenantId") Long tenantId,
+                @Param("startTime") LocalDateTime startTime,
+                @Param("endTime") LocalDateTime endTime);
 }

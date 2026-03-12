@@ -49,6 +49,9 @@ public class IntelligenceController {
     private FeedbackLearningOrchestrator feedbackLearningOrchestrator;
 
     @Autowired
+    private AiPatrolOrchestrator aiPatrolOrchestrator;
+
+    @Autowired
     private WorkerProfileOrchestrator workerProfileOrchestrator;
 
     @Autowired
@@ -692,5 +695,18 @@ public class IntelligenceController {
         int y = year > 0 ? year : now.getYear();
         int m = month > 0 ? month : now.getMonthValue();
         return Result.success(monthlyBizSummaryOrchestrator.getMonthly(y, m));
+    }
+
+    // ── AI主动巡检 ──
+
+    /**
+     * 手动触发 AI 巡检（逾期/停滞/结算超时），与定时任务逻辑相同。
+     * 返回本次推送通知条数。
+     */
+    @PostMapping("/ai-patrol/run")
+    public Result<Integer> runAiPatrol() {
+        int count = aiPatrolOrchestrator.patrolTenant(
+                com.fashion.supplychain.common.UserContext.tenantId());
+        return Result.success(count);
     }
 }
