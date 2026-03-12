@@ -313,8 +313,10 @@ public class AiAgentOrchestrator {
                 "progress格式: {\"type\":\"progress\",\"title\":\"整体完成率\",\"value\":67}\n" +
                 "B) 若回答中含有可立即执行的操作且有真实订单号，插入操作卡片：\n" +
                 "【ACTIONS】[{\"title\":\"标题\",\"desc\":\"描述\",\"orderId\":\"真实ID\",\"actions\":[{\"label\":\"标记紧急\",\"type\":\"mark_urgent\"},{\"label\":\"查看详情\",\"type\":\"navigate\",\"path\":\"/production/orders\"}]}]【/ACTIONS】\n" +
-                "action type: mark_urgent/remove_urgent/navigate/send_notification\n" +
-                "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。";
+                "action type: mark_urgent/remove_urgent/navigate/send_notification/urge_order\n" +
+                "C) 用户要求催单/跟进出货/催出货日期时，为每个相关订单生成催单卡片（type=urge_order）：\n" +
+                "【ACTIONS】[{\"title\":\"催单通知\",\"desc\":\"请尽快填写最新预计出货日期并备注情况\",\"orderNo\":\"真实单号\",\"responsiblePerson\":\"订单跟单员或工厂老板姓名\",\"factoryName\":\"工厂名\",\"currentExpectedShipDate\":\"当前预计出货日期(如有,格式YYYY-MM-DD)\",\"actions\":[{\"label\":\"填写出货日期\",\"type\":\"urge_order\"}]}]【/ACTIONS】\n" +
+                "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。订单号必须是数据库中真实存在的。";
     }
 
     private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {

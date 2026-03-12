@@ -1078,7 +1078,7 @@ export const intelligenceApi = {
     api.post<{ code: number; data: HealthIndexResponse }>('/intelligence/health-index', {}),
 
   /** ⑪ 自动排产建议 */
-  suggestScheduling: (payload: { styleNo: string; quantity: number; deadline: string }) =>
+  suggestScheduling: (payload: { styleNo: string; quantity: number; deadline: string; productCategory?: string }) =>
     api.post<{ code: number; data: SchedulingSuggestionResponse }>('/intelligence/scheduling-suggestion', payload),
 
   /** ⑫ 质量缺陷热力图 */
@@ -1300,5 +1300,25 @@ export const intelligenceApi = {
     const json = await res.json() as { code: number; data: { filename: string; parsedContent: string }; message?: string };
     if (json.code !== 200) throw new Error(json.message ?? '文件分析失败');
     return json.data;
+  },
+
+  /** 催单：更新订单的预计出货日期和备注 */
+  quickEditOrder: async (payload: {
+    orderNo: string;
+    expectedShipDate?: string;
+    remarks?: string;
+    urgencyLevel?: string;
+  }): Promise<void> => {
+    const token = localStorage.getItem('authToken') || '';
+    const res = await fetch('/api/production/orders/quick-edit', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json() as { code: number; message?: string };
+    if (json.code !== 200) throw new Error(json.message ?? '更新失败');
   },
 };
