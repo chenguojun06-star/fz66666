@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, App } from 'antd';
 import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
 import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket, fetchDailyHotItems, refreshDailyHotItems } from '@/services/selection/selectionApi';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 
 const { Text } = Typography;
 const { Search } = Input;
@@ -49,6 +50,49 @@ interface SearchResult {
   sourceCount?: number;
   sources?: Array<{ dataSource: string; label: string }>;
 }
+
+const buildMarketInsight = (
+  item: ShoppingItem,
+  analysis: { avgPrice: number; minPrice: number; maxPrice: number; sources: string[]; ratedCount: number; trendScore: number; total: number } | null,
+): DecisionInsight => {
+  const price = item.extractedPrice;
+  const avg = analysis?.avgPrice || 0;
+  const trendScore = analysis?.trendScore ?? -1;
+  const lowPrice = Boolean(price && avg > 0 && price < avg * 0.8);
+  const highPrice = Boolean(price && avg > 0 && price > avg * 1.2);
+  const level: DecisionInsight['level'] = trendScore >= 70 ? 'success' : trendScore >= 40 ? 'warning' : 'info';
+  const title = trendScore >= 70 ? '适合作为热卖参考' : trendScore >= 40 ? '适合作为跟踪观察款' : '更适合作为渠道样本';
+  const summary = trendScore >= 70
+    ? '这款所处关键词热度较高，且当前渠道结果较多，更适合进入选品池做下一步筛选。'
+    : trendScore >= 40
+    ? '这款有一定市场热度，但还需要结合价格带和评分判断是否值得推进。'
+    : '当前更像是渠道样本，能提供风格参考，但不足以单凭热度直接推进。';
+  const evidence = [
+    trendScore >= 0 ? `关键词热度 ${trendScore}/100` : '关键词热度未返回',
+    price && avg > 0
+      ? `价格 ${item.price}，${lowPrice ? '低于均价 20%+' : highPrice ? '高于均价 20%+' : '接近市场均价'}`
+      : '价格数据不足',
+    item.rankScore != null ? `榜单权重 ${item.rankScore}` : null,
+    item.rating != null ? `商品评分 ${item.rating} / 5（${item.reviews ?? 0} 条）` : null,
+    item.sourceLabel ? `渠道 ${item.sourceLabel}` : null,
+  ].filter(Boolean) as string[];
+  return {
+    level,
+    title,
+    summary,
+    painPoint: trendScore >= 70
+      ? '真正要防的是只看热度不看利润和供应链承接能力。'
+      : trendScore >= 40
+      ? '热度有了，但价格带和评分还没把它坐实。'
+      : '它更像渠道样本，不能只凭“看起来有人卖”就推进。',
+    source: item.sourceLabel || '多源热榜',
+    confidence: item.rankScore != null && item.rankScore >= 90 ? '中高置信' : '中置信',
+    evidence,
+    note: item.delivery ? `配送信息：${item.delivery}` : undefined,
+    execute: trendScore >= 70 ? '先加入选品池，再走审款。' : '先比价、看评分，再决定要不要加。',
+    actionLabel: trendScore >= 70 ? '建议加入选品后继续审款' : '建议先比价再决定是否加入',
+  };
+};
 
 export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   const { message } = App.useApp();
@@ -214,30 +258,23 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
 
   /* 单个商品的 AI Popover 内容 */
   const renderItemPopover = (item: ShoppingItem, analysis = aiAnalysis) => {
-    const price = item.extractedPrice;
-    const avg = analysis?.avgPrice || 0;
-    const priceTag = price && avg > 0
-      ? price < avg * 0.8 ? '低于均价20%+（高性价比）'
-        : price > avg * 1.2 ? '高于均价20%+（高端定位）'
-        : '接近市场均价（主流价位）'
-      : '暂无价格数据';
-    const ts = analysis?.trendScore ?? -1;
-    const trendLabel = ts >= 70 ? '高热度' : ts >= 40 ? '中等热度' : '低热度';
+    const insight = buildMarketInsight(item, analysis);
     return (
-      <div style={{ maxWidth: 280, fontSize: 13 }}>
-        <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>AI 趋势分析</div>
-        <div style={{ marginBottom: 6 }}>
-          <Text type="secondary">Google 趋势：</Text>
-          <Tag color={ts >= 70 ? 'red' : ts >= 40 ? 'orange' : 'default'}>{ts >= 0 ? `${ts}/100 ${trendLabel}` : '未获取'}</Tag>
-        </div>
-        <div style={{ marginBottom: 6 }}><Text type="secondary">价格定位：</Text><span>{priceTag}</span></div>
-        {avg > 0 && <div style={{ marginBottom: 6 }}><Text type="secondary">价格区间：</Text><span>¥{analysis?.minPrice?.toFixed(0)} ~ ¥{analysis?.maxPrice?.toFixed(0)}（均价 ¥{avg.toFixed(0)}）</span></div>}
-        <div style={{ marginBottom: 6 }}><Text type="secondary">竞品数量：</Text><span>{analysis?.total || 0} 款在售</span></div>
-        <div style={{ marginBottom: 6 }}><Text type="secondary">销售渠道：</Text><span>{analysis?.sources?.slice(0, 5).join('、') || '—'}</span></div>
-        {item.rating != null && item.rating > 0 && (
-          <div><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 12 }} /><span style={{ marginLeft: 4, fontSize: 11 }}>({item.reviews ?? 0}条)</span></div>
+      <div style={{ width: SMART_CARD_CONTENT_WIDTH, maxWidth: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
+        <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>市场判断</div>
+        <DecisionInsightCard compact insight={insight} />
+        {analysis?.avgPrice > 0 && (
+          <div style={{ marginTop: 8, fontSize: 11, color: '#595959', lineHeight: 1.6 }}>
+            价格区间：¥{analysis.minPrice.toFixed(0)} ~ ¥{analysis.maxPrice.toFixed(0)}（均价 ¥{analysis.avgPrice.toFixed(0)}）
+          </div>
         )}
-        {item.rankScore != null && <div style={{ marginTop: 6 }}><Text type="secondary">榜单权重：</Text><span>{item.rankScore}</span></div>}
+        <div style={{ marginTop: 6, fontSize: 11, color: '#595959', lineHeight: 1.6 }}>
+          竞品数量：{analysis?.total || 0} 款在售
+          {analysis?.sources?.length ? ` · 渠道覆盖 ${analysis.sources.slice(0, 5).join('、')}` : ''}
+        </div>
+        {item.rating != null && item.rating > 0 && (
+          <div style={{ marginTop: 6 }}><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 12 }} /><span style={{ marginLeft: 4, fontSize: 11 }}>({item.reviews ?? 0}条)</span></div>
+        )}
       </div>
     );
   };
@@ -389,7 +426,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                   <Row gutter={[12, 14]}>
                     {filterProductsBySource(section.items || []).map((item, idx) => (
                       <Col key={`${section.keyword}-${idx}`} xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Popover content={renderItemPopover(item, sectionAiAnalysis)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3}>
+                <Popover content={renderItemPopover(item, sectionAiAnalysis)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3} overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}>
                   <div
                     style={{
                       border: '1px solid #f0f0f0', borderRadius: 8, background: '#fff',

@@ -21,6 +21,7 @@ import {
 } from '@/services/selection/selectionApi';
 import MarketHotItems from './MarketHotItems';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 
 const { Text, Paragraph } = Typography;
 
@@ -71,6 +72,47 @@ const getScoreMeta = (record: Candidate) => {
   return { label: '待分析', color: 'default' as const, title: '当前还没有评分来源信息' };
 };
 
+const trimReason = (reason?: string) => {
+  if (!reason) return undefined;
+  const normalized = reason.replace(/^AI模型分析：|^规则评分：/u, '').trim();
+  return normalized.length > 78 ? `${normalized.slice(0, 78)}…` : normalized;
+};
+
+const buildCandidateInsight = (record: Candidate): DecisionInsight | null => {
+  if (record.trendScore == null) return null;
+  const scoreMeta = getScoreMeta(record);
+  const score = record.trendScore;
+  const level = score >= 70 ? 'success' : score >= 50 ? 'warning' : 'danger';
+  const title = score >= 70 ? '可推进下版' : score >= 50 ? '建议补证后再审' : '暂不建议推进';
+  const summary = score >= 70
+    ? '当前趋势分和利润空间都具备推进价值，更适合直接转入样衣打版验证。'
+    : score >= 50
+    ? '当前分数处在中位区间，说明方向不差，但证据还不够硬，先补渠道和价格带判断更稳。'
+    : '当前趋势契合度偏弱，贸然下版更容易占用样衣与跟单资源。';
+  const evidence = [
+    `趋势评分 ${score} 分（${scoreMeta.label}）`,
+    record.profitEstimate != null ? `预估利润率 ${record.profitEstimate}%` : null,
+    record.targetQty != null ? `预计下单 ${record.targetQty} 件` : null,
+    record.avgReviewScore != null ? `评审均分 ${record.avgReviewScore} / 5` : null,
+  ].filter(Boolean) as string[];
+  return {
+    level,
+    title,
+    summary,
+    painPoint: score >= 70
+      ? '真正的风险不在趋势，而在后续是否能快速验证样衣。'
+      : score >= 50
+      ? '方向不差，但证据还不够硬，容易出现拍脑袋推进。'
+      : '趋势、利润或需求预期都不够强，推进后容易占资源。',
+    source: scoreMeta.label,
+    confidence: score >= 70 ? '中高置信' : '中置信',
+    evidence,
+    note: trimReason(record.trendScoreReason),
+    execute: score >= 70 ? '继续走审核与下版。' : score >= 50 ? '先补市场对比，再决定是否推进。' : '先保留观察，不要直接下版。',
+    actionLabel: score >= 70 ? '建议继续走审核与下版' : score >= 50 ? '建议补充市场对比后再决策' : '建议先保留观察',
+  };
+};
+
 interface CandidateReviewItem {
   id: number;
   reviewerName?: string;
@@ -111,8 +153,9 @@ function AiHoverCard({
 }) {
   const hasScore = record.trendScore != null;
   const scoreMeta = getScoreMeta(record);
+  const decisionInsight = buildCandidateInsight(record);
   return (
-    <div style={{ width: 290 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
       <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text strong style={{ fontSize: 14 }}>{record.styleName || '未命名'}</Text>
         <Tag color={STATUS_MAP[record.status]?.color} style={{ margin: 0 }}>
@@ -221,19 +264,9 @@ function AiHoverCard({
         } catch { return null; }
       })()}
 
-      {hasScore && (
-        <div style={{
-          marginTop: 10, padding: '6px 10px',
-          background: record.trendScore! >= 70 ? '#f6ffed' : '#fff7e6',
-          borderRadius: 6,
-          border: `1px solid ${record.trendScore! >= 70 ? '#b7eb8f' : '#ffd591'}`,
-          fontSize: 12,
-        }}>
-          {record.trendScore! >= 70
-            ? '✅ 建议通过 — 趋势契合度高，可下版到样衣'
-            : record.trendScore! >= 50
-            ? '⚠️ 待定 — 趋势中等，建议补充市场调研'
-            : '❌ 谨慎 — 趋势契合度偏低，需重新评估'}
+      {hasScore && decisionInsight && (
+        <div style={{ marginTop: 10 }}>
+          <DecisionInsightCard compact insight={decisionInsight} />
         </div>
       )}
     </div>
@@ -500,7 +533,7 @@ export default function SelectionCenter() {
                       trigger="hover"
                       placement="right"
                       mouseEnterDelay={0.4}
-                      overlayStyle={{ maxWidth: 320 }}
+                      overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
                       onOpenChange={(open) => {
                         if (open) {
                           ensureLatestReview(item.id);

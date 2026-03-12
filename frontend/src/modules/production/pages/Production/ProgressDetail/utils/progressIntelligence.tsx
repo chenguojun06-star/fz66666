@@ -13,6 +13,7 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
+import DecisionInsightCard from '@/components/common/DecisionInsightCard';
 
 /**
  * 已知阶段→订单字段映射（best-effort 人员查询）
@@ -259,43 +260,44 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
     || followUpPoints.length || riskPredictions.length;
   if (!hasContent) return null;
 
+  const summary = verdict === 'critical'
+    ? '当前这张单不是普通跟进问题，而是已经进入需要优先干预的状态。'
+    : verdict === 'warn'
+    ? '当前不是立即爆雷，但已经出现会拖慢交付的信号。'
+    : '整体推进还算顺，但仍要盯住关键节点别突然掉速。';
+  const painPoint = bottleneck
+    ? `${bottleneck.stage} 是当前主卡点，前后工序节奏已经拉开。`
+    : riskPredictions[0] || personnelNotes[0] || followUpPoints[0] || '当前未发现明显主卡点。';
+  const execute = resourceSuggestions[0] || followUpPoints[0] || '继续按当前节奏推进，并保持对关键节点的抽查。';
+  const evidence = [
+    bottleneck ? `瓶颈 ${bottleneck.stage}，落差 ${bottleneck.gap}%` : null,
+    personnelNotes[0] || null,
+    riskPredictions[0] || null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 6, paddingTop: 6, fontSize: 11, lineHeight: 1.6 }}>
-      {/* 标题 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, fontWeight: 600 }}>
-        <span>🤖 智能分析</span>
+    <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 6, paddingTop: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 11 }}>
+        <span>🤖 智能判断</span>
         <span style={{
           fontSize: 9, padding: '0 5px', borderRadius: 3,
           background: V_COLOR[verdict], color: '#fff',
         }}>{V_LABEL[verdict]}</span>
       </div>
-
-      {/* 瓶颈 */}
-      {bottleneck && (
-        <div style={{ color: '#ff7875', marginBottom: 3 }}>
-          🔍 <b>瓶颈</b>：{bottleneck.stage} — {bottleneck.reason}
-        </div>
-      )}
-
-      {/* 人员分析 */}
-      {personnelNotes.length > 0 && personnelNotes.map((n, i) => (
-        <div key={`p${i}`} style={{ color: '#d4b106' }}>👥 {n}</div>
-      ))}
-
-      {/* 资源建议 */}
-      {resourceSuggestions.length > 0 && resourceSuggestions.map((s, i) => (
-        <div key={`rs${i}`} style={{ color: '#69b1ff' }}>📊 {s}</div>
-      ))}
-
-      {/* 跟进要点 */}
-      {followUpPoints.length > 0 && followUpPoints.map((f, i) => (
-        <div key={`f${i}`} style={{ color: '#b37feb' }}>📋 {f}</div>
-      ))}
-
-      {/* 风险预测 */}
-      {riskPredictions.length > 0 && riskPredictions.map((r, i) => (
-        <div key={`rp${i}`} style={{ color: verdict === 'good' ? '#95de64' : '#ff7875' }}>⚡ {r}</div>
-      ))}
+      <DecisionInsightCard
+        compact
+        insight={{
+          level: verdict === 'critical' ? 'danger' : verdict === 'warn' ? 'warning' : 'success',
+          title: verdict === 'critical' ? '这单要优先干预' : verdict === 'warn' ? '这单要重点盯' : '这单节奏正常',
+          summary,
+          painPoint,
+          evidence,
+          execute,
+          source: '进度判断',
+          confidence: verdict === 'critical' ? '中高置信' : '中置信',
+          note: bottleneck?.reason,
+        }}
+      />
     </div>
   );
 }

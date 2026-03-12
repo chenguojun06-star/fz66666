@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
+import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import RowActions from '@/components/common/RowActions';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
@@ -141,7 +142,7 @@ export const useProgressColumns = ({
           trigger="hover"
           placement="rightTop"
           mouseEnterDelay={0.3}
-          overlayStyle={{ maxWidth: 280 }}
+          overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', cursor: 'default' }}>
             <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>

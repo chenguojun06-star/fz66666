@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Row, Col, Button, Space, Popover } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
+import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import './style.css';
 
 export interface CardField {
@@ -282,7 +283,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   content={hoverContent}
                   trigger="hover"
                   placement="rightTop"
-                  overlayStyle={{ maxWidth: 280 }}
+                  overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
                 >
                   {cardNode}
                 </Popover>

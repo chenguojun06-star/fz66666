@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Popover, Tag, Divider } from 'antd';
-import { CheckCircleOutlined, WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Popover, Tag } from 'antd';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 import type { PayableItem } from '@/services/finance/wagePaymentApi';
 
 /* ===== 类型定义 ===== */
@@ -297,55 +297,67 @@ function analyzePayable(item: PayableItem): AnalysisResult {
 }
 
 /* ===== 样式常量 ===== */
-const statusIcon: Record<string, React.ReactNode> = {
-  ok: <CheckCircleOutlined />, warn: <WarningOutlined />, danger: <CloseCircleOutlined />,
-};
-const statusColor: Record<string, string> = { ok: '#52c41a', warn: '#faad14', danger: '#ff4d4f' };
 const riskTagColor: Record<string, string> = { LOW: 'green', MEDIUM: 'orange', HIGH: 'red' };
 const suggestionLabel: Record<string, string> = { APPROVE: '建议付款', REVIEW: '需复核', REJECT: '建议暂停' };
+
+function mapRiskLevel(risk: string): DecisionInsight['level'] {
+  if (risk === 'HIGH') return 'danger';
+  if (risk === 'MEDIUM') return 'warning';
+  return 'success';
+}
+
+function buildPaymentInsight(record: PayableItem, analysis: AnalysisResult): DecisionInsight {
+  const abnormalChecks = analysis.checks.filter((item) => item.status !== 'ok');
+  const focusChecks = (abnormalChecks.length > 0 ? abnormalChecks : analysis.checks).slice(0, 3);
+  const amount = Number(record.amount) || 0;
+  const bizType = record.bizType || 'UNKNOWN';
+  const primaryIssue = abnormalChecks[0]?.detail;
+
+  return {
+    level: mapRiskLevel(analysis.risk),
+    title: '付款审核建议',
+    summary: analysis.suggestionText,
+    painPoint: primaryIssue || (analysis.risk === 'LOW' ? '当前未发现明显异常项，可按流程推进' : undefined),
+    execute: analysis.suggestion === 'APPROVE'
+      ? '核对付款对象与金额后可直接推进付款。'
+      : analysis.suggestion === 'REJECT'
+        ? '先暂停付款，回到业务单据核对异常来源，再决定是否重提。'
+        : '先复核异常项、明细和附件，再决定是否付款。',
+    evidence: focusChecks.map((item) => `${item.label}：${item.detail}`),
+    note: `业务类型 ${bizType} · 本次应付 ¥${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    source: '规则审核',
+    confidence: suggestionLabel[analysis.suggestion],
+  };
+}
 
 /* ===== 组件 ===== */
 const PaymentAuditPopover: React.FC<{ record: PayableItem; children: React.ReactNode }> = ({ record, children }) => {
   const analysis = useMemo(() => analyzePayable(record), [record]);
+  const insight = useMemo(() => buildPaymentInsight(record, analysis), [record, analysis]);
 
   const content = (
-    <div style={{ width: 300, fontSize: 13 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>🔍 AI 付款审核</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>🔍 付款审核</span>
         <Tag color={riskTagColor[analysis.risk]}>{suggestionLabel[analysis.suggestion]}</Tag>
       </div>
+      <DecisionInsightCard compact insight={insight} />
 
-      {/* 明细摘要区（仅订单结算有数据） */}
       {analysis.breakdown.length > 0 && (
-        <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', padding: '4px 0', background: '#fafafa', borderRadius: 4, marginBottom: 6, paddingLeft: 6, paddingRight: 6 }}>
-            {analysis.breakdown.map((b, i) => (
-              <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 12 }}>
-                <span style={{ color: '#8c8c8c' }}>{b.label}：</span>
-                <span style={{ fontWeight: 500 }}>{b.value}</span>
-              </span>
-            ))}
-          </div>
-          <Divider style={{ margin: '4px 0' }} />
-        </>
-      )}
-
-      {/* 审核检查项 */}
-      {analysis.checks.map((c, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 6 }}>
-          <span style={{ color: statusColor[c.status], flexShrink: 0 }}>{statusIcon[c.status]}</span>
-          <span style={{ width: 68, flexShrink: 0, color: '#595959' }}>{c.label}</span>
-          <span style={{ color: statusColor[c.status], fontWeight: 500 }}>{c.detail}</span>
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: '#fafafa', borderRadius: 6 }}>
+          {analysis.breakdown.slice(0, 6).map((b, i) => (
+            <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 12 }}>
+              <span style={{ color: '#8c8c8c' }}>{b.label}：</span>
+              <span style={{ fontWeight: 500 }}>{b.value}</span>
+            </span>
+          ))}
         </div>
-      ))}
-      <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 6, paddingTop: 6, color: '#8c8c8c', fontSize: 12 }}>
-        💡 {analysis.suggestionText}
-      </div>
+      )}
     </div>
   );
 
   return (
-    <Popover content={content} trigger="hover" placement="right" mouseEnterDelay={0.3}>
+    <Popover content={content} trigger="hover" placement="right" mouseEnterDelay={0.3} overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}>
       {children}
     </Popover>
   );

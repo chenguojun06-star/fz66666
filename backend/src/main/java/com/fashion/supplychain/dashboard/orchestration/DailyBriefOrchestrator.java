@@ -1,6 +1,7 @@
 package com.fashion.supplychain.dashboard.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.dashboard.dto.BriefDecisionCard;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -34,6 +35,7 @@ public class DailyBriefOrchestrator {
 
     private final DashboardQueryService dashboardQueryService;
     private final ProductionOrderService productionOrderService;
+    private final DailyBriefDecisionOrchestrator dailyBriefDecisionOrchestrator;
 
     /** 可选注入：Key 未配置时为 null，业务逻辑降级为规则建议 */
     @Autowired(required = false)
@@ -120,6 +122,16 @@ public class DailyBriefOrchestrator {
             })
             .collect(Collectors.toList());
         brief.put("pendingItems", pendingItems);
+
+        List<BriefDecisionCard> decisionCards = dailyBriefDecisionOrchestrator.buildDecisionCards(
+            today,
+            overdueCount,
+            todayScan,
+            ydCount,
+            ydQty,
+            highRisk
+        );
+        brief.put("decisionCards", decisionCards);
 
         // ⑥ 智能建议文案
         List<String> suggestions = new ArrayList<>();

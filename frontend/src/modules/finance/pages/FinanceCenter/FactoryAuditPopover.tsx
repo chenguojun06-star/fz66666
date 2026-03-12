@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Popover, Progress, Tag, Divider } from 'antd';
 import { RobotOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
 interface FactorySummaryRow {
   factoryId: string;
@@ -62,11 +63,12 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
       suggestions.push('数据健康，可放心终审推送');
     }
 
-    return { auditedCount, totalCount, auditRate, profitRate, defectRate, suggestions };
+    const topSuggestion = suggestions[0] ?? '数据健康，可放心终审推送';
+    return { auditedCount, totalCount, auditRate, profitRate, defectRate, suggestions, topSuggestion };
   }, [record, auditedOrderNos]);
 
   const content = (
-    <div style={{ width: 260 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <RobotOutlined style={{ color: 'var(--primary-color)' }} />
         <span style={{ fontWeight: 600, fontSize: 13 }}>AI 智能分析</span>
@@ -111,16 +113,35 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
 
       <div>
         <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {analysis.suggestions[0].startsWith('⚠️') || analysis.suggestions[0].includes('警')
+          {analysis.topSuggestion.startsWith('⚠️') || analysis.topSuggestion.includes('警')
             ? <WarningOutlined style={{ color: 'var(--color-warning)' }} />
             : <CheckCircleOutlined style={{ color: 'var(--color-success)' }} />}
-          智能建议
+          智能判断
         </div>
-        {analysis.suggestions.map((s, i) => (
-          <div key={i} style={{ fontSize: 12, color: 'var(--neutral-text)', marginBottom: 4, paddingLeft: 4, borderLeft: '2px solid var(--primary-color)' }}>
-            {s}
-          </div>
-        ))}
+        <DecisionInsightCard
+          compact
+          insight={{
+            level: analysis.profitRate < 0 || analysis.defectRate > 3 ? 'danger' : analysis.profitRate < 5 || analysis.auditRate < 100 ? 'warning' : 'success',
+            title: analysis.auditRate === 100 ? '可以进入终审' : '先补审核再终审',
+            summary: analysis.auditRate === 100 ? '当前审核覆盖已经到位，可以把注意力放在利润和次品风险。' : '这家工厂还有订单没审完，终审前不要急着放行。',
+            painPoint: analysis.profitRate < 0
+              ? '利润已经转负，最大痛点是成本结构失真。'
+              : analysis.defectRate > 3
+              ? '次品率偏高，利润会继续被返修和损耗吞掉。'
+              : analysis.auditRate < 100
+              ? '审核链没闭合，后面出错会直接放大财务风险。'
+              : '当前主要看利润和质量是否还稳。',
+            evidence: [
+              `审核 ${analysis.auditedCount}/${analysis.totalCount}`,
+              `利润率 ${analysis.profitRate.toFixed(1)}%`,
+              `次品率 ${analysis.defectRate.toFixed(1)}%`,
+            ],
+            execute: analysis.auditRate < 100 ? '先把未审核订单补齐，再做终审。' : analysis.defectRate > 3 ? '先找工厂复盘质量，再决定是否放行。' : '按当前口径推进终审，同时盯利润。',
+            source: '财务规则',
+            confidence: '中高置信',
+            note: analysis.suggestions.slice(1, 3).join('；') || undefined,
+          }}
+        />
       </div>
     </div>
   );
@@ -130,7 +151,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
       content={content}
       placement="rightTop"
       trigger="hover"
-      overlayStyle={{ maxWidth: 300 }}
+      overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
     >
       {children}
     </Popover>

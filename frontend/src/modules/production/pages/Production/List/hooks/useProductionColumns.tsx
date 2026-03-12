@@ -4,6 +4,7 @@ import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { NavigateFunction } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
+import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
@@ -82,7 +83,7 @@ export function useProductionColumns({
               trigger="hover"
               placement="rightTop"
               mouseEnterDelay={0.3}
-              overlayStyle={{ maxWidth: 280 }}
+              overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
             >
             <a
               className="order-no-wrap"

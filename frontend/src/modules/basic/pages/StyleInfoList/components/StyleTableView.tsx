@@ -2,6 +2,7 @@ import React from 'react';
 import { Tag, Popover } from 'antd';
 
 import type { MenuProps } from 'antd';
+import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import AttachmentThumb from '../components/AttachmentThumb';
@@ -110,7 +111,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           trigger="hover"
           placement="rightTop"
           mouseEnterDelay={0.3}
-          overlayStyle={{ maxWidth: 280 }}
+          overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
         >
           <a
             onClick={() => navigate(`/style-info/${record.id}`)}

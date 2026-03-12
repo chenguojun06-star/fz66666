@@ -16,6 +16,7 @@ import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
 import type { SysNotice } from '../../services/production/productionApi';
+import DecisionInsightCard, { type DecisionInsight } from '../common/DecisionInsightCard';
 
 // ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
@@ -35,6 +36,7 @@ interface BriefData {
   highRiskOrderCount: number;
   topPriorityOrder?: TopPriorityOrder;
   suggestions: string[];
+  decisionCards?: Array<DecisionInsight & { actionPath?: string }>;
 }
 
 interface UrgentEvent {
@@ -433,9 +435,24 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: '#0284c7' }} /> 智能建议
                 </div>
-                {brief.suggestions.slice(0, 3).map((s, i) => (
-                  <div key={i} className="sap-suggestion">· {s}</div>
-                ))}
+                {brief.decisionCards && brief.decisionCards.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {brief.decisionCards.slice(0, 3).map((card, i) => (
+                      <DecisionInsightCard
+                        key={`${card.title}-${i}`}
+                        compact
+                        insight={{
+                          ...card,
+                          onAction: card.actionPath ? () => goTo(card.actionPath!) : undefined,
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  brief.suggestions.slice(0, 3).map((s, i) => (
+                    <div key={i} className="sap-suggestion">· {s}</div>
+                  ))
+                )}
               </div>
             )}
 

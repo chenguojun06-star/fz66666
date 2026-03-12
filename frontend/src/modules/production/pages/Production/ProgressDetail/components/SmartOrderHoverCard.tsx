@@ -9,6 +9,7 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 
+import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
@@ -295,7 +296,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   if (isCompleted) return null;
 
   return (
-    <div style={{ width: 270, fontSize: 12, lineHeight: 1.5 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 12, lineHeight: 1.5, boxSizing: 'border-box' }}>
 
       {/* 顶部：款号 + 款名 + EC单号 */}
       {(order.styleNo || order.ecOrderNo) && (

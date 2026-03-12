@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Popover, Spin, Tag } from 'antd';
 import { intelligenceApi } from '@/services/production/productionApi';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
 /* ===== 类型 ===== */
 interface HistoricalOrder {
@@ -60,14 +61,38 @@ const StyleQuotePopover: React.FC<{
   const fmt = (v: number | null | undefined) =>
     v != null ? `¥${Number(v).toFixed(2)}` : '--';
 
+  const quoteInsight = data ? {
+    level: data.suggestedPrice != null && data.totalCost != null && data.suggestedPrice < data.totalCost ? 'danger' as const
+      : data.suggestedPrice != null && data.currentQuotation != null && data.suggestedPrice > data.currentQuotation * 1.1 ? 'warning' as const
+      : 'info' as const,
+    title: data.suggestedPrice != null ? '先按建议价判断' : '先参考历史单价',
+    summary: data.suggestedPrice != null
+      ? `当前更适合围绕 ${fmt(data.suggestedPrice)} 做报价判断，而不是只凭经验拍价。`
+      : '当前没有完整建议价，先以历史订单和成本拆解做保守判断。',
+    painPoint: data.totalCost != null && data.suggestedPrice != null && data.suggestedPrice < data.totalCost
+      ? '建议价已经压到成本线以下，继续压价会直接伤利润。'
+      : data.currentQuotation != null && data.suggestedPrice != null && data.suggestedPrice > data.currentQuotation * 1.1
+      ? '建议价明显高于历史报价，客户接受度可能会变差。'
+      : '报价最怕只看单次成本，不看历史成交和客户接受度。',
+    evidence: [
+      data.totalCost != null ? `总成本 ${fmt(data.totalCost)}` : null,
+      data.currentQuotation != null ? `现有报价 ${fmt(data.currentQuotation)}` : null,
+      `历史订单 ${data.historicalOrderCount} 个 / ${data.historicalTotalQuantity} 件`,
+    ].filter(Boolean) as string[],
+    execute: data.suggestedPrice != null ? '先拿建议价对比现有报价，再决定是保利润还是保成交。' : '先补齐成本和历史成交，再报最终价。',
+    source: '报价建议',
+    confidence: '中置信',
+    note: data.suggestion || undefined,
+  } : null;
+
   const content = loading ? (
-    <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin size="small" /></div>
   ) : !data ? (
-    <div style={{ width: 260, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据
     </div>
   ) : (
-    <div style={{ width: 300, fontSize: 13 }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
       {/* 标题 */}
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
         💰 报价参考 <span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
@@ -133,13 +158,9 @@ const StyleQuotePopover: React.FC<{
         </>
       )}
 
-      {/* 智能建议 */}
-      {data.suggestion && (
-        <div style={{
-          borderTop: '1px solid #f0f0f0', marginTop: 6, paddingTop: 6,
-          fontSize: 12, color: '#595959', lineHeight: 1.6,
-        }}>
-          💡 {data.suggestion}
+      {quoteInsight && (
+        <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 8, paddingTop: 8 }}>
+          <DecisionInsightCard compact insight={quoteInsight} />
         </div>
       )}
     </div>
@@ -152,6 +173,7 @@ const StyleQuotePopover: React.FC<{
       placement="bottom"
       mouseEnterDelay={0.3}
       destroyTooltipOnHide
+      overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
       getPopupContainer={(node) => node.closest('.ant-modal-body') || document.body}
       onOpenChange={(open) => { if (open) fetchData(); }}
     >
