@@ -381,11 +381,17 @@ public class ProductionOrderQueryService {
             return stats;
         }
 
-        // 计算总订单数
-        stats.setTotalOrders(allOrders.size());
+        // 计算总订单数与总数量（未指定状态时排除已完成/已取消，仅统计生产中订单，避免历史订单虚高显示）
+        boolean noStatusFilter = !StringUtils.hasText(status);
+        List<ProductionOrder> statsOrders = noStatusFilter
+            ? allOrders.stream()
+                .filter(o -> !"completed".equals(o.getStatus()) && !"cancelled".equals(o.getStatus()))
+                .collect(Collectors.toList())
+            : allOrders;
+        stats.setTotalOrders(statsOrders.size());
 
         // 计算总数量
-        long totalQty = allOrders.stream()
+        long totalQty = statsOrders.stream()
             .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
             .sum();
         stats.setTotalQuantity(totalQty);
