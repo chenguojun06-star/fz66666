@@ -100,7 +100,7 @@ const TenantListTab: React.FC = () => {
     '/dashboard', '/basic/template-center', '/order-management',
     '/finance/payroll-operator-summary', '/finance/wage-payment', '/finance/expense-reimbursement',
     '/system/profile', '/system/user', '/system/role', '/system/factory',
-    '/system/dict', '/system/logs', '/system/tutorial', '/system/data-import', '/system/app-store',
+    '/system/dict', '/system/logs', '/system/tutorial', '/system/data-import',
   ];
 
   // 全量可配置模块（按业务分组，用于审批时勾选侧边栏白名单）
@@ -157,9 +157,8 @@ const TenantListTab: React.FC = () => {
       { path: '/system/tutorial', label: '系统教学' },
       { path: '/system/data-import', label: '数据导入' },
     ]},
-    { key: 'appStore', title: '应用商店', paths: [{ path: '/system/app-store', label: '应用商店' }] },
     { key: 'intelligence', title: '智能运营中心', paths: [{ path: '/intelligence/center', label: '智能运营中心' }] },
-    { key: 'integration', title: '集成对接中心', paths: [{ path: '/integration/center', label: '集成对接中心' }] },
+    // 应用商店(/system/app-store) 和 集成对接中心(/integration/center) 始终可见，不在白名单管控范围内，无需配置
   ];
 
   const fetchData = useCallback(async () => {

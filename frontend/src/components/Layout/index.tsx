@@ -232,6 +232,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isTenantModuleEnabled = (path: string) =>
     !tenantModules || tenantModules.length === 0 || tenantModules.includes(path);
 
+  // 这些顶层路径始终显示，不受租户模块白名单控制
+  const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
+
   // 工厂账号可见的菜单分组键（其余整组隐藏）
   const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system']);
   // 工厂账号可见的具体路径白名单
@@ -253,8 +256,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         // 外发工厂账号：只显示指定分组，其余整组隐藏
         if (isFactoryAccount && !FACTORY_VISIBLE_SECTIONS.has(section.key)) return false;
         // 租户模块白名单：若设置了白名单，则隐藏整个无启用项的分组
+        // 注意：ALWAYS_VISIBLE_PATHS 中的路径始终显示，不受白名单控制
         if (tenantModules && tenantModules.length > 0) {
-          if (section.path && !tenantModules.includes(section.path)) return false;
+          if (section.path && !ALWAYS_VISIBLE_PATHS.has(section.path) && !tenantModules.includes(section.path)) return false;
           if (section.items && !section.items.some(item => isTenantModuleEnabled(item.path))) return false;
         }
         // 超管专属菜单：非超管不可见
