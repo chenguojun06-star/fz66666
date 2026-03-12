@@ -118,6 +118,9 @@ public class BottleneckDetectionOrchestrator {
         if (request != null && request.getOrderId() != null
                 && !request.getOrderId().isBlank()) {
             qw.eq("id", request.getOrderId());
+        } else if (request != null && request.getOrderNo() != null
+                && !request.getOrderNo().isBlank()) {
+            qw.eq("order_no", request.getOrderNo());
         }
         return productionOrderService.list(qw);
     }
