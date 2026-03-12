@@ -1,4 +1,3 @@
-const { safeNavigate } = require('../utils/uiHelper');
 const i18n = require('../utils/i18n/index');
 
 function buildTabList(language) {
@@ -29,6 +28,9 @@ Component({
     list: buildTabList(i18n.getLanguage()),
   },
 
+  // 防重复点击时间戳
+  _lastTapTime: 0,
+
   methods: {
     refreshLanguage(language) {
       this.setData({ list: buildTabList(language) });
@@ -45,6 +47,14 @@ Component({
       if (!item || !item.pagePath) {
         return;
       }
+
+      // 300ms 内重复点击同一 tab 不再触发（防误触，不用全局锁）
+      const now = Date.now();
+      if (now - this._lastTapTime < 300) {
+        return;
+      }
+      this._lastTapTime = now;
+
       const pages = getCurrentPages();
       const current = pages && pages.length ? pages[pages.length - 1] : null;
       const currentRoute = current && current.route ? `/${current.route}` : '';
@@ -57,13 +67,18 @@ Component({
 
       // 立即更新选中态，给用户即时视觉反馈
       this.setData({ selected: idx });
-      safeNavigate({ url: item.pagePath }, 'switchTab').catch(() => {
-        // 导航失败（通常是重复点击被锁）：恢复到之前的选中态
-        const prevPages = getCurrentPages();
-        const prevPage = prevPages && prevPages.length ? prevPages[prevPages.length - 1] : null;
-        const prevRoute = prevPage && prevPage.route ? `/${prevPage.route}` : '';
-        const prevIdx = this.data.list.findIndex(t => t.pagePath === prevRoute);
-        if (prevIdx >= 0) this.setData({ selected: prevIdx });
+
+      // 直接调用 wx.switchTab（不使用 safeNavigate 全局锁，避免被 app 内其他导航阻断）
+      wx.switchTab({
+        url: item.pagePath,
+        fail: () => {
+          // 导航失败：恢复到之前的选中态
+          const prevPages = getCurrentPages();
+          const prevPage = prevPages && prevPages.length ? prevPages[prevPages.length - 1] : null;
+          const prevRoute = prevPage && prevPage.route ? `/${prevPage.route}` : '';
+          const prevIdx = this.data.list.findIndex(t => t.pagePath === prevRoute);
+          if (prevIdx >= 0) this.setData({ selected: prevIdx });
+        },
       });
     },
   },

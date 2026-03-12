@@ -9,6 +9,7 @@ const {
 const { normalizeStats, normalizeActivities } = require('../../utils/dataTransform');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getCurrentFactoryId } = require('../../utils/permission');
+const { isTenantOwner: checkTenantOwner } = require('../../utils/storage');
 
 function toNumber(value) {
   const n = Number(value);
@@ -72,7 +73,8 @@ Page({
       warehousing: { day: 0, week: 0, month: 0, year: 0, total: 0 },
     },
     activities: [],
-    isFactory: false, // 是否为外发工厂账号（隐藏全公司统计数据）
+    isFactory: false,       // 是否为外发工厂账号（隐藏全公司统计数据）
+    isTenantOwner: false,   // 是否为租户老板（显示完整数据概览）
     unreadNoticeCount: 0, // 未读智能提醒数
   },
 
@@ -84,8 +86,11 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    // 工厂账号隐藏全公司数据概览
-    this.setData({ isFactory: !!getCurrentFactoryId() });
+    // 角色识别：工厂工人 / 租户老板 / 跟单员
+    this.setData({
+      isFactory: !!getCurrentFactoryId(),
+      isTenantOwner: checkTenantOwner(),
+    });
     this.loadStats();
 
     // 加载未读智能提醒数（工人/跟单员首页都能看到）
@@ -156,6 +161,10 @@ Page({
 
   goAdmin() {
     safeNavigate({ url: '/pages/admin/index' }, 'switchTab').catch(() => {});
+  },
+
+  goPayroll() {
+    safeNavigate({ url: '/pages/payroll/payroll' }).catch(() => {});
   },
 
   async loadStats() {

@@ -8,37 +8,6 @@
     <text class="inbox-banner-arrow">›</text>
   </view>
 
-  <!-- 仓库管理卡片（工厂账号隐藏） -->
-  <view class="card" wx:if="{{!isFactory}}">
-    <view class="title">仓库</view>
-    <view class="grid-menu">
-      <view class="grid-item" hover-class="grid-item-hover" hover-stay-time="100" bindtap="navTo" data-url="/pages/warehouse/sample/list/index">
-        <view class="icon-box bg-soft-blue">
-          <text class="iconfont">🧥</text>
-        </view>
-        <text class="menu-name">样衣库存</text>
-      </view>
-      <view class="grid-item" hover-class="grid-item-hover" hover-stay-time="100" bindtap="navTo" data-url="/pages/warehouse/finished/list/index">
-        <view class="icon-box bg-soft-indigo">
-          <text class="iconfont">�</text>
-        </view>
-        <text class="menu-name">成品管理</text>
-      </view>
-      <view class="grid-item" hover-class="grid-item-hover" hover-stay-time="100" bindtap="navTo" data-url="/pages/warehouse/material/alerts/index">
-        <view class="icon-box bg-soft-green">
-          <text class="iconfont">🧵</text>
-        </view>
-        <text class="menu-name">面辅料排行</text>
-      </view>
-      <view class="grid-item" hover-class="grid-item-hover" hover-stay-time="100" bindtap="navTo" data-url="/pages/order/index">
-        <view class="icon-box bg-soft-slate">
-          <text class="iconfont">📝</text>
-        </view>
-        <text class="menu-name">下单管理</text>
-      </view>
-    </view>
-  </view>
-
   <view class="card">
     <view class="title-row">
       <view class="title">生产</view>
