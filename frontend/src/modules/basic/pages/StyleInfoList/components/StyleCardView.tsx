@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { getStyleSourceText } from '@/utils/styleSource';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -46,6 +47,10 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
     return node === '样衣完成';
   };
 
+  const renderSourceText = (record: StyleInfo) => {
+    return getStyleSourceText(record);
+  };
+
   return (
     <UniversalCardView
       dataSource={data}
@@ -57,6 +62,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       fields={[]}
       fieldGroups={[
         [{ label: '码数', key: 'sizeColorConfig', render: (val) => { if (!val) return '-'; try { const config = JSON.parse(val); const sizes = (config.sizes || []).filter((s: string) => s && s.trim()); return sizes.length > 0 ? sizes.join(',') : '-'; } catch { return '-'; } } }, { label: '数量', key: 'sampleQuantity', render: (val) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
         [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
       ]}
       progressConfig={{

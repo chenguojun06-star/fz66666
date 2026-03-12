@@ -255,6 +255,12 @@ public class StyleInfo {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sampleReviewTime;
 
+    /** 开发来源类型：SELF_DEVELOPED / SELECTION_CENTER */
+    private String developmentSourceType;
+
+    /** 开发来源明细：自主开发 / 外部市场 / 供应商 / 客户定制 / 内部选品 */
+    private String developmentSourceDetail;
+
     @TableField(exist = false)
     private String progressNode;
 

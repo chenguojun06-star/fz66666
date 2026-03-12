@@ -8,6 +8,7 @@ import AttachmentThumb from '../components/AttachmentThumb';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { formatDateTime } from '@/utils/datetime';
+import { getStyleSourceMeta } from '@/utils/styleSource';
 import { useNavigate } from 'react-router-dom';
 import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
@@ -85,13 +86,18 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     return node === '样衣完成';
   };
 
+  const renderSourceTag = (record: StyleInfo) => {
+    const source = getStyleSourceMeta(record);
+    return <Tag color={source.color}>{source.label}</Tag>;
+  };
+
   const columns = [
     {
       title: '图片',
       dataIndex: 'cover',
       key: 'cover',
       width: 80,
-      render: (_: any, record: StyleInfo) => <AttachmentThumb styleId={record.id!} />
+      render: (_: any, record: StyleInfo) => <AttachmentThumb styleId={record.id!} src={record.cover || null} />
     },
     {
       title: '款号',
@@ -135,6 +141,12 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       key: 'category',
       width: 100,
       render: (value: unknown) => toCategoryCn(value),
+    },
+    {
+      title: '来源',
+      key: 'developmentSourceType',
+      width: 150,
+      render: (_: unknown, record: StyleInfo) => renderSourceTag(record),
     },
     {
       title: '季节',

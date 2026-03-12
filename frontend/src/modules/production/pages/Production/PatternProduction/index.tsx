@@ -638,7 +638,7 @@ const PatternProduction: React.FC = () => {
 
               return (
                 <div
-                  key={node.id}
+                  key={`${node.id}-${node.name}`}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',

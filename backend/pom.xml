@@ -24,6 +24,7 @@
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <mysql-connector.version>9.0.0</mysql-connector.version>
         <springdoc-openapi.version>1.7.0</springdoc-openapi.version>
+        <flyway.version>9.22.3</flyway.version>
         <snakeyaml.version>2.2</snakeyaml.version>
         <h2.version>2.2.224</h2.version>
         <hutool.version>5.8.27</hutool.version>
@@ -131,6 +132,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
         </dependency>
 
         <!-- 测试依赖 -->

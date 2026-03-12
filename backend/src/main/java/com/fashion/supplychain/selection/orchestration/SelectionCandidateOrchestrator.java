@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -250,7 +251,10 @@ public class SelectionCandidateOrchestrator {
         Long tenantId = UserContext.tenantId();
         SelectionCandidate candidate = getOwnedCandidate(id, tenantId);
         if ("APPROVED".equals(candidate.getStatus())) {
-            throw new RuntimeException("已通过的款式不可删除");
+            LocalDateTime baseTime = candidate.getUpdateTime() != null ? candidate.getUpdateTime() : candidate.getCreateTime();
+            if (baseTime == null || Duration.between(baseTime, LocalDateTime.now()).toDays() < 10) {
+                throw new RuntimeException("审核通过后的候选款需保留满10天后才可删除");
+            }
         }
         candidate.setDeleteFlag(1);
         candidateService.updateById(candidate);

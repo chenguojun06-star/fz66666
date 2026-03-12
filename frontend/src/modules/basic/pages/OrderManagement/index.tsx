@@ -26,6 +26,7 @@ import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
 import { SchedulingSuggestionResponse, SchedulePlan } from '@/services/intelligence/intelligenceApi';
 import { generateUniqueId } from '@/utils/idGenerator';
+import { getStyleSourceMeta, getStyleSourceText } from '@/utils/styleSource';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import SmartStyleInsightCard from './components/SmartStyleInsightCard';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -1319,6 +1320,15 @@ const OrderManagement: React.FC = () => {
       render: (v: unknown) => toCategoryCn(v),
     },
     {
+      title: '来源',
+      key: 'developmentSourceType',
+      width: 150,
+      render: (_: unknown, record: StyleInfo) => {
+        const source = getStyleSourceMeta(record);
+        return <Tag color={source.color}>{source.label}</Tag>;
+      },
+    },
+    {
       title: '下单次数',
       dataIndex: 'orderCount',
       key: 'orderCount',
@@ -1528,6 +1538,7 @@ const OrderManagement: React.FC = () => {
             fields={[]}
             fieldGroups={[
               [{ label: '码数', key: 'size', render: (val) => val || '-' }, { label: '数量', key: 'sampleQuantity', render: (val, record) => { const qty = Number(val) || Number(record?.quantity) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+              [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => getStyleSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
               [{ label: '下单', key: 'latestOrderTime', render: (val) => val ? dayjs(val).format('MM-DD') : '-' }, { label: '下单人', key: 'latestOrderCreator', render: (val) => val || '-' }],
             ]}
             progressConfig={{ show: false, calculate: () => 0 }}

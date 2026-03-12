@@ -17,6 +17,7 @@ SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3308/fashion_supplychain
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=changeme
 WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
+FLYWAY_ENABLED=true
 EOF
   echo "✅ 环境变量文件已创建"
 else

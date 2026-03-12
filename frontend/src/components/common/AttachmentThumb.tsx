@@ -4,6 +4,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface AttachmentThumbProps {
   styleId: string | number;
+  src?: string | null;
 }
 
 /**
@@ -14,9 +15,13 @@ interface AttachmentThumbProps {
  * - 款式管理列表
  * - 款式详情页
  */
-const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
-  const [url, setUrl] = useState<string | null>(null);
+const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId, src }) => {
+  const [url, setUrl] = useState<string | null>(src || null);
   const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    setUrl(src || null);
+  }, [src]);
 
   useEffect(() => {
     let mounted = true;
@@ -26,11 +31,12 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
         const res = await api.get<{ code: number; data: any[] }>(`/style/attachment/list?styleId=${styleId}`);
         if (res.code === 200) {
           const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-          if (mounted) setUrl((images[0] as any)?.fileUrl || null);
+          const firstImage = (images[0] as any)?.fileUrl || null;
+          if (mounted && firstImage) setUrl(firstImage);
         }
       } catch {
         // 忽略错误
-        if (mounted) setUrl(null);
+        if (mounted && !src) setUrl(null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -38,7 +44,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
     return () => {
       mounted = false;
     };
-  }, [styleId]);
+  }, [styleId, src]);
 
   return (
     <div
@@ -56,7 +62,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
       {loading ? (
         <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
-        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setUrl(null)} />
       ) : (
         <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}

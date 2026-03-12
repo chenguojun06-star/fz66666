@@ -8,7 +8,10 @@ import com.fashion.supplychain.selection.dto.StyleHistoryAnalysisDTO;
 import com.fashion.supplychain.selection.entity.SelectionCandidate;
 import com.fashion.supplychain.selection.service.SelectionCandidateService;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,11 +30,16 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SelectionApprovalOrchestrator {
 
+        private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
     private SelectionCandidateService candidateService;
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+        @Autowired
+        private StyleInfoOrchestrator styleInfoOrchestrator;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -66,12 +74,19 @@ public class SelectionApprovalOrchestrator {
         style.setColor(candidate.getColorFamily());
         style.setPrice(candidate.getTargetPrice());
         style.setSeason(candidate.getSeasonTags());
-        style.setDescription("由选品候选款 " + candidate.getCandidateNo() + " 自动生成");
+        style.setDescription(buildSelectionSourceDescription(candidate));
         style.setStatus("ENABLED");
         style.setYear(java.time.LocalDate.now().getYear());
         style.setMonth(java.time.LocalDate.now().getMonthValue());
+        style.setCover(resolveCandidateCover(candidate));
+                style.setDevelopmentSourceType("SELECTION_CENTER");
+                style.setDevelopmentSourceDetail(resolveSelectionSourceDetail(candidate));
+                if (style.getSampleQuantity() == null || style.getSampleQuantity() <= 0) {
+                        style.setSampleQuantity(1);
+                }
 
-        styleInfoService.saveOrUpdateStyle(style);
+                // 复用正常「样衣开发新建」入口，确保自动创建样板生产记录并走一致的后续流转链路
+                styleInfoOrchestrator.save(style);
         log.info("[Selection] 候选款 {} → 款式 {} 创建成功", candidate.getCandidateNo(), styleNo);
 
         // 回写关联
@@ -81,6 +96,57 @@ public class SelectionApprovalOrchestrator {
 
         return style;
     }
+
+        private String buildSelectionSourceDescription(SelectionCandidate candidate) {
+                String sourceLabel;
+                switch (candidate.getSourceType() == null ? "" : candidate.getSourceType()) {
+                        case "INTERNAL":
+                                sourceLabel = "选品中心·自开发";
+                                break;
+                        case "EXTERNAL":
+                                sourceLabel = "选品中心·外部市场";
+                                break;
+                        case "SUPPLIER":
+                                sourceLabel = "选品中心·供应商";
+                                break;
+                        case "CLIENT":
+                                sourceLabel = "选品中心·客户定制";
+                                break;
+                        default:
+                                sourceLabel = "选品中心";
+                                break;
+                }
+                return sourceLabel + "候选款 " + candidate.getCandidateNo() + " 自动生成";
+        }
+
+        private String resolveSelectionSourceDetail(SelectionCandidate candidate) {
+                String sourceType = candidate.getSourceType() == null ? "" : candidate.getSourceType().trim().toUpperCase();
+                switch (sourceType) {
+                        case "EXTERNAL":
+                                return "外部市场";
+                        case "SUPPLIER":
+                                return "供应商";
+                        case "CLIENT":
+                                return "客户定制";
+                        case "INTERNAL":
+                                return "内部选品";
+                        default:
+                                return "选品中心";
+                }
+        }
+
+        private String resolveCandidateCover(SelectionCandidate candidate) {
+                if (candidate.getReferenceImages() == null || candidate.getReferenceImages().isBlank()) {
+                        return null;
+                }
+                try {
+                        List<String> images = objectMapper.readValue(candidate.getReferenceImages(), new TypeReference<List<String>>() {});
+                        return images.isEmpty() ? null : images.get(0);
+                } catch (Exception e) {
+                        log.warn("[Selection] 解析候选款参考图失败 candidateId={}", candidate.getId(), e);
+                        return null;
+                }
+        }
 
     /**
      * 历史款式分析 — 基于内部生产订单+财务结算数据

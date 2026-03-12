@@ -34,6 +34,8 @@ export interface StyleInfo extends Record<string, unknown> {
   sampleStatus?: string;
   sampleProgress?: number;
   sampleCompletedTime?: string;
+  developmentSourceType?: 'SELF_DEVELOPED' | 'SELECTION_CENTER' | string;
+  developmentSourceDetail?: string;
 
   maintenanceTime?: string;
   maintenanceMan?: string;

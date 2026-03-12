@@ -189,10 +189,10 @@ const Login: React.FC = () => {
               onFocus={() => { /* 不自动展开，等用户输入后再搜索 */ }}
               placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
               disabled={submitting || tenantsLoading}
-              size="large"
             >
               <Input
                 prefix={<SearchOutlined className="site-form-item-icon" />}
+                size="large"
                 allowClear
                 autoComplete="off"
                 onClear={() => {

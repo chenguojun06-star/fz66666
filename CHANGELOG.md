@@ -1,3 +1,23 @@
+# 2026-03-12（本地开发环境修复）
+
+## 修复：样衣开发“来源”列显示乱码和超长脏文案
+
+- 处理：为 `developmentSourceType/developmentSourceDetail` 增加前后端双重归一化。
+- 规则：`自主开发` 固定显示为短文案；`选品来源` 仅允许 `外部市场/供应商/客户定制/内部选品/选品中心` 这几类标准明细。
+- 效果：历史脏数据、乱码、超长错编码文本不再直接显示到列表和卡片上。
+
+## 修复：本地后端启动失败导致 WebSocket 1006 和接口 500
+
+- 根因：`backend/pom.xml` 中虽然声明了 `flyway.version=9.22.3`，但 `flyway-core` 未显式绑定该版本，启动时落回旧依赖，触发 `Unsupported Database: MySQL 8.0`。
+- 处理：显式为 `flyway-core` 指定 `${flyway.version}`。
+- 效果：恢复本地后端启动链路，避免前端在 5173 下看到 `/api/system/user/me`、`/api/system/tenant/public-list` 500 和 WebSocket 连接关闭 1006。
+
+## 修复：清洗样衣来源历史垃圾数据并移除登录页控件警告
+
+- 新增 Flyway 脚本 `V20260312004__sanitize_style_source_detail.sql`，统一清洗 `t_style_info.development_source_type/development_source_detail` 历史脏值。
+- 规则：`SELF_DEVELOPED` 一律标准化为 `自主开发`；`SELECTION_CENTER` 仅保留 `外部市场/供应商/客户定制/内部选品/选品中心`，其余垃圾数据全部回退为标准值。
+- 同步修复登录页 `AutoComplete`：移除组件级 `size`，改由自定义输入框自身控制尺寸，消除 antd 控制台警告。
+
 # 2026-03-12（线上紧急修复）
 
 ## 修复：Selection 页面 `POST /api/selection/candidate/list` 500

@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Row, Col, Tag, Button, Input, Select, Space, Spin, Empty,
-  Popover, Typography, Divider, message, Progress, Modal, Form,
-  InputNumber, Tooltip, Tabs,
+  Popover, Typography, Divider, Progress, Modal, Form, App,
+  InputNumber, Tooltip, Tabs, Pagination,
 } from 'antd';
 import Layout from '@/components/Layout';
 import {
-  PlusOutlined, RobotOutlined, SendOutlined,
+  PlusOutlined, DeleteOutlined, SendOutlined,
   ThunderboltOutlined, FireOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import {
+  candidateDelete,
   candidateList,
   candidateAiScore,
   candidateCreateStyle,
+  candidateGetReviews,
+  candidateReview,
   candidateSave,
   candidateStageAction,
 } from '@/services/selection/selectionApi';
@@ -41,7 +44,24 @@ interface Candidate {
   reviewCount?: number;
   createdStyleId?: number;
   createdStyleNo?: string;
+  rejectReason?: string;
+  createTime?: string;
+  updateTime?: string;
   remark?: string;
+}
+
+interface CandidateReviewItem {
+  id: number;
+  reviewerName?: string;
+  score?: number;
+  decision?: string;
+  comment?: string;
+  reviewTime?: string;
+}
+
+interface CandidateListResponse {
+  records?: Candidate[];
+  list?: Candidate[];
 }
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
@@ -55,17 +75,18 @@ const SOURCE_MAP: Record<string, string> = {
   INTERNAL: '自主开发',
   SUPPLIER: '供应商',
   CLIENT:   '客户定制',
+  EXTERNAL: '外部市场',
 };
 
 /** 悬停时显示的 AI 分析浮层 */
 function AiHoverCard({
   record,
-  onAiScore,
   aiLoading,
+  latestReview,
 }: {
   record: Candidate;
-  onAiScore: (id: number) => void;
   aiLoading: boolean;
+  latestReview?: CandidateReviewItem | null;
 }) {
   const hasScore = record.trendScore != null;
   return (
@@ -76,6 +97,23 @@ function AiHoverCard({
           {STATUS_MAP[record.status]?.label}
         </Tag>
       </div>
+
+      {latestReview?.comment && (
+        <div style={{
+          marginBottom: 10,
+          padding: '8px 10px',
+          background: latestReview.decision === 'APPROVE' ? '#f6ffed' : '#fff2f0',
+          border: `1px solid ${latestReview.decision === 'APPROVE' ? '#b7eb8f' : '#ffccc7'}`,
+          borderRadius: 6,
+          fontSize: 12,
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            审核意见
+            {latestReview.reviewerName ? ` · ${latestReview.reviewerName}` : ''}
+          </div>
+          <div style={{ color: '#555', lineHeight: 1.6 }}>{latestReview.comment}</div>
+        </div>
+      )}
 
       {hasScore ? (
         <>
@@ -108,20 +146,8 @@ function AiHoverCard({
           )}
         </>
       ) : (
-        <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-          <Button
-            size="small"
-            icon={<RobotOutlined />}
-            loading={aiLoading}
-            type="dashed"
-            onClick={() => onAiScore(record.id)}
-            style={{ fontSize: 12 }}
-          >
-            获取 AI 分析
-          </Button>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
-            分析趋势契合度 · 利润空间 · 给出决策建议
-          </div>
+        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: '#888', fontSize: 12 }}>
+          {aiLoading ? '正在生成 AI 分析...' : '悬停后自动分析趋势、价值与决策建议'}
         </div>
       )}
 
@@ -190,6 +216,7 @@ function AiHoverCard({
 }
 
 export default function SelectionCenter() {
+  const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [search, setSearch] = useState('');
@@ -199,12 +226,19 @@ export default function SelectionCenter() {
   const [addOpen, setAddOpen] = useState(false);
   const [addForm] = Form.useForm();
   const [activeTab, setActiveTab] = useState<string>('market');
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<Candidate | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewForm] = Form.useForm();
+  const [reviewMap, setReviewMap] = useState<Record<number, CandidateReviewItem | null>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await candidateList({ page: 1, pageSize: 100 });
-      const data = res?.records ?? res?.list ?? res ?? [];
+      const res = await candidateList({ page: 1, pageSize: 100 }) as CandidateListResponse | Candidate[];
+      const data = Array.isArray(res) ? res : (res.records ?? res.list ?? []);
       setCandidates(Array.isArray(data) ? data : []);
     } catch {
       message.error('加载失败');
@@ -215,10 +249,16 @@ export default function SelectionCenter() {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  useEffect(() => {
+    if (activeTab === 'mine') {
+      fetchList();
+    }
+  }, [activeTab, fetchList]);
+
   const handleAiScore = async (id: number) => {
     setAiLoadingIds(prev => new Set(prev).add(id));
     try {
-      const res = await candidateAiScore(id);
+      const res = await candidateAiScore(id) as Partial<Candidate> | null;
       setCandidates(prev => prev.map(c => c.id === id ? { ...c, ...(res ?? {}) } : c));
       message.success('AI 评分完成');
     } catch {
@@ -228,18 +268,44 @@ export default function SelectionCenter() {
     }
   };
 
-  const handleApprove = async (id: number) => {
+  const openReviewModal = (record: Candidate) => {
+    setReviewTarget(record);
+    reviewForm.setFieldsValue({
+      decision: 'APPROVE',
+      score: record.trendScore ?? undefined,
+      comment: '',
+    });
+    setReviewOpen(true);
+  };
+
+  const submitReview = async () => {
+    if (!reviewTarget) return;
     try {
-      await candidateStageAction(id, 'approve');
-      message.success('已通过评审');
+      const values = await reviewForm.validateFields();
+      setReviewSubmitting(true);
+      const decision = values.decision === 'APPROVE' ? 'approve' : 'reject';
+      await candidateReview({
+        candidateId: reviewTarget.id,
+        score: values.score,
+        decision: values.decision,
+        comment: values.comment,
+      });
+      await candidateStageAction(reviewTarget.id, decision, values.comment);
+      message.success(values.decision === 'APPROVE' ? '审核通过，可下版到样衣' : '已记录审核不通过');
+      setReviewOpen(false);
+      setReviewTarget(null);
+      reviewForm.resetFields();
       fetchList();
-    } catch {
-      message.error('操作失败');
+    } catch (e) {
+      if ((e as { errorFields?: unknown })?.errorFields) return;
+      message.error('提交审核失败');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
   const handleCreateStyle = (id: number, styleName: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '下版到样衣',
       content: `确认将「${styleName}」生成正式款式，进入样衣开发流程？`,
       okText: '确认下版',
@@ -250,6 +316,42 @@ export default function SelectionCenter() {
           fetchList();
         } catch (e: unknown) {
           message.error((e as { message?: string })?.message ?? '下版失败');
+        }
+      },
+    });
+  };
+
+  const ensureLatestReview = useCallback(async (candidateId: number) => {
+    if (candidateId in reviewMap) return;
+    try {
+      const reviews = await candidateGetReviews(candidateId) as CandidateReviewItem[];
+      setReviewMap(prev => ({ ...prev, [candidateId]: Array.isArray(reviews) && reviews.length > 0 ? reviews[0] : null }));
+    } catch {
+      setReviewMap(prev => ({ ...prev, [candidateId]: null }));
+    }
+  }, [reviewMap]);
+
+  const canDeleteCandidate = useCallback((record: Candidate) => {
+    if (record.status === 'REJECTED') return true;
+    if (record.status !== 'APPROVED') return false;
+    const baseTime = record.updateTime || record.createTime;
+    if (!baseTime) return false;
+    const diff = Date.now() - new Date(baseTime).getTime();
+    return diff >= 10 * 24 * 60 * 60 * 1000;
+  }, []);
+
+  const handleDeleteCandidate = (record: Candidate) => {
+    modal.confirm({
+      title: '删除候选款',
+      content: `确认删除「${record.styleName}」？删除后不可恢复。`,
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await candidateDelete(record.id);
+          message.success('已删除候选款');
+          fetchList();
+        } catch (e: unknown) {
+          message.error((e as { message?: string })?.message ?? '删除失败');
         }
       },
     });
@@ -272,6 +374,12 @@ export default function SelectionCenter() {
     return true;
   });
 
+  const pagedCandidates = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, categoryFilter]);
+
   return (
     <Layout>
     <div style={{ padding: '16px 20px' }}>
@@ -287,7 +395,10 @@ export default function SelectionCenter() {
 
       {/* 市场热品 Tab */}
       {activeTab === 'market' && (
-        <MarketHotItems onAdded={() => setActiveTab('mine')} />
+        <MarketHotItems onAdded={() => {
+          fetchList();
+          setActiveTab('mine');
+        }} />
       )}
 
       {/* 我的选品库 Tab */}
@@ -326,7 +437,7 @@ export default function SelectionCenter() {
             />
           )}
           <Text type="secondary" style={{ fontSize: 12 }}>
-            共 {filtered.length} 款 · 鼠标悬停查看 AI 分析
+            共 {filtered.length} 款 · 鼠标悬停查看 AI 分析与审核意见
           </Text>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
@@ -342,139 +453,176 @@ export default function SelectionCenter() {
             style={{ marginTop: 80 }}
           />
         ) : (
-          <Row gutter={[16, 16]}>
-            {filtered.map(item => {
-              const img = getFirstImage(item.referenceImages);
-              const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: item.status };
-              const aiLoading = aiLoadingIds.has(item.id);
-              return (
-                <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4}>
-                  <Popover
-                    content={
-                      <AiHoverCard
-                        record={item}
-                        onAiScore={handleAiScore}
-                        aiLoading={aiLoading}
-                      />
-                    }
-                    title={null}
-                    trigger="hover"
-                    placement="right"
-                    mouseEnterDelay={0.4}
-                    overlayStyle={{ maxWidth: 320 }}
-                  >
-                    <div
-                      style={{
-                        border: '1px solid #e8e8e8',
-                        borderRadius: 8,
-                        overflow: 'hidden',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        transition: 'box-shadow 0.2s',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          <div>
+            <Row gutter={[16, 16]}>
+              {pagedCandidates.map(item => {
+                const img = getFirstImage(item.referenceImages);
+                const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: item.status };
+                const aiLoading = aiLoadingIds.has(item.id);
+                const latestReview = reviewMap[item.id] ?? null;
+                return (
+                  <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4}>
+                    <Popover
+                      content={
+                        <AiHoverCard
+                          record={item}
+                          aiLoading={aiLoading}
+                          latestReview={latestReview}
+                        />
+                      }
+                      title={null}
+                      trigger="hover"
+                      placement="right"
+                      mouseEnterDelay={0.4}
+                      overlayStyle={{ maxWidth: 320 }}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          ensureLatestReview(item.id);
+                        }
+                        if (open && item.trendScore == null && !aiLoading) {
+                          handleAiScore(item.id);
+                        }
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
-                      onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
                     >
-                      {/* 图片区 */}
-                      <div style={{ position: 'relative', height: 210, background: '#f7f7f7', overflow: 'hidden' }}>
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={item.styleName}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            height: '100%', flexDirection: 'column', color: '#ccc',
-                          }}>
-                            <FireOutlined style={{ fontSize: 36 }} />
-                            <div style={{ fontSize: 11, marginTop: 6 }}>暂无参考图</div>
+                      <div
+                        style={{
+                          border: '1px solid #e8e8e8',
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          transition: 'box-shadow 0.2s',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
+                        onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
+                      >
+                        {/* 图片区 */}
+                        <div style={{ position: 'relative', height: 260, background: '#f7f7f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={item.styleName}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <div style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              height: '100%', flexDirection: 'column', color: '#ccc',
+                            }}>
+                              <FireOutlined style={{ fontSize: 36 }} />
+                              <div style={{ fontSize: 11, marginTop: 6 }}>暂无参考图</div>
+                            </div>
+                          )}
+                          {/* 状态角标 */}
+                          <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                            <Tag color={color} style={{ margin: 0, fontSize: 11 }}>{label}</Tag>
                           </div>
-                        )}
-                        {/* 状态角标 */}
-                        <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                          <Tag color={color} style={{ margin: 0, fontSize: 11 }}>{label}</Tag>
+                          {/* AI 分角标 */}
+                          {item.trendScore != null && (
+                            <div style={{
+                              position: 'absolute', top: 8, left: 8,
+                              background: 'rgba(114,46,209,0.88)', borderRadius: 4,
+                              padding: '2px 8px', color: '#fff', fontSize: 12, fontWeight: 700,
+                            }}>
+                              <ThunderboltOutlined /> {item.trendScore}
+                            </div>
+                          )}
                         </div>
-                        {/* AI 分角标 */}
-                        {item.trendScore != null && (
+
+                        {/* 信息区 */}
+                        <div style={{ padding: '10px 12px' }}>
                           <div style={{
-                            position: 'absolute', top: 8, left: 8,
-                            background: 'rgba(114,46,209,0.88)', borderRadius: 4,
-                            padding: '2px 8px', color: '#fff', fontSize: 12, fontWeight: 700,
+                            fontWeight: 600, fontSize: 13, marginBottom: 2,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
-                            <ThunderboltOutlined /> {item.trendScore}
+                            {item.styleName || '未命名'}
                           </div>
-                        )}
-                      </div>
+                          <div style={{ fontSize: 11, color: '#999', marginBottom: 10 }}>
+                            {[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType]
+                              .filter(Boolean).join(' · ')}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#777', marginBottom: 8, minHeight: 18 }}>
+                            {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}
+                            {item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
+                          </div>
+                          <div style={{ marginBottom: 8, minHeight: 22 }}>
+                            {item.status === 'APPROVED' && <Tag color="green" style={{ margin: 0 }}>通过</Tag>}
+                            {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
+                            {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
+                            {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
+                            {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
+                          </div>
 
-                      {/* 信息区 */}
-                      <div style={{ padding: '10px 12px' }}>
-                        <div style={{
-                          fontWeight: 600, fontSize: 13, marginBottom: 2,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {item.styleName || '未命名'}
+                          {/* 操作按钮 */}
+                          <Space size={6} style={{ width: '100%' }}>
+                            {(item.status === 'PENDING' || item.status === 'HOLD') && (
+                              <Tooltip title="填写审核结果：通过或不通过">
+                                <Button
+                                  size="small"
+                                  onClick={() => openReviewModal(item)}
+                                  style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 11 }}
+                                >
+                                  审核
+                                </Button>
+                              </Tooltip>
+                            )}
+                            {item.status === 'APPROVED' && !item.createdStyleId && (
+                              <Tooltip title="生成正式款式，进入样衣开发流程">
+                                <Button
+                                  size="small"
+                                  type="primary"
+                                  icon={<SendOutlined />}
+                                  onClick={() => handleCreateStyle(item.id, item.styleName)}
+                                  style={{ fontSize: 11 }}
+                                >
+                                  下版到样衣
+                                </Button>
+                              </Tooltip>
+                            )}
+                            {item.createdStyleId && (
+                              <Tag color="green" style={{ fontSize: 11, margin: 0 }}>
+                                ✓ 已下版 {item.createdStyleNo}
+                              </Tag>
+                            )}
+                            {canDeleteCandidate(item) && (
+                              <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
+                                <Button
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => handleDeleteCandidate(item)}
+                                  style={{ fontSize: 11 }}
+                                >
+                                  删除
+                                </Button>
+                              </Tooltip>
+                            )}
+                          </Space>
                         </div>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 10 }}>
-                          {[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType]
-                            .filter(Boolean).join(' · ')}
-                        </div>
-
-                        {/* 操作按钮 */}
-                        <Space size={6} style={{ width: '100%' }}>
-                          {item.status === 'PENDING' && (
-                            <Tooltip title="AI 分析趋势契合度 · 利润空间 · 给出决策建议">
-                              <Button
-                                size="small"
-                                icon={<RobotOutlined />}
-                                loading={aiLoading}
-                                onClick={() => handleAiScore(item.id)}
-                                style={{ borderColor: '#722ed1', color: '#722ed1', fontSize: 11 }}
-                              >
-                                AI 评分
-                              </Button>
-                            </Tooltip>
-                          )}
-                          {item.status === 'PENDING' && item.trendScore != null && item.trendScore >= 60 && (
-                            <Tooltip title="通过评审，可下版到样衣">
-                              <Button
-                                size="small"
-                                icon={<CheckCircleOutlined />}
-                                onClick={() => handleApprove(item.id)}
-                                style={{ borderColor: '#52c41a', color: '#52c41a', fontSize: 11 }}
-                              >
-                                通过
-                              </Button>
-                            </Tooltip>
-                          )}
-                          {item.status === 'APPROVED' && !item.createdStyleId && (
-                            <Tooltip title="生成正式款式，进入样衣开发流程">
-                              <Button
-                                size="small"
-                                type="primary"
-                                icon={<SendOutlined />}
-                                onClick={() => handleCreateStyle(item.id, item.styleName)}
-                                style={{ fontSize: 11 }}
-                              >
-                                下版到样衣
-                              </Button>
-                            </Tooltip>
-                          )}
-                          {item.createdStyleId && (
-                            <Tag color="green" style={{ fontSize: 11, margin: 0 }}>
-                              ✓ 已下版 {item.createdStyleNo}
-                            </Tag>
-                          )}
-                        </Space>
                       </div>
-                    </div>
-                  </Popover>
-                </Col>
-              );
-            })}
-          </Row>
+                    </Popover>
+                  </Col>
+                );
+              })}
+            </Row>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={filtered.length}
+                showSizeChanger
+                pageSizeOptions={['12', '18', '24', '36']}
+                onChange={(page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
+                }}
+                showTotal={(total) => `共 ${total} 款`}
+              />
+            </div>
+          </div>
         )}
       </Spin>
 
@@ -547,6 +695,37 @@ export default function SelectionCenter() {
           </Row>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={reviewTarget ? `审核候选款：${reviewTarget.styleName}` : '审核候选款'}
+        open={reviewOpen}
+        onCancel={() => {
+          setReviewOpen(false);
+          setReviewTarget(null);
+          reviewForm.resetFields();
+        }}
+        onOk={submitReview}
+        confirmLoading={reviewSubmitting}
+        okText="提交审核"
+        width={520}
+      >
+        <Form form={reviewForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item name="decision" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
+            <Select
+              options={[
+                { value: 'APPROVE', label: '通过' },
+                { value: 'REJECT', label: '不通过' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="score" label="评审分数">
+            <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="可选，0-100" />
+          </Form.Item>
+          <Form.Item name="comment" label="审核意见" rules={[{ required: true, message: '请填写审核意见' }]}>
+            <Input.TextArea rows={4} placeholder="填写通过原因、不通过原因或后续建议" />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Row, Col, Button, Tag, Space, message, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs } from 'antd';
+import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, App } from 'antd';
 import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
 import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket, fetchDailyHotItems, refreshDailyHotItems } from '@/services/selection/selectionApi';
 
@@ -7,6 +7,7 @@ const { Text } = Typography;
 const { Search } = Input;
 
 const HOT_KEYWORDS = ['连衣裙', '卫衣', '外套', '牛仔裤', 'T恤', '衬衫', '半身裙', '针织衫', '风衣', '西装'];
+const SEARCH_HISTORY_STORAGE_KEY = 'selection-market-search-history';
 
 interface ShoppingItem {
   title: string;
@@ -42,7 +43,27 @@ interface SearchResult {
 }
 
 export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
-  const [result, setResult] = useState<SearchResult | null>(null);
+  const { message } = App.useApp();
+  const [searchHistory, setSearchHistory] = useState<SearchResult[]>(() => {
+    try {
+      const raw = localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [result, setResult] = useState<SearchResult | null>(() => {
+    try {
+      const raw = localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed[parsed.length - 1] : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [lastKeyword, setLastKeyword] = useState('');
   const [addLoading, setAddLoading] = useState<Record<number, boolean>>({});
@@ -53,6 +74,14 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
 
   /* 页面打开时自动加载今日热榜 */
   useEffect(() => { loadDailyHot(); }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
+    } catch {
+      // Ignore storage failures
+    }
+  }, [searchHistory]);
 
   const loadDailyHot = useCallback(async () => {
     setDailyHotLoading(true);
@@ -80,6 +109,17 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
     finally { setRefreshing(false); }
   }, [loadDailyHot]);
 
+  const handleClearSearchHistory = useCallback(() => {
+    setResult(null);
+    setLastKeyword('');
+    setSearchHistory([]);
+    try {
+      localStorage.removeItem(SEARCH_HISTORY_STORAGE_KEY);
+    } catch {
+      // Ignore storage failures
+    }
+  }, []);
+
   /* 搜索 */
   const doSearch = useCallback(async (kw: string) => {
     const trimmed = kw.trim();
@@ -89,7 +129,12 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
     try {
       const data = await searchExternalMarket(trimmed, 20) as SearchResult;
       setResult(data);
-      if (!data.serpApiEnabled) {
+      setSearchHistory(prev => {
+        const next = prev.filter(item => item.keyword !== data.keyword);
+        return [...next, data];
+      });
+      const hasUsableSearchData = Boolean(data.items?.length) || (typeof data.trendScore === 'number' && data.trendScore >= 0);
+      if (data.serpApiEnabled === false && !hasUsableSearchData) {
         message.warning('SerpApi 未启用，请联系管理员配置 SERPAPI_KEY');
       } else if (!data.items?.length) {
         message.info('未搜索到相关商品，请换个关键词试试');
@@ -120,7 +165,10 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
       await candidateSave({
         styleName: item.title?.slice(0, 80) || lastKeyword,
         category: lastKeyword,
+        colorFamily: '',
         sourceType: 'EXTERNAL',
+        sourceDesc: item.source || 'Google Shopping',
+        referenceImages: item.thumbnail ? [item.thumbnail] : undefined,
         targetPrice: item.extractedPrice || undefined,
         remark: `来源：${item.source || 'Google Shopping'}｜${item.link || ''}`,
         seasonTags: lastKeyword,
@@ -138,7 +186,10 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
       const res = await candidateSave({
         styleName: item.title?.slice(0, 80) || lastKeyword,
         category: lastKeyword,
+        colorFamily: '',
         sourceType: 'EXTERNAL',
+        sourceDesc: item.source || 'Google Shopping',
+        referenceImages: item.thumbnail ? [item.thumbnail] : undefined,
         targetPrice: item.extractedPrice || undefined,
         remark: `来源：${item.source || 'Google Shopping'}`,
       }) as { id?: number };
@@ -153,15 +204,15 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   };
 
   /* 单个商品的 AI Popover 内容 */
-  const renderItemPopover = (item: ShoppingItem) => {
+  const renderItemPopover = (item: ShoppingItem, analysis = aiAnalysis) => {
     const price = item.extractedPrice;
-    const avg = aiAnalysis?.avgPrice || 0;
+    const avg = analysis?.avgPrice || 0;
     const priceTag = price && avg > 0
       ? price < avg * 0.8 ? '低于均价20%+（高性价比）'
         : price > avg * 1.2 ? '高于均价20%+（高端定位）'
         : '接近市场均价（主流价位）'
       : '暂无价格数据';
-    const ts = aiAnalysis?.trendScore ?? -1;
+    const ts = analysis?.trendScore ?? -1;
     const trendLabel = ts >= 70 ? '高热度' : ts >= 40 ? '中等热度' : '低热度';
     return (
       <div style={{ maxWidth: 280, fontSize: 13 }}>
@@ -171,9 +222,9 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
           <Tag color={ts >= 70 ? 'red' : ts >= 40 ? 'orange' : 'default'}>{ts >= 0 ? `${ts}/100 ${trendLabel}` : '未获取'}</Tag>
         </div>
         <div style={{ marginBottom: 6 }}><Text type="secondary">价格定位：</Text><span>{priceTag}</span></div>
-        {avg > 0 && <div style={{ marginBottom: 6 }}><Text type="secondary">价格区间：</Text><span>¥{aiAnalysis?.minPrice?.toFixed(0)} ~ ¥{aiAnalysis?.maxPrice?.toFixed(0)}（均价 ¥{avg.toFixed(0)}）</span></div>}
-        <div style={{ marginBottom: 6 }}><Text type="secondary">竞品数量：</Text><span>{aiAnalysis?.total || 0} 款在售</span></div>
-        <div style={{ marginBottom: 6 }}><Text type="secondary">销售渠道：</Text><span>{aiAnalysis?.sources?.slice(0, 5).join('、') || '—'}</span></div>
+        {avg > 0 && <div style={{ marginBottom: 6 }}><Text type="secondary">价格区间：</Text><span>¥{analysis?.minPrice?.toFixed(0)} ~ ¥{analysis?.maxPrice?.toFixed(0)}（均价 ¥{avg.toFixed(0)}）</span></div>}
+        <div style={{ marginBottom: 6 }}><Text type="secondary">竞品数量：</Text><span>{analysis?.total || 0} 款在售</span></div>
+        <div style={{ marginBottom: 6 }}><Text type="secondary">销售渠道：</Text><span>{analysis?.sources?.slice(0, 5).join('、') || '—'}</span></div>
         {item.rating != null && item.rating > 0 && (
           <div><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 12 }} /><span style={{ marginLeft: 4, fontSize: 11 }}>({item.reviews ?? 0}条)</span></div>
         )}
@@ -203,10 +254,14 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 children: (
                   <Row gutter={[10, 10]}>
                     {g.products.map((item, i) => (
-                      <Col key={i} xs={24} sm={8}>
+                      <Col key={i} xs={24} sm={12} md={8} lg={6} xl={4}>
                         <div style={{ border: '1px solid #f0f0f0', borderRadius: 6, background: '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                           {item.thumbnail
-                            ? <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: 120, objectFit: 'cover' }} loading="lazy" referrerPolicy="no-referrer" />
+                            ? (
+                              <div style={{ width: '100%', height: 190, background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
+                                <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
+                              </div>
+                            )
                             : <div style={{ height: 80, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 12 }}>暂无图片</div>}
                           <div style={{ padding: '8px 10px' }}>
                             <Tooltip title={item.title}><div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
@@ -240,14 +295,19 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
 
       {/* 搜索栏 */}
       <div style={{ marginBottom: 12 }}>
-        <Search
-          placeholder="输入关键词搜索市场真实商品（如：连衣裙、卫衣、牛仔外套）"
-          allowClear
-          enterButton={<><SearchOutlined /> 搜索市场</>}
-          onSearch={doSearch}
-          size="large"
-          style={{ maxWidth: 520 }}
-        />
+        <Space wrap>
+          <Search
+            placeholder="输入关键词搜索市场真实商品（如：连衣裙、卫衣、牛仔外套）"
+            allowClear
+            enterButton={<><SearchOutlined /> 搜索市场</>}
+            onSearch={doSearch}
+            size="large"
+            style={{ width: 520 }}
+          />
+          {searchHistory.length > 0 && (
+            <Button onClick={handleClearSearchHistory}>清空本轮搜索结果</Button>
+          )}
+        </Space>
       </div>
 
       {/* 热门关键词 */}
@@ -258,25 +318,36 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
         ))}
       </div>
 
-      {/* 搜索结果头部 */}
-      {result && !loading && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <GoogleOutlined style={{ color: '#4285f4' }} />
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            「{result.keyword}」共 {result.items?.length || 0} 件真实商品
-            {result.trendScore >= 0 && (
-              <> · Google 趋势热度 <Tag color={result.trendScore >= 70 ? 'red' : result.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 10, marginLeft: 4 }}>{result.trendScore}/100</Tag></>
-            )}
-          </Text>
-        </div>
-      )}
-
       <Spin spinning={loading}>
-        {result?.items?.length ? (
-          <Row gutter={[12, 14]}>
-            {result.items.map((item, idx) => (
-              <Col key={idx} xs={24} sm={12} md={8} lg={6}>
-                <Popover content={renderItemPopover(item)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3}>
+        {searchHistory.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {searchHistory.map((section, sectionIndex) => {
+              const sectionAiAnalysis = (() => {
+                if (!section.items?.length) return null;
+                const prices = section.items.map(i => i.extractedPrice).filter((p): p is number => p != null && p > 0);
+                const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+                const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+                const sources = [...new Set(section.items.map(i => i.source).filter(Boolean))];
+                const ratedCount = section.items.filter(i => i.rating != null && i.rating > 0).length;
+                return { avgPrice, minPrice, maxPrice, sources, ratedCount, trendScore: section.trendScore, total: section.items.length };
+              })();
+
+              return (
+                <div key={`${section.keyword}-${sectionIndex}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <GoogleOutlined style={{ color: '#4285f4' }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      「{section.keyword}」共 {section.items?.length || 0} 件真实商品
+                      {section.trendScore >= 0 && (
+                        <> · Google 趋势热度 <Tag color={section.trendScore >= 70 ? 'red' : section.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 10, marginLeft: 4 }}>{section.trendScore}/100</Tag></>
+                      )}
+                    </Text>
+                  </div>
+                  <Row gutter={[12, 14]}>
+                    {section.items.map((item, idx) => (
+                      <Col key={`${section.keyword}-${idx}`} xs={24} sm={12} md={8} lg={6} xl={4}>
+                <Popover content={renderItemPopover(item, sectionAiAnalysis)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3}>
                   <div
                     style={{
                       border: '1px solid #f0f0f0', borderRadius: 8, background: '#fff',
@@ -288,8 +359,8 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                   >
                     {/* 商品图片 */}
                     {item.thumbnail ? (
-                      <div style={{ height: 160, overflow: 'hidden', background: '#fafafa' }}>
-                        <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" referrerPolicy="no-referrer" />
+                      <div style={{ height: 280, background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
+                        <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
                     ) : (
                       <div style={{ height: 100, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13 }}>暂无图片</div>
@@ -300,7 +371,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                         <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                       </Tooltip>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        {item.price && <Text strong style={{ fontSize: 16, color: '#ff4d4f' }}>{item.price}</Text>}
+                              {item.price && <Text strong style={{ fontSize: 16, color: '#ff4d4f' }}>{item.price}</Text>}
                         {item.source && <Tag style={{ fontSize: 10, margin: 0 }}>{item.source}</Tag>}
                       </div>
                       {item.rating != null && item.rating > 0 && (
@@ -311,15 +382,19 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                       )}
                       {item.delivery && <Text type="secondary" style={{ fontSize: 10 }}>{item.delivery}</Text>}
                       <Space style={{ marginTop: 'auto', paddingTop: 6 }} size={6}>
-                        <Button size="small" icon={<PlusOutlined />} loading={addLoading[idx]} onClick={() => handleAdd(item, idx)} style={{ fontSize: 11 }}>加入选品</Button>
-                        <Button size="small" type="primary" icon={<SendOutlined />} loading={deployLoading[idx]} onClick={() => handleDeploy(item, idx)} style={{ fontSize: 11 }}>一键下版</Button>
+                        <Button size="small" icon={<PlusOutlined />} loading={addLoading[sectionIndex * 10000 + idx]} onClick={() => handleAdd(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>加入选品</Button>
+                        <Button size="small" type="primary" icon={<SendOutlined />} loading={deployLoading[sectionIndex * 10000 + idx]} onClick={() => handleDeploy(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>一键下版</Button>
                       </Space>
                     </div>
                   </div>
                 </Popover>
               </Col>
-            ))}
-          </Row>
+                    ))}
+                  </Row>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           !loading && (
             <Empty
@@ -328,7 +403,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 result && result.items?.length === 0 ? (
                   <div>
                     <p style={{ margin: '8px 0', fontSize: 14 }}>未搜索到「{lastKeyword}」的相关商品</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>请换一个关键词，或检查 SerpApi 是否配置正确</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>请换一个关键词，或稍后重试</p>
                   </div>
                 ) : (
                   <div>

@@ -6,6 +6,7 @@ export SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3308/fashion_supplychain?us
 export SPRING_DATASOURCE_USERNAME=root
 export SPRING_DATASOURCE_PASSWORD=changeme
 export WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
+export FLYWAY_ENABLED=true
 
 # 先停止已有后端实例，避免旧进程残留
 pkill -f "spring-boot:run|org.springframework.boot.loader.JarLauncher|com.fashion.supplychain" >/dev/null 2>&1 || true
