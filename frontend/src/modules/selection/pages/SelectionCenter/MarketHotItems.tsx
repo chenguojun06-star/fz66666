@@ -66,10 +66,17 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   const handleRefreshDailyHot = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await refreshDailyHotItems() as { success: number; failed: number };
-      message.success(`热榜已刺激更新：${res.success} 个关键词成功`);
-      await loadDailyHot();
-    } catch { message.error('刺激失败'); }
+      const res = await refreshDailyHotItems() as any;
+      if (res?.started) {
+        // 异步任务已启动，约1分钟后完成
+        message.success('热榜刷新任务已启动，约1分钟后完成，请稍后刷新页面查看');
+        setTimeout(() => loadDailyHot(), 65000);
+      } else {
+        // 兼容旧响应格式（同步执行的情况）
+        message.success(`热榜已更新：${res?.success ?? 0} 个关键词成功`);
+        await loadDailyHot();
+      }
+    } catch { message.error('刷新失败，请稍后重试'); }
     finally { setRefreshing(false); }
   }, [loadDailyHot]);
 

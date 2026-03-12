@@ -7,9 +7,11 @@ import com.fashion.supplychain.selection.job.DailyHotItemsJob;
 import com.fashion.supplychain.selection.orchestration.SelectionApprovalOrchestrator;
 import com.fashion.supplychain.selection.orchestration.TrendAnalysisOrchestrator;
 import com.fashion.supplychain.selection.service.SerpApiTrendService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.concurrent.CompletableFuture;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/selection/trend")
 @PreAuthorize("isAuthenticated()")
+@Slf4j
 public class TrendAnalysisController {
 
     @Autowired
@@ -113,9 +116,19 @@ public class TrendAnalysisController {
         return Result.success(trendOrchestrator.getDailyHotItems());
     }
 
-    /** 手动刺激拉取今日热榜（管理员用，可立即预热） */
+    /** 异步刷新今日热榜（管理员用，立即返回，后台约需1分钟完成10个关键词的拉取） */
     @PostMapping("/market/daily-hot/refresh")
-    public Result<Map<String, Integer>> refreshDailyHot() {
-        return Result.success(dailyHotItemsJob.execute());
+    public Result<Map<String, Object>> refreshDailyHot() {
+        CompletableFuture.runAsync(() -> {
+            try {
+                dailyHotItemsJob.execute();
+            } catch (Exception e) {
+                log.error("[DailyHotRefresh] 后台刷新失败", e);
+            }
+        });
+        Map<String, Object> resp = new java.util.LinkedHashMap<>();
+        resp.put("started", true);
+        resp.put("message", "热榜刷新任务已启动，约1分钟后完成（10个关键词），请稍后刷新页面查看");
+        return Result.success(resp);
     }
 }
