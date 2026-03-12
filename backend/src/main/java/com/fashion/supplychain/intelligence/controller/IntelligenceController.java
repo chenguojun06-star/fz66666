@@ -668,8 +668,9 @@ public class IntelligenceController {
         return Result.success(replenishmentAdvisorOrchestrator.suggest());
     }
 
-    /** 月度经营汇总：生产完成/次品返修率/各工厂产量/面辅料/成品进出/人工成本/利润（仅超管可访问） */
-    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    /** 月度经营汇总：生产完成/次品返修率/各工厂产量/面辅料/成品进出/人工成本/利润
+     * 访问规则：平台超管 | 租户主账号(isTenantOwner) | 被显授 INTELLIGENCE_MONTHLY_VIEW 权限的角色 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'INTELLIGENCE_MONTHLY_VIEW', 'ROLE_tenant_owner')")
     @GetMapping("/monthly-biz-summary")
     public Result<Map<String, Object>> monthlyBizSummary(
             @RequestParam(defaultValue = "0") int year,

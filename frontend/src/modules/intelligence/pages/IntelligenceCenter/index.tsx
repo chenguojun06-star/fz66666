@@ -80,7 +80,7 @@ const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isTenantOwner, user } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
@@ -1389,7 +1389,7 @@ const IntelligenceCenter: React.FC = () => {
         {/* ╔════════════════════════════════════════════╝
             ║ 月度经营汇总（仅超管可见）                  ║
             ╚════════════════════════════════════════════╝ */}
-        {isSuperAdmin && (
+        {(isSuperAdmin || isTenantOwner || (user?.permissions ?? []).includes('INTELLIGENCE_MONTHLY_VIEW')) && (
           <>
             <div style={{ padding: '0 24px 4px' }}>
               <div
