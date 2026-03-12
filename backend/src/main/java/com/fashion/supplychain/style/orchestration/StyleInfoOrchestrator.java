@@ -265,6 +265,27 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.resetSample(id, body);
     }
 
+    /**
+     * 直接删除款式（级联删除关联样板生产记录）。
+     * 若存在未删除的生产订单则拒绝删除。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean delete(Long id) {
+        long activeOrders = productionOrderService.count(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getStyleId, String.valueOf(id))
+                        .eq(ProductionOrder::getDeleteFlag, 0));
+        if (activeOrders > 0) {
+            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个生产订单，无法删除");
+        }
+        if (patternProductionService != null) {
+            patternProductionService.lambdaUpdate()
+                    .eq(com.fashion.supplychain.production.entity.PatternProduction::getStyleId, id)
+                    .remove();
+        }
+        return styleInfoService.deleteById(id);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public Object deleteWithApproval(Long id, String reason) {
         StyleInfo style = styleInfoService.getById(id);
