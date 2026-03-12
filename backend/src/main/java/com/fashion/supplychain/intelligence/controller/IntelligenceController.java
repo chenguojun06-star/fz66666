@@ -159,6 +159,9 @@ public class IntelligenceController {
     private ProfessionalReportOrchestrator professionalReportOrchestrator;
 
     @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
+
+    @Autowired
     private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
 
     @Autowired
@@ -507,6 +510,24 @@ public class IntelligenceController {
         });
         return emitter;
     }
+    /** 文件上传分析 — 解析 Excel/CSV 内容，返回 Markdown 表格供 AI 分析 */
+    @PostMapping(value = "/ai-advisor/upload-analyze", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<java.util.Map<String, String>> uploadAndAnalyze(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return Result.fail("请选择要上传的文件");
+        }
+        if (file.getSize() > 5 * 1024 * 1024L) {
+            return Result.fail("文件大小不能超过 5MB");
+        }
+        String parsedContent = fileAnalysisOrchestrator.analyzeFile(file);
+        String safeFilename = java.util.Objects.requireNonNullElse(file.getOriginalFilename(), "unknown");
+        return Result.success(java.util.Map.of(
+                "filename", safeFilename,
+                "parsedContent", parsedContent
+        ));
+    }
+
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
     @GetMapping("/supplier-scorecard")
     public Result<SupplierScorecardResponse> supplierScorecard() {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
@@ -8,7 +8,8 @@ import {
   DownloadOutlined,
   LoadingOutlined,
   AudioMutedOutlined,
-  ClearOutlined
+  ClearOutlined,
+  PaperClipOutlined
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
@@ -79,6 +80,54 @@ function escHtml(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ── 富媒体结构类型 ─────────────────────────────────────────────────────────
+
+interface ChartSpec {
+  type: 'bar' | 'line' | 'pie' | 'progress';
+  title: string;
+  xAxis?: string[];
+  series?: Array<{ name: string; data?: number[]; value?: number }>;
+  value?: number;
+  colors?: string[];
+}
+
+interface ActionCard {
+  title: string;
+  desc?: string;
+  orderId?: string;
+  actions: Array<{
+    label: string;
+    type: 'mark_urgent' | 'remove_urgent' | 'navigate' | 'send_notification';
+    path?: string;
+  }>;
+}
+
+/** 从 AI 原始回复中提取 CHART/ACTIONS 标记块，返回干净展示文本 + 结构化数据 */
+function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[] } {
+  const charts: ChartSpec[] = [];
+  const actionCards: ActionCard[] = [];
+  const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  let m: RegExpExecArray | null;
+  while ((m = chartRe.exec(rawText)) !== null) {
+    try { charts.push(JSON.parse(m[1].trim())); } catch { /* skip */ }
+  }
+  const actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
+  while ((m = actionsRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1].trim()) as unknown;
+      if (Array.isArray(parsed)) actionCards.push(...(parsed as ActionCard[]));
+    } catch { /* skip */ }
+  }
+  const displayText = rawText
+    .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
+    .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
+    .trim();
+  return { displayText, charts, actionCards };
+}
+
+// ── 模块级 ECharts 懒加载（必须在组件外定义，不能在 render 函数中调用 lazy）
+const ReactEChartsLazy = lazy(() => import('echarts-for-react'));
+
 interface Message {
   id: string;
   role: 'ai' | 'user';
@@ -86,6 +135,8 @@ interface Message {
   intent?: string;
   hasSpeech?: boolean;
   reportType?: 'daily' | 'weekly' | 'monthly';
+  charts?: ChartSpec[];
+  actionCards?: ActionCard[];
 }
 
 const INITIAL_MSG: Message = {
@@ -228,6 +279,67 @@ const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading 
   );
 };
 
+// ── 迷你图表组件 ─────────────────────────────────────────────────────────────
+const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
+  if (chart.type === 'progress') {
+    return (
+      <div className={styles.miniProgressChart}>
+        <div className={styles.miniChartTitle}>{chart.title}</div>
+        <div className={styles.progressBarWrap}>
+          <div className={styles.progressBarFill} style={{ width: `${Math.min(chart.value ?? 0, 100)}%` }} />
+        </div>
+        <div className={styles.progressLabel}>{chart.value ?? 0}%</div>
+      </div>
+    );
+  }
+  let option: Record<string, unknown>;
+  if (chart.type === 'pie') {
+    option = {
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      series: [{ type: 'pie', radius: ['40%', '70%'], data: chart.series, label: { show: false } }],
+    };
+  } else {
+    option = {
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 10 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+      grid: { top: 30, right: 10, bottom: 30, left: 40 },
+      color: chart.colors ?? ['#1890ff', '#52c41a', '#fa8c16'],
+      series: chart.series?.map(s => ({ name: s.name, type: chart.type === 'line' ? 'line' : 'bar', data: s.data })),
+    };
+  }
+  return (
+    <div className={styles.miniEChart}>
+      <div className={styles.miniChartTitle}>{chart.title}</div>
+      <Suspense fallback={<div className={styles.chartLoading}>图表加载中…</div>}>
+        <ReactEChartsLazy option={option} style={{ height: '140px' }} opts={{ renderer: 'svg' }} />
+      </Suspense>
+    </div>
+  );
+};
+
+// ── 任务流操作卡片组件 ─────────────────────────────────────────────────────────
+const ActionCardWidget: React.FC<{
+  card: ActionCard;
+  onAction: (type: string, path?: string, orderId?: string) => void;
+}> = ({ card, onAction }) => (
+  <div className={styles.actionCard}>
+    <div className={styles.actionCardTitle}>⚡ {card.title}</div>
+    {card.desc && <div className={styles.actionCardDesc}>{card.desc}</div>}
+    <div className={styles.actionCardBtns}>
+      {card.actions.map((action, i) => (
+        <button
+          key={i}
+          className={`${styles.actionBtn} ${action.type === 'mark_urgent' ? styles.actionBtnDanger : styles.actionBtnPrimary}`}
+          onClick={() => onAction(action.type, action.path, card.orderId)}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
 const GlobalAiAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [_mood, setMood] = useState<CloudMood>('normal');
@@ -238,6 +350,9 @@ const GlobalAiAssistant: React.FC = () => {
   const [hasFetchedMood, setHasFetchedMood] = useState(false);
   const [pendingItems, setPendingItems] = useState<Array<{orderNo: string; styleNo: string; factoryName: string; progress: number; daysLeft: number}>>([]);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     if (hasFetchedMood) return;
@@ -406,9 +521,11 @@ const GlobalAiAssistant: React.FC = () => {
             toolStatus = `${ok} ${event.data.tool || '工具'}调用完成`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'answer') {
-            accumulatedText = String(event.data.content || '');
+            const rawContent = String(event.data.content || '');
+            const { displayText, charts, actionCards } = parseAiResponse(rawContent);
+            accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards }
               : m));
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
@@ -465,9 +582,39 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif'];
+    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+    if (!allowed.includes(ext)) { alert('只支持 Excel（xlsx/xls）、CSV 和图片文件'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('文件大小不能超过 5MB'); return; }
+    setAttachedFile(file);
+    e.target.value = '';
+  };
+
+  const handleSendWithAttachment = async () => {
+    if (!attachedFile) { void handleSend(); return; }
+    const question = inputValue.trim();
+    setUploadingFile(true);
+    const userMsgText = question ? `📎 ${attachedFile.name}\n${question}` : `📎 ${attachedFile.name}`;
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user' as const, text: userMsgText }]);
+    setInputValue('');
+    const fileToUpload = attachedFile;
+    setAttachedFile(null);
+    try {
+      const result = await intelligenceApi.uploadAnalyze(fileToUpload);
+      setUploadingFile(false);
+      await handleSend(`${question || '请帮我分析这个文件'}\n\n${result.parsedContent}`);
+    } catch {
+      setUploadingFile(false);
+      await handleSend(question || '文件上传失败，请直接描述需求');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSend();
+      if (attachedFile) { void handleSendWithAttachment(); } else { void handleSend(); }
     }
   };
 
@@ -659,6 +806,28 @@ const GlobalAiAssistant: React.FC = () => {
                       </button>
                     </div>
                   )}
+                  {/* 内嵌迷你图表 */}
+                  {msg.role === 'ai' && !!msg.charts?.length && (
+                    <div className={styles.chartsWrapper}>
+                      {msg.charts.map((chart, i) => <MiniChartWidget key={i} chart={chart} />)}
+                    </div>
+                  )}
+                  {/* 任务流操作卡片 */}
+                  {msg.role === 'ai' && !!msg.actionCards?.length && (
+                    <div className={styles.actionCardsWrapper}>
+                      {msg.actionCards.map((card, i) => (
+                        <ActionCardWidget
+                          key={i}
+                          card={card}
+                          onAction={(type, path, orderId) => {
+                            if (type === 'navigate' && path) { setIsOpen(false); navigate(path); }
+                            else if (type === 'mark_urgent' && orderId) { void handleSend(`把订单 ${orderId} 标记为紧急`); }
+                            else { void handleSend(`执行操作：${card.title}`); }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* 语音播报小按钮(仅AI部分) */}
@@ -690,22 +859,45 @@ const GlobalAiAssistant: React.FC = () => {
           {/* Input Area */}
           <div className={styles.inputArea}>
             <input
-              ref={inputRef}
-              type="text"
-              className={styles.chatInput}
-              placeholder="直接输入问题，例如：先看今天最该处理什么"
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isTyping}
+              ref={fileInputRef}
+              type="file"
+              style={{ display: 'none' }}
+              accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif"
+              onChange={handleFileSelect}
             />
-            <button
-              className={styles.sendBtn}
-              onClick={() => handleSend()}
-              disabled={!inputValue.trim() || isTyping}
-            >
-              <SendOutlined />
-            </button>
+            {attachedFile && (
+              <div className={styles.attachChip}>
+                <span>📎 {attachedFile.name}</span>
+                <button className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
+              </div>
+            )}
+            <div className={styles.inputRow}>
+              <button
+                className={styles.uploadBtn}
+                title="上传文件（Excel/CSV/图片）"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isTyping || uploadingFile}
+              >
+                <PaperClipOutlined />
+              </button>
+              <input
+                ref={inputRef}
+                type="text"
+                className={styles.chatInput}
+                placeholder="输入问题，或上传 Excel / CSV 文件分析"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isTyping || uploadingFile}
+              />
+              <button
+                className={styles.sendBtn}
+                onClick={() => attachedFile ? void handleSendWithAttachment() : void handleSend()}
+                disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}
+              >
+                {uploadingFile ? <LoadingOutlined /> : <SendOutlined />}
+              </button>
+            </div>
           </div>
         </div>
       )}

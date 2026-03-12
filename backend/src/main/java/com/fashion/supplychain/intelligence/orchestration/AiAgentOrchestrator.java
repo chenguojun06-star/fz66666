@@ -304,7 +304,17 @@ public class AiAgentOrchestrator {
                 "- 每次操作后告知用户操作结果\n\n" +
                 "【强制格式】\n" +
                 "回答末尾必须换行并推荐 3 个相关追问，格式：\n" +
-                "【推荐追问】：问题1 | 问题2 | 问题3";
+                "【推荐追问】：问题1 | 问题2 | 问题3\n\n" +
+                "【富媒体输出 — 仅在有真实数据时选填，置于推荐追问之前】\n" +
+                "A) 若回答中含有可视化数据（排名/趋势/分布/占比/进度），插入图表：\n" +
+                "【CHART】{\"type\":\"bar\",\"title\":\"工厂在制订单量\",\"xAxis\":[\"工厂A\",\"工厂B\"],\"series\":[{\"name\":\"订单数\",\"data\":[12,8]}],\"colors\":[\"#1890ff\"]}【/CHART】\n" +
+                "type: bar(柱状)/line(折线)/pie(饼图)/progress(单进度条)\n" +
+                "pie格式: {\"type\":\"pie\",\"title\":\"xxx\",\"series\":[{\"name\":\"A\",\"value\":30}]}\n" +
+                "progress格式: {\"type\":\"progress\",\"title\":\"整体完成率\",\"value\":67}\n" +
+                "B) 若回答中含有可立即执行的操作且有真实订单号，插入操作卡片：\n" +
+                "【ACTIONS】[{\"title\":\"标题\",\"desc\":\"描述\",\"orderId\":\"真实ID\",\"actions\":[{\"label\":\"标记紧急\",\"type\":\"mark_urgent\"},{\"label\":\"查看详情\",\"type\":\"navigate\",\"path\":\"/production/orders\"}]}]【/ACTIONS】\n" +
+                "action type: mark_urgent/remove_urgent/navigate/send_notification\n" +
+                "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。";
     }
 
     private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {

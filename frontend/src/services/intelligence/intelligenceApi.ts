@@ -1284,4 +1284,21 @@ export const intelligenceApi = {
   /** B8 - 补料采购建议 */
   getReplenishmentSuggestion: () =>
     api.get<{ code: number; data: ReplenishmentAdvisorResponse }>('/intelligence/replenishment/suggest'),
+
+  // ── 文件上传分析 ──
+
+  /** 上传 Excel/CSV/图片，解析为 Markdown 文本供 AI 分析 */
+  uploadAnalyze: async (file: File): Promise<{ filename: string; parsedContent: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('authToken') || '';
+    const res = await fetch('/api/intelligence/ai-advisor/upload-analyze', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const json = await res.json() as { code: number; data: { filename: string; parsedContent: string }; message?: string };
+    if (json.code !== 200) throw new Error(json.message ?? '文件分析失败');
+    return json.data;
+  },
 };
