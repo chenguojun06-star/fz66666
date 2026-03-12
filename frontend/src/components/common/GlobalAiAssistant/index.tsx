@@ -91,14 +91,22 @@ interface Message {
 const INITIAL_MSG: Message = {
   id: 'init-msg',
   role: 'ai',
-  text: 'Hi 👋 欢迎使用云裳智链！我是您的专属管家「小云」☁️。\n您可以随时问我：',
+  text: '您好，我是小云。你可以直接让我基于实时数据说清楚：现在最该先处理什么、先做哪一步。',
 };
 
 const SUGGESTIONS = [
-  '📄 智能日报', '📅 智能周报', '📊 智能月报',
-  '🚨 逾期风险及解决方案', '📉 效率低谷与分析', '📦 面料库存缺口速查',
-  '🔍 成本异常追踪分析', '🤖 智能派工推荐', '🏭 工厂综合表现'
+  '📄 先看今天运营日报', '📅 帮我拉本周重点', '📊 看本月风险与结果',
+  '📌 今天先处理哪几件', '📈 本月哪里最容易出问题',
+  '🚨 逾期单先救哪几张', '📉 哪个工厂正在拖节奏', '📦 哪些物料会卡交付',
+  '🔍 哪些订单成本异常', '🤖 谁该先跟进', '🏭 工厂表现怎么排',
+  '📚 FOB是什么意思', '🧮 帮我算款式用料成本', '📋 帮我创建一个生产订单',
+  '❓ 怎么操作工资结算', '🏷️ 菲号是什么'
 ];
+
+const choose = (seed: number, variants: string[]) => {
+  if (!variants.length) return '';
+  return variants[Math.abs(seed) % variants.length];
+};
 
 type CloudMood = 'normal' | 'curious' | 'urgent' | 'error' | 'success';
 
@@ -243,6 +251,7 @@ const GlobalAiAssistant: React.FC = () => {
           const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, pendingItems: apiPendingItems = [], topPriorityOrder } = actualData;
           let newMood: CloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
+          const seed = overdueOrderCount * 17 + highRiskOrderCount * 11 + todayScanCount;
 
           // 存储待办详情供 UI 展示
           if (apiPendingItems && apiPendingItems.length > 0) {
@@ -254,25 +263,41 @@ const GlobalAiAssistant: React.FC = () => {
           if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
             newMood = 'urgent';
             const topHint = topPriorityOrder ? `最紧急：${topPriorityOrder.orderNo}（${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%）` : '';
-            greeting = `Hi 👋 紧急告警！发现 ${overdueOrderCount + highRiskOrderCount} 个待办异常！${topHint}\n小云有点着急，建议优先处理哦！`;
+            greeting = choose(seed, [
+              `现在有 ${overdueOrderCount + highRiskOrderCount} 个高优先级风险。${topHint}\n我可以先按影响面帮你排处理顺序。`,
+              `当前高优先级风险共 ${overdueOrderCount + highRiskOrderCount} 个。${topHint}\n建议先收口最急的几单，我可以直接给出处理次序。`,
+              `风险已经堆到 ${overdueOrderCount + highRiskOrderCount} 项。${topHint}\n你可以让我先把“先做什么”排出来。`,
+            ]);
           } else if (overdueOrderCount > 0 || highRiskOrderCount > 0) {
             newMood = 'curious';
             const topHint = topPriorityOrder ? `\n📌 ${topPriorityOrder.orderNo}（${topPriorityOrder.styleNo || ''}）${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '还剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%` : '';
-            greeting = `Hi 👋 小云提醒您，有 ${overdueOrderCount + highRiskOrderCount} 个待办需要关注：${topHint}`;
+            greeting = choose(seed + 3, [
+              `当前有 ${overdueOrderCount + highRiskOrderCount} 个待关注事项。${topHint}\n我可以继续往下拆：为什么慢、先动哪里。`,
+              `现在有 ${overdueOrderCount + highRiskOrderCount} 项需要盯。${topHint}\n你可以让我直接给出优先处理顺序。`,
+              `这会儿要关注的事项有 ${overdueOrderCount + highRiskOrderCount} 个。${topHint}\n我可以帮你把根因和动作排清楚。`,
+            ]);
           } else if (todayScanCount > 100) {
             newMood = 'success';
-            greeting = `Hi 👋 太棒啦！今天货期大盘非常健康，大家干劲满满呢！小云给您比心🤩 需要看点什么数据吗：`;
+            greeting = choose(seed + 5, [
+              '今天整体节奏比较稳，我可以继续帮你盯效率、风险和成本波动。',
+              '当前运行状态不错，你可以让我再做一轮隐患巡检。',
+              '今天盘面偏稳，接下来可以重点看效率和成本有没有暗点。',
+            ]);
           } else {
             newMood = 'normal';
-            greeting = `Hi 👋 欢迎使用云裳智链！今天货期状态平稳，一切顺利哦！\n您可以随时问我：`;
+            greeting = choose(seed + 7, [
+              '您好，我是小云。你可以直接问我今天先盯哪几单、为什么、先做什么。',
+              '您好，我是小云。你可以让我先把今天的重点风险和处理顺序排出来。',
+              '您好，我是小云。你可以直接让我看风险、瓶颈和交付影响。',
+            ]);
             // 时间彩蛋
             const hour = new Date().getHours();
             if (hour >= 0 && hour < 6) {
-               greeting = `夜深了，系统仍在运转，小云陪您一起加班 🌙... 辛苦啦，需要帮您查什么吗？`;
+               greeting = '当前仍有业务在跑，我可以先把夜间异常和明早优先事项排出来。';
             } else if (hour >= 12 && hour <= 14) {
-               greeting = `中午好 ☀️ 吃过午饭了吗？小云刚刚伸了个懒腰，随时准备为您服务！`;
+               greeting = '现在适合快速过一遍半天经营情况，我可以先总结风险和下午动作。';
             } else if (hour >= 19) {
-               greeting = `晚上好！今天的工作马上要收尾了，小云为您站好最后一班岗 🚀`;
+               greeting = '现在适合收口今天的问题，我可以整理今晚要盯的订单和明天动作。';
             }
           }
           setMood(newMood);
@@ -281,7 +306,7 @@ const GlobalAiAssistant: React.FC = () => {
       } catch (err) {
         console.error('Failed to fetch system mood', err);
         setMood('normal');
-        setMessages([{ ...INITIAL_MSG, text: `Hi 👋 小云为您服务！网络好像开了个小差，但我依然在哦！\n您可以随时问我：` }]);
+        setMessages([{ ...INITIAL_MSG, text: '实时数据暂时没取到，但您仍可以继续提问，我会尽量基于现有上下文协助判断。' }]);
       }
     };
     fetchStatus();
@@ -386,7 +411,7 @@ const GlobalAiAssistant: React.FC = () => {
               ? { ...m, text: accumulatedText, reportType: reportTypeToDownload }
               : m));
           } else if (event.type === 'error') {
-            accumulatedText = String(event.data.message || '小云遇到了一点问题 🌧️');
+            accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
           }
         },
@@ -411,7 +436,7 @@ const GlobalAiAssistant: React.FC = () => {
             const res = await intelligenceApi.aiAdvisorChat(text);
             // @ts-ignore
             const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
-            const answer = resultData?.answer || '抱歉呀😜，小云还在思考中…';
+            const answer = resultData?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) {
@@ -422,7 +447,7 @@ const GlobalAiAssistant: React.FC = () => {
             speak(answer);
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '网络似乎有点小波动，小云暂时连不到数据中心了 🌧️ 请稍后再试！' }]);
+            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
           } finally {
             setIsTyping(false);
           }
@@ -434,7 +459,7 @@ const GlobalAiAssistant: React.FC = () => {
       setMessages(prev => [...prev, {
         id: aiMsgId,
         role: 'ai',
-        text: '网络似乎有点小波动，小云暂时连不到数据中心了 🌧️ 请稍后再试！'
+        text: '当前连不到数据服务，请稍后再试。'
       }]);
       setIsTyping(false);
     }
@@ -499,7 +524,7 @@ const GlobalAiAssistant: React.FC = () => {
             </div>
             <div className={styles.headerText}>
               <div className={styles.headerTitle}>小云 智能助理</div>
-              <div className={styles.headerSubtitle}>云裳智链 · 实时数据支持</div>
+              <div className={styles.headerSubtitle}>云裳智链 · 实时判断与执行协作</div>
             </div>
             <div className={styles.headerActions}>
               {isMuted ? (
@@ -668,7 +693,7 @@ const GlobalAiAssistant: React.FC = () => {
               ref={inputRef}
               type="text"
               className={styles.chatInput}
-              placeholder="想问什么？回车发送..."
+              placeholder="直接输入问题，例如：先看今天最该处理什么"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
