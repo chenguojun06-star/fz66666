@@ -133,7 +133,7 @@
 
 /* 文本/链接按钮尺寸统一由基础覆盖 */
 
-/* 危险按钮 */
+/* 危险按钮（全局：实心红） */
 .ant-btn-dangerous.ant-btn-primary {
   background: #ef4444 !important;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
@@ -142,6 +142,35 @@
 .ant-btn-dangerous.ant-btn-primary:hover {
   background: #dc2626 !important;
   box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* modal.confirm 确认框底部：危险确认按钮强制描边红（非实心）
+   背景：antd 6.1 中 okButtonProps: { danger: true, type: 'default' } 在部分场景
+   下 type 不能完全覆盖内部 okType: 'primary'，导致按钮仍渲染 ant-btn-primary
+   + ant-btn-dangerous 类，触发上方全局规则变为实心红。
+   此规则仅作用于 .ant-modal-confirm-btns 容器，不影响其他场景。 */
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-primary,
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-variant-solid {
+  background: transparent !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  box-shadow: none !important;
+}
+
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-primary:hover,
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-variant-solid:hover {
+  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: #dc2626 !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+}
+
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-primary:active,
+.ant-modal-confirm-btns .ant-btn-dangerous.ant-btn-variant-solid:active {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #b91c1c !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
 }
 
 /* 图标按钮 */

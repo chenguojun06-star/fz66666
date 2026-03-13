@@ -122,7 +122,7 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
       content: <ModalContent data={data} isHigh={isHigh} />,
       okText: isHigh ? '忽略风险，强制提交' : '确认继续',
       cancelText: '返回修改',
-      okButtonProps: { danger: isHigh },
+      okButtonProps: { danger: isHigh, ...(isHigh ? { type: 'default' as const } : {}) },
       cancelButtonProps: { type: isHigh ? 'primary' : 'default' },
       maskClosable: false,
       onOk() {
