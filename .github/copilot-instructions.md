@@ -737,17 +737,20 @@ public class ProductionOrderService {
 
 ### 弹窗三级尺寸体系（禁止自定义）
 ```tsx
-// ✅ 大窗口（60vw × 60vh）：复杂表单、多 Tab
-<ResizableModal defaultWidth="60vw" defaultHeight="60vh">
+// ✅ 大窗口（60vw）：复杂表单、多 Tab
+// 60vw弹窗强制传 initialHeight！用视口82%自适应所有屏幕分辨率
+<ResizableModal width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)}>
 
-// ✅ 中窗口（40vw × 50vh）：普通表单
-<ResizableModal defaultWidth="40vw" defaultHeight="50vh">
+// ✅ 中窗口（40vw）：普通表单（高度使用默认值 min(720px,viewport×80%) 即可）
+<ResizableModal width="40vw">
 
-// ✅ 小窗口（30vw × 40vh）：确认对话框
-<ResizableModal defaultWidth="30vw" defaultHeight="40vh">
+// ✅ 小窗口（30vw）：确认对话框（高度使用默认值即可）
+<ResizableModal width="30vw">
 
 // ❌ 错误：自定义尺寸会破坏设计一致性
-<ResizableModal defaultWidth="55vw" defaultHeight="65vh">
+<ResizableModal width="55vw">
+// ❌ 错误：defaultWidth / defaultHeight 这两个prop根本不存在！
+<ResizableModal defaultWidth="60vw" defaultHeight="60vh">
 ```
 
 **尺寸选择指南**：
