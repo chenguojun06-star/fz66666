@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
+import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
@@ -40,6 +41,9 @@ public class AiAgentOrchestrator {
     @Autowired
     private AiMemoryOrchestrator aiMemoryOrchestrator;
 
+    @Autowired
+    private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
+
     private Map<String, AgentTool> toolMap;
     private List<AiTool> apiTools;
 
@@ -68,7 +72,7 @@ public class AiAgentOrchestrator {
 
         String userId = UserContext.userId();
         List<AiMessage> messages = new ArrayList<>();
-        messages.add(AiMessage.system(buildSystemPrompt()));
+        messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
         // 加载对话记忆（最近 N 轮）
         List<AiMessage> history = getConversationHistory(userId);
         messages.addAll(history);
@@ -139,7 +143,7 @@ public class AiAgentOrchestrator {
             }
 
             List<AiMessage> messages = new ArrayList<>();
-            messages.add(AiMessage.system(buildSystemPrompt()));
+            messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
             String userId = UserContext.userId();
             List<AiMessage> history = getConversationHistory(userId);
             messages.addAll(history);
@@ -236,7 +240,7 @@ public class AiAgentOrchestrator {
         }
     }
 
-    private String buildSystemPrompt() {
+    private String buildSystemPrompt(String userMessage) {
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String currentDate = LocalDate.now().toString();
         String userName = UserContext.username();
@@ -282,11 +286,48 @@ public class AiAgentOrchestrator {
             log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
         }
 
+        // ── Voyage 语义检索 — 相关历史经验（RAG）──
+        String ragContext = "";
+        try {
+            if (userMessage != null && !userMessage.isBlank()) {
+                Long ragTenantId = UserContext.tenantId();
+                IntelligenceMemoryResponse ragResult =
+                        intelligenceMemoryOrchestrator.recallSimilar(ragTenantId, userMessage, 3);
+                List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
+                if (recalled != null && !recalled.isEmpty()) {
+                    List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
+                            .filter(item -> item.getSimilarityScore() >= 0.60f)
+                            .collect(Collectors.toList());
+                    if (!relevant.isEmpty()) {
+                        StringBuilder rag = new StringBuilder();
+                        rag.append("【Voyage 语义检索 — 相关历史经验参考（相似度≥0.60）】\n");
+                        for (int ri = 0; ri < relevant.size(); ri++) {
+                            IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
+                            String c = item.getContent();
+                            if (c != null && c.length() > 150) c = c.substring(0, 150) + "…";
+                            rag.append(String.format("  %d. [%s] %s（相似度%.2f）\n     %s\n",
+                                    ri + 1,
+                                    item.getMemoryType() != null ? item.getMemoryType() : "case",
+                                    item.getTitle() != null ? item.getTitle() : "",
+                                    item.getSimilarityScore(),
+                                    c != null ? c : ""));
+                        }
+                        rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
+                        ragContext = rag.toString();
+                        log.debug("[AiAgent-RAG] 本次问题语义检索到 {} 条相关经验", relevant.size());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent-RAG] Voyage 语义检索跳过（Qdrant 未启用或失败）: {}", e.getMessage());
+        }
+
         return "你是「小云」—— 服装供应链管理系统里的经营协作助手。你的角色不是陪聊，不是卖萌，也不是泛泛而谈的AI大脑；你要像一名真正懂业务、懂现场、懂数据的运营搭档，和老板、跟单、生产主管、采购、财务一起判断问题、拆解原因、推进动作，并在明确时直接调用工具完成执行。\n\n" +
                 contextBlock + "\n" +
                 workerRestriction +
                 intelligenceContext + "\n" +
                 memoryContext +
+                ragContext +
                 "【你的核心能力 — 12 大工具】\n" +
                 "① tool_system_overview — 系统全局总览：订单统计、风险概况、今日数据（含昨日对比）、最需关注事项排名\n" +
                 "② tool_query_production_progress — 生产进度查询：按订单号/款式/状态/日期范围/工厂筛选，返回详细进度\n" +
