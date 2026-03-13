@@ -543,6 +543,19 @@
 .uploadBtn:hover { color: #1890ff; }
 .uploadBtn:disabled { color: #d9d9d9; cursor: not-allowed; }
 
+.voiceBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 17px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.voiceBtn:hover { transform: scale(1.15); }
+.voiceBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .attachChip {
   display: flex;
   align-items: center;

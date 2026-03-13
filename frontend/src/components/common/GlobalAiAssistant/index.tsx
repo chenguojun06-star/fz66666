@@ -448,6 +448,7 @@ const GlobalAiAssistant: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
     if (hasFetchedMood) return;
@@ -686,6 +687,52 @@ const GlobalAiAssistant: React.FC = () => {
     if (file.size > 5 * 1024 * 1024) { alert('文件大小不能超过 5MB'); return; }
     setAttachedFile(file);
     e.target.value = '';
+  };
+
+  /** Stage10 — 语音录入：WebSpeechAPI 识别 → POST /intelligence/voice/command → 显示回答并朗读 */
+  const handleVoiceInput = () => {
+    // @ts-ignore – SpeechRecognition 在部分 TS 版本下需要忽略
+    const SR = (window as unknown as Record<string, unknown>).SpeechRecognition
+             // @ts-ignore
+             || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+    if (!SR) { void handleSend('语音功能暂不支持该浏览器，请改用 Chrome。'); return; }
+    if (isRecording) return;
+    // @ts-ignore
+    const recognition = new SR() as { lang: string; interimResults: boolean; maxAlternatives: number; start: () => void; onresult: ((e: Event) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; };
+    recognition.lang = 'zh-CN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setIsRecording(true);
+    recognition.start();
+    recognition.onresult = async (e: Event) => {
+      // @ts-ignore
+      const text = (e as { results: { [key: number]: { [key: number]: { transcript: string } } } }).results[0][0].transcript.trim();
+      setIsRecording(false);
+      if (!text) return;
+      setInputValue(text);
+      try {
+        // @ts-ignore
+        const res = await api.post('/intelligence/voice/command', { transcribedText: text, mode: 'QUERY' });
+        // @ts-ignore
+        const data = (res as Record<string, unknown>)?.data ?? res;
+        const answer: string = ((data as Record<string, unknown>)?.responseText ?? (data as Record<string, unknown>)?.speakableText ?? '') as string;
+        if (answer) {
+          setMessages(prev => [
+            ...prev,
+            { id: `voice-u-${Date.now()}`, role: 'user' as const, text },
+            { id: `voice-a-${Date.now()}`, role: 'ai' as const, text: answer },
+          ]);
+          setInputValue('');
+          speak(answer);
+        } else {
+          void handleSend(text);
+        }
+      } catch {
+        void handleSend(text);
+      }
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
   };
 
   const handleSendWithAttachment = async () => {
@@ -986,6 +1033,15 @@ const GlobalAiAssistant: React.FC = () => {
                 onKeyDown={handleKeyDown}
                 disabled={isTyping || uploadingFile}
               />
+              <button
+                className={styles.voiceBtn}
+                title="语音输入（点击后说话）"
+                onClick={handleVoiceInput}
+                disabled={isTyping || isRecording}
+                style={{ color: isRecording ? '#f5222d' : undefined }}
+              >
+                {isRecording ? <LoadingOutlined spin /> : '🎤'}
+              </button>
               <button
                 className={styles.sendBtn}
                 onClick={() => attachedFile ? void handleSendWithAttachment() : void handleSend()}

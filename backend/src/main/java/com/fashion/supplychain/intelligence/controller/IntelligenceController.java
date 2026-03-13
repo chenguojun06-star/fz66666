@@ -709,4 +709,42 @@ public class IntelligenceController {
                 com.fashion.supplychain.common.UserContext.tenantId());
         return Result.success(count);
     }
+
+    // ── 第八批：10阶段AI路线图新能力 ──
+
+    @Autowired private ForecastEngineOrchestrator forecastEngineOrchestrator;
+    @Autowired private WhatIfSimulationOrchestrator whatIfSimulationOrchestrator;
+    @Autowired private VisualAIOrchestrator visualAIOrchestrator;
+    @Autowired private CrossTenantBenchmarkOrchestrator crossTenantBenchmarkOrchestrator;
+    @Autowired private VoiceCommandOrchestrator voiceCommandOrchestrator;
+
+    /** Stage5 — 成本/需求/用量预测（POST body: forecastType/subjectId/horizon） */
+    @PostMapping("/forecast")
+    public Result<ForecastEngineResponse> forecast(@RequestBody ForecastEngineRequest req) {
+        return Result.success(forecastEngineOrchestrator.forecast(req));
+    }
+
+    /** Stage6 — What-If 推演沙盘（多场景对比） */
+    @PostMapping("/whatif/simulate")
+    public Result<WhatIfResponse> whatIfSimulate(@RequestBody WhatIfRequest req) {
+        return Result.success(whatIfSimulationOrchestrator.simulate(req));
+    }
+
+    /** Stage7 — 视觉AI图像分析（瑕疵检测/款式识别/色差检验） */
+    @PostMapping("/visual/analyze")
+    public Result<VisualAIResponse> visualAnalyze(@RequestBody VisualAIRequest req) {
+        return Result.success(visualAIOrchestrator.analyze(req));
+    }
+
+    /** Stage8 — 跨租户基准对标（当日快照，隐私保护聚合） */
+    @GetMapping("/benchmark/cross-tenant")
+    public Result<CrossTenantBenchmarkResponse> crossTenantBenchmark() {
+        return Result.success(crossTenantBenchmarkOrchestrator.getBenchmark());
+    }
+
+    /** Stage10 — 语音多模态指令（transcribedText → NlQuery / ExecutionEngine） */
+    @PostMapping("/voice/command")
+    public Result<VoiceCommandResponse> voiceCommand(@RequestBody VoiceCommandRequest req) {
+        return Result.success(voiceCommandOrchestrator.processVoice(req));
+    }
 }
