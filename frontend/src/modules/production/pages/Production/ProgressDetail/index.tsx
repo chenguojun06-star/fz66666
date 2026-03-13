@@ -1088,8 +1088,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.parentOrgUnitId || ''}
-                    onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value || undefined, page: 1 }))}
+                    value={queryParams.orgUnitId ? `dept:${queryParams.orgUnitId}` : (queryParams.parentOrgUnitId || '')}
+                    onChange={(value) => {
+                      if (!value) {
+                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
+                      } else if (value.startsWith('dept:')) {
+                        setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
+                      } else {
+                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, orgUnitId: undefined, page: 1 }));
+                      }
+                    }}
                     placeholder="归属部门"
                     allowClear
                     showSearch
@@ -1389,8 +1397,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.parentOrgUnitId || ''}
-                    onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value || undefined, page: 1 }))}
+                    value={queryParams.orgUnitId ? `dept:${queryParams.orgUnitId}` : (queryParams.parentOrgUnitId || '')}
+                    onChange={(value) => {
+                      if (!value) {
+                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
+                      } else if (value.startsWith('dept:')) {
+                        setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
+                      } else {
+                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, orgUnitId: undefined, page: 1 }));
+                      }
+                    }}
                     placeholder="归属部门"
                     allowClear
                     showSearch

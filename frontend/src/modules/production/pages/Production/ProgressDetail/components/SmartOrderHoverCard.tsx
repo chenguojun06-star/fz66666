@@ -375,6 +375,18 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
+      {/* 次品预警 - 有次品才显示 */}
+      {(order.unqualifiedQuantity ?? 0) > 0 && (
+        <div style={{
+          padding: '3px 10px', background: '#fff2f0', borderRadius: 6,
+          marginBottom: 8, fontSize: 11, color: '#ff4d4f', fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          <span>🔴</span>
+          <span>次品 {order.unqualifiedQuantity} 件，请核查质检记录</span>
+        </div>
+      )}
+
       {/* 今日任务标签 */}
       {todayTask && (
         <div style={{

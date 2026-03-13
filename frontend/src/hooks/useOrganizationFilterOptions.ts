@@ -29,15 +29,27 @@ export const useOrganizationFilterOptions = () => {
   }, []);
 
   const departmentOptions = useMemo(() => {
+    const factories = departments
+      .filter((item) => item.nodeType === 'FACTORY')
+      .map((item) => ({
+        label: item.unitName || item.nodeName || '',
+        value: String(item.id || ''),
+      }))
+      .filter((item) => item.value);
+
+    // 内部组别（DEPARTMENT），value 前缀 "dept:" 用于区分过滤参数
+    const depts = departments
+      .filter((item) => item.nodeType === 'DEPARTMENT')
+      .map((item) => ({
+        label: `  └ ${item.unitName || item.nodeName || ''}`,
+        value: `dept:${item.id || ''}`,
+      }))
+      .filter((item) => item.value !== 'dept:');
+
     return [
       { label: '全部生产方', value: '' },
-      ...departments
-        .filter((item) => item.nodeType === 'FACTORY')
-        .map((item) => ({
-          label: item.unitName || item.nodeName,
-          value: String(item.id || ''),
-        }))
-        .filter((item) => item.value),
+      ...factories,
+      ...depts,
     ];
   }, [departments]);
 
