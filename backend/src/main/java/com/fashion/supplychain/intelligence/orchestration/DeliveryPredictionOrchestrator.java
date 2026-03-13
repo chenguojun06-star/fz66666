@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -135,22 +136,33 @@ public class DeliveryPredictionOrchestrator {
             }
         }
 
+        // ── P80 历史百分位混合 ──
+        long blendedMlDays = correctedMlDays;
+        String p80Hint = "";
+        OptionalDouble p80Opt = calcP80Days(UserContext.tenantId(), order.getFactoryName());
+        if (p80Opt.isPresent()) {
+            long p80Days = Math.round(p80Opt.getAsDouble());
+            blendedMlDays = Math.max(1, Math.round(correctedMlDays * 0.6 + p80Days * 0.4));
+            p80Hint = String.format("；P80历史%d天（混合后%d天）", p80Days, blendedMlDays);
+        }
         resp.setOptimisticDate(today.plusDays(optDays).format(DATE_FMT));
-        resp.setMostLikelyDate(today.plusDays(correctedMlDays).format(DATE_FMT));
+        resp.setMostLikelyDate(today.plusDays(blendedMlDays).format(DATE_FMT));
         resp.setPessimisticDate(today.plusDays(pesDays).format(DATE_FMT));
 
         // 是否延期
         if (order.getPlannedEndDate() != null) {
-            resp.setLikelyDelayed(today.plusDays(correctedMlDays).isAfter(
+            resp.setLikelyDelayed(today.plusDays(blendedMlDays).isAfter(
                     order.getPlannedEndDate().toLocalDate()));
         }
 
-        // 置信度（数据量越多越高）
-        int confidence = Math.min(90, 40 + (int) velocity);
+        // 置信度（P80样本越多精度越高）
+        int confidence = p80Opt.isPresent()
+                ? Math.min(85, 45 + (int) velocity)
+                : Math.min(90, 40 + (int) velocity);
         resp.setConfidence(confidence);
         resp.setRationale(String.format(
-                "基于近7天加权日均产量 %.1f 件/天，剩余 %d 件，预计 %d ~ %d 天完成",
-                velocity, remaining, optDays, pesDays));
+                "基于近7天加权日均产量 %.1f 件/天，剩余 %d 件，预计 %d ~ %d 天完成%s",
+                velocity, remaining, optDays, pesDays, p80Hint));
 
         // ── 保存预测日志（数据飞轮）──
         try {
@@ -163,7 +175,7 @@ public class DeliveryPredictionOrchestrator {
             plog.setFactoryName(order.getFactoryName());
             plog.setCurrentProgress(order.getProductionProgress());
             plog.setPredictedFinishTime(LocalDateTime.of(
-                    today.plusDays(correctedMlDays), LocalTime.NOON));
+                    today.plusDays(blendedMlDays), LocalTime.NOON));
             plog.setDailyVelocity(velocity);
             plog.setRemainingQty(remaining);
             plog.setConfidence(BigDecimal.valueOf(confidence).movePointLeft(2));
@@ -180,6 +192,31 @@ public class DeliveryPredictionOrchestrator {
             resp.setRationale("数据加载异常，请稍后重试");
         }
         return resp;
+    }
+
+    /** P80完工天数：基于180天内同一工厂的历史实际完工记录，取80百分位 */
+    private OptionalDouble calcP80Days(Long tenantId, String factoryName) {
+        if (factoryName == null || factoryName.isBlank()) return OptionalDouble.empty();
+        try {
+            QueryWrapper<IntelligencePredictionLog> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId).eq("factory_name", factoryName)
+              .isNotNull("actual_finish_time")
+              .ge("create_time", LocalDateTime.now().minusDays(180));
+            List<IntelligencePredictionLog> logs = predictionLogMapper.selectList(qw);
+            if (logs.size() < 3) return OptionalDouble.empty();
+            List<Double> actualDays = logs.stream()
+                    .filter(l -> l.getActualFinishTime() != null && l.getCreateTime() != null)
+                    .map(l -> (double) ChronoUnit.DAYS.between(l.getCreateTime(), l.getActualFinishTime()))
+                    .filter(d -> d > 0 && d < 365)
+                    .sorted()
+                    .collect(Collectors.toList());
+            if (actualDays.size() < 3) return OptionalDouble.empty();
+            int idx = (int) Math.ceil(actualDays.size() * 0.8) - 1;
+            return OptionalDouble.of(actualDays.get(idx));
+        } catch (Exception e) {
+            log.debug("[交期预测] P80计算异常: {}", e.getMessage());
+            return OptionalDouble.empty();
+        }
     }
 
     private double computeWeightedVelocity(String orderId) {

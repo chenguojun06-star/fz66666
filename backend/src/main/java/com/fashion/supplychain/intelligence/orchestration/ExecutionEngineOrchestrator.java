@@ -95,7 +95,12 @@ public class ExecutionEngineOrchestrator {
                 case "style:return" -> commandExecutor.executeStyleReturn(command, executorId);
                 case "quality:reject" -> commandExecutor.executeQualityReject(command, executorId);
                 case "settlement:approve" -> commandExecutor.executeSettlementApprove(command, executorId);
-                case "purchase:create" -> commandExecutor.executePurchaseCreate(command, executorId);
+                case "purchase:create"         -> commandExecutor.executePurchaseCreate(command, executorId);
+                case "factory:urge"            -> commandExecutor.executeFactoryUrge(command, executorId);
+                case "process:reassign"        -> commandExecutor.executeProcessReassign(command, executorId);
+                case "order:ship_date"         -> commandExecutor.executeOrderShipDate(command, executorId);
+                case "order:add_note"          -> commandExecutor.executeOrderAddNote(command, executorId);
+                case "procurement:order_goods" -> commandExecutor.executeProcurementOrderGoods(command, executorId);
                 default -> throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
                 };
             } // end if (not undo)

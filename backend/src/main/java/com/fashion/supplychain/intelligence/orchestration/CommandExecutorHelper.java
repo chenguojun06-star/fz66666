@@ -9,11 +9,13 @@ import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -227,6 +229,74 @@ public class CommandExecutorHelper {
         purchase.setStatus("pending");
         materialPurchaseService.save(purchase);
         log.info("[PurchaseCreate] AI创建采购单: materialName={}, qty={}, executor={}", materialName, quantity, executorId);
+        return purchase;
+    }
+
+    public Map<String, Object> executeFactoryUrge(ExecutableCommand command, Long executorId) {
+        Map<String, Object> params = command.getParams();
+        String factoryName = (String) params.getOrDefault("factoryName", command.getTargetId());
+        String message = (String) params.getOrDefault("message", command.getReason());
+        smartNotification.notifyTeam(factoryName, "[AI催单] " + factoryName, message, UserContext.tenantId());
+        log.info("[FactoryUrge] 催单通知已发送: factory={}, executor={}", factoryName, executorId);
+        return Map.of("factory", factoryName, "notified", true, "message", message);
+    }
+
+    public ProductionOrder executeProcessReassign(ExecutableCommand command, Long executorId) {
+        ProductionOrder order = requireOrder(command.getTargetId());
+        Map<String, Object> params = command.getParams();
+        String newOperator = (String) params.getOrDefault("operator", "");
+        String processName = (String) params.getOrDefault("process", "");
+        String remark = order.getOperationRemark() == null ? "" : order.getOperationRemark();
+        order.setOperationRemark(remark + " [AI工序重新分配] 工序「" + processName + "」→ 操作员「" + newOperator + "」 " + command.getReason());
+        productionOrderService.updateById(order);
+        log.info("[ProcessReassign] 工序重新分配: orderId={}, process={}, operator={}", command.getTargetId(), processName, newOperator);
+        return order;
+    }
+
+    public ProductionOrder executeOrderShipDate(ExecutableCommand command, Long executorId) {
+        ProductionOrder order = requireOrder(command.getTargetId());
+        Map<String, Object> params = command.getParams();
+        String dateStr = (String) params.get("shipDate");
+        if (dateStr == null || dateStr.isBlank()) {
+            throw new ExecutionEngineOrchestrator.BusinessException("缺少必要参数: shipDate (格式 yyyy-MM-dd)");
+        }
+        order.setPlannedEndDate(LocalDate.parse(dateStr).atStartOfDay());
+        productionOrderService.updateById(order);
+        log.info("[OrderShipDate] 交期已调整: orderId={}, newDate={}, executor={}", command.getTargetId(), dateStr, executorId);
+        return order;
+    }
+
+    public ProductionOrder executeOrderAddNote(ExecutableCommand command, Long executorId) {
+        ProductionOrder order = requireOrder(command.getTargetId());
+        Map<String, Object> params = command.getParams();
+        String note = (String) params.getOrDefault("note", command.getReason());
+        String existing = order.getOperationRemark() == null ? "" : order.getOperationRemark();
+        order.setOperationRemark(existing + " [备注] " + note);
+        productionOrderService.updateById(order);
+        log.info("[OrderAddNote] 备注已添加: orderId={}, executor={}", command.getTargetId(), executorId);
+        return order;
+    }
+
+    public MaterialPurchase executeProcurementOrderGoods(ExecutableCommand command, Long executorId) {
+        Map<String, Object> params = command.getParams();
+        String materialName = (String) params.getOrDefault("materialName", "");
+        Object qtyObj = params.get("quantity");
+        String supplier = (String) params.getOrDefault("supplier", "");
+        if (qtyObj == null || materialName.isBlank()) {
+            throw new ExecutionEngineOrchestrator.BusinessException("缺少必要参数: materialName 和 quantity");
+        }
+        int quantity = Integer.parseInt(qtyObj.toString());
+        if (quantity <= 0) {
+            throw new ExecutionEngineOrchestrator.BusinessException("采购数量必须为正数");
+        }
+        MaterialPurchase purchase = new MaterialPurchase();
+        purchase.setMaterialName(materialName);
+        purchase.setPurchaseQuantity(quantity);
+        purchase.setSourceType("AI");
+        purchase.setRemark("[AI订货] " + command.getReason() + (supplier.isBlank() ? "" : " 供应商: " + supplier));
+        purchase.setStatus("pending");
+        materialPurchaseService.save(purchase);
+        log.info("[ProcurementOrderGoods] AI订货单已创建: material={}, qty={}, supplier={}", materialName, quantity, supplier);
         return purchase;
     }
 

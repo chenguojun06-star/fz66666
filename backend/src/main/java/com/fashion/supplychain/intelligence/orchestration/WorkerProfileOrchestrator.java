@@ -14,7 +14,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * 工人效率画像编排器
@@ -32,6 +34,10 @@ public class WorkerProfileOrchestrator {
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
+
+    /** 画像缓存：tenantId → operatorName → WorkerProfileResponse，每晚 3:10 定时刷新 */
+    private final ConcurrentHashMap<Long, ConcurrentHashMap<String, WorkerProfileResponse>> profileCache
+            = new ConcurrentHashMap<>();
 
     /**
      * 获取工人效率画像
@@ -142,7 +148,107 @@ public class WorkerProfileOrchestrator {
         resp.setTotalQty(totalQty);
         resp.setLastScanTime(lastScanTime);
         resp.setDateDays(dateDays);
+        // 写缓存，供 getProfileFast / rankByProcess 快速读取
+        profileCache.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
+                    .put(request.getOperatorName(), resp);
         return resp;
+    }
+
+    // ── 缓存加速接口 ──────────────────────────────────────────────────────
+
+    /**
+     * 快速查询工人画像（优先命中缓存；缓存冷时触发该租户全量刷新，避免对每个工人单独查询）
+     */
+    public WorkerProfileResponse getProfileFast(Long tenantId, String operatorName) {
+        if (operatorName == null || operatorName.isBlank()) {
+            WorkerProfileResponse empty = new WorkerProfileResponse();
+            empty.setStages(Collections.emptyList());
+            return empty;
+        }
+        ConcurrentHashMap<String, WorkerProfileResponse> tenantMap = profileCache.get(tenantId);
+        if (tenantMap == null || !tenantMap.containsKey(operatorName)) {
+            refreshTenantProfiles(tenantId);
+            tenantMap = profileCache.get(tenantId);
+        }
+        if (tenantMap != null && tenantMap.containsKey(operatorName)) {
+            return tenantMap.get(operatorName);
+        }
+        WorkerProfileResponse empty = new WorkerProfileResponse();
+        empty.setOperatorName(operatorName);
+        empty.setStages(Collections.emptyList());
+        return empty;
+    }
+
+    /**
+     * 按工序对工人排名（avgPerDay 降序）；缓存为空时先触发该租户全量刷新
+     *
+     * @param tenantId    租户 ID
+     * @param processName 工序/阶段名（stageName）
+     * @return 包含该工序的所有工人，按日均件数降序排列
+     */
+    public List<WorkerProfileResponse> rankByProcess(Long tenantId, String processName) {
+        ConcurrentHashMap<String, WorkerProfileResponse> tenantMap = profileCache.get(tenantId);
+        if (tenantMap == null || tenantMap.isEmpty()) {
+            refreshTenantProfiles(tenantId);
+            tenantMap = profileCache.get(tenantId);
+            if (tenantMap == null) return Collections.emptyList();
+        }
+        return tenantMap.values().stream()
+                .filter(p -> p.getStages() != null && p.getStages().stream()
+                        .anyMatch(s -> processName.equals(s.getStageName())))
+                .sorted((a, b) -> {
+                    double aPd = a.getStages().stream()
+                            .filter(s -> processName.equals(s.getStageName()))
+                            .mapToDouble(WorkerProfileResponse.StageProfile::getAvgPerDay)
+                            .findFirst().orElse(0);
+                    double bPd = b.getStages().stream()
+                            .filter(s -> processName.equals(s.getStageName()))
+                            .mapToDouble(WorkerProfileResponse.StageProfile::getAvgPerDay)
+                            .findFirst().orElse(0);
+                    return Double.compare(bPd, aPd);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 批量刷新指定租户近 90 天所有活跃工人的画像缓存（一次全量 DB 扫描代替 N 次单工人查询）
+     *
+     * @param tenantId 租户 ID
+     * @return 本次刷新的工人数量
+     */
+    public int refreshTenantProfiles(Long tenantId) {
+        LocalDateTime from = LocalDateTime.now().minusDays(89);
+        LocalDateTime to   = LocalDateTime.now();
+        List<ScanRecord> allRecords = queryAllRecords(tenantId, from, to);
+        Map<String, Double> factoryAvg = calcFactoryStageAvg(allRecords);
+        Map<String, List<ScanRecord>> byOperator = allRecords.stream()
+                .filter(r -> r.getOperatorName() != null && !r.getOperatorName().isBlank())
+                .collect(Collectors.groupingBy(ScanRecord::getOperatorName));
+        ConcurrentHashMap<String, WorkerProfileResponse> tenantMap = new ConcurrentHashMap<>();
+        for (Map.Entry<String, List<ScanRecord>> entry : byOperator.entrySet()) {
+            WorkerProfileResponse profile = buildProfileFromRecords(
+                    entry.getKey(), entry.getValue(), factoryAvg, 90);
+            tenantMap.put(entry.getKey(), profile);
+        }
+        profileCache.put(tenantId, tenantMap);
+        log.info("[WorkerProfile] 租户{}画像刷新完成，共{}位工人", tenantId, tenantMap.size());
+        return tenantMap.size();
+    }
+
+    /** 每日凌晨 3:10 刷新所有已缓存租户的工人画像 */
+    @Scheduled(cron = "0 10 3 * * ?")
+    public void scheduledProfileRebuild() {
+        if (profileCache.isEmpty()) return;
+        log.info("[WorkerProfile] 定时刷新开始，涉及{}个租户", profileCache.size());
+        int total = 0;
+        for (Long tenantId : profileCache.keySet()) {
+            try {
+                total += refreshTenantProfiles(tenantId);
+            } catch (Exception e) {
+                log.warn("[WorkerProfile] 租户{}刷新异常: {}", tenantId, e.getMessage());
+            }
+        }
+        log.info("[WorkerProfile] 定时刷新完成，共{}位工人画像", total);
     }
 
     // ── 私有方法 ──────────────────────────────────────────────────────────
@@ -226,6 +332,67 @@ public class WorkerProfileOrchestrator {
             factoryAvg.put(e.getKey(), avg);
         }
         return factoryAvg;
+    }
+
+    /**
+     * 从已加载的扫码记录直接构建画像（批量刷新专用，不发起额外 DB 查询）
+     */
+    private WorkerProfileResponse buildProfileFromRecords(
+            String operatorName,
+            List<ScanRecord> workerRecords,
+            Map<String, Double> factoryStageAvg,
+            int dateDays) {
+        Map<String, List<ScanRecord>> byStage = workerRecords.stream()
+                .filter(r -> r.getProgressStage() != null && !r.getProgressStage().isBlank())
+                .collect(Collectors.groupingBy(ScanRecord::getProgressStage));
+        List<WorkerProfileResponse.StageProfile> stages = new ArrayList<>();
+        for (Map.Entry<String, List<ScanRecord>> entry : byStage.entrySet()) {
+            String stageName = entry.getKey();
+            List<ScanRecord> recs = entry.getValue();
+            long totalQty = recs.stream().mapToLong(r -> r.getQuantity() == null ? 0 : r.getQuantity()).sum();
+            if (totalQty == 0) continue;
+            long activeDays = recs.stream()
+                    .filter(r -> r.getScanTime() != null)
+                    .map(r -> r.getScanTime().toLocalDate())
+                    .distinct().count();
+            if (activeDays == 0) activeDays = 1;
+            double avgPerDay = Math.round((double) totalQty / activeDays * 10.0) / 10.0;
+            Double factoryAvg = factoryStageAvg.get(stageName);
+            double vsFactoryAvgPct = 0.0;
+            String level = "normal";
+            if (factoryAvg != null && factoryAvg > 0) {
+                vsFactoryAvgPct = Math.round((avgPerDay - factoryAvg) / factoryAvg * 1000.0) / 10.0;
+                double ratio = avgPerDay / factoryAvg;
+                if (ratio >= 1.3) level = "excellent";
+                else if (ratio >= 0.9) level = "good";
+                else if (ratio >= 0.7) level = "normal";
+                else level = "below";
+            }
+            WorkerProfileResponse.StageProfile sp = new WorkerProfileResponse.StageProfile();
+            sp.setStageName(stageName);
+            sp.setTotalQty(totalQty);
+            sp.setActiveDays((int) activeDays);
+            sp.setAvgPerDay(avgPerDay);
+            sp.setVsFactoryAvgPct(vsFactoryAvgPct);
+            sp.setLevel(level);
+            stages.add(sp);
+        }
+        stages.sort(Comparator.comparingLong(WorkerProfileResponse.StageProfile::getTotalQty).reversed());
+        String lastScanTime = workerRecords.stream()
+                .filter(r -> r.getScanTime() != null)
+                .map(ScanRecord::getScanTime)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.format(DT_FMT))
+                .orElse(null);
+        long totalQty = workerRecords.stream()
+                .mapToLong(r -> r.getQuantity() == null ? 0 : r.getQuantity()).sum();
+        WorkerProfileResponse resp = new WorkerProfileResponse();
+        resp.setOperatorName(operatorName);
+        resp.setStages(stages);
+        resp.setTotalQty(totalQty);
+        resp.setLastScanTime(lastScanTime);
+        resp.setDateDays(dateDays);
+        return resp;
     }
 
     private LocalDate parseDateOrDefault(String dateStr, LocalDate defaultVal) {

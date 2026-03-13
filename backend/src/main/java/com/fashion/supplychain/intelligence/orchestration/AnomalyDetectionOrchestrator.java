@@ -148,43 +148,74 @@ public class AnomalyDetectionOrchestrator {
         return nightScans.size();
     }
 
-    // ── 维度③：质量异常飙升 ──────────────────────────────────────────
+    // ── 维度③：质量异常飙升（工厂级 Z-score 统计检测，≥2.0 警告 / ≥3.0 严重）──
 
     private int detectQualitySpikes(Long tenantId, LocalDate today,
             AnomalyDetectionResponse response) {
-        // 今日失败扫码
-        List<ScanRecord> todayFail = queryRecordsByResult(tenantId,
-                today.atStartOfDay(), today.plusDays(1).atStartOfDay(), "fail");
-        List<ScanRecord> todayAll = queryRecordsByResult(tenantId,
-                today.atStartOfDay(), today.plusDays(1).atStartOfDay(), null);
 
-        if (todayAll.size() < 10) return 0; // 数据太少
-
-        double todayFailRate = (double) todayFail.size() / todayAll.size();
-
-        // 历史30天失败率
-        List<ScanRecord> histFail = queryRecordsByResult(tenantId,
-                today.minusDays(30).atStartOfDay(), today.atStartOfDay(), "fail");
+        // 查询30天全部记录（含成功+失败），按工厂分组
         List<ScanRecord> histAll = queryRecordsByResult(tenantId,
-                today.minusDays(30).atStartOfDay(), today.atStartOfDay(), null);
+                today.minusDays(30).atStartOfDay(), today.plusDays(1).atStartOfDay(), null);
 
-        double histFailRate = histAll.isEmpty() ? 0 : (double) histFail.size() / histAll.size();
+        if (histAll.size() < 20) return 0; // 样本太少
 
-        if (todayFailRate > 0.1 && todayFailRate > histFailRate * 2) {
-            AnomalyItem item = new AnomalyItem();
-            item.setType("quality_spike");
-            item.setSeverity(todayFailRate > 0.2 ? "critical" : "warning");
-            item.setTitle("质量异常飙升");
-            item.setDescription(String.format(
-                    "今日扫码失败率 %.1f%%，历史均值 %.1f%%（偏差 %.1f 倍）",
-                    todayFailRate * 100, histFailRate * 100,
-                    histFailRate > 0 ? todayFailRate / histFailRate : 0));
-            item.setTodayValue(todayFailRate * 100);
-            item.setHistoryAvg(histFailRate * 100);
-            item.setDeviationRatio(histFailRate > 0 ? todayFailRate / histFailRate : 0);
-            response.getAnomalies().add(item);
+        // 按 (工人, 日期) → 统计 fail 数、total 数 → 得到每日失败率时间序列
+        Map<String, Map<LocalDate, long[]>> factoryDailyStats = new HashMap<>();
+        for (ScanRecord r : histAll) {
+            if (r.getScanTime() == null) continue;
+            String factory = r.getOperatorName() != null ? r.getOperatorName() : "__global__";
+            LocalDate day = r.getScanTime().toLocalDate();
+            factoryDailyStats
+                .computeIfAbsent(factory, k -> new HashMap<>())
+                .computeIfAbsent(day, k -> new long[]{0, 0});
+            long[] cnt = factoryDailyStats.get(factory).get(day);
+            cnt[1]++; // total
+            if ("fail".equals(r.getScanResult())) cnt[0]++; // fail
         }
-        return 1;
+
+        int checked = 0;
+        for (Map.Entry<String, Map<LocalDate, long[]>> factoryEntry : factoryDailyStats.entrySet()) {
+            String factory = factoryEntry.getKey();
+            Map<LocalDate, long[]> dailyStats = factoryEntry.getValue();
+
+            // 仅取历史日（不含今天），构建失败率时间序列
+            List<Double> histRates = new ArrayList<>();
+            double todayFailRate = -1;
+            long[] todayCounts = dailyStats.get(today);
+            if (todayCounts != null && todayCounts[1] >= 5) {
+                todayFailRate = (double) todayCounts[0] / todayCounts[1];
+            }
+            for (Map.Entry<LocalDate, long[]> dayEntry : dailyStats.entrySet()) {
+                if (dayEntry.getKey().equals(today)) continue;
+                long[] cnt = dayEntry.getValue();
+                if (cnt[1] >= 3) histRates.add((double) cnt[0] / cnt[1]);
+            }
+
+            if (todayFailRate < 0 || histRates.size() < 5) { checked++; continue; }
+
+            double mean = histRates.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            double std = calcStdDevDouble(histRates, mean);
+            if (std < 0.001) { checked++; continue; } // 历史数据过于稳定，std≈0不做判定
+
+            double z = (todayFailRate - mean) / std;
+            if (z >= 2.0) {
+                AnomalyItem item = new AnomalyItem();
+                item.setType("quality_spike");
+                item.setSeverity(z >= 3.0 ? "critical" : "warning");
+                String factoryLabel = "__global__".equals(factory) ? "全局" : factory;
+                item.setTitle("质量异常飙升");
+                item.setDescription(String.format(
+                        "%s 今日扫码失败率 %.1f%%，历史均值 %.1f%%（Z-score %.1f，显著超出统计基线）",
+                        factoryLabel, todayFailRate * 100, mean * 100, z));
+                item.setTargetName(factoryLabel);
+                item.setTodayValue(Math.round(todayFailRate * 1000.0) / 10.0);
+                item.setHistoryAvg(Math.round(mean * 1000.0) / 10.0);
+                item.setDeviationRatio(Math.round(z * 10.0) / 10.0);
+                response.getAnomalies().add(item);
+            }
+            checked++;
+        }
+        return checked;
     }
 
     // ── 维度④：活跃工人突然消失 ──────────────────────────────────────
@@ -262,6 +293,11 @@ public class AnomalyDetectionOrchestrator {
     private double calcStdDev(List<Long> values, double mean) {
         double sumSq = values.stream()
                 .mapToDouble(v -> Math.pow(v - mean, 2)).sum();
+        return Math.sqrt(sumSq / values.size());
+    }
+
+    private double calcStdDevDouble(List<Double> values, double mean) {
+        double sumSq = values.stream().mapToDouble(v -> Math.pow(v - mean, 2)).sum();
         return Math.sqrt(sumSq / values.size());
     }
 }

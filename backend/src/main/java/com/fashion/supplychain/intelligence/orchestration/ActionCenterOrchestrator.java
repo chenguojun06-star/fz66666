@@ -54,6 +54,9 @@ public class ActionCenterOrchestrator {
     @Autowired
     private ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
 
+    @Autowired(required = false)
+    private FeedbackLearningOrchestrator feedbackLearning;
+
     public ActionCenterResponse getCenter() {
         HealthIndexResponse health = safeHealth();
         LivePulseResponse pulse = safePulse();
@@ -276,7 +279,10 @@ public class ActionCenterOrchestrator {
         if (taskCode.contains("RISK") || taskCode.contains("FOLLOW") || taskCode.contains("ANOMALY")) {
             score += 6;
         }
-        return score;
+        double weight = feedbackLearning != null
+                ? feedbackLearning.getTaskTypeWeight(task.getTaskCode())
+                : 1.0;
+        return (int) Math.round(score * weight);
     }
 
     private String defaultReviewAt(String escalationLevel) {

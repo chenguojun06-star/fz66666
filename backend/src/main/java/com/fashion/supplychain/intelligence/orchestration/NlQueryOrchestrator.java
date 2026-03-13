@@ -5,7 +5,9 @@ import com.fashion.supplychain.intelligence.dto.NlQueryRequest;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,20 +27,31 @@ public class NlQueryOrchestrator {
     @Autowired private AiAdvisorService aiAdvisorService;
     @Autowired private NlQueryDataHandlers dataHandlers;
 
+    /** 会话上下文缓存: sessionKey → 最近3轮 [question, answer] */
+    private final ConcurrentHashMap<String, LinkedList<String[]>> sessionContexts = new ConcurrentHashMap<>();
+
     public NlQueryResponse query(NlQueryRequest req) {
         String question = req.getQuestion().trim();
         Long tenantId = UserContext.tenantId();
         log.info("[NlQuery] question={}, tenant={}", question, tenantId);
 
+        String sessionId = req.getSessionId() != null ? req.getSessionId() : "";
+        String sessionKey = tenantId + ":" + sessionId;
+
         NlQueryResponse resp;
         try {
-            resp = routeIntent(question, tenantId);
+            resp = routeIntent(question, tenantId, sessionKey);
         } catch (Exception e) {
             log.error("[NL查询] 数据加载异常（降级返回兜底）: {}", e.getMessage(), e);
             resp = new NlQueryResponse();
             resp.setIntent("error");
             resp.setAnswer("系统暂时无法处理您的询问，请稍后重试");
             resp.setConfidence(0);
+        }
+
+        // ── 保存会话上下文（多轮对话记忆） ──
+        if (!sessionId.isEmpty()) {
+            saveToSession(sessionKey, question, resp.getAnswer() != null ? resp.getAnswer() : "");
         }
 
         // ── 全系统学习：记录每次查询 ──
@@ -50,9 +63,10 @@ public class NlQueryOrchestrator {
     }
 
     /** 意图识别路由（LLM优先 → 关键词兜底） */
-    private NlQueryResponse routeIntent(String question, Long tenantId) {
+    private NlQueryResponse routeIntent(String question, Long tenantId, String sessionKey) {
+        String contextPrompt = buildContextPrompt(sessionKey);
         // ── 优先尝试 LLM 意图分类（快速超时，失败降级关键词） ──
-        String llmIntent = classifyIntentByLlm(question, tenantId);
+        String llmIntent = classifyIntentByLlm(question, tenantId, contextPrompt);
         if (llmIntent != null) {
             NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId);
             if (resp != null) {
@@ -243,10 +257,12 @@ public class NlQueryOrchestrator {
             + "summary - 总览/概况/汇总/整体情况\n";
 
     /** 调用 DeepSeek 进行意图分类，失败返回 null */
-    private String classifyIntentByLlm(String question, Long tenantId) {
+    private String classifyIntentByLlm(String question, Long tenantId, String contextPrompt) {
         try {
             if (!aiAdvisorService.isEnabled()) return null;
-            String reply = aiAdvisorService.chat(LLM_INTENT_PROMPT, "用户问题：" + question);
+            String userMsg = contextPrompt.isEmpty() ? "用户问题：" + question
+                    : contextPrompt + "\n用户当前问题：" + question;
+            String reply = aiAdvisorService.chat(LLM_INTENT_PROMPT, userMsg);
             if (reply == null || reply.isBlank()) return null;
             String intent = reply.trim().toLowerCase().replaceAll("[^a-z_]", "");
             if (KNOWN_INTENTS.contains(intent)) return intent;
@@ -291,5 +307,26 @@ public class NlQueryOrchestrator {
             case "summary":           return dataHandlers.handleSummaryQuery(tenantId);
             default:                  return null;
         }
+    }
+
+    // ── 会话上下文工具方法 ──
+
+    private String buildContextPrompt(String sessionKey) {
+        LinkedList<String[]> history = sessionContexts.get(sessionKey);
+        if (history == null || history.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("【对话历史（最近3轮）】\n");
+        for (String[] qa : history) {
+            sb.append("Q: ").append(qa[0]).append("\nA: ").append(qa[1]).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private void saveToSession(String sessionKey, String question, String answer) {
+        LinkedList<String[]> history = sessionContexts.computeIfAbsent(sessionKey, k -> new LinkedList<>());
+        history.addLast(new String[]{
+            question,
+            answer.length() > 200 ? answer.substring(0, 200) + "…" : answer
+        });
+        while (history.size() > 3) history.removeFirst();
     }
 }

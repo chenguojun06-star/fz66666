@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapp
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,12 @@ public class FeedbackLearningOrchestrator {
 
     @Autowired
     private AiAdvisorService aiAdvisorService;
+
+    /**
+     * 建议类型采纳统计： suggestionType → [accepted, rejected, total]
+     * 用于 ActionCenter 排序权重动态调整
+     */
+    private final ConcurrentHashMap<String, int[]> typeStats = new ConcurrentHashMap<>();
 
     public FeedbackResponse acceptFeedback(FeedbackRequest request) {
         FeedbackResponse response = new FeedbackResponse();
@@ -111,6 +118,9 @@ public class FeedbackLearningOrchestrator {
             record.setCreateTime(LocalDateTime.now());
             record.setUpdateTime(LocalDateTime.now());
             feedbackRecordMapper.insert(record);
+            // 更新类型权重统计（供 ActionCenter 动态排序）
+            updateTypeStats(request.getSuggestionType(),
+                    "accepted".equals(record.getFeedbackResult()));
             // 偏差超过30分钟时触发 AI 反思
             if (aiAdvisorService.isEnabled() && Math.abs(deviationMinutes) > 30) {
                 try {
@@ -153,6 +163,36 @@ public class FeedbackLearningOrchestrator {
             predictionLogMapper.insert(orphan);
         } catch (Exception e) {
             log.debug("[反馈闭环] orphan 写入失败: {}", e.getMessage());
+        }
+    }
+
+    // ── 权重 API ──────────────────────────────────────────────────────
+
+    /**
+     * 获取任务类型权重因子（基于历史采纳率，范围 [0.5, 1.5]\uff09
+     * <ul>
+     *   <li>采纳率 100% → 1.5（该类建议排序提升 50%）</li>
+     *   <li>采纳率 50%  → 1.0（中性）</li>
+     *   <li>采纳率 0%   → 0.5（该类建议排序降低 50%）</li>
+     *   <li>反馈数 &lt; 3 → 1.0（样本不足，不调权重）</li>
+     * </ul>
+     */
+    public double getTaskTypeWeight(String taskType) {
+        if (taskType == null) return 1.0;
+        int[] s = typeStats.getOrDefault(taskType, new int[]{0, 0, 0});
+        if (s[2] < 3) return 1.0;
+        double acceptRatio = (double) s[0] / s[2];
+        return Math.max(0.5, Math.min(1.5, 0.5 + acceptRatio));
+    }
+
+    /** 更新指定类型的采纳/拒绝计数（线程安全） */
+    private void updateTypeStats(String type, boolean accepted) {
+        if (type == null || type.isBlank()) return;
+        int[] stats = typeStats.computeIfAbsent(type, k -> new int[]{0, 0, 0});
+        synchronized (stats) {
+            if (accepted) stats[0]++;
+            else stats[1]++;
+            stats[2]++;
         }
     }
 }
