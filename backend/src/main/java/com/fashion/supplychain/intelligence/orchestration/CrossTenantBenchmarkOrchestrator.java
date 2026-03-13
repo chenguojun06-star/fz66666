@@ -6,7 +6,9 @@ import com.fashion.supplychain.intelligence.dto.CrossTenantBenchmarkResponse;
 import com.fashion.supplychain.intelligence.entity.BenchmarkSnapshot;
 import com.fashion.supplychain.intelligence.mapper.BenchmarkSnapshotMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,9 @@ public class CrossTenantBenchmarkOrchestrator {
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
@@ -89,7 +94,18 @@ public class CrossTenantBenchmarkOrchestrator {
         BigDecimal completionRate  = pct(completed, total);
         // 准时交货率（近似：完工订单中85%准时，基于无法直接查交期的限制）
         BigDecimal onTimeRate      = completionRate.multiply(BigDecimal.valueOf(0.85)).setScale(1, RoundingMode.HALF_UP);
-        BigDecimal defectRate      = BigDecimal.valueOf(2.5); // 行业基准值，等完整质检数据后更换
+        // 真实次品率 = 扫码失败记录数 / 总扫码记录数 × 100（查同一90天窗口）
+        List<ScanRecord> scans = scanRecordService.list(
+                new QueryWrapper<ScanRecord>()
+                        .eq("tenant_id", tenantId)
+                        .ge("scan_time", LocalDateTime.now().minusDays(90))
+                        .select("scan_result"));
+        long totalScanCount = scans.size();
+        long failedScanCount = scans.stream()
+                .filter(r -> "fail".equals(r.getScanResult())).count();
+        BigDecimal defectRate = totalScanCount > 0
+                ? pct(failedScanCount, (int) totalScanCount)
+                : BigDecimal.valueOf(2.5); // 暂无扫码记录时沿用行业基准兜底
         // 综合效率分
         BigDecimal effScore = completionRate.subtract(overdueRate.multiply(BigDecimal.valueOf(2)))
                 .add(onTimeRate).divide(BigDecimal.valueOf(3), 1, RoundingMode.HALF_UP);

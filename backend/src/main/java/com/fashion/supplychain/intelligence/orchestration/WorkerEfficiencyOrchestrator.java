@@ -130,8 +130,8 @@ public class WorkerEfficiencyOrchestrator {
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey).orElse("未知"));
 
-        // 速度分 — 暂存 avgDaily，后面百分位校准
-        we.setSpeedScore((int) avgDaily); // 临时值
+        // 速度分 — 暂存 avgDaily，calibrateSpeedScores() 会用中位数基线覆盖
+        we.setSpeedScore((int) avgDaily); // 临时值（待基线校准覆盖）
 
         // 趋势（最近7天 vs 前7天）
         LocalDate now = LocalDate.now();
@@ -147,16 +147,27 @@ public class WorkerEfficiencyOrchestrator {
         return we;
     }
 
-    /** 速度分：百分位排名 */
+    /**
+     * 速度分：以同组中位数为基线归一化至 [0,100]。
+     * <ul>
+     *   <li>中位数产量 = 50 分（「达标」基准线）</li>
+     *   <li>2× 中位数产量 = 100 分（「卓越」上限）</li>
+     *   <li>线性缩放，clamp [0, 100]</li>
+     * </ul>
+     * 相比纯百分位排名，此方案绝对可比：若整组产量偏低，分数真实偏低，不会因集体差而虚高。
+     */
     private void calibrateSpeedScores(List<WorkerEfficiency> workers) {
+        if (workers.isEmpty()) return;
         List<Double> avgs = workers.stream()
                 .map(WorkerEfficiency::getDailyAvgOutput)
                 .sorted().collect(Collectors.toList());
+        // 同组中位数作为工厂基准线（无需外部配置）
+        double medianOutput = avgs.get(avgs.size() / 2);
+        double baseline = medianOutput > 0 ? medianOutput : 1.0;
         for (WorkerEfficiency w : workers) {
-            int rank = Collections.binarySearch(avgs, w.getDailyAvgOutput());
-            if (rank < 0) rank = -rank - 1;
-            w.setSpeedScore(Math.min(100, (int) ((rank + 1) * 100.0 / avgs.size())));
-
+            // 中位数 → 50分，2× 中位数 → 100分，clamp [0, 100]
+            w.setSpeedScore((int) Math.min(100, Math.max(0,
+                    (w.getDailyAvgOutput() / baseline) * 50.0)));
             // 综合分（五维等权均值）
             w.setOverallScore((w.getSpeedScore() + w.getQualityScore()
                     + w.getStabilityScore() + w.getAttendanceScore()
