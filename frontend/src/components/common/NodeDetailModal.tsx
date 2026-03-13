@@ -1128,7 +1128,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         </div>
       }
       width="60vw"
-      initialHeight={580}
+      initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       <Spin spinning={loading}>
         {loadWarnings.length > 0 && (
