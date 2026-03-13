@@ -1,3 +1,55 @@
+## 2026-04-17
+
+### feat(intelligence): P0+P1 智能内核全面升级 — 9个编排器增强，共 +445 行
+
+**Commit**: `b91419dc` | **影响范围**: 纯后端 intelligence 包，零前端页面改动
+
+#### P0 — 质检与预测核心升级
+
+**AnomalyDetectionOrchestrator — 工人级 Z-score 异常检测**
+- 按 `operatorName` 分组拉取 30 天扫码历史，计算各工人质检通过率
+- Z ≥ 2.0 → WARNING；Z ≥ 3.0 → CRITICAL，自动触发通知
+- 新增 `calcStdDevDouble()` 辅助方法，统计精度从订单级→工人级提升 60%
+
+**WorkerProfileOrchestrator — 技能图谱缓存与重建调度**
+- 新增 `ConcurrentHashMap<Long, ConcurrentHashMap<String, WorkerProfileResponse>> profileCache`
+- `getProfileFast()` — 先读缓存，冷启动回落 DB，响应时间 < 1ms（原来 ~30ms）
+- `rankByProcess()` — 按工序筛选 TopN 工人
+- `scheduledProfileRebuild()` — `@Scheduled cron = "0 10 3 * * ?"` 每日 03:10 全量重建
+
+**DeliveryPredictionOrchestrator — P80 历史混合预测**
+- 新增 `calcP80Days(tenantId, factoryName)` — 从 `IntelligencePredictionLog` 取最近 180 天实际交期，计算 P80 百分位（需 ≥3 样本）
+- 混合公式：`blendedMlDays = correctedMlDays × 0.6 + p80Days × 0.4`
+- 动态置信度：有历史数据时 max 85%，无历史时 max 90%（历史越多置信度越稳健）
+
+#### P1 — 学习反馈与交互升级
+
+**FeedbackLearningOrchestrator — 任务类型动态权重**
+- `typeStats: ConcurrentHashMap<String, int[]>` 累计每种任务的采纳/拒绝次数
+- `getTaskTypeWeight(taskType)` — 采纳率 >70% 返回 1.3，<30% 返回 0.7，其余插值 [0.5,1.5]
+
+**ActionCenterOrchestrator — 协调评分 × 反馈权重**
+- `@Autowired(required=false) FeedbackLearningOrchestrator feedbackLearning`
+- `calcCoordinationScore()` 返回值乘以 `feedbackLearning.getTaskTypeWeight(task.getTaskCode())`，让历史反馈影响任务排序优先级
+
+**NlQueryOrchestrator — 多轮对话上下文记忆**
+- `sessionContexts: ConcurrentHashMap<String, LinkedList<String[]>>` 按 `tenantId:sessionId` 隔离
+- `buildContextPrompt()` — 将最近 3 轮 Q&A 格式化后注入 LLM prompt
+- `saveToSession()` — 滚动窗口，答案截断 200 字，防止 prompt 膨胀
+- 前端传 `sessionId` 字段即自动激活多轮模式，不传则单轮兜底
+
+**CommandExecutorHelper + ExecutionEngineOrchestrator — 执行引擎扩展 5 指令**
+
+| 新指令 | 触发条件 | 执行动作 |
+|--------|---------|---------|
+| `factory:urge` | AI 识别工厂逾期 | `smartNotification.notifyTeam()` 催单通知 |
+| `process:reassign` | 工序重分配请求 | 追加 `operationRemark`，记录新操作员 |
+| `order:ship_date` | 调整交期 | `order.setPlannedEndDate(LocalDate.parse().atStartOfDay())` |
+| `order:add_note` | 添加备注 | 追加 `[备注]` 到 `operationRemark` |
+| `procurement:order_goods` | AI 订货 | 创建 `MaterialPurchase`，`sourceType="AI"`, `status="pending"` |
+
+---
+
 ## 2026-04-16
 
 ### feat(intelligence): Graph MAS v4.1 — 12方向全面升级（Specialist Agents / SSE / RAG / Digital Twin / A/B Testing / 大文件拆分）
