@@ -20,6 +20,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -79,6 +80,8 @@ public class SecurityConfig implements WebMvcConfigurer {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
+                // JWT 无状态认证：禁止创建 Session，消除 JSESSIONID Cookie 及 SameSite 浏览器警告
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 安全响应头
                 .headers(headers -> headers
                         .frameOptions().deny()                              // 防止 Clickjacking
