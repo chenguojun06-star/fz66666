@@ -238,8 +238,8 @@ public class WebhookPushService {
                     "OUTBOUND", "POST", app.getCallbackUrl(),
                     requestBody, responseCode, responseBody, costMs,
                     result, errorMessage, "SYSTEM");
-        } catch (Exception ignored) {
-            // 日志记录失败不影响主流程
+        } catch (Exception e) {
+            log.warn("[Webhook] 审计日志写入失败: appId={}, url={}", app.getId(), app.getCallbackUrl(), e);
         }
     }
 

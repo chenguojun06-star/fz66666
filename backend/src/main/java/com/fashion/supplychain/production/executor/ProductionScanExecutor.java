@@ -340,7 +340,9 @@ public class ProductionScanExecutor {
                     quantity,
                     operatorName
                 );
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("WebSocket广播失败(不阻断): orderNo={}", order.getOrderNo(), e);
+            }
 
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
             // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化

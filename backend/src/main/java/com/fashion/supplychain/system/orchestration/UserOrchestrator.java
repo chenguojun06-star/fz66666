@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
@@ -38,11 +38,11 @@ public class UserOrchestrator {
     /** Redis key 前缀：pwd:ver:{userId}，用于改密后废止旧令牌 */
     private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
 
-    private static final long LOGIN_WINDOW_MS = Duration.ofMinutes(10).toMillis();
     private static final int LOGIN_MAX_FAILURES = 10;
-    private static final long LOGIN_LOCK_MS = Duration.ofMinutes(15).toMillis();
-
-    private final ConcurrentHashMap<String, LoginThrottle> loginThrottle = new ConcurrentHashMap<>();
+    private static final long LOGIN_LOCK_SECONDS = Duration.ofMinutes(15).getSeconds();
+    private static final long LOGIN_WINDOW_SECONDS = Duration.ofMinutes(10).getSeconds();
+    private static final String REDIS_LOGIN_FAIL_PREFIX = "fashion:ratelimit:login:fail:";
+    private static final String REDIS_LOGIN_LOCK_PREFIX = "fashion:ratelimit:login:lock:";
 
     @Autowired
     private UserService userService;
@@ -295,11 +295,15 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(key)) {
             return;
         }
-        LoginThrottle t = loginThrottle.computeIfAbsent(key, k -> new LoginThrottle());
-        long now = System.currentTimeMillis();
-        long lockedUntil = t.getLockedUntil(now);
-        if (lockedUntil > now) {
-            throw new IllegalStateException("登录失败次数过多，请稍后再试");
+        try {
+            String lockKey = REDIS_LOGIN_LOCK_PREFIX + key;
+            if (stringRedisTemplate != null && Boolean.TRUE.equals(stringRedisTemplate.hasKey(lockKey))) {
+                throw new IllegalStateException("登录失败次数过多，请稍后再试");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[LoginThrottle] Redis检查异常，放行登录: {}", e.getMessage());
         }
     }
 
@@ -308,11 +312,21 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(key)) {
             return;
         }
-        LoginThrottle t = loginThrottle.computeIfAbsent(key, k -> new LoginThrottle());
-        long now = System.currentTimeMillis();
-        t.recordFailure(now);
-        if (t.shouldLock(now)) {
-            t.lock(now + LOGIN_LOCK_MS);
+        try {
+            if (stringRedisTemplate == null) return;
+            String failKey = REDIS_LOGIN_FAIL_PREFIX + key;
+            Long count = stringRedisTemplate.opsForValue().increment(failKey);
+            if (count != null && count == 1) {
+                stringRedisTemplate.expire(failKey, LOGIN_WINDOW_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+            }
+            if (count != null && count >= LOGIN_MAX_FAILURES) {
+                String lockKey = REDIS_LOGIN_LOCK_PREFIX + key;
+                stringRedisTemplate.opsForValue().set(lockKey, String.valueOf(count), LOGIN_LOCK_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+                stringRedisTemplate.delete(failKey);
+                log.warn("[LoginThrottle] 账号锁定: key={}, 失败次数={}", key, count);
+            }
+        } catch (Exception e) {
+            log.warn("[LoginThrottle] Redis记录失败异常: {}", e.getMessage());
         }
     }
 
@@ -321,7 +335,13 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(key)) {
             return;
         }
-        loginThrottle.remove(key);
+        try {
+            if (stringRedisTemplate == null) return;
+            stringRedisTemplate.delete(REDIS_LOGIN_FAIL_PREFIX + key);
+            stringRedisTemplate.delete(REDIS_LOGIN_LOCK_PREFIX + key);
+        } catch (Exception e) {
+            log.warn("[LoginThrottle] Redis清除失败计数异常: {}", e.getMessage());
+        }
     }
 
     public Map<String, Object> me() {
@@ -690,40 +710,4 @@ public class UserOrchestrator {
         return "1".equals(roleName.trim()) || r.contains("admin") || r.contains("管理员") || r.contains("管理");
     }
 
-    private static final class LoginThrottle {
-        private long windowStartMs;
-        private int failures;
-        private long lockedUntilMs;
-
-        private synchronized long getLockedUntil(long now) {
-            if (lockedUntilMs > now) {
-                return lockedUntilMs;
-            }
-            if (lockedUntilMs != 0 && lockedUntilMs <= now) {
-                lockedUntilMs = 0;
-            }
-            return lockedUntilMs;
-        }
-
-        private synchronized void recordFailure(long now) {
-            if (windowStartMs == 0 || now - windowStartMs > LOGIN_WINDOW_MS) {
-                windowStartMs = now;
-                failures = 0;
-            }
-            failures++;
-        }
-
-        private synchronized boolean shouldLock(long now) {
-            if (windowStartMs == 0 || now - windowStartMs > LOGIN_WINDOW_MS) {
-                windowStartMs = now;
-                failures = 0;
-                return false;
-            }
-            return failures >= LOGIN_MAX_FAILURES;
-        }
-
-        private synchronized void lock(long until) {
-            lockedUntilMs = Math.max(lockedUntilMs, until);
-        }
-    }
 }

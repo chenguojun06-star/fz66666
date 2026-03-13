@@ -3,6 +3,7 @@ import { Tabs, Badge } from 'antd';
 import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined, NotificationOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import { useAuth } from '@/utils/AuthContext';
 import { appStoreService } from '@/services/system/appStore';
 import feedbackService from '@/services/feedbackService';
 import AppOrderTab from './AppOrderTab';
@@ -17,25 +18,28 @@ import BroadcastTab from './components/BroadcastTab';
 const CustomerManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'tenants';
+  const { isSuperAdmin } = useAuth();
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPendingOrderCount = useCallback(async () => {
+    if (!isSuperAdmin) return;  // 超管专属接口，非超管直接跳过，避免 403 日志噪音
     try {
       const res: any = await appStoreService.adminOrderList({ status: 'PENDING' });
       const list = res?.data || res || [];
       setPendingOrderCount(Array.isArray(list) ? list.length : 0);
     } catch { /* ignore */ }
-  }, []);
+  }, [isSuperAdmin]);
 
   const fetchPendingFeedbackCount = useCallback(async () => {
+    if (!isSuperAdmin) return;  // 超管专属接口，非超管直接跳过，避免 403 日志噪音
     try {
       const res: any = await feedbackService.stats();
       const d = res?.data || res;
       setPendingFeedbackCount((d?.pending ?? 0) + (d?.processing ?? 0));
     } catch { /* ignore */ }
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     fetchPendingOrderCount();

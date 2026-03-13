@@ -5,12 +5,14 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 生产数据一致性检查定时任务
@@ -26,12 +28,32 @@ public class ProductionDataConsistencyJob {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
+
     /**
      * 每30分钟执行一次，修复生产进度数据
      * 按租户隔离迭代，防止跨租户写入
      */
     @Scheduled(cron = "0 0/30 * * * ?")
     public void recomputeActiveOrdersProgress() {
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:consistency", 25, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.info("[ConsistencyJob] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                doRecompute();
+            } finally {
+                distributedLockService.unlock("job:consistency", lockValue);
+            }
+        } else {
+            doRecompute();
+        }
+    }
+
+    private void doRecompute() {
         log.info("[ConsistencyJob] 开始执行生产进度一致性检查...");
         long start = System.currentTimeMillis();
 

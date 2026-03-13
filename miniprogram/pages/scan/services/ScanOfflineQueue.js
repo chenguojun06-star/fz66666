@@ -13,6 +13,7 @@
 
 const QUEUE_KEY = 'scan_offline_queue';
 const MAX_QUEUE_SIZE = 50; // 最多缓存 50 条，超出则丢弃最新（保护 storage）
+const { DEBUG } = require('../../../config/debug');
 
 // ─── 私有实现 ────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function _save(queue) {
   try {
     wx.setStorageSync(QUEUE_KEY, JSON.stringify(queue));
   } catch (e) {
-    console.warn('[ScanOfflineQueue] storage 写入失败:', e);
+    if (DEBUG) console.warn('[ScanOfflineQueue] storage 写入失败:', e);
   }
 }
 
@@ -60,7 +61,7 @@ const ScanOfflineQueue = {
   enqueue(scanData) {
     const queue = _load();
     if (queue.length >= MAX_QUEUE_SIZE) {
-      console.warn('[ScanOfflineQueue] 队列已满（' + MAX_QUEUE_SIZE + '条），丢弃');
+      if (DEBUG) console.warn('[ScanOfflineQueue] 队列已满（' + MAX_QUEUE_SIZE + '条），丢弃');
       return false;
     }
     const item = {
@@ -70,7 +71,7 @@ const ScanOfflineQueue = {
     };
     queue.push(item);
     _save(queue);
-    console.log('[ScanOfflineQueue] 已入队，当前数量:', queue.length);
+    if (DEBUG) console.log('[ScanOfflineQueue] 已入队，当前数量:', queue.length);
     return true;
   },
 
@@ -116,7 +117,7 @@ const ScanOfflineQueue = {
     let submitted = 0;
     let failed = 0;
     const total = queue.length;
-    console.log('[ScanOfflineQueue] 开始批量上传，共', total, '条');
+    if (DEBUG) console.log('[ScanOfflineQueue] 开始批量上传，共', total, '条');
 
     for (const item of queue) {
       try {
@@ -125,16 +126,16 @@ const ScanOfflineQueue = {
           // ✅ 上传成功
           this.dequeue(item.queueId);
           submitted++;
-          console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
+          if (DEBUG) console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
         } else {
           // 业务拒绝（如重复扫码），直接丢弃，不重传
           this.dequeue(item.queueId);
-          console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
+          if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
         }
       } catch (e) {
         failed++;
         const errMsg = (e && (e.errMsg || e.message)) || '';
-        console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
+        if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
         // 网络仍断开 → 停止本次 flush，等待下次触发
         if (
           errMsg.includes('timeout') ||
@@ -144,7 +145,7 @@ const ScanOfflineQueue = {
           errMsg.includes('ERR_CONNECTION') ||
           errMsg.includes('fail network')
         ) {
-          console.log('[ScanOfflineQueue] 网络仍断开，停止上传');
+          if (DEBUG) console.log('[ScanOfflineQueue] 网络仍断开，停止上传');
           break;
         }
       }
@@ -154,7 +155,7 @@ const ScanOfflineQueue = {
       }
     }
 
-    console.log('[ScanOfflineQueue] 批量上传完成 submitted=' + submitted + ' failed=' + failed + ' remaining=' + this.count());
+    if (DEBUG) console.log('[ScanOfflineQueue] 批量上传完成 submitted=' + submitted + ' failed=' + failed + ' remaining=' + this.count());
     return { submitted, failed };
   },
 };

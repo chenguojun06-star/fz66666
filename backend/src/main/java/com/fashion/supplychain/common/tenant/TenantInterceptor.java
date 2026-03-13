@@ -11,7 +11,6 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,10 +30,17 @@ import java.util.regex.Pattern;
 public class TenantInterceptor implements InnerInterceptor {
 
     /** 不需要租户隔离的系统表（无 tenant_id 列） */
-    private static final Set<String> EXCLUDED_TABLES = new HashSet<>();
+    private static final Set<String> EXCLUDED_TABLES = Set.of(
+            "t_tenant", "t_permission", "t_role_permission", "t_login_log",
+            "t_dict", "t_param_config", "t_serial_rule", "t_app_store",
+            "t_tenant_permission_ceiling", "t_user_permission_override",
+            "t_integration_callback_log"
+    );
 
     /** 需要混合查询的表（租户数据 + 系统共享数据，用 tenant_id = X OR tenant_id IS NULL） */
-    private static final Set<String> SHARED_TENANT_TABLES = new HashSet<>();
+    private static final Set<String> SHARED_TENANT_TABLES = Set.of(
+            "t_role", "t_template_library", "t_template_operation_log"
+    );
 
     /**
      * 超管可管理的表（有 tenant_id 列，但超管需要跨租户操作）。
@@ -45,55 +51,15 @@ public class TenantInterceptor implements InnerInterceptor {
      * 安全保障：超管只能通过"客户应用管理"模块操作这些表，
      * 不会看到生产订单/款式/财务等业务数据。
      */
-    private static final Set<String> SUPERADMIN_MANAGED_TABLES = new HashSet<>();
+    private static final Set<String> SUPERADMIN_MANAGED_TABLES = Set.of(
+            "t_user", "t_app_order", "t_tenant_subscription",
+            "t_payment_record", "t_logistics_record", "t_user_feedback",
+            "t_tenant_billing", "t_billing_record", "t_plan_definition"
+    );
 
     /** 匹配 FROM/JOIN/UPDATE/DELETE FROM 后表名的正则 */
     private static final Pattern TABLE_PATTERN = Pattern.compile(
             "(?:FROM|JOIN|UPDATE|DELETE\\s+FROM)\\s+([`]?\\w+[`]?)", Pattern.CASE_INSENSITIVE);
-
-    static {
-        // === 系统共享表（无 tenant_id 列的表）===
-        EXCLUDED_TABLES.add("t_tenant");
-        EXCLUDED_TABLES.add("t_permission");
-        EXCLUDED_TABLES.add("t_role_permission");
-        EXCLUDED_TABLES.add("t_login_log");
-        EXCLUDED_TABLES.add("t_dict");
-        EXCLUDED_TABLES.add("t_param_config");
-        EXCLUDED_TABLES.add("t_serial_rule");
-        EXCLUDED_TABLES.add("t_app_store");
-
-        // === 权限相关表（跨租户共享权限定义）===
-        EXCLUDED_TABLES.add("t_tenant_permission_ceiling");
-        EXCLUDED_TABLES.add("t_user_permission_override");
-
-        // === 第三方集成回调日志（无 tenant_id 列，全局系统级日志）===
-        EXCLUDED_TABLES.add("t_integration_callback_log");
-
-        // === 混合表（租户自有数据 + 系统共享数据）===
-        SHARED_TENANT_TABLES.add("t_role");              // 系统模板角色(tenant_id=NULL) + 租户自有角色
-        SHARED_TENANT_TABLES.add("t_template_library");  // 系统工序模板(NULL) + 租户自定义模板
-        SHARED_TENANT_TABLES.add("t_template_operation_log"); // 模板操作日志
-
-        // === 超管可管理的表（超管审批/创建账号时需要跨租户操作）===
-        SUPERADMIN_MANAGED_TABLES.add("t_user");         // 超管审批入驻、创建租户主账号
-        // t_role 已在 SHARED_TENANT_TABLES，超管可正常访问模板角色
-
-        // === 应用商店平台表（超管需要跨租户查看所有购买订单和订阅记录）===
-        SUPERADMIN_MANAGED_TABLES.add("t_app_order");        // 租户购买订单（超管激活用）
-        SUPERADMIN_MANAGED_TABLES.add("t_tenant_subscription"); // 租户订阅记录（超管管理用）
-
-        // === 第三方集成追踪表（超管需要查看所有租户的支付 / 物流记录）===
-        SUPERADMIN_MANAGED_TABLES.add("t_payment_record");   // 支付流水（普通租户按 tenant_id 隔离）
-        SUPERADMIN_MANAGED_TABLES.add("t_logistics_record"); // 物流运单（普通租户按 tenant_id 隔离）
-
-        // === 用户反馈表（超管在「客户管理→问题反馈」Tab 查看所有租户的反馈）===
-        SUPERADMIN_MANAGED_TABLES.add("t_user_feedback");    // 用户提交的反馈（超管全量查看、回复）
-
-        // === 套餐与计费表（超管管理所有租户的套餐和账单）===
-        SUPERADMIN_MANAGED_TABLES.add("t_tenant_billing");   // 租户账单记录
-        SUPERADMIN_MANAGED_TABLES.add("t_billing_record");   // 账单明细
-        SUPERADMIN_MANAGED_TABLES.add("t_plan_definition");  // 套餐定义（共享配置）
-    }
 
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,

@@ -137,6 +137,15 @@ public class CosService {
         return StringUtils.hasText(secretId) && StringUtils.hasText(bucket);
     }
 
+    /** 允许上传的文件扩展名白名单 */
+    private static final java.util.Set<String> ALLOWED_EXTENSIONS = java.util.Set.of(
+            "jpg", "jpeg", "png", "gif", "bmp", "webp",
+            "pdf", "doc", "docx", "xls", "xlsx", "csv", "txt",
+            "zip", "rar", "7z"
+    );
+    /** 单文件最大 50MB */
+    private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
+
     /**
      * 上传 MultipartFile 到 COS
      *
@@ -145,6 +154,21 @@ public class CosService {
      * @param file     待上传文件
      */
     public void upload(Long tenantId, String filename, MultipartFile file) throws IOException {
+        // 文件大小校验
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IOException("文件大小超过限制（最大50MB）");
+        }
+        // 文件类型白名单校验
+        String ext = "";
+        String originalName = file.getOriginalFilename();
+        if (originalName != null && originalName.contains(".")) {
+            ext = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase();
+        } else if (filename.contains(".")) {
+            ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+        }
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IOException("不允许上传此类型文件（" + ext + "）");
+        }
         String key = buildKey(tenantId, filename);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());

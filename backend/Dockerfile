@@ -17,6 +17,8 @@ RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shang
 RUN mkdir -p /uploads/tenants
 COPY --from=build /app/target/*.jar ./app.jar
 EXPOSE 8088
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8088/actuator/health || exit 1
 # 默认激活 prod 配置（cloudbaserc.json 或 docker run -e 可覆盖）
 ENV SPRING_PROFILES_ACTIVE=prod
 # JVM 启动优化（云端健康检查探针有时间限制，必须加速启动）

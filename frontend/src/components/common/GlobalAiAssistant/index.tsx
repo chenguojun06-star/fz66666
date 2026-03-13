@@ -80,6 +80,15 @@ function escHtml(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+/** 白名单 HTML 标签清理（defense-in-depth，防止 XSS） */
+const ALLOWED_TAGS = /^<\/?(strong|em|code|pre|ul|li|ol|div|br|span|p|a|h[1-6]|table|thead|tbody|tr|td|th)(\s[^>]*)?\/?>$/i;
+function sanitizeHtml(html: string): string {
+  return html.replace(/<\/?[^>]+(>|$)/g, (tag) => {
+    if (ALLOWED_TAGS.test(tag)) return tag;
+    return tag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  });
+}
+
 // ── 富媒体结构类型 ─────────────────────────────────────────────────────────
 
 interface ChartSpec {
@@ -838,11 +847,11 @@ const GlobalAiAssistant: React.FC = () => {
                     <div
                       className={styles.mdContent}
                       dangerouslySetInnerHTML={{
-                        __html: renderSimpleMarkdown(
+                        __html: sanitizeHtml(renderSimpleMarkdown(
                           msg.text.includes('【推荐追问】：')
                             ? msg.text.split('【推荐追问】：')[0]
                             : msg.text
-                        )
+                        ))
                       }}
                     />
                   ) : (

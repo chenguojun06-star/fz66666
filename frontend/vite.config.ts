@@ -19,6 +19,10 @@ const buildCommit = env.VITE_BUILD_COMMIT || resolveGitCommit()
 const buildTime = env.VITE_BUILD_TIME || new Date().toISOString()
 
 export default defineConfig({
+  esbuild: {
+    drop: ['debugger'],
+    pure: ['console.log'],
+  },
   define: {
     __BUILD_COMMIT__: JSON.stringify(buildCommit),
     __BUILD_TIME__: JSON.stringify(buildTime),
@@ -36,6 +40,8 @@ export default defineConfig({
     // terser 在云端内存受限环境（1-2GB）压缩 ECharts 等大 chunk 时 OOM 被杀，
     // 导致 dist/assets/ 只生成了一部分，引用这些文件的 index.html 上线后 404
     minify: 'esbuild',
+    // 生产构建时移除 console.log 和 debugger
+    target: 'es2020',
     // ⚠️ 不使用 manualChunks，让 Rollup 完全自动拆包。
     // 手动指定 manualChunks 会把 rc-*/scheduler 等 React 内部依赖
     // 与 react/react-dom 拆入不同 chunk，造成双 React 实例 →

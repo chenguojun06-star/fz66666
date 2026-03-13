@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 
 /**
  * 今日热榜定时任务
@@ -40,9 +42,25 @@ public class DailyHotItemsJob {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
+
     @Scheduled(cron = "0 0 2 * * ?")
     public void scheduled() {
-        execute();
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:daily-hot-items", 30, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.info("[DailyHotJob] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                execute();
+            } finally {
+                distributedLockService.unlock("job:daily-hot-items", lockValue);
+            }
+        } else {
+            execute();
+        }
     }
 
     /**

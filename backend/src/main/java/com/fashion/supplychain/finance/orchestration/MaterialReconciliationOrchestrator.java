@@ -27,6 +27,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class MaterialReconciliationOrchestrator {
 
@@ -128,7 +131,7 @@ public class MaterialReconciliationOrchestrator {
                 }
             }
         } catch (Exception e) {
-            // 忽略错误，图片URL、采购员、单位、单价、到货数量、采购类型为可选字段
+            log.warn("面料对账采购信息填充失败（单价/数量可能缺失）", e);
         }
 
         // 填充图片URL、采购员姓名、单位、单价、到货数量、采购类型

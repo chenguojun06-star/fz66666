@@ -9,11 +9,14 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -30,11 +33,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @PreAuthorize("isAuthenticated()")
 public class TenantController {
 
-    @Autowired
-    private SysNoticeOrchestrator sysNoticeOrchestrator;
+    private static final String REDIS_WORKER_REG_PREFIX = "fashion:ratelimit:worker-reg:";
+    private static final int WORKER_REG_MAX_PER_HOUR = 10;
 
     @Autowired
     private TenantOrchestrator tenantOrchestrator;
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
     // ========== 公开接口（无需登录） ==========
 
@@ -451,7 +460,24 @@ public class TenantController {
      * 工人自注册（无需登录）
      */
     @PostMapping("/registration/register")
-    public Result<Map<String, Object>> workerRegister(@RequestBody Map<String, String> params) {
+    public Result<Map<String, Object>> workerRegister(@RequestBody Map<String, String> params,
+                                                      HttpServletRequest request) {
+        // Redis IP 限流：每 IP 每小时最多 10 次工人注册
+        if (stringRedisTemplate != null) {
+            try {
+                String ip = request.getRemoteAddr();
+                String key = REDIS_WORKER_REG_PREFIX + ip;
+                Long count = stringRedisTemplate.opsForValue().increment(key);
+                if (count != null && count == 1) {
+                    stringRedisTemplate.expire(key, 1, TimeUnit.HOURS);
+                }
+                if (count != null && count > WORKER_REG_MAX_PER_HOUR) {
+                    return Result.fail("注册请求过于频繁，请稍后再试");
+                }
+            } catch (Exception ignored) {
+                // Redis 不可用时降级放行
+            }
+        }
         String username = params.get("username");
         String password = params.get("password");
         String name = params.get("name");

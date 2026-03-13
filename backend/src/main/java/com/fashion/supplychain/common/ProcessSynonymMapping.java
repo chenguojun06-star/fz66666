@@ -1,6 +1,11 @@
 package com.fashion.supplychain.common;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 工序名称同义词映射表
@@ -22,36 +27,39 @@ public class ProcessSynonymMapping {
     /**
      * 同义词映射表：key=标准名称, value=同义词列表
      */
-    private static final Map<String, Set<String>> SYNONYM_MAP = new LinkedHashMap<>();
+    private static final Map<String, Set<String>> SYNONYM_MAP;
 
     static {
+        Map<String, Set<String>> map = new LinkedHashMap<>();
         // 采购环节同义词
-        SYNONYM_MAP.put(PROCESS_PROCUREMENT, new HashSet<>(Arrays.asList(
-                "采购", "物料采购", "面辅料采购", "备料", "到料", "进料", "物料")));
+        map.put(PROCESS_PROCUREMENT, Set.of(
+                "采购", "物料采购", "面辅料采购", "备料", "到料", "进料", "物料"));
 
         // 裁剪环节同义词
-        SYNONYM_MAP.put(PROCESS_CUTTING, new HashSet<>(Arrays.asList(
-                "裁剪", "裁床", "剪裁", "开裁", "裁片", "裁切")));
+        map.put(PROCESS_CUTTING, Set.of(
+                "裁剪", "裁床", "剪裁", "开裁", "裁片", "裁切"));
 
         // 车缝/生产环节同义词（核心映射）
-        SYNONYM_MAP.put(PROCESS_SEWING, new HashSet<>(Arrays.asList(
-                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产", "整件")));
+        map.put(PROCESS_SEWING, Set.of(
+                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产", "整件"));
 
         // 大烫环节同义词
-        SYNONYM_MAP.put(PROCESS_IRONING, new HashSet<>(Arrays.asList(
-                "大烫", "整烫", "熨烫", "烫整", "后整烫")));
+        map.put(PROCESS_IRONING, Set.of(
+                "大烫", "整烫", "熨烫", "烫整", "后整烫"));
 
         // 质检环节同义词
-        SYNONYM_MAP.put(PROCESS_QUALITY, new HashSet<>(Arrays.asList(
-                "质检", "检验", "品检", "验货", "QC", "品控", "检查")));
+        map.put(PROCESS_QUALITY, Set.of(
+                "质检", "检验", "品检", "验货", "QC", "品控", "检查"));
 
         // 包装环节同义词
-        SYNONYM_MAP.put(PROCESS_PACKAGING, new HashSet<>(Arrays.asList(
-                "包装", "后整", "打包", "装箱", "封箱", "贴标")));
+        map.put(PROCESS_PACKAGING, Set.of(
+                "包装", "后整", "打包", "装箱", "封箱", "贴标"));
 
         // 入库环节同义词
-        SYNONYM_MAP.put(PROCESS_WAREHOUSE, new HashSet<>(Arrays.asList(
-                "入库", "仓储", "上架", "进仓", "入仓")));
+        map.put(PROCESS_WAREHOUSE, Set.of(
+                "入库", "仓储", "上架", "进仓", "入仓"));
+
+        SYNONYM_MAP = Collections.unmodifiableMap(map);
     }
 
     /**

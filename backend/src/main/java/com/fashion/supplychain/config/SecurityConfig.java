@@ -98,12 +98,12 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .authorizeHttpRequests(authz -> authz
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .antMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
+                        .antMatchers("/error").permitAll()  // Spring Boot 错误转发端点，需放行否则自身产生 403 噪音日志
                         .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .antMatchers("/api/system/tenant/apply").permitAll()
                         .antMatchers("/api/system/tenant/public-list").permitAll()
                         .antMatchers("/api/system/user/login").permitAll()
                         .antMatchers("/api/auth/login").permitAll()
-                        .antMatchers("/api/auth/user-info").permitAll()
                         .antMatchers("/api/auth/register").permitAll()
                         // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
                         // 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx，TokenAuthFilter 会解析
@@ -129,8 +129,6 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/production/order/node-operations/**").authenticated()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
                         .permitAll()
-                        .antMatchers("/actuator/prometheus", "/actuator/prometheus/**")
-                        .permitAll()
                         .antMatchers("/api/warehouse/dashboard/**").authenticated()
                         .antMatchers("/actuator/**").hasAnyAuthority(
                                 "ROLE_admin",
@@ -155,6 +153,14 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "ROLE_tenant_owner")
                         .antMatchers("/api/**").authenticated()
                         .anyRequest().denyAll());
+
+        // 未认证请求（token 缺失 / 过期）统一返回 401 JSON，前端拦截器据此跳转登录页
+        // 有 token 但权限不足（403 Forbidden / AccessDeniedException）不在此处处理，保持默认 403
+        http.exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
+            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            res.setContentType("application/json;charset=UTF-8");
+            res.getWriter().write("{\"code\":401,\"message\":\"token已过期，请重新登录\"}");
+        }));
 
         http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine, stringRedisTemplate), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);

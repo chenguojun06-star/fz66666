@@ -216,7 +216,8 @@ public final class ParamUtils {
 
     public static int getPageSize(Map<String, ?> params) {
         int size = getIntOrDefault(params, "pageSize", 10);
-        return size <= 0 ? 10 : size;
+        if (size <= 0) size = 10;
+        return Math.min(size, 500);
     }
 
     public static int getPageSizeClamped(Map<String, ?> params, int defaultValue, int minValue, int maxValue) {
@@ -235,7 +236,8 @@ public final class ParamUtils {
 
     public static long getPageSizeLong(Map<String, ?> params) {
         long size = getLongOrDefault(params, "pageSize", 10L);
-        return size <= 0 ? 10L : size;
+        if (size <= 0) size = 10L;
+        return Math.min(size, 500L);
     }
 
     public static long getPageSizeLongClamped(Map<String, ?> params, long defaultValue, long minValue, long maxValue) {

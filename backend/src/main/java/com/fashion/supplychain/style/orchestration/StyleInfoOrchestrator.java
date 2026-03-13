@@ -134,6 +134,7 @@ public class StyleInfoOrchestrator {
         return styleInfo;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleInfo styleInfo) {
         normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
@@ -175,6 +176,7 @@ public class StyleInfoOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleInfo styleInfo) {
         normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);

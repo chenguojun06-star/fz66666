@@ -138,7 +138,7 @@ public class GlobalExceptionHandler {
                 String rootMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
                 logger.error("SQL语法异常（DB列缺失）: {} {} - {}", method, uri, rootMsg, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据库结构不一致: " + rootMsg));
+                                .body(Result.fail(500, "数据库操作异常，请联系管理员"));
         }
 
         /**
@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("事务意外回滚: {} {} - {}", method, uri, e.getMessage(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "操作失败（事务回滚）：" + e.getMessage()));
+                                .body(Result.fail(500, "操作失败，请稍后重试"));
         }
 
         /**

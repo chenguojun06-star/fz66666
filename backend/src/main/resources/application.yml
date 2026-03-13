@@ -20,8 +20,8 @@ spring:
     allow-circular-references: true
   servlet:
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
@@ -79,6 +79,11 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
   type-aliases-package: com.fashion.supplychain.entity
+  global-config:
+    db-config:
+      logic-delete-field: deleteFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
@@ -108,7 +113,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: ${ACTUATOR_ENDPOINTS:health}
       base-path: /actuator
   endpoint:
     health:
@@ -148,7 +153,7 @@ fashion:
 
 app:
   auth:
-    jwt-secret: ${APP_AUTH_JWT_SECRET:fashion-supply-chain-jwt-secret-key-2026}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
   security:
     trusted-ips:
@@ -180,11 +185,15 @@ app:
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
 
 springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:false}
   packages-to-scan: com.fashion.supplychain
 
   qrcode:
     hmac-secret: ${APP_QRCODE_HMAC_SECRET:}
-    require-signature: ${APP_QRCODE_REQUIRE_SIGNATURE:false}
+    require-signature: ${APP_QRCODE_REQUIRE_SIGNATURE:true}
 
 wechat:
   mini-program:

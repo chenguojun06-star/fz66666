@@ -5,14 +5,14 @@
  */
 
 // 从主配置文件获取调试模式（ES module → CommonJS 适配）
-let DEBUG_MODE_VALUE = true;
+let DEBUG_MODE_VALUE = false;
 try {
   // config.js 使用 ES export，在 require 环境中可能需要 fallback
   const mainConfig = require('../config.js');
-  DEBUG_MODE_VALUE = mainConfig.DEBUG_MODE !== undefined ? mainConfig.DEBUG_MODE : true;
+  DEBUG_MODE_VALUE = mainConfig.DEBUG_MODE !== undefined ? mainConfig.DEBUG_MODE : false;
 } catch (e) {
-  // fallback: 开发环境默认开启调试
-  DEBUG_MODE_VALUE = true;
+  // fallback: 生产环境默认关闭调试
+  DEBUG_MODE_VALUE = false;
 }
 
 module.exports = {
@@ -21,12 +21,6 @@ module.exports = {
    * 生产环境请在 config.js 中设置 DEBUG_MODE = false
    */
   DEBUG: DEBUG_MODE_VALUE,
-
-  /**
-   * API 基础地址（仅作参考，实际地址以 config.js → getBaseUrl() 为准）
-   * 默认使用局域网IP支持内网访问，如连接失败请在登录页手动输入 localhost:8088
-   */
-  API_BASE_URL: 'http://192.168.1.17:8088',
 
   /**
    * 请求超时时间（毫秒）

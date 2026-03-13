@@ -16,6 +16,7 @@ import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -79,26 +80,32 @@ public class ReconciliationStatusOrchestrator {
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
 
+    @Transactional(rollbackFor = Exception.class)
     public String updateMaterialStatus(String id, String status) {
         return updateStatus(Scope.MATERIAL, id, status);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String updateShipmentStatus(String id, String status) {
         return updateStatus(Scope.SHIPMENT, id, status);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String updateStatusCompat(String id, String status) {
         return updateStatus(Scope.AUTO, id, status);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String returnMaterialToPrevious(String id, String reason) {
         return returnToPrevious(Scope.MATERIAL, id, reason);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String returnShipmentToPrevious(String id, String reason) {
         return returnToPrevious(Scope.SHIPMENT, id, reason);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String returnCompat(String id, String reason) {
         return returnToPrevious(Scope.AUTO, id, reason);
     }

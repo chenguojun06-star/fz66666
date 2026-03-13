@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.dto.AnomalyDetectionResponse;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionResponse;
@@ -68,8 +70,28 @@ public class SmartNotifyJob {
     @Autowired
     private WxAlertNotifyService wxAlertNotifyService;
 
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
+
     @Scheduled(cron = "0 0 * * * ?")
     public void autoDetectAndNotify() {
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:smart-notify", 50, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.info("[SmartNotify] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                doAutoDetect();
+            } finally {
+                distributedLockService.unlock("job:smart-notify", lockValue);
+            }
+        } else {
+            doAutoDetect();
+        }
+    }
+
+    private void doAutoDetect() {
         log.info("[SmartNotify] 开始自动风险检测...");
         long startMs = System.currentTimeMillis();
 

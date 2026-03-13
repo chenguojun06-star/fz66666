@@ -1584,13 +1584,10 @@ public class TenantOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> workerRegister(String username, String password, String name,
                                                 String phone, String tenantCode, String factoryId) {
-        // 验证租户码
+        // 验证租户码（统一错误消息防止枚举）
         Tenant tenant = tenantService.findByTenantCode(tenantCode);
-        if (tenant == null) {
-            throw new IllegalArgumentException("无效的租户编码: " + tenantCode);
-        }
-        if (!"active".equals(tenant.getStatus())) {
-            throw new IllegalArgumentException("该租户已停用");
+        if (tenant == null || !"active".equals(tenant.getStatus())) {
+            throw new IllegalArgumentException("注册失败，请检查租户编码是否正确");
         }
 
         // 验证用户名唯一

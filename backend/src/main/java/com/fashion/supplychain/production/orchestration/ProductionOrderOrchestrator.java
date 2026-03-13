@@ -406,6 +406,7 @@ public class ProductionOrderOrchestrator {
      * 级联清理订单的所有子表数据（删除/报废时统一调用）
      * 包括：采购任务、裁剪任务、扫码记录、质检入库、出库记录、出货对账
      */
+    @Transactional(rollbackFor = Exception.class)
     private void cascadeCleanupChildTables(String orderId) {
         try {
             materialPurchaseService.deleteByOrderId(orderId);

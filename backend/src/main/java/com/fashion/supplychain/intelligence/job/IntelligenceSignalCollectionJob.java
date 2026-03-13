@@ -3,7 +3,9 @@ package com.fashion.supplychain.intelligence.job;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceSignalOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,8 +29,28 @@ public class IntelligenceSignalCollectionJob {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
+
     @Scheduled(cron = "0 */30 * * * ?")
     public void periodicCollect() {
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:signal-collection", 25, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.info("[信号采集Job] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                doCollect();
+            } finally {
+                distributedLockService.unlock("job:signal-collection", lockValue);
+            }
+        } else {
+            doCollect();
+        }
+    }
+
+    private void doCollect() {
         List<Long> tenants = processStatsEngine.findActiveTenantIds();
         if (tenants == null || tenants.isEmpty()) {
             return;

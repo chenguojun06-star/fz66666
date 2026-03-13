@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,11 +27,31 @@ public class IntelligenceLearningJob {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
+
     /**
      * 每日 02:30 学习任务入口（cron: 秒 分 时 日 月 星期）
      */
     @Scheduled(cron = "0 30 2 * * ?")
     public void dailyRecompute() {
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:intelligence-learning", 30, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.info("[智能学习Job] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                doDailyRecompute();
+            } finally {
+                distributedLockService.unlock("job:intelligence-learning", lockValue);
+            }
+        } else {
+            doDailyRecompute();
+        }
+    }
+
+    private void doDailyRecompute() {
         log.info("[智能学习Job] ===== 每日工序统计学习开始 =====");
 
         List<Long> tenants = processStatsEngine.findActiveTenantIds();

@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.util.concurrent.TimeUnit;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -39,6 +41,7 @@ public class AiPatrolOrchestrator {
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private ScanRecordMapper scanRecordMapper;
     @Autowired private SysNoticeService sysNoticeService;
+    @Autowired(required = false) private DistributedLockService distributedLockService;
 
     // ─── 定时调度 ─────────────────────────────────────────────────────────────
 
@@ -47,6 +50,23 @@ public class AiPatrolOrchestrator {
      */
     @Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 5 * 60 * 1000)
     public void schedulePatrol() {
+        if (distributedLockService != null) {
+            String lockValue = distributedLockService.tryLock("job:ai-patrol", 25, TimeUnit.MINUTES);
+            if (lockValue == null) {
+                log.debug("[AiPatrol] 其他实例正在执行，跳过");
+                return;
+            }
+            try {
+                doPatrol();
+            } finally {
+                distributedLockService.unlock("job:ai-patrol", lockValue);
+            }
+        } else {
+            doPatrol();
+        }
+    }
+
+    private void doPatrol() {
         List<Tenant> tenants = tenantService.list();
         log.info("[AiPatrol] 开始定时巡检，共 {} 个租户", tenants.size());
         int total = 0;
