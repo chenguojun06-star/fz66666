@@ -548,8 +548,8 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
     <ResizableModal
       open={open}
       title="工序单价维护 · 同步到生产订单"
-      width="80vw"
-      initialHeight={680}
+      width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       onCancel={handleCancel}
       footer={
         <Space>

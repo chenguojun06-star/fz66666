@@ -66,7 +66,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       onOk={handleOk}
       onCancel={handleCancel}
       confirmLoading={loading}
-      width={500}
+      width="40vw"
       destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

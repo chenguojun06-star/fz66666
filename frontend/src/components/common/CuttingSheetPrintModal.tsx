@@ -421,7 +421,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       title="打印裁剪单"
       open={open}
       onCancel={onCancel}
-      width={500}
+      width="40vw"
       footer={
         <Space>
           <Button onClick={onCancel}>取消</Button>

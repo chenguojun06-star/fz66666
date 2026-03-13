@@ -33,7 +33,7 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
 }) => (
   <ResizableModal
     title="扫码确认"
-    width="35vw"
+    width="30vw"
     open={open}
     onCancel={onCancel}
     footer={[
