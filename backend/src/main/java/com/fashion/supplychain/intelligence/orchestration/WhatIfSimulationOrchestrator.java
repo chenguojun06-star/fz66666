@@ -196,9 +196,10 @@ public class WhatIfSimulationOrchestrator {
     }
 
     private boolean isOverdue(ProductionOrder o) {
-        // 简单判断：已逾期（delivery_date < today && 非已完成）
-        // 这里用 orderQuantity 的缺失作为简版逾期判断（无 deliveryDate 字段被直接暴露）
-        return false;  // 占位：实际项目中接回 deliveryDate 比较
+        return o.getPlannedEndDate() != null
+            && o.getStatus() != null
+            && !o.getStatus().contains("完工")
+            && java.time.LocalDate.now().isAfter(o.getPlannedEndDate().toLocalDate());
     }
 
     private double estimateCost(ProductionOrder o) {

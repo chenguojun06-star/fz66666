@@ -350,4 +350,100 @@ export async function getGraphAbStats(days = 30): Promise<ABSceneStat[]> {
   return response.data;
 }
 
+/** ── 预测引擎 ── */
+
+export interface ForecastParams {
+  forecastType: 'COST' | 'DEMAND' | 'MATERIAL';
+  subjectId?: string;   // 款式ID 或 品类
+  horizon?: string;     // 预测周期，如 '30d' '90d'
+}
+export interface ForecastResult {
+  forecastType: string;
+  predictedValue: number;
+  optimisticLow: number;
+  pessimisticHigh: number;
+  confidence: number;
+  algorithm: string;
+  rationale: string;
+  breakdown: Record<string, number>;
+}
+export async function runForecast(params: ForecastParams): Promise<ForecastResult> {
+  const response = await api.post<ApiResult<ForecastResult>>(
+    '/intelligence/forecast',
+    params
+  );
+  return response.data as unknown as ForecastResult;
+}
+
+/** ── 推演仿真（What-If）── */
+
+export interface WhatIfParams {
+  orderIds: number[];
+  scenarios: { scenarioKey: string; description: string; tweaks: Record<string, number> }[];
+}
+export interface ScenarioResult {
+  scenarioKey: string;
+  description: string;
+  finishDateDeltaDays: number;
+  costDelta: number;
+  overdueRiskDelta: number;
+  score: number;
+  action: string;
+}
+export interface WhatIfResult {
+  baseline: ScenarioResult;
+  scenarios: ScenarioResult[];
+  recommendedScenario: string;
+  summary: string;
+}
+export async function simulateWhatIf(params: WhatIfParams): Promise<WhatIfResult> {
+  const response = await api.post<ApiResult<WhatIfResult>>(
+    '/intelligence/whatif/simulate',
+    params
+  );
+  return response.data as unknown as WhatIfResult;
+}
+
+/** ── 视觉AI质检 ── */
+
+export interface VisualAnalyzeParams {
+  imageUrl: string;
+  taskType: 'DEFECT_DETECT' | 'STYLE_IDENTIFY' | 'COLOR_CHECK';
+  orderId?: string | number;
+}
+export interface VisualAnalyzeResult {
+  taskType: string;
+  report: string;
+  severity: 'NONE' | 'LOW' | 'MED' | 'HIGH';
+  confidence: number;
+  recommendation: string;
+  detectedItems: string[];
+}
+export async function analyzeVisualAI(params: VisualAnalyzeParams): Promise<VisualAnalyzeResult> {
+  const response = await api.post<ApiResult<VisualAnalyzeResult>>(
+    '/intelligence/visual/analyze',
+    params
+  );
+  return response.data as unknown as VisualAnalyzeResult;
+}
+
+/** ── 经营基准 KPI ── */
+
+export interface BenchmarkPerformanceResult {
+  overdueRate: number;
+  completionRate: number;
+  onTimeRate: number;
+  defectRate: number;
+  effScore: number;
+  aiAdvice: string;
+  snapshotDate: string;
+  tenantId: string;
+}
+export async function getBenchmarkPerformance(): Promise<BenchmarkPerformanceResult> {
+  const response = await api.get<ApiResult<BenchmarkPerformanceResult>>(
+    '/intelligence/benchmark/performance'
+  );
+  return response.data as unknown as BenchmarkPerformanceResult;
+}
+
 export default intelligenceApi;
