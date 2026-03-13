@@ -8,7 +8,7 @@ import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } fr
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
-import { App, Button, Card, Form, Input, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
@@ -202,6 +202,7 @@ const FactoryList: React.FC = () => {
         contactPhone: '',
         managerId: undefined,
         address: '',
+        dailyCapacity: undefined,
         status: 'active',
         supplierType: activeTab === 'ALL' ? 'MATERIAL' : activeTab,
         factoryType: activeTab === 'OUTSOURCE' ? 'EXTERNAL' : 'INTERNAL',
@@ -217,6 +218,7 @@ const FactoryList: React.FC = () => {
         contactPhone: factory?.contactPhone,
         managerId: factory?.managerId,
         address: factory?.address,
+        dailyCapacity: factory?.dailyCapacity,
         status: factory?.status || 'inactive',
         supplierType: factory?.supplierType || 'MATERIAL',
         factoryType: factory?.factoryType || 'INTERNAL',
@@ -773,6 +775,20 @@ const FactoryList: React.FC = () => {
           </div>
           <Form.Item name="address" label="地址">
             <Input placeholder="请输入地址" />
+          </Form.Item>
+          <Form.Item
+            name="dailyCapacity"
+            label="日产能（件/天）"
+            extra="填写实际日均可生产件数，直接影响排产建议评分的准确性"
+          >
+            <InputNumber
+              min={1}
+              max={99999}
+              precision={0}
+              placeholder="请输入日产能，如：200"
+              style={{ width: '100%' }}
+              addonAfter="件/天"
+            />
           </Form.Item>
           <Form.Item name="businessLicense" label="营业执照" hidden>
             <Input />

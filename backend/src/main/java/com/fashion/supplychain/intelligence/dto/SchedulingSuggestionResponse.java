@@ -40,6 +40,10 @@ public class SchedulingSuggestionResponse {
         private boolean capacityConfigured;
         /** 数据说明文字（给前端展示用） */
         private String dataNote;
+        /** 近30天实测日产能（件/天），0=无扫码数据 */
+        private int realDailyCapacity;
+        /** 产能数据来源：real=扫码实测 / configured=手动配置 / default=系统默认500 */
+        private String capacitySource;
     }
 
     @Data

@@ -386,8 +386,25 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                                 <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
                                   共 {schedulingResult.plans.length} 个工厂方案，按匹配度排序：
                                 </div>
+                                {/* 无真实数据时显示全局提示 */}
+                                {schedulingResult.plans.every(p => !p.hasRealData) && (
+                                  <div style={{
+                                    background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4,
+                                    padding: '6px 10px', marginBottom: 8, fontSize: 12, color: '#ad6800',
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                  }}>
+                                    ⚠️ 当前无历史完成订单，以下评分均为估算参考值，请结合实际情况选择工厂
+                                  </div>
+                                )}
                                 {schedulingResult.plans.map((plan: SchedulePlan, idx: number) => {
-                                  const scoreColor = plan.matchScore >= 70 ? '#52c41a' : plan.matchScore >= 50 ? '#fa8c16' : '#ff4d4f';
+                                  const capacitySource = plan.capacitySource ?? 'default';
+                                  const isFullReal = capacitySource === 'real' && plan.hasRealData;
+                                  const isRealCap = capacitySource === 'real';
+                                  const isEstimated = capacitySource === 'default';
+                                  const scoreColor = isEstimated ? '#d4b106'
+                                    : isFullReal ? (plan.matchScore >= 70 ? '#52c41a' : plan.matchScore >= 50 ? '#fa8c16' : '#ff4d4f')
+                                    : '#1677ff';
+                                  const badgeLabel = isEstimated ? '估算' : isFullReal ? 'AI推荐' : '实测';
                                   const totalGanttDays = plan.ganttItems?.reduce((s, g) => s + g.days, 0) || plan.estimatedDays || 1;
                                   return (
                                     <div key={idx} style={{
@@ -404,9 +421,18 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                                           <span style={{
                                             fontSize: 11, fontWeight: 700, padding: '1px 6px',
                                             borderRadius: 10, color: '#fff', background: scoreColor,
-                                          }}>匹配 {plan.matchScore}分</span>
+                                          }}>
+                                            {badgeLabel} {plan.matchScore}分
+                                          </span>
                                           <span style={{ fontSize: 11, color: '#888' }}>
                                             在制 {plan.currentLoad} 件 · 可用 {plan.availableCapacity.toLocaleString()} 件产能
+                                            {isRealCap && plan.realDailyCapacity ? (
+                                              <span style={{ color: '#52c41a', marginLeft: 3 }}>(实测{plan.realDailyCapacity}件/天)</span>
+                                            ) : capacitySource === 'configured' ? (
+                                              <span style={{ color: '#1677ff', marginLeft: 3 }}>(已配置)</span>
+                                            ) : (
+                                              <span style={{ color: '#faad14', marginLeft: 3 }}>(估算)</span>
+                                            )}
                                           </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

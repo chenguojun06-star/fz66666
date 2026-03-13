@@ -7,10 +7,13 @@ import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse.GanttItem;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse.SchedulePlan;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +41,9 @@ public class SchedulingSuggestionOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     /** 标准工序及时间占比 */
     private static final LinkedHashMap<String, Double> STAGE_RATIO = new LinkedHashMap<>() {{
@@ -91,6 +97,50 @@ public class SchedulingSuggestionOrchestrator {
                     .filter(o -> o.getFactoryName() != null)
                     .collect(Collectors.groupingBy(ProductionOrder::getFactoryName));
 
+            // ⑤ 近30天生产扫码记录 → 各工厂实测日产能 ─────────────────────────────
+            // 所有订单 orderId(String) → factoryName 映射（扫码记录无直接工厂名字段）
+            QueryWrapper<ProductionOrder> allOrdersQw = new QueryWrapper<>();
+            allOrdersQw.eq(tenantId != null, "tenant_id", tenantId)
+                       .eq("delete_flag", 0)
+                       .isNotNull("factory_name")
+                       .select("id", "factory_name");
+            Map<String, String> orderToFactory = productionOrderService.list(allOrdersQw).stream()
+                    .filter(o -> o.getFactoryName() != null && o.getId() != null)
+                    .collect(Collectors.toMap(
+                            o -> String.valueOf(o.getId()),
+                            ProductionOrder::getFactoryName,
+                            (a, b) -> a));
+
+            // 近30天成功的「生产工序」扫码记录
+            QueryWrapper<ScanRecord> scanQw = new QueryWrapper<>();
+            scanQw.eq(tenantId != null, "tenant_id", tenantId)
+                  .eq("scan_result", "success")
+                  .eq("scan_type", "production")
+                  .ge("scan_time", LocalDateTime.now().minusDays(30))
+                  .isNotNull("order_id");
+            List<ScanRecord> recentScans = scanRecordService.list(scanQw);
+
+            // factoryName → { date → totalQty }  每天各工厂扫码件数汇总
+            Map<String, Map<LocalDate, Integer>> scansByFactory = new HashMap<>();
+            for (ScanRecord sr : recentScans) {
+                String fn = orderToFactory.get(sr.getOrderId());
+                if (fn == null || sr.getScanTime() == null) continue;
+                int qty = sr.getQuantity() != null ? sr.getQuantity() : 0;
+                if (qty <= 0) continue;
+                scansByFactory.computeIfAbsent(fn, k -> new HashMap<>())
+                        .merge(sr.getScanTime().toLocalDate(), qty, Integer::sum);
+            }
+
+            // factoryName → 实测日产能 = 近30天总件数 ÷ 有扫码的工作日数
+            Map<String, Integer> realDailyCapByFactory = new HashMap<>();
+            for (Map.Entry<String, Map<LocalDate, Integer>> e : scansByFactory.entrySet()) {
+                int totalQty = e.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                int workDays = e.getValue().size();
+                realDailyCapByFactory.put(e.getKey(), Math.max(1, totalQty / Math.max(1, workDays)));
+            }
+            log.info("[排产建议] 近30天有扫码数据的工厂数={}, 扫码记录总数={}",
+                     realDailyCapByFactory.size(), recentScans.size());
+
             String requestedCategory = req.getProductCategory();
             int quantity = req.getQuantity() != null ? req.getQuantity() : 1000;
 
@@ -101,8 +151,25 @@ public class SchedulingSuggestionOrchestrator {
                 if (factoryName == null) continue;
 
                 int currentLoad = loadByFactory.getOrDefault(factoryName, 0);
-                int dailyCapacity = (f.getDailyCapacity() != null && f.getDailyCapacity() > 0)
-                        ? f.getDailyCapacity() : 500;
+
+                // 产能来源优先级：① 实测扫码记录 ② 手动配置（非默认500） ③ 系统默认500
+                Integer realCap = realDailyCapByFactory.get(factoryName);
+                boolean hasRealScanCapacity = realCap != null && realCap > 0;
+                boolean capacityConfigured = f.getDailyCapacity() != null && f.getDailyCapacity() > 0
+                        && f.getDailyCapacity() != 500;
+                int dailyCapacity;
+                String capacitySource;
+                if (hasRealScanCapacity) {
+                    dailyCapacity = realCap;
+                    capacitySource = "real";
+                } else if (capacityConfigured) {
+                    dailyCapacity = f.getDailyCapacity();
+                    capacitySource = "configured";
+                } else {
+                    dailyCapacity = 500;
+                    capacitySource = "default";
+                }
+
                 int availableCapacity = Math.max(0, dailyCapacity * 30 - currentLoad);
                 int estimatedDays = Math.max(7, (int) Math.ceil((double) quantity / dailyCapacity));
 
@@ -170,6 +237,25 @@ public class SchedulingSuggestionOrchestrator {
                 plan.setEstimatedEnd(estimatedEnd.toString());
                 plan.setEstimatedDays(estimatedDays);
                 plan.setGanttItems(buildGantt(suggestedStart, estimatedDays));
+
+                // ── 数据质量标记 ─────────────────────────────────────────────
+                boolean hasRealData = !factoryDone.isEmpty();
+                plan.setHasRealData(hasRealData || hasRealScanCapacity);
+                plan.setCapacityConfigured(capacityConfigured || hasRealScanCapacity);
+                plan.setRealDailyCapacity(hasRealScanCapacity ? realCap : 0);
+                plan.setCapacitySource(capacitySource);
+                if (hasRealScanCapacity && hasRealData) {
+                    plan.setDataNote(null); // 产能+历史均为真实数据，不显示提示
+                } else if (hasRealScanCapacity) {
+                    plan.setDataNote("产能基于近30天实测（" + realCap + "件/天）；交期评分暂待完成订单数据");
+                } else if (!hasRealData && !capacityConfigured) {
+                    plan.setDataNote("暂无生产数据，产能与评分均为估算参考值");
+                } else if (!hasRealData) {
+                    plan.setDataNote("产能已配置，交期/品类评分暂无历史完成订单参考");
+                } else {
+                    plan.setDataNote("产能未配置，建议填写日产能或积累扫码数据");
+                }
+
                 plans.add(plan);
             }
 

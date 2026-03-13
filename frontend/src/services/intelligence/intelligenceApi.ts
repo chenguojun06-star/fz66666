@@ -284,6 +284,12 @@ export interface SchedulePlan {
   estimatedEnd: string;
   estimatedDays: number;
   ganttItems: GanttItem[];
+  // 数据质量标记
+  hasRealData?: boolean;       // false = 评分全为估算默认值（无历史完成订单）
+  capacityConfigured?: boolean; // false = 产能使用系统默认500件/日
+  dataNote?: string;           // 数据说明文字
+  realDailyCapacity?: number;  // 近30天实测日产能（件/天），0=无扫码数据
+  capacitySource?: string;     // 'real'=扫码实测 | 'configured'=手动配置 | 'default'=系统默认
   // legacy fields
   totalDays?: number;
   capacityUtilization?: number;

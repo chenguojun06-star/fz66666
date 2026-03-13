@@ -82,6 +82,8 @@ export interface Factory extends Record<string, unknown> {
   parentOrgUnitName?: string;
   /** 负责人ID (关联系统用户，仅内部工厂有效) */
   managerId?: string;
+  /** 日产能（件/天），用于排产建议评分 */
+  dailyCapacity?: number;
   orgPath?: string;
   operationRemark?: string;
   createTime?: string;
