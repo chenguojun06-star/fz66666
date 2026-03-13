@@ -32,6 +32,14 @@ public class SchedulingSuggestionResponse {
         private int estimatedDays;
         /** 甘特图条目 */
         private List<GanttItem> ganttItems;
+
+        // ── 数据质量标记 ──────────────────────────────────────────────────
+        /** 是否有真实历史完成订单数据（false=评分全为估算默认值） */
+        private boolean hasRealData;
+        /** 工厂日产能是否已配置（false=使用系统默认500件/日估算） */
+        private boolean capacityConfigured;
+        /** 数据说明文字（给前端展示用） */
+        private String dataNote;
     }
 
     @Data
