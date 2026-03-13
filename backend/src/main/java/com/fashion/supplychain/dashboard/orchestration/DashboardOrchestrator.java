@@ -48,6 +48,12 @@ public class DashboardOrchestrator {
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
+        // 工厂账号隔离：只看本工厂的订单统计，隐藏供应商/客户/财务数据
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
+            return buildFactoryDashboard(ctxFactoryId);
+        }
+
         LocalDate rangeStart = parseDateOrNull(startDate);
         LocalDate rangeEnd = parseDateOrNull(endDate);
         LocalDateTime rangeStartTime = rangeStart == null ? null : rangeStart.atStartOfDay();
@@ -145,6 +151,42 @@ public class DashboardOrchestrator {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 工厂账号专属仪表板：只统计本工厂关联的生产订单，隐藏财务/供应商/仓库等敏感数据
+     */
+    private DashboardResponse buildFactoryDashboard(String factoryId) {
+        DashboardResponse data = new DashboardResponse();
+        // 查询本工厂的生产订单
+        List<ProductionOrder> factoryOrders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getFactoryId, factoryId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list();
+
+        data.setProductionOrderCount(factoryOrders.size());
+        long totalQty = factoryOrders.stream()
+                .mapToLong(o -> o.getOrderQuantity() == null ? 0 : o.getOrderQuantity())
+                .sum();
+        data.setOrderQuantityTotal(totalQty);
+
+        LocalDateTime now = LocalDateTime.now();
+        long overdueCount = factoryOrders.stream()
+                .filter(o -> !"completed".equals(o.getStatus()) && !"cancelled".equals(o.getStatus()))
+                .filter(o -> o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(now))
+                .count();
+        data.setOverdueOrderCount(overdueCount);
+
+        // 工厂不可见的指标置零
+        data.setSampleDevelopmentCount(0);
+        data.setTodayScanCount(0);
+        data.setTotalScanCount(0);
+        data.setTodayWarehousingCount(0);
+        data.setTotalWarehousingCount(0);
+        data.setDefectiveQuantity(0);
+        data.setPaymentApprovalCount(0);
+        data.setRecentActivities(new ArrayList<>());
+        return data;
     }
 
     private static class Activity {

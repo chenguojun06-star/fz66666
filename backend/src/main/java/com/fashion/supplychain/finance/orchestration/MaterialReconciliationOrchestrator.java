@@ -40,6 +40,10 @@ public class MaterialReconciliationOrchestrator {
     private ProductionOrderService productionOrderService;
 
     public IPage<MaterialReconciliation> list(Map<String, Object> params) {
+        // 工厂账号不可查看物料对账（供应商维度数据，与工厂无关）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        }
         IPage<MaterialReconciliation> page = materialReconciliationService.queryPage(params);
         if (page != null) {
             fillProductionCompletedQuantity(page.getRecords());

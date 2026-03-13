@@ -62,6 +62,17 @@ public class PayrollSettlementOrchestrator {
     }
 
     public IPage<PayrollSettlement> list(Map<String, Object> params) {
+        // 工厂账号隔离：只能查看本工厂订单的工资结算
+        java.util.List<String> factoryOrderIds = com.fashion.supplychain.common.DataPermissionHelper
+                .getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        }
+        if (factoryOrderIds != null) {
+            java.util.Map<String, Object> mutable = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
+            mutable.put("_factoryOrderIds", factoryOrderIds);
+            return payrollSettlementService.queryPage(mutable);
+        }
         return payrollSettlementService.queryPage(params);
     }
 

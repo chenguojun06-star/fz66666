@@ -1,4 +1,159 @@
+## 2026-04-16
+
+### feat(intelligence): Graph MAS v4.1 — 12方向全面升级（Specialist Agents / SSE / RAG / Digital Twin / A/B Testing / 大文件拆分）
+
+#### 升级总览
+在 v4.0 MVP 基础上完成 **12 项升级方向**（P0→P3），将多代理图引擎从原型推进到生产级。核心收益：真实数据驱动分析、流式响应、知识增强、模型路由、A/B 实验闭环、代码可维护性大幅提升。
+
+#### P0 — 专家代理 + 真实指标（Todos 1-2）
+
+**4 个 Specialist Agent（`intelligence/orchestration/specialist/`）**：
+- `SpecialistAgent.java` — 接口定义：`getRoute()` + `analyze(AgentState)`
+- `DeliverySpecialistAgent.java`（~90 行）— 交期风险分析，注入 OrderHealthScoreOrchestrator 获取真实健康度评分
+- `SourcingSpecialistAgent.java`（~60 行）— 采购供应分析，使用 ModelRoutingConfig "sourcing" 配置
+- `ComplianceSpecialistAgent.java`（~60 行）— 合规审计分析，"compliance" 配置
+- `LogisticsSpecialistAgent.java`（~60 行）— 仓储物流分析，"logistics" 配置
+
+**真实指标集成**：SupervisorAgentOrchestrator 分析时注入 OrderHealthScoreOrchestrator 的真实评分数据（非模拟数据），让 LLM 基于实际业务状态进行推理。
+
+#### P1 — 执行日志 + SSE流式 + 可视化面板（Todos 3-5）
+
+**AgentExecutionLog 实体增强**（`intelligence/entity/AgentExecutionLog.java`）：
+- 新增字段：specialistResults（JSON）、nodeTrace（JSON）、digitalTwinSnapshot（JSON）、userFeedback（1-5分）、feedbackNote
+- Flyway：`V20260415002__add_graph_mas_v41_columns.sql`（幂等 ALTER TABLE）
+
+**SSE 流式响应**：
+- MultiAgentGraphOrchestrator 新增 `runGraphStreaming(SseEmitter, ...)` — 每个节点执行完毕即推送 SSE 事件
+- MultiAgentGraphController 新增 `GET /stream`（produces TEXT_EVENT_STREAM_VALUE）
+- 前端 useAgentGraphStore 新增 SSE 连接管理（EventSource + onmessage 分段解析）
+
+**历史记录 & 反馈**：
+- `GET /history` — 按租户查询最近执行记录
+- `POST /feedback` — 用户提交 1-5 分评分 + 反馈备注
+- 前端 AgentGraphPanel 新增历史时间线 + 反馈表单
+
+#### P2 — 并行调度 + RAG融合 + 数字孪生（Todos 6-8）
+
+**并行 Specialist 调度**：SupervisorAgentOrchestrator 中 `dispatchSpecialist()` 根据 scene 路由到对应 Specialist Agent 并行分析，结果写入 AgentState.specialistResults。
+
+**RAG 知识融合**：SupervisorAgentOrchestrator 调用 QdrantService 向量搜索，将历史知识作为 context 注入 LLM prompt，提升分析准确度。
+
+**数字孪生快照**（`DigitalTwinBuilderOrchestrator.java`，~100 行）：
+- 采集当日订单统计、库存统计、产能统计，构建 JSON 快照
+- 快照写入 AgentExecutionLog.digitalTwinSnapshot，供后续对比分析
+
+#### P3 — 模型路由 + 代码拆分 + A/B 测试（Todos 9-12）
+
+**多模型路由**（`ModelRoutingConfig.java`，~62 行）：
+- 5 个场景配置：delivery_risk / sourcing / compliance / logistics / full
+- 每个配置含 modelOverride、temperature、maxTokens、systemPromptPrefix
+- Specialist Agent 按 scene 获取对应路由配置，支持未来多模型切换
+
+**后端大编排器拆分（3个）**：
+| 原文件 | 拆出 Helper | 原行数 | 拆后行数 | 降幅 |
+|--------|------------|--------|---------|------|
+| IntelligenceSignalOrchestrator | SignalCollectorHelper（~240行） | 543 | 160 | -70% |
+| ExecutionEngineOrchestrator | CommandExecutorHelper（~265行） | 596 | 173 | -71% |
+| NlQueryOrchestrator | NlQueryDataHandlers（~450行） | 755 | 295 | -61% |
+
+**前端 IntelligenceCenter 拆分（3个提取文件）**：
+| 提取文件 | 行数 | 职责 |
+|----------|------|------|
+| kpiTypes.ts | ~58 | 类型定义 + 常量（KpiMetricSnapshot, KpiHistoryPoint 等） |
+| hooks/useKpiMetrics.tsx | ~185 | KPI 计算逻辑（kpiFlash/kpiDelta/kpiHistory/告警统计/ticker 等） |
+| KpiPopoverContent.tsx | ~120 | 6 个 Popover 内容渲染（scan/factory/health/stagnant/shortage/notify） |
+
+IntelligenceCenter/index.tsx：**1443 行 → 1140 行**（-21%），核心计算逻辑零冗余
+
+**A/B 测试框架**：
+- `AgentExecutionLogMapper.java`：新增 `@Select` 自定义 SQL — 按 scene 分组统计执行次数/成功率/平均延迟/平均置信/平均评分
+- `MultiAgentGraphController.java`：新增 `GET /ab-stats?days=30` 端点（bounds 1-90）
+- `intelligenceApi.ts`：新增 `ABSceneStat` 类型 + `getGraphAbStats(days)` 函数
+- `ABTestStatsPanel/index.tsx`（~95 行）：暗色主题卡片网格，展示各 scene 的运行次数/成功率/延迟/置信/评分，自动标注 ⚡最低延迟 和 ⭐最高评分的冠军场景
+- IntelligenceCenter 新增可折叠 A/B 实验面板（天蓝色 #38bdf8 主题）
+
+#### 文件统计
+- **新增文件**：19 个（后端 14 + 前端 5）
+- **修改文件**：12 个（后端 7 + 前端 5）
+- **代码净减**：后端三大编排器合计 -1266 行；前端 IC 页面 -303 行
+- **编译验证**：`mvn clean compile -q` ✅ + `npx tsc --noEmit` ✅，零错误
+
+#### 对系统的帮助
+- **真实数据驱动**：Specialist Agent 直接调用 OrderHealthScoreOrchestrator 获取健康评分，分析结论基于真实业务指标
+- **流式体验**：SSE 逐节点推送分析进度，用户无需等待完整推理完成
+- **知识增强**：RAG 融合 Qdrant 向量库，历史分析经验自动注入 prompt，减少重复推理
+- **模型可切换**：5 场景独立配置模型/温度/token，未来可无缝接入多供应商 LLM
+- **实验闭环**：A/B 面板实时对比各 scene 的成功率/延迟/置信/评分，数据驱动路由优化
+- **可维护性**：三大后端编排器行数降至 160-295 行，前端 IC 降至 1140 行，符合项目规范
+
+---
+
+## 2026-04-15
+
+### feat(intelligence): Hybrid Graph MAS v4.0 — 多代理图自治分析引擎
+
+#### 新增功能概述
+将 intelligence 模块从「单体 LLM 调用」升级为「Plan-Act-Reflect 多代理闭环」。
+通过 GraphState 状态机串联 Supervisor + Reflection 两个专职代理，
+实现自我批判、低置信自动重路由、长期记忆持久化的供应链 AI 大脑 MVP。
+
+#### 后端新增文件（6个）
+
+**DTO（`intelligence/dto/`）**：
+- `AgentState.java` — 贯穿 Plan→Act→Reflect 全生命周期的共享状态容器
+- `MultiAgentRequest.java` — REST 请求体（scene/orderIds/question）
+- `GraphExecutionResult.java` — REST 响应体（route/confidence/reflection/suggestion）
+
+**编排器（`intelligence/orchestration/`）**：
+- `SupervisorAgentOrchestrator.java` — 路由决策 + 初步分析节点；支持低置信重路由
+- `ReflectionEngineOrchestrator.java` — 批判性反思节点；输出置信分 + 优化建议；持久化图记忆
+- `MultiAgentGraphOrchestrator.java` — 主图引擎，\`@Transactional\` 编排完整闭环
+
+**Controller（`intelligence/controller/`）**：
+- `MultiAgentGraphController.java` — `POST /api/intelligence/multi-agent-graph/run`
+
+**数据库**：
+- `V20260415001__add_graph_mas_tables.sql` — \`t_agent_execution_log\` 执行日志表（幂等）
+
+#### 前端新增文件（3个）
+- `stores/useAgentGraphStore.ts` — Zustand store（scene/orderIds/question/result/loading）
+- `modules/intelligence/components/AgentGraphPanel/index.tsx` — 场景选择 + 执行 + 置信度进度条 + 结果展示组件
+- `services/intelligenceApi.ts` — 新增 `runMultiAgentGraph()` 导出函数
+
+**IntelligenceCenter 挂载**：
+- 在「利润/完工双引擎」下方、「月度经营汇总」上方新增 🤖 多代理图分析 可折叠面板
+
+#### 测试
+- 新增测试脚本：`test-multi-agent-graph.sh`（3个场景：full/delivery_risk/sourcing）
+
+#### Graph MAS 分析场景
+| 场景 | 说明 |
+|------|------|
+| `full` | 货期×采购×合规全面分析（默认） |
+| `delivery_risk` | 货期风险专项，逾期预警 |
+| `sourcing` | 供应商/原材料风险 |
+| `compliance` | DPP 合规性检查 |
+| `logistics` | 物流路线优化 |
+
+#### 核心流程
+```
+init → Supervisor.analyzeAndRoute() → Reflection.critiqueAndReflect()
+  → [置信<70] → Supervisor.reRouteWithReflection() → Reflection.critiqueAndReflect()
+  → buildSuccess()  // 持久化到 t_intelligence_memory + t_agent_execution_log
+```
+
+#### Phase 2 扩展预告
+4 个并行 Specialist 代理（DeliverySpecialist/SourcingSpecialist/ComplianceSpecialist/LogisticsSpecialist）+ Digital Twin + Knowledge RAG 融合
+
+**对系统的帮助**：
+- 跟单员无需逐条检查订单；AI 一键分析全租户风险，输出置信分和优化建议
+- 低置信时自动切换分析视角，减少误判
+- 所有推理过程持久化为长期记忆，下次分析可调取经验
+
+---
+
 ## 2026-04-01（补充）
+
 
 ### feat(system): 租户开户时可配置菜单模块白名单
 

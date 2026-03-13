@@ -17,6 +17,7 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
         implements PayrollSettlementService {
 
     @Override
+    @SuppressWarnings("unchecked")
     public IPage<PayrollSettlement> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
         Integer pageSize = ParamUtils.getPageSize(params);
@@ -27,6 +28,8 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
         String orderNo = params == null ? null : (String) params.get("orderNo");
         String styleNo = params == null ? null : (String) params.get("styleNo");
         String status = params == null ? null : (String) params.get("status");
+        java.util.List<String> factoryOrderIds = params == null ? null
+                : (java.util.List<String>) params.get("_factoryOrderIds");
 
         return baseMapper.selectPage(pageInfo,
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PayrollSettlement>()
@@ -34,6 +37,8 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
                         .eq(StringUtils.hasText(orderNo), PayrollSettlement::getOrderNo, orderNo)
                         .eq(StringUtils.hasText(styleNo), PayrollSettlement::getStyleNo, styleNo)
                         .eq(StringUtils.hasText(status), PayrollSettlement::getStatus, status)
+                        .in(factoryOrderIds != null && !factoryOrderIds.isEmpty(),
+                                PayrollSettlement::getOrderId, factoryOrderIds)
                         .orderByDesc(PayrollSettlement::getCreateTime));
     }
 

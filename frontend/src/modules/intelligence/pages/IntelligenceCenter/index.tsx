@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -16,64 +16,19 @@ import AiExecutionPanel from '../../components/AiExecutionPanel';
 
 import {
   risk2color, grade2color, LiveDot, Sparkline,
-  KpiPop, AnimatedNum, medalColor,
+  AnimatedNum, medalColor,
 } from './components/IntelligenceWidgets';
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import MonthlyBizSummary from './MonthlyBizSummary';
+import AgentGraphPanel from '../../components/AgentGraphPanel';
+import ABTestStatsPanel from '../../components/ABTestStatsPanel';
+import { useKpiMetrics } from './hooks/useKpiMetrics';
+import { useKpiPopovers } from './KpiPopoverContent';
 import './styles.css';
 
-type KpiMetricSnapshot = {
-  todayScanQty: number;
-  scanRatePerHour: number;
-  activeFactories: number;
-  activeWorkers: number;
-  healthIndex: number;
-  stagnantFactories: number;
-  shortageItems: number;
-  pendingNotify: number;
-  sentToday: number;
-  totalFactories: number;
-  productionOrderCount: number;
-};
 
-type KpiHistoryPoint = {
-  ts: number;
-  value: number;
-};
-
-type KpiHistoryStore = Record<keyof KpiMetricSnapshot, KpiHistoryPoint[]>;
-
-const EMPTY_KPI_METRICS: KpiMetricSnapshot = {
-  todayScanQty: 0,
-  scanRatePerHour: 0,
-  activeFactories: 0,
-  activeWorkers: 0,
-  healthIndex: 0,
-  stagnantFactories: 0,
-  shortageItems: 0,
-  pendingNotify: 0,
-  sentToday: 0,
-  totalFactories: 0,
-  productionOrderCount: 0,
-};
-
-const EMPTY_KPI_HISTORY = (): KpiHistoryStore => ({
-  todayScanQty: [],
-  scanRatePerHour: [],
-  activeFactories: [],
-  activeWorkers: [],
-  healthIndex: [],
-  stagnantFactories: [],
-  shortageItems: [],
-  pendingNotify: [],
-  sentToday: [],
-  totalFactories: [],
-  productionOrderCount: [],
-});
-
-const KPI_HISTORY_WINDOW_MS = 5 * 60 * 1000;
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -102,12 +57,8 @@ const IntelligenceCenter: React.FC = () => {
 
   const [executingTask, setExecutingTask] = useState<string | null>(null);
   const [executeTaskResult, setExecuteTaskResult] = useState<{ taskCode: string; ok: boolean; msg: string } | null>(null);
-  const [kpiFlash, setKpiFlash] = useState(false);
-  const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
-  const [kpiHistory, setKpiHistory] = useState<KpiHistoryStore>(EMPTY_KPI_HISTORY);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
-  const prevKpiMetricsRef = useRef<KpiMetricSnapshot | null>(null);
 
   /* URL ?q= 参数：从生产页「问AI分析」或「催→AI」跳转时自动预填问题 */
   const [searchParams, setSearchParams] = useSearchParams();
@@ -120,14 +71,6 @@ const IntelligenceCenter: React.FC = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  /* KPI 刷新闪光：data.ts 每次全量刷新完成后更新，触发各 KPI 卡短暂氖灯闪光 */
-  useEffect(() => {
-    if (!data.ts) return;
-    setKpiFlash(true);
-    const t = setTimeout(() => setKpiFlash(false), 900);
-    return () => clearTimeout(t);
-  }, [data.ts]);
 
   /* ⌘K / Ctrl+K：打开全局搜索 */
   useEffect(() => {
@@ -200,278 +143,20 @@ const IntelligenceCenter: React.FC = () => {
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
 
-  /* 工厂产能 Map：factoryName → { totalOrders, totalQuantity } */
-  const factoryCapMap = useMemo(() => {
-    const m = new Map<string, { totalOrders: number; totalQuantity: number }>();
-    (factoryCapacity ?? []).forEach(f => m.set(f.factoryName, { totalOrders: f.totalOrders, totalQuantity: f.totalQuantity }));
-    return m;
-  }, [factoryCapacity]);
-
-  const currentKpiMetrics = useMemo<KpiMetricSnapshot>(() => ({
-    todayScanQty: Number(pulse?.todayScanQty) || 0,
-    scanRatePerHour: Number(pulse?.scanRatePerHour) || 0,
-    activeFactories: Number(pulse?.activeFactories) || 0,
-    activeWorkers: Number(pulse?.activeWorkers) || 0,
-    healthIndex: Number(health?.healthIndex) || 0,
-    stagnantFactories: Number(pulse?.stagnantFactories?.length) || 0,
-    shortageItems: Number(shortage?.shortageItems?.length) || 0,
-    pendingNotify: Number(notify?.pendingCount) || 0,
-    sentToday: Number(notify?.sentToday) || 0,
-    totalFactories: Math.max(Number(pulse?.factoryActivity?.length) || 0, Number(ranking?.rankings?.length) || 0),
-    productionOrderCount: (orders ?? []).filter(o => {
-      const s = String(o.status || '').toUpperCase();
-      return s !== 'COMPLETED' && s !== 'CANCELLED' && s !== 'DRAFT';
-    }).length,
-  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, orders, pulse?.activeFactories, pulse?.activeWorkers, pulse?.factoryActivity?.length, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, ranking?.rankings?.length, shortage?.shortageItems]);
-
-  useEffect(() => {
-    const prev = prevKpiMetricsRef.current;
-    const nowTs = Date.now();
-    if (!prev) {
-      prevKpiMetricsRef.current = currentKpiMetrics;
-      setKpiHistory({
-        todayScanQty: [{ ts: nowTs, value: currentKpiMetrics.todayScanQty }],
-        scanRatePerHour: [{ ts: nowTs, value: currentKpiMetrics.scanRatePerHour }],
-        activeFactories: [{ ts: nowTs, value: currentKpiMetrics.activeFactories }],
-        activeWorkers: [{ ts: nowTs, value: currentKpiMetrics.activeWorkers }],
-        healthIndex: [{ ts: nowTs, value: currentKpiMetrics.healthIndex }],
-        stagnantFactories: [{ ts: nowTs, value: currentKpiMetrics.stagnantFactories }],
-        shortageItems: [{ ts: nowTs, value: currentKpiMetrics.shortageItems }],
-        pendingNotify: [{ ts: nowTs, value: currentKpiMetrics.pendingNotify }],
-        sentToday: [{ ts: nowTs, value: currentKpiMetrics.sentToday }],
-        totalFactories: [{ ts: nowTs, value: currentKpiMetrics.totalFactories }],
-        productionOrderCount: [{ ts: nowTs, value: currentKpiMetrics.productionOrderCount }],
-      });
-      return;
-    }
-    setKpiDelta({
-      todayScanQty: currentKpiMetrics.todayScanQty - prev.todayScanQty,
-      scanRatePerHour: currentKpiMetrics.scanRatePerHour - prev.scanRatePerHour,
-      activeFactories: currentKpiMetrics.activeFactories - prev.activeFactories,
-      activeWorkers: currentKpiMetrics.activeWorkers - prev.activeWorkers,
-      healthIndex: currentKpiMetrics.healthIndex - prev.healthIndex,
-      stagnantFactories: currentKpiMetrics.stagnantFactories - prev.stagnantFactories,
-      shortageItems: currentKpiMetrics.shortageItems - prev.shortageItems,
-      pendingNotify: currentKpiMetrics.pendingNotify - prev.pendingNotify,
-      sentToday: currentKpiMetrics.sentToday - prev.sentToday,
-      totalFactories: currentKpiMetrics.totalFactories - prev.totalFactories,
-      productionOrderCount: currentKpiMetrics.productionOrderCount - prev.productionOrderCount,
-    });
-    setKpiHistory((prevHistory) => {
-      const nextHistory = { ...prevHistory } as KpiHistoryStore;
-      (Object.keys(currentKpiMetrics) as Array<keyof KpiMetricSnapshot>).forEach((key) => {
-        const prevSeries = prevHistory[key] || [];
-        const lastPoint = prevSeries[prevSeries.length - 1];
-        if (lastPoint && lastPoint.value === currentKpiMetrics[key] && nowTs - lastPoint.ts < 8_000) {
-          nextHistory[key] = prevSeries.filter((point) => nowTs - point.ts <= KPI_HISTORY_WINDOW_MS);
-          return;
-        }
-        nextHistory[key] = [
-          ...prevSeries,
-          { ts: nowTs, value: currentKpiMetrics[key] },
-        ].filter((point) => nowTs - point.ts <= KPI_HISTORY_WINDOW_MS);
-      });
-      return nextHistory;
-    });
-    prevKpiMetricsRef.current = currentKpiMetrics;
-  }, [currentKpiMetrics]);
-
-  const formatDeltaText = useCallback((delta: number, suffix = '') => {
-    if (delta === 0) return `0${suffix}`;
-    return `${delta > 0 ? '+' : ''}${delta}${suffix}`;
-  }, []);
-
-  const renderDeltaBadge = useCallback((delta: number, options?: { flatText?: string; suffix?: string }) => {
-    const flatText = options?.flatText ?? '持平';
-    const suffix = options?.suffix ?? '';
-    const tone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
-    return (
-      <span className={`c-kpi-delta ${tone}`}>
-        {delta === 0 ? flatText : formatDeltaText(delta, suffix)}
-      </span>
-    );
-  }, [formatDeltaText]);
-
-  const getKpiTrend = useCallback((key: keyof KpiMetricSnapshot) => {
-    return (kpiHistory[key] || []).map((point) => point.value);
-  }, [kpiHistory]);
-
-  const minFactorySilentMinutes = useMemo(() => {
-    const activity = pulse?.factoryActivity || [];
-    if (activity.length === 0) return null;
-    return activity.reduce<number | null>((min, item) => {
-      const value = Number(item.minutesSinceLastScan);
-      if (!Number.isFinite(value)) return min;
-      if (min === null) return value;
-      return Math.min(min, value);
-    }, null);
-  }, [pulse?.factoryActivity]);
-
-  /* ── 逾期 & 延期风险订单（纯前端推导，无需额外接口） ── */
-  const overdueRisk = useMemo(() => {
-    const overdue: typeof orders = [];
-    const highRisk: typeof orders = [];
-    const watch: typeof orders = [];
-    for (const o of orders) {
-      const prog = Number(o.productionProgress) || 0;
-      const daysLeft = o.plannedEndDate
-        ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)
-        : null;
-      if (daysLeft !== null && daysLeft < 0)                        overdue.push(o);
-      else if (daysLeft !== null && daysLeft <= 7 && prog < 50)     highRisk.push(o);
-      else if (daysLeft !== null && daysLeft <= 14 && prog < 30)    watch.push(o);
-    }
-    return { overdue, highRisk, watch };
-  }, [orders]);
-
-  /* ── 订单量汇总：各风险分组总件数 ── */
-  const orderStats = useMemo(() => ({
-    totalQty:    orders.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
-    overdueQty:  overdueRisk.overdue.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
-    highRiskQty: overdueRisk.highRisk.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
-    watchQty:    overdueRisk.watch.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
-  }), [orders, overdueRisk]);
-
-  /* ── 工厂卡点分析：来自后端真实扫码统计（替代旧的从未写入的 *CompletionRate 字段） ── */
-  const factoryBottleneck = bottleneck ?? [];
-
-  /* 派生警报数量 */
-  const alertCount = (pulse?.stagnantFactories?.length ?? 0) + (shortage?.shortageItems?.length ?? 0);
-  const healWarnCount = healing?.items?.filter(i => i.status !== 'OK' && !i.autoFixed).length ?? 0;
-  const totalWarn = alertCount + healWarnCount + (notify?.pendingCount ?? 0);
+  /* ── KPI 指标（委托给 useKpiMetrics） ── */
+  const {
+    kpiFlash, kpiDelta, kpiHistory, currentKpiMetrics, factoryCapMap,
+    formatDeltaText, renderDeltaBadge, getKpiTrend,
+    minFactorySilentMinutes, overdueRisk, orderStats, factoryBottleneck,
+    alertCount, healWarnCount, totalWarn, tickerItems, handleTickerClick,
+  } = useKpiMetrics(data);
 
   /* 格式化时钟 */
   const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
-  /* ── 跑马灯：紧急订单（预留，暂未渲染）── */
-  const tickerItems = useMemo(() => {
-    const items: Array<{ orderNo: string; text: string; level: 'danger' | 'warning' }> = [];
-    overdueRisk.overdue.forEach(o => {
-      const d = o.plannedEndDate ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)) : 0;
-      items.push({
-        orderNo: String(o.orderNo || '').trim(),
-        text: `⚠ ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`,
-        level: 'danger',
-      });
-    });
-    overdueRisk.highRisk.forEach(o => {
-      const d = o.plannedEndDate ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000) : 0;
-      items.push({
-        orderNo: String(o.orderNo || '').trim(),
-        text: `🔴 ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress)||0}%`,
-        level: 'warning',
-      });
-    });
-    return items;
-  }, [overdueRisk]);
-
-  const handleTickerClick = useCallback((orderNo: string) => {
-    const safeOrderNo = String(orderNo || '').trim();
-    if (!safeOrderNo) return;
-    navigate(`/production/progress-detail?orderNo=${encodeURIComponent(safeOrderNo)}`);
-  }, [navigate]);
-
-  /* ── 各 KPI 卡片悬浮详情内容 ── */
-  const hourNow = Math.max(now.getHours(), 1);
-  const projectedToday = ((pulse?.scanRatePerHour ?? 0) * (24 - hourNow) + (pulse?.todayScanQty ?? 0));
-
-  const scanPop = (
-    <KpiPop
-      title="今日扫码详情"
-      items={[
-        { label: '扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: '#00e5ff' },
-        { label: '实时速率',  value: `${pulse?.scanRatePerHour ?? '—'} 件/时` },
-        { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
-        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家` },
-        ...(pulse?.timeline?.length ? [{ label: '最新采样点', value: pulse.timeline[pulse.timeline.length - 1]?.time.slice(-5) }] : []),
-      ]}
-      aiTip={pulse ? `按当前速率，今日预计完成 ${projectedToday.toLocaleString()} 件` : undefined}
-    />
-  );
-
-  const factoryPop = (
-    <KpiPop
-      title="工厂在线状态"
-      items={[
-        { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: '#39ff14' },
-        { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
-        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' },
-        ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
-          label: (['🥇 ', '🥈 ', '🥉 '][i] ?? '') + r.factoryName,
-          value: `${r.totalScore} 分`,
-          color: (['#ffd700', '#c0c0c0', '#cd7f32'][i] as string | undefined),
-        })) ?? []),
-      ]}
-      aiTip="高产工厂建议持续跟踪，停工工厂建议立即联系确认"
-    />
-  );
-
-  const healthPop = (
-    <KpiPop
-      title="供应链健康分析"
-      items={[
-        { label: '健康指数',  value: `${health?.healthIndex ?? '—'} 分`, color: grade2color(health?.grade ?? '') },
-        { label: '评级',      value: `${health?.grade ?? '—'} 级`,       color: grade2color(health?.grade ?? '') },
-        { label: '异常项目',  value: `${healing?.issuesFound ?? 0} 项`,  color: (healing?.issuesFound ?? 0) > 0 ? '#f7a600' : '#39ff14' },
-        { label: '自愈健康',  value: `${healing?.healthScore ?? '—'} 分` },
-      ]}
-      aiTip={health?.grade === 'A' ? '系统运行优秀，继续保持' : health?.grade === 'B' ? '整体良好，关注预警项' : '建议立即处理异常，提升供应链健康'}
-    />
-  );
-
-  const stagnantPop = (
-    <KpiPop
-      title="停工预警详情"
-      items={pulse?.stagnantFactories?.length
-        ? pulse.stagnantFactories.slice(0, 5).map(f => ({
-            label: f.factoryName,
-            value: `停滞 ${Math.floor(f.minutesSilent / 60)}h ${Math.round(f.minutesSilent % 60)}m`,
-            color: '#ff4136',
-          }))
-        : [{ label: '状态', value: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
-            ? '无工厂活跃，生产可能停滞' : '所有工厂正常运转',
-            color: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? '#f7a600' : '#39ff14' }]}
-      warning={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '建议 15 分钟内联系工厂确认原因'
-        : currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0 ? `有 ${currentKpiMetrics.productionOrderCount} 单在制但无工厂生产动态，建议检查工厂状态` : undefined}
-      aiTip={(pulse?.stagnantFactories?.length ?? 0) > 0
-        ? `${pulse!.stagnantFactories.length} 家工厂停工，订单交付风险上升，建议立即介入`
-        : currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
-          ? `当前 ${currentKpiMetrics.productionOrderCount} 单在制但无活跃工厂，生产节拍异常，建议检查`
-          : '停工率 0%，生产节拍正常，供应链健康'}
-    />
-  );
-
-  const shortagePop = (
-    <KpiPop
-      title="面料缺口预警"
-      items={shortage?.shortageItems?.length
-        ? shortage.shortageItems.slice(0, 5).map(item => ({
-            label: item.materialName,
-            value: `缺 ${item.shortageQuantity} ${item.unit}`,
-            color: risk2color(item.riskLevel),
-          }))
-        : [{ label: '状态', value: '所有面辅料库存充足', color: '#39ff14' }]}
-      warning={(shortage?.shortageItems?.length ?? 0) > 0 ? (shortage?.summary ?? undefined) : undefined}
-      aiTip={(shortage?.shortageItems?.length ?? 0) > 0
-        ? 'HIGH 级缺料将影响 3 天内生产，建议立即下补采购单'
-        : '面辅料储备率良好，暂无补单压力'}
-    />
-  );
-
-  const notifyPop = (
-    <KpiPop
-      title="智能通知概况"
-      items={[
-        { label: '待发送', value: `${notify?.pendingCount ?? '—'} 条`, color: '#a78bfa' },
-        { label: '今日已发', value: `${notify?.sentToday ?? 0} 条` },
-        { label: '通知命中率', value: notify?.sentToday
-          ? `${Math.round(Math.min(100, ((notify.sentToday) / Math.max(notify.sentToday + (notify.pendingCount ?? 0), 1)) * 100))}%`
-          : '—' },
-      ]}
-      aiTip={`待处理 ${notify?.pendingCount ?? 0} 条，建议及时下发确保工厂按时接收指令`}
-    />
-  );
+  /* ── KPI Popover 内容（委托给 useKpiPopovers） ── */
+  const { scanPop, factoryPop, healthPop, stagnantPop, shortagePop, notifyPop } = useKpiPopovers({ data, currentKpiMetrics, now });
 
   /* 面板折叠按钮（chevron 图标，放在 c-card-title 末尾） */
   const CollapseChevron = ({ panelKey }: { panelKey: string }) => (
@@ -1384,6 +1069,42 @@ const IntelligenceCenter: React.FC = () => {
           </div>
 
         </div>
+        </div>
+
+        {/* ╔════════════════════════════════════════════════╗
+            ║  Hybrid Graph MAS v4.0 — 多代理自治分析      ║
+            ╚════════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 4px' }}>
+          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
+            <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}>🤖 多代理图分析（Graph MAS）</span>
+            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
+              Plan · Act · Reflect v4.0
+            </span>
+            <CollapseChevron panelKey="graphmas" />
+          </div>
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
+          <div style={{ padding: '0 24px 20px' }}>
+            <AgentGraphPanel />
+          </div>
+        </div>
+
+        {/* ╔════════════════════════════════════════════════╗
+            ║ A/B 测试统计（模型/场景对比）                  ║
+            ╚════════════════════════════════════════════════╝ */}
+        <div style={{ padding: '0 24px 4px' }}>
+          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
+            <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}>📊 A/B 测试统计</span>
+            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
+              Scene Comparison
+            </span>
+            <CollapseChevron panelKey="abtest" />
+          </div>
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
+          <div style={{ padding: '0 24px 20px' }}>
+            <ABTestStatsPanel />
+          </div>
         </div>
 
         {/* ╔════════════════════════════════════════════╝

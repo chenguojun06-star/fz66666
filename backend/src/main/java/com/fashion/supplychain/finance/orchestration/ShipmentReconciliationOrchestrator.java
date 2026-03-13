@@ -107,6 +107,10 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     public IPage<ShipmentReconciliation> list(Map<String, Object> params) {
+        // 工厂账号不可查看出货对账（客户维度数据，与工厂无关）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        }
         IPage<ShipmentReconciliation> page = shipmentReconciliationService.queryPage(params);
         if (page != null && page.getRecords() != null) {
             fillProductionCompletedQuantity(page.getRecords());
@@ -118,6 +122,10 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     public List<ShipmentReconciliation> listAll() {
+        // 工厂账号不可查看出货对账
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return java.util.Collections.emptyList();
+        }
         return shipmentReconciliationService.list();
     }
 

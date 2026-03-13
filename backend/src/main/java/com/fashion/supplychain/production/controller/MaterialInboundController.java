@@ -39,6 +39,10 @@ public class MaterialInboundController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String materialCode,
             @RequestParam(required = false) String purchaseId) {
+        // 工厂账号不可查看入库记录（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(new Page<MaterialInbound>());
+        }
 
         Page<MaterialInbound> page = new Page<>(pageNum, pageSize);
         IPage<MaterialInbound> result = materialInboundService.queryPage(page, materialCode, purchaseId);

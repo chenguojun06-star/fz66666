@@ -49,6 +49,10 @@ public class MaterialStockController {
 
     @GetMapping("/list")
     public Result<IPage<MaterialStock>> getPage(@RequestParam Map<String, Object> params) {
+        // 工厂账号不可查看面辅料库存（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
+        }
         return Result.success(materialStockService.queryPage(params));
     }
 

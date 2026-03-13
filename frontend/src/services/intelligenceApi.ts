@@ -282,7 +282,11 @@ export const intelligenceApi = {
   queryWorkflowHistory,
   getExecutionConfig,
   updateExecutionConfig,
-  getMetricsOverview
+  getMetricsOverview,
+  runMultiAgentGraph,
+  getGraphHistory,
+  submitGraphFeedback,
+  getGraphAbStats,
 };
 
 export interface MetricsSceneStat {
@@ -296,6 +300,51 @@ export interface MetricsSceneStat {
 export async function getMetricsOverview(days = 7): Promise<MetricsSceneStat[]> {
   const response = await api.get<ApiResult<MetricsSceneStat[]>>(
     '/intelligence/metrics/overview',
+    { params: { days } }
+  );
+  return response.data;
+}
+
+/** Hybrid Graph MAS v4.0 — 多代理图执行 */
+export async function runMultiAgentGraph(params: {
+  scene?: string;
+  orderIds?: string[];
+  question?: string;
+}): Promise<any> {
+  const response = await api.post<ApiResult<any>>(
+    '/intelligence/multi-agent-graph/run',
+    params
+  );
+  return response.data;
+}
+
+/** Graph MAS v4.1 — 查询执行历史 */
+export async function getGraphHistory(page = 1, size = 20): Promise<any[]> {
+  const response = await api.get<ApiResult<any[]>>(
+    '/intelligence/multi-agent-graph/history',
+    { params: { page, size } }
+  );
+  return response.data;
+}
+
+/** Graph MAS v4.1 — 提交用户反馈评分 */
+export async function submitGraphFeedback(executionId: string, score: number, note?: string): Promise<void> {
+  await api.post('/intelligence/multi-agent-graph/feedback', { executionId, score, note });
+}
+
+/** Graph MAS v4.1 — A/B 测试统计（按 scene 聚合） */
+export interface ABSceneStat {
+  scene: string;
+  totalRuns: number;
+  successCount: number;
+  avgLatencyMs: number;
+  avgConfidence: number;
+  feedbackCount: number;
+  avgFeedback: number;
+}
+export async function getGraphAbStats(days = 30): Promise<ABSceneStat[]> {
+  const response = await api.get<ApiResult<ABSceneStat[]>>(
+    '/intelligence/multi-agent-graph/ab-stats',
     { params: { days } }
   );
   return response.data;

@@ -31,6 +31,9 @@ public class MaterialPickingController {
         return Result.success(materialPickingService.createPicking(request.getPicking(), request.getItems()));
     }
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
     @GetMapping("/list")
     public Result<IPage<MaterialPicking>> page(
             @RequestParam(defaultValue = "1") int page,
@@ -39,8 +42,18 @@ public class MaterialPickingController {
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String status) {
 
+        // 工厂账号隔离：只能查看本工厂订单的领料记录
+        java.util.List<String> factoryOrderIds = com.fashion.supplychain.common.DataPermissionHelper
+                .getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return Result.success(new Page<>());
+        }
+
         LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialPicking::getDeleteFlag, 0);
+        if (factoryOrderIds != null) {
+            wrapper.in(MaterialPicking::getOrderId, factoryOrderIds);
+        }
         if (StringUtils.hasText(orderNo)) {
             wrapper.like(MaterialPicking::getOrderNo, orderNo);
         }
