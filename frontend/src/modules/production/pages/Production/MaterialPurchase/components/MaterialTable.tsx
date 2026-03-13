@@ -61,7 +61,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
     let reason = '';
     modal.confirm({
       title: '撤回采购领取',
-      width: 440,
+      width: '30vw',
       content: (
         <div>
           <p style={{ marginBottom: 8 }}>

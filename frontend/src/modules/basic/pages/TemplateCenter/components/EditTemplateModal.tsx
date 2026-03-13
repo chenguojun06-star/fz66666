@@ -205,6 +205,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
         if (templateType === 'process') {
           const confirmed = await new Promise<boolean>((resolve) => {
             modal.confirm({
+              width: '30vw',
               title: '工序单价自动同步提醒',
               content: (
                 <div>
@@ -221,7 +222,6 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
               ),
               okText: '确认保存',
               cancelText: '取消',
-              width: 480,
               onOk: () => resolve(true),
               onCancel: () => resolve(false),
             });

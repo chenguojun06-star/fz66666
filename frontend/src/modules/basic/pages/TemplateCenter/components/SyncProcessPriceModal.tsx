@@ -515,7 +515,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
             <DeleteOutlined style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}
               onClick={(e) => {
                 e.stopPropagation();
-                Modal.confirm({ title: `确定删除"${size}"码？`, content: '删除后该尺码单价数据将被清除', onOk: () => handleRemoveSize(size) });
+                Modal.confirm({ width: '30vw', title: `确定删除"${size}"码？`, content: '删除后该尺码单价数据将被清除', onOk: () => handleRemoveSize(size) });
               }} />
           )}
         </div>
@@ -535,7 +535,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       render: (_: any, r: StyleProcessRow) => em
         ? <RowActions maxInline={1} actions={[{
             key: 'del', label: '删除', danger: true,
-            onClick: () => Modal.confirm({ title: '确定删除?', onOk: () => handleDelete(r.id) }),
+            onClick: () => Modal.confirm({ width: '30vw', title: '确定删除?', onOk: () => handleDelete(r.id) }),
           }]} />
         : null,
     };
@@ -555,7 +555,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
         <Space>
           <Button onClick={handleCancel} disabled={isBusy}>关闭</Button>
           {editMode && (
-            <Button disabled={saving} onClick={() => Modal.confirm({ title: '放弃未保存的修改？', onOk: exitEdit })}>
+            <Button disabled={saving} onClick={() => Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit })}>
               取消编辑
             </Button>
           )}
@@ -642,8 +642,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
             ? <Button type="primary" onClick={enterEdit} disabled={!selectedStyleId || isBusy}>编辑</Button>
             : <>
                 <Button type="primary" onClick={saveAll} loading={saving} disabled={syncing}>保存</Button>
-                <Button disabled={saving} onClick={() => Modal.confirm({ title: '放弃未保存的修改？', onOk: exitEdit })}>取消</Button>
-              width: '30vw',
+                <Button disabled={saving} onClick={() => Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit })}>取消</Button>
               </>
           }
         </div>

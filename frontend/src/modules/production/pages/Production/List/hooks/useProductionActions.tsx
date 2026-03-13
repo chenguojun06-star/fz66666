@@ -108,6 +108,7 @@ export function useProductionActions({
     let closeRemark = '';
 
     modal.confirm({
+      width: '30vw',
       title: `确认关单：${safeString((order as any)?.orderNo)}`,
       okText: '确认关单',
       cancelText: '取消',

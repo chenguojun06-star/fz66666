@@ -110,6 +110,7 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
     };
 
     Modal.confirm({
+      width: '30vw',
       icon: isHigh
         ? <StopOutlined style={{ color: '#ff4d4f' }} />
         : <WarningOutlined style={{ color: '#faad14' }} />,
@@ -123,7 +124,6 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
       cancelText: '返回修改',
       okButtonProps: { danger: isHigh },
       cancelButtonProps: { type: isHigh ? 'primary' : 'default' },
-      width: 500,
       maskClosable: false,
       onOk() {
         safeResolve(true);

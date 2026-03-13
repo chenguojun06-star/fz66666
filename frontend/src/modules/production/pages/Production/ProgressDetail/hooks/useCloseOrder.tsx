@@ -62,6 +62,7 @@ export const useCloseOrder = ({
     let closeRemark = '';
 
     Modal.confirm({
+      width: '30vw',
       title: `确认关单：${String((order as any)?.orderNo || '').trim() || '-'}`,
       okText: '确认关单',
       cancelText: '取消',

@@ -946,6 +946,7 @@ export function useMaterialPurchase() {
         }).join('\n');
 
         Modal.confirm({
+          width: '30vw',
           title: '发现当天同款面辅料采购任务',
           content: (
             <div>
@@ -968,7 +969,6 @@ export function useMaterialPurchase() {
           ),
           okText: '合并领取全部',
           cancelText: '仅领取当前',
-          width: 480,
           onOk: async () => {
             // 合并领取：当前 + 所有可合并的
             const allIds = [id, ...mergeableItems.map((item) => item.id)];
