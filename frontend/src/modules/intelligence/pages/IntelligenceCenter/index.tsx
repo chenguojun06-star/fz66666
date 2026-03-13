@@ -23,7 +23,6 @@ import { useCockpit } from './hooks/useCockpit';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import MonthlyBizSummary from './MonthlyBizSummary';
 import WhatIfSimPanel from './WhatIfSimPanel';
-import BenchmarkKpiPanel from './BenchmarkKpiPanel';
 import AgentGraphPanel from '../../components/AgentGraphPanel';
 import ABTestStatsPanel from '../../components/ABTestStatsPanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
@@ -1129,26 +1128,6 @@ const IntelligenceCenter: React.FC = () => {
             <WhatIfSimPanel />
           </div>
         </div>
-
-        {/* ╔════════════════════════════════════════════╝
-            ║ 经营基准（权限控制）                        ║
-            ╚════════════════════════════════════════════╝ */}
-        {(isSuperAdmin || isTenantOwner || (user?.permissions ?? []).includes('INTELLIGENCE_BENCHMARK_VIEW')) && (
-          <>
-            <div style={{ padding: '0 24px 4px' }}>
-              <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('benchmark')}>
-                <span style={{ fontSize: 13, color: '#f472b6', fontWeight: 600 }}>📈 经营基准</span>
-                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(244,114,182,0.15)', color: '#f472b6' }}>完成率 / 逾期率 / 效率分</span>
-                <CollapseChevron panelKey="benchmark" />
-              </div>
-            </div>
-            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['benchmark'] ? 0 : 600, transition: 'max-height 0.4s ease' }}>
-              <div style={{ padding: '0 24px 28px' }}>
-                <BenchmarkKpiPanel />
-              </div>
-            </div>
-          </>
-        )}
 
         {/* ╔════════════════════════════════════════════╝
             ║ 月度经营汇总（仅超管可见）                  ║
