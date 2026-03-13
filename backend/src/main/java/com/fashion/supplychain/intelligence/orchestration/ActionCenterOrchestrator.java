@@ -63,15 +63,32 @@ public class ActionCenterOrchestrator {
         FinanceAuditResponse financeAudit = safeFinanceAudit();
 
         ActionCenterResponse response = new ActionCenterResponse();
-        List<ActionCenterResponse.ActionTask> tasks = buildTasks(health, pulse, risks, anomalies, notifications, financeAudit);
-        actionTaskFeedbackOrchestrator.applyTaskFeedbackState(tasks);
-        appendOverdueReviewTasks(tasks);
+        List<ActionCenterResponse.ActionTask> tasks = new ArrayList<>();
+        try {
+            tasks = buildTasks(health, pulse, risks, anomalies, notifications, financeAudit);
+        } catch (Exception e) {
+            log.warn("[ActionCenter] buildTasks 失败: {}", e.getMessage());
+        }
+        try {
+            actionTaskFeedbackOrchestrator.applyTaskFeedbackState(tasks);
+        } catch (Exception e) {
+            log.warn("[ActionCenter] applyTaskFeedbackState 失败（表可能不存在）: {}", e.getMessage());
+        }
+        try {
+            appendOverdueReviewTasks(tasks);
+        } catch (Exception e) {
+            log.warn("[ActionCenter] appendOverdueReviewTasks 失败: {}", e.getMessage());
+        }
         rankTasks(tasks);
         if (tasks.size() > 8) {
             tasks = new ArrayList<>(tasks.subList(0, 8));
         }
         response.setTasks(tasks);
-        fillSummary(response);
+        try {
+            fillSummary(response);
+        } catch (Exception e) {
+            log.warn("[ActionCenter] fillSummary 失败: {}", e.getMessage());
+        }
         return response;
     }
 

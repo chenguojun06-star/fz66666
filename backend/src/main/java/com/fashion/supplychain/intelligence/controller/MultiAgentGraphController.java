@@ -112,9 +112,14 @@ public class MultiAgentGraphController {
     @GetMapping("/ab-stats")
     public Result<List<Map<String, Object>>> abStats(
             @RequestParam(defaultValue = "30") int days) {
-        Long tenantId = UserContext.tenantId();
-        int safeDays = Math.min(Math.max(days, 1), 90);
-        List<Map<String, Object>> stats = logMapper.selectAbStatsByScene(tenantId, safeDays);
-        return Result.success(stats);
+        try {
+            Long tenantId = UserContext.tenantId();
+            int safeDays = Math.min(Math.max(days, 1), 90);
+            List<Map<String, Object>> stats = logMapper.selectAbStatsByScene(tenantId, safeDays);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.warn("[AbStats] 查询失败（表可能不存在）: {}", e.getMessage());
+            return Result.success(List.of());
+        }
     }
 }
