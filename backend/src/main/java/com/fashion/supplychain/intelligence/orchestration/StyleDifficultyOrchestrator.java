@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.DifficultyAssessment;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -49,6 +50,9 @@ public class StyleDifficultyOrchestrator {
 
     @Autowired
     private AiAdvisorService aiAdvisorService;
+
+    @Autowired
+    private QdrantService qdrantService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -209,6 +213,31 @@ public class StyleDifficultyOrchestrator {
                 .filter(n -> n != null && !n.isEmpty())
                 .collect(Collectors.joining("、"));
 
+        // ── Voyage AI 视觉相似度检索（辅助 DeepSeek 理解款式视觉难度） ──
+        String visualSimilarityContext = "";
+        float[] imageVec = null;
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            try {
+                imageVec = qdrantService.computeMultimodalEmbedding(imageUrl);
+                List<QdrantService.SimilarStyle> similar = qdrantService.searchSimilarStyleImages(imageVec, 3);
+                List<String> refs = new ArrayList<>();
+                for (QdrantService.SimilarStyle ss : similar) {
+                    if (ss.getSimilarity() >= 0.72f) {
+                        refs.add(String.format("款号%s 难度%d分(%s) 视觉相似%.0f%%",
+                                ss.getStyleNo().isEmpty() ? "[无款号]" : ss.getStyleNo(),
+                                ss.getDifficultyScore(), ss.getDifficultyLevel(),
+                                ss.getSimilarity() * 100));
+                    }
+                }
+                if (!refs.isEmpty()) {
+                    visualSimilarityContext = "- 视觉近似历史款式（AI检索）：" + String.join("；", refs) + "\n";
+                }
+                log.info("[StyleDifficulty] 图片向量完成，相似款式数={}", similar.size());
+            } catch (Exception e) {
+                log.warn("[StyleDifficulty] Voyage图像向量失败，跳过视觉上下文: {}", e.getMessage());
+            }
+        }
+
         String systemPrompt = "你是专业服装版师和工艺师，擅长根据款式工艺信息快速评估制作难度。" +
                 "请根据用户提供的款式信息（含图片链接）进行难度评估，严格返回 JSON，不加任何解释文字。";
 
@@ -218,7 +247,7 @@ public class StyleDifficultyOrchestrator {
                 "- BOM物料种数：%d 种\n" +
                 "- 工序（共%d道）：%s\n" +
                 "- 二次工艺（共%d道）：%s\n" +
-                "- 款式封面图URL：%s\n\n" +
+                "- 款式封面图URL：%s\n%s\n" +
                 "结构化预评分：难度%s（%d/10），含高难工序%d道，二次工艺%s。\n\n" +
                 "请综合款式图片视觉特征（版型复杂度、装饰工艺、面料难度等）进行最终评估。\n" +
                 "返回 JSON（必须严格是下面格式，不能有其他文字）：\n" +
@@ -231,6 +260,7 @@ public class StyleDifficultyOrchestrator {
                 secondaryProcesses == null ? 0 : secondaryProcesses.size(),
                 secondaryNames.isEmpty() ? "无" : secondaryNames,
                 imageUrl == null ? "暂无图片" : imageUrl,
+                visualSimilarityContext,
                 base.getDifficultyLabel(),
                 base.getDifficultyScore(),
                 processes == null ? 0 : processes.stream()
@@ -287,6 +317,17 @@ public class StyleDifficultyOrchestrator {
         base.setImageAnalyzed(true);
         base.setImageInsight(imageInsight.length() > 100 ? imageInsight.substring(0, 100) : imageInsight);
         base.setAssessmentSource("AI_ENHANCED");
+        // 存储款式图片向量，供后续相似款式搜索使用
+        if (imageVec != null && style.getId() != null) {
+            try {
+                qdrantService.upsertStyleImageVector(style.getId(),
+                        style.getStyleNo() != null ? style.getStyleNo() : "",
+                        imageVec, base.getDifficultyLevel(), base.getDifficultyScore());
+                log.info("[StyleDifficulty] \u6b3e\u5f0f\u56fe\u7247\u5411\u91cf\u5df2\u5165\u5e93 styleId={}", style.getId());
+            } catch (Exception e) {
+                log.warn("[StyleDifficulty] \u6b3e\u5f0f\u56fe\u5411\u91cf\u5165\u5e93\u5931\u8d25: {}", e.getMessage());
+            }
+        }
         return base;
     }
 

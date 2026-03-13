@@ -305,6 +305,10 @@ public class NlQueryOrchestrator {
             case "finance_audit":     return smartHandlers.handleCostQuery();
             case "help":              return dataHandlers.handleHelpQuery();
             case "summary":           return dataHandlers.handleSummaryQuery(tenantId);
+            case "root_cause":        return smartHandlers.handleRootCauseQuery(question);
+            case "pattern":           return smartHandlers.handlePatternQuery();
+            case "goal":              return smartHandlers.handleGoalQuery(question);
+            case "meeting":           return smartHandlers.handleMeetingQuery(question);
             default:                  return null;
         }
     }

@@ -433,16 +433,17 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     <Tag color="purple" style={{ margin: 0 }}>AI图像增强</Tag>
                   )}
                 </div>
-                <Tooltip title="需要接入视觉模型后生效（当前 AI 为纯文本模型，无法识别图片内容）">
-                  <Button
+                <Button
                     size="small"
                     icon={<ExperimentOutlined />}
-                    disabled
+                    loading={difficultyLoading}
+                    onClick={handleAiImageAnalysis}
+                    disabled={!style?.cover}
+                    title={!style?.cover ? '款式暂无封面图' : '用 AI 视觉模型分析款式图难度'}
                     style={{ fontSize: 12 }}
                   >
                     AI图像分析
                   </Button>
-                </Tooltip>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                 <Progress
@@ -480,16 +481,17 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
           )}
           {!activeDifficulty && (
             <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Tooltip title="需要接入视觉模型后生效（当前 AI 为纯文本模型，无法识别图片内容）">
-                <Button
-                  size="small"
-                  icon={<ExperimentOutlined />}
-                  disabled
-                  style={{ fontSize: 12 }}
-                >
-                  AI 难度分析
-                </Button>
-              </Tooltip>
+              <Button
+                size="small"
+                icon={<ExperimentOutlined />}
+                loading={difficultyLoading}
+                onClick={handleAiImageAnalysis}
+                disabled={!style?.cover}
+                title={!style?.cover ? '款式暂无封面图' : '用 AI 视觉模型识别款式图制作难度'}
+                style={{ fontSize: 12 }}
+              >
+                AI 难度分析
+              </Button>
               <span style={{ fontSize: 12, color: '#bfbfbf' }}>结构化评分已自动完成，AI 图像识别待接入视觉模型</span>
             </div>
           )}

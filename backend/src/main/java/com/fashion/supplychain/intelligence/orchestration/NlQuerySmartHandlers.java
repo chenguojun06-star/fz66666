@@ -32,6 +32,10 @@ public class NlQuerySmartHandlers {
     @Autowired private SmartNotificationOrchestrator smartNotificationOrchestrator;
     @Autowired private SelfHealingOrchestrator selfHealingOrchestrator;
     @Autowired private LearningReportOrchestrator learningReportOrchestrator;
+    @Autowired private RootCauseAnalysisOrchestrator rootCauseAnalysisOrchestrator;
+    @Autowired private PatternDiscoveryOrchestrator patternDiscoveryOrchestrator;
+    @Autowired private GoalDecompositionOrchestrator goalDecompositionOrchestrator;
+    @Autowired private AgentMeetingOrchestrator agentMeetingOrchestrator;
 
     // ── 系统健康指数 ──
     public NlQueryResponse handleHealthQuery() {
@@ -475,6 +479,116 @@ public class NlQuerySmartHandlers {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ── 根因分析 ──
+    public NlQueryResponse handleRootCauseQuery(String question) {
+        NlQueryResponse resp = build("root_cause");
+        try {
+            var rca = rootCauseAnalysisOrchestrator.analyze("nl_query", question, "");
+            StringBuilder sb = new StringBuilder("🔍 5-Why根因分析：\n");
+            sb.append("• 根因：").append(rca.getRootCause()).append("\n");
+            sb.append("• 分类：").append(rca.getRootCauseCategory()).append("（").append(rca.getSeverity()).append("）\n");
+            if (rca.getSuggestedActions() != null) sb.append("• 建议：").append(rca.getSuggestedActions());
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("rcaId", rca.getId());
+            data.put("rootCause", rca.getRootCause());
+            data.put("category", rca.getRootCauseCategory());
+            data.put("severity", rca.getSeverity());
+            resp.setData(data);
+        } catch (Exception e) {
+            fallback(resp, "根因分析", e);
+        }
+        resp.setSuggestions(Arrays.asList("有什么规律？", "帮我拆解目标", "开个例会讨论"));
+        return resp;
+    }
+
+    // ── 规律发现 ──
+    public NlQueryResponse handlePatternQuery() {
+        NlQueryResponse resp = build("pattern");
+        try {
+            var patterns = patternDiscoveryOrchestrator.discoverPatterns(30);
+            if (patterns.isEmpty()) {
+                resp.setAnswer("✅ 近30天未发现明显规律或异常模式，各项运营指标平稳。");
+                resp.setConfidence(80);
+            } else {
+                StringBuilder sb = new StringBuilder("📊 规律发现（近30天）：\n");
+                for (var p : patterns) {
+                    sb.append(String.format("• %s（%s）— %s\n", p.getPatternName(), p.getPatternType(), p.getDescription()));
+                }
+                resp.setAnswer(sb.toString().trim());
+                resp.setConfidence(85);
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("patternCount", patterns.size());
+            resp.setData(data);
+        } catch (Exception e) {
+            fallback(resp, "规律发现", e);
+        }
+        resp.setSuggestions(Arrays.asList("做个根因分析", "帮我拆解目标", "系统健康度如何？"));
+        return resp;
+    }
+
+    // ── 目标拆解 ──
+    public NlQueryResponse handleGoalQuery(String question) {
+        NlQueryResponse resp = build("goal");
+        try {
+            var goal = goalDecompositionOrchestrator.createAndDecompose(
+                    "production", question, question, null, null, null, null);
+            var tree = goalDecompositionOrchestrator.listGoalTree(com.fashion.supplychain.common.UserContext.tenantId());
+            long subCount = tree.stream().filter(g -> goal.getId().equals(g.getParentGoalId())).count();
+            StringBuilder sb = new StringBuilder("🎯 目标已拆解：\n");
+            sb.append("• 目标：").append(goal.getTitle()).append("\n");
+            sb.append("• 子目标数：").append(subCount).append("个\n");
+            for (var g : tree) {
+                if (goal.getId().equals(g.getParentGoalId())) {
+                    sb.append("  → ").append(g.getTitle()).append("\n");
+                }
+            }
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(82);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("goalId", goal.getId());
+            data.put("subGoalCount", subCount);
+            resp.setData(data);
+        } catch (Exception e) {
+            fallback(resp, "目标拆解", e);
+        }
+        resp.setSuggestions(Arrays.asList("查看目标进度", "有什么规律？", "做个根因分析"));
+        return resp;
+    }
+
+    // ── Agent例会 ──
+    public NlQueryResponse handleMeetingQuery(String question) {
+        NlQueryResponse resp = build("meeting");
+        try {
+            com.fashion.supplychain.intelligence.dto.AgentState state = new com.fashion.supplychain.intelligence.dto.AgentState();
+            state.setTenantId(com.fashion.supplychain.common.UserContext.tenantId());
+            state.setScene("meeting");
+            state.setQuestion(question);
+            var meeting = agentMeetingOrchestrator.holdMeeting("daily", question, state);
+            StringBuilder sb = new StringBuilder("🤝 Agent例会结论：\n");
+            sb.append("• 议题：").append(meeting.getTopic()).append("\n");
+            sb.append("• 共识：").append(meeting.getConsensus()).append("\n");
+            if (meeting.getDissent() != null && !meeting.getDissent().isBlank()) {
+                sb.append("• 异议：").append(meeting.getDissent()).append("\n");
+            }
+            sb.append("• 行动项：").append(meeting.getActionItems()).append("\n");
+            sb.append("• 置信度：").append(meeting.getConfidenceScore()).append("分");
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(meeting.getConfidenceScore());
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("meetingId", meeting.getId());
+            data.put("consensus", meeting.getConsensus());
+            data.put("confidence", meeting.getConfidenceScore());
+            resp.setData(data);
+        } catch (Exception e) {
+            fallback(resp, "Agent例会", e);
+        }
+        resp.setSuggestions(Arrays.asList("查看历史例会", "做个根因分析", "有什么规律？"));
+        return resp;
     }
 
     // ── 工具方法 ──
