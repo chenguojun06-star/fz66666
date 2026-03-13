@@ -844,7 +844,7 @@ const DataCenter: React.FC = () => {
           </Space>
         }
         width="60vw"
-        initialHeight={620}
+        initialHeight={Math.round(window.innerHeight * 0.82)}
       >
         {detailRecord && (
           <div style={{ padding: '16px' }}>

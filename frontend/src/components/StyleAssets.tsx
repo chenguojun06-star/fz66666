@@ -473,7 +473,7 @@ export const StyleAttachmentsButton: React.FC<{
         open={open}
         title={modalTitle}
         width="60vw"
-        initialHeight={580}
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         onCancel={() => {
           setOpen(false);
           onModalClose?.();

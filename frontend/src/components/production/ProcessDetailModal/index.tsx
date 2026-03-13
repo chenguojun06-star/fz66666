@@ -826,7 +826,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       footer={null}
       className="process-detail-modal"
       width="60vw"
-      initialHeight={580}
+      initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       <Tabs
         activeKey={activeTab}
