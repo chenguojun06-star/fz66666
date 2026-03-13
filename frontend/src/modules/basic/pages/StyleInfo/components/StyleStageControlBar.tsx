@@ -170,6 +170,7 @@ const StyleStageControlBar: React.FC<Props> = ({
   const handleRollback = () => {
     let reason = '';
     modal.confirm({
+      width: '30vw',
       title: `退回修改 - ${stageName}`,
       content: (
         <div>
@@ -190,7 +191,7 @@ const StyleStageControlBar: React.FC<Props> = ({
       ),
       okText: '确认退回',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         const remark = String(reason || '').trim();
         if (!remark) {

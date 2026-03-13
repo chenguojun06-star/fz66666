@@ -183,11 +183,12 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
 
   const handleUndo = useCallback(async (record: ProcessTrackingRecord) => {
     modal.confirm({
+      width: '30vw',
       title: '确认撤回',
       content: `确定撤回此扫码记录？\n菲号: ${record.bundleNo}\n工序: ${record.processName || '-'}\n数量: ${record.quantity || 0}件`,
       okText: '确认撤回',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         try {
           await productionScanApi.undo({ recordId: record.scanRecordId! });

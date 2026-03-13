@@ -65,7 +65,7 @@ export const useCloseOrder = ({
       title: `确认关单：${String((order as any)?.orderNo || '').trim() || '-'}`,
       okText: '确认关单',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       content: (
         <div>
           <div>订单数量：{orderQty}</div>

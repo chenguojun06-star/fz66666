@@ -1111,7 +1111,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 onConfirm={handleClear}
                 okText="确认清空"
                 cancelText="取消"
-                okButtonProps={{ danger: true }}
+                okButtonProps={{ danger: true, type: 'default' }}
               >
                 <Button danger loading={saving}>
                   清空设置

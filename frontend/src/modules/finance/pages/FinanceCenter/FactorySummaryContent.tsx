@@ -167,6 +167,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   // 终审推送单个工厂结算到付款中心
   const handleApprove = async (record: FactorySummaryRow) => {
     modal.confirm({
+      width: '30vw',
       title: '推送到付款中心',
       content: `确认将工厂「${record.factoryName}」的 ${record.orderCount} 个订单（总金额 ¥${toMoney(record.totalAmount)}）终审推送到付款中心？`,
         okText: '确认终审',
@@ -208,6 +209,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     const totalOrders = selected.reduce((s, r) => s + (r.orderCount || 0), 0);
 
     modal.confirm({
+      width: '30vw',
       title: '批量推送确认',
       content: `确认将 ${selected.length} 个工厂（共 ${totalOrders} 个订单，总金额 ¥${toMoney(totalAmount)}）终审推送到付款中心？`,
         okText: '确认终审',

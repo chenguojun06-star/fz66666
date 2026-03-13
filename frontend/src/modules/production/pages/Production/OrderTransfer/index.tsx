@@ -82,6 +82,7 @@ const OrderTransferPage: React.FC = () => {
 
   const handleAccept = async (transfer: OrderTransfer) => {
     Modal.confirm({
+      width: '30vw',
       title: '确认接受转移',
       content: `确定要接受订单 ${transfer.orderNo} 的转移吗？`,
       onOk: async () => {

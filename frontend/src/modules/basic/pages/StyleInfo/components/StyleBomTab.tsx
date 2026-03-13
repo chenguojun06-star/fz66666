@@ -830,10 +830,11 @@ const StyleBomTab: React.FC<Props> = ({
           // 已生成过时，提示是否强制重新生成
           if (errMsg.includes('已生成过') && !force) {
             Modal.confirm({
+              width: '30vw',
               title: '已存在样衣采购记录',
               content: '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）',
               okText: '重新生成',
-              okButtonProps: { danger: true },
+              okButtonProps: { danger: true, type: 'default' },
               cancelText: '取消',
               onOk: () => doGenerate(true),
             });
@@ -849,6 +850,7 @@ const StyleBomTab: React.FC<Props> = ({
     };
 
     Modal.confirm({
+      width: '30vw',
       title: '确认生成采购单',
       content: `将根据当前BOM配置（${data.length}个物料）及款式颜色数量生成物料采购记录，是否继续？`,
       onOk: () => doGenerate(false),
@@ -1001,6 +1003,7 @@ const StyleBomTab: React.FC<Props> = ({
           if (hasZeroPrices) {
             return new Promise<boolean>((resolve) => {
               Modal.confirm({
+                width: '30vw',
                 title: '部分单价为0',
                 content: '存在单价为0的BOM物料，确认仍然完成BOM配置？',
                 okText: '确认完成',

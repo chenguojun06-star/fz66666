@@ -98,6 +98,7 @@ const ApprovalCenter: React.FC = () => {
 
   const handleCancel = async (id: string) => {
     Modal.confirm({
+      width: '30vw',
       title: '确认撤销申请？',
       onOk: async () => {
         try {

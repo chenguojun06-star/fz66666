@@ -741,6 +741,7 @@ const TaxExport: React.FC = () => {
   const handleFormatClick = (opt: typeof FORMAT_OPTIONS[0]) => {
     if (!opt.free && !subscribed) {
       Modal.confirm({
+        width: '30vw',
         title: '专业格式 — 付费功能',
         icon: <LockOutlined style={{ color: '#f59e0b' }} />,
         content: (

@@ -229,11 +229,12 @@ const MaterialDatabasePage: React.FC = () => {
       return;
     }
     Modal.confirm({
+      width: '30vw',
       title: '确认删除',
       content: '删除后不可恢复，是否继续？',
       okText: '删除',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         unwrapApiData<boolean>(await api.delete<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}`), '删除失败');
         message.success('删除成功');
@@ -250,6 +251,7 @@ const MaterialDatabasePage: React.FC = () => {
       return;
     }
     Modal.confirm({
+      width: '30vw',
       title: '确认完成',
       content: '确认将该物料标记为已完成？',
       okText: '确认',
@@ -273,11 +275,12 @@ const MaterialDatabasePage: React.FC = () => {
       return;
     }
     Modal.confirm({
+      width: '30vw',
       title: '确认退回',
       content: '确认将该物料退回编辑状态？',
       okText: '确认',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         unwrapApiData<boolean>(
           await api.put<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}/return`),

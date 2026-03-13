@@ -121,6 +121,7 @@ export default function AiExecutionPanel() {
     if (!selectedCommand) return;
 
     Modal.confirm({
+      width: '30vw',
       title: '确认拒绝',
       content: `确定要拒绝该命令吗？\n命令ID: ${selectedCommand.commandId}`,
       okText: '拒绝',

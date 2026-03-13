@@ -379,6 +379,7 @@ const PatternProduction: React.FC = () => {
   const handleMaintenance = (record: PatternProductionRecord) => {
     let maintenanceReason = '';
     Modal.confirm({
+      width: '30vw',
       title: '维护',
       content: (
         <div>
@@ -399,7 +400,7 @@ const PatternProduction: React.FC = () => {
       ),
       okText: '确认维护',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         const reason = maintenanceReason.trim();
         if (!reason) {
@@ -422,6 +423,7 @@ const PatternProduction: React.FC = () => {
   const _handleDelete = async (record: PatternProductionRecord) => {
     let deleteReason = '';
     Modal.confirm({
+      width: '30vw',
       title: '确认删除',
       content: (
         <div>
@@ -442,7 +444,7 @@ const PatternProduction: React.FC = () => {
       ),
       okText: '确认删除',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         const reason = deleteReason.trim();
         if (!reason) {

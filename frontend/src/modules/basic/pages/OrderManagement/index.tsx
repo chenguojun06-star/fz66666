@@ -768,6 +768,7 @@ const OrderManagement: React.FC = () => {
   const confirmPricingReady = () =>
     new Promise<boolean>((resolve) => {
       modal.confirm({
+        width: '30vw',
         title: '下单提醒',
         content: '请确认单价维护已完成。',
         okText: '确认下单',

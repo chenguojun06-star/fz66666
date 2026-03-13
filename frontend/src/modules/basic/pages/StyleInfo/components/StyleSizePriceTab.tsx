@@ -532,6 +532,7 @@ const StyleSizePriceTab: React.FC<Props> = ({
                   </Button>
                   <Button type="default" disabled={saving} onClick={() => {
                     Modal.confirm({
+                      width: '30vw',
                       title: '放弃未保存的修改？',
                       onOk: () => { setEditMode(false); fetchData(); },
                     });

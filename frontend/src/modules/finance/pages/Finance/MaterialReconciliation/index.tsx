@@ -292,6 +292,7 @@ const MaterialReconciliation: React.FC = () => {
     if (!normalized.length) return;
     let reasonValue = '';
     Modal.confirm({
+      width: '30vw',
       title: normalized.length > 1 ? `批量驳回（${normalized.length}条）` : '驳回',
       content: (
         <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
@@ -310,7 +311,7 @@ const MaterialReconciliation: React.FC = () => {
       ),
       okText: '确认驳回',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         const remark = String(reasonValue || '').trim();
         if (!remark) {

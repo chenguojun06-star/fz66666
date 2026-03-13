@@ -405,6 +405,7 @@ export default function SelectionCenter() {
 
   const handleCreateStyle = (id: number, styleName: string) => {
     modal.confirm({
+      width: '30vw',
       title: '下版到样衣',
       content: `确认将「${styleName}」生成正式款式，进入样衣开发流程？`,
       okText: '确认下版',
@@ -441,9 +442,10 @@ export default function SelectionCenter() {
 
   const handleDeleteCandidate = (record: Candidate) => {
     modal.confirm({
+      width: '30vw',
       title: '删除候选款',
       content: `确认删除「${record.styleName}」？删除后不可恢复。`,
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         try {
           await candidateDelete(record.id);

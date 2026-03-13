@@ -385,6 +385,7 @@ export function useBomColumns({
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
+                      width: '30vw',
                       title: '确定删除?',
                       onOk: () => handleDelete(record.id!),
                     });
@@ -417,6 +418,7 @@ export function useBomColumns({
                 title: '取消',
                 onClick: () => {
                   Modal.confirm({
+                    width: '30vw',
                     title: '确定取消?',
                     onOk: cancel,
                   });
@@ -444,6 +446,7 @@ export function useBomColumns({
                 disabled: editingKey !== '',
                 onClick: () => {
                   Modal.confirm({
+                    width: '30vw',
                     title: '确定删除?',
                     onOk: () => handleDelete(record.id!),
                   });

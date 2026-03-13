@@ -386,6 +386,7 @@ const AppManagementTab: React.FC = () => {
 
   const handleResetSecret = async (record: TenantAppInfo) => {
     Modal.confirm({
+      width: '30vw',
       title: '重置密钥',
       content: '重置后旧密钥立即失效，客户系统需要更新配置。确认重置？',
       okText: '确认重置',
@@ -410,6 +411,7 @@ const AppManagementTab: React.FC = () => {
 
   const handleDelete = async (record: TenantAppInfo) => {
     Modal.confirm({
+      width: '30vw',
       title: '删除应用',
       content: `确认删除应用"${record.appName}"？删除后无法恢复。`,
       okText: '确认删除',

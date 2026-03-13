@@ -149,6 +149,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   // 删除
   const handleDelete = (record: SecondaryProcess) => {
     modal.confirm({
+      width: '30vw',
       title: '确认删除',
       content: `确定要删除工艺"${record.processName}"吗？`,
       onOk: async () => {

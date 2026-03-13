@@ -233,6 +233,7 @@ const ReceivableList: React.FC = () => {
 
   const handleDelete = (record: Receivable) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认删除应收单「${record.receivableNo}」？`,
       content: '删除后不可恢复',
       okButtonProps: { danger: true, type: 'default' },

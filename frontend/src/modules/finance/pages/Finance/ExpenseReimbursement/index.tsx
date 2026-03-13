@@ -224,6 +224,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   // ── 确认付款 ──
   const handlePay = (record: ExpenseReimbursement) => {
     modal.confirm({
+      width: '30vw',
       title: '确认付款',
       content: (
         <div>

@@ -578,6 +578,7 @@ const TemplateCenter: React.FC = () => {
     let deleteReason = '';
 
     modal.confirm({
+      width: '30vw',
       title: '确认删除该模板？',
       content: (
         <div>
@@ -596,7 +597,7 @@ const TemplateCenter: React.FC = () => {
         </div>
       ),
       okText: '删除',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         if (!deleteReason) {

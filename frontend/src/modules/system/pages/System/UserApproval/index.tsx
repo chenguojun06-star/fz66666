@@ -343,7 +343,7 @@ const UserApproval: React.FC = () => {
           }}
           okText="确定拒绝"
           cancelText="取消"
-          okButtonProps={{ danger: true }}
+          okButtonProps={{ danger: true, type: 'default' }}
         >
           <div style={{ marginBottom: 16 }}>
             <p>

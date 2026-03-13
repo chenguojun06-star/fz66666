@@ -541,6 +541,7 @@ const StyleSizeTab: React.FC<Props> = ({
               title={`删除尺码 ${sn}`}
               onClick={() => {
                 Modal.confirm({
+                  width: '30vw',
                   title: `确定删除尺码“${sn}”？`,
                   onOk: () => handleDeleteSize(sn),
                 });
@@ -604,6 +605,7 @@ const StyleSizeTab: React.FC<Props> = ({
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
+                      width: '30vw',
                       title: '确定删除该部位？',
                       onOk: () => handleDeletePart(record),
                     });
@@ -719,6 +721,7 @@ const StyleSizeTab: React.FC<Props> = ({
                 disabled={saving}
                 onClick={() => {
                   Modal.confirm({
+                    width: '30vw',
                     title: '放弃未保存的修改？',
                     onOk: exitEdit,
                   });

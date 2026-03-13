@@ -159,6 +159,7 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
     if (!(await ensureOrderUnlockedById((task as unknown as any)?.productionOrderNo))) return;
     let reason = '';
     modal.confirm({
+      width: '30vw',
       title: '确认退回该裁剪任务？',
       content: (
         <div>
@@ -174,7 +175,7 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
         </div>
       ),
       okText: '确认退回',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         const remark = String(reason || '').trim();

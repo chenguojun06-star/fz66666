@@ -276,6 +276,7 @@ const CustomerManagement: React.FC = () => {
 
   const handleDelete = (record: Customer) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认删除客户「${record.companyName}」？`,
       content: '删除后不可恢复',
       okButtonProps: { danger: true, type: 'default' },

@@ -80,7 +80,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       ),
       okText: '确认撤回',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: async () => {
         if (!reason.trim()) {
           message.error('请填写撤回原因');

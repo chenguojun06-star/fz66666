@@ -500,6 +500,7 @@ const UserList: React.FC = () => {
   ) => {
     let remarkValue = '';
     modal.confirm({
+      width: '30vw',
       title,
       content: (
         <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>

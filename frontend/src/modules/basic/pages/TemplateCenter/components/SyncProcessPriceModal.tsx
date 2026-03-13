@@ -643,6 +643,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
             : <>
                 <Button type="primary" onClick={saveAll} loading={saving} disabled={syncing}>保存</Button>
                 <Button disabled={saving} onClick={() => Modal.confirm({ title: '放弃未保存的修改？', onOk: exitEdit })}>取消</Button>
+              width: '30vw',
               </>
           }
         </div>

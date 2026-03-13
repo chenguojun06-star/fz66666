@@ -154,6 +154,7 @@ const BillingTab: React.FC = () => {
       ? `¥${plan?.yearlyFee || record.monthlyFee * 10}/年`
       : `¥${record.monthlyFee || 0}/月`;
     Modal.confirm({
+      width: '30vw',
       title: `为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`,
       content: `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`,
       okText: '确认生成',
@@ -172,6 +173,7 @@ const BillingTab: React.FC = () => {
 
   const handleMarkBillPaid = async (bill: BillingRecord) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认标记账单 ${bill.billingNo} 已支付`,
       content: `金额：¥${bill.totalAmount}，租户：${bill.tenantName}`,
       okText: '确认支付',
@@ -189,6 +191,7 @@ const BillingTab: React.FC = () => {
 
   const handleWaiveBill = async (bill: BillingRecord) => {
     Modal.confirm({
+      width: '30vw',
       title: `减免账单 ${bill.billingNo}`,
       content: <Input.TextArea placeholder="减免原因（选填）" id="waive-remark" />,
       okText: '确认减免',
@@ -207,6 +210,7 @@ const BillingTab: React.FC = () => {
 
   const handleIssueInvoice = async (bill: BillingRecord) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认开票 - ${bill.billingNo}`,
       content: (
         <div>

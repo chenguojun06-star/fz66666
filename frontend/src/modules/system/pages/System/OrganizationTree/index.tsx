@@ -189,10 +189,11 @@ const OrganizationTreePage: React.FC = () => {
 
   const handleDelete = (record: OrganizationUnit) => {
     modal.confirm({
+      width: '30vw',
       title: `删除部门「${record.unitName}」`,
       content: '仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。',
       okText: '删除',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         const remark = `删除组织节点：${record.unitName}`;
@@ -268,10 +269,11 @@ const OrganizationTreePage: React.FC = () => {
   // 移出成员
   const handleRemoveMember = useCallback(async (userId: string, userName: string) => {
     modal.confirm({
+      width: '30vw',
       title: `移出成员「${userName}」`,
       content: '该成员将从当前组织节点移出，账号本身不受影响。',
       okText: '移出',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         await organizationApi.removeMember(userId);

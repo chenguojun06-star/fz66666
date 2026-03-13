@@ -164,6 +164,7 @@ export function useProductionActions({
 
     let remark = '';
     modal.confirm({
+      width: '30vw',
       title: `确认报废：${safeString((order as any)?.orderNo)}`,
       okText: '确认报废',
       cancelText: '取消',

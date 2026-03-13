@@ -326,6 +326,7 @@ const DictManage: React.FC = () => {
   // 删除
   const handleDelete = (record: DictItem) => {
     modal.confirm({
+      width: '30vw',
       title: '确认删除',
       content: `确定要删除字典项"${record.dictLabel}"吗？`,
       onOk: async () => {
@@ -379,6 +380,7 @@ const DictManage: React.FC = () => {
       return;
     }
     modal.confirm({
+      width: '30vw',
       title: '导入预设数据',
       content: `将把系统内置的「${typeLabel}」预设选项（共 ${localData.length} 条）写入数据库，已存在的条目会自动跳过。确定继续？`,
       onOk: async () => {

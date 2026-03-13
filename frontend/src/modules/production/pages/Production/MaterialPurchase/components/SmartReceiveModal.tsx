@@ -159,6 +159,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       : `从仓库领取 ${pickQty}，全部满足`;
 
     Modal.confirm({
+      width: '30vw',
       title: `确认仓库领取 - ${item.materialName}`,
       icon: <ShopOutlined style={{ color: 'var(--color-primary)' }} />,
       content: (
@@ -200,6 +201,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
   // 一键采购（无库存时确认外部采购）
   const handlePurchaseOnly = (item: MaterialItem) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认采购 - ${item.materialName}`,
       icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
       content: (
@@ -244,6 +246,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
   const handleCancelPicking = (record: PickingRecord) => {
     let reason = '';
     Modal.confirm({
+      width: '30vw',
       title: '撤销出库单',
       icon: <ExclamationCircleOutlined />,
       content: (
@@ -298,6 +301,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
     }
 
     Modal.confirm({
+      width: '30vw',
       title: '确认批量采购',
       icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
       content: (

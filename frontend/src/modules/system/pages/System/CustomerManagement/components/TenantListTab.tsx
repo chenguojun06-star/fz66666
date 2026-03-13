@@ -262,6 +262,7 @@ const TenantListTab: React.FC = () => {
   const handleDeleteTenant = (record: TenantInfo) => {
     const statusLabel = record.status === 'pending_review' ? '待审核' : record.status === 'active' ? '正常' : record.status;
     Modal.confirm({
+      width: '30vw',
       title: `确认删除「${record.tenantName}」`,
       icon: <ExclamationCircleOutlined />,
       content: record.status === 'active' || record.status === 'disabled'
@@ -304,6 +305,7 @@ const TenantListTab: React.FC = () => {
   const handleMarkPaid = async (record: TenantInfo) => {
     const isPaid = record.paidStatus === 'PAID';
     Modal.confirm({
+      width: '30vw',
       title: isPaid ? `取消「${record.tenantName}」的已付费状态` : `标记「${record.tenantName}」为已付费`,
       okText: isPaid ? '取消付费' : '标记已付费',
       cancelText: '取消',

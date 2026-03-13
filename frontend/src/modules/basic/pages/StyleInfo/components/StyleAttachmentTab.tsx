@@ -387,6 +387,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
               ? undefined
               : () => {
                 Modal.confirm({
+                  width: '30vw',
                   title: '确定删除?',
                   onOk: () => handleDelete(record.id!),
                 });

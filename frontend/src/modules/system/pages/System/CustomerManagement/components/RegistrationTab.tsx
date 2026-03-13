@@ -32,6 +32,7 @@ const RegistrationTab: React.FC = () => {
 
   const handleApproveTenant = async (record: TenantInfo) => {
     Modal.confirm({
+      width: '30vw',
       title: `确认审批通过「${record.tenantName}」`,
       content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户（默认免费试用30天，可在「客户管理」中调整套餐）。`,
       okText: '确认审批',
@@ -50,6 +51,7 @@ const RegistrationTab: React.FC = () => {
 
   const handleRejectTenant = async (record: TenantInfo) => {
     Modal.confirm({
+      width: '30vw',
       title: `拒绝「${record.tenantName}」的入驻申请`,
       content: <Input.TextArea placeholder="请输入拒绝原因" id="reject-tenant-reason" />,
       okText: '确认拒绝',

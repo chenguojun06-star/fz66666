@@ -840,6 +840,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   Modal.confirm({
+                    width: '30vw',
                     title: `确定删除"${size}"码？`,
                     content: '删除后该尺码的单价数据将被清除',
                     onOk: () => handleRemoveSize(size),
@@ -885,6 +886,7 @@ const StyleProcessTab: React.FC<Props> = ({
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
+                      width: '30vw',
                       title: '确定删除?',
                       onOk: () => handleDelete(record.id!),
                     });
@@ -1104,6 +1106,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 disabled={saving}
                 onClick={() => {
                   Modal.confirm({
+                    width: '30vw',
                     title: '放弃未保存的修改？',
                     onOk: exitEdit,
                   });

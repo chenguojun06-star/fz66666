@@ -422,6 +422,7 @@ const PaymentCenterPage: React.FC = () => {
   // ============================================================
   const handleCancel = (record: WagePayment) => {
     Modal.confirm({
+      width: '30vw',
       title: '确认取消',
       content: `确定取消支付单 ${record.paymentNo} 吗？`,
       onOk: async () => {
@@ -442,6 +443,7 @@ const PaymentCenterPage: React.FC = () => {
   const handleRejectPayable = (record: PayableItem) => {
     let reason = '';
     Modal.confirm({
+      width: '30vw',
       title: '驳回待付款',
       content: (
         <div>
@@ -457,7 +459,7 @@ const PaymentCenterPage: React.FC = () => {
         </div>
       ),
       okText: '确认驳回',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
         if (!reason.trim()) {
@@ -511,6 +513,7 @@ const PaymentCenterPage: React.FC = () => {
     if (selected.length === 0) return;
     const totalAmt = selected.reduce((s, p) => s + Number(p.amount ?? 0), 0);
     Modal.confirm({
+      width: '30vw',
       title: `批量线下付款`,
       content: (
         <div>

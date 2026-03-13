@@ -352,7 +352,7 @@ const MaterialPurchase: React.FC = () => {
           title="退回回料确认"
           okText="确认退回"
           cancelText="取消"
-          okButtonProps={{ danger: true, loading: returnResetSubmitting }}
+          okButtonProps={{ danger: true, type: 'default', loading: returnResetSubmitting }}
           width={isMobile ? '96vw' : 520}
           onCancel={() => {
             returnResetModal.close();
