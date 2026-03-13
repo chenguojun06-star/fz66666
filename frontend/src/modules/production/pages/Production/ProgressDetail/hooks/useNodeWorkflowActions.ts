@@ -60,6 +60,7 @@ export const useNodeWorkflowActions = ({
     }
     const target = nodes.find((n) => String(n.id) === String(nodeId));
     Modal.confirm({
+      width: '30vw',
       title: '确认删除节点？',
       content: `将删除「${target?.name || '该节点'}」`,
       okText: '删除',

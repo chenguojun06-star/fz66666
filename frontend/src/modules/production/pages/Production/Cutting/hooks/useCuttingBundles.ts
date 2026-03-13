@@ -192,6 +192,7 @@ export function useCuttingBundles({
     }
 
     modal.confirm({
+      width: '30vw',
       title: '确认保存并生成二维码？',
       content: '确认后将保存裁剪单并生成二维码，保存成功后才可批量打印。',
       okText: '确认保存',

@@ -17,6 +17,7 @@ export const useStyleActions = (refreshCallback?: () => void) => {
     return new Promise((resolve, reject) => {
       let scrapReason = '';
       modal.confirm({
+        width: '30vw',
         title: '确认报废',
         content: React.createElement(
           'div',
