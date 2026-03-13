@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -47,20 +48,26 @@ public class CrossTenantBenchmarkOrchestrator {
         Long myTenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
 
-        // 1. 计算/刷新全量快照（今日尚未计算才触发）
-        refreshSnapshotsIfNeeded(today);
-
-        // 2. 读取本租户今日快照
-        BenchmarkSnapshot mySnap = benchmarkSnapshotMapper.selectOne(
-                new QueryWrapper<BenchmarkSnapshot>()
+        // 1. 仅读当前租户自己的订单，计算指标并写入快照
+        //    ⚠️ 严格加 tenant_id 过滤，绝不读其他租户原始数据
+        List<ProductionOrder> myOrders = productionOrderService.list(
+                new QueryWrapper<ProductionOrder>()
                         .eq("tenant_id", myTenantId)
-                        .eq("snapshot_date", today));
-        if (mySnap == null) {
-            // 没有历史订单数据：返回空对标
+                        .gt("create_time", LocalDateTime.now().minusDays(90))
+                        .select("tenant_id", "status", "completed_quantity",
+                                "order_quantity", "create_time")
+        );
+        if (myOrders.isEmpty()) {
             return emptyResponse();
         }
+        BenchmarkSnapshot mySnap = computeSnapshot(myTenantId, myOrders, today);
+        // UPSERT 自己的快照（每次请求刷新保证实时性）
+        benchmarkSnapshotMapper.delete(new QueryWrapper<BenchmarkSnapshot>()
+                .eq("tenant_id", myTenantId).eq("snapshot_date", today));
+        benchmarkSnapshotMapper.insert(mySnap);
 
-        // 3. 读取所有今日快照（计算行业分位值）
+        // 2. 读取所有今日快照用于计算行业分位数
+        //    t_benchmark_snapshot 只含聚合指标，不含原始订单明细，安全可读
         List<BenchmarkSnapshot> all = benchmarkSnapshotMapper.selectList(
                 new QueryWrapper<BenchmarkSnapshot>().eq("snapshot_date", today));
 
@@ -85,41 +92,44 @@ public class CrossTenantBenchmarkOrchestrator {
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // 快照计算
+    // 定时任务：每日凌晨1:30 系统级刷新全租户快照
+    // （仅此处允许跨租户读取，普通用户请求路径绝不触发）
     // ──────────────────────────────────────────────────────────────────
 
-    private void refreshSnapshotsIfNeeded(LocalDate today) {
-        // 检查今日是否已有快照（任意租户有则认为已计算，避免重复全量扫描）
-        long count = benchmarkSnapshotMapper.selectCount(
-                new QueryWrapper<BenchmarkSnapshot>().eq("snapshot_date", today));
-        if (count > 0) return;
+    @Scheduled(cron = "0 30 1 * * ?")
+    public void dailyRefreshAllSnapshots() {
+        LocalDate today = LocalDate.now();
+        log.info("[CrossTenantBenchmark] 定时任务：开始计算今日({})全租户快照", today);
+        try {
+            // 系统级任务，无 UserContext，直接全量扫描
+            List<ProductionOrder> allOrders = productionOrderService.list(
+                    new QueryWrapper<ProductionOrder>()
+                            .gt("create_time", LocalDateTime.now().minusDays(90))
+                            .select("tenant_id", "status", "completed_quantity",
+                                    "order_quantity", "create_time")
+            );
+            Map<Long, List<ProductionOrder>> byTenant = allOrders.stream()
+                    .filter(o -> o.getTenantId() != null)
+                    .collect(Collectors.groupingBy(ProductionOrder::getTenantId));
 
-        log.info("[CrossTenantBenchmark] 计算今日({})全租户快照...", today);
-
-        // 按 tenant_id 分组统计近90天完工订单
-        List<ProductionOrder> allOrders = productionOrderService.list(
-                new QueryWrapper<ProductionOrder>()
-                        .gt("create_time", LocalDateTime.now().minusDays(90))
-                        .select("tenant_id", "status", "completed_quantity", "order_quantity", "create_time")
-        );
-
-        Map<Long, List<ProductionOrder>> byTenant = allOrders.stream()
-                .filter(o -> o.getTenantId() != null)
-                .collect(Collectors.groupingBy(ProductionOrder::getTenantId));
-
-        for (Map.Entry<Long, List<ProductionOrder>> entry : byTenant.entrySet()) {
-            Long tenantId = entry.getKey();
-            List<ProductionOrder> orders = entry.getValue();
-            if (orders.isEmpty()) continue;
-            try {
-                BenchmarkSnapshot snap = computeSnapshot(tenantId, orders, today);
-                // UPSERT（ON DUPLICATE KEY UPDATE via delete+insert）
-                benchmarkSnapshotMapper.delete(new QueryWrapper<BenchmarkSnapshot>()
-                        .eq("tenant_id", tenantId).eq("snapshot_date", today));
-                benchmarkSnapshotMapper.insert(snap);
-            } catch (Exception ex) {
-                log.warn("[CrossTenant] tenant={} snapshot failed: {}", tenantId, ex.getMessage());
+            int ok = 0, fail = 0;
+            for (Map.Entry<Long, List<ProductionOrder>> entry : byTenant.entrySet()) {
+                Long tenantId = entry.getKey();
+                if (entry.getValue().isEmpty()) continue;
+                try {
+                    BenchmarkSnapshot snap = computeSnapshot(tenantId, entry.getValue(), today);
+                    benchmarkSnapshotMapper.delete(new QueryWrapper<BenchmarkSnapshot>()
+                            .eq("tenant_id", tenantId).eq("snapshot_date", today));
+                    benchmarkSnapshotMapper.insert(snap);
+                    ok++;
+                } catch (Exception ex) {
+                    log.warn("[CrossTenant] tenant={} snapshot failed: {}", tenantId, ex.getMessage());
+                    fail++;
+                }
             }
+            log.info("[CrossTenantBenchmark] 定时任务完成：成功={} 失败={}", ok, fail);
+        } catch (Exception e) {
+            log.error("[CrossTenantBenchmark] 定时任务异常: {}", e.getMessage(), e);
         }
     }
 

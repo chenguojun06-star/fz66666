@@ -736,8 +736,9 @@ public class IntelligenceController {
         return Result.success(visualAIOrchestrator.analyze(req));
     }
 
-    /** Stage8 — 跨租户基准对标（当日快照，隐私保护聚合） */
+    /** Stage8 — 跨租户基准对标（仅租户负责人/超管可用，返回聚合分位数，不暴露其他租户明细） */
     @GetMapping("/benchmark/cross-tenant")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     public Result<CrossTenantBenchmarkResponse> crossTenantBenchmark() {
         return Result.success(crossTenantBenchmarkOrchestrator.getBenchmark());
     }
