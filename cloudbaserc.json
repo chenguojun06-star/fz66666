@@ -35,7 +35,8 @@
             "COS_SECRET_KEY": "{{COS_SECRET_KEY}}",
             "COS_REGION": "{{COS_REGION}}",
             "COS_BUCKET": "{{COS_BUCKET}}",
-            "SERPAPI_ENABLED": "true"
+            "SERPAPI_ENABLED": "true",
+            "QWEN_VL_API_KEY": "{{QWEN_VL_API_KEY}}"
           },
           "customLogs": "stdout",
           "healthPath": "/actuator/health/liveness"

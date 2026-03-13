@@ -54,6 +54,9 @@ public class StyleDifficultyOrchestrator {
     @Autowired
     private QdrantService qdrantService;
 
+    @Autowired
+    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -213,6 +216,24 @@ public class StyleDifficultyOrchestrator {
                 .filter(n -> n != null && !n.isEmpty())
                 .collect(Collectors.joining("、"));
 
+        // ── Qwen-VL：真正看图，生成视觉描述（在 DeepSeek 评分前执行） ──
+        String visionDescription = "暂无视觉分析";
+        if (imageUrl != null && !imageUrl.isBlank() && inferenceOrchestrator.isVisionEnabled()) {
+            try {
+                String visionPrompt = "请简洁描述这件服装的：① 版型结构（领型/袖型/裙/裤型等）" +
+                        "② 装饰工艺（刺绣/印花/拼接/蕾丝/立体裁剪等，若无写'无'）" +
+                        "③ 面料质感（光泽/厚度/纹理等可见特征）。" +
+                        "严格控制在100字以内，不需要分析难度，只描述视觉事实。";
+                String raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
+                if (raw != null && !raw.isBlank()) {
+                    visionDescription = raw.length() > 200 ? raw.substring(0, 200) : raw;
+                    log.info("[StyleDifficulty] Qwen-VL 视觉描述完成");
+                }
+            } catch (Exception e) {
+                log.warn("[StyleDifficulty] Qwen-VL 视觉分析失败，降级无描述: {}", e.getMessage());
+            }
+        }
+
         // ── Voyage AI 视觉相似度检索（辅助 DeepSeek 理解款式视觉难度） ──
         String visualSimilarityContext = "";
         float[] imageVec = null;
@@ -239,7 +260,7 @@ public class StyleDifficultyOrchestrator {
         }
 
         String systemPrompt = "你是专业服装版师和工艺师，擅长根据款式工艺信息快速评估制作难度。" +
-                "请根据用户提供的款式信息（含图片链接）进行难度评估，严格返回 JSON，不加任何解释文字。";
+                "请根据用户提供的款式信息（含AI视觉描述）进行难度评估，严格返回 JSON，不加任何解释文字。";
 
         String userMessage = String.format(
                 "款式信息：\n" +
@@ -247,9 +268,9 @@ public class StyleDifficultyOrchestrator {
                 "- BOM物料种数：%d 种\n" +
                 "- 工序（共%d道）：%s\n" +
                 "- 二次工艺（共%d道）：%s\n" +
-                "- 款式封面图URL：%s\n%s\n" +
+                "- 款式视觉AI描述（Qwen-VL）：%s\n%s\n" +
                 "结构化预评分：难度%s（%d/10），含高难工序%d道，二次工艺%s。\n\n" +
-                "请综合款式图片视觉特征（版型复杂度、装饰工艺、面料难度等）进行最终评估。\n" +
+                "请综合款式视觉描述（版型复杂度、装饰工艺、面料难度等）进行最终评估。\n" +
                 "返回 JSON（必须严格是下面格式，不能有其他文字）：\n" +
                 "{\"difficultyLevel\":\"SIMPLE|MEDIUM|COMPLEX|HIGH_END\",\"difficultyScore\":0," +
                 "\"keyFactors\":[\"因素1\"],\"pricingMultiplier\":1.0,\"imageInsight\":\"图像难度摘要\"}",
@@ -259,7 +280,7 @@ public class StyleDifficultyOrchestrator {
                 processNames.isEmpty() ? "暂无" : processNames,
                 secondaryProcesses == null ? 0 : secondaryProcesses.size(),
                 secondaryNames.isEmpty() ? "无" : secondaryNames,
-                imageUrl == null ? "暂无图片" : imageUrl,
+                visionDescription,
                 visualSimilarityContext,
                 base.getDifficultyLabel(),
                 base.getDifficultyScore(),
