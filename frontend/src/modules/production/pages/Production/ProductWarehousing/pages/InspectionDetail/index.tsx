@@ -1152,6 +1152,7 @@ const InspectionDetail: React.FC = () => {
           onCancel={() => setShowWarehousingModal(false)}
           footer={null}
           width="60vw"
+          initialHeight={Math.round(window.innerHeight * 0.82)}
           destroyOnClose
         >
           {renderWarehousingAction()}

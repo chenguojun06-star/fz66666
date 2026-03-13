@@ -106,6 +106,7 @@ const SupplierPurchaseHistoryModal: React.FC<SupplierPurchaseHistoryModalProps> 
       okText="关闭"
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       destroyOnClose
     >
       <div style={{ marginTop: 12 }}>

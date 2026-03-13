@@ -148,6 +148,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
         onCancel={() => setRawBodyModal({ open: false, content: '' })}
         footer={null}
         width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
       >
         <pre style={{
           maxHeight: '60vh', overflow: 'auto', background: '#1e1e1e', color: '#d4d4d4',

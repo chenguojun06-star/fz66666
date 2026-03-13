@@ -653,6 +653,7 @@ const AppManagementTab: React.FC = () => {
         title={`应用详情 - ${selectedApp?.appName || ''}`}
         onCancel={() => { detailModal.close(); setNewSecret(null); }}
         width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={
           <Space>
             <Button onClick={() => { detailModal.close(); setNewSecret(null); }}>关闭</Button>
@@ -743,6 +744,7 @@ const AppManagementTab: React.FC = () => {
         title={`调用日志 - ${selectedApp?.appName || ''}`}
         onCancel={logModal.close}
         width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={<Button onClick={logModal.close}>关闭</Button>}
       >
         <ResizableTable

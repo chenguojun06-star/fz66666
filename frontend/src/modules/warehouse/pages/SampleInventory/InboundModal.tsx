@@ -70,6 +70,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       onOk={handleOk}
       confirmLoading={loading}
       width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       {showSmartErrorNotice && smartError ? (
         <div style={{ marginBottom: 12 }}>

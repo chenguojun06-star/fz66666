@@ -187,7 +187,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   ];
 
   return (
-    <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="60vw" confirmLoading={loading}>
+    <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} confirmLoading={loading}>
       <Form form={form} onFinish={handleFinish} layout="vertical">
         <Form.Item name="orderId" label="生产订单" rules={[{ required: true }]}>
             <Select onChange={handleOrderChange} showSearch optionFilterProp="children">

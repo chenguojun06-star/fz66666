@@ -725,6 +725,7 @@ const TenantListTab: React.FC = () => {
         title={`审批通过 - ${approveModal.data?.tenantName || ''}`}
         onCancel={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }}
         width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={
           <Space>
             <Button onClick={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }}>取消</Button>

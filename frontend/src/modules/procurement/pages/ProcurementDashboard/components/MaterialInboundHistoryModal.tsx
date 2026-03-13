@@ -125,6 +125,7 @@ const MaterialInboundHistoryModal: React.FC<MaterialInboundHistoryModalProps> = 
       okText="关闭"
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       destroyOnClose
     >
       {loading ? (

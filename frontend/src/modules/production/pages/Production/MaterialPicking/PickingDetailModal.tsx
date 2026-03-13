@@ -43,6 +43,7 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
       onCancel={onCancel}
       footer={null}
       width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       <ResizableTable
         storageKey="picking-detail"

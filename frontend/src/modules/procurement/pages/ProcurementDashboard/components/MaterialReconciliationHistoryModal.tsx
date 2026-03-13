@@ -122,6 +122,7 @@ const MaterialReconciliationHistoryModal: React.FC<MaterialReconciliationHistory
       okText="关闭"
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       destroyOnClose
     >
       {loading ? (

@@ -439,6 +439,7 @@ const CustomerManagement: React.FC = () => {
         onCancel={() => setDrawerOpen(false)}
         footer={null}
         width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         destroyOnClose
       >
         {drawerData && (

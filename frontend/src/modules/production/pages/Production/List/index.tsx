@@ -1316,6 +1316,7 @@ const ProductionList: React.FC = () => {
           okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
           cancelText="取消"
           width="60vw"
+          initialHeight={Math.round(window.innerHeight * 0.82)}
           destroyOnHidden
         >
           <div style={{ padding: '8px 0' }}>
