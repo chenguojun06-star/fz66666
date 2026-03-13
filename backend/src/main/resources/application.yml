@@ -3,6 +3,11 @@ server:
   port: ${PORT:8088}
   servlet:
     context-path: /
+    session:
+      cookie:
+        same-site: none    # 跨域部署(前端域≠后端域)需 None; JWT无状态模式下此Cookie不参与认证
+        secure: true        # SameSite=None 必须配合 Secure（HTTPS）
+        http-only: true
     encoding:
       charset: UTF-8
       enabled: true
