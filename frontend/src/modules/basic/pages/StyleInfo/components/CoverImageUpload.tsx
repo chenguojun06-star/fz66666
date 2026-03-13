@@ -10,6 +10,7 @@ interface CoverImageUploadProps {
   isNewMode?: boolean;  // 新建模式
   pendingFiles?: File[];  // 待上传的文件列表
   onPendingFilesChange?: (files: File[]) => void;  // 更新待上传文件
+  coverUrl?: string | null;  // 兜底封面URL（选品中心下板时写入cover字段，无附件时展示）
 }
 
 /**
@@ -21,7 +22,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   enabled,
   isNewMode = false,
   pendingFiles = [],
-  onPendingFilesChange
+  onPendingFilesChange,
+  coverUrl,
 }) => {
   const { message } = App.useApp();
   const [images, setImages] = useState<any[]>([]);
@@ -213,6 +215,9 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       >
         {currentImage ? (
           <img src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : coverUrl ? (
+          // 无上传附件但有选品中心下板时的参考图（cover字段）
+          <img src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {isNewMode ? (

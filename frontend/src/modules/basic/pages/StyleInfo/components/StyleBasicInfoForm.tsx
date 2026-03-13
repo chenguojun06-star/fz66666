@@ -93,6 +93,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             isNewMode={isNewPage}
             pendingFiles={pendingImages}
             onPendingFilesChange={onPendingImagesChange}
+            coverUrl={currentStyle?.cover}
           />
         </Col>
 

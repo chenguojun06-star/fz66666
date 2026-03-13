@@ -41,9 +41,11 @@ export const StyleCoverThumb: React.FC<{
     setUrl(src || null);
   }, [src]);
 
-  // 加载款号封面图片
+  // 加载款号封面图片（仅在 src 为空时才查询附件 API，避免覆盖有效的 cover URL）
   React.useEffect(() => {
     let mounted = true;
+    // 已有直接URL（如 cover 字段）时，不再发起附件查询，防止 API 返回空结果后把有效图片覆盖为"无图"
+    if (src) return () => { mounted = false; };
     if (!styleId && !styleNo) return () => { mounted = false; };
 
     (async () => {
@@ -67,7 +69,7 @@ export const StyleCoverThumb: React.FC<{
       }
     })();
     return () => { mounted = false; };
-  }, [styleId, styleNo]);
+  }, [styleId, styleNo, src]);
 
   return (
     <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
