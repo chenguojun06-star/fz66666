@@ -1110,11 +1110,11 @@ const InspectionDetail: React.FC = () => {
                               )}
                               <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
                               <ResizableTable
-                                storageKey="inspection-requirements"
+                                storageKey="inspection-requirements-v2"
                                 size="small" rowKey="key" pagination={false}
                                 dataSource={fixedRows}
                                 columns={[
-                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 36, align: 'center' as const },
+                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const, resizable: false },
                                   {
                                     title: '内容',
                                     dataIndex: 'content',
