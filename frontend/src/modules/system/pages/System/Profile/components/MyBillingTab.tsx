@@ -411,7 +411,7 @@ const MyBillingTab: React.FC = () => {
         footer={[
           <Button key="close" onClick={() => setPayModalVisible(false)}>关闭</Button>,
         ]}
-        width={480}
+        width="40vw"
       >
         {payingBill && (
           <div>
@@ -476,7 +476,7 @@ const MyBillingTab: React.FC = () => {
         onOk={handleSubmitInvoice}
         onCancel={() => setInvoiceModalVisible(false)}
         okText="提交申请"
-        width={520}
+        width="40vw"
       >
         {currentBill && (
           <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
@@ -513,7 +513,7 @@ const MyBillingTab: React.FC = () => {
         onOk={handleSaveInvoiceInfo}
         onCancel={() => setInvoiceInfoModalVisible(false)}
         okText="保存"
-        width={520}
+        width="40vw"
       >
         <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
           设置后，每次申请发票时会自动填充以下信息

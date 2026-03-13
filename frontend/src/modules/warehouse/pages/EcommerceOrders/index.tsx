@@ -395,7 +395,7 @@ const OrdersTab: React.FC = () => {
 
       <Modal title={<><LinkOutlined /> 关联生产订单</>}
         open={!!linkTarget} onCancel={() => setLinkTarget(null)}
-        onOk={handleLink} confirmLoading={linking} okText="确认关联" width={440}>
+        onOk={handleLink} confirmLoading={linking} okText="确认关联" width="40vw">
         {linkTarget && (
           <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
             <div>平台订单: <b>{linkTarget.platformOrderNo}</b></div>
@@ -415,7 +415,7 @@ const OrdersTab: React.FC = () => {
 
       <Modal title={<><CarOutlined /> 现货直接出库</>}
         open={!!outboundTarget} onCancel={() => setOutboundTarget(null)}
-        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width={440}>
+        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="40vw">
         {outboundTarget && (
           <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
             <div>平台订单: <b>{outboundTarget.platformOrderNo || outboundTarget.orderNo}</b></div>

@@ -1590,7 +1590,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         okText="保存"
         cancelText="取消"
         confirmLoading={remarkSaving}
-        width={500}
+        width="30vw"
         destroyOnClose
       >
         <Input.TextArea

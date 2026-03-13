@@ -684,7 +684,7 @@ const OrganizationTreePage: React.FC = () => {
         title={`${qrModal.unit?.unitName || ''} · 注册二维码`}
         onCancel={() => setQrModal({ open: false, unit: null, tenantCode: '' })}
         footer={null}
-        width="360px"
+        width="30vw"
         initialHeight={420}
       >
         <div style={{ textAlign: 'center', padding: '24px 0' }}>

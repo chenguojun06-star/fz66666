@@ -428,7 +428,7 @@ export default function AiExecutionPanel() {
         onCancel={() => setShowResult(false)}
         okText="关闭"
         cancelButtonProps={{ style: { display: 'none' } }}
-        width={500}
+        width="40vw"
       >
         <div className="result-content">
           {executeResult?.success ? (

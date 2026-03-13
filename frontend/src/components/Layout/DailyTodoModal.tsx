@@ -262,7 +262,7 @@ const DailyTodoModal: React.FC = () => {
       closable={false}         // 禁用右上角 × 按钮
       maskClosable={false}     // 点遮罩不关闭
       keyboard={false}         // ESC 不关闭
-      width={480}
+      width="40vw"
       centered
       styles={{ body: { padding: '16px 20px' } }}
     >

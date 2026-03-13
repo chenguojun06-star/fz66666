@@ -913,7 +913,6 @@ const PatternProduction: React.FC = () => {
           okText="保存"
           cancelText="取消"
           size="sm"
-          width={380}
           minWidth={340}
         >
           {progressModal.data && (
@@ -974,7 +973,6 @@ const PatternProduction: React.FC = () => {
           okText="提交审核"
           cancelText="取消"
           size="sm"
-          width={380}
           minWidth={340}
         >
           {reviewModal.data && (

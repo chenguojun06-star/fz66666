@@ -745,7 +745,7 @@ export default function SelectionCenter() {
             message.error('添加失败');
           }
         }}
-        width={480}
+        width="40vw"
         okText="确认添加"
       >
         <Form form={addForm} layout="vertical" style={{ marginTop: 8 }}>
@@ -811,7 +811,7 @@ export default function SelectionCenter() {
         onOk={submitReview}
         confirmLoading={reviewSubmitting}
         okText="提交审核"
-        width={520}
+        width="40vw"
       >
         <Form form={reviewForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item name="decision" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>

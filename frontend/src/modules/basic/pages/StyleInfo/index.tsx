@@ -554,7 +554,7 @@ const StyleInfoDetailPage: React.FC = () => {
           pushToOrderForm.resetFields();
         }}
         confirmLoading={pushToOrderSaving}
-        width={500}
+        width="40vw"
         forceRender
       >
         <Form form={pushToOrderForm} layout="vertical">

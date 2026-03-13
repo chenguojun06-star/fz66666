@@ -289,7 +289,7 @@ const StyleProductionTab: React.FC<Props> = ({
         confirmLoading={reviewSaving}
         okText="保存"
         cancelText="取消"
-        width={480}
+        width="40vw"
         destroyOnClose
       >
         <Form form={reviewForm} layout="vertical" style={{ marginTop: 8 }}>
