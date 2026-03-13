@@ -65,7 +65,7 @@ export const useNodeWorkflowActions = ({
       content: `将删除「${target?.name || '该节点'}」`,
       okText: '删除',
       cancelText: '取消',
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: 'default' },
       onOk: () => {
         const next = nodes.filter((n) => String(n.id) !== String(nodeId));
         saveNodes(next.length ? next : defaultNodes);

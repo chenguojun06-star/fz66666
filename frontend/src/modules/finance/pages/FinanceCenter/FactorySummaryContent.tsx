@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Form, Input, Button, Space, App, Table, Tag, Tooltip } from 'antd';
+import { Card, Form, Input, Button, Space, App, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ReloadOutlined,
@@ -543,37 +543,37 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}
         summary={() => (
-          <Table.Summary fixed>
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={2}>
+          <ResizableTable.Summary fixed>
+            <ResizableTable.Summary.Row>
+              <ResizableTable.Summary.Cell index={0} colSpan={2}>
                 <strong>合计 ({filteredData.length} 个工厂)</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={2} align="center">
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={2} align="center">
                 <strong>{summary.totalOrders}</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={3} align="right">
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={3} align="right">
                 <strong>{summary.totalQty.toLocaleString()}</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={4} align="right">
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={4} align="right">
                 <strong>{summary.totalWarehoused.toLocaleString()}</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} />
-              <Table.Summary.Cell index={6} />
-              <Table.Summary.Cell index={7} />
-              <Table.Summary.Cell index={8} align="right">
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={5} />
+              <ResizableTable.Summary.Cell index={6} />
+              <ResizableTable.Summary.Cell index={7} />
+              <ResizableTable.Summary.Cell index={8} align="right">
                 <strong style={{ color: 'var(--primary-color)' }}>
                   ¥{toMoney(summary.totalAmount)}
                 </strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={9} align="right">
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={9} align="right">
                 <strong style={{ color: summary.totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
                   ¥{toMoney(summary.totalProfit)}
                 </strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={10} />
-              <Table.Summary.Cell index={11} />
-            </Table.Summary.Row>
-          </Table.Summary>
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={10} />
+              <ResizableTable.Summary.Cell index={11} />
+            </ResizableTable.Summary.Row>
+          </ResizableTable.Summary>
         )}
       />
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Space, Table, Tabs, Tag, message } from 'antd';
+import { Alert, Button, Card, Space, Tabs, Tag, message } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
@@ -811,15 +811,15 @@ const OrderFlow: React.FC = () => {
                               }, 0);
 
                               return totalAmount > 0 ? (
-                                <Table.Summary.Row style={{ background: '#fafafa' }}>
-                                  <Table.Summary.Cell index={0} colSpan={9} align="right">
+                                <ResizableTable.Summary.Row style={{ background: '#fafafa' }}>
+                                  <ResizableTable.Summary.Cell index={0} colSpan={9} align="right">
                                     <strong>合计：</strong>
-                                  </Table.Summary.Cell>
-                                  <Table.Summary.Cell index={1} align="right">
+                                  </ResizableTable.Summary.Cell>
+                                  <ResizableTable.Summary.Cell index={1} align="right">
                                     <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-lg)" }}>¥{totalAmount.toFixed(2)}</strong>
-                                  </Table.Summary.Cell>
-                                  <Table.Summary.Cell index={2} colSpan={3} />
-                                </Table.Summary.Row>
+                                  </ResizableTable.Summary.Cell>
+                                  <ResizableTable.Summary.Cell index={2} colSpan={3} />
+                                </ResizableTable.Summary.Row>
                               ) : null;
                             }}
                           />

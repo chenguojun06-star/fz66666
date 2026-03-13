@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, App, Table } from 'antd';
+import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, App } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { SaveOutlined, LockOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -501,18 +501,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
           scroll={{ x: 1100 }}
           style={{ fontSize: '14px' }}
           summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={8} align="right">
+            <ResizableTable.Summary fixed>
+              <ResizableTable.Summary.Row>
+                <ResizableTable.Summary.Cell index={0} colSpan={8} align="right">
                   <strong style={{ fontSize: '15px' }}>物料总成本：</strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={8} align="right">
+                </ResizableTable.Summary.Cell>
+                <ResizableTable.Summary.Cell index={8} align="right">
                   <strong style={{ color: 'var(--primary-color)', fontSize: '16px', fontWeight: 700 }}>
                     ¥{materialCost.toFixed(2)}
                   </strong>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
+                </ResizableTable.Summary.Cell>
+              </ResizableTable.Summary.Row>
+            </ResizableTable.Summary>
           )}
         />
       </Card>
@@ -536,18 +536,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
           summary={() => {
             const processTotal = processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
             return (
-              <Table.Summary fixed>
-                <Table.Summary.Row>
-                  <Table.Summary.Cell index={0} colSpan={3} align="right">
+              <ResizableTable.Summary fixed>
+                <ResizableTable.Summary.Row>
+                  <ResizableTable.Summary.Cell index={0} colSpan={3} align="right">
                     <strong style={{ fontSize: '15px' }}>工序小计：</strong>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={3} align="right">
+                  </ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={3} align="right">
                     <strong style={{ color: 'var(--color-success)', fontSize: '16px', fontWeight: 700 }}>
                       ¥{processTotal.toFixed(2)}
                     </strong>
-                  </Table.Summary.Cell>
-                </Table.Summary.Row>
-              </Table.Summary>
+                  </ResizableTable.Summary.Cell>
+                </ResizableTable.Summary.Row>
+              </ResizableTable.Summary>
             );
           }}
         />
@@ -572,18 +572,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
             summary={() => {
               const secondaryTotal = secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0);
               return (
-                <Table.Summary fixed>
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={5} align="right">
+                <ResizableTable.Summary fixed>
+                  <ResizableTable.Summary.Row>
+                    <ResizableTable.Summary.Cell index={0} colSpan={5} align="right">
                       <strong style={{ fontSize: '15px' }}>二次工艺总费用：</strong>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5} align="right">
+                    </ResizableTable.Summary.Cell>
+                    <ResizableTable.Summary.Cell index={5} align="right">
                       <strong style={{ color: 'var(--color-warning)', fontSize: '16px', fontWeight: 700 }}>
                         ¥{secondaryTotal.toFixed(2)}
                       </strong>
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-                </Table.Summary>
+                    </ResizableTable.Summary.Cell>
+                  </ResizableTable.Summary.Row>
+                </ResizableTable.Summary>
               );
             }}
           />

@@ -235,8 +235,7 @@ const FactoryWorkerList: React.FC = () => {
         <ResizableModal
           open={workerModal.visible}
           title={workerModal.data?.id ? '编辑工人信息' : '新增工人'}
-          defaultWidth="40vw"
-          defaultHeight="50vh"
+          width="40vw"
           destroyOnHidden
           onCancel={handleClose}
           footer={
@@ -291,8 +290,7 @@ const FactoryWorkerList: React.FC = () => {
       <ResizableModal
         open={accountModal.visible}
         title={`创建账号 — ${factoryNameFromUrl || '外发工厂'}`}
-        defaultWidth="30vw"
-        defaultHeight="40vh"
+        width="30vw"
         destroyOnHidden
         onCancel={() => { accountModal.close(); accountForm.resetFields(); }}
         footer={

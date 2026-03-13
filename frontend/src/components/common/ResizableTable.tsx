@@ -674,4 +674,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   );
 };
 
-export default ResizableTable;
+// 挂载 Summary 静态子组件，使用方可直接用 ResizableTable.Summary.*，无需额外引入 antd Table
+const ResizableTableWithSummary = Object.assign(ResizableTable, {
+  Summary: Table.Summary,
+});
+
+export default ResizableTableWithSummary;

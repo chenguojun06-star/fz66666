@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Table, Button, Space, Tag, Row, Col, InputNumber, Input, Select, App } from 'antd';
+import { Card, Button, Space, Tag, Row, Col, InputNumber, Input, Select, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -793,22 +793,22 @@ const _FinishedInventory: React.FC = () => {
                     const totalOutbound = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
                     const totalAvailable = skuDetails.reduce((sum, item) => sum + item.availableQty, 0);
                     return (
-                      <Table.Summary fixed>
-                        <Table.Summary.Row>
-                          <Table.Summary.Cell index={0} colSpan={4} align="right">
+                      <ResizableTable.Summary fixed>
+                        <ResizableTable.Summary.Row>
+                          <ResizableTable.Summary.Cell index={0} colSpan={4} align="right">
                             <strong>合计</strong>
-                          </Table.Summary.Cell>
-                          <Table.Summary.Cell index={1} align="center">
+                          </ResizableTable.Summary.Cell>
+                          <ResizableTable.Summary.Cell index={1} align="center">
                             <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
-                          </Table.Summary.Cell>
-                          <Table.Summary.Cell index={2} colSpan={2} />
-                          <Table.Summary.Cell index={3} align="center">
+                          </ResizableTable.Summary.Cell>
+                          <ResizableTable.Summary.Cell index={2} colSpan={2} />
+                          <ResizableTable.Summary.Cell index={3} align="center">
                             <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-md)" }}>
                               {totalOutbound} 件
                             </strong>
-                          </Table.Summary.Cell>
-                        </Table.Summary.Row>
-                      </Table.Summary>
+                          </ResizableTable.Summary.Cell>
+                        </ResizableTable.Summary.Row>
+                      </ResizableTable.Summary>
                     );
                   }}
                 />

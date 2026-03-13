@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tabs, Table } from 'antd';
+import { Tabs } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -411,14 +411,14 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
               if (pageData.length === 0) return null;
               const total = pageData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
               return (
-                <Table.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
-                  <Table.Summary.Cell index={0} colSpan={2}>
+                <ResizableTable.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
+                  <ResizableTable.Summary.Cell index={0} colSpan={2}>
                     <span style={{ fontWeight: 600 }}>合计</span>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} align="right">
+                  </ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={1} align="right">
                     <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>{total} 件</span>
-                  </Table.Summary.Cell>
-                </Table.Summary.Row>
+                  </ResizableTable.Summary.Cell>
+                </ResizableTable.Summary.Row>
               );
             }}
           />
@@ -793,21 +793,21 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   pagination={false}
                   size="small"
                   summary={() => (
-                    <Table.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
-                      <Table.Summary.Cell index={0} colSpan={4} align="right">
+                    <ResizableTable.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
+                      <ResizableTable.Summary.Cell index={0} colSpan={4} align="right">
                         <span style={{ fontWeight: 600 }}>合计</span>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={1} align="right">
+                      </ResizableTable.Summary.Cell>
+                      <ResizableTable.Summary.Cell index={1} align="right">
                         <span style={{ fontWeight: 700, color: '#dc2626' }}>
                           ¥{stageTotal.toFixed(2)}
                         </span>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={2} align="right">
+                      </ResizableTable.Summary.Cell>
+                      <ResizableTable.Summary.Cell index={2} align="right">
                         <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                           ¥{(stageTotal * cuttingQty).toFixed(2)}
                         </span>
-                      </Table.Summary.Cell>
-                    </Table.Summary.Row>
+                      </ResizableTable.Summary.Cell>
+                    </ResizableTable.Summary.Row>
                   )}
                 />
               </div>

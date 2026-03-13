@@ -270,8 +270,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         title="激活订单"
         open={activateModal.visible}
         onCancel={() => { activateModal.close(); setRemark(''); }}
-        defaultWidth="40vw"
-        defaultHeight="50vh"
+        width="40vw"
         footer={
           <Space>
             <Button onClick={() => { activateModal.close(); setRemark(''); }}>取消</Button>

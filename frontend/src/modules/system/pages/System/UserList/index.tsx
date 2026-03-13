@@ -1094,8 +1094,7 @@ const UserList: React.FC = () => {
           open={inviteQr.open}
           onCancel={() => setInviteQr({ open: false, loading: false })}
           footer={null}
-          defaultWidth="30vw"
-          defaultHeight="50vh"
+          width="30vw"
         >
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             {inviteQr.loading ? (
