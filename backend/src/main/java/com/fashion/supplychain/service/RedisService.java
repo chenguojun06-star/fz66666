@@ -49,7 +49,8 @@ public class RedisService {
         try {
             return (T) redisTemplate.opsForValue().get(key);
         } catch (Exception e) {
-            log.error("Redis get error, key: {}", key, e);
+            // 缓存未命中或反序列化失败（格式不兼容时降级为查DB），不打完整堆栈避免日志噪音
+            log.warn("Redis get failed (cache miss), key={} err={}", key, e.getMessage());
             return null;
         }
     }
