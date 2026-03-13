@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import {
-  Tabs, Table, Tag, Button, Input, Select, Card, Space, Modal, Form,
+  Tabs, Tag, Button, Input, Select, Card, Space, Modal, Form,
   message, Row, Col, Statistic, Drawer, Descriptions, Divider,
   InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image,
 } from 'antd';
@@ -12,6 +12,7 @@ import {
   SearchOutlined, ShoppingCartOutlined, ApiOutlined, ShopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 
 const { Text } = Typography;
@@ -318,7 +319,7 @@ const OrdersTab: React.FC = () => {
         </Space>
       </Card>
 
-      <Table rowKey="id" dataSource={data} columns={columns} loading={loading}
+      <ResizableTable rowKey="id" dataSource={data} columns={columns} loading={loading}
         scroll={{ x: 1350 }} size="small"
         pagination={{ current: page, pageSize, total, showSizeChanger: true,
           showTotal: t => `共 ${t} 条`,
@@ -551,7 +552,7 @@ const PricingTab: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
         </Space>
       </Card>
-      <Table rowKey="id" dataSource={data} columns={pricingColumns} loading={loading}
+      <ResizableTable rowKey="id" dataSource={data} columns={pricingColumns} loading={loading}
         size="small" scroll={{ x: 900 }}
         pagination={{ current: page, pageSize: 20, total,
           showTotal: t => `共 ${t} 个 SKU`,

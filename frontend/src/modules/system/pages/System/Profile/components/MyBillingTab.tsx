@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Card, Row, Col, Statistic, Table, Tag, Button, Form, Input, Modal,
+  Card, Row, Col, Statistic, Tag, Button, Form, Input, Modal,
   Descriptions, Progress, Empty, Typography, App, Alert, Space, Tooltip,
 } from 'antd';
 import {
@@ -16,6 +16,7 @@ import dayjs from 'dayjs';
 import tenantService from '@/services/tenantService';
 import { appStoreService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
+import ResizableTable from '@/components/common/ResizableTable';
 
 const { Text } = Typography;
 
@@ -373,7 +374,7 @@ const MyBillingTab: React.FC = () => {
             </Button>
           }
         >
-          <Table
+          <ResizableTable
             rowKey="subscriptionId"
             dataSource={myApps}
             columns={appColumns}
@@ -391,7 +392,7 @@ const MyBillingTab: React.FC = () => {
         size="small"
         extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}
       >
-        <Table
+        <ResizableTable
           rowKey="id"
           dataSource={bills}
           columns={billColumns}

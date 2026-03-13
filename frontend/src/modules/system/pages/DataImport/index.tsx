@@ -5,7 +5,6 @@ import {
   Button,
   Upload,
   Alert,
-  Table,
   Space,
   Typography,
   Tag,
@@ -31,6 +30,7 @@ import type { UploadFile, RcFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
 import { dataImportService } from '@/services/system/dataImport';
 import type { ImportResult } from '@/services/system/dataImport';
+import ResizableTable from '@/components/common/ResizableTable';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -239,7 +239,7 @@ const ZipImportPanel: React.FC = () => {
                   }
                   style={{ marginBottom: 12 }}
                 />
-                <Table
+                <ResizableTable
                   dataSource={result.failedRecords as Record<string, unknown>[]}
                   columns={failedColumns}
                   rowKey="row"
@@ -441,7 +441,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                   }
                   style={{ marginBottom: 12 }}
                 />
-                <Table
+                <ResizableTable
                   dataSource={result.failedRecords as Record<string, unknown>[]}
                   columns={failedColumns}
                   rowKey="row"

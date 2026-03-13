@@ -8,9 +8,10 @@ import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import {
   App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input,
-  InputNumber, QRCode, Row, Select, Space, Table, Tag, Tooltip, Typography,
+  InputNumber, QRCode, Row, Select, Space, Tag, Tooltip, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   ApartmentOutlined, BankOutlined, CrownFilled, DeleteOutlined,
   DownOutlined, EditOutlined, PlusOutlined, QrcodeOutlined, RightOutlined,
@@ -519,7 +520,7 @@ const OrganizationTreePage: React.FC = () => {
                       </Button>
                     )}
                   </div>
-                  <Table<User>
+                  <ResizableTable<User>
                     size="small"
                     rowKey={r => String(r.id ?? r.username)}
                     columns={isExternalSelected ? readOnlyMemberColumns : memberColumns}
@@ -608,7 +609,7 @@ const OrganizationTreePage: React.FC = () => {
           {filteredAssignableUsers.length === 0 ? (
             <Empty description="暂无用户（该租户下尚无活跃账号）" style={{ padding: '32px 0' }} />
           ) : (
-            <Table<User>
+            <ResizableTable<User>
               size="small"
               rowKey={(r) => String(r.id)}
               dataSource={filteredAssignableUsers}

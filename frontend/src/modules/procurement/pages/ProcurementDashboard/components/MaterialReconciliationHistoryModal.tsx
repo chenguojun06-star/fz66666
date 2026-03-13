@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Empty, Space, Spin, Table, Tag, Typography, message } from 'antd';
+import { Button, Empty, Space, Spin, Tag, Typography, message } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   ModalField,
@@ -145,7 +146,7 @@ const MaterialReconciliationHistoryModal: React.FC<MaterialReconciliationHistory
             </div>
           </ModalHeaderCard>
 
-          <Table<MaterialReconciliation>
+          <ResizableTable<MaterialReconciliation>
             rowKey={(record) => String(record.id || record.reconciliationNo)}
             size="small"
             pagination={false}

@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Card, Table, Tag, Select, Input, Button, Space, Row, Col, Statistic,
+  Card, Tag, Select, Input, Button, Space, Row, Col, Statistic,
   message, Popconfirm, Tooltip, Typography,
 } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   SearchOutlined, ReloadOutlined, CheckCircleOutlined,
   ClockCircleOutlined, DollarOutlined,
@@ -295,7 +296,7 @@ const EcSalesRevenue: React.FC = () => {
 
         {/* 数据表格 */}
         <Card size="small" style={{ overflow: 'hidden' }}>
-          <Table<EcRevenueRecord>
+          <ResizableTable<EcRevenueRecord>
             rowKey="id"
             loading={loading}
             dataSource={records}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Table, Input, Button, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
+import { Input, Button, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined, RobotOutlined } from '@ant-design/icons';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/es/table/interface';
@@ -25,7 +26,7 @@ const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = 
     { title: '录入时间', dataIndex: 'createTime', width: 140, render: (v) => v || '-' },
   ];
   return (
-    <Table
+    <ResizableTable
       size="small"
       columns={cols}
       dataSource={records}
@@ -308,7 +309,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       )}
 
       {/* 主表 — 受控分页 + 行选择 */}
-      <Table<ProcessKnowledgeItem>
+      <ResizableTable<ProcessKnowledgeItem>
         size="middle"
         loading={loading}
         columns={columns}

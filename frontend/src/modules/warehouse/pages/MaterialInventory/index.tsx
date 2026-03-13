@@ -186,14 +186,14 @@ const _MaterialInventory: React.FC = () => {
               暂无待出库单
             </div>
           ) : (
-            <Table
+            <ResizableTable
               loading={pendingPickingsLoading}
               rowKey="id"
               dataSource={pendingPickings}
               pagination={false}
               expandable={{
                 expandedRowRender: (record) => (
-                  <Table
+                  <ResizableTable
                     rowKey="id"
                     dataSource={record.items || []}
                     pagination={false}

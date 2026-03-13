@@ -31,10 +31,13 @@ export const useOrganizationFilterOptions = () => {
   const departmentOptions = useMemo(() => {
     return [
       { label: '全部生产方', value: '' },
-      ...departments.map((item) => ({
-        label: item.unitName || item.nodeName,
-        value: String(item.id || ''),
-      })).filter((item) => item.value),
+      ...departments
+        .filter((item) => item.nodeType === 'FACTORY')
+        .map((item) => ({
+          label: item.unitName || item.nodeName,
+          value: String(item.id || ''),
+        }))
+        .filter((item) => item.value),
     ];
   }, [departments]);
 

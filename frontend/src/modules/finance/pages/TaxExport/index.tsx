@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card, Row, Col, Button, DatePicker, Space, Tag, Typography, message, Divider, Alert, Modal,
-  Tabs, Table, Form, Input, Select, InputNumber, Popconfirm, Statistic,
+  Tabs, Form, Input, Select, InputNumber, Popconfirm, Statistic,
 } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined,
   UnlockOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined, FileTextOutlined,
@@ -254,7 +255,7 @@ const InvoiceTab: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      <Table rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
+      <ResizableTable rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }} />
       <ResizableModal
         title={editRecord ? '编辑发票' : '新建发票'}
@@ -498,7 +499,7 @@ const PayableTab: React.FC = () => {
         message="应付账款与业务系统深度联动"
         description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
       />
-      <Table
+      <ResizableTable
         rowKey="id"
         columns={columns}
         dataSource={list}
@@ -664,7 +665,7 @@ const TaxConfigTab: React.FC = () => {
       <div style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新增税率</Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" pagination={false} />
+      <ResizableTable rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" pagination={false} />
       <ResizableModal
         title={editRecord ? '编辑税率' : '新增税率'}
         open={formOpen}

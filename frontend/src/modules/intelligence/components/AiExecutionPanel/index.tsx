@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Modal, Table, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
+import { Card, Button, Modal, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { intelligenceApi } from '@/services/intelligenceApi';
@@ -289,7 +290,7 @@ export default function AiExecutionPanel() {
               style={{ marginTop: '40px' }}
             />
           ) : (
-            <Table
+            <ResizableTable
               columns={columns}
               dataSource={pendingCommands}
               rowKey="commandId"

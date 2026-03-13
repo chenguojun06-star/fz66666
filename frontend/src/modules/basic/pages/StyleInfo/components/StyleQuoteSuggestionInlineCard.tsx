@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Spin, Table, Tag } from 'antd';
+import { Button, Spin, Tag } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { BulbOutlined, ReloadOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
@@ -128,7 +129,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           </div>
 
           {Array.isArray(data.recentOrders) && data.recentOrders.length > 0 ? (
-            <Table
+            <ResizableTable
               size="small"
               rowKey="orderNo"
               pagination={false}

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Tabs, Tag, Typography } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { BugOutlined, CheckCircleOutlined, CodeOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -224,7 +225,7 @@ export default function SystemIssueBoard() {
           {summary && (summary.issues ?? []).length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 当前无已知问题，系统运行正常</Text>} />
           ) : (
-            <Table
+            <ResizableTable
               dataSource={summary?.issues ?? []}
               columns={columns}
               rowKey={(r) => `${r.category}-${r.title}`}
@@ -249,7 +250,7 @@ export default function SystemIssueBoard() {
           {feErrors.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 暂无前端异常记录</Text>} />
           ) : (
-            <Table
+            <ResizableTable
               dataSource={feErrors}
               columns={feColumns}
               rowKey={(r, i) => `${r.occurredAt}-${i}`}
