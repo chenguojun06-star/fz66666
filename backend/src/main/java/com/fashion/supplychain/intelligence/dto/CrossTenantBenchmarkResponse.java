@@ -3,32 +3,17 @@ package com.fashion.supplychain.intelligence.dto;
 import lombok.Data;
 import java.math.BigDecimal;
 
-/** Stage8 跨租户基准对标响应 */
+/** 本企业经营指标快照响应（仅含本租户自身数据，不含任何跨租户信息） */
 @Data
 public class CrossTenantBenchmarkResponse {
 
-    /** 本租户指标 */
+    /** 本企业指标 */
     private TenantMetrics self;
 
-    /** 行业基准（所有租户匿名聚合） */
-    private TenantMetrics industryMedian;
-
-    /** 行业最优值（P90） */
-    private TenantMetrics industryTop10pct;
-
-    /** 百分位排名（0-100，越高越好；100=行业最优） */
-    private Integer percentileRank;
-
-    /** 参与对标的租户数量 */
-    private Integer peerCount;
-
-    /** AI生成的对标分析与改进建议 */
+    /** AI生成的经营分析建议（基于自身历史数据） */
     private String insight;
 
-    /** 差距最大的指标名 */
-    private String biggestGapMetric;
-
-    /** 最值得对标学习的行为 */
+    /** 改善优先级提示 */
     private String topLearning;
 
     @Data
