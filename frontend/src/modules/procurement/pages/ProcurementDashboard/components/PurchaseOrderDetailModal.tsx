@@ -227,7 +227,7 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
       onOk={onClose}
       okText="关闭"
       cancelButtonProps={{ style: { display: 'none' } }}
-      width="40vw"
+      width="60vw"
       destroyOnClose
     >
       {loading ? (
@@ -299,22 +299,26 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>到货登记 / 入库</div>
-                <Form form={arriveForm} layout="inline">
-                  <Form.Item name="arrivedQuantity" rules={[{ required: true, message: '请输入到货数量' }]}>
-                    <InputNumber min={0} placeholder="到货数量" style={{ width: 140 }} disabled={!canRegisterArrival} />
-                  </Form.Item>
-                  <Form.Item name="warehouseLocation">
-                    <Input placeholder="仓库库位，默认仓" style={{ width: 180 }} disabled={!canRegisterArrival} />
-                  </Form.Item>
-                  <Form.Item name="remark">
-                    <Input placeholder="到货备注，低到货率时建议填写" style={{ width: 280 }} disabled={!canRegisterArrival} />
-                  </Form.Item>
-                  <Button type="primary" loading={arriveSaving} onClick={handleArriveSubmit} disabled={!canRegisterArrival}>
-                    保存到货
-                  </Button>
-                  <Button loading={inboundSaving} onClick={handleConfirmArrivalAndInbound} disabled={!canRegisterArrival}>
-                    到货并入库
-                  </Button>
+                <Form form={arriveForm} layout="vertical">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '0 12px' }}>
+                    <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
+                      <InputNumber min={0} placeholder="到货数量" style={{ width: '100%' }} disabled={!canRegisterArrival} />
+                    </Form.Item>
+                    <Form.Item name="warehouseLocation" label="仓库库位">
+                      <Input placeholder="默认仓" style={{ width: '100%' }} disabled={!canRegisterArrival} />
+                    </Form.Item>
+                    <Form.Item name="remark" label="到货备注">
+                      <Input placeholder="低到货率时建议填写" style={{ width: '100%' }} disabled={!canRegisterArrival} />
+                    </Form.Item>
+                  </div>
+                  <Space>
+                    <Button type="primary" loading={arriveSaving} onClick={handleArriveSubmit} disabled={!canRegisterArrival}>
+                      保存到货
+                    </Button>
+                    <Button loading={inboundSaving} onClick={handleConfirmArrivalAndInbound} disabled={!canRegisterArrival}>
+                      到货并入库
+                    </Button>
+                  </Space>
                 </Form>
               </div>
 
@@ -322,13 +326,15 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
 
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>快速编辑</div>
-                <Form form={editForm} layout="inline">
-                  <Form.Item name="expectedShipDate">
-                    <DatePicker placeholder="预计出货日期" />
-                  </Form.Item>
-                  <Form.Item name="remark">
-                    <Input placeholder="采购备注" style={{ width: 280 }} />
-                  </Form.Item>
+                <Form form={editForm} layout="vertical">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0 12px' }}>
+                    <Form.Item name="expectedShipDate" label="预计出货日期">
+                      <DatePicker placeholder="预计出货日期" style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item name="remark" label="采购备注">
+                      <Input placeholder="采购备注" style={{ width: '100%' }} />
+                    </Form.Item>
+                  </div>
                   <Button loading={editSaving} onClick={handleQuickEditSubmit}>
                     保存编辑
                   </Button>
@@ -339,9 +345,9 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
 
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>撤回领取</div>
-                <Form form={cancelForm} layout="inline">
-                  <Form.Item name="reason" rules={[{ required: true, message: '请填写撤回原因' }]}>
-                    <Input placeholder="撤回原因" style={{ width: 320 }} disabled={!canCancelReceive} />
+                <Form form={cancelForm} layout="vertical">
+                  <Form.Item name="reason" label="撤回原因" rules={[{ required: true, message: '请填写撤回原因' }]}>
+                    <Input placeholder="撤回原因" style={{ width: '100%' }} disabled={!canCancelReceive} />
                   </Form.Item>
                   <Button danger loading={cancelSaving} onClick={handleCancelReceive} disabled={!canCancelReceive}>
                     恢复待处理
