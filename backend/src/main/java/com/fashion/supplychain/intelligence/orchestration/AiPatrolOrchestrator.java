@@ -1,7 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.finance.entity.PayrollSettlement;
-import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -25,10 +23,9 @@ import java.util.stream.Collectors;
  * AI主动巡检编排器 — 每30分钟自动扫描全部活跃租户，发现问题后主动推送
  * 站内通知给责任人，无需任何人手动触发。
  *
- * 扫描三大场景：
+ * 扫描两大场景：
  *  1. 逾期未完成订单   → 通知跟单员
  *  2. 停滞订单(≥3天)   → 通知跟单员
- *  3. 待审批结算单>48h → 通知管理员
  *
  * 去重机制：同类型通知24小时内不重复推送同一订单。
  */
@@ -41,7 +38,6 @@ public class AiPatrolOrchestrator {
     @Autowired private TenantService tenantService;
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private ScanRecordMapper scanRecordMapper;
-    @Autowired private PayrollSettlementService payrollSettlementService;
     @Autowired private SysNoticeService sysNoticeService;
 
     // ─── 定时调度 ─────────────────────────────────────────────────────────────
@@ -73,7 +69,6 @@ public class AiPatrolOrchestrator {
         int n = 0;
         n += scanOverdueOrders(tenantId);
         n += scanStagnantOrders(tenantId);
-        n += scanPendingSettlements(tenantId);
         return n;
     }
 
@@ -150,33 +145,6 @@ public class AiPatrolOrchestrator {
                         o.getOrderNo(), days, pct(o), deadline);
                 push(tenantId, o.getOrderNo(), o.getMerchandiser(),
                         "⏸ 生产停滞：" + o.getOrderNo(), body, "stagnant");
-                count++;
-            }
-        }
-        return count;
-    }
-
-    // ─── 3. 结算待审批超时 ───────────────────────────────────────────────────
-
-    private int scanPendingSettlements(Long tenantId) {
-        LocalDateTime timeout = LocalDateTime.now().minusHours(48);
-        List<PayrollSettlement> pending = payrollSettlementService.lambdaQuery()
-                .eq(PayrollSettlement::getTenantId, tenantId)
-                .eq(PayrollSettlement::getStatus, "PENDING")
-                .lt(PayrollSettlement::getCreateTime, timeout)
-                .last("LIMIT 10")
-                .list();
-
-        int count = 0;
-        for (PayrollSettlement s : pending) {
-            String key = "STL_" + s.getId();
-            if (!recentlySent(tenantId, key, "settlement_timeout")) {
-                String body = String.format(
-                        "工资结算单【%s】（订单 %s）已提交超过 48 小时待审批，总金额 %.0f 元，请及时处理。",
-                        s.getSettlementNo(), s.getOrderNo(),
-                        s.getTotalAmount() != null ? s.getTotalAmount().doubleValue() : 0);
-                push(tenantId, key, "管理员",
-                        "💰 结算待审批超时：" + s.getSettlementNo(), body, "settlement_timeout");
                 count++;
             }
         }
