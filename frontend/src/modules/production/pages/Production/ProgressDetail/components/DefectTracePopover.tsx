@@ -43,7 +43,9 @@ const riskLabel: Record<string, string> = { low: '低风险', medium: '中风险
 const DefectTracePopover: React.FC<{
   orderId: string;
   children: React.ReactNode;
-}> = ({ orderId, children }) => {
+  /** 订单是否有次品记录（由父组件从列表数据传入，实现红点的预显示，不需要等悬停触发请求） */
+  hasDefects?: boolean;
+}> = ({ orderId, children, hasDefects = false }) => {
   const [data, setData] = useState<DefectTraceData | null>(null);
   const [loading, setLoading] = useState(false);
   const fetchedRef = useRef(false);
@@ -65,7 +67,9 @@ const DefectTracePopover: React.FC<{
   // 重置 fetchedRef when orderId changes
   useEffect(() => { fetchedRef.current = false; setData(null); }, [orderId]);
 
-  const showDot = data != null && data.totalDefects > 0;
+  // hasDefects 由父组件从列表数据传入（后端批量填充的unqualifiedQuantity），实现红点预显示
+  // 等悬停加载完数据后用实际数据覆盖
+  const showDot = hasDefects || (data != null && data.totalDefects > 0);
 
   const content = loading ? (
     <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin size="small" /></div>

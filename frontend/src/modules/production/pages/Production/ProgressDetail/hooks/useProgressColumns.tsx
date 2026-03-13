@@ -583,7 +583,10 @@ export const useProgressColumns = ({
                     <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>--</div>
                   )}
                   {(nodeType === 'quality' || nodeType === 'warehousing') ? (
-                    <DefectTracePopover orderId={String(record.id || '')}>
+                    <DefectTracePopover
+                      orderId={String(record.id || '')}
+                      hasDefects={Number(record.unqualifiedQuantity) > 0}
+                    >
                       <LiquidProgressLottie
                         progress={percent}
                         size={60}

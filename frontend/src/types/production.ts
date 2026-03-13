@@ -11,6 +11,8 @@ export interface ProductionOrder extends Record<string, unknown> {
   ecOrderNo?: string;
   /** 关联电商平台：TB/JD/PDD/DY/XHS/WC/SFY 等 */
   ecPlatform?: string;
+  /** 次品数量汇总（由后端批量填充，有次品记录的订单 >0，用于前端进度球红点预显示） */
+  unqualifiedQuantity?: number;
   color?: string;
   size?: string;
   factoryId: string;

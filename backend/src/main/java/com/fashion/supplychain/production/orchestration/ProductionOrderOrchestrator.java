@@ -181,6 +181,42 @@ public class ProductionOrderOrchestrator {
                 log.warn("[EC关联] 批量关联EC单号失败，不影响主流程: {}", e.getMessage());
             }
         }
+        // 批量填充次品数量（用于前端进度球红点预显示，失败不影响主流程）
+        if (page != null && !page.getRecords().isEmpty()) {
+            try {
+                List<String> orderIds = page.getRecords().stream()
+                        .map(ProductionOrder::getId)
+                        .filter(id -> id != null && !id.isEmpty())
+                        .distinct()
+                        .collect(java.util.stream.Collectors.toList());
+                if (!orderIds.isEmpty()) {
+                    List<com.fashion.supplychain.production.entity.ProductWarehousing> defectRecords =
+                            productWarehousingService.list(
+                                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                                            com.fashion.supplychain.production.entity.ProductWarehousing>()
+                                            .in(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId, orderIds)
+                                            .gt(com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity, 0)
+                                            .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0)
+                            );
+                    if (!defectRecords.isEmpty()) {
+                        Map<String, Integer> defectSumMap = defectRecords.stream()
+                                .collect(java.util.stream.Collectors.toMap(
+                                        com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
+                                        w -> w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity(),
+                                        Integer::sum
+                                ));
+                        page.getRecords().forEach(o -> {
+                            Integer defectSum = defectSumMap.get(o.getId());
+                            if (defectSum != null) {
+                                o.setUnqualifiedQuantity(defectSum);
+                            }
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[次品数量] 批量填充次品数量失败，不影响主流程: {}", e.getMessage());
+            }
+        }
         return page;
     }
 
