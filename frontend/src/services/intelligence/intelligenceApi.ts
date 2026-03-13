@@ -601,6 +601,26 @@ export interface StyleIntelligenceProfileResponse {
   };
   stages: StyleIntelligenceStageStatus[];
   insights: string[];
+  /** 款式制作难度评估（随档案卡加载时自动计算） */
+  difficulty?: DifficultyAssessment;
+}
+
+/* ================================================================
+   款式制作难度评估
+================================================================ */
+export interface DifficultyAssessment {
+  difficultyLevel: 'SIMPLE' | 'MEDIUM' | 'COMPLEX' | 'HIGH_END';
+  difficultyScore: number;
+  difficultyLabel: string;
+  bomCount: number;
+  processCount: number;
+  hasSecondaryProcess: boolean;
+  keyFactors: string[];
+  pricingMultiplier: number;
+  adjustedSuggestedPrice?: number | null;
+  imageAnalyzed: boolean;
+  imageInsight?: string | null;
+  assessmentSource: 'STRUCTURED' | 'AI_ENHANCED';
 }
 
 /* ================================================================
@@ -1108,6 +1128,10 @@ export const intelligenceApi = {
   /** 款式智能档案卡（按款式聚合开发/生产/库存/财务） */
   getStyleIntelligenceProfile: (params: { styleId?: string | number; styleNo?: string }) =>
     api.get<{ code: number; data: StyleIntelligenceProfileResponse }>('/intelligence/style-profile', { params }),
+
+  /** 款式制作难度 AI 增强分析（用户主动触发，含图像分析） */
+  analyzeStyleDifficulty: (params: { styleId: number | string; coverUrl?: string }) =>
+    api.post<{ code: number; data: DifficultyAssessment }>('/intelligence/style-difficulty', params),
 
   /** 工序单价 AI 提示 */
   getProcessPriceHint: (processName: string, standardTime?: number) =>

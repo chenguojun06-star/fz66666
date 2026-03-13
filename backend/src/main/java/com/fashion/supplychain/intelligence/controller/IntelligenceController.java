@@ -204,6 +204,9 @@ public class IntelligenceController {
     @Autowired
     private MonthlyBizSummaryOrchestrator monthlyBizSummaryOrchestrator;
 
+    @Autowired
+    private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {
@@ -384,6 +387,25 @@ public class IntelligenceController {
             @RequestParam(value = "styleId", required = false) Long styleId,
             @RequestParam(value = "styleNo", required = false) String styleNo) {
         return Result.success(styleIntelligenceProfileOrchestrator.profile(styleId, styleNo));
+    }
+
+    /**
+     * 款式制作难度 AI 增强分析（用户主动触发，含图像大模型分析，耗时较长）。
+     * <p>传入款式 ID，可选传封面图 URL（不传则自动取 cover 字段）。
+     * 结构化评分已在 style-profile 响应中随页面加载，此接口仅用于触发 AI 图像增强。
+     */
+    @PostMapping("/style-difficulty")
+    public Result<StyleIntelligenceProfileResponse.DifficultyAssessment> analyzeStyleDifficulty(
+            @RequestBody java.util.Map<String, Object> body) {
+        Object idObj = body.get("styleId");
+        if (idObj == null) {
+            return Result.fail("styleId 不能为空");
+        }
+        Long styleId = Long.parseLong(String.valueOf(idObj));
+        String coverUrl = body.get("coverUrl") != null ? String.valueOf(body.get("coverUrl")) : null;
+        StyleIntelligenceProfileResponse.DifficultyAssessment result =
+                styleDifficultyOrchestrator.assessWithAiById(styleId, coverUrl);
+        return Result.success(result);
     }
 
     /**

@@ -40,7 +40,13 @@ const WhatIfSimPanel: React.FC = () => {
     api.post<any>('/production/orders/list', { filters: { status: 'IN_PROGRESS' }, pageSize: 50 })
       .then(res => {
         const rows = res?.data?.records ?? res?.data?.data?.records ?? [];
-        setOrders(rows.map((o: any) => ({ id: o.id, label: `${o.orderNo ?? o.id} · ${o.customerName ?? ''}` })));
+        setOrders(rows.map((o: any) => {
+          const parts: string[] = [o.orderNo ?? String(o.id)];
+          if (o.styleNo) parts.push(o.styleNo);
+          else if (o.styleName) parts.push(o.styleName);
+          if (o.customerName) parts.push(o.customerName);
+          return { id: o.id, label: parts.join(' · ') };
+        }));
       })
       .catch(() => {/* 拉取失败静默 */});
   }, []);
@@ -146,7 +152,7 @@ const WhatIfSimPanel: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '4px 0' }}>
+    <div className="whatif-dark-panel" style={{ padding: '4px 0' }}>
       {/* 参数控制行 */}
       <Row gutter={12} align="middle" style={{ marginBottom: 12 }}>
         <Col span={10}>
@@ -159,6 +165,8 @@ const WhatIfSimPanel: React.FC = () => {
             onChange={v => setSelectedOrderIds(v.slice(0, 5))}
             options={orders.map(o => ({ value: o.id, label: o.label }))}
             maxTagCount={2}
+            popupClassName="whatif-select-popup"
+            popupStyle={{ background: '#1a2236', border: '1px solid #334155', borderRadius: 6 }}
           />
         </Col>
         <Col>
@@ -167,7 +175,7 @@ const WhatIfSimPanel: React.FC = () => {
             <InputNumber
               min={1} max={50} value={extraWorkers}
               onChange={v => setExtraWorkers(v ?? 5)}
-              size="small" style={{ width: 64 }}
+              size="small" style={{ width: 64, background: '#1e293b', borderColor: '#334155' }}
             />
             <Text style={{ color: '#94a3b8', fontSize: 12 }}>人</Text>
           </Space>
@@ -178,7 +186,7 @@ const WhatIfSimPanel: React.FC = () => {
             <InputNumber
               min={0.5} max={6} step={0.5} value={overtimeHours}
               onChange={v => setOvertimeHours(v ?? 2)}
-              size="small" style={{ width: 64 }}
+              size="small" style={{ width: 64, background: '#1e293b', borderColor: '#334155' }}
             />
             <Text style={{ color: '#94a3b8', fontSize: 12 }}>h/天</Text>
           </Space>
@@ -244,6 +252,40 @@ const WhatIfSimPanel: React.FC = () => {
 
       <style>{`
         .whatif-recommended-row td { background: rgba(251,191,36,0.06) !important; }
+        /* ── 下拉选单深色主题 ── */
+        .whatif-dark-panel .ant-select-selector {
+          background: #1e293b !important;
+          border-color: #334155 !important;
+        }
+        .whatif-dark-panel .ant-select-selection-placeholder { color: #475569 !important; }
+        .whatif-dark-panel .ant-select-selection-item { color: #e2e8f0 !important; }
+        .whatif-dark-panel .ant-select-arrow,
+        .whatif-dark-panel .ant-select-clear { color: #475569 !important; }
+        /* ── 数字输入框深色主题 ── */
+        .whatif-dark-panel .ant-input-number {
+          background: #1e293b !important;
+          border-color: #334155 !important;
+        }
+        .whatif-dark-panel .ant-input-number-input {
+          color: #e2e8f0 !important;
+          background: transparent !important;
+        }
+        .whatif-dark-panel .ant-input-number:hover,
+        .whatif-dark-panel .ant-select-selector:hover {
+          border-color: #7c3aed !important;
+        }
+        /* ── 弹出下拉列表深色 ── */
+        .whatif-select-popup .ant-select-item {
+          color: #cbd5e1 !important;
+          background: transparent !important;
+        }
+        .whatif-select-popup .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background: #334155 !important;
+        }
+        .whatif-select-popup .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background: rgba(124,58,237,0.25) !important;
+          color: #e2e8f0 !important;
+        }
       `}</style>
     </div>
   );

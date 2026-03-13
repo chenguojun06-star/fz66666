@@ -26,6 +26,8 @@ public class StyleIntelligenceProfileResponse {
     private TenantPreferenceProfile tenantProfile = new TenantPreferenceProfile();
     private List<StageStatus> stages = new ArrayList<>();
     private List<String> insights = new ArrayList<>();
+    /** 款式难度评估（结构化自动计算 + 可选 AI 图像增强分析） */
+    private DifficultyAssessment difficulty;
 
     @Data
     public static class ProductionSummary {
@@ -108,5 +110,34 @@ public class StyleIntelligenceProfileResponse {
         private String assignee;
         private String startTime;
         private String completedTime;
+    }
+
+    /** 款式制作难度评估（从 BOM + 工序结构数据自动计算，可选触发 AI 图像增强分析） */
+    @Data
+    public static class DifficultyAssessment {
+        /** 难度级别：SIMPLE / MEDIUM / COMPLEX / HIGH_END */
+        private String difficultyLevel;
+        /** 难度分数 1-10 */
+        private Integer difficultyScore;
+        /** 中文难度说明：简单款 / 中等难度 / 工艺复杂 / 高定级 */
+        private String difficultyLabel;
+        /** BOM 物料种类数量（影响难度） */
+        private Integer bomCount;
+        /** 工序道数 */
+        private Integer processCount;
+        /** 是否含二次工艺 */
+        private Boolean hasSecondaryProcess;
+        /** 关键工艺要素列表（最多 5 条） */
+        private List<String> keyFactors = new ArrayList<>();
+        /** 报价倍率：在基础成本上叠加的难度溢价倍率（如 1.0 / 1.15 / 1.35 / 1.60） */
+        private BigDecimal pricingMultiplier;
+        /** 难度调整后的建议报价（= 原始 AI 建议报价 × pricingMultiplier） */
+        private BigDecimal adjustedSuggestedPrice;
+        /** 是否进行了 AI 图像增强分析 */
+        private Boolean imageAnalyzed = false;
+        /** AI 图像分析摘要（仅 imageAnalyzed=true 时有值） */
+        private String imageInsight;
+        /** 评估来源：STRUCTURED（仅结构数据）/ AI_ENHANCED（含图像 LLM 分析） */
+        private String assessmentSource = "STRUCTURED";
     }
 }

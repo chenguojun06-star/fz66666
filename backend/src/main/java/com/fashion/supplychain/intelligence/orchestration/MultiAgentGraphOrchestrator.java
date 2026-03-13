@@ -38,6 +38,7 @@ public class MultiAgentGraphOrchestrator {
     @Autowired private SupervisorAgentOrchestrator supervisor;
     @Autowired private ReflectionEngineOrchestrator reflector;
     @Autowired private DigitalTwinBuilderOrchestrator digitalTwin;
+    @Autowired private DecisionChainOrchestrator decisionChain;
     @Autowired private AgentExecutionLogMapper logMapper;
     @Autowired private ModelRoutingConfig modelRoutingConfig;
     @Autowired private List<SpecialistAgent> specialistAgents;
@@ -98,6 +99,9 @@ public class MultiAgentGraphOrchestrator {
                 emitSse(emitter, "node_done", Map.of("node", "re_route", "newRoute", state.getRoute(), "confidence", state.getConfidenceScore()));
             }
 
+            // Step 6: 决策闭环
+            recordDecisionSafely(state);
+
             long latency = System.currentTimeMillis() - start;
             persistLog(state, "SUCCESS", latency);
             emitSse(emitter, "graph_done", buildSuccessMap(state, latency));
@@ -123,6 +127,24 @@ public class MultiAgentGraphOrchestrator {
             supervisor.reRouteWithReflection(state);
             reflector.critiqueAndReflect(state);
             state.getNodeTrace().add("re_route");
+        }
+        // ★ 决策闭环：自动记录本次决策
+        recordDecisionSafely(state);
+    }
+
+    /**
+     * 安全记录决策（降级忽略失败，不影响主流程）。
+     */
+    private void recordDecisionSafely(AgentState state) {
+        try {
+            String decision = state.getContextSummary();
+            String rationale = state.getOptimizationSuggestion();
+            decisionChain.recordDecision(state,
+                    decision != null ? truncate(decision, 500) : "MAS决策",
+                    rationale != null ? truncate(rationale, 500) : "反思建议");
+            state.getNodeTrace().add("decision_record");
+        } catch (Exception e) {
+            log.warn("[Graph] 决策记录降级: {}", e.getMessage());
         }
     }
 

@@ -2,6 +2,9 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
+import com.fashion.supplychain.intelligence.entity.DecisionMemory;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,12 +34,16 @@ public class ReflectionEngineOrchestrator {
     @Autowired
     private IntelligenceMemoryOrchestrator memoryOrchestrator;
 
+    @Autowired
+    private DecisionChainOrchestrator decisionChainOrchestrator;
+
     /**
      * 对 AgentState 执行批判性反思，更新 reflection / confidenceScore / optimizationSuggestion。
      */
     public AgentState critiqueAndReflect(AgentState state) {
         long start = System.currentTimeMillis();
         try {
+            // 原有反思
             var result = inferenceOrchestrator.chat(
                 "graph-reflection", SYS_PROMPT, buildUserMessage(state));
 
@@ -44,6 +51,14 @@ public class ReflectionEngineOrchestrator {
             state.setReflection(critique);
             state.setConfidenceScore(parseConfidence(critique, state));
             state.setOptimizationSuggestion(parseSuggestion(critique));
+
+            // ★ 新增：横向比对同租户历史决策教训
+            String crossRef = crossReferenceHistory(state);
+            if (crossRef != null && !crossRef.isBlank()) {
+                state.setOptimizationSuggestion(
+                    state.getOptimizationSuggestion() + "\n[历史比对] " + crossRef);
+            }
+
             persistMemory(state);
 
         } catch (Exception e) {
@@ -58,6 +73,36 @@ public class ReflectionEngineOrchestrator {
     }
 
     // ── private helpers ────────────────────────────────────────────────────
+
+    /**
+     * 横向比对历史决策教训 — 从同租户、同类型的已提炼教训中找相似经验。
+     */
+    private String crossReferenceHistory(AgentState state) {
+        try {
+            String decisionType = mapSceneToType(state.getScene());
+            List<DecisionMemory> history = decisionChainOrchestrator
+                    .recallSimilarDecisions(state.getTenantId(), decisionType, 3);
+            if (history.isEmpty()) return null;
+
+            String lessons = history.stream()
+                    .map(dm -> String.format("- [评分%d] %s", dm.getOutcomeScore(), dm.getLessonLearned()))
+                    .collect(Collectors.joining("\n"));
+            return String.format("同类型历史%d条教训：\n%s", history.size(), lessons);
+        } catch (Exception e) {
+            log.debug("[ReflectionEngine] 横向比对降级: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String mapSceneToType(String scene) {
+        if (scene == null) return "delivery";
+        return switch (scene) {
+            case "delivery_risk" -> "delivery";
+            case "sourcing" -> "sourcing";
+            case "compliance" -> "quality";
+            default -> "delivery";
+        };
+    }
 
     private String buildUserMessage(AgentState state) {
         int orderCount = state.getOrderIds() == null ? 0 : state.getOrderIds().size();

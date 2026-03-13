@@ -68,6 +68,9 @@ public class StyleIntelligenceProfileOrchestrator {
     @Autowired
     private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
 
+    @Autowired
+    private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
+
     public StyleIntelligenceProfileResponse profile(Long styleId, String styleNo) {
         StyleIntelligenceProfileResponse response = new StyleIntelligenceProfileResponse();
         StyleInfo style = findStyle(styleId, styleNo);
@@ -94,6 +97,16 @@ public class StyleIntelligenceProfileOrchestrator {
 
         response.setStages(buildStages(style));
         response.setInsights(buildInsights(style, response, quoteSuggestion));
+        // 难度评估（结构化自动计算，不走 AI 避免影响接口响应时间）
+        StyleIntelligenceProfileResponse.DifficultyAssessment difficulty = styleDifficultyOrchestrator.assess(style);
+        // 若已有 AI 建议报价，叠加难度倍率生成调整后建议价
+        if (response.getFinance() != null && response.getFinance().getSuggestedQuotation() != null) {
+            java.math.BigDecimal adjusted = response.getFinance().getSuggestedQuotation()
+                    .multiply(difficulty.getPricingMultiplier())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            difficulty.setAdjustedSuggestedPrice(adjusted);
+        }
+        response.setDifficulty(difficulty);
         return response;
     }
 
