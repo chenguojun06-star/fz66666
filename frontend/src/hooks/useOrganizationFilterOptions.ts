@@ -37,9 +37,15 @@ export const useOrganizationFilterOptions = () => {
       }))
       .filter((item) => item.value);
 
-    // 内部组别（DEPARTMENT），value 前缀 "dept:" 用于区分过滤参数
+    // 内部组别（DEPARTMENT），只保留与生产相关的部门（名称或路径含"生产"），
+    // 过滤掉财务、行政等非生产部门。value 前缀 "dept:" 用于区分过滤参数
     const depts = departments
-      .filter((item) => item.nodeType === 'DEPARTMENT')
+      .filter((item) => {
+        if (item.nodeType !== 'DEPARTMENT') return false;
+        const name = item.unitName || item.nodeName || '';
+        const path = item.pathNames || '';
+        return name.includes('生产') || path.includes('生产');
+      })
       .map((item) => ({
         label: `  └ ${item.unitName || item.nodeName || ''}`,
         value: `dept:${item.id || ''}`,
