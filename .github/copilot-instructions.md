@@ -140,7 +140,7 @@ Controller → Orchestrator → Service → Mapper
 ```
 □ 文件行数预估：组件目标 ≤ 300 行，页面 ≤ 500 行；超出先拆分再提交
 □ 弹窗尺寸：只能用 60vw / 40vw / 30vw 三档，禁止自定义
-□ 标准组件：ResizableModal / ModalContentLayout / RowActions（不要重复造轮子）
+□ 标准组件：ResizableModal / ModalContentLayout / RowActions / ResizableTable（不要重复造轮子）
 □ API 调用：新接口要在 services/ 对应文件加 TS 类型定义
 □ 状态管理：跨组件共享的数据 → Zustand store；组件内局部数据 → useState
 □ 自定义 Hook：数据逻辑超过 30 行 → 抽取为独立 useXxx.ts，组件文件只保留 JSX
@@ -348,7 +348,7 @@ frontend/src/
 │   ├── procurement/       # 采购管理（采购单/供应商）⭐新
 │   └── intelligence/      # 智能运营驾驶舱（60个编排器）
 ├── components/            # 公共组件
-│   └── common/            # 通用组件（RowActions, ResizableModal, QRCodeBox, ModalContentLayout）
+│   └── common/            # 通用组件（RowActions, ResizableModal, QRCodeBox, ModalContentLayout, ResizableTable）
 ├── services/              # API 调用层
 ├── stores/                # Zustand 全局状态
 ├── utils/                 # 工具函数（validationRules, formatters）
@@ -987,10 +987,12 @@ SKU = styleNo + color + size
 
 ### 前端组件规范
 **强制使用标准组件库**：
+- ✅ `ResizableTable` - 所有列表表格（支持列宽拖拽调整，完全兼容 antd TableProps）
 - ✅ `RowActions` - 表格行操作（最多 1 个主按钮，其余折叠）
 - ✅ `ResizableModal` - 弹窗（三级尺寸：60vw / 40vw / 30vw）
 - ✅ `ModalContentLayout` + `ModalFieldRow` - 弹窗表单布局
 - ✅ `ModalHeaderCard` - 弹窗头部卡片（#f8f9fa 背景）
+- ❌ 禁止直接使用 antd `Table`（缺少列宽拖拽，用 `ResizableTable` 替代，props 完全兼容）
 - ❌ 禁止自定义弹窗尺寸或样式
 
 ---
@@ -1548,7 +1550,7 @@ ls -1 test-*.sh           # 列出所有测试脚本
 ### AI 代码审查重点
 - [ ] 是否遵循 Orchestrator 模式？
 - [ ] Controller class 级别是否有 `@PreAuthorize("isAuthenticated()")` ？（方法级别不需要）
-- [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout）？
+- [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout/ResizableTable）？
 - [ ] 是否更新了跨端验证规则？
 - [ ] 是否编写了测试？
 
