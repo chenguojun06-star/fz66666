@@ -5,6 +5,7 @@ import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export type MaterialType = NonNullable<StyleBom['materialType']>;
@@ -158,11 +159,11 @@ export function useBomColumns({
               {urls.map((url) => (
                 <Image
                   key={url}
-                  src={url}
+                  src={getFullAuthedFileUrl(url)}
                   width={40}
                   height={40}
                   style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                  preview={{ src: url }}
+                  preview={{ src: getFullAuthedFileUrl(url) }}
                 />
               ))}
             </div>

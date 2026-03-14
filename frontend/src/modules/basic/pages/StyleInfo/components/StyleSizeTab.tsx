@@ -3,6 +3,7 @@ import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, m
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -539,11 +540,17 @@ const StyleSizeTab: React.FC<Props> = ({
           const gi = Math.floor(rowIndex / 5);
           const imgs = sizeImageGroups[gi] || [];
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', padding: '4px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', padding: '4px 0', minHeight: 88 }}>
               <Image.PreviewGroup>
                 {imgs.map((url, i) => (
                   <div key={url} style={{ position: 'relative', display: 'inline-block' }}>
-                    <Image src={url} width={48} height={48} style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
+                    <Image
+                      src={getFullAuthedFileUrl(url)}
+                      width={72}
+                      height={72}
+                      style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #eee', background: '#fff' }}
+                      preview={{ src: getFullAuthedFileUrl(url) }}
+                    />
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setSizeImageGroups((prev) => ({ ...prev, [gi]: (prev[gi] || []).filter((_, ii) => ii !== i) }))}
@@ -573,7 +580,7 @@ const StyleSizeTab: React.FC<Props> = ({
                     return false;
                   }}
                 >
-                  <Button size="small" icon={<PlusOutlined />} style={{ width: 48, height: 48, borderRadius: 4, borderStyle: 'dashed' }} />
+                  <Button size="small" icon={<PlusOutlined />} style={{ width: 72, height: 72, borderRadius: 6, borderStyle: 'dashed' }} />
                 </Upload>
               )}
             </div>

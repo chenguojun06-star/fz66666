@@ -26,8 +26,9 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
     try {
       const parsed = new URL(url, window.location.origin);
       const isSameOrigin = parsed.origin === window.location.origin;
+      const isSameHost = parsed.hostname === window.location.hostname;
       const isFileApi = parsed.pathname.startsWith('/api/file/tenant-download/') || parsed.pathname.startsWith('/api/common/download/');
-      if (!isSameOrigin || !isFileApi) {
+      if ((!isSameOrigin && !isSameHost) || !isFileApi) {
         return url;
       }
       if (!parsed.searchParams.has('token')) {
@@ -57,9 +58,12 @@ export function getFullAuthedFileUrl(fileUrl: string | undefined | null): string
   const url = fileUrl.trim();
   if (!url) return '';
 
-  // 已经是完整 URL 或本地 blob URL（本地预览），直接返回，不拼接后端地址
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+  // 完整 URL 仍需补 token；blob 直接返回
+  if (url.startsWith('blob:')) {
     return url;
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return getAuthedFileUrl(url);
   }
 
   // 以 /api/ 开头的走 Vite proxy（开发模式 localhost:5173）

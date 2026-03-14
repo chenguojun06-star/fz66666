@@ -798,9 +798,8 @@ const StyleBomTab: React.FC<Props> = ({
       [rid]: { ...newBom },
     });
 
-    if (!tableEditable) {
-      setEditingKey(rid);
-    }
+    setEditingKey('');
+    setTableEditable(true);
   };
 
   // 生成采购单（手动触发）

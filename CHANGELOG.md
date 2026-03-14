@@ -1,5 +1,18 @@
 ## 2026-04-（最新）
 
+### 🧩 fix(style-image-ux): 修复 BOM 连续加行受阻、图片鉴权 401 和尺寸图碎图问题
+
+**改动内容**：
+- `StyleBomTab`：新增物料不再进入单行锁定模式，改为直接进入整表编辑，解决“加一行后按钮立刻被禁用”的问题
+- `useBomColumns`：BOM 图片列统一改为通过带 token 的文件 URL 预览，避免 `tenant-download` 401
+- `StyleSizeTab`：尺寸参考图统一走带鉴权的 URL，并把预览图从 48x48 调整为 72x72，改为更自然的填充展示
+- `fileUrl.ts`：补强绝对地址文件 URL 处理，同主机不同端口的下载地址也会自动追加 token
+
+**对系统的帮助**：
+- ✅ BOM 可连续新增多行，不再被单行编辑状态卡死
+- ✅ 图片在 BOM/尺寸表中能稳定显示，不再因为 `tenant-download` 未带 token 返回 401
+- ✅ 尺寸参考图可读性明显提升，减少“碎图”“太小看不清”的问题
+
 ### 🤖 refactor(ai): 精简小云 system prompt 与欢迎语
 
 **commit**: `689f1ffc`
