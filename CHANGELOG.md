@@ -1,3 +1,38 @@
+## 2026-04-18
+
+### 🔴 fix(production-order): 修复云端下单 HTTP 500「系统内部错误」
+
+**问题背景**：云端点击「下单」按钮时，`POST /api/production/order` 返回 HTTP 500，
+用户看到「系统内部错误，请联系管理员」，本地开发环境无法复现。
+
+**根本原因**：`ProductionOrder` entity 中的 5 个 `progress_workflow_*` 字段均标注了
+`@TableField("...")` 映射到真实 DB 列，但**从未被任何 Flyway 迁移脚本覆盖**，这 5 列
+只存在于本地数据库（手动添加），云端 DB 一直缺失。前端下单时 `buildProgressWorkflowJson()`
+始终返回非空 JSON 字符串，INSERT SQL 包含 `progress_workflow_json = '...'`，云端 MySQL
+报 `Unknown column` 异常，被 `GlobalExceptionHandler` 最终兜底为 HTTP 500。
+
+**修复内容**：
+
+| 文件 | 说明 |
+|------|------|
+| `V20260418001__add_production_order_workflow_fields.sql` | 新增 Flyway 迁移脚本，使用 INFORMATION_SCHEMA 幂等模式补全全部 5 个缺失列 |
+
+新增的 5 列（均幂等，可重复执行）：
+- `progress_workflow_json` — LONGTEXT，工序节点配置 JSON
+- `progress_workflow_locked` — INT NOT NULL DEFAULT 0，是否锁定（0=否，1=是）
+- `progress_workflow_locked_at` — DATETIME，锁定时间
+- `progress_workflow_locked_by` — VARCHAR(36)，锁定人 ID
+- `progress_workflow_locked_by_name` — VARCHAR(50)，锁定人姓名
+
+**对系统的帮助**：
+- ✅ 云端下单功能恢复正常，不再出现 HTTP 500
+- ✅ 工序节点锁定/解锁功能在云端完整生效
+- ✅ Flyway 脚本幂等，不会破坏本地已有列，也不影响已有数据
+
+commit: `45d12264`
+
+---
+
 ## 2026-04-03
 
 ### � fix(material-selection): 完整打通面辅料选料→进销存查询链路

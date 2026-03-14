@@ -2389,3 +2389,55 @@ commit: 6260b04d
 | **总计** | **152** | — |
 
 ---
+
+### 2026-04-18 变更批次（fix: 云端下单 HTTP 500 — progress_workflow 缺失列）
+
+#### 变更 #I ｜ 🔴 BUG修复 — POST /api/production/order 云端 HTTP 500
+
+```
+触发问题：
+  云端点击「下单」→ HTTP 500 "系统内部错误，请联系管理员"
+  本地开发环境无法复现。
+
+根本原因（完整调用链追踪）：
+  1. 前端 buildProgressWorkflowJson(progressNodes) 始终返回非空 JSON
+  2. Submit payload 含 progressWorkflowJson: '{"stages":[...]}' (非null)
+  3. ProductionOrderServiceImpl.saveOrUpdateOrder() →
+     this.saveOrUpdate(productionOrder) 生成 INSERT SQL
+  4. INSERT SQL 包含列: progress_workflow_json = '{"stages":[...]}'
+  5. 云端 DB 无此列 → Unknown column 'progress_workflow_json' 异常
+  6. @Transactional 包装 → 异常冒泡至 GlobalExceptionHandler
+  7. 不是 BadSqlGrammarException / DataAccessException 的子类
+     → 被 Exception.class 兜底 → HTTP 500 "系统内部错误，请联系管理员"
+
+为什么列不存在于云端：
+  ProductionOrder.java 映射了 5 个真实 DB 列（@TableField("progress_workflow_xxx")），
+  这些列是本地手动 ALTER TABLE 添加的，从未有任何 Flyway 迁移脚本覆盖。
+  grep -r "progress_workflow" db/migration/ → 零结果（问题发现方式）
+
+修复：
+  📄 backend/src/main/resources/db/migration/
+         V20260418001__add_production_order_workflow_fields.sql  (新增)
+  使用 INFORMATION_SCHEMA SET @s IF 幂等模式新增全部 5 列：
+    progress_workflow_json        LONGTEXT DEFAULT NULL
+    progress_workflow_locked      INT NOT NULL DEFAULT 0
+    progress_workflow_locked_at   DATETIME DEFAULT NULL
+    progress_workflow_locked_by   VARCHAR(36) DEFAULT NULL
+    progress_workflow_locked_by_name VARCHAR(50) DEFAULT NULL
+
+废弃代码清查：✅ 纯新增迁移脚本，无废弃代码
+
+影响范围：
+  ✅ 云端下单功能恢复
+  ✅ 工序节点锁定相关字段在云端完整生效
+  ✅ Flyway 脚本幂等，本地重建 / CI 均安全
+
+次要发现（不修复，记录在案）：
+  ⚠️ ProductionOrder.java 实体 customerId 字段：@TableField("company") — 与
+     company 字段（无注解，自动映射到 company 列）形成双重映射。本地 MyBatis-Plus
+     内部去重，不影响当前功能。正确做法：添加 customer_id 列并修改注解，待后续迁移。
+
+commit: 45d12264
+```
+
+---
