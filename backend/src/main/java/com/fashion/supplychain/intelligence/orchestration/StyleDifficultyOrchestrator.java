@@ -356,7 +356,7 @@ public class StyleDifficultyOrchestrator {
         if (!visionEnabled) {
             imageInsightFallback = "AI视觉模型未配置，评分依据 BOM和品类结构数据";
         } else if (!inferenceOrchestrator.isVisionModelValid()) {
-            imageInsightFallback = "视觉模型端点未开通（" + getShortModelName() + "），请在Volcengine控制台激活该模型";
+            imageInsightFallback = "视觉模型端点未开通，请在Volcengine ARK控制台激活视觉模型后配置DOUBAO_MODEL环境变量";
         } else if (imageNotFound) {
             imageInsightFallback = "封面图未上传，评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
         } else {

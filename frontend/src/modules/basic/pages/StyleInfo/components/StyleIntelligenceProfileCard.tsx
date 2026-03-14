@@ -180,6 +180,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     if (!styleId) return;
     setDifficultyLoading(true);
     try {
+      // coverUrl 传 cover（可为空）；后端 assessWithAiById 会自动回退到款式附件中的第一张图
       const res = await intelligenceApi.analyzeStyleDifficulty({
         styleId,
         coverUrl: style?.cover || undefined,
@@ -187,7 +188,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
       const data = (res as any)?.data || null;
       if (data) setLocalDifficulty(data);
     } catch {
-      // 失败时保展原结构化结果
+      // 失败时保留原结构化结果
     } finally {
       setDifficultyLoading(false);
     }
@@ -418,7 +419,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                       <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
                       {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
                     </div>
-                    <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!style?.cover} style={{ fontSize: 11, height: 20, padding: '0 5px' }}>图像分析</Button>
+                    <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11, height: 20, padding: '0 5px' }}>图像分析</Button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
@@ -427,12 +428,18 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     <span style={{ fontSize: 11, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
                   <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
-                  {activeDifficulty.imageInsight && (
-                    <div style={{ fontSize: 11, color: '#595959', marginTop: 3, lineHeight: 1.5, background: 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>🔬 {activeDifficulty.imageInsight}</div>
-                  )}
+                  {activeDifficulty.imageInsight && (() => {
+                    const insight = activeDifficulty.imageInsight as string;
+                    const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
+                    return (
+                      <div style={{ fontSize: 11, color: isError ? '#8c8c8c' : '#595959', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
+                        {isError ? '⚠️' : '🔬'} {insight}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
-                <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!style?.cover} style={{ fontSize: 11 }}>AI 难度分析</Button>
+                <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11 }}>AI 难度分析</Button>
               )}
             </div>
 
