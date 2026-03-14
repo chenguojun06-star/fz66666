@@ -120,33 +120,33 @@ function buildWorkerInsight(record: WorkerSummaryRow, analysis: AnalysisResult):
 
   const summary = analysis.suggestion === 'APPROVE'
     ? choose(seed, [
-      '这位员工的工资与产量关系基本合理，可以继续提审。',
-      '当前数据没有明显冲突，审核可按流程推进。',
-      '这条工资汇总整体稳定，适合进入通过流程。',
+      '工资与产量匹配，可提审。',
+      '数据无异常，可推进。',
+      '汇总稳定，可通过。',
     ])
     : choose(seed, [
-      '这条工资记录需要再看一眼关键指标，直接放行风险偏高。',
-      '当前存在需要人工确认的异常点，建议先复核再决定。',
-      '先把异常项核清，再做通过或驳回更稳。',
+      '存在异常指标，建议复核。',
+      '需人工确认异常点。',
+      '先核异常再决定。',
     ]);
 
   const execute = analysis.suggestion === 'APPROVE'
     ? choose(seed + 3, [
-      '核对员工身份和统计区间后即可提审。',
-      '完成最终金额确认后可直接推进。',
-      '按当前口径提交审核，并保留复核记录。',
+      '核对身份和区间后提审。',
+      '确认金额后推进。',
+      '提交审核并保留记录。',
     ])
     : choose(seed + 7, [
-      '先核对件均工资、扫码密度和团队占比，再决定是否通过。',
-      '建议先复核异常指标，再继续流程。',
-      '先做人工复核，确认后再提审。',
+      '核对件均工资和扫码密度。',
+      '复核异常指标后继续。',
+      '人工复核后再提审。',
     ]);
 
   return {
     level: mapRiskLevel(analysis.risk),
     title: '工资审核建议',
     summary,
-    painPoint: primaryIssue || '当前工资与产量关系未见明显异常。',
+    painPoint: primaryIssue || '无明显异常',
     execute,
     evidence: focusChecks.map((item) => `${item.label}：${item.detail}`),
     note: `${record.operatorName || '员工'} · 总工资 ¥${(record.totalAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,

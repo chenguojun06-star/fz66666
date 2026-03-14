@@ -58,26 +58,26 @@ function buildSmartNarrative(data: OrderTrackData) {
   const daysLeft = getDaysLeft(data.plannedEndDate);
   const latestStage = data.latestScanStage || data.statusText || '当前阶段';
   const progress = Number(data.productionProgress || 0);
-  let summary = `当前订单已进入${latestStage}，整体完成 ${progress}%。`;
-  let reason = '当前生产节奏正常，系统将继续跟踪后续节点推进。';
-  let prediction = data.plannedEndDate ? `按当前节奏，预计在 ${formatDate(data.plannedEndDate)} 前后完成。` : '当前暂无明确交期，建议结合最新工厂反馈确认完成时间。';
+  let summary = `${latestStage}，完成 ${progress}%`;
+  let reason = '生产节奏正常。';
+  let prediction = data.plannedEndDate ? `预计 ${formatDate(data.plannedEndDate)} 完成` : '暂无交期，请确认工厂反馈。';
 
   if (daysLeft != null && daysLeft < 0) {
-    summary = `当前订单处于${latestStage}，已超过原计划交期 ${Math.abs(daysLeft)} 天。`;
+    summary = `${latestStage}，已逾期 ${Math.abs(daysLeft)} 天`;
     reason = data.latestScanTime
-      ? `最近一次推进发生在 ${formatTime(data.latestScanTime)}，当前需要优先确认工厂卡点与补救安排。`
-      : '当前暂无最近推进记录，建议立即核查工厂是否停滞或存在缺料问题。';
-    prediction = '系统判断该单已进入高风险状态，建议优先做客户解释与内部催办。';
+      ? `最近推进：${formatTime(data.latestScanTime)}，请确认卡点。`
+      : '无近期推进记录，请核查工厂状态。';
+    prediction = '高风险，建议立即催办。';
   } else if (daysLeft != null && daysLeft <= 3 && progress < 80) {
-    summary = `距离交期只剩 ${daysLeft} 天，当前仍停留在${latestStage}，进度为 ${progress}%。`;
-    reason = '交期临近但推进仍偏慢，建议优先确认当前工序产能、是否存在返工或等待物料。';
-    prediction = data.plannedEndDate ? `如果后续节点连续推进，仍有机会在 ${formatDate(data.plannedEndDate)} 前完成。` : prediction;
+    summary = `距交期 ${daysLeft} 天，${latestStage}，进度 ${progress}%`;
+    reason = '交期临近，进度偏慢。';
+    prediction = data.plannedEndDate ? `加速推进仍可在 ${formatDate(data.plannedEndDate)} 前完成` : prediction;
   } else if (progress >= 95) {
-    summary = `当前订单已接近完成，处于${latestStage}收尾阶段。`;
-    reason = '系统判断该单主要剩余尾部、质检或入库动作，整体风险较低。';
-    prediction = data.plannedEndDate ? `如无返工异常，预计可在 ${formatDate(data.plannedEndDate)} 前顺利收尾。` : '如无返工异常，预计很快可以完成。';
+    summary = `${latestStage}收尾中，${progress}%`;
+    reason = '剩余尾部/质检/入库，风险低。';
+    prediction = data.plannedEndDate ? `预计 ${formatDate(data.plannedEndDate)} 前收尾` : '预计很快完成。';
   } else if (data.latestScanTime) {
-    reason = `最近一次推进时间为 ${formatTime(data.latestScanTime)}，系统将继续按最新节奏跟踪。`;
+    reason = `最近推进：${formatTime(data.latestScanTime)}`;
   }
 
   return { summary, reason, prediction };

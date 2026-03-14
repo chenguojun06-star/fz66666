@@ -321,45 +321,45 @@ function buildPaymentInsight(record: PayableItem, analysis: AnalysisResult): Dec
 
   const summary = analysis.suggestion === 'APPROVE'
     ? choose(seed, [
-      '这笔付款整体风险较低，按流程核对后可以继续推进。',
-      '当前看不到关键异常项，可以进入正常付款流程。',
-      '这笔单据数据比较顺，付款动作可按计划执行。',
+      '风险低，可按流程付款。',
+      '无明显异常，可正常付款。',
+      '数据正常，可执行付款。',
     ])
     : analysis.suggestion === 'REJECT'
       ? choose(seed, [
-        '这笔款存在明显异常，建议先暂停并回到源单据复核。',
-        '当前风险已经超出可放行范围，不建议直接付款。',
-        '关键指标异常较多，先止付再查原因更安全。',
+        '存在异常，建议暂停付款。',
+        '风险较高，不建议直接付款。',
+        '异常项较多，建议先止付。',
       ])
       : choose(seed, [
-        '这笔付款不是不能付，但建议先把异常项核清再放行。',
-        '存在需要人工确认的点，先复核再付款更稳。',
-        '建议先做一轮快速复核，确认后再执行付款。',
+        '有异常项需确认，建议复核后付款。',
+        '存在待确认项，先复核再付。',
+        '建议先核实异常项再放行。',
       ]);
 
   const execute = analysis.suggestion === 'APPROVE'
     ? choose(seed + 3, [
-      '确认付款对象、金额和附件后直接推进。',
-      '完成最终金额核对即可发起付款。',
-      '按现有口径执行付款，并保留复核记录。',
+      '核对金额和附件后付款。',
+      '确认金额无误后执行。',
+      '按流程付款并保留记录。',
     ])
     : analysis.suggestion === 'REJECT'
       ? choose(seed + 5, [
-        '先暂停付款，回查业务单据、成本项和审批附件。',
-        '先止付并锁定异常明细，确认后再决定是否重提。',
-        '建议先回到源数据核查，再重新提交付款申请。',
+        '暂停付款，回查源单据。',
+        '止付并核实异常明细。',
+        '回查数据后重新提交。',
       ])
       : choose(seed + 7, [
-        '优先复核异常项和附件一致性，再决定是否付款。',
-        '先把异常点逐条核清，确认无误后再放行。',
-        '建议先做人工复核，再进入付款动作。',
+        '先核实异常项，再决定付款。',
+        '逐条核清异常后再放行。',
+        '人工复核后再执行付款。',
       ]);
 
   return {
     level: mapRiskLevel(analysis.risk),
     title: '付款审核建议',
     summary,
-    painPoint: primaryIssue || (analysis.risk === 'LOW' ? '当前未发现明显异常项，可按流程推进' : undefined),
+    painPoint: primaryIssue || (analysis.risk === 'LOW' ? '无明显异常' : undefined),
     execute,
     evidence: focusChecks.map((item) => `${item.label}：${item.detail}`),
     note: `业务类型 ${bizType} · 本次应付 ¥${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
