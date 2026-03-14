@@ -728,7 +728,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
                       <span style={{ color: '#666', fontSize: 12 }}>尺寸参考图：</span>
                       {imgs.map((url: string) => (
-                        <img key={url} src={url} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
+                        <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
                       ))}
                     </div>
                   );
@@ -794,7 +794,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                           {imgs.map((url: string) => (
-                            <img key={url} src={url} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
+                            <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
                           ))}
                         </div>
                       );
