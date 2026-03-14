@@ -37,12 +37,12 @@ public class MaterialDatabaseController {
         return Result.success(materialDatabaseOrchestrator.update(material));
     }
 
-    @PostMapping("/{id}/complete")
+    @PutMapping("/{id}/complete")
     public Result<Boolean> complete(@PathVariable String id) {
         return Result.success(materialDatabaseOrchestrator.complete(id));
     }
 
-    @PostMapping("/{id}/return")
+    @PutMapping("/{id}/return")
     public Result<Boolean> returnToPending(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
         String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
         return Result.success(materialDatabaseOrchestrator.returnToPending(id, reason));

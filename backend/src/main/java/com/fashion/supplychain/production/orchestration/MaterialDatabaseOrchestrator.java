@@ -129,16 +129,13 @@ public class MaterialDatabaseOrchestrator {
     }
 
     public boolean returnToPending(String id, String reason) {
-        if (!StringUtils.hasText(reason)) {
-            throw new IllegalArgumentException("退回原因不能为空");
-        }
         MaterialDatabase current = getById(id);
         // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
         LambdaUpdateWrapper<MaterialDatabase> retUw = new LambdaUpdateWrapper<>();
         retUw.eq(MaterialDatabase::getId, current.getId())
              .set(MaterialDatabase::getStatus, "pending")
              .set(MaterialDatabase::getCompletedTime, null)
-             .set(MaterialDatabase::getReturnReason, reason.trim())
+             .set(MaterialDatabase::getReturnReason, StringUtils.hasText(reason) ? reason.trim() : null)
              .set(MaterialDatabase::getUpdateTime, LocalDateTime.now());
         boolean ok = materialDatabaseService.update(retUw);
         if (!ok) {
