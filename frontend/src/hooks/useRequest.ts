@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 
 /**
  * API 请求配置选项
@@ -57,6 +57,7 @@ export const useRequest = <T = any>(
   asyncFn: () => Promise<T | string | void>,
   options: RequestOptions<T> = {}
 ): RequestResult<T> => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T | undefined>();
 

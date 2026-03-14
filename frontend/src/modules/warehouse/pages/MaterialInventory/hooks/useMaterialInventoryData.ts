@@ -254,7 +254,7 @@ export function useMaterialInventoryData() {
     setDbSearchLoading(true);
     try {
       const res = await api.get('/material/database/list', {
-        params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+        params: { keyword: keyword.trim(), pageSize: 30 },
       });
       const records: any[] = res?.data?.records || [];
       const opts = records.map((m: any) => {
