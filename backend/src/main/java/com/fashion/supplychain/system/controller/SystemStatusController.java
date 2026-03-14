@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.DatabaseStructureHealthService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,9 @@ public class SystemStatusController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private DatabaseStructureHealthService databaseStructureHealthService;
 
     @Value("${spring.application.name:supplychain}")
     private String applicationName;
@@ -125,6 +129,15 @@ public class SystemStatusController {
         data.put("totalUsers", totalUsers);
         data.put("tenants", result);
         return Result.success(data);
+    }
+
+    /**
+     * 数据库结构健康检查。
+     * 用于发布前/发布后核对关键表结构与当前代码是否一致。
+     */
+    @GetMapping("/structure-health")
+    public Result<?> structureHealth() {
+        return Result.success(databaseStructureHealthService.inspect());
     }
 
     /**

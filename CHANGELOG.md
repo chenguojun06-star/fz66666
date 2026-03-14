@@ -1,5 +1,34 @@
 ## 2026-03-14
 
+### 🛡️ feat(predeploy-guard): 新增数据库结构健康检查接口与发布前守卫脚本
+
+**问题**：本次连续故障暴露出一个根因：代码、Flyway、云端真实数据库、前端契约之间缺少统一发布门禁，导致字段缺失、旧接口、智能表缺失等问题会直接放大成线上 401/404/500。
+
+**修复**：补上两道长期防线：
+- 新增 `/api/system/status/structure-health` 结构健康检查接口
+- 新增 `DatabaseStructureHealthService`，统一检查：
+  - Flyway 失败记录
+  - `t_style_info.image_insight`
+  - `t_intelligence_action_task_feedback`
+  - `t_material_database` 及关键列
+  - `t_intelligence_metrics`
+  - `t_intelligence_signal`
+  - `t_production_order.progress_workflow_*`
+  - `t_user.avatar_url`
+- 新增 `scripts/predeploy-guard.sh`，发布前自动做：
+  - 登录拿 Token
+  - `/actuator/health`
+  - `/api/system/status/structure-health`
+  - 生产订单列表标准/兼容路由
+  - 面辅料数据库列表
+  - 动作中心 / 智能大脑 / AI 顾问状态冒烟验证
+- 在 [快速测试指南.md](快速测试指南.md) 增加“发布前守卫（强制）”说明
+
+**对系统的帮助**：
+- ✅ 以后发布前就能提前拦住“缺表缺列、旧接口失配、智能链路炸库”这类 P0 问题
+- ✅ 结构健康状态可以通过接口直接看，不再靠人工猜云端到底缺了什么
+- ✅ 发布流程从“上线后排雷”改为“上线前拦截”
+
 ### 🔴 fix(api-compat-self-heal): 补回旧订单列表兼容，扩展云端自愈到面辅料库和智能表
 
 **问题**：云端仍有三类残留异常：
@@ -754,6 +783,11 @@ init → Supervisor.analyzeAndRoute() → Reflection.critiqueAndReflect()
 ---
 
 ## 2026-03-12
+
+- feat: 新增数据库结构健康检查接口与发布前守卫脚本，用于持续预防结构漂移把系统整体炸掉。
+  - 文件：[backend/src/main/java/com/fashion/supplychain/system/service/DatabaseStructureHealthService.java](backend/src/main/java/com/fashion/supplychain/system/service/DatabaseStructureHealthService.java)、[backend/src/main/java/com/fashion/supplychain/system/service/impl/DatabaseStructureHealthServiceImpl.java](backend/src/main/java/com/fashion/supplychain/system/service/impl/DatabaseStructureHealthServiceImpl.java)、[backend/src/main/java/com/fashion/supplychain/system/controller/SystemStatusController.java](backend/src/main/java/com/fashion/supplychain/system/controller/SystemStatusController.java)、[scripts/predeploy-guard.sh](scripts/predeploy-guard.sh)、[快速测试指南.md](快速测试指南.md)
+  - 改动：新增 `/api/system/status/structure-health`，集中检查关键缺表缺列、Flyway 失败记录和阻断级问题；新增发布前守卫脚本统一验证结构健康和关键接口冒烟。
+  - 作用：把“上线后才发现库结构没对齐”的问题前移到发布前，避免单个缺列/缺表继续演变成系统级 500/401/404 连锁故障。
 
 - fix: 仓库主数据中的面辅料类型与 BOM A/B 细分解耦。
   - 文件：[frontend/src/modules/warehouse/pages/MaterialDatabase/index.tsx](frontend/src/modules/warehouse/pages/MaterialDatabase/index.tsx)、[frontend/src/modules/warehouse/pages/MaterialInventory/index.tsx](frontend/src/modules/warehouse/pages/MaterialInventory/index.tsx)、[frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useMaterialInventoryColumns.tsx](frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useMaterialInventoryColumns.tsx)、[frontend/src/utils/materialType.ts](frontend/src/utils/materialType.ts)
