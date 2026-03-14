@@ -117,11 +117,14 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         + "`scene` VARCHAR(100) NOT NULL,"
                         + "`provider` VARCHAR(50) DEFAULT NULL,"
                         + "`model` VARCHAR(100) DEFAULT NULL,"
+                        + "`trace_id` VARCHAR(64) DEFAULT NULL,"
+                        + "`trace_url` VARCHAR(500) DEFAULT NULL,"
                         + "`success` TINYINT(1) NOT NULL DEFAULT 0,"
                         + "`fallback_used` TINYINT(1) NOT NULL DEFAULT 0,"
                         + "`latency_ms` INT DEFAULT NULL,"
                         + "`prompt_chars` INT DEFAULT NULL,"
                         + "`response_chars` INT DEFAULT NULL,"
+                        + "`tool_call_count` INT DEFAULT NULL,"
                         + "`error_message` VARCHAR(500) DEFAULT NULL,"
                         + "`user_id` VARCHAR(64) DEFAULT NULL,"
                         + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
@@ -130,6 +133,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         + "KEY `idx_metrics_tenant_scene` (`tenant_id`, `scene`, `create_time`),"
                         + "KEY `idx_metrics_create_time` (`create_time`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智能模块AI调用度量表'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "trace_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT 'AI调用追踪ID'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "trace_url",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '外部观测平台Trace链接'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "tool_call_count",
+                    "INT DEFAULT NULL COMMENT '本次AI调用工具次数'");
                 repairedTables += ensureTable(conn, schema,
                     "t_intelligence_signal",
                     "CREATE TABLE IF NOT EXISTS `t_intelligence_signal` ("

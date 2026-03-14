@@ -1,5 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
@@ -28,6 +30,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class AiAgentOrchestrator {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final int MAX_TOOL_RAW_CHARS = 1800;
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
@@ -117,7 +122,9 @@ public class AiAgentOrchestrator {
                         }
                     }
                     log.info("[AiAgent] 工具调用结果:\n{}", toolResult);
-                    messages.add(AiMessage.tool(toolResult, toolCall.getId(), toolName));
+                    String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
+                    log.info("[AiAgent] 工具证据摘要:\n{}", toolEvidence);
+                    messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
                 }
             } else {
                 // Done!
@@ -183,8 +190,12 @@ public class AiAgentOrchestrator {
                                 toolResult = "{\"error\": \"执行失败: " + e.getMessage() + "\"}";
                             }
                         }
-                        emitSse(emitter, "tool_result", Map.of("tool", toolName, "success", !toolResult.contains("\"error\"")));
-                        messages.add(AiMessage.tool(toolResult, toolCall.getId(), toolName));
+                        String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
+                        emitSse(emitter, "tool_result", Map.of(
+                                "tool", toolName,
+                                "success", !toolResult.contains("\"error\""),
+                                "summary", truncateOneLine(toolEvidence, 200)));
+                        messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
                     }
                 } else {
                     // 最终回答
@@ -286,7 +297,7 @@ public class AiAgentOrchestrator {
             log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
         }
 
-        // ── Voyage 语义检索 — 相关历史经验（RAG）──
+        // ── 混合检索 RAG — 相关历史经验（语义 + 关键词 + 热度）──
         String ragContext = "";
         try {
             if (userMessage != null && !userMessage.isBlank()) {
@@ -296,30 +307,32 @@ public class AiAgentOrchestrator {
                 List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
                 if (recalled != null && !recalled.isEmpty()) {
                     List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
-                            .filter(item -> item.getSimilarityScore() >= 0.60f)
+                            .filter(item -> item.getSimilarityScore() >= 0.45f)
                             .collect(Collectors.toList());
                     if (!relevant.isEmpty()) {
                         StringBuilder rag = new StringBuilder();
-                        rag.append("【Voyage 语义检索 — 相关历史经验参考（相似度≥0.60）】\n");
+                        rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥0.45）】\n");
                         for (int ri = 0; ri < relevant.size(); ri++) {
                             IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
                             String c = item.getContent();
                             if (c != null && c.length() > 150) c = c.substring(0, 150) + "…";
-                            rag.append(String.format("  %d. [%s] %s（相似度%.2f）\n     %s\n",
+                            rag.append(String.format("  %d. [%s/%s] %s（融合分%.2f，采纳%d次）\n     %s\n",
                                     ri + 1,
                                     item.getMemoryType() != null ? item.getMemoryType() : "case",
+                                    item.getBusinessDomain() != null ? item.getBusinessDomain() : "general",
                                     item.getTitle() != null ? item.getTitle() : "",
                                     item.getSimilarityScore(),
+                                    item.getAdoptedCount(),
                                     c != null ? c : ""));
                         }
                         rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
                         ragContext = rag.toString();
-                        log.debug("[AiAgent-RAG] 本次问题语义检索到 {} 条相关经验", relevant.size());
+                        log.debug("[AiAgent-RAG] 本次问题混合检索到 {} 条相关经验", relevant.size());
                     }
                 }
             }
         } catch (Exception e) {
-            log.debug("[AiAgent-RAG] Voyage 语义检索跳过（Qdrant 未启用或失败）: {}", e.getMessage());
+            log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
         }
 
         return "你是小云——服装供应链智能运营助理。第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
@@ -344,7 +357,7 @@ public class AiAgentOrchestrator {
                 "⑬ tool_change_approval — 变更审批：查看待审批列表(list_pending)、审批通过(approve)、驳回(reject)。当用户问'有什么待审批'、'通过那个申请'时调用\n" +
                 "⑭ tool_whatif — 推演沙盘：分析[如果提前X天交货/换工厂/加X个工人/降成本/推迟开工]对完工日、成本、逾期风险的量化影响，并给出最优策略。当用户说如果提前/换厂/加人/推迟时调用\n" +
                 "⑮ tool_multi_agent — 多智能体协同图谱：排产+采购+合规+物流专家并行分析，反思引擎整合，适合全面分析/综合评估所有订单/我最需要关注什么等宏观决策\n" +
-                "⑯ tool_knowledge_search — 知识库RAG问答：回答行业术语(FOB/CMT/菲号等)、系统操作指南(如何建单/扫码/结算)、业务FAQ，并自动更新语义向量索引\n\n" +
+                "⑯ tool_knowledge_search — 知识库RAG问答：用混合检索回答行业术语(FOB/CMT/菲号等)、系统操作指南(如何建单/扫码/结算)、业务FAQ，并自动更新向量索引\n\n" +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
@@ -403,12 +416,187 @@ public class AiAgentOrchestrator {
 
     private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             emitter.send(SseEmitter.event()
                     .name(eventName)
-                    .data(mapper.writeValueAsString(data)));
+                    .data(JSON.writeValueAsString(data)));
         } catch (Exception e) {
             log.warn("[AiAgent-Stream] 发送SSE事件失败: event={}, error={}", eventName, e.getMessage());
         }
+    }
+
+    private String buildToolEvidenceMessage(String toolName, String toolResult) {
+        String safeResult = toolResult == null ? "" : toolResult.trim();
+        if (safeResult.isEmpty()) {
+            return "【工具证据】\n- 工具: " + toolName + "\n- 状态: 空结果\n- 原始结果: （空）";
+        }
+        try {
+            JsonNode root = JSON.readTree(safeResult);
+            if (root.hasNonNull("error")) {
+                return "【工具证据】\n- 工具: " + toolName + "\n- 状态: 失败\n- 错误: "
+                        + root.path("error").asText() + "\n- 原始结果: " + truncate(safeResult, 400);
+            }
+
+            StringBuilder evidence = new StringBuilder();
+            evidence.append("【工具证据】\n")
+                    .append("- 工具: ").append(toolName).append("\n")
+                    .append("- 状态: 成功\n");
+
+            if ("tool_knowledge_search".equals(toolName)) {
+                appendKnowledgeEvidence(evidence, root);
+            } else if ("tool_whatif".equals(toolName)) {
+                appendWhatIfEvidence(evidence, root);
+            } else if ("tool_multi_agent".equals(toolName)) {
+                appendMultiAgentEvidence(evidence, root);
+            } else {
+                appendGenericEvidence(evidence, root);
+            }
+
+            int rawExcerptLimit = resolveRawExcerptLimit(toolName);
+            if (rawExcerptLimit > 0) {
+                evidence.append("- 原始结果摘录: ").append(truncate(safeResult, rawExcerptLimit));
+            }
+            return evidence.toString();
+        } catch (Exception e) {
+            return "【工具证据】\n- 工具: " + toolName + "\n- 状态: 成功\n- 结构化解析: 失败，回退原始文本\n- 原始结果: "
+                    + truncate(safeResult, MAX_TOOL_RAW_CHARS);
+        }
+    }
+
+    private void appendKnowledgeEvidence(StringBuilder evidence, JsonNode root) {
+        evidence.append("- 检索模式: ").append(root.path("retrievalMode").asText("unknown")).append("\n")
+                .append("- 命中统计: 结果").append(root.path("count").asInt(0))
+                .append("条，语义召回").append(root.path("semanticHits").asInt(0))
+                .append("条，关键词召回").append(root.path("keywordHits").asInt(0)).append("条\n");
+        JsonNode items = root.path("items");
+        if (items.isArray() && items.size() > 0) {
+            for (int i = 0; i < Math.min(items.size(), 3); i++) {
+                JsonNode item = items.get(i);
+                evidence.append("- 证据").append(i + 1).append(": ")
+                        .append(item.path("title").asText("未命名"))
+                        .append(" [").append(item.path("category").asText("general")).append("]")
+                        .append(" 融合分").append(String.format("%.2f", item.path("hybridScore").asDouble(0d)))
+                        .append("，语义分").append(String.format("%.2f", item.path("semanticScore").asDouble(0d)))
+                        .append("，关键词分").append(String.format("%.2f", item.path("keywordScore").asDouble(0d)))
+                        .append("，摘要: ").append(truncate(item.path("content").asText(""), 90))
+                        .append("\n");
+            }
+        }
+    }
+
+    private void appendWhatIfEvidence(StringBuilder evidence, JsonNode root) {
+        if (root.hasNonNull("summary")) {
+            evidence.append("- 推演摘要: ").append(root.path("summary").asText()).append("\n");
+        }
+        if (root.hasNonNull("recommended")) {
+            evidence.append("- 推荐方案: ").append(root.path("recommended").asText()).append("\n");
+        }
+        JsonNode baseline = root.path("baseline");
+        if (baseline != null && !baseline.isMissingNode() && !baseline.isNull()) {
+            evidence.append("- 基线: ")
+                    .append(baseline.path("desc").asText(baseline.path("key").asText("baseline")))
+                    .append("，评分").append(String.format("%.0f", baseline.path("score").asDouble(0d)))
+                    .append("\n");
+        }
+        JsonNode scenarios = root.path("scenarios");
+        if (scenarios.isArray() && scenarios.size() > 0) {
+            for (int i = 0; i < Math.min(scenarios.size(), 3); i++) {
+                JsonNode scenario = scenarios.get(i);
+                evidence.append("- 方案").append(i + 1).append(": ")
+                        .append(scenario.path("desc").asText(scenario.path("key").asText("scenario")))
+                        .append("，评分").append(String.format("%.0f", scenario.path("score").asDouble(0d)))
+                        .append("，完工变化").append(scenario.path("finishDeltaDays").asInt(0)).append("天")
+                        .append("，成本变化").append(scenario.path("costDelta").asDouble(0d))
+                        .append("，风险变化").append(scenario.path("riskDelta").asDouble(0d))
+                        .append("，动作: ").append(truncate(scenario.path("action").asText(""), 60))
+                        .append("\n");
+            }
+        }
+    }
+
+    private void appendMultiAgentEvidence(StringBuilder evidence, JsonNode root) {
+        evidence.append("- 路由场景: ").append(root.path("route").asText("unknown")).append("\n");
+        if (root.hasNonNull("context")) {
+            evidence.append("- 上下文摘要: ").append(truncate(root.path("context").asText(), 120)).append("\n");
+        }
+        if (root.hasNonNull("reflection")) {
+            evidence.append("- 反思结论: ").append(truncate(root.path("reflection").asText(), 120)).append("\n");
+        }
+        if (root.hasNonNull("optimization")) {
+            evidence.append("- 优化建议: ").append(truncate(root.path("optimization").asText(), 120)).append("\n");
+        }
+        JsonNode specialists = root.path("specialists");
+        if (specialists != null && specialists.isObject()) {
+            List<String> names = new ArrayList<>();
+            specialists.fieldNames().forEachRemaining(names::add);
+            if (!names.isEmpty()) {
+                evidence.append("- 专家输出: ").append(String.join(", ", names)).append("\n");
+            }
+        }
+    }
+
+    private void appendGenericEvidence(StringBuilder evidence, JsonNode root) {
+        if (root.hasNonNull("summary")) {
+            evidence.append("- 摘要: ").append(truncate(root.path("summary").asText(), 120)).append("\n");
+        } else if (root.hasNonNull("message")) {
+            evidence.append("- 消息: ").append(truncate(root.path("message").asText(), 120)).append("\n");
+        }
+
+        JsonNode countNode = root.path("count");
+        if (countNode.isNumber()) {
+            evidence.append("- 数量: ").append(countNode.asInt()).append("\n");
+        }
+
+        JsonNode items = root.path("items");
+        if (items.isArray() && items.size() > 0) {
+            for (int i = 0; i < Math.min(items.size(), 3); i++) {
+                JsonNode item = items.get(i);
+                evidence.append("- 条目").append(i + 1).append(": ")
+                        .append(extractBestLabel(item)).append("\n");
+            }
+        } else {
+            List<String> keys = new ArrayList<>();
+            root.fieldNames().forEachRemaining(keys::add);
+            if (!keys.isEmpty()) {
+                evidence.append("- 顶层字段: ").append(String.join(", ", keys.subList(0, Math.min(keys.size(), 8)))).append("\n");
+            }
+        }
+    }
+
+    private String extractBestLabel(JsonNode item) {
+        if (item == null || item.isMissingNode() || item.isNull()) {
+            return "空条目";
+        }
+        String[] fields = new String[] {"title", "name", "orderNo", "order_no", "styleNo", "sku", "summary", "desc"};
+        for (String field : fields) {
+            String value = item.path(field).asText("").trim();
+            if (!value.isEmpty()) {
+                return truncate(value, 90);
+            }
+        }
+        return truncate(item.toString(), 90);
+    }
+
+    private String truncate(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, Math.max(0, maxLength - 1)) + "…";
+    }
+
+    private String truncateOneLine(String text, int maxLength) {
+        return truncate(text == null ? "" : text.replace("\n", " ").replace("\r", " "), maxLength);
+    }
+
+    private int resolveRawExcerptLimit(String toolName) {
+        if ("tool_multi_agent".equals(toolName)) {
+            return 0;
+        }
+        if ("tool_whatif".equals(toolName) || "tool_knowledge_search".equals(toolName)) {
+            return 800;
+        }
+        return MAX_TOOL_RAW_CHARS;
     }
 }

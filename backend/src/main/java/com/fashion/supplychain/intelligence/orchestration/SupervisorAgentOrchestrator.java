@@ -10,8 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 监督代理编排器 — Hybrid Graph MAS 第一节点（Route + Analyze）。
@@ -141,8 +143,8 @@ public class SupervisorAgentOrchestrator {
             String query = state.getContextSummary() != null ? state.getContextSummary() : state.getScene();
             if (query != null && !query.isBlank()) {
                 var hits = qdrantService.search(state.getTenantId(), query, 3);
-                double maxScore = hits.stream().mapToDouble(h -> h.getScore()).max().orElse(0);
-                state.setKnowledgeMatch(Math.min(100, maxScore * 100));
+                double matchScore = computeKnowledgeMatch(query, hits);
+                state.setKnowledgeMatch(Math.min(100, matchScore * 100));
             }
         } catch (Exception e) {
             log.debug("[Supervisor] RAG 匹配失败: {}", e.getMessage());
@@ -175,5 +177,38 @@ public class SupervisorAgentOrchestrator {
             case "logistics"     -> "compliance";
             default              -> "delivery_risk";
         };
+    }
+
+    private double computeKnowledgeMatch(String query, List<QdrantService.ScoredPoint> hits) {
+        if (hits == null || hits.isEmpty()) {
+            return 0d;
+        }
+        String normalizedQuery = normalize(query);
+        List<Double> ranked = hits.stream()
+                .map(hit -> {
+                    double semantic = Math.max(0d, hit.getScore());
+                    Map<String, String> payload = hit.getPayload();
+                    String title = payload == null ? "" : normalize(payload.get("title"));
+                    String keywords = payload == null ? "" : normalize(payload.get("keywords"));
+                    double keywordBoost = 0d;
+                    if (!normalizedQuery.isEmpty()) {
+                        if (!title.isEmpty() && title.contains(normalizedQuery)) keywordBoost += 0.12d;
+                        if (!keywords.isEmpty() && keywords.contains(normalizedQuery)) keywordBoost += 0.18d;
+                    }
+                    return Math.min(semantic * 0.85d + keywordBoost, 1.0d);
+                })
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList());
+
+        double weighted = 0d;
+        double[] weights = new double[] {0.6d, 0.3d, 0.1d};
+        for (int i = 0; i < ranked.size() && i < weights.length; i++) {
+            weighted += ranked.get(i) * weights[i];
+        }
+        return weighted;
+    }
+
+    private String normalize(String text) {
+        return text == null ? "" : text.toLowerCase().replace("\n", " ").replace("\r", " ").trim();
     }
 }

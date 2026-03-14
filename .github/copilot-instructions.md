@@ -29,6 +29,12 @@
 >   - ✅ **修改现有表结构**：优先使用幂等 INFORMATION_SCHEMA 判断 + SET @s IF()，不要直接 ALTER TABLE
 >   - ❌ **禁止**：Entity 字段用 `@TableField(exist=false)` transient 字段，然后在代码里通过关联查询填充（脆弱、易 null、难维护）
 
+> **AI 生产观测补充（2026-04-26 新增）**：
+>   - ✅ `t_intelligence_metrics` 现包含 `trace_id` / `trace_url` / `tool_call_count`，所有 AI 基础链路改造要同步考虑这 3 个字段
+>   - ✅ 超管排障优先用 `GET /api/intelligence/metrics/recent` 查看最近 AI 调用，不要让租户直接接触 trace 细节
+>   - ✅ 定位 AI 线上问题时，优先判断：哪次调用失败、是否 fallback、工具调用次数异常、trace 链接是否可跳转
+>   - ❌ 禁止把平台级观测字段直接暴露给普通租户页面，租户只看结果，不看内部追踪链路
+
 ---
 
 ## 🚀 快速上手（新开发者必读 5分钟）

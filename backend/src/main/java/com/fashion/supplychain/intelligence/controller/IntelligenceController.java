@@ -674,6 +674,15 @@ public class IntelligenceController {
                 UserContext.tenantId(), days));
     }
 
+        /** AI 最近调用明细 — 输出traceId/traceUrl/工具调用数，便于快速定位异常（超管专属） */
+        @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+        @GetMapping("/metrics/recent")
+        public Result<List<java.util.Map<String, Object>>> recentMetrics(
+            @RequestParam(defaultValue = "20") int limit) {
+        return Result.success(observabilityOrchestrator.getRecentInvocations(
+            UserContext.tenantId(), limit));
+        }
+
     // ── 第六批：B阶段新增智能驾驶舱能力 ──
 
     /** B2 - 产能缺口分析：按工厂展示排期缺口与风险级别 */

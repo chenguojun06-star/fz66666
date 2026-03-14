@@ -64,6 +64,15 @@ public class DatabaseStructureHealthServiceImpl implements DatabaseStructureHeal
             warningCount += addTableCheck(conn, schema, checks, blockingIssues, recommendations,
                     "t_intelligence_metrics", "warning", true,
                     "智能模块度量表，缺失会影响 AI 可观测性");
+                warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
+                    "t_intelligence_metrics", "trace_id", "warning", true,
+                    "AI 调用 trace_id 字段，缺失会导致调用链追踪断裂");
+                warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
+                    "t_intelligence_metrics", "trace_url", "warning", true,
+                    "AI 外部观测链接字段，缺失会影响 Langfuse 等平台跳转定位");
+                warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
+                    "t_intelligence_metrics", "tool_call_count", "warning", true,
+                    "AI 工具调用次数字段，缺失会影响工具使用诊断");
             warningCount += addTableCheck(conn, schema, checks, blockingIssues, recommendations,
                     "t_intelligence_signal", "warning", true,
                     "智能信号表，缺失会影响 intelligence 聚合能力");

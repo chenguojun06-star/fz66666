@@ -7,8 +7,13 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse.Memor
 import com.fashion.supplychain.intelligence.entity.IntelligenceMemory;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceMemoryMapper;
 import com.fashion.supplychain.intelligence.service.QdrantService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -78,7 +83,8 @@ public class IntelligenceMemoryOrchestrator {
                 Map<String, Object> payload = Map.of(
                         "title", title,
                         "type", memoryType,
-                        "domain", businessDomain);
+                    "domain", businessDomain,
+                    "content", content == null ? "" : content);
                 vectorSynced = qdrantService.upsertVector(pointId, tenantId, content, payload);
                 if (vectorSynced) {
                     memory.setEmbeddingId(pointId);
@@ -92,7 +98,7 @@ public class IntelligenceMemoryOrchestrator {
         response.setSuccess(true);
         response.setSavedMemoryId(memory.getId());
         response.setVectorSynced(vectorSynced);
-        log.info("[记忆编排] 保存记忆 id={} type={} domain={} vectorSynced={}", 
+        log.info("[记忆编排] 保存记忆 id={} type={} domain={} vectorSynced={}",
                 memory.getId(), memoryType, businessDomain, vectorSynced);
         return response;
     }
@@ -104,47 +110,69 @@ public class IntelligenceMemoryOrchestrator {
         IntelligenceMemoryResponse response = new IntelligenceMemoryResponse();
         List<MemoryItem> items = new ArrayList<>();
 
-        boolean vectorOk = false;
+        Map<String, Float> semanticScoreMap = new LinkedHashMap<>();
+        List<IntelligenceMemory> semanticRecords = new ArrayList<>();
         try {
             if (qdrantService.isAvailable()) {
-                List<QdrantService.ScoredPoint> hits = qdrantService.search(tenantId, queryText, topK);
+                List<QdrantService.ScoredPoint> hits = qdrantService.search(tenantId, queryText, Math.max(topK * 2, 6));
                 if (!hits.isEmpty()) {
-                    vectorOk = true;
                     List<String> pointIds = hits.stream()
                             .map(QdrantService.ScoredPoint::getPointId)
                             .collect(Collectors.toList());
+                    for (QdrantService.ScoredPoint hit : hits) {
+                        semanticScoreMap.put(hit.getPointId(), hit.getScore());
+                    }
                     // 按 embedding_id 批量查 DB
-                    List<IntelligenceMemory> dbRecords = memoryMapper.selectList(
+                    semanticRecords = memoryMapper.selectList(
                             new QueryWrapper<IntelligenceMemory>()
                                     .in("embedding_id", pointIds)
                                     .eq("tenant_id", tenantId)
                                     .eq("delete_flag", 0));
-                    Map<String, IntelligenceMemory> byEmbedId = dbRecords.stream()
-                            .collect(Collectors.toMap(
-                                    IntelligenceMemory::getEmbeddingId,
-                                    m -> m, (a, b) -> a));
-                    for (QdrantService.ScoredPoint hit : hits) {
-                        IntelligenceMemory m = byEmbedId.get(hit.getPointId());
-                        if (m != null) items.add(toMemoryItem(m, hit.getScore()));
-                    }
                 }
             }
         } catch (Exception e) {
             log.warn("[记忆检索] Qdrant 检索失败，退化为 LIKE 检索: {}", e.getMessage());
         }
 
-        // 降级：MySQL LIKE
-        if (!vectorOk) {
-            String keyword = queryText.length() > 20 ? queryText.substring(0, 20) : queryText;
-            List<IntelligenceMemory> dbRecords = memoryMapper.selectList(
-                    new QueryWrapper<IntelligenceMemory>()
-                            .eq("tenant_id", tenantId)
-                            .eq("delete_flag", 0)
-                            .like("content", keyword)
-                            .orderByDesc("adopted_count")
-                            .last("LIMIT " + topK));
-            for (IntelligenceMemory m : dbRecords) {
-                items.add(toMemoryItem(m, 0.5f));
+        // 关键词召回：无论Qdrant是否命中都补充，增强生产稳定性
+        String keyword = queryText.length() > 30 ? queryText.substring(0, 30) : queryText;
+        List<IntelligenceMemory> keywordRecords = memoryMapper.selectList(
+                new QueryWrapper<IntelligenceMemory>()
+                        .eq("tenant_id", tenantId)
+                        .eq("delete_flag", 0)
+                        .and(wrapper -> wrapper.like("title", keyword)
+                                .or().like("content", keyword)
+                                .or().like("business_domain", keyword)
+                                .or().like("memory_type", keyword))
+                        .orderByDesc("adopted_count")
+                        .last("LIMIT " + Math.max(topK * 2, 6)));
+
+        LinkedHashMap<Long, IntelligenceMemory> candidateMap = new LinkedHashMap<>();
+        for (IntelligenceMemory record : semanticRecords) {
+            candidateMap.put(record.getId(), record);
+        }
+        for (IntelligenceMemory record : keywordRecords) {
+            candidateMap.putIfAbsent(record.getId(), record);
+        }
+
+        List<MemoryHit> ranked = candidateMap.values().stream()
+                .map(memory -> buildMemoryHit(memory, queryText,
+                        semanticScoreMap.getOrDefault(memory.getEmbeddingId(), 0f)))
+                .sorted(Comparator.comparing(MemoryHit::getHybridScore).reversed()
+                        .thenComparing(MemoryHit::getKeywordScore).reversed()
+                        .thenComparing(MemoryHit::getSemanticScore).reversed())
+                .limit(topK)
+                .collect(Collectors.toList());
+
+        for (MemoryHit hit : ranked) {
+            MemoryItem item = toMemoryItem(hit.getMemory(), (float) hit.getHybridScore());
+            items.add(item);
+            try {
+                IntelligenceMemory update = new IntelligenceMemory();
+                update.setId(hit.getMemory().getId());
+                update.setRelevanceScore(BigDecimal.valueOf(hit.getHybridScore()).setScale(4, RoundingMode.HALF_UP));
+                memoryMapper.updateById(update);
+            } catch (Exception ignored) {
             }
         }
 
@@ -175,5 +203,69 @@ public class IntelligenceMemoryOrchestrator {
         item.setRecallCount(m.getRecallCount() == null ? 0 : m.getRecallCount());
         item.setAdoptedCount(m.getAdoptedCount() == null ? 0 : m.getAdoptedCount());
         return item;
+    }
+
+    private MemoryHit buildMemoryHit(IntelligenceMemory memory, String queryText, float semanticScore) {
+        double keywordScore = computeKeywordScore(memory, queryText);
+        double adoptionScore = computeAdoptionScore(memory);
+        double semantic = Math.max(0d, semanticScore);
+        double hybridScore = semantic * 0.58d + keywordScore * 0.32d + adoptionScore * 0.10d;
+
+        MemoryHit hit = new MemoryHit();
+        hit.setMemory(memory);
+        hit.setSemanticScore(semantic);
+        hit.setKeywordScore(keywordScore);
+        hit.setHybridScore(Math.min(hybridScore, 1.0d));
+        return hit;
+    }
+
+    private double computeKeywordScore(IntelligenceMemory memory, String queryText) {
+        String query = normalize(queryText);
+        if (query.isEmpty()) {
+            return 0d;
+        }
+        String title = normalize(memory.getTitle());
+        String content = normalize(memory.getContent());
+        String domain = normalize(memory.getBusinessDomain());
+        String type = normalize(memory.getMemoryType());
+
+        double score = 0d;
+        if (title.contains(query)) score += 0.55d;
+        if (content.contains(query)) score += 0.35d;
+        if (domain.contains(query)) score += 0.18d;
+        if (type.contains(query)) score += 0.12d;
+
+        for (String token : Arrays.stream(safe(queryText).split("[\\s,，、/|]+"))
+                .map(String::trim)
+                .filter(token -> token.length() >= 2)
+                .collect(Collectors.toList())) {
+            String t = normalize(token);
+            if (title.contains(t)) score += 0.10d;
+            if (content.contains(t)) score += 0.06d;
+        }
+        return Math.min(score, 1.0d);
+    }
+
+    private double computeAdoptionScore(IntelligenceMemory memory) {
+        int adopted = memory.getAdoptedCount() == null ? 0 : memory.getAdoptedCount();
+        int recalled = memory.getRecallCount() == null ? 0 : memory.getRecallCount();
+        double raw = Math.log1p(adopted * 2.0d + recalled * 0.3d) / 10.0d;
+        return Math.min(raw, 1.0d);
+    }
+
+    private String normalize(String text) {
+        return safe(text).toLowerCase().replace("\n", " ").replace("\r", " ").trim();
+    }
+
+    private String safe(String text) {
+        return text == null ? "" : text;
+    }
+
+    @lombok.Data
+    private static class MemoryHit {
+        private IntelligenceMemory memory;
+        private double semanticScore;
+        private double keywordScore;
+        private double hybridScore;
     }
 }

@@ -51,11 +51,14 @@ public class IntelligenceObservabilityOrchestrator {
             metrics.setScene(scene);
             metrics.setProvider(result.getProvider());
             metrics.setModel(result.getModel());
+            metrics.setTraceId(result.getTraceId());
+            metrics.setTraceUrl(result.getTraceUrl());
             metrics.setSuccess(result.isSuccess());
             metrics.setFallbackUsed(result.isFallbackUsed());
             metrics.setLatencyMs((int) result.getLatencyMs());
             metrics.setPromptChars(result.getPromptChars());
             metrics.setResponseChars(result.getResponseChars());
+            metrics.setToolCallCount(result.getToolCallCount());
             metrics.setErrorMessage(result.getErrorMessage());
             metrics.setUserId(userId);
             metrics.setCreateTime(LocalDateTime.now());
@@ -72,7 +75,8 @@ public class IntelligenceObservabilityOrchestrator {
         String promptNote = capturePrompts
                 ? String.format("promptChars=%d,responseChars=%d", result.getPromptChars(), result.getResponseChars())
                 : "promptChars=masked,responseChars=masked";
-        log.info("[AI_OBSERVABILITY] provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} status={} {} error={}",
+        log.info("[AI_OBSERVABILITY] traceId={} provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} toolCalls={} status={} {} error={} traceUrl={}",
+            result.getTraceId(),
                 result.getProvider(),
                 scene,
                 tenantId,
@@ -81,9 +85,11 @@ public class IntelligenceObservabilityOrchestrator {
                 result.isFallbackUsed(),
                 result.getLatencyMs(),
                 result.getModel(),
+            result.getToolCallCount(),
                 resolveStatus(),
                 promptNote,
-                result.getErrorMessage());
+            result.getErrorMessage(),
+            result.getTraceUrl());
     }
 
     /**
@@ -95,6 +101,16 @@ public class IntelligenceObservabilityOrchestrator {
             return metricsMapper.aggregateByScene(tenantId, days);
         } catch (Exception e) {
             log.warn("[AI_OBSERVABILITY] 指标查询失败（表可能尚未就绪，V43/V45 执行后自动恢复）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    public List<Map<String, Object>> getRecentInvocations(Long tenantId, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        try {
+            return metricsMapper.listRecentInvocations(tenantId, safeLimit);
+        } catch (Exception e) {
+            log.warn("[AI_OBSERVABILITY] 最近调用查询失败（表可能尚未就绪）: {}", e.getMessage());
             return java.util.Collections.emptyList();
         }
     }
@@ -113,6 +129,20 @@ public class IntelligenceObservabilityOrchestrator {
 
     public boolean isObservationReady() {
         return enabled && hasText(provider) && !"none".equalsIgnoreCase(provider);
+    }
+
+    public String buildTraceUrl(String traceId) {
+        if (!hasText(traceId) || !hasText(endpoint)) {
+            return null;
+        }
+        String base = endpoint.trim();
+        if (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        if ("langfuse".equalsIgnoreCase(normalizeProvider())) {
+            return base + "/trace/" + traceId;
+        }
+        return base + "/traces/" + traceId;
     }
 
     private boolean shouldRecord() {

@@ -1,5 +1,98 @@
 ## 2026-04-（最新）
 
+### 🔎 feat(qdrant-hybrid): 知识库检索升级为语义召回 + 关键词召回 + 本地重排
+
+**改动内容**：
+- `KnowledgeSearchTool` 从原来的“Qdrant 语义优先 + SQL 补充”升级为真正的混合检索链
+- 召回阶段同时做：`Qdrant 语义召回` + `MySQL 关键词召回`
+- 排序阶段新增本地重排：按 `semanticScore + keywordScore + popularityScore` 计算 `hybridScore`
+- 返回结果补充 `retrievalMode=hybrid`、`semanticHits`、`keywordHits` 以及每条命中的融合得分
+- Qdrant payload 同步写入 `title` / `keywords` / `source`，为后续更强的向量侧 rerank 继续铺路
+- 修复知识库向量点位 ID：`kb_UUID` 改为按字符串写入 Qdrant，避免之前强转 long 导致索引失败
+
+**对系统的帮助**：
+- ✅ 行业术语、系统 SOP、FAQ 这类问答不再只靠单一路径命中，准确率和稳定性更高
+- ✅ 当语义相似和关键词命中出现分歧时，系统会按融合分数重新排序，减少“看起来像相关但其实不对题”的结果
+- ✅ 修复 `kb_UUID` 索引写入问题后，知识库向量链终于能稳定积累，不再出现“代码写了但向量库其实没真正用起来”
+
+### 🧠 feat(memory-route-hybrid): 记忆召回与监督路由同步升级混合检索
+
+**改动内容**：
+- `IntelligenceMemoryOrchestrator` 不再只做“Qdrant命中 or LIKE兜底”，改为 `语义召回 + 关键词召回 + 采纳热度` 融合排序
+- 记忆召回结果会把融合分写回 `relevance_score`，为后续学习闭环提供更真实的最近命中质量
+- `SupervisorAgentOrchestrator` 的 `knowledgeMatch` 不再只看单个最高相似度，而是按 Top3 加权并结合 payload 关键词做稳态判断
+- 记忆向量 payload 同步补入 `content`，让后续更深的 payload 级重排有数据基础
+
+**对系统的帮助**：
+- ✅ AI 在“回忆历史经验”时更稳，不容易只因为一句语义接近就把弱相关旧案例顶上来
+- ✅ 多智能体监督路由对知识匹配度的判断更可信，减少因为单点命中波动导致的误判
+- ✅ 检索升级从知识库一条线扩展到记忆链和路由链，开始真正影响 AI 决策质量
+
+### 🧩 refactor(agent-rag): 主代理系统提示词同步切到混合检索语境
+
+**改动内容**：
+- `AiAgentOrchestrator` 中原来的“Voyage 语义检索”上下文改为“混合检索 RAG”
+- 主代理读取历史经验时不再只按旧语义阈值显示，而是按融合分展示，并带出业务域与采纳次数
+- 工具说明中的知识库能力同步改成“混合检索”表述，避免底层升级后主代理仍按旧心智运行
+
+**对系统的帮助**：
+- ✅ 主代理对历史经验的理解与底层检索链保持一致，不再出现“底层升级了，系统提示词还是旧描述”的错位
+- ✅ 用户看到的历史经验参考更可信，能区分业务域和经验被采纳次数
+
+### 🧾 feat(agent-evidence): 工具结果新增证据摘要层
+
+**改动内容**：
+- `AiAgentOrchestrator` 不再把工具返回的原始 JSON 直接塞回模型，而是先生成“工具证据”摘要再进入下一轮推理
+- 对 `tool_knowledge_search`、`tool_whatif`、`tool_multi_agent` 做了专门摘要，显式带出混合检索命中、推演评分、路由/反思/优化建议等关键字段
+- SSE 流式事件中的 `tool_result` 也同步带上摘要，前端后续可直接显示更易读的工具执行结果
+
+**对系统的帮助**：
+- ✅ 最终回答更容易抓住关键证据，不会被大段原始 JSON 干扰
+- ✅ 混合检索、推演沙盘、多智能体图谱的关键分数和判断开始真正影响最终回答质量，而不是只停留在工具内部
+
+### 🧪 test(ai-regression): 新增 AI 顾问专项回归脚本
+
+**改动内容**：
+- 新增 `scripts/ai_advisor_regression.py`
+- 自动验证 AI 顾问的 3 条高价值主链：知识库混合检索、推演沙盘、多智能体协同图谱
+- 回归脚本同时校验 AI 顾问状态、问答是否非空、是否包含关键业务词、是否输出 `【推荐追问】`
+- 多智能体回归单独放宽到 180 秒，避免把长链分析误判成失败
+
+### ⚡ perf(agent-evidence): 多智能体工具证据进一步减负
+
+**改动内容**：
+- `AiAgentOrchestrator` 对 `tool_multi_agent` 不再附带原始结果摘录，只保留结构化证据摘要
+- `tool_knowledge_search` 与 `tool_whatif` 的原始摘录也同步缩短，减少最终总结阶段的上下文负担
+
+**对系统的帮助**：
+- ✅ 以后每次升级主代理、工具链、检索链，都可以快速回归，不再靠人工临场提问
+- ✅ 把“已经做得更聪明”变成可重复验证，而不是只看主观体感
+
+### 🛡️ chore(predeploy-guard): 发布前守卫接入 AI 顾问专项回归
+
+**改动内容**：
+- `scripts/predeploy-guard.sh` 现在会在基础健康检查和核心接口冒烟后，自动执行 `scripts/ai_advisor_regression.py`
+- 发布前守卫不再只检查 AI 顾问状态是否“已启用”，而是继续验证知识库混合检索、推演沙盘、多智能体协同三条主链是否真实可用
+
+**对系统的帮助**：
+- ✅ AI 链路从“可手动回归”升级为“发布默认拦截”，上线更稳
+- ✅ 避免出现接口都 200、但真正问答主链已经退化的假通过场景
+- ✅ 多智能体这类重链路在 AI 顾问场景下更容易稳定返回，不会因为无意义的大段原始 JSON 拖慢最终回答
+
+### 🤖 feat(ai-observability): AI 调用补齐 trace 追踪、工具调用计数与最近调用查询
+
+**改动内容**：
+- `IntelligenceInferenceOrchestrator` 为每次 AI 调用生成唯一 `traceId`，并随请求头透传 `X-Trace-Id` / `X-Request-Id`
+- `IntelligenceObservabilityOrchestrator` 入库并输出：`trace_id`、`trace_url`、`tool_call_count`
+- `t_intelligence_metrics` 新增三列，支持在观测平台中从数据库记录直接跳到具体调用链
+- `IntelligenceController` 新增 `/api/intelligence/metrics/recent`，超管可直接查看最近 AI 调用明细
+- `DbColumnRepairRunner` 与结构健康检查同步补齐，避免云端缺列导致观测链路残缺
+
+**对系统的帮助**：
+- ✅ 每次 AI 调用都能精确定位，不再只知道“失败过”，而能知道“哪一次失败、用了几个工具、链路在哪”
+- ✅ 为接 Langfuse 这类外部观测平台做好兼容接口，不需要推翻现有智能体
+- ✅ 后续做提示词评估、工具命中分析、租户问题排查会明显更快
+
 ### 🧵 feat(style-size-group): 尺寸表增加显式分组字段，支持套装分区保存
 
 **改动内容**：

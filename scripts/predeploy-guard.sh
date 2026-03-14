@@ -113,6 +113,13 @@ check_get "/api/intelligence/action-center" "动作中心"
 check_get "/api/intelligence/brain/snapshot" "智能大脑快照"
 check_get "/api/intelligence/ai-advisor/status" "AI 顾问状态"
 
+echo "执行 AI 顾问专项回归..."
+if python3 "$(dirname "$0")/ai_advisor_regression.py" "$BASE" "$USERNAME" "$PASSWORD"; then
+  pass "AI 顾问专项回归"
+else
+  fail "AI 顾问专项回归"
+fi
+
 echo "----------------------------------------"
 echo "通过: $PASS"
 echo "失败: $FAIL"

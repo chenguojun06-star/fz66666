@@ -27,6 +27,12 @@ public class IntelligenceMetrics {
     /** 模型名称 */
     private String model;
 
+    /** 端到端追踪ID */
+    private String traceId;
+
+    /** 外部可跳转的观测链接 */
+    private String traceUrl;
+
     private Boolean success;
 
     private Boolean fallbackUsed;
@@ -37,6 +43,8 @@ public class IntelligenceMetrics {
     private Integer promptChars;
 
     private Integer responseChars;
+
+    private Integer toolCallCount;
 
     private String errorMessage;
 

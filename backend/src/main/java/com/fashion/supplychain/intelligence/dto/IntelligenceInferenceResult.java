@@ -16,10 +16,13 @@ public class IntelligenceInferenceResult {
     private boolean fallbackUsed;
     private String provider;
     private String model;
+    private String traceId;
+    private String traceUrl;
     private String content;
     private String errorMessage;
     private long latencyMs;
     private int promptChars;
     private int responseChars;
+    private int toolCallCount;
     private List<AiToolCall> toolCalls;
 }

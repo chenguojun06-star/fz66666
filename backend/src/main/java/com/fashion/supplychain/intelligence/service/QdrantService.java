@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -101,7 +104,7 @@ public class QdrantService {
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
             ObjectNode point = points.addObject();
-            point.put("id", Long.parseLong(pointId));
+            point.put("id", pointId);
 
             ArrayNode vec = point.putArray("vector");
             for (float v : vector) {
@@ -147,13 +150,20 @@ public class QdrantService {
             body.put("with_payload", true);
 
             // 租户隔离过滤
-            ObjectNode filter = body.putObject("filter");
-            ArrayNode must = filter.putArray("must");
-            ObjectNode cond = must.addObject();
-            ObjectNode field = cond.putObject("key");
-            field.put("key", "tenant_id");   // workaround: Qdrant match表达式
-            ObjectNode matchVal = cond.putObject("match");
-            matchVal.put("integer", tenantId);
+            if (tenantId != null) {
+                ObjectNode filter = body.putObject("filter");
+                ArrayNode should = filter.putArray("should");
+
+                ObjectNode tenantCond = should.addObject();
+                tenantCond.put("key", "tenant_id");
+                ObjectNode tenantMatchVal = tenantCond.putObject("match");
+                tenantMatchVal.put("integer", tenantId);
+
+                ObjectNode publicCond = should.addObject();
+                publicCond.put("key", "tenant_id");
+                ObjectNode publicMatchVal = publicCond.putObject("match");
+                publicMatchVal.put("integer", 0);
+            }
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/search";
             HttpEntity<String> entity = jsonEntity(body.toString());
@@ -167,6 +177,7 @@ public class QdrantService {
                         ScoredPoint sp = new ScoredPoint();
                         sp.setPointId(item.path("id").asText());
                         sp.setScore((float) item.path("score").asDouble());
+                        sp.setPayload(readPayload(item.path("payload")));
                         results.add(sp);
                     }
                 }
@@ -177,13 +188,22 @@ public class QdrantService {
         return results;
     }
 
+    private Map<String, String> readPayload(JsonNode payloadNode) {
+        if (payloadNode == null || payloadNode.isMissingNode() || payloadNode.isNull()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> payload = new LinkedHashMap<>();
+        payloadNode.fields().forEachRemaining(entry -> payload.put(entry.getKey(), entry.getValue().asText("")));
+        return payload;
+    }
+
     /** 删除指定向量点 */
     public void deleteVector(String pointId) {
         try {
             ObjectNode body = objectMapper.createObjectNode();
             ObjectNode points = body.putObject("points");
             ArrayNode ids = points.putArray("values");
-            ids.add(Long.parseLong(pointId));
+            ids.add(pointId);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
             restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
@@ -499,6 +519,7 @@ public class QdrantService {
     public static class ScoredPoint {
         private String pointId;
         private float score;
+        private Map<String, String> payload;
     }
 
     @lombok.Data

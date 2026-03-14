@@ -15,6 +15,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,17 +71,20 @@ public class IntelligenceInferenceOrchestrator {
 
     public IntelligenceInferenceResult chat(String scene, List<AiMessage> messages, List<AiTool> tools) {
         long start = System.currentTimeMillis();
+        String traceId = UUID.randomUUID().toString();
         IntelligenceInferenceResult result;
         if (intelligenceModelGatewayOrchestrator.isGatewayReady()) {
-            result = invokeLitellm(messages, tools);
+            result = invokeLitellm(messages, tools, traceId);
             if (!result.isSuccess() && intelligenceModelGatewayOrchestrator.isFallbackEnabled()) {
-                IntelligenceInferenceResult fallback = invokeDirect(messages, tools);
+                IntelligenceInferenceResult fallback = invokeDirect(messages, tools, traceId);
                 fallback.setFallbackUsed(true);
                 result = fallback;
             }
         } else {
-            result = invokeDirect(messages, tools);
+            result = invokeDirect(messages, tools, traceId);
         }
+        result.setTraceId(traceId);
+        result.setTraceUrl(intelligenceObservabilityOrchestrator.buildTraceUrl(traceId));
         result.setLatencyMs(Math.max(0, System.currentTimeMillis() - start));
         result.setPromptChars(length(messages.toString()));
         result.setResponseChars(length(result.getContent()));
@@ -92,15 +96,15 @@ public class IntelligenceInferenceOrchestrator {
         return intelligenceModelGatewayOrchestrator.isGatewayReady() || hasText(directApiKey);
     }
 
-    private IntelligenceInferenceResult invokeLitellm(List<AiMessage> messages, List<AiTool> tools) {
+    private IntelligenceInferenceResult invokeLitellm(List<AiMessage> messages, List<AiTool> tools, String traceId) {
         String baseUrl = intelligenceModelGatewayOrchestrator.getGatewayBaseUrl();
         String model = intelligenceModelGatewayOrchestrator.getActiveModelName();
         String endpoint = normalizeChatCompletionsUrl(baseUrl);
-        return invokeOpenAiCompatible("litellm", endpoint, litellmApiKey, model, messages, tools, gatewayTimeoutSeconds);
+        return invokeOpenAiCompatible("litellm", endpoint, litellmApiKey, model, messages, tools, gatewayTimeoutSeconds, traceId);
     }
 
-    private IntelligenceInferenceResult invokeDirect(List<AiMessage> messages, List<AiTool> tools) {
-        return invokeOpenAiCompatible("direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds);
+    private IntelligenceInferenceResult invokeDirect(List<AiMessage> messages, List<AiTool> tools, String traceId) {
+        return invokeOpenAiCompatible("direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds, traceId);
     }
 
     private IntelligenceInferenceResult invokeOpenAiCompatible(String provider,
@@ -109,10 +113,12 @@ public class IntelligenceInferenceOrchestrator {
                                                                String model,
                                                                List<AiMessage> messages,
                                                                List<AiTool> tools,
-                                                               int timeoutSeconds) {
+                                                               int timeoutSeconds,
+                                                               String traceId) {
         IntelligenceInferenceResult result = new IntelligenceInferenceResult();
         result.setProvider(provider);
         result.setModel(model);
+        result.setTraceId(traceId);
         if (!hasText(endpoint)) {
             result.setSuccess(false);
             result.setErrorMessage("endpoint-missing");
@@ -134,6 +140,8 @@ public class IntelligenceInferenceOrchestrator {
                     .uri(URI.create(endpoint))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
+                    .header("X-Trace-Id", traceId)
+                    .header("X-Request-Id", traceId)
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .timeout(Duration.ofSeconds(Math.max(timeoutSeconds, 5)))
                     .build();
@@ -196,6 +204,7 @@ public class IntelligenceInferenceOrchestrator {
             if (message.has("tool_calls")) {
                 List<AiToolCall> toolCalls = MAPPER.convertValue(message.path("tool_calls"), new TypeReference<List<AiToolCall>>(){});
                 result.setToolCalls(toolCalls);
+                result.setToolCallCount(toolCalls == null ? 0 : toolCalls.size());
             }
         }
     }

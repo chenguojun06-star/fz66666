@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -76,27 +78,27 @@ public class KnowledgeSearchTool implements AgentTool {
 
             Long tenantId = UserContext.tenantId();
 
-            // ── STEP 1: Qdrant语义检索（向量引擎可用时优先）──
-            List<String> semanticHitIds = new ArrayList<>();
+            // ── STEP 1: Qdrant语义召回（向量引擎可用时优先）──
+            Map<String, Float> semanticScoreMap = new LinkedHashMap<>();
             boolean qdrantEnabled = qdrantService != null && qdrantService.isAvailable();
             if (qdrantEnabled) {
                 try {
-                    List<QdrantService.ScoredPoint> hits = qdrantService.search(tenantId, query, 6);
+                    List<QdrantService.ScoredPoint> hits = qdrantService.search(tenantId, query, 10);
                     for (QdrantService.ScoredPoint hit : hits) {
                         String pid = hit.getPointId();
                         if (pid != null && pid.startsWith("kb_")) {
-                            semanticHitIds.add(pid.substring(3)); // 去掉"kb_"前缀得到UUID
+                            semanticScoreMap.put(pid.substring(3), hit.getScore());
                         }
                     }
-                    if (!semanticHitIds.isEmpty()) {
-                        log.debug("[KnowledgeSearch] Qdrant语义命中 {} 条", semanticHitIds.size());
+                    if (!semanticScoreMap.isEmpty()) {
+                        log.debug("[KnowledgeSearch] Qdrant语义命中 {} 条", semanticScoreMap.size());
                     }
                 } catch (Exception e) {
                     log.debug("[KnowledgeSearch] Qdrant语义检索跳过: {}", e.getMessage());
                 }
             }
 
-            // ── STEP 2: MySQL全文搜索（回退 + 补充语义结果）──
+            // ── STEP 2: MySQL关键词召回（补充语义结果）──
             QueryWrapper<KnowledgeBase> qw = new QueryWrapper<KnowledgeBase>()
                     .eq("delete_flag", 0)
                     .and(wrapper -> wrapper
@@ -110,26 +112,41 @@ public class KnowledgeSearchTool implements AgentTool {
                             .or().like("content", query)
                     );
             if (!category.isEmpty()) qw.eq("category", category);
-            qw.orderByAsc("category").last("LIMIT 5");
+                        qw.orderByAsc("category").last("LIMIT 10");
             List<KnowledgeBase> sqlResults = knowledgeBaseService.list(qw);
 
-            // ── STEP 3: 语义命中的KB条目（按UUID in查询）──
+                        // ── STEP 3: 拉取语义命中的KB条目 ──
             List<KnowledgeBase> semanticKbList = new ArrayList<>();
-            if (!semanticHitIds.isEmpty()) {
+                        if (!semanticScoreMap.isEmpty()) {
                 QueryWrapper<KnowledgeBase> semanticQw = new QueryWrapper<KnowledgeBase>()
                         .eq("delete_flag", 0)
-                        .in("id", semanticHitIds)
+                            .in("id", semanticScoreMap.keySet())
                         .and(w -> w.isNull("tenant_id").or().eq(tenantId != null, "tenant_id", tenantId));
+                        if (!category.isEmpty()) semanticQw.eq("category", category);
                 semanticKbList = knowledgeBaseService.list(semanticQw);
             }
 
-            // ── STEP 4: 合并（语义结果优先），去重，最多5条 ──
-            List<KnowledgeBase> finalList = new ArrayList<>(semanticKbList);
-            Set<String> seenIds = finalList.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
-            for (KnowledgeBase kb : sqlResults) {
-                if (!seenIds.contains(kb.getId())) finalList.add(kb);
+                        // ── STEP 4: 混合重排（语义 + 关键词 + 热度）──
+                        LinkedHashMap<String, KnowledgeBase> candidateMap = new LinkedHashMap<>();
+                        for (KnowledgeBase kb : semanticKbList) {
+                        candidateMap.put(kb.getId(), kb);
             }
-            if (finalList.size() > 5) finalList = finalList.subList(0, 5);
+                        for (KnowledgeBase kb : sqlResults) {
+                        candidateMap.putIfAbsent(kb.getId(), kb);
+                        }
+
+                        List<KnowledgeHit> rankedHits = candidateMap.values().stream()
+                            .map(kb -> buildKnowledgeHit(kb, query, category, semanticScoreMap.containsKey(kb.getId())
+                                ? semanticScoreMap.get(kb.getId()) : 0f))
+                            .sorted(Comparator.comparing(KnowledgeHit::getHybridScore).reversed()
+                                .thenComparing(KnowledgeHit::getKeywordScore).reversed()
+                                .thenComparing(KnowledgeHit::getSemanticScore).reversed())
+                            .limit(5)
+                            .collect(Collectors.toList());
+
+                        List<KnowledgeBase> finalList = rankedHits.stream()
+                            .map(KnowledgeHit::getKnowledgeBase)
+                            .collect(Collectors.toList());
 
             if (finalList.isEmpty()) {
                 return "{\"message\": \"知识库中未找到关于 '" + query + "' 的相关内容。\"}";
@@ -144,20 +161,29 @@ public class KnowledgeSearchTool implements AgentTool {
                         String kbContent = kb.getTitle() + "\n"
                                 + (kb.getKeywords() != null ? kb.getKeywords() + "\n" : "")
                                 + kb.getContent();
+                        Map<String, Object> payload = new HashMap<>();
+                        payload.put("type", "kb");
+                        payload.put("category", kb.getCategory() != null ? kb.getCategory() : "general");
+                        payload.put("title", safe(kb.getTitle()));
+                        payload.put("keywords", safe(kb.getKeywords()));
+                        payload.put("source", safe(kb.getSource()));
                         qdrantService.upsertVector("kb_" + kb.getId(), kbTenantId, kbContent,
-                                Map.of("type", "kb", "category",
-                                        kb.getCategory() != null ? kb.getCategory() : "general"));
+                            payload);
                     } catch (Exception ignored) {} // 非关键路径，失败不影响主流程
                 }
             }
 
             // ── STEP 6: 格式化返回 ──
             List<Map<String, Object>> formatted = new ArrayList<>();
-            for (KnowledgeBase kb : finalList) {
+                    for (KnowledgeHit hit : rankedHits) {
+                    KnowledgeBase kb = hit.getKnowledgeBase();
                 Map<String, Object> item = new HashMap<>();
                 item.put("title", kb.getTitle());
                 item.put("category", kb.getCategory());
                 item.put("content", kb.getContent());
+                    item.put("semanticScore", round(hit.getSemanticScore()));
+                    item.put("keywordScore", round(hit.getKeywordScore()));
+                    item.put("hybridScore", round(hit.getHybridScore()));
                 formatted.add(item);
                 try {
                     KnowledgeBase update = new KnowledgeBase();
@@ -170,12 +196,101 @@ public class KnowledgeSearchTool implements AgentTool {
             Map<String, Object> result = new HashMap<>();
             result.put("count", finalList.size());
             result.put("items", formatted);
-            result.put("semantic", !semanticKbList.isEmpty()); // 告知LLM本次是否为语义检索
+            result.put("semantic", !semanticKbList.isEmpty());
+            result.put("retrievalMode", "hybrid");
+            result.put("semanticHits", semanticKbList.size());
+            result.put("keywordHits", sqlResults.size());
             return objectMapper.writeValueAsString(result);
 
         } catch (Exception e) {
             log.error("[KnowledgeSearchTool] 搜索异常", e);
             return "{\"error\": \"知识库搜索失败: " + e.getMessage() + "\"}";
         }
+    }
+
+    private KnowledgeHit buildKnowledgeHit(KnowledgeBase kb,
+                                           String query,
+                                           String category,
+                                           float semanticScore) {
+        double keywordScore = computeKeywordScore(kb, query);
+        double popularityScore = computePopularityScore(kb);
+        double categoryBonus = (!category.isEmpty() && category.equalsIgnoreCase(safe(kb.getCategory()))) ? 0.08d : 0d;
+        double semantic = Math.max(0d, semanticScore);
+        double hybridScore = semantic * 0.55d + keywordScore * 0.40d + popularityScore * 0.05d + categoryBonus;
+
+        KnowledgeHit hit = new KnowledgeHit();
+        hit.setKnowledgeBase(kb);
+        hit.setSemanticScore(semantic);
+        hit.setKeywordScore(keywordScore);
+        hit.setHybridScore(hybridScore);
+        return hit;
+    }
+
+    private double computeKeywordScore(KnowledgeBase kb, String query) {
+        String normalizedQuery = normalize(query);
+        if (normalizedQuery.isEmpty()) {
+            return 0d;
+        }
+
+        double score = 0d;
+        String title = normalize(kb.getTitle());
+        String keywords = normalize(kb.getKeywords());
+        String content = normalize(kb.getContent());
+
+        if (!title.isEmpty() && title.contains(normalizedQuery)) score += 0.55d;
+        if (!keywords.isEmpty() && keywords.contains(normalizedQuery)) score += 0.70d;
+        if (!content.isEmpty() && content.contains(normalizedQuery)) score += 0.35d;
+
+        for (String token : splitQueryTokens(query)) {
+            if (token.length() < 2) {
+                continue;
+            }
+            String normalizedToken = normalize(token);
+            if (normalizedToken.isEmpty()) {
+                continue;
+            }
+            if (!title.isEmpty() && title.contains(normalizedToken)) score += 0.12d;
+            if (!keywords.isEmpty() && keywords.contains(normalizedToken)) score += 0.18d;
+            if (!content.isEmpty() && content.contains(normalizedToken)) score += 0.08d;
+        }
+        return Math.min(score, 1.0d);
+    }
+
+    private List<String> splitQueryTokens(String query) {
+        return Arrays.stream(safe(query).split("[\\s,，、/|]+"))
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private double computePopularityScore(KnowledgeBase kb) {
+        int helpful = kb.getHelpfulCount() == null ? 0 : kb.getHelpfulCount();
+        int views = kb.getViewCount() == null ? 0 : kb.getViewCount();
+        double raw = Math.log1p(helpful * 2.0d + views * 0.25d) / 10.0d;
+        return Math.min(raw, 1.0d);
+    }
+
+    private double round(double value) {
+        return BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private String normalize(String text) {
+        return safe(text).toLowerCase(Locale.ROOT)
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .replace("\t", " ")
+                .trim();
+    }
+
+    private String safe(String text) {
+        return text == null ? "" : text;
+    }
+
+    @lombok.Data
+    private static class KnowledgeHit {
+        private KnowledgeBase knowledgeBase;
+        private double semanticScore;
+        private double keywordScore;
+        private double hybridScore;
     }
 }

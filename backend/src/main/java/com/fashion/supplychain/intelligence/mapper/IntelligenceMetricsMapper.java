@@ -26,4 +26,12 @@ public interface IntelligenceMetricsMapper extends BaseMapper<IntelligenceMetric
             "GROUP BY scene ORDER BY total_calls DESC")
     List<Map<String, Object>> aggregateByScene(@Param("tenantId") Long tenantId,
                                                 @Param("days") int days);
+
+    @Select("SELECT trace_id, trace_url, scene, provider, model, success, fallback_used, latency_ms, tool_call_count, error_message, user_id, create_time " +
+            "FROM t_intelligence_metrics " +
+            "WHERE tenant_id = #{tenantId} " +
+            "AND delete_flag = 0 " +
+            "ORDER BY create_time DESC LIMIT #{limit}")
+    List<Map<String, Object>> listRecentInvocations(@Param("tenantId") Long tenantId,
+                                                    @Param("limit") int limit);
 }
