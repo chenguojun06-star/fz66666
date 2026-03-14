@@ -138,14 +138,8 @@ ALTER TABLE `t_style_operation_log`        ADD COLUMN `tenant_id` BIGINT DEFAULT
 CREATE INDEX IF NOT EXISTS `idx_sol_tenant_id`  ON `t_style_operation_log` (`tenant_id`);
 
 -- ---- 面辅料/仓库模块 ----
-SET @tbl_md = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_material_database');
-SET @s = IF(@tbl_md > 0 AND (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_material_database' AND COLUMN_NAME='tenant_id')=0,
-    'ALTER TABLE `t_material_database` ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT ''租户ID''',
-    'SELECT 1');
-PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @i_md = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_material_database' AND INDEX_NAME='idx_md_tenant_id');
-SET @s = IF(@tbl_md > 0 AND @i_md = 0, 'CREATE INDEX `idx_md_tenant_id` ON `t_material_database` (`tenant_id`)', 'SELECT 1');
-PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+ALTER TABLE `t_material_database`          ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
+CREATE INDEX IF NOT EXISTS `idx_md_tenant_id`   ON `t_material_database` (`tenant_id`);
 
 ALTER TABLE `t_material_stock`             ADD COLUMN `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID';
 CREATE INDEX IF NOT EXISTS `idx_ms_tenant_id`   ON `t_material_stock` (`tenant_id`);
