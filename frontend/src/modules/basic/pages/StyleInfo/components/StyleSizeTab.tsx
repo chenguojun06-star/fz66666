@@ -122,6 +122,13 @@ const resolveGroupToneMeta = (groupName: string): GroupToneMeta => {
   return GROUP_TONE_METAS.other;
 };
 
+const normalizeRowSorts = (list: MatrixRow[]) => {
+  return list.map((row, index) => ({
+    ...row,
+    sort: index + 1,
+  }));
+};
+
 const StyleSizeTab: React.FC<Props> = ({
   styleId,
   readOnly,
@@ -142,9 +149,11 @@ const StyleSizeTab: React.FC<Props> = ({
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
 
   const [addSizeOpen, setAddSizeOpen] = useState(false);
+  const [addGroupOpen, setAddGroupOpen] = useState(false);
   // 未开始时禁止编辑（需先点击「开始尺寸表」）
   const notStarted = !sizeStartTime && !sizeCompletedTime;
   const [newSizeName, setNewSizeName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
   const [sizeTemplateKey, setSizeTemplateKey] = useState<string | undefined>(undefined);
   const [sizeTemplates, setSizeTemplates] = useState<TemplateLibrary[]>([]);
   const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
@@ -199,6 +208,17 @@ const StyleSizeTab: React.FC<Props> = ({
     });
 
     return flatRows;
+  }, [rows]);
+
+  const groupNameOptions = useMemo(() => {
+    const optionSet = new Set<string>(['上装区', '下装区', '其他区']);
+    rows.forEach((row) => {
+      const groupName = resolveGroupName(row.groupName, row.partName);
+      if (groupName) {
+        optionSet.add(groupName);
+      }
+    });
+    return Array.from(optionSet).map((groupName) => ({ value: groupName, label: groupName }));
   }, [rows]);
 
   const fetchStyleNoOptions = async (keyword?: string) => {
@@ -402,7 +422,36 @@ const StyleSizeTab: React.FC<Props> = ({
   };
 
   const updateGroupName = (rowKey: string, groupName: string) => {
-    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, groupName } : r)));
+    const normalizedGroupName = String(groupName || '').trim() || '其他区';
+    setRows((prev) => {
+      const rowIndex = prev.findIndex((row) => row.key === rowKey);
+      if (rowIndex < 0) return prev;
+
+      const currentRow = prev[rowIndex];
+      const currentResolvedGroup = resolveGroupName(currentRow.groupName, currentRow.partName);
+      if (currentResolvedGroup === normalizedGroupName && String(currentRow.groupName || '').trim() === normalizedGroupName) {
+        return prev;
+      }
+
+      const nextRows = [...prev];
+      const [movedRow] = nextRows.splice(rowIndex, 1);
+      const updatedRow: MatrixRow = {
+        ...movedRow,
+        groupName: normalizedGroupName,
+      };
+
+      const targetIndex = nextRows.findIndex(
+        (row) => resolveGroupName(row.groupName, row.partName) === normalizedGroupName,
+      );
+
+      if (targetIndex >= 0) {
+        nextRows.splice(targetIndex, 0, updatedRow);
+      } else {
+        nextRows.push(updatedRow);
+      }
+
+      return normalizeRowSorts(nextRows);
+    });
   };
 
   const updateMeasureMethod = (rowKey: string, measureMethod: string) => {
@@ -447,6 +496,29 @@ const StyleSizeTab: React.FC<Props> = ({
       cells[sn] = { value: 0 };
     });
     setRows((prev) => [...prev, { key, groupName: defaultGroupName, partName: '', measureMethod: '', tolerance: 0, sort: nextSort, cells }]);
+    if (!editMode) enterEdit();
+  };
+
+  const confirmAddGroup = () => {
+    if (readOnly) return;
+    const groupName = String(newGroupName || '').trim();
+    if (!groupName) {
+      message.error('请输入分组名称');
+      return;
+    }
+
+    const key = `tmp-group-${Date.now()}-${Math.random()}`;
+    const cells: Record<string, MatrixCell> = {};
+    sizeColumns.forEach((sn) => {
+      cells[sn] = { value: 0 };
+    });
+
+    setRows((prev) => normalizeRowSorts([
+      { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: 1, cells },
+      ...prev,
+    ]));
+    setAddGroupOpen(false);
+    setNewGroupName('');
     if (!editMode) enterEdit();
   };
 
@@ -723,26 +795,41 @@ const StyleSizeTab: React.FC<Props> = ({
             {record.isGroupStart ? (
               <div
                 style={{
-                  display: 'inline-flex',
-                  alignSelf: 'flex-start',
-                  padding: '4px 12px',
-                  borderRadius: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignSelf: 'stretch',
+                  gap: 2,
+                  padding: '10px 12px',
+                  borderRadius: 12,
                   background: record.groupToneMeta.tagBg,
                   color: record.groupToneMeta.tagColor,
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 600,
-                  lineHeight: 1.6,
                   boxShadow: `inset 0 0 0 1px ${record.groupToneMeta.tagColor}22`,
                 }}
               >
-                {record.resolvedGroupName}
+                <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, lineHeight: 1.5 }}>
+                  {record.resolvedGroupName}
+                </span>
+                <span style={{ fontSize: 'var(--font-size-xs)', opacity: 0.88, lineHeight: 1.4 }}>
+                  本分组每 5 行共用一个参考图区
+                </span>
               </div>
             ) : null}
             {editableMode ? (
-              <Input
-                value={String(record.groupName || record.resolvedGroupName || '')}
-                placeholder="如：上装区 / 下装区"
-                onChange={(e) => updateGroupName(record.key, e.target.value)}
+              <Select
+                mode="tags"
+                value={[String(record.groupName || record.resolvedGroupName || '其他区')]}
+                placeholder="选择或新建分组"
+                style={{ width: '100%' }}
+                options={groupNameOptions}
+                maxCount={1}
+                tokenSeparators={[',', '，']}
+                onChange={(values) => updateGroupName(record.key, String(values?.[0] || '其他区'))}
+                onBlur={(event) => {
+                  const inputValue = String((event?.target as HTMLInputElement | null)?.value || '').trim();
+                  if (inputValue) {
+                    updateGroupName(record.key, inputValue);
+                  }
+                }}
               />
             ) : (
               <span style={{ color: record.groupToneMeta.tagColor, fontWeight: 500 }}>{record.resolvedGroupName}</span>
@@ -864,13 +951,17 @@ const StyleSizeTab: React.FC<Props> = ({
     ];
 
     return [...left, ...sizeCols, ...right];
-  }, [editMode, readOnly, sizeColumns, displayRows]);
+  }, [editMode, readOnly, sizeColumns, displayRows, groupNameOptions]);
 
   return (
     <div>
       <style>{`
         .style-size-table .ant-table-tbody > tr.style-size-group-start > td {
           border-top: 12px solid #f5f7fa;
+        }
+
+        .style-size-table .ant-table-tbody > tr.style-size-group-start > td {
+          box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.03);
         }
 
         .style-size-table .ant-table-tbody > tr.style-size-group-upper > td {
@@ -964,6 +1055,9 @@ const StyleSizeTab: React.FC<Props> = ({
           <Button type="default" onClick={handleAddPart} disabled={loading || saving || notStarted}>
             新增部位
           </Button>
+          <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
+            新增分组
+          </Button>
           <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
             新增尺码
           </Button>
@@ -1019,6 +1113,32 @@ const StyleSizeTab: React.FC<Props> = ({
         storageKey={`style-size-v2-${String(styleId)}`}
         minColumnWidth={70}
       />
+
+      <ResizableModal
+        open={addGroupOpen}
+        title="新增分组"
+        onCancel={() => {
+          setAddGroupOpen(false);
+          setNewGroupName('');
+        }}
+        onOk={confirmAddGroup}
+        okText="确定"
+        cancelText="取消"
+        confirmLoading={saving}
+        width="30vw"
+        minWidth={360}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.34 : 280}
+        minHeight={220}
+        autoFontSize={false}
+        scaleWithViewport
+      >
+        <Input
+          value={newGroupName}
+          placeholder="如：上装区 / 下装区 / 马甲区"
+          onChange={(e) => setNewGroupName(e.target.value)}
+          onPressEnter={confirmAddGroup}
+        />
+      </ResizableModal>
 
       <ResizableModal
         open={addSizeOpen}
