@@ -24,6 +24,14 @@ public class MaterialDatabase {
 
     private String materialType;
 
+    private String color;
+
+    private String fabricWidth;
+
+    private String fabricWeight;
+
+    private String fabricComposition;
+
     private String specifications;
 
     private String unit;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Input, Select, Tag, Form, Row, Col, InputNumber, Upload, message, Modal } from 'antd';
+import { Button, Card, Input, Select, Tag, Form, Row, Col, InputNumber, Upload, App } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { UploadOutlined } from '@ant-design/icons';
@@ -39,7 +39,7 @@ const toLocalDateTimeInputValue = (): string => {
 };
 
 const MaterialDatabasePage: React.FC = () => {
-  const [_messageApi, contextHolder] = message.useMessage();
+  const { message, modal } = App.useApp();
   const { isMobile } = useViewport();
   const { user } = useAuth();
 
@@ -228,7 +228,7 @@ const MaterialDatabasePage: React.FC = () => {
       message.error('记录缺少ID');
       return;
     }
-    Modal.confirm({
+    modal.confirm({
       width: '30vw',
       title: '确认删除',
       content: '删除后不可恢复，是否继续？',
@@ -250,9 +250,7 @@ const MaterialDatabasePage: React.FC = () => {
       message.error('记录缺少ID');
       return;
     }
-    Modal.confirm({
-      width: '30vw',
-      title: '确认完成',
+    modal.confirm({
       content: '确认将该物料标记为已完成？',
       okText: '确认',
       cancelText: '取消',
@@ -274,7 +272,7 @@ const MaterialDatabasePage: React.FC = () => {
       message.error('记录缺少ID');
       return;
     }
-    Modal.confirm({
+    modal.confirm({
       width: '30vw',
       title: '确认退回',
       content: '确认将该物料退回编辑状态？',
@@ -483,7 +481,6 @@ const MaterialDatabasePage: React.FC = () => {
 
   return (
     <Layout>
-      {contextHolder}
       {showSmartErrorNotice && smartError ? (
         <Card size="small" style={{ marginBottom: 12 }}>
           <SmartErrorNotice

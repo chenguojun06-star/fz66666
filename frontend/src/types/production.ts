@@ -421,6 +421,10 @@ export interface MaterialDatabase extends Record<string, unknown> {
   | 'accessoryC'
   | 'accessoryD'
   | 'accessoryE';
+  color?: string;
+  fabricWidth?: string;
+  fabricWeight?: string;
+  fabricComposition?: string;
   specifications?: string;
   unit?: string;
   supplierName?: string;
