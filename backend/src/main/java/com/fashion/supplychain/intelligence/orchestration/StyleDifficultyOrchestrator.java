@@ -216,24 +216,28 @@ public class StyleDifficultyOrchestrator {
                 .filter(n -> n != null && !n.isEmpty())
                 .collect(Collectors.joining("、"));
 
-        // ── Qwen-VL：真正看图，提取工艺难度特征（在 DeepSeek 评分前执行） ──
+        // ── Qwen-VL：真正看图，开放式发现工艺难度特征（无固定列表限制） ──
         String visionDescription = "暂无视觉分析";
         if (imageUrl != null && !imageUrl.isBlank() && inferenceOrchestrator.isVisionEnabled()) {
             try {
-                String visionPrompt = "分析这件服装的制作难度特征，重点识别以下工艺复杂度因素（若无该特征写'无'）：\n" +
-                        "① 领型复杂度：是否为翻领？翻领贴边/烫定工艺？其他复杂领型？\n" +
-                        "② 口袋设计：口袋个数？是否有贴里布？转角处理是否精细？\n" +
-                        "③ 扣子排列：单排还是双排？间距均匀度要求高吗？\n" +
-                        "④ 版型控制：Oversize/宽松款式还是修身款？裁片多吗？宽松度均匀性难度？\n" +
-                        "⑤ 面料工序难度：这个面料易起皱/起球/起毛吗？对车工和手工的要求如何？\n" +
-                        "⑥ 长度精度：长款还是短款？长度误差容差严格吗？\n" +
-                        "⑦ 其他工艺：是否有刺绣/蕾丝/拼接/压褶等装饰？\n" +
-                        "输出格式：列出 3-5 个最关键的难度特征（用「难」「中」「易」标记），简述为何难/易。" +
-                        "严格控制在 180 字以内，着重讲工艺复杂度，不讲颜色/风格等无关信息。";
+                String visionPrompt = "分析这件服装图片中存在的制作难度因素。\n" +
+                        "直接列出图片中实际可见的工艺难点特征，对每个难点简述为什么会增加制作难度。\n" +
+                        "可以包括但不限于：\n" +
+                        "- 领型复杂度（翻领、贴边、烫定等）\n" +
+                        "- 口袋构造（数量、里布、转角处理）\n" +
+                        "- 扣子精度（单排/双排、间距要求）\n" +
+                        "- 版型控制（Oversize、宽松度均匀性、裁片复杂度）\n" +
+                        "- 面料工序难度（易皱/易起球、对车工手工要求）\n" +
+                        "- 长度精度要求\n" +
+                        "- 装饰工艺（刺绣、蕾丝、拼接、压褶、激光切割等）\n" +
+                        "- 或其他任何工艺创新特征\n\n" +
+                        "对每个识别的难点用「难」「中」「易」标记。\n" +
+                        "严格控制在 200 字以内，着重讲工艺复杂度，无关颜色/风格等不涉及难度的信息。\n" +
+                        "如果图片中根本看不出有什么难度特征，就直接写「简单基础款，无特殊难度因素」。";
                 String raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
                 if (raw != null && !raw.isBlank()) {
                     visionDescription = raw.length() > 250 ? raw.substring(0, 250) : raw;
-                    log.info("[StyleDifficulty] Qwen-VL 视觉难度特征提取完成");
+                    log.info("[StyleDifficulty] Qwen-VL 开放式难度特征发现完成");
                 }
             } catch (Exception e) {
                 log.warn("[StyleDifficulty] Qwen-VL 视觉分析失败，降级无描述: {}", e.getMessage());
@@ -274,13 +278,15 @@ public class StyleDifficultyOrchestrator {
                 "- BOM物料种数：%d 种\n" +
                 "- 工序（共%d道）：%s\n" +
                 "- 二次工艺（共%d道）：%s\n" +
-                "- AI图像分析工艺难度特征（Qwen-VL 提取）：%s\n%s\n" +
+                "- AI图像发现的工艺难度因素（Qwen-VL 开放式分析）：%s\n%s\n" +
                 "结构化预评分：难度%s（%d/10），含高难工序%d道，二次工艺%s。\n\n" +
-                "请综合 AI 图像分析中识别的工艺难度特征（领型复杂度、口袋构造、扣子精度、版型控制、面料特性）进行加权评估。" +
-                "AI识别出「难」标记的特征应该显著提升评分；「易」或「无」的特征可以降低评分。\n" +
+                "请根据 AI 图像分析发现的工艺难度特征进行评估。\n" +
+                "AI 可能发现的工艺特征是动态的、开放式的，包括常见工艺和创新工艺（如激光切割、热风贴合等）。\n" +
+                "标记为「难」的工艺特征应该显著提升评分，「中」适度提升，「易」保持基准评分。\n" +
+                "如果有多个「难」特征，综合评分应该至少在 6-8 分。\n" +
                 "返回 JSON（必须严格是下面格式，不能有其他文字）：\n" +
                 "{\"difficultyLevel\":\"SIMPLE|MEDIUM|COMPLEX|HIGH_END\",\"difficultyScore\":0," +
-                "\"keyFactors\":[\"因素1\"],\"pricingMultiplier\":1.0,\"imageInsight\":\"AI识别的难度关键特征\"}",
+                "\"keyFactors\":[\"因素1\"],\"pricingMultiplier\":1.0,\"imageInsight\":\"AI识别的难度关键特征总结\"}",
                 style.getCategory() == null ? "未分类" : style.getCategory(),
                 base.getBomCount(),
                 base.getProcessCount(),
