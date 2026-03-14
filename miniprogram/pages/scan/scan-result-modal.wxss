@@ -119,3 +119,27 @@
   background: #9ca3af;
   pointer-events: none;
 }
+
+/* === 款式难度提示行 === */
+.diff-hint-row {
+  align-items: flex-start;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.diff-hint-label {
+  color: #c2410c;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.diff-hint-text {
+  font-size: 11px;
+  color: #9a3412;
+  font-weight: 500;
+  line-height: 1.5;
+  flex: 1;
+  text-align: right;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

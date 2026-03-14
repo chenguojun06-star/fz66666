@@ -96,7 +96,23 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.confirmTime': scanData && scanData.confirmTime ? scanData.confirmTime : '',
     // 一行显示：开始时间 | 结束时间
     'scanResultConfirm.timeDisplay': `${scanData && scanData.receiveTime ? scanData.receiveTime : '—'} | ${scanData && scanData.confirmTime ? scanData.confirmTime : '—'}`,
+    // 先清空，待异步拉取后补填
+    'scanResultConfirm.imageInsight': '',
   });
+
+  // 异步拉取款式难度提示（不阻塞确认弹窗显示）
+  const styleNo = orderDetail && orderDetail.styleNo;
+  if (styleNo && ctx.api && ctx.api.style) {
+    ctx.api.style.listStyles({ styleNo, page: 1, pageSize: 1 })
+      .then(res => {
+        const record = (res && (res.records || res.list || []))[0] || (res && !res.records ? res : null);
+        const hint = record && record.imageInsight;
+        if (hint) {
+          ctx.setData({ 'scanResultConfirm.imageInsight': hint });
+        }
+      })
+      .catch(() => { /* 静默失败，不影响主流程 */ });
+  }
 }
 
 /**
@@ -120,6 +136,7 @@ function closeScanResultConfirm(ctx) {
   ctx.setData({
     'scanResultConfirm.visible': false,
     'scanResultConfirm.loading': false,
+    'scanResultConfirm.imageInsight': '',
   });
 }
 

@@ -422,6 +422,33 @@ public class StyleAttachmentOrchestrator {
         return true;
     }
 
+    /**
+     * 将指定附件设置为款式封面（主图）
+     * 前端"设为主图"按钮调用此方法，确保封面持久化到 t_style_info.cover
+     */
+    public boolean setCoverFromAttachment(String attachmentId) {
+        if (!StringUtils.hasText(attachmentId)) {
+            throw new IllegalArgumentException("attachmentId不能为空");
+        }
+        StyleAttachment attachment = styleAttachmentService.getById(attachmentId.trim());
+        if (attachment == null) {
+            throw new NoSuchElementException("附件不存在：" + attachmentId);
+        }
+        TenantAssert.assertTenantContext();
+        try {
+            Long sid = Long.valueOf(attachment.getStyleId());
+            styleInfoService.lambdaUpdate()
+                    .eq(StyleInfo::getId, sid)
+                    .set(StyleInfo::getCover, attachment.getFileUrl())
+                    .update();
+            log.info("[StyleAttachment] 封面已更新: styleId={}, fileUrl={}", sid, attachment.getFileUrl());
+            return true;
+        } catch (Exception e) {
+            log.error("[StyleAttachment] 设置封面失败: attachmentId={}", attachmentId, e);
+            throw new IllegalStateException("设置封面失败：" + e.getMessage());
+        }
+    }
+
     private boolean isAllowedPatternExtension(String extension) {
         String ext = extension == null ? "" : extension.trim().toLowerCase();
         return ".dxf".equals(ext) || ".plt".equals(ext) || ".ets".equals(ext);

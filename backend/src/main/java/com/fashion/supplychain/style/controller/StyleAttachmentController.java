@@ -84,4 +84,13 @@ public class StyleAttachmentController {
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(styleAttachmentOrchestrator.delete(id));
     }
+
+    /**
+     * 设置附件为款式主图（封面）
+     * 前端"设为主图"⭐按钮触发，将 t_style_info.cover 更新为该附件的 fileUrl，确保持久化
+     */
+    @PostMapping("/{id}/set-cover")
+    public Result<Boolean> setCover(@PathVariable String id) {
+        return Result.success(styleAttachmentOrchestrator.setCoverFromAttachment(id));
+    }
 }

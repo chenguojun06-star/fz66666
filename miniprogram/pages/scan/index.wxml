@@ -344,6 +344,10 @@
             <text class="item-label">款号</text>
             <text class="item-value">{{scanResultConfirm.styleNo}}</text>
           </view>
+          <view wx:if="{{scanResultConfirm.imageInsight}}" class="result-item diff-hint-row">
+            <text class="item-label diff-hint-label">⚠️难度</text>
+            <text class="item-value diff-hint-text">{{scanResultConfirm.imageInsight}}</text>
+          </view>
           <view class="result-item">
             <text class="item-label">数量</text>
             <input

@@ -43,6 +43,7 @@ const scanPageData = {
     parsedData: null,
     quantity: 0,
     warehouseCode: '',
+    imageInsight: '',
   },
 
   // 撤销功能

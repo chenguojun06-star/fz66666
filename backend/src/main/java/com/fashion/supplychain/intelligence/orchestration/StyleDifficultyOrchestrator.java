@@ -393,6 +393,7 @@ public class StyleDifficultyOrchestrator {
 
         String userMessage = String.format(
                 "款式信息：\n" +
+                "- 款号：%s\n" +
                 "- 品类：%s\n" +
                 "- BOM物料种数：%d 种\n" +
                 "- 工序（共%d道）：%s\n" +
@@ -410,6 +411,7 @@ public class StyleDifficultyOrchestrator {
                 "返回 JSON（必须严格是下面格式，不能有其他文字）：\n" +
                 "{\"difficultyLevel\":\"SIMPLE|MEDIUM|COMPLEX|HIGH_END\",\"difficultyScore\":0," +
                 "\"keyFactors\":[\"因素1\"],\"pricingMultiplier\":1.0,\"imageInsight\":\"AI识别的难度关键特征总结\"}",
+                style.getStyleNo() == null ? "未填写" : style.getStyleNo(),
                 style.getCategory() == null ? "未分类" : style.getCategory(),
                 base.getBomCount(),
                 base.getProcessCount(),

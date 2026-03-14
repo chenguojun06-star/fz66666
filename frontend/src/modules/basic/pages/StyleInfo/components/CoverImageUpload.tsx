@@ -182,10 +182,29 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     }
   };
 
-  const handleSetCover = (index: number) => {
-    setCurrentIndex(index);
-    if (!isNewMode) {
-      message.success('已设置为主图');
+  const handleSetCover = async (index: number) => {
+    const img = displayImages[index];
+    if (!img) return;
+    if (isNewMode) {
+      // 新建模式：仅本地切换预览，无需 API
+      setCurrentIndex(index);
+      return;
+    }
+    // 兜底封面（选品中心 Google 图）不是真实附件，无法设为封面
+    if ((img as any).isCoverFallback) {
+      message.warning('请先上传图片，再设置主图');
+      return;
+    }
+    try {
+      const res = await api.post(`/style/attachment/${img.id}/set-cover`);
+      if ((res as any)?.code === 200 || res === true || (res as any)?.data === true) {
+        setCurrentIndex(index);
+        message.success('已设置为主图');
+      } else {
+        message.error((res as any)?.message || '设置主图失败');
+      }
+    } catch {
+      message.error('设置主图失败，请重试');
     }
   };
 
