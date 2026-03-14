@@ -68,6 +68,7 @@ public class StyleTableMigrator {
                 "unit_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价'," +
                 "total_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '总价'," +
                 "supplier VARCHAR(100) COMMENT '供应商'," +
+                "image_urls TEXT COMMENT '物料图片URLs(JSON数组)'," +
                 "remark VARCHAR(200) COMMENT '备注'," +
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
@@ -82,6 +83,7 @@ public class StyleTableMigrator {
                 "measure_method VARCHAR(50) COMMENT '度量方式'," +
                 "standard_value DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '标准数值'," +
                 "tolerance DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '公差'," +
+            "image_urls TEXT COMMENT '部位参考图片URLs(JSON数组)'," +
                 "sort INT NOT NULL DEFAULT 0 COMMENT '排序'," +
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
@@ -201,6 +203,8 @@ public class StyleTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_style_bom ADD COLUMN material_type VARCHAR(20) DEFAULT 'fabric' COMMENT '物料类型：fabric-面料，accessory-辅料'");
         if (!dbHelper.columnExists("t_style_bom", "supplier"))
             dbHelper.execSilently("ALTER TABLE t_style_bom ADD COLUMN supplier VARCHAR(100)");
+        if (!dbHelper.columnExists("t_style_bom", "image_urls"))
+            dbHelper.execSilently("ALTER TABLE t_style_bom ADD COLUMN image_urls TEXT COMMENT '物料图片URLs(JSON数组)'");
         if (!dbHelper.columnExists("t_style_bom", "remark"))
             dbHelper.execSilently("ALTER TABLE t_style_bom ADD COLUMN remark VARCHAR(200)");
         if (!dbHelper.columnExists("t_style_bom", "size"))
@@ -222,6 +226,8 @@ public class StyleTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN standard_value DECIMAL(10,2) NOT NULL DEFAULT 0");
         if (!dbHelper.columnExists("t_style_size", "tolerance"))
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN tolerance DECIMAL(10,2) NOT NULL DEFAULT 0");
+        if (!dbHelper.columnExists("t_style_size", "image_urls"))
+            dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN image_urls TEXT COMMENT '部位参考图片URLs(JSON数组)'");
         if (!dbHelper.columnExists("t_style_size", "sort"))
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN sort INT NOT NULL DEFAULT 0");
         if (!dbHelper.columnExists("t_style_size", "measure_method"))

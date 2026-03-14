@@ -51,6 +51,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
             repaired += ensureColumn(conn, schema, "t_style_info", "image_insight",
                     "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
+                repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
+                    "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
+                repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
+                    "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,

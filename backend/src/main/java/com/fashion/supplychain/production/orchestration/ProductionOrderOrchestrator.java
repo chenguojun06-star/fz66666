@@ -80,6 +80,8 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired
     private ProductionOrderService productionOrderService;
 
     @Autowired
