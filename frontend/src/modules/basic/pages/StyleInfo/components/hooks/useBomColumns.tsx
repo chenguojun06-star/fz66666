@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Button, Select, InputNumber, Tag, Modal, Space } from 'antd';
+import { Form, Input, Button, Select, InputNumber, Tag, Modal, Space, Image } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
@@ -141,6 +141,34 @@ export function useBomColumns({
         }
         return text;
       }
+    },
+    {
+      title: '图片',
+      dataIndex: 'imageUrls',
+      key: 'imageUrls',
+      width: 90,
+      render: (_: any, record: StyleBom) => {
+        const urls: string[] = (() => {
+          try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
+        })();
+        if (!urls.length) return null;
+        return (
+          <Image.PreviewGroup>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {urls.map((url) => (
+                <Image
+                  key={url}
+                  src={url}
+                  width={40}
+                  height={40}
+                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                  preview={{ src: url }}
+                />
+              ))}
+            </div>
+          </Image.PreviewGroup>
+        );
+      },
     },
     {
       title: '颜色',

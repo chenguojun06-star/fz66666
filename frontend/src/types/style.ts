@@ -92,6 +92,8 @@ export interface StyleBom extends Record<string, unknown> {
   stockStatus?: 'sufficient' | 'insufficient' | 'none' | 'unchecked';
   availableStock?: number;
   requiredPurchase?: number;
+  /** 物料图片URLs（JSON数组字符串，自动从面辅料资料带出，也可手动上传） */
+  imageUrls?: string;
 }
 
 export interface StyleSize extends Record<string, unknown> {
@@ -103,6 +105,8 @@ export interface StyleSize extends Record<string, unknown> {
   standardValue: number;
   tolerance: number;
   sort: number;
+  /** 部位参考图片URLs（JSON数组字符串） */
+  imageUrls?: string;
 }
 
 export interface StyleProcess extends Record<string, unknown> {

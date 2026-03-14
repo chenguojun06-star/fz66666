@@ -76,6 +76,12 @@ public class DatabaseStructureHealthServiceImpl implements DatabaseStructureHeal
             warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
                     "t_user", "avatar_url", "warning", true,
                     "用户头像字段，缺失会影响用户资料展示");
+                warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
+                    "t_style_bom", "image_urls", "critical", false,
+                    "BOM 物料图片字段，缺失会导致 BOM 图片保存与打印能力不可用");
+                warningCount += addColumnCheck(conn, schema, checks, blockingIssues, recommendations,
+                    "t_style_size", "image_urls", "critical", false,
+                    "尺寸表参考图片字段，缺失会导致尺寸图片分组上传与打印能力不可用");
 
             boolean healthy = blockingIssues.isEmpty();
             result.put("healthy", healthy);

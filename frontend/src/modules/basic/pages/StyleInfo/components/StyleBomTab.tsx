@@ -426,6 +426,8 @@ const StyleBomTab: React.FC<Props> = ({
       specification: String(m.specifications ?? m.specification ?? '').trim(),
       unitPrice: Number(m.unitPrice) || 0,
       materialType: mapDbTypeToBomType(m.materialType),
+      // 自动从面辅料资料带出图片（面辅料资料 image 字段，包装成 JSON 数组）
+      imageUrls: m.image ? JSON.stringify([String(m.image).trim()]) : undefined,
     };
     const materialColor = String(m.color ?? m.materialColor ?? '').trim();
     if (materialColor) {

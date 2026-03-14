@@ -125,6 +125,12 @@ public class StyleBom {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
+    /**
+     * 物料图片URLs（JSON数组字符串，例如：["https://...","https://..."]）
+     * 自动从面辅料资料带出，也可手动上传
+     */
+    private String imageUrls;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

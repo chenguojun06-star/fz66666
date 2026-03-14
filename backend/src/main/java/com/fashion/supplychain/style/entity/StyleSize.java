@@ -69,6 +69,11 @@ public class StyleSize {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
+    /**
+     * 部位参考图片URLs（JSON数组字符串，每个部位行可上传多张图）
+     */
+    private String imageUrls;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }
