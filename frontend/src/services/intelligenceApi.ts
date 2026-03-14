@@ -394,6 +394,7 @@ export interface ForecastResult {
   optimisticLow: number;
   pessimisticHigh: number;
   algorithm: string;
+  rationale?: string; // AI 分析依据说明（后端可选返回）
 }
 
 export async function runForecast(params: ForecastRequest): Promise<ForecastResult> {
