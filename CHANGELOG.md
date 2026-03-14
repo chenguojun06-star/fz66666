@@ -1,4 +1,51 @@
+## 2026-04-（最新）
+
+### 🤖 refactor(ai): 精简小云 system prompt 与欢迎语
+
+**commit**: `689f1ffc`
+
+**改动内容**：
+- `AiAgentOrchestrator.buildSystemPrompt()`：提示词从 7 节 77 行压缩为 4 节 23 行（约 **-70%**）
+  - 删除：【协作原则】7 条、【工具使用策略】9 条、【输出要求】7 条、【执行操作准则】4 条、【强制格式】
+  - 保留：【工具】13 个简述列表 + 【回答规则】6 条 + 【富媒体（选填）】3 行 + 【追问（选填）】
+  - 首行明确约束：「第1句必须给结论+关键数字，不铺垫背景，不捏造数据」
+  - 追问从「强制3个」改为「末尾选填2个」，减少格式套话
+- `GlobalAiAssistant/index.tsx`：欢迎语从 6 行功能介绍 → 1 行要点（`我是小云，你的运营助理。点快捷入口或直接输入问题 👇`）
+
+**对系统的帮助**：
+- ✅ 小云回答更直接：第一句必须是结论+数字，不再先铺一段背景介绍
+- ✅ 减少 LLM token 消耗约 60%（prompt 从 ~5000 字符缩到 ~1900 字符）
+- ✅ 对话框打开时不再显示功能列表"推销文案"，界面更清爽
+- ✅ 去掉冗余规则，减少 LLM"过度遵守规则"导致的罗列式回答
+
+---
+
 ## 2026-03-15
+
+### 🔴 fix(cloud-hotfix): 修复生产下单空指针，并为 BOM/尺寸图片字段补启动自愈
+
+**问题**：云端在最新一轮发布后同时出现两类 500：
+- `POST /api/production/order` 报 `productionOrderService is null`
+- `/api/style/bom/list`、`/api/style/size/list`、`/api/intelligence/style-profile`、`/api/intelligence/material-shortage` 连锁 500
+
+**根因**：
+- `ProductionOrderOrchestrator` 中 `productionOrderService` 注入丢失，导致生产下单直接空指针
+- `StyleBom`、`StyleSize` 实体已经新增 `imageUrls` 字段，但云端表如果尚未执行 `image_urls` 迁移，MyBatis 查询整行时会直接触发 Unknown column，进一步拖垮 BOM、尺寸、款式画像和缺料预测链路
+
+**修复**：
+- 补回 `ProductionOrderOrchestrator.productionOrderService` 的 `@Autowired`
+- `DbColumnRepairRunner` 新增启动自愈：
+  - `t_style_bom.image_urls`
+  - `t_style_size.image_urls`
+- `StyleTableMigrator` 同步补齐：
+  - 新建表 SQL 增加 `image_urls`
+  - 存量表迁移自动补列
+- 结构健康检查把这两列改为 `autoRepairCovered=true`
+
+**对系统的帮助**：
+- ✅ 生产下单恢复，不再因为编排器注入缺失直接 500
+- ✅ 云端即使漏执行图片字段迁移，服务启动时也能自愈补列
+- ✅ BOM 列表、尺寸表、款式智能档案、缺料预测这一串接口会同时恢复
 
 ### 🖼️ feat(style-print-images): BOM 和尺寸表支持图片列保存与打印联动
 
