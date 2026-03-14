@@ -17,6 +17,7 @@
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | 见「权限控制模式」 |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | 见「第三步：编排层规划」 |
 | 🔴 P0 | **代码与数据库不同步** | Entity 新增字段无 Flyway / Flyway 新增列无 Entity | Flyway 链断裂 UNknown column 500 | 见「推送前强制三步验证」 |
+| 🔴 P0 | **修改已执行的 Flyway 脚本** | 编辑任何已在云端 `flyway_schema_history` 中有记录的 V*.sql 文件内容 | **checksum不匹配 → Flyway启动失败 → 全系统所有API 500** | 见「Flyway 铁则」 |
 | 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | 见「文件大小限制」 |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | 见「快速判断：什么时候新建 Orchestrator」 |
 
@@ -1122,6 +1123,23 @@ git push upstream main
 
 **关键约束**：云端 `FLYWAY_ENABLED=true`（见 `cloudbaserc.json`），所有 Flyway 迁移脚本（`V*.sql`）**会自动执行**。  
 **任何脚本失败 → Spring Boot 启动失败 → 所有新接口 404（旧容器继续服务）**
+
+### 🔴 Flyway 铁则（违反 = 全系统 500，无一例外）
+
+🚨 **绝对禁止修改已执行过的 Flyway 脚本文件内容！**
+
+Flyway 在每次启动时对 `flyway_schema_history` 中所有已执行脚本做 **checksum 校验**。  
+只要文件内容有任何变化（哪怕只改一个空格），校验就会**失败 → Flyway 拒绝启动 → Spring Boot context 不初始化 → ALL API 500**。
+
+**触发案例（2026-04-21 全系统崩溃）**：  
+commit `931d79e2` 修改了 3 个已执行脚本（V20260221b、V47、V20260314001），  
+改动方式仅是"添加 @tbl 存在性守卫来增强幂等性"。  
+结果：Flyway checksum 不匹配 → 全部 API 500 → 持续约 5+ 小时。
+
+**正确做法**：
+- ✅ 已执行脚本发现问题 → 创建**新版本号脚本**来补偿（如 `V20260422001__fix_xxx.sql`）  
+- ✅ 新逻辑放新脚本，旧脚本永远保持原始内容不变  
+- ❌ 禁止：编辑任何已推送到 main 且可能已部署过的 V*.sql 文件
 
 **强制规范**：
 1. `CREATE TABLE` 必须用 `CREATE TABLE IF NOT EXISTS`

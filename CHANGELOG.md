@@ -1,3 +1,33 @@
+## 2026-04-21
+
+### 🔴 fix(flyway): 还原3个已执行脚本 — 消除checksum不匹配导致的**全系统500**
+
+**根因诊断**：commit `931d79e2` 修改了3个云端 Flyway 已经成功执行过的脚本内容，
+导致 `flyway_schema_history` 中记录的 checksum 与文件现有内容不一致。
+Flyway 在下一次部署启动时检测到 checksum 不匹配 → **拒绝启动** → Spring Boot context
+无法初始化 → **全部 API 均返回 500**（不只是个别接口）。
+
+**3个被修改（已导致checksum不匹配）的脚本**：
+
+| 脚本 | 修改原因（931d79e2）| 后果 |
+|------|-------------------|------|
+| `V20260221b__consolidate_all_missing_migrations.sql` | 为 t_material_database 的 tenant_id 添加 @tbl 存在性守卫 | checksum不匹配 |
+| `V47__add_material_database_missing_columns.sql` | 5个列的 INFORMATION_SCHEMA 判断改写为含 @tbl 守卫版 | checksum不匹配 |
+| `V20260314001__add_material_database_extra_fields.sql` | 4个列的 INFORMATION_SCHEMA 判断改写为含 @tbl 守卫版 | checksum不匹配 |
+
+**修复方式**：`git checkout 931d79e2^ -- <file>` 还原3个文件到修改前内容，
+使文件 checksum 与云端 `flyway_schema_history` 记录重新对齐。
+
+**对系统的帮助**：
+- ✅ Flyway 正常启动，Spring Boot context 初始化成功
+- ✅ 全部 API 恢复正常（production/order/list、style/info/list 等）
+- ✅ 后续5个新脚本（V20260418001~V20260421001）正常执行，补齐所有缺失列
+- 📌 **铁血规律新增**：已在 copilot-instructions 中补充 P0 禁止项：「禁止修改已在云端执行过的 Flyway 脚本内容」
+
+commit: `db7db109` | 推送时间：2026-04-21 | upstream/main
+
+---
+
 ## 2026-04-20
 
 ### 🛡️ audit(db-flyway): 全系统 Entity-DB 一致性审计（112个实体类扫描完毕）
