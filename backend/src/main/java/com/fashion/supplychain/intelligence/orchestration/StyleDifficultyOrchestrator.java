@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
+import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -62,6 +64,9 @@ public class StyleDifficultyOrchestrator {
     @Autowired
     private CosService cosService;
 
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
+
     @Value("${fashion.upload-dir:./uploads}")
     private String uploadPath;
 
@@ -95,7 +100,19 @@ public class StyleDifficultyOrchestrator {
         if (style == null) {
             return defaultAssessment();
         }
-        return assessWithAi(style, coverUrl);
+        // 如果前端未传 coverUrl 且 style.cover 也为空，则尝试从附件表取第一张图
+        // （通过款式详情上传的图片存在 t_style_attachment，style.cover 本身为空）
+        String effectiveCoverUrl = coverUrl;
+        if ((effectiveCoverUrl == null || effectiveCoverUrl.isBlank())
+                && (style.getCover() == null || style.getCover().isBlank())) {
+            List<StyleAttachment> attachments = styleAttachmentService.listByStyleId(String.valueOf(styleId));
+            if (attachments != null && !attachments.isEmpty()) {
+                effectiveCoverUrl = attachments.get(0).getFileUrl();
+                log.info("[StyleDifficulty] style.cover为空，从附件表回退第一张图: styleId={}, url={}",
+                        styleId, effectiveCoverUrl);
+            }
+        }
+        return assessWithAi(style, effectiveCoverUrl);
     }
 
     /**
@@ -519,8 +536,12 @@ public class StyleDifficultyOrchestrator {
      */
     private String resolveImageUrlForVision(String rawUrl) {
         if (rawUrl == null || rawUrl.isBlank()) return null;
-        // 已是公网 URL，直接透传
+        // 已是公网 URL
         if (rawUrl.startsWith("https://") || rawUrl.startsWith("http://")) {
+            // COS 私有桶直链：Doubao 无法直接访问，须转为预签名 URL
+            if (rawUrl.contains(".cos.") && rawUrl.contains(".myqcloud.com/")) {
+                return resolveCosHttpsUrl(rawUrl);
+            }
             return rawUrl;
         }
         // 解析相对路径：/api/file/tenant-download/{tenantId}/{filename}
@@ -553,6 +574,39 @@ public class StyleDifficultyOrchestrator {
         log.warn("[StyleDifficulty][imageResolve] 无法识别的 URL 格式，跳过视觉: {}",
                 rawUrl.substring(0, Math.min(60, rawUrl.length())));
         return null;
+    }
+
+    /**
+     * 将 COS 私有桶直链（https://xxx.cos.region.myqcloud.com/tenants/{tenantId}/{filename}）
+     * 转换为 Doubao 可访问的预签名 URL。
+     * 若 URL 格式无法解析则原样返回（兜底透传，避免彻底失败）。
+     */
+    private String resolveCosHttpsUrl(String cosUrl) {
+        try {
+            int keyStart = cosUrl.indexOf(".myqcloud.com/") + ".myqcloud.com/".length();
+            String cosKey = cosUrl.substring(keyStart);
+            int qMark = cosKey.indexOf('?');
+            if (qMark > 0) cosKey = cosKey.substring(0, qMark); // 去掉已有的查询参数
+            if (cosKey.startsWith("tenants/")) {
+                String rest = cosKey.substring("tenants/".length());
+                int slashIdx = rest.indexOf('/');
+                if (slashIdx > 0) {
+                    Long tenantId = Long.parseLong(rest.substring(0, slashIdx));
+                    String filename = rest.substring(slashIdx + 1);
+                    if (cosService.isEnabled()) {
+                        String presigned = cosService.getPresignedUrl(tenantId, filename);
+                        log.info("[StyleDifficulty][imageResolve] COS直链 → 预签名URL (tenantId={}, file={})", tenantId, filename);
+                        return presigned;
+                    }
+                    // COS 未启用（本地开发）→ 走本地文件读取
+                    return readLocalFileAsBase64DataUri(tenantId, filename);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[StyleDifficulty][imageResolve] COS直链解析失败，透传原始URL: {}", e.getMessage());
+        }
+        // 无法解析结构，透传原始 URL（外部图片 / 其他平台 CDN）
+        return cosUrl;
     }
 
     /**

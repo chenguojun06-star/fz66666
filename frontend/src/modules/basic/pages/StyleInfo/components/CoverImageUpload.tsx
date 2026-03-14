@@ -190,9 +190,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   };
 
   // 新建模式使用本地预览，否则使用服务器图片
+  // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底显示
   const displayImages = isNewMode
     ? localPreviewUrls.map((url, i) => ({ fileUrl: url, id: `local-${i}`, isLocal: true, localIndex: i }))
-    : images;
+    : images.length > 0
+      ? images
+      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []);
   const currentImage = displayImages[currentIndex];
   const isUploadEnabled = isNewMode || (enabled && styleId);
 
@@ -245,6 +248,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           const img = displayImages[idx];
           const hover = hoverIndex === idx;
           const canOperate = isNewMode || enabled;
+          const isCoverFallback = !!(img as any)?.isCoverFallback;
           return (
             <div
               key={idx}
@@ -272,8 +276,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onClick={() => setCurrentIndex(idx)}
                   />
-                  {/* Hover显示操作按钮 */}
-                  {hover && canOperate && (
+                  {/* Hover显示操作按钮（兜底参考图不可编辑） */}
+                  {hover && canOperate && !isCoverFallback && (
                     <div
                       style={{
                         position: 'absolute',
@@ -334,20 +338,20 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                       </div>
                     </div>
                   )}
-                  {/* 主图标记 */}
+                  {/* 主图/参考图标记 */}
                   {currentIndex === idx && (
                     <div
                       style={{
                         position: 'absolute',
                         top: 2,
                         right: 2,
-                        background: 'var(--color-warning)',
+                        background: isCoverFallback ? 'var(--neutral-text-secondary)' : 'var(--color-warning)',
                         color: 'var(--neutral-white)',
                         fontSize: 10,
                         padding: '2px 6px',
                       }}
                     >
-                      主图
+                      {isCoverFallback ? '参考图' : '主图'}
                     </div>
                   )}
                 </>
