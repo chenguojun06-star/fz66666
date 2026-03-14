@@ -26,6 +26,7 @@ type MatrixCell = {
 
 type MatrixRow = {
   key: string;
+  groupName: string;
   partName: string;
   measureMethod: string;
   tolerance: number;
@@ -33,6 +34,23 @@ type MatrixRow = {
   cells: Record<string, MatrixCell>;
   /** 部位参考图片 URLs（JSON 字符串数组反序列化后） */
   imageUrls?: string[];
+};
+
+type GroupToneMeta = {
+  key: 'upper' | 'lower' | 'other';
+  tint: string;
+  tagBg: string;
+  tagColor: string;
+};
+
+type DisplayRow = MatrixRow & {
+  resolvedGroupName: string;
+  groupToneMeta: GroupToneMeta;
+  isGroupStart: boolean;
+  isImageChunkStart: boolean;
+  imageChunkSpan: number;
+  chunkImageUrls: string[];
+  chunkRowKeys: string[];
 };
 
 const splitSizeNames = (name: string) => {
@@ -44,6 +62,64 @@ const splitSizeNames = (name: string) => {
     .filter(Boolean);
   if (!parts.length) return [];
   return parts;
+};
+
+const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
+  upper: {
+    key: 'upper',
+    tint: '#f7fbff',
+    tagBg: '#e8f3ff',
+    tagColor: '#1677ff',
+  },
+  lower: {
+    key: 'lower',
+    tint: '#fffaf2',
+    tagBg: '#fff1db',
+    tagColor: '#d48806',
+  },
+  other: {
+    key: 'other',
+    tint: '#fafafa',
+    tagBg: '#f0f0f0',
+    tagColor: '#595959',
+  },
+};
+
+const inferGroupNameFromPart = (partName: string): string => {
+  const normalized = String(partName || '').replace(/\s+/g, '').toLowerCase();
+  if (!normalized) return '其他区';
+
+  const upperKeywords = [
+    '衣长', '胸围', '肩宽', '袖长', '袖口', '袖肥', '领围', '领宽', '领深', '门襟', '胸宽', '摆围', '下摆', '前长', '后长', '前胸', '后背', '袖窿',
+  ];
+  const lowerKeywords = [
+    '裤长', '腰围', '臀围', '前浪', '后浪', '脚口', '裤口', '腿围', '小腿围', '大腿围', '膝围', '坐围', '裆', '裙长', '裙摆',
+  ];
+
+  if (upperKeywords.some((keyword) => normalized.includes(keyword))) {
+    return '上装区';
+  }
+  if (lowerKeywords.some((keyword) => normalized.includes(keyword))) {
+    return '下装区';
+  }
+  return '其他区';
+};
+
+const resolveGroupName = (groupName?: string, partName?: string) => {
+  const explicit = String(groupName || '').trim();
+  if (explicit) return explicit;
+  return inferGroupNameFromPart(String(partName || ''));
+};
+
+const resolveGroupToneMeta = (groupName: string): GroupToneMeta => {
+  const normalized = String(groupName || '').replace(/\s+/g, '').toLowerCase();
+  if (normalized.includes('上装')) {
+    return GROUP_TONE_METAS.upper;
+  }
+  if (normalized.includes('下装') || normalized.includes('裤') || normalized.includes('裙')) {
+    return GROUP_TONE_METAS.lower;
+  }
+  return GROUP_TONE_METAS.other;
 };
 
 const StyleSizeTab: React.FC<Props> = ({
@@ -61,7 +137,6 @@ const StyleSizeTab: React.FC<Props> = ({
   const [sizeColumns, setSizeColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<MatrixRow[]>([]);
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
-  const [sizeImageGroups, setSizeImageGroups] = useState<Record<number, string[]>>({});
   const originalRef = useRef<StyleSize[]>([]);
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
@@ -80,6 +155,51 @@ const StyleSizeTab: React.FC<Props> = ({
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
   const { message } = App.useApp();
+
+  const displayRows = useMemo<DisplayRow[]>(() => {
+    const sortedRows = rows
+      .map((row, index) => ({ row, index }))
+      .sort((a, b) => {
+        const sortDiff = toNumberSafe(a.row.sort) - toNumberSafe(b.row.sort);
+        return sortDiff !== 0 ? sortDiff : a.index - b.index;
+      })
+      .map((item) => item.row);
+
+    const groupOrder: string[] = [];
+    const grouped = new Map<string, MatrixRow[]>();
+    sortedRows.forEach((row) => {
+      const groupName = resolveGroupName(row.groupName, row.partName);
+      if (!grouped.has(groupName)) {
+        grouped.set(groupName, []);
+        groupOrder.push(groupName);
+      }
+      grouped.get(groupName)!.push(row);
+    });
+
+    const flatRows: DisplayRow[] = [];
+    groupOrder.forEach((groupName) => {
+      const groupRows = grouped.get(groupName) || [];
+      const groupToneMeta = resolveGroupToneMeta(groupName);
+      groupRows.forEach((row, localIndex) => {
+        const chunkStart = Math.floor(localIndex / 5) * 5;
+        const chunkRows = groupRows.slice(chunkStart, chunkStart + 5);
+        const chunkImageUrls =
+          chunkRows.find((candidate) => Array.isArray(candidate.imageUrls) && candidate.imageUrls.length > 0)?.imageUrls || [];
+        flatRows.push({
+          ...row,
+          resolvedGroupName: groupName,
+          groupToneMeta,
+          isGroupStart: localIndex === 0,
+          isImageChunkStart: localIndex % 5 === 0,
+          imageChunkSpan: localIndex % 5 === 0 ? chunkRows.length : 0,
+          chunkImageUrls: chunkImageUrls.slice(0, 2),
+          chunkRowKeys: chunkRows.map((item) => item.key),
+        });
+      });
+    });
+
+    return flatRows;
+  }, [rows]);
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -206,13 +326,17 @@ const StyleSizeTab: React.FC<Props> = ({
         const byPart = new Map<string, StyleSize[]>();
         normalizedList.forEach((it) => {
           const part = String(it.partName || '').trim();
-          if (!byPart.has(part)) byPart.set(part, []);
-          byPart.get(part)!.push(it);
+          const groupName = resolveGroupName((it as any)?.groupName as string, part);
+          const mapKey = `${groupName}::${part}`;
+          if (!byPart.has(mapKey)) byPart.set(mapKey, []);
+          byPart.get(mapKey)!.push(it);
         });
 
         const nextRows: MatrixRow[] = Array.from(byPart.entries())
-          .map(([partName, items]) => {
-            const key = partName || (items.map((x) => String(x.id || '')).filter(Boolean)[0] || `tmp-${Date.now()}-${Math.random()}`);
+          .map(([mapKey, items]) => {
+            const partName = String(items[0]?.partName || '').trim();
+            const groupName = resolveGroupName((items[0] as any)?.groupName as string, partName);
+            const key = items.map((x) => String(x.id || '')).filter(Boolean)[0] || mapKey || `tmp-${Date.now()}-${Math.random()}`;
             const measureMethod = items.length ? String((items[0] as Record<string, unknown>).measureMethod || '') : '';
             const tolerance = items.length ? toNumberSafe((items[0] as Record<string, unknown>).tolerance) : 0;
             const sort = Math.min(...items.map((x) => toNumberSafe((x as Record<string, unknown>).sort)), 0);
@@ -224,24 +348,15 @@ const StyleSizeTab: React.FC<Props> = ({
                 value: cell?.standardValue != null ? toNumberSafe(cell.standardValue) : 0,
               };
             });
-            // 从任意一行取 imageUrls（同部位各行值相同）
             const rawImageUrls = (items[0] as any)?.imageUrls;
             let imageUrls: string[] | undefined;
             try { imageUrls = rawImageUrls ? JSON.parse(rawImageUrls) : undefined; } catch { imageUrls = undefined; }
-            return { key, partName, measureMethod, tolerance, sort, cells, imageUrls };
+            return { key, groupName, partName, measureMethod, tolerance, sort, cells, imageUrls };
           })
           .sort((a, b) => (toNumberSafe(a.sort) || 0) - (toNumberSafe(b.sort) || 0));
 
         setSizeColumns(sizes);
         setRows(nextRows);
-        const grps: Record<number, string[]> = {};
-        nextRows.forEach((r, idx) => {
-          const gi = Math.floor(idx / 5);
-          if (r.imageUrls && r.imageUrls.length > 0 && !grps[gi]) {
-            grps[gi] = r.imageUrls.slice(0, 2);
-          }
-        });
-        setSizeImageGroups(grps);
         setDeletedIds([]);
       }
     } catch (error) {
@@ -286,6 +401,10 @@ const StyleSizeTab: React.FC<Props> = ({
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, partName } : r)));
   };
 
+  const updateGroupName = (rowKey: string, groupName: string) => {
+    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, groupName } : r)));
+  };
+
   const updateMeasureMethod = (rowKey: string, measureMethod: string) => {
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, measureMethod } : r)));
   };
@@ -310,15 +429,24 @@ const StyleSizeTab: React.FC<Props> = ({
     );
   };
 
+  const setChunkImageUrls = (chunkRowKeys: string[], nextImages: string[]) => {
+    const rowKeySet = new Set(chunkRowKeys);
+    const sanitized = nextImages.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 2);
+    setRows((prev) =>
+      prev.map((row) => (rowKeySet.has(row.key) ? { ...row, imageUrls: sanitized.length ? sanitized : undefined } : row)),
+    );
+  };
+
   const handleAddPart = () => {
     if (readOnly) return;
     const nextSort = rows.length ? Math.max(...rows.map((r) => toNumberSafe(r.sort))) + 1 : 1;
     const key = `tmp-part-${Date.now()}-${Math.random()}`;
+    const defaultGroupName = rows.length ? resolveGroupName(rows[rows.length - 1]?.groupName, rows[rows.length - 1]?.partName) : '上装区';
     const cells: Record<string, MatrixCell> = {};
     sizeColumns.forEach((sn) => {
       cells[sn] = { value: 0 };
     });
-    setRows((prev) => [...prev, { key, partName: '', measureMethod: '', tolerance: 0, sort: nextSort, cells }]);
+    setRows((prev) => [...prev, { key, groupName: defaultGroupName, partName: '', measureMethod: '', tolerance: 0, sort: nextSort, cells }]);
     if (!editMode) enterEdit();
   };
 
@@ -461,9 +589,9 @@ const StyleSizeTab: React.FC<Props> = ({
       }
 
       const tasks: Array<Promise<any>> = [];
-      rows.forEach((r, rowIdx) => {
-        const grpImgs = sizeImageGroups[Math.floor(rowIdx / 5)] || [];
-        const imageUrlsJson = grpImgs.length > 0 ? JSON.stringify(grpImgs) : null;
+      rows.forEach((r) => {
+        const groupName = resolveGroupName(r.groupName, r.partName);
+        const imageUrlsJson = r.imageUrls && r.imageUrls.length > 0 ? JSON.stringify(r.imageUrls.slice(0, 2)) : null;
         sizeColumns.forEach((sn) => {
           const cell = r.cells[sn];
           const id = cell?.id;
@@ -472,6 +600,7 @@ const StyleSizeTab: React.FC<Props> = ({
             styleId,
             sizeName: sn,
             partName: r.partName,
+            groupName,
             measureMethod: r.measureMethod,
             standardValue: toNumberSafe(cell?.value),
             tolerance: toNumberSafe(r.tolerance),
@@ -485,6 +614,7 @@ const StyleSizeTab: React.FC<Props> = ({
               !old ||
               String(old.sizeName || '').trim() !== sn ||
               String(old.partName || '').trim() !== String(r.partName || '').trim() ||
+              String((old as Record<string, unknown>).groupName || '').trim() !== String(payload.groupName || '').trim() ||
               String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
               toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
               toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
@@ -529,16 +659,12 @@ const StyleSizeTab: React.FC<Props> = ({
         key: 'groupImage',
         dataIndex: '__groupImage',
         width: 180,
-        onCell: (_rec: any, rowIndex?: number) => {
-          const ri = rowIndex ?? 0;
-          const isFirst = ri % 5 === 0;
-          const span = isFirst ? Math.min(5, rows.length - Math.floor(ri / 5) * 5) : 0;
-          return { rowSpan: span };
+        onCell: (record: DisplayRow) => {
+          return { rowSpan: record.isImageChunkStart ? record.imageChunkSpan : 0 };
         },
-        render: (_: any, _record: MatrixRow, rowIndex: number) => {
-          if (rowIndex % 5 !== 0) return null;
-          const gi = Math.floor(rowIndex / 5);
-          const imgs = sizeImageGroups[gi] || [];
+        render: (_: any, record: DisplayRow) => {
+          if (!record.isImageChunkStart) return null;
+          const imgs = record.chunkImageUrls || [];
           const blockHeight = imgs.length > 1 ? 108 : 220;
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', justifyContent: 'center', width: '100%', minHeight: 240, padding: '8px 0' }}>
@@ -554,7 +680,7 @@ const StyleSizeTab: React.FC<Props> = ({
                     />
                     {editableMode && (
                       <DeleteOutlined
-                        onClick={() => setSizeImageGroups((prev) => ({ ...prev, [gi]: (prev[gi] || []).filter((_, ii) => ii !== i) }))}
+                        onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
                         style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 10, cursor: 'pointer' }}
                       />
                     )}
@@ -571,7 +697,7 @@ const StyleSizeTab: React.FC<Props> = ({
                     try {
                       const res: any = await (api as any).post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                       if (res?.code === 200 && res?.data) {
-                        setSizeImageGroups((prev) => ({ ...prev, [gi]: [...(prev[gi] || []), String(res.data)].slice(0, 2) }));
+                        setChunkImageUrls(record.chunkRowKeys, [...imgs, String(res.data)].slice(0, 2));
                       } else {
                         antMsg.error('图片上传失败');
                       }
@@ -589,10 +715,46 @@ const StyleSizeTab: React.FC<Props> = ({
         },
       },
       {
+        title: '分组',
+        dataIndex: 'groupName',
+        width: 160,
+        render: (_: any, record: DisplayRow) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {record.isGroupStart ? (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignSelf: 'flex-start',
+                  padding: '4px 12px',
+                  borderRadius: 10,
+                  background: record.groupToneMeta.tagBg,
+                  color: record.groupToneMeta.tagColor,
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 600,
+                  lineHeight: 1.6,
+                  boxShadow: `inset 0 0 0 1px ${record.groupToneMeta.tagColor}22`,
+                }}
+              >
+                {record.resolvedGroupName}
+              </div>
+            ) : null}
+            {editableMode ? (
+              <Input
+                value={String(record.groupName || record.resolvedGroupName || '')}
+                placeholder="如：上装区 / 下装区"
+                onChange={(e) => updateGroupName(record.key, e.target.value)}
+              />
+            ) : (
+              <span style={{ color: record.groupToneMeta.tagColor, fontWeight: 500 }}>{record.resolvedGroupName}</span>
+            )}
+          </div>
+        ),
+      },
+      {
         title: '部位(cm)',
         dataIndex: 'partName',
         width: 180,
-        render: (_: any, record: MatrixRow) =>
+        render: (_: any, record: DisplayRow) =>
           editableMode ? (
             <Input value={record.partName} placeholder="如：胸围" onChange={(e) => updatePartName(record.key, e.target.value)} />
           ) : (
@@ -702,10 +864,23 @@ const StyleSizeTab: React.FC<Props> = ({
     ];
 
     return [...left, ...sizeCols, ...right];
-  }, [editMode, readOnly, rows, sizeColumns, sizeImageGroups]);
+  }, [editMode, readOnly, sizeColumns, displayRows]);
 
   return (
     <div>
+      <style>{`
+        .style-size-table .ant-table-tbody > tr.style-size-group-start > td {
+          border-top: 12px solid #f5f7fa;
+        }
+
+        .style-size-table .ant-table-tbody > tr.style-size-group-upper > td {
+          background: #f7fbff;
+        }
+
+        .style-size-table .ant-table-tbody > tr.style-size-group-lower > td {
+          background: #fffaf2;
+        }
+      `}</style>
       {/* 统一状态控制栏 */}
       {!simpleView && (
         <StyleStageControlBar
@@ -823,12 +998,22 @@ const StyleSizeTab: React.FC<Props> = ({
       )}
 
       <ResizableTable
+        className="style-size-table"
         bordered
-        dataSource={rows}
+        dataSource={displayRows}
         columns={columns as any}
         pagination={false}
         loading={loading}
         rowKey="key"
+        rowClassName={(_record, rowIndex) => {
+          const row = displayRows[rowIndex];
+          if (!row) return '';
+          const classes = [`style-size-group-${row.groupToneMeta.key}`];
+          if (row.isGroupStart) {
+            classes.push('style-size-group-start');
+          }
+          return classes.join(' ');
+        }}
         scroll={{ x: 'max-content' }}
         tableLayout="auto"
         storageKey={`style-size-v2-${String(styleId)}`}

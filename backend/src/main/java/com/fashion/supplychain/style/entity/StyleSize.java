@@ -34,6 +34,11 @@ public class StyleSize {
      */
     private String partName;
 
+    /**
+     * 尺寸分组名（如：上装区 / 下装区 / 马甲区）
+     */
+    private String groupName;
+
     private String measureMethod;
 
     /**

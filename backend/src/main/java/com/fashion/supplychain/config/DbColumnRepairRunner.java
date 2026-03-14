@@ -55,6 +55,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
+                repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '尺寸分组名，如上装区/下装区' ");
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,

@@ -80,6 +80,7 @@ public class StyleTableMigrator {
                 "style_id BIGINT NOT NULL COMMENT '款号ID'," +
                 "size_name VARCHAR(20) NOT NULL COMMENT '尺码名称'," +
                 "part_name VARCHAR(50) NOT NULL COMMENT '部位名称'," +
+                "group_name VARCHAR(50) COMMENT '尺寸分组名，如上装区/下装区'," +
                 "measure_method VARCHAR(50) COMMENT '度量方式'," +
                 "standard_value DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '标准数值'," +
                 "tolerance DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '公差'," +
@@ -228,6 +229,8 @@ public class StyleTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN tolerance DECIMAL(10,2) NOT NULL DEFAULT 0");
         if (!dbHelper.columnExists("t_style_size", "image_urls"))
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN image_urls TEXT COMMENT '部位参考图片URLs(JSON数组)'");
+        if (!dbHelper.columnExists("t_style_size", "group_name"))
+            dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN group_name VARCHAR(50) COMMENT '尺寸分组名，如上装区/下装区'");
         if (!dbHelper.columnExists("t_style_size", "sort"))
             dbHelper.execSilently("ALTER TABLE t_style_size ADD COLUMN sort INT NOT NULL DEFAULT 0");
         if (!dbHelper.columnExists("t_style_size", "measure_method"))

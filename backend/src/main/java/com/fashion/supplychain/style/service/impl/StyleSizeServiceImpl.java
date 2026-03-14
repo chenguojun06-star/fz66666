@@ -18,11 +18,33 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
     private JdbcTemplate jdbcTemplate;
 
     private volatile Boolean imageUrlsColumnExists;
+    private volatile Boolean groupNameColumnExists;
 
     @Override
     public List<StyleSize> listByStyleId(Long styleId) {
+        boolean includeImageUrls = hasImageUrlsColumn();
+        boolean includeGroupName = hasGroupNameColumn();
         LambdaQueryWrapper<StyleSize> queryWrapper;
-        if (hasImageUrlsColumn()) {
+        if (includeImageUrls && includeGroupName) {
+            queryWrapper = new LambdaQueryWrapper<StyleSize>()
+                .select(
+                    StyleSize::getId,
+                    StyleSize::getStyleId,
+                    StyleSize::getSizeName,
+                    StyleSize::getPartName,
+                    StyleSize::getGroupName,
+                    StyleSize::getMeasureMethod,
+                    StyleSize::getStandardValue,
+                    StyleSize::getTolerance,
+                    StyleSize::getSort,
+                    StyleSize::getCreateTime,
+                    StyleSize::getUpdateTime,
+                    StyleSize::getImageUrls,
+                    StyleSize::getTenantId
+                )
+                .eq(StyleSize::getStyleId, styleId)
+                .orderByAsc(StyleSize::getSort);
+        } else if (includeImageUrls) {
             queryWrapper = new LambdaQueryWrapper<StyleSize>()
                 .select(
                     StyleSize::getId,
@@ -36,6 +58,24 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
                     StyleSize::getCreateTime,
                     StyleSize::getUpdateTime,
                     StyleSize::getImageUrls,
+                    StyleSize::getTenantId
+                )
+                .eq(StyleSize::getStyleId, styleId)
+                .orderByAsc(StyleSize::getSort);
+        } else if (includeGroupName) {
+            queryWrapper = new LambdaQueryWrapper<StyleSize>()
+                .select(
+                    StyleSize::getId,
+                    StyleSize::getStyleId,
+                    StyleSize::getSizeName,
+                    StyleSize::getPartName,
+                    StyleSize::getGroupName,
+                    StyleSize::getMeasureMethod,
+                    StyleSize::getStandardValue,
+                    StyleSize::getTolerance,
+                    StyleSize::getSort,
+                    StyleSize::getCreateTime,
+                    StyleSize::getUpdateTime,
                     StyleSize::getTenantId
                 )
                 .eq(StyleSize::getStyleId, styleId)
@@ -59,6 +99,25 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
                 .orderByAsc(StyleSize::getSort);
         }
         return list(queryWrapper);
+    }
+
+    private boolean hasGroupNameColumn() {
+        Boolean cached = groupNameColumnExists;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_style_size' AND COLUMN_NAME = 'group_name'",
+                    Integer.class
+            );
+            boolean exists = count != null && count > 0;
+            groupNameColumnExists = exists;
+            return exists;
+        } catch (Exception ex) {
+            groupNameColumnExists = false;
+            return false;
+        }
     }
 
     private boolean hasImageUrlsColumn() {

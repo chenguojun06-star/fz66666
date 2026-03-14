@@ -101,6 +101,7 @@ export interface StyleSize extends Record<string, unknown> {
   styleId: string | number;
   sizeName: string;
   partName: string;
+  groupName?: string;
   measureMethod?: string;
   standardValue: number;
   tolerance: number;
