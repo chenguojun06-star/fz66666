@@ -13,9 +13,8 @@ import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
-import { StyleAttachmentsButton } from '@/components/StyleAssets';
+import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import api from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
 import { formatDateTime } from '@/utils/datetime';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -517,23 +516,13 @@ const PatternProduction: React.FC = () => {
       dataIndex: 'coverImage',
       key: 'coverImage',
       width: 80,
-      render: (coverImage: string) => (
-        <div style={{
-          width: 60,
-          height: 60,
-
-          overflow: 'hidden',
-          background: 'var(--color-bg-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          {coverImage ? (
-            <img src={getFullAuthedFileUrl(coverImage)} alt="样板图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>无图</span>
-          )}
-        </div>
+      render: (_: string, record: any) => (
+        <StyleCoverThumb
+          styleId={record.styleId}
+          styleNo={record.styleNo}
+          src={record.coverImage || null}
+          size={60}
+        />
       ),
     },
     {

@@ -135,6 +135,13 @@
             <version>${flyway.version}</version>
         </dependency>
 
+        <!-- Flyway 9.x MySQL 8.0 支持需要单独 artifact -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
         <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -7,7 +7,7 @@ import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-public class V4__cleanup_factory_reconciliation_table extends BaseJavaMigration {
+public class V47__cleanup_factory_reconciliation_table extends BaseJavaMigration {
 
     @Override
     public void migrate(Context context) throws Exception {

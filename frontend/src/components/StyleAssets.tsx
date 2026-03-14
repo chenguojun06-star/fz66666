@@ -35,17 +35,23 @@ export const StyleCoverThumb: React.FC<{
   const [url, setUrl] = React.useState<string | null>(src || null);
   // 加载状态
   const [loading, setLoading] = React.useState(false);
+  // src URL 是否已加载失败（用于触发 fallback 附件查询）
+  const [srcFailed, setSrcFailed] = React.useState(false);
 
-  // 当src变化时更新链接
+  // 当src变化时更新链接并重置失败状态
   React.useEffect(() => {
     setUrl(src || null);
+    setSrcFailed(false);
   }, [src]);
 
-  // 加载款号封面图片（仅在 src 为空时才查询附件 API，避免覆盖有效的 cover URL）
+  // 加载款号封面图片
+  // - src 有值且未失败时：直接使用 src，不查附件 API
+  // - src 为空时：查附件 API（无 cover 字段的款式）
+  // - src 有值但加载失败（srcFailed=true）时：查附件 API 作为 fallback
   React.useEffect(() => {
     let mounted = true;
-    // 已有直接URL（如 cover 字段）时，不再发起附件查询，防止 API 返回空结果后把有效图片覆盖为"无图"
-    if (src) return () => { mounted = false; };
+    // src 有效且未加载失败时，跳过附件查询
+    if (src && !srcFailed) return () => { mounted = false; };
     if (!styleId && !styleNo) return () => { mounted = false; };
 
     (async () => {
@@ -61,22 +67,35 @@ export const StyleCoverThumb: React.FC<{
           if (mounted) setUrl(first);
         }
       } catch {
-        // Intentionally empty
-        // 忽略错误
         if (mounted) setUrl(null);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [styleId, styleNo, src]);
+  }, [styleId, styleNo, src, srcFailed]);
 
   return (
     <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
         <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
-        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setUrl(null)} />
+        <img
+          src={getFullAuthedFileUrl(url)}
+          alt="cover"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={() => {
+            // 判断当前是 src prop 直接给的URL，还是 fallback 附件 API 查出的URL
+            if (url === (src || null) && src && !srcFailed) {
+              // src URL 加载失败 → 标记并触发 fallback 查询附件
+              setSrcFailed(true);
+              setUrl(null);
+            } else {
+              // fallback 附件 URL 也失败 → 直接显示"无图"
+              setUrl(null);
+            }
+          }}
+        />
       ) : (
         <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
