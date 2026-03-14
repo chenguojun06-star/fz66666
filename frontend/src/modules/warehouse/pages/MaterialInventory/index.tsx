@@ -290,32 +290,32 @@ const _MaterialInventory: React.FC = () => {
             </Form.Item>
           )}
           <Form.Item label="物料信息">
-            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%' }}>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>物料编号：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialCode || '-'}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料编号</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.materialCode || '-'}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>物料名称：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialName || '-'}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料名称</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.materialName || '-'}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
-                <span style={{ fontWeight: 600 }}>{getMaterialTypeLabel(instructionTarget?.materialType)}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>类型</div>
+                <div style={{ fontWeight: 600 }}>{getMaterialTypeLabel(instructionTarget?.materialType)}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.supplierName || '-'}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>供应商</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.supplierName || '-'}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.unit || '-'}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>单位</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.unit || '-'}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>颜色：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.color || '-'}</span>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>颜色</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.color || '-'}</div>
               </div>
-            </Space>
+            </div>
 
             {/* 面料属性（仅面料显示） */}
             {instructionTarget?.materialType === '面料' && (
@@ -349,25 +349,25 @@ const _MaterialInventory: React.FC = () => {
               </div>
             )}
           </Form.Item>
-          <Row gutter={12}>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="purchaseQuantity"
-                label="采购数量"
+                label="*采购数量"
                 rules={[{ required: true, message: '请输入采购数量' }]}
               >
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="自动计算为安全库存缺口" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="receiverId"
-                label="采购人"
+                label="*采购人"
                 rules={[{ required: true, message: '请选择采购人' }]}
               >
                 <Select
                   showSearch
-                  placeholder="请选择采购人"
+                  placeholder="自动识别为当前登录用户"
                   options={receiverOptions}
                   onChange={(value) => {
                     const hit = receiverOptions.find((item) => item.value === value);

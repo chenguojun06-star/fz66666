@@ -291,7 +291,15 @@ export function useMaterialInventoryData() {
       return;
     }
     setInstructionTarget(null);
-    instructionForm.resetFields();
+    // 自动回填当前登录用户为采购人
+    const receiverId = String(user?.id || '').trim();
+    const receiverName = String(user?.name || user?.username || '').trim();
+    instructionForm.setFieldsValue({
+      purchaseQuantity: 1,
+      receiverId: receiverId || undefined,
+      receiverName: receiverName || undefined,
+      remark: '',
+    });
     setInstructionVisible(true);
     if (!receiverOptions.length) loadReceivers();
   };
