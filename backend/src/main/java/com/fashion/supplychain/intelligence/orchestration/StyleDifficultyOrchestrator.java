@@ -344,8 +344,8 @@ public class StyleDifficultyOrchestrator {
                         imageUrl.startsWith("data:") ? "base64(" + imageUrl.length() + "字符)" :
                         imageUrl.startsWith("http") ? "http-url" : "other"));
         String imageInsightInstruction = visionFailed
-                ? "必须填写：'视觉图片暂未获取到，评分依据结构化数据（BOM+品类）'"
-                : "一行总结Doubao视觉分析中发现的关键制作难点（50字以内，直接说工艺特征，不要写AI视觉分析这几个字）";
+                ? "必须填写：'封面图暂未获取，评分依据结构化数据（BOM+品类）'"
+                : "用80字以内写三点：①款式大类+颜色/面料 ②最难的1-2个工艺特征 ③制版/缝制注意点。直接给结论，不要介绍性语言。";
 
         String userMessage = String.format(
                 "款式信息：\n" +
@@ -433,7 +433,7 @@ public class StyleDifficultyOrchestrator {
         base.setPricingMultiplier(aiMultiplier);
         base.setKeyFactors(mergedFactors.stream().limit(6).collect(Collectors.toList()));
         base.setImageAnalyzed(true);
-        base.setImageInsight(imageInsight.length() > 300 ? imageInsight.substring(0, 300) : imageInsight);
+        base.setImageInsight(imageInsight.length() > 120 ? imageInsight.substring(0, 120) : imageInsight);
         // 视觉分析成功时，保存 Doubao 原始识别描述供前端展示（用户可直接看到 AI 识别了哪些工艺特征）
         if (!visionFailed) {
             base.setVisionRaw(visionDescription.length() > 400 ? visionDescription.substring(0, 400) : visionDescription);

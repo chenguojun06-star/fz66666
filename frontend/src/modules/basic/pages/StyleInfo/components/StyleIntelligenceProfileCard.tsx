@@ -427,13 +427,8 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     <span style={{ fontSize: 11, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
                   <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
-                  {activeDifficulty.visionRaw && (
-                    <div style={{ fontSize: 11, color: '#262626', marginTop: 3, lineHeight: 1.6, background: 'rgba(114,46,209,0.07)', borderRadius: 4, padding: '4px 6px' }}>
-                      <span style={{ fontWeight: 600, color: '#722ed1', marginRight: 3 }}>🔬 Doubao工艺识别：</span>{activeDifficulty.visionRaw}
-                    </div>
-                  )}
                   {activeDifficulty.imageInsight && (
-                    <div style={{ fontSize: 11, color: '#595959', marginTop: 3, lineHeight: 1.5, background: 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>💬 {activeDifficulty.imageInsight}</div>
+                    <div style={{ fontSize: 11, color: '#595959', marginTop: 3, lineHeight: 1.5, background: 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>🔬 {activeDifficulty.imageInsight}</div>
                   )}
                 </div>
               ) : (
