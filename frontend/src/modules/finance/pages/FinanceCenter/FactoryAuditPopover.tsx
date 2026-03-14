@@ -3,11 +3,6 @@ import { Popover, Progress, Tag, Divider } from 'antd';
 import { RobotOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
-const choose = (seed: number, variants: string[]) => {
-  if (!variants.length) return '';
-  return variants[Math.abs(seed) % variants.length];
-};
-
 interface FactorySummaryRow {
   factoryId: string;
   factoryName: string;
@@ -73,45 +68,17 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
   }, [record, auditedOrderNos]);
 
   const narrative = useMemo(() => {
-    const seed = Math.round(analysis.profitRate * 10)
-      + Math.round(analysis.defectRate * 10)
-      + analysis.auditRate
-      + analysis.totalCount;
     const summary = analysis.auditRate === 100
-      ? choose(seed, [
-        '审核覆盖已闭环，当前重点是确认利润与质量波动是否可接受。',
-        '订单审核已经收口，接下来主要看利润和次品风险有没有隐藏波动。',
-        '这家工厂审核进度已到位，可以把精力放在利润质量的最终确认上。',
-      ])
-      : choose(seed, [
-        '还有订单没审核完，建议先补齐再做终审放行。',
-        '审核链还没闭合，现在推进终审风险会偏高。',
-        '当前不建议直接终审，先把未审核订单处理完更稳。',
-      ]);
+      ? '审核已全部覆盖，重点确认利润和次品率是否在可接受范围。'
+      : '还有订单未审核，建议先补齐再推进终审。';
 
     const painPoint = analysis.profitRate < 0
-      ? choose(seed + 3, [
-        '利润已经转负，说明成本结构或损耗环节需要立即复盘。',
-        '当前最需要警惕的是负利润继续扩大。',
-        '这批数据里利润为负，核心问题不在流程而在成本失衡。',
-      ])
+      ? `利润已为负（${analysis.profitRate.toFixed(1)}%），需立即复盘成本结构。`
       : analysis.defectRate > 3
-      ? choose(seed + 5, [
-        '次品率偏高，返修和损耗会持续侵蚀利润。',
-        '质量波动已经明显，后续结算风险会上升。',
-        '次品控制没压住，利润端会被持续拖慢。',
-      ])
+      ? `次品率 ${analysis.defectRate.toFixed(1)}% 偏高，返修损耗会持续侵蚀利润。`
       : analysis.auditRate < 100
-      ? choose(seed + 7, [
-        '审核链未闭合是当前最大不确定项。',
-        '未审核订单是现阶段最主要的风险源。',
-        '先把审核闭环做完，再谈终审效率更合适。',
-      ])
-      : choose(seed + 11, [
-        '当前主要关注利润和质量是否继续稳定。',
-        '目前没有单点爆雷，重点是守住利润和质量底线。',
-        '这批单看起来平稳，核心是防止质量回摆。',
-      ]);
+      ? '审核链未闭合，终审前须先补齐未审核订单。'
+      : '利润和次品率均正常，保持当前状态。';
 
     const execute = analysis.auditRate < 100
       ? '先把未审核订单补齐，再进入终审。'

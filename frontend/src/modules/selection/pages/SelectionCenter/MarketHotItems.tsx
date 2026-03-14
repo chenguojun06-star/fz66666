@@ -7,11 +7,6 @@ import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH
 const { Text } = Typography;
 const { Search } = Input;
 
-const choose = (seed: number, variants: string[]) => {
-  if (!variants.length) return '';
-  return variants[Math.abs(seed) % variants.length];
-};
-
 const HOT_KEYWORDS = ['连衣裙', '卫衣', '外套', '牛仔裤', 'T恤', '衬衫', '半身裙', '针织衫', '风衣', '西装', '夹克', '羽绒服'];
 const SEARCH_HISTORY_STORAGE_KEY = 'selection-market-search-history';
 
@@ -65,26 +60,13 @@ const buildMarketInsight = (
   const trendScore = analysis?.trendScore ?? -1;
   const lowPrice = Boolean(price && avg > 0 && price < avg * 0.8);
   const highPrice = Boolean(price && avg > 0 && price > avg * 1.2);
-  const seed = Math.round((price || 0) * 10) + (item.rankScore || 0) + (analysis?.total || 0);
   const level: DecisionInsight['level'] = trendScore >= 70 ? 'success' : trendScore >= 40 ? 'warning' : 'info';
   const title = trendScore >= 70 ? '适合作为热卖参考' : trendScore >= 40 ? '适合作为跟踪观察款' : '更适合作为渠道样本';
   const summary = trendScore >= 70
-    ? choose(seed, [
-      '这款所在关键词热度高，渠道覆盖也够，适合进选品池继续筛选。',
-      '当前热度和渠道数量都在线，适合进入下一步选款流程。',
-      '这款具备进入选品池的条件，可以继续做审款判断。',
-    ])
+    ? '热度高、渠道覆盖足，适合进选品池继续审款。'
     : trendScore >= 40
-    ? choose(seed, [
-      '这款有一定热度，但还需要结合价格带和评分再定。',
-      '现在属于可关注区间，先补比价和评分证据更稳。',
-      '热度不差，但还没到直接推进的确定性。',
-    ])
-    : choose(seed, [
-      '当前更像渠道样本，适合作为风格参考而不是直接推进。',
-      '这款参考价值有，但推进价值暂时不强。',
-      '现阶段建议先观察，不要直接投入打版资源。',
-    ]);
+    ? '有一定热度，还需结合价格带和评分确认。'
+    : '目前更像渠道样本，建议先观察不直接推进。';
   const evidence = [
     trendScore >= 0 ? `关键词热度 ${trendScore}/100` : '关键词热度未返回',
     price && avg > 0
@@ -99,29 +81,17 @@ const buildMarketInsight = (
     title,
     summary,
     painPoint: trendScore >= 70
-      ? choose(seed + 3, [
-        '真正要防的是只看热度，不看利润和供应链承接能力。',
-        '热点不是问题，问题是后续能不能承接并盈利。',
-        '最容易忽视的是供应链承接与利润空间。',
-      ])
+      ? '热度不等于利润，需同步确认供应链承接能力。'
       : trendScore >= 40
-      ? choose(seed + 5, [
-        '热度有了，但价格带和评分还没把它坐实。',
-        '目前缺的是“能卖且有利润”的实证。',
-        '现在主要是证据强度不足，不是方向错误。',
-      ])
-      : choose(seed + 7, [
-        '它更像渠道样本，不能只凭“看起来有人卖”就推进。',
-        '当前信号偏弱，直接推进容易变成无效试错。',
-        '市场存在感不足，先观察更合适。',
-      ]),
+      ? '热度有了，但价格带和评分还没坐实。'
+      : '当前信号偏弱，直接推进容易变成无效试错。',
     source: item.sourceLabel || '多源热榜',
     confidence: item.rankScore != null && item.rankScore >= 90 ? '把握较高' : '建议复核',
     evidence,
     note: item.delivery ? `配送信息：${item.delivery}` : undefined,
     execute: trendScore >= 70
-      ? choose(seed + 11, ['先加入选品池，再走审款。', '先入池再做审款决策。', '可以先纳入候选并继续评审。'])
-      : choose(seed + 13, ['先比价、看评分，再决定要不要加。', '建议先补价格与评分证据再决定。', '先做一轮比价评估，再决定是否纳入。']),
+      ? '先加入选品池，再走审款。'
+      : '先比价、看评分，再决定是否加入。',
     actionLabel: trendScore >= 70 ? '建议加入选品后继续审款' : '建议先比价再决定是否加入',
     labels: {
       summary: '现状',
