@@ -1,4 +1,60 @@
+## 2026-04-03
+
+### � fix(material-selection): 完整打通面辅料选料→进销存查询链路
+
+**问题背景**：系统中多处"选择面辅料"下拉框之前只从 `alertList`（库存预警列表）取数据，导致新录入的物料无法出现在选择列表；另外采购单新建表单的物料编码是手填 Input，无法与数据库关联。
+
+**架构规则（已恢复合规）**：
+1. 选料 → 查 `/material/database/list`（面辅料数据库全量搜索）
+2. 选完后 → 查 `/production/material/stock/list` 获取真实库存，计算采购缺口量
+
+#### 修复内容（2文件）
+
+| 文件 | 修复内容 |
+|------|---------|
+| `useMaterialInventoryData.ts` | `handleMaterialSelect` 改为 async；无预警物料分支补充调用 `/production/material/stock/list?materialCode=xxx`；计算 `availableQty = quantity - lockedQuantity`，自动填充 `purchaseQuantity = max(1, safetyStock - availableQty)`，不再写死 1 |
+| `PurchaseCreateForm.tsx` | 物料编码从手填 `<Input />` 改为异步搜索 `<Select>`，搜索来源 `/material/database/list`；选定物料后自动回填 `materialName`、`unit`；已有 `useEffect` 监听 materialCode 变化触发库存查询（保持不变） |
+
+#### 影响范围
+- ✅ 采购指令弹窗：任意物料（含新录入、无预警的）均可搜索选择，采购缺口量自动计算
+- ✅ 采购单新建表单：物料编码支持名称/编码关键词搜索，选完自动填充名称和单位
+- ✅ StyleBomTab：已在之前版本正确实现（数据库选料→库存查询），本次确认无需修改
+
+commit: `f851b57b`
+
+---
+
+
+
+**问题背景**：Doubao视觉分析失败（图片获取失败/超时）时，`visionDescription="暂无视觉分析"` 被直接传给 DeepSeek，
+DeepSeek 杜撰出 `imageInsight = "AI视觉分析未发现具体工艺特征..."` 这类误导文字，让用户误以为 AI 看了图片但没发现工艺，
+实际上是根本没取到图片。
+
+#### 根本原因修复（4处，5文件，43行）
+
+| 文件 | 修复内容 |
+|------|---------|
+| `StyleDifficultyOrchestrator` | 新增 `visionFailed` 标志；Doubao失败时强制覆盖 `imageInsight` 为 "封面图暂未获取，评分依据BOM+品类" |
+| `StyleDifficultyOrchestrator` | `imageInsight` 截断限制 100 → **300** 字；DeepSeek 提示词按视觉是否成功分两路 |
+| `StyleDifficultyOrchestrator` | Doubao成功时将原始描述存入新字段 `visionRaw`（400字上限），与 DeepSeek 摘要分离 |
+| `IntelligenceInferenceOrchestrator` | 新增 base64 大小检查（>8MB跳过）；增加请求类型/长度日志，诊断 Doubao 调用失败原因 |
+| `StyleIntelligenceProfileResponse.java` + `intelligenceApi.ts` | 新增 `visionRaw` 字段透传前端 |
+| `StyleIntelligenceProfileCard.tsx` | 新增 **🔬 Doubao工艺识别** 紫色区块（visionRaw有值时显示），用户可直接看到 AI 识别了哪些工艺；imageInsight 降级为 💬 辅助说明 |
+
+#### 展示效果对比
+
+| 场景 | 修复前 | 修复后 |
+|------|--------|--------|
+| Doubao成功 | imageInsight仅100字摘要，看不到原始识别内容 | 显示完整400字原始识别详情 + 300字DeepSeek总结 |
+| Doubao失败 | "AI视觉分析未发现具体工艺特征..." (误导) | "封面图暂未获取，评分依据结构化数据" (诚实) |
+| 大图片(>8MB) | 静默超时无日志 | 提前跳过 + 明确 warn 日志 |
+
+commit: `4f2c2545`
+
+---
+
 ## 2026-04-02
+
 
 ### 🔒 fix(security): 全系统删除幂等性安全审计 — 9处 + TS 编译修复 + 智能评分修正
 
