@@ -338,13 +338,23 @@ public class StyleDifficultyOrchestrator {
 
         // 根据视觉分析是否成功，给 DeepSeek 不同的 imageInsight 生成指令（避免生成误导性"未发现"文字）
         boolean visionFailed = "暂无视觉分析".equals(visionDescription);
-        log.info("[StyleDifficulty] 视觉分析状态: visionFailed={} imageUrl类型={}",
-                visionFailed,
+        boolean imageNotFound = (imageUrl == null || imageUrl.isBlank());
+        // 分辨失败原因，给用户准确的说明
+        String imageInsightFallback;
+        if (!visionEnabled) {
+            imageInsightFallback = "AI视觉模型未配置，评分依据 BOM和品类结构数据";
+        } else if (imageNotFound) {
+            imageInsightFallback = "封面图未上传，评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
+        } else {
+            imageInsightFallback = "图片读取失败，评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
+        }
+        log.info("[StyleDifficulty] 视觉分析状态: visionEnabled={} imageNotFound={} visionFailed={} imageUrl类型={}",
+                visionEnabled, imageNotFound, visionFailed,
                 imageUrl == null ? "null" : (
                         imageUrl.startsWith("data:") ? "base64(" + imageUrl.length() + "字符)" :
                         imageUrl.startsWith("http") ? "http-url" : "other"));
         String imageInsightInstruction = visionFailed
-                ? "必须填写：'封面图暂未获取，评分依据结构化数据（BOM+品类）'"
+                ? "必须填写：'" + imageInsightFallback + "'"
                 : "用80字以内写三点：①款式大类+颜色/面料 ②最难的1-2个工艺特征 ③制版/缝制注意点。直接给结论，不要介绍性语言。";
 
         String userMessage = String.format(
@@ -406,9 +416,9 @@ public class StyleDifficultyOrchestrator {
         Object scoreObj = parsed.get("difficultyScore");
         int aiScore = scoreObj instanceof Number ? Math.max(1, Math.min(10, ((Number) scoreObj).intValue())) : base.getDifficultyScore();
         String imageInsight = String.valueOf(parsed.getOrDefault("imageInsight", ""));
-        // 视觉分析失败时覆盖 DeepSeek 生成的文字，避免出现"AI视觉分析未发现具体工艺特征"这类误导性描述
+        // 视觉分析失败时覆盖 DeepSeek 生成的文字，避免出现误导性描述
         if (visionFailed) {
-            imageInsight = "封面图暂未获取，本次评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
+            imageInsight = imageInsightFallback;
         }
         Object multiplierObj = parsed.get("pricingMultiplier");
         BigDecimal aiMultiplier = multiplierObj instanceof Number
@@ -542,7 +552,8 @@ public class StyleDifficultyOrchestrator {
             if (rawUrl.contains(".cos.") && rawUrl.contains(".myqcloud.com/")) {
                 return resolveCosHttpsUrl(rawUrl);
             }
-            return rawUrl;
+            // 外部 URL（H&M / Pinterest 等）：服务端下载转 Base64，防止防盗链导致 Doubao 读取失败
+            return downloadExternalImageAsBase64(rawUrl);
         }
         // 解析相对路径：/api/file/tenant-download/{tenantId}/{filename}
         String prefix = "/api/file/tenant-download/";
@@ -607,6 +618,43 @@ public class StyleDifficultyOrchestrator {
         }
         // 无法解析结构，透传原始 URL（外部图片 / 其他平台 CDN）
         return cosUrl;
+    }
+
+    /**
+     * 下载外部公网图片并转为 Base64 Data URI，避免 Doubao 直接访问外链被防盗链拦截。
+     */
+    private String downloadExternalImageAsBase64(String url) {
+        try {
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(url))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .header("Accept", "image/*,*/*")
+                    .timeout(java.time.Duration.ofSeconds(20))
+                    .GET()
+                    .build();
+            java.net.http.HttpResponse<byte[]> resp = java.net.http.HttpClient.newHttpClient()
+                    .send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            if (resp.statusCode() == 200) {
+                byte[] bytes = resp.body();
+                if (bytes.length > 8 * 1024 * 1024) {
+                    log.warn("[StyleDifficulty][imageResolve] 外链图片过大({}MB>8MB)，跳过视觉", bytes.length / 1024 / 1024);
+                    return null;
+                }
+                String contentType = resp.headers().firstValue("Content-Type").orElse("image/jpeg");
+                String mimeType = contentType.contains("png") ? "image/png"
+                        : contentType.contains("webp") ? "image/webp"
+                        : contentType.contains("gif") ? "image/gif" : "image/jpeg";
+                String b64 = java.util.Base64.getEncoder().encodeToString(bytes);
+                log.info("[StyleDifficulty][imageResolve] 外链图片下载成功 → Base64({}KB, {})", bytes.length / 1024, mimeType);
+                return "data:" + mimeType + ";base64," + b64;
+            }
+            log.warn("[StyleDifficulty][imageResolve] 外链图片下载失败 status={} url={}",
+                    resp.statusCode(), url.substring(0, Math.min(80, url.length())));
+            return null;
+        } catch (Exception e) {
+            log.warn("[StyleDifficulty][imageResolve] 外链图片下载异常: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
