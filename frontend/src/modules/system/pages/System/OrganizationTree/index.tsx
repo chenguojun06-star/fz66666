@@ -6,6 +6,7 @@ import { factoryApi } from '@/services/system/factoryApi';
 import tenantService from '@/services/tenantService';
 import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
+import { useAuth } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input,
   InputNumber, QRCode, Row, Select, Space, Tag, Tooltip, Typography,
@@ -49,6 +50,7 @@ function getDescendantIds(node: OrganizationUnit): string[] {
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
+  const { user } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<OrganizationUnit[]>([]);
@@ -96,6 +98,7 @@ const OrganizationTreePage: React.FC = () => {
   const [batchAssignLoading, setBatchAssignLoading] = useState(false);
   // 设为老板操作 loading（存 userId）
   const [setOwnerLoading, setSetOwnerLoading] = useState<string | null>(null);
+  const currentFactoryName = String((user as any)?.tenantName || '').trim();
 
   const handleInitTemplate = async () => {
     if (!tplModal.type) { message.warning('请选择一个模板类型'); return; }
@@ -435,9 +438,15 @@ const OrganizationTreePage: React.FC = () => {
             <h2 className="page-title">
               <ApartmentOutlined style={{ marginRight: 8 }} />
               组织架构
+              {currentFactoryName ? (
+                <Tag color="blue" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+                  {currentFactoryName}
+                </Tag>
+              ) : null}
             </h2>
             <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
               管理公司组织结构，包含部门、工厂及人员分配。
+              {currentFactoryName ? <span style={{ marginLeft: 12 }}>当前工厂：{currentFactoryName}</span> : null}
               <span style={{ marginLeft: 12 }}>
                 共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
               </span>
