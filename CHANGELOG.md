@@ -136,6 +136,11 @@ commit: `5f42cf66`
 
 ## 2026-04-19
 
+- fix: 下单前款号校验改为按需字段查询，避免被云端旧库缺失 `image_insight` 列阻断。
+  - 文件：[backend/src/main/java/com/fashion/supplychain/style/service/impl/StyleInfoServiceImpl.java](backend/src/main/java/com/fashion/supplychain/style/service/impl/StyleInfoServiceImpl.java)
+  - 改动：`getValidatedForOrderCreate()` 不再使用 `getById()` / 默认全字段查询，改为只查 `id/styleNo/styleName/status/sampleStatus/patternStatus`。
+  - 作用：即使云端 `t_style_info.image_insight` 仍未补齐，下单接口也能先恢复，不再在款号校验阶段报 500。
+
 - fix: 修复 AI 顾问流式问答使用错误本地 token 键的问题。
   - 文件：[frontend/src/services/intelligence/intelligenceApi.ts](frontend/src/services/intelligence/intelligenceApi.ts)
   - 改动：`aiAdvisorChatStream()` 从 `localStorage.getItem('token')` 改为统一的 `authToken`。

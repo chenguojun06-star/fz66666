@@ -616,12 +616,30 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 }
             }
             if (numeric) {
-                style = this.getById(Long.parseLong(sid));
+                style = this.lambdaQuery()
+                        .select(StyleInfo::getId,
+                                StyleInfo::getStyleNo,
+                                StyleInfo::getStyleName,
+                                StyleInfo::getStatus,
+                                StyleInfo::getSampleStatus,
+                                StyleInfo::getPatternStatus)
+                        .eq(StyleInfo::getId, Long.parseLong(sid))
+                        .last("limit 1")
+                        .one();
             }
         }
 
         if (style == null && StringUtils.hasText(sno)) {
-            style = this.lambdaQuery().eq(StyleInfo::getStyleNo, sno).last("limit 1").one();
+            style = this.lambdaQuery()
+                    .select(StyleInfo::getId,
+                            StyleInfo::getStyleNo,
+                            StyleInfo::getStyleName,
+                            StyleInfo::getStatus,
+                            StyleInfo::getSampleStatus,
+                            StyleInfo::getPatternStatus)
+                    .eq(StyleInfo::getStyleNo, sno)
+                    .last("limit 1")
+                    .one();
         }
 
         if (style == null) {
