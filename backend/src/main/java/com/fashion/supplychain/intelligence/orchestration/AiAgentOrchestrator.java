@@ -334,9 +334,9 @@ public class AiAgentOrchestrator {
                 "query_style_info / query_warehouse_stock / query_financial_payroll / " +
                 "sample_stock / finished_product_stock / query_crm_customer / query_system_user / change_approval\n\n" +
                 "回答规则（强制）：\n" +
-                "1. 总长度≤5行。第一行=结论+关键数字，无标题头。\n" +
-                "2. 禁止使用【结论】【依据】【建议】【分析】等标题头。\n" +
-                "3. 数据行最多2-3行，每行带具体数字。\n" +
+                "1. 普通问答≤5行。日报/周报/月报例外：第1行=总览数字摘要，之后每条逾期/高风险订单各占一行，固定格式：🔴 {订单号} | {数量}件 | 进度{%} | 逾期{N}天 | 工厂:{factoryName} | 跟单:{merchandiser}；不受5行限制。\n" +
+                "2. 禁止【结论】【依据】【建议】【分析】等标题块；报表里「逾期订单」「高风险订单」「生产建议」作为小节分隔符允许。\n" +
+                "3. 数据行每行带具体数字；factoryName和merchandiser有值时必须显示，不可省略。\n" +
                 "4. 可执行动作最多2条，写在最后。\n" +
                 "5. 风险用 🔴🟠🟡🟢 标记，不展开解释。\n" +
                 "6. 写操作先1句话确认再执行。执行后返回：✅操作+结果。\n" +

@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -356,13 +357,19 @@ public class SmartReportTool implements AgentTool {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("orderNo", o.getOrderNo());
         dto.put("styleName", o.getStyleName());
-        dto.put("factoryName", o.getFactoryName());
+        dto.put("factoryName", o.getFactoryName() != null ? o.getFactoryName() : "未知工厂");
+        dto.put("merchandiser", o.getMerchandiser() != null ? o.getMerchandiser() : "未指定");
         dto.put("orderQuantity", o.getOrderQuantity());
         dto.put("completedQuantity", o.getCompletedQuantity());
         dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
         dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
+        // 逾期天数（正数=已逾期天数，0=未逾期）
+        long overdueDays = 0;
+        if (o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(LocalDateTime.now())) {
+            overdueDays = ChronoUnit.DAYS.between(o.getPlannedEndDate().toLocalDate(), LocalDate.now());
+        }
+        dto.put("overdueDays", overdueDays);
         dto.put("company", o.getCompany());
-        dto.put("merchandiser", o.getMerchandiser());
         return dto;
     }
 }
