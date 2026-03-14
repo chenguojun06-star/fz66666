@@ -44,24 +44,22 @@ public class DailyBriefDecisionOrchestrator {
     }
 
     private BriefDecisionCard buildOverdueCard(LocalDate today, long overdueCount, List<ProductionOrder> highRiskOrders) {
-        String summary = "当前已有 " + overdueCount + " 张订单超过交期，优先级必须高于常规跟单。";
         List<String> evidence = new ArrayList<>();
-        evidence.add("逾期订单 " + overdueCount + " 张");
+        evidence.add("逾期 " + overdueCount + " 张");
         if (!highRiskOrders.isEmpty()) {
             ProductionOrder top = highRiskOrders.get(0);
             long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
             evidence.add(formatOrderEvidence(top, daysLeft));
         }
-        evidence.add("来源：交期 + 当前生产进度规则判断");
         return buildCard(
             "danger",
-            "先处理逾期订单",
-            summary,
-            "交期已经越线，再按常规节奏跟单只会继续放大违约风险。",
+            "逾期 " + overdueCount + " 单待处理",
+            overdueCount + " 张订单已超交期，需逐单确认。",
+            "违约风险",
             "高置信",
             "规则判断",
             evidence,
-            "先拉逾期清单逐单确认：谁卡住、能否补产、是否需要升级处理。",
+            "逐单确认卡点，决定补产或升级",
             "查看逾期清单",
             "/production/progress-detail");
     }
@@ -70,19 +68,19 @@ public class DailyBriefDecisionOrchestrator {
         long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
         Integer progress = top.getProductionProgress() == null ? 0 : top.getProductionProgress();
         List<String> evidence = Arrays.asList(
-                "高风险订单 " + highRiskCount + " 张",
+                "高风险 " + highRiskCount + " 张",
                 formatOrderEvidence(top, daysLeft),
-                "当前进度 " + progress + "% ，低于交付安全线"
+                "进度 " + progress + "%"
         );
         return buildCard(
             daysLeft <= 3 ? "danger" : "warning",
-            "今天先催 " + safe(top.getOrderNo()),
-            safe(top.getFactoryName()) + " 的这张单离交期很近，但当前进度仍偏低，今天应该先盯这一单。",
-            "离交期近但进度没跟上，最容易在最后几天集中爆雷。",
+            "先催 " + safe(top.getOrderNo()),
+            safe(top.getFactoryName()) + "·剩" + daysLeft + "天·进度" + progress + "%，需优先跟进。",
+            "交期近+进度低",
             daysLeft <= 3 ? "高置信" : "中高置信",
             "规则判断",
             evidence,
-            "先找工厂确认卡在哪一道，再决定是加人、加班还是拆单分流。",
+            "确认卡点，加人/加班/拆单",
             "打开订单跟进",
             "/production?orderNo=" + safe(top.getOrderNo()));
     }
@@ -90,17 +88,16 @@ public class DailyBriefDecisionOrchestrator {
     private BriefDecisionCard buildScanGapCard(long yesterdayWarehousingCount, long yesterdayWarehousingQuantity) {
         return buildCard(
             "warning",
-            "先确认扫码录入",
-            "今天还没有新的扫码记录，现场可能没录，也可能节奏真的慢下来了。",
-            "一旦现场没录进度，管理层看到的就是假平静。",
+            "今日0扫码",
+            "今日无扫码记录，需确认现场状况。",
+            "进度数据断档",
             "中置信",
             "规则判断",
             Arrays.asList(
                 "今日扫码 0 次",
-                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件",
-                "来源：扫码流水与入库对比"
+                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件"
             ),
-            "先核实是没人扫、没开工，还是数据没回传，再决定是否催工厂。",
+            "核实是否停工或漏录",
             "查看生产进度",
             "/production/progress-detail");
     }
@@ -108,17 +105,16 @@ public class DailyBriefDecisionOrchestrator {
     private BriefDecisionCard buildWarehousingCard(long todayScanCount, long yesterdayWarehousingCount, long yesterdayWarehousingQuantity) {
         return buildCard(
             "info",
-            "保持当前推进节奏",
-            "今日已有稳定扫码，昨日也有入库，当前更适合盯紧风险单，不必全量打扰工厂。",
-            "如果全线同时催办，反而会冲淡真正该优先处理的异常单。",
+            "节奏正常",
+            "今日" + todayScanCount + "次扫码，昨日入库" + yesterdayWarehousingCount + "单/" + yesterdayWarehousingQuantity + "件。",
+            "聚焦风险单",
             "中置信",
             "规则判断",
             Arrays.asList(
                 "今日扫码 " + todayScanCount + " 次",
-                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件",
-                "来源：近两日现场活跃度"
+                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件"
             ),
-            "把注意力放到高风险与停滞单，不要平均用力。",
+            "重点跟进高风险与停滞单",
             "查看今日看板",
             "/dashboard");
     }
@@ -126,17 +122,16 @@ public class DailyBriefDecisionOrchestrator {
     private BriefDecisionCard buildHealthyCard(long todayScanCount, long yesterdayWarehousingCount, long yesterdayWarehousingQuantity) {
         return buildCard(
             "success",
-            "整体状态平稳",
-            "当前没有明显交付风险，今天按既定节奏推进即可。",
-            "风险不高时，最怕的是因为误判而频繁打断正常节奏。",
+            "运转正常",
+            "无逾期/高风险，扫码" + todayScanCount + "次，入库" + yesterdayWarehousingCount + "单。",
+            "保持节奏",
             "中置信",
             "规则判断",
             Arrays.asList(
                 "今日扫码 " + todayScanCount + " 次",
-                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件",
-                "暂无逾期与高风险告警"
+                "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件"
             ),
-            "保持例行抽查，重点盯住关键订单，不需要全线加压。",
+            "例行抽查关键订单",
             "查看运营日报",
             "/dashboard");
     }

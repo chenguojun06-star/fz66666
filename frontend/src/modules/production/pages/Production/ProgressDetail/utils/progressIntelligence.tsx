@@ -227,7 +227,7 @@ export function analyzeProgress(
       riskPredictions.push(msg);
     } else if (daysLeft <= 7 && prog < 50) {
       if (verdict === 'good') verdict = 'warn';
-      riskPredictions.push(`风险单：距交期 ${daysLeft} 天但进度未过半(${prog}%)，建议提升下线优先级。`);
+      riskPredictions.push(`风险单：距交期${daysLeft}天但进度未过半(${prog}%)，建议提升优先级。`);
     } else if (daysLeft <= 2 && prog >= 90 && prog < 100) {
       riskPredictions.push(`临近尾声(${prog}%)，距交期 ${daysLeft}天，请催促尾部及质检尽快手工收尾清点。`);
     }
@@ -235,12 +235,12 @@ export function analyzeProgress(
 
   // 质量连锁风险
   if (bottleneck && bottleneck.gap >= 40 && daysLeft !== null && daysLeft <= 7 && daysLeft > 0) {
-    riskPredictions.push(`${bottleneck.stage} 严重滞后且交期临近 — 后续赶工可能导致次品率飙升，请前置通知质检把关。`);
+    riskPredictions.push(`${bottleneck.stage} 严重滞后且交期临近，赶工可能导致次品率飙升，请通知质检。`);
   }
 
   // 首单风险
   if (order.plateType === 'FIRST' && prog < 30 && daysLeft !== null && daysLeft <= 14) {
-    riskPredictions.push('首单工艺磨合期较长，当前进度偏慢属正常现象，但仍需跟密以防前道工序踩坑。');
+    riskPredictions.push('首单磨合期，进度偏慢属正常，需跟密前道工序。');
   }
 
   // 全链路顺畅正面反馈
@@ -286,38 +286,38 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
 
   const summary = verdict === 'critical'
     ? chooseBySeed(seed, [
-      '这张单已经不是催一下就能恢复的节奏，必须马上介入处理。',
-      '目前这单处在明显失速区间，继续观望只会让交付压力更大。',
-      '现在最怕的是问题继续堆，建议立即把这单提到优先处理队列。',
+      '必须立即介入，订单严重失速。',
+      '订单已在失控区间，需立即处理。',
+      '问题堆积，建议立即提优先级。',
     ])
     : verdict === 'warn'
     ? chooseBySeed(seed, [
-      '整体还没失控，但已经出现会拖慢交付的信号。',
-      '这单表面能跑，实际上节奏开始变慢，需要提前纠偏。',
-      '先不算爆雷，不过几个关键环节已经在拉开差距。',
+      '出现拖慢信号，需提前纠偏。',
+      '节奏开始变慢，关键环节拉开差距。',
+      '未失控但有风险，需关注。',
     ])
     : chooseBySeed(seed, [
-      '当前推进比较平稳，按这个节奏大概率能跟上计划。',
-      '这单整体节奏还可以，重点是别让后段突然掉速。',
-      '目前看交付链条是顺的，保持节奏比大幅调整更重要。',
+      '推进平稳，按节奏可交付。',
+      '节奏正常，保持即可。',
+      '交付链顺畅，继续推进。',
     ]);
 
   const painPoint = bottleneck
     ? chooseBySeed(seed + 3, [
-      `${bottleneck.stage} 是眼下最慢的一段（${bottleneck.stageQty}/${bottleneck.total}件），上下游进度差已到 ${bottleneck.gap}%。`,
-      `最明显的压力点在 ${bottleneck.stage}，当前仅 ${bottleneck.stageQty}/${bottleneck.total} 件，和前一段节奏已经拉开。`,
-      `${bottleneck.stage} 这段开始堆积，当前落差 ${bottleneck.gap}%，继续拖会把后续交付一起带慢。`,
+      `${bottleneck.stage} 最慢（${bottleneck.stageQty}/${bottleneck.total}件），落差${bottleneck.gap}%`,
+      `压力点在${bottleneck.stage}，${bottleneck.stageQty}/${bottleneck.total}件，落后${bottleneck.gap}%`,
+      `${bottleneck.stage} 堆积，落差${bottleneck.gap}%，拖慢后续交付`,
     ])
     : riskPredictions[0] || personnelNotes[0] || followUpPoints[0] || chooseBySeed(seed + 7, [
-      '暂时没看到单一爆点，主要是保持连续推进，避免阶段性停摆。',
-      '当前没有绝对卡死点，更像是多处小风险叠加，需要持续盯盘。',
-      '目前主问题不在某一个节点，而在于整体节奏稳定性。',
+      '无单一爆点，保持连续推进',
+      '多处小风险叠加，继续盯盘',
+      '整体节奏稳定性是关键',
     ]);
 
   const execute = resourceSuggestions[0] || followUpPoints[0] || chooseBySeed(seed + 11, [
-    '建议先把最慢环节的人手补齐，再按半天频率复盘一次进度变化。',
-    '先盯关键节点把积压降下来，再同步后段工序接续安排。',
-    '保持当前主节奏，同时给关键环节设置更密的扫码回传频率。',
+    '补齐最慢环节人手，半天复盘一次',
+    '先降关键节点积压，同步后段接续',
+    '保持节奏，加密关键环节扫码回传',
   ]);
 
   const evidence = [

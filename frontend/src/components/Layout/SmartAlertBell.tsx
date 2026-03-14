@@ -53,7 +53,7 @@ interface AiMessage {
   suggestions?: string[];
 }
 
-const AI_WELCOME = '我是小云。你可以直接让我基于实时数据说清楚：现在最该先处理哪件事、为什么、先做什么。';
+const AI_WELCOME = '我是小云。问我任何订单/风险/工厂问题，我直接给结论和数据。';
 const AI_DEFAULT_SUGGESTIONS = ['先帮我排今天处理顺序', '哪些单今天最危险', '哪个工厂正在拖节奏', '先动哪一步最有效'];
 // 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
 const SUGGESTION_NAV: Record<string, string> = {
@@ -451,9 +451,9 @@ const SmartAlertBell: React.FC = () => {
                           source: card.source || '实时数据推演',
                           confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
                           summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
-                            '当前风险点已经出现，建议先处理影响面最大的事项。',
-                            '现在更适合先做优先级收口，再展开细项处理。',
-                            '先把关键风险压下来，后续执行会顺很多。',
+                            '有风险点，先处理影响最大的。',
+                            '先做优先级收口，再展开细项。',
+                            '先压关键风险，后续更顺。',
                           ]),
                           labels: {
                             summary: '现状',
