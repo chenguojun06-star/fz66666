@@ -528,7 +528,7 @@ const StyleSizeTab: React.FC<Props> = ({
         title: '参考图',
         key: 'groupImage',
         dataIndex: '__groupImage',
-        width: 100,
+        width: 180,
         onCell: (_rec: any, rowIndex?: number) => {
           const ri = rowIndex ?? 0;
           const isFirst = ri % 5 === 0;
@@ -539,16 +539,17 @@ const StyleSizeTab: React.FC<Props> = ({
           if (rowIndex % 5 !== 0) return null;
           const gi = Math.floor(rowIndex / 5);
           const imgs = sizeImageGroups[gi] || [];
+          const blockHeight = imgs.length > 1 ? 108 : 220;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', padding: '4px 0', minHeight: 88 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', justifyContent: 'center', width: '100%', minHeight: 240, padding: '8px 0' }}>
               <Image.PreviewGroup>
                 {imgs.map((url, i) => (
-                  <div key={url} style={{ position: 'relative', display: 'inline-block' }}>
+                  <div key={url} style={{ position: 'relative', width: '100%' }}>
                     <Image
                       src={getFullAuthedFileUrl(url)}
-                      width={72}
-                      height={72}
-                      style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #eee', background: '#fff' }}
+                      width="100%"
+                      height={blockHeight}
+                      style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 6 }}
                       preview={{ src: getFullAuthedFileUrl(url) }}
                     />
                     {editableMode && (
@@ -580,7 +581,7 @@ const StyleSizeTab: React.FC<Props> = ({
                     return false;
                   }}
                 >
-                  <Button size="small" icon={<PlusOutlined />} style={{ width: 72, height: 72, borderRadius: 6, borderStyle: 'dashed' }} />
+                  <Button size="small" icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }} />
                 </Upload>
               )}
             </div>
