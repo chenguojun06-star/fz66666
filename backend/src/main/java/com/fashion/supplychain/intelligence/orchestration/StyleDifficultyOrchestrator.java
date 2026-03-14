@@ -216,10 +216,10 @@ public class StyleDifficultyOrchestrator {
                 .filter(n -> n != null && !n.isEmpty())
                 .collect(Collectors.joining("、"));
 
-        // ── Qwen-VL：真正看图，开放式发现工艺难度特征（无固定列表限制） ──
+        // ── Doubao 视觉模型：真正看图，开放式发现工艺难度特征（无固定列表限制） ──
         String visionDescription = "暂无视觉分析";
         boolean visionEnabled = inferenceOrchestrator.isVisionEnabled();
-        log.info("[StyleDifficulty] Qwen-VL 状态检查：imageUrl={}, visionEnabled={}", 
+        log.info("[StyleDifficulty] 视觉模型状态检查：imageUrl={}, visionEnabled={}",
             imageUrl != null && !imageUrl.isBlank() ? "有" : "无", visionEnabled);
         if (imageUrl != null && !imageUrl.isBlank() && visionEnabled) {
             try {
@@ -237,13 +237,13 @@ public class StyleDifficultyOrchestrator {
                         "对每个识别的难点用「难」「中」「易」标记。\n" +
                         "严格控制在 200 字以内，着重讲工艺复杂度，无关颜色/风格等不涉及难度的信息。\n" +
                         "如果图片中根本看不出有什么难度特征，就直接写「简单基础款，无特殊难度因素」。";
-                String raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
+                String raw = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
                 if (raw != null && !raw.isBlank()) {
                     visionDescription = raw.length() > 250 ? raw.substring(0, 250) : raw;
-                    log.info("[StyleDifficulty] Qwen-VL 开放式难度特征发现完成");
+                    log.info("[StyleDifficulty] Doubao 开放式难度特征发现完成");
                 }
             } catch (Exception e) {
-                log.warn("[StyleDifficulty] Qwen-VL 视觉分析失败，降级无描述: {}", e.getMessage());
+                log.warn("[StyleDifficulty] Doubao 视觉分析失败，降级无描述: {}", e.getMessage());
             }
         }
 

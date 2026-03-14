@@ -47,6 +47,18 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.qwen-vl.model:qwen-vl-max}")
     private String visionModel;
 
+    @Value("${ai.doubao.api-key:}")
+    private String doubaoApiKey;
+
+    @Value("${ai.doubao.api-url:https://ark.cn-beijing.volces.com/api/v3/chat/completions}")
+    private String doubaoApiUrl;
+
+    @Value("${ai.doubao.model:doubao-1-5-vision-pro-32k-250115}")
+    private String doubaoModel;
+
+    @Value("${ai.doubao.timeout-seconds:60}")
+    private int doubaoTimeoutSeconds;
+
     @Value("${ai.gateway.litellm.api-key:}")
     private String litellmApiKey;
 
@@ -287,12 +299,65 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isVisionEnabled() {
-        boolean result = hasText(visionApiKey);
-        if (!result) {
-            log.warn("[Vision] Qwen-VL 未启用：visionApiKey 为空或未配置");
-        } else {
-            log.debug("[Vision] Qwen-VL 已启用，model={}", visionModel);
+        // 优先使用 Doubao，次选 Qwen-VL
+        boolean doubaoReady = hasText(doubaoApiKey);
+        boolean qwenReady = hasText(visionApiKey);
+        if (!doubaoReady && !qwenReady) {
+            log.warn("[Vision] 无可用视觉模型：doubao 和 qwen-vl 均未配置");
         }
-        return result;
+        return doubaoReady || qwenReady;
+    }
+
+    public String chatWithDoubaoVision(String imageUrl, String textPrompt) {
+        if (!hasText(doubaoApiKey) || !hasText(imageUrl)) {
+            log.warn("[DoubaoVision] 缺少必要参数：apiKey 或 imageUrl 为空");
+            return null;
+        }
+        try {
+            String payload = buildDoubaoVisionPayload(imageUrl, textPrompt);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(doubaoApiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + doubaoApiKey)
+                    .timeout(Duration.ofSeconds(doubaoTimeoutSeconds))
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            String body = response.body();
+            if (response.statusCode() == 200) {
+                JsonNode root = MAPPER.readTree(body);
+                if (root.has("choices") && root.get("choices").size() > 0) {
+                    String content = root.get("choices").get(0).get("message").get("content").asText();
+                    log.debug("[DoubaoVision] 调用成功，content长度={}", content.length());
+                    return content;
+                }
+                log.warn("[DoubaoVision] 响应格式异常: {}", body);
+            } else {
+                log.warn("[DoubaoVision] 调用失败 status={} body={}", response.statusCode(),
+                        body.substring(0, Math.min(200, body.length())));
+            }
+        } catch (Exception e) {
+            log.warn("[DoubaoVision] 图像分析异常: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String buildDoubaoVisionPayload(String imageUrl, String textPrompt) throws Exception {
+        // Doubao vision API payload format
+        String json = "{" +
+                "\"model\":\"" + doubaoModel + "\"," +
+                "\"messages\":[{" +
+                "\"role\":\"user\"," +
+                "\"content\":[" +
+                "{\"type\":\"image_url\",\"image_url\":{\"url\":\"" + escapeJsonString(imageUrl) + "\"}}," +
+                "{\"type\":\"text\",\"text\":\"" + escapeJsonString(textPrompt) + "\"}" +
+                "]" +
+                "}]" +
+                "}";
+        return json;
+    }
+
+    private String escapeJsonString(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n");
     }
 }
