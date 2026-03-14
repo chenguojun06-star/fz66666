@@ -720,8 +720,19 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
             return (
               <div className="print-section">
-                <div className="print-section-title">📏 尺寸表</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
+                <div className="print-section-title">📏 尺寸表</div>                {(() => {
+                  const firstWithImg = data.sizes.find((s: any) => s.imageUrls);
+                  const imgs: string[] = (() => { try { return JSON.parse((firstWithImg as any)?.imageUrls || '[]'); } catch { return []; } })();
+                  if (!imgs.length) return null;
+                  return (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                      <span style={{ color: '#666', fontSize: 12 }}>尺寸参考图：</span>
+                      {imgs.map((url: string) => (
+                        <img key={url} src={url} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
+                      ))}
+                    </div>
+                  );
+                })()}                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr style={{ background: 'var(--color-bg-container)' }}>
                       <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left' }}>部位(cm)</th>
@@ -776,6 +787,19 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                   { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
                     render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' },
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
+                  { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
+                    render: (v: string) => {
+                      const imgs: string[] = (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })();
+                      if (!imgs.length) return null;
+                      return (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {imgs.map((url: string) => (
+                            <img key={url} src={url} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
+                          ))}
+                        </div>
+                      );
+                    }
+                  },
                 ]}
               />
             </div>

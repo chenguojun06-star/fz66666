@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Space, Select, Modal } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, message as antMsg } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -30,6 +30,8 @@ type MatrixRow = {
   tolerance: number;
   sort: number;
   cells: Record<string, MatrixCell>;
+  /** 部位参考图片 URLs（JSON 字符串数组反序列化后） */
+  imageUrls?: string[];
 };
 
 const splitSizeNames = (name: string) => {
@@ -58,6 +60,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const [sizeColumns, setSizeColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<MatrixRow[]>([]);
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
+  const [sizeImageGroups, setSizeImageGroups] = useState<Record<number, string[]>>({});
   const originalRef = useRef<StyleSize[]>([]);
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
@@ -220,12 +223,24 @@ const StyleSizeTab: React.FC<Props> = ({
                 value: cell?.standardValue != null ? toNumberSafe(cell.standardValue) : 0,
               };
             });
-            return { key, partName, measureMethod, tolerance, sort, cells };
+            // 从任意一行取 imageUrls（同部位各行值相同）
+            const rawImageUrls = (items[0] as any)?.imageUrls;
+            let imageUrls: string[] | undefined;
+            try { imageUrls = rawImageUrls ? JSON.parse(rawImageUrls) : undefined; } catch { imageUrls = undefined; }
+            return { key, partName, measureMethod, tolerance, sort, cells, imageUrls };
           })
           .sort((a, b) => (toNumberSafe(a.sort) || 0) - (toNumberSafe(b.sort) || 0));
 
         setSizeColumns(sizes);
         setRows(nextRows);
+        const grps: Record<number, string[]> = {};
+        nextRows.forEach((r, idx) => {
+          const gi = Math.floor(idx / 5);
+          if (r.imageUrls && r.imageUrls.length > 0 && !grps[gi]) {
+            grps[gi] = r.imageUrls.slice(0, 2);
+          }
+        });
+        setSizeImageGroups(grps);
         setDeletedIds([]);
       }
     } catch (error) {
@@ -445,7 +460,9 @@ const StyleSizeTab: React.FC<Props> = ({
       }
 
       const tasks: Array<Promise<any>> = [];
-      rows.forEach((r) => {
+      rows.forEach((r, rowIdx) => {
+        const grpImgs = sizeImageGroups[Math.floor(rowIdx / 5)] || [];
+        const imageUrlsJson = grpImgs.length > 0 ? JSON.stringify(grpImgs) : null;
         sizeColumns.forEach((sn) => {
           const cell = r.cells[sn];
           const id = cell?.id;
@@ -458,6 +475,7 @@ const StyleSizeTab: React.FC<Props> = ({
             standardValue: toNumberSafe(cell?.value),
             tolerance: toNumberSafe(r.tolerance),
             sort: toNumberSafe(r.sort),
+            imageUrls: imageUrlsJson,
           };
 
           if (id != null && String(id).trim() !== '') {
@@ -469,7 +487,8 @@ const StyleSizeTab: React.FC<Props> = ({
               String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
               toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
               toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
-              toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort);
+              toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort) ||
+              String((old as Record<string, unknown>).imageUrls || '') !== String(payload.imageUrls || '');
             if (changed) {
               tasks.push(api.put('/style/size', payload));
             }
@@ -504,6 +523,63 @@ const StyleSizeTab: React.FC<Props> = ({
   const columns = useMemo(() => {
     const editableMode = editMode && !readOnly;
     const left = [
+      {
+        title: '参考图',
+        key: 'groupImage',
+        dataIndex: '__groupImage',
+        width: 100,
+        onCell: (_rec: any, rowIndex?: number) => {
+          const ri = rowIndex ?? 0;
+          const isFirst = ri % 5 === 0;
+          const span = isFirst ? Math.min(5, rows.length - Math.floor(ri / 5) * 5) : 0;
+          return { rowSpan: span };
+        },
+        render: (_: any, _record: MatrixRow, rowIndex: number) => {
+          if (rowIndex % 5 !== 0) return null;
+          const gi = Math.floor(rowIndex / 5);
+          const imgs = sizeImageGroups[gi] || [];
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', padding: '4px 0' }}>
+              <Image.PreviewGroup>
+                {imgs.map((url, i) => (
+                  <div key={url} style={{ position: 'relative', display: 'inline-block' }}>
+                    <Image src={url} width={48} height={48} style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
+                    {editableMode && (
+                      <DeleteOutlined
+                        onClick={() => setSizeImageGroups((prev) => ({ ...prev, [gi]: (prev[gi] || []).filter((_, ii) => ii !== i) }))}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 10, cursor: 'pointer' }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </Image.PreviewGroup>
+              {editableMode && imgs.length < 2 && (
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={async (file) => {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res: any = await (api as any).post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                      if (res?.code === 200 && res?.data) {
+                        setSizeImageGroups((prev) => ({ ...prev, [gi]: [...(prev[gi] || []), String(res.data)].slice(0, 2) }));
+                      } else {
+                        antMsg.error('图片上传失败');
+                      }
+                    } catch {
+                      antMsg.error('图片上传失败');
+                    }
+                    return false;
+                  }}
+                >
+                  <Button size="small" icon={<PlusOutlined />} style={{ width: 48, height: 48, borderRadius: 4, borderStyle: 'dashed' }} />
+                </Upload>
+              )}
+            </div>
+          );
+        },
+      },
       {
         title: '部位(cm)',
         dataIndex: 'partName',
@@ -618,7 +694,7 @@ const StyleSizeTab: React.FC<Props> = ({
     ];
 
     return [...left, ...sizeCols, ...right];
-  }, [editMode, readOnly, rows, sizeColumns]);
+  }, [editMode, readOnly, rows, sizeColumns, sizeImageGroups]);
 
   return (
     <div>
