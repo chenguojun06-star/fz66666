@@ -53,7 +53,7 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.doubao.api-url:https://ark.cn-beijing.volces.com/api/v3/chat/completions}")
     private String doubaoApiUrl;
 
-    @Value("${ai.doubao.model:doubao-1-5-vision-pro-32k-250115}")
+    @Value("${ai.doubao.model:doubao-1.5-vision-pro-250328}")
     private String doubaoModel;
 
     @Value("${ai.doubao.timeout-seconds:60}")
