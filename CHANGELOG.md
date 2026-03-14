@@ -755,6 +755,11 @@ init → Supervisor.analyzeAndRoute() → Reflection.critiqueAndReflect()
 
 ## 2026-03-12
 
+- fix: 仓库主数据中的面辅料类型与 BOM A/B 细分解耦。
+  - 文件：[frontend/src/modules/warehouse/pages/MaterialDatabase/index.tsx](frontend/src/modules/warehouse/pages/MaterialDatabase/index.tsx)、[frontend/src/modules/warehouse/pages/MaterialInventory/index.tsx](frontend/src/modules/warehouse/pages/MaterialInventory/index.tsx)、[frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useMaterialInventoryColumns.tsx](frontend/src/modules/warehouse/pages/MaterialInventory/hooks/useMaterialInventoryColumns.tsx)、[frontend/src/utils/materialType.ts](frontend/src/utils/materialType.ts)
+  - 改动：面辅料数据库与库存场景统一只使用基础类型 `面料/里料/辅料`；新增基础类型映射与展示 helper，避免仓库主数据被自动归到 `A` 档。
+  - 作用：修复新增/编辑普通面辅料时被错误显示或保存成 `面料A/里料A/辅料A` 的问题，保留 BOM 场景继续使用 A/B 细分。
+
 - 样衣开发删除改为报废留档：开发中的款式不再从列表消失，而是保留在当前页面并显示为“开发样报废”，进度按当前节点停滞。
 - 样衣开发前端交互改为填写报废原因并调用专用报废接口，表格/卡片不再提供真正删除语义。
 - 样衣开发后端流转增加报废冻结校验，已报废款式不能继续推进纸样、样衣、BOM、工序、二次工艺等流程。

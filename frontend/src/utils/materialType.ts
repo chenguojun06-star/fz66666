@@ -1,5 +1,14 @@
 export type MaterialTypeCategory = 'fabric' | 'lining' | 'accessory';
 
+export const getBaseMaterialType = <T extends string = string>(v: unknown): T => {
+  const category = getMaterialTypeCategory(v);
+  if (category === 'lining') return 'lining' as T;
+  if (category === 'accessory') return 'accessory' as T;
+  return 'fabric' as T;
+};
+
+export const getBaseMaterialTypeLabel = (v: unknown): string => getMaterialTypeLabel(getBaseMaterialType(v));
+
 export const normalizeMaterialType = <T extends string = string>(v: unknown): T => {
   const type = String(v || '').trim();
   if (!type || type === 'fabric') return 'fabricA' as T;

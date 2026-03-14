@@ -24,7 +24,7 @@ import {
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
 import './MaterialInventory.css';
@@ -303,7 +303,7 @@ const _MaterialInventory: React.FC = () => {
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
                 <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>类型</div>
-                <div style={{ fontWeight: 600 }}>{getMaterialTypeLabel(instructionTarget?.materialType)}</div>
+                <div style={{ fontWeight: 600 }}>{getBaseMaterialTypeLabel(instructionTarget?.materialType)}</div>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
                 <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>供应商</div>
@@ -320,7 +320,7 @@ const _MaterialInventory: React.FC = () => {
             </div>
 
             {/* 面料属性（仅面料显示） */}
-            {instructionTarget?.materialType === '面料' && (
+            {getMaterialTypeCategory(instructionTarget?.materialType) === 'fabric' && (
               <div style={{ marginTop: 16 }}>
                 <div style={{
                   fontSize: 'var(--font-size-sm)',
@@ -407,7 +407,7 @@ const _MaterialInventory: React.FC = () => {
         {safetyStockTarget && (
           <div>
             <Card size="small" style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
-              <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color={getMaterialTypeCategory(safetyStockTarget.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(safetyStockTarget.materialType) === 'lining' ? 'cyan' : 'green'}>{getMaterialTypeLabel(safetyStockTarget.materialType)}</Tag></div>
+              <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color={getMaterialTypeCategory(safetyStockTarget.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(safetyStockTarget.materialType) === 'lining' ? 'cyan' : 'green'}>{getBaseMaterialTypeLabel(safetyStockTarget.materialType)}</Tag></div>
               <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', marginTop: 4 }}>{safetyStockTarget.materialName}</div>
               <div style={{ fontSize: "var(--font-size-sm)", marginTop: 4 }}>
                 当前库存: <strong>{safetyStockTarget.quantity ?? 0}</strong> {safetyStockTarget.unit}
@@ -448,7 +448,7 @@ const _MaterialInventory: React.FC = () => {
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div>
                   <strong style={{ fontSize: "var(--font-size-lg)" }}>{detailModal.data.materialCode}</strong>
-                  <Tag color={getMaterialTypeCategory(detailModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(detailModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ marginLeft: 8 }}>{getMaterialTypeLabel(detailModal.data.materialType)}</Tag>
+                  <Tag color={getMaterialTypeCategory(detailModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(detailModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ marginLeft: 8 }}>{getBaseMaterialTypeLabel(detailModal.data.materialType)}</Tag>
                 </div>
                 <div style={{ fontSize: "var(--font-size-base)" }}>{detailModal.data.materialName}</div>
               </Space>
@@ -541,10 +541,9 @@ const _MaterialInventory: React.FC = () => {
             <Col span={5}>
               <Form.Item label="物料类型" name="materialType">
                 <Select disabled placeholder="自动识别">
-                  <Option value="fabricA">面料A</Option>
-                  <Option value="fabricB">面料B</Option>
-                  <Option value="liningA">里料A</Option>
-                  <Option value="accessoryA">辅料A</Option>
+                  <Option value="fabric">面料</Option>
+                  <Option value="lining">里料</Option>
+                  <Option value="accessory">辅料</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -683,7 +682,7 @@ const _MaterialInventory: React.FC = () => {
                     </div>
                     <div style={{ fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
-                      <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: 0 }}>{getMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
+                      <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: 0 }}>{getBaseMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
                     </div>
                     <div style={{ fontSize: 'var(--font-size-sm)' }}>
                       <span style={{ color: 'var(--neutral-text-disabled)' }}>颜色：</span>

@@ -6,7 +6,7 @@ import type { FormInstance } from 'antd/es/form';
 import RowActions from '@/components/common/RowActions';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialInventory } from '../types';
 
@@ -78,7 +78,7 @@ export function useMaterialInventoryColumns({
               color={getMaterialTypeCategory(record.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(record.materialType) === 'lining' ? 'cyan' : 'green'}
               style={{ fontSize: 'var(--font-size-xs)', margin: '0 0 0 8px' }}
             >
-              {getMaterialTypeLabel(record.materialType)}
+              {getBaseMaterialTypeLabel(record.materialType)}
             </Tag>
           </div>
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
@@ -93,7 +93,7 @@ export function useMaterialInventoryColumns({
       key: 'fabricProperties',
       width: 200,
       render: (_, record) => {
-        if (record.materialType !== '面料') {
+        if (getMaterialTypeCategory(record.materialType) !== 'fabric') {
           return (
             <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)' }}>
               -

@@ -16,7 +16,7 @@ import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/productio
 import api, { unwrapApiData } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
-import { getMaterialTypeCategory, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
+import { getBaseMaterialType, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
@@ -147,7 +147,7 @@ const MaterialDatabasePage: React.FC = () => {
       open(record); // 自动设置 visible=true + data=record
       form.setFieldsValue({
         ...record,
-        materialType: normalizeMaterialType(record.materialType || 'accessory'),
+        materialType: getBaseMaterialType(record.materialType || 'accessory'),
       });
       if (record.image) {
         setImageFiles([
@@ -182,7 +182,7 @@ const MaterialDatabasePage: React.FC = () => {
       const { createTime: _createTime, completedTime: _completedTime, ...rest } = values as any;
       const payload: Record<string, unknown> = {
         ...rest,
-        materialType: normalizeMaterialType(values?.materialType || 'accessory'),
+        materialType: getBaseMaterialType(values?.materialType || 'accessory'),
         status: status === 'completed' ? 'completed' : 'pending',
         image: String(values?.image || '').trim() || undefined,
       };
@@ -340,7 +340,7 @@ const MaterialDatabasePage: React.FC = () => {
       render: (v: unknown) => {
         const type = String(v || '').trim();
         const category = getMaterialTypeCategory(type);
-        const text = getMaterialTypeLabel(type);
+        const text = getBaseMaterialTypeLabel(type);
         const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';
         return <Tag color={color}>{text}</Tag>;
       },
@@ -512,23 +512,8 @@ const MaterialDatabasePage: React.FC = () => {
                   statusOptions={[
                     { label: '全部', value: '' },
                     { label: '面料', value: 'fabric' },
-                    { label: '面料A', value: 'fabricA' },
-                    { label: '面料B', value: 'fabricB' },
-                    { label: '面料C', value: 'fabricC' },
-                    { label: '面料D', value: 'fabricD' },
-                    { label: '面料E', value: 'fabricE' },
                     { label: '里料', value: 'lining' },
-                    { label: '里料A', value: 'liningA' },
-                    { label: '里料B', value: 'liningB' },
-                    { label: '里料C', value: 'liningC' },
-                    { label: '里料D', value: 'liningD' },
-                    { label: '里料E', value: 'liningE' },
                     { label: '辅料', value: 'accessory' },
-                    { label: '辅料A', value: 'accessoryA' },
-                    { label: '辅料B', value: 'accessoryB' },
-                    { label: '辅料C', value: 'accessoryC' },
-                    { label: '辅料D', value: 'accessoryD' },
-                    { label: '辅料E', value: 'accessoryE' },
                   ]}
                 />
               )}
@@ -635,23 +620,8 @@ const MaterialDatabasePage: React.FC = () => {
                 >
                   <Select placeholder="请选择物料类型">
                     <Option value="fabric">面料</Option>
-                    <Option value="fabricA">面料A</Option>
-                    <Option value="fabricB">面料B</Option>
-                    <Option value="fabricC">面料C</Option>
-                    <Option value="fabricD">面料D</Option>
-                    <Option value="fabricE">面料E</Option>
                     <Option value="lining">里料</Option>
-                    <Option value="liningA">里料A</Option>
-                    <Option value="liningB">里料B</Option>
-                    <Option value="liningC">里料C</Option>
-                    <Option value="liningD">里料D</Option>
-                    <Option value="liningE">里料E</Option>
                     <Option value="accessory">辅料</Option>
-                    <Option value="accessoryA">辅料A</Option>
-                    <Option value="accessoryB">辅料B</Option>
-                    <Option value="accessoryC">辅料C</Option>
-                    <Option value="accessoryD">辅料D</Option>
-                    <Option value="accessoryE">辅料E</Option>
                   </Select>
                 </Form.Item>
               </Col>
