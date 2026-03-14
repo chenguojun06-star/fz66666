@@ -9,7 +9,7 @@ SET @s = IF(
    WHERE TABLE_SCHEMA = DATABASE()
      AND TABLE_NAME   = 't_production_order'
      AND COLUMN_NAME  = 'qr_code') = 0,
-  'ALTER TABLE `t_production_order` ADD COLUMN `qr_code` VARCHAR(100) DEFAULT NULL COMMENT ''订单二维码''',
+  'ALTER TABLE `t_production_order` ADD COLUMN `qr_code` VARCHAR(100) DEFAULT NULL',
   'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -20,7 +20,7 @@ SET @s = IF(
    WHERE TABLE_SCHEMA = DATABASE()
      AND TABLE_NAME   = 't_production_order'
      AND COLUMN_NAME  = 'factory_contact_person') = 0,
-  'ALTER TABLE `t_production_order` ADD COLUMN `factory_contact_person` VARCHAR(50) DEFAULT NULL COMMENT ''工厂联系人快照''',
+  'ALTER TABLE `t_production_order` ADD COLUMN `factory_contact_person` VARCHAR(50) DEFAULT NULL',
   'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -31,7 +31,7 @@ SET @s = IF(
    WHERE TABLE_SCHEMA = DATABASE()
      AND TABLE_NAME   = 't_production_order'
      AND COLUMN_NAME  = 'factory_contact_phone') = 0,
-  'ALTER TABLE `t_production_order` ADD COLUMN `factory_contact_phone` VARCHAR(20) DEFAULT NULL COMMENT ''工厂联系电话快照''',
+  'ALTER TABLE `t_production_order` ADD COLUMN `factory_contact_phone` VARCHAR(20) DEFAULT NULL',
   'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

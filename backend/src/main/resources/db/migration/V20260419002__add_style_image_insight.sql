@@ -7,7 +7,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_style_info'
        AND COLUMN_NAME  = 'image_insight') = 0,
-    'ALTER TABLE `t_style_info` ADD COLUMN `image_insight` VARCHAR(500) NULL COMMENT ''AI视觉图像分析摘要（豆包Vision识别结果，用于持久化缓存）'' AFTER `cover`',
+    'ALTER TABLE `t_style_info` ADD COLUMN `image_insight` VARCHAR(500) NULL AFTER `cover`',
     'SELECT 1'
 );
 PREPARE stmt FROM @s;

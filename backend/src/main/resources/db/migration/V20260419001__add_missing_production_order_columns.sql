@@ -8,7 +8,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_production_order'
        AND COLUMN_NAME  = 'remarks') = 0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `remarks` TEXT DEFAULT NULL COMMENT ''备注''',
+    'ALTER TABLE `t_production_order` ADD COLUMN `remarks` TEXT DEFAULT NULL',
     'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -19,7 +19,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_production_order'
        AND COLUMN_NAME  = 'expected_ship_date') = 0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `expected_ship_date` DATE DEFAULT NULL COMMENT ''预计出货日期''',
+    'ALTER TABLE `t_production_order` ADD COLUMN `expected_ship_date` DATE DEFAULT NULL',
     'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -30,7 +30,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_production_order'
        AND COLUMN_NAME  = 'node_operations') = 0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `node_operations` LONGTEXT DEFAULT NULL COMMENT ''工序节点操作记录(JSON)''',
+    'ALTER TABLE `t_production_order` ADD COLUMN `node_operations` LONGTEXT DEFAULT NULL',
     'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -41,7 +41,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_production_order'
        AND COLUMN_NAME  = 'procurement_confirmed_at') = 0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `procurement_confirmed_at` DATETIME DEFAULT NULL COMMENT ''采购确认时间''',
+    'ALTER TABLE `t_production_order` ADD COLUMN `procurement_confirmed_at` DATETIME DEFAULT NULL',
     'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -52,7 +52,7 @@ SET @s = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME   = 't_production_order'
        AND COLUMN_NAME  = 'procurement_confirm_remark') = 0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `procurement_confirm_remark` VARCHAR(500) DEFAULT NULL COMMENT ''采购确认备注''',
+    'ALTER TABLE `t_production_order` ADD COLUMN `procurement_confirm_remark` VARCHAR(500) DEFAULT NULL',
     'SELECT 1'
 );
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

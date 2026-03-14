@@ -4,7 +4,7 @@
 -- 新增约 22 条培训记录，让小云可以辅导任何岗位的员工
 -- ============================================================
 
-INSERT INTO t_knowledge_base (kb_id, tenant_id, category, title, content, keywords, `source`) VALUES
+INSERT IGNORE INTO t_knowledge_base (id, tenant_id, category, title, content, keywords, `source`) VALUES
 
 -- ══════════════════════════════════════════════════════
 -- 系统操作指南（补全缺失模块）
@@ -647,4 +647,4 @@ A: 已锁定期不可修改；在下期开头补录「上期补录」记录',
 -- 统计新增
 SELECT CONCAT('本次扩充知识库完成，新增 ', COUNT(*), ' 条培训记录') AS result
 FROM t_knowledge_base
-WHERE kb_id LIKE 'kb-guide-0%' OR kb_id LIKE 'kb-sop-%' OR kb_id LIKE 'kb-faq-00%' OR kb_id LIKE 'kb-term-0%';
+WHERE id LIKE 'kb-guide-0%' OR id LIKE 'kb-sop-%' OR id LIKE 'kb-faq-00%' OR id LIKE 'kb-term-0%';

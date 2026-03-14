@@ -44,4 +44,7 @@ SET @s = IF(
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 添加 supplier_id 索引（提升按供应商查询性能）
-CREATE INDEX IF NOT EXISTS `idx_md_supplier_id` ON `t_material_database` (`supplier_id`);
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_material_database' AND INDEX_NAME='idx_md_supplier_id')=0,
+    'CREATE INDEX idx_md_supplier_id ON t_material_database (supplier_id)',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
