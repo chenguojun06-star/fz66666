@@ -282,11 +282,7 @@ export function useMaterialInventoryData() {
           const name = String(item.name || item.username || item.id || '').trim();
           return { label: name, value: String(item.id || ''), name, roleName: String(item.roleName || '') };
         }).filter((item: any) => item.value);
-        const supervisors = items.filter((item: any) => {
-          const roleName = String(item.roleName || '');
-          return roleName.includes('主管') || roleName.includes('管理员');
-        });
-        setReceiverOptions(supervisors);
+        setReceiverOptions(items);
       }
     } catch (e) {
       message.error('加载接收人失败');
@@ -312,8 +308,13 @@ export function useMaterialInventoryData() {
       receiverName: receiverName || undefined,
       remark: '',
     });
+    // 立即将当前用户插入 options，确保 Select 能显示名字（不等异步加载）
+    if (receiverId) {
+      const selfOption = { label: receiverName || receiverId, value: receiverId, name: receiverName || receiverId, roleName: String((user as any)?.roleName || '') };
+      setReceiverOptions(prev => prev.some(o => o.value === receiverId) ? prev : [selfOption, ...prev]);
+    }
     setInstructionVisible(true);
-    if (!receiverOptions.length) loadReceivers();
+    loadReceivers();
   };
 
   const openInstructionEmpty = () => {
@@ -331,8 +332,13 @@ export function useMaterialInventoryData() {
       receiverName: receiverName || undefined,
       remark: '',
     });
+    // 立即将当前用户插入 options，确保 Select 能显示名字（不等异步加载）
+    if (receiverId) {
+      const selfOption = { label: receiverName || receiverId, value: receiverId, name: receiverName || receiverId, roleName: String((user as any)?.roleName || '') };
+      setReceiverOptions(prev => prev.some(o => o.value === receiverId) ? prev : [selfOption, ...prev]);
+    }
     setInstructionVisible(true);
-    if (!receiverOptions.length) loadReceivers();
+    loadReceivers();
   };
 
   const handleMaterialSelect = async (value: string) => {
