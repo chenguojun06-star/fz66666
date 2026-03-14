@@ -38,15 +38,6 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.deepseek.timeout-seconds:90}")
     private int directTimeoutSeconds;
 
-    @Value("${ai.qwen-vl.api-key:}")
-    private String visionApiKey;
-
-    @Value("${ai.qwen-vl.api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}")
-    private String visionApiUrl;
-
-    @Value("${ai.qwen-vl.model:qwen-vl-max}")
-    private String visionModel;
-
     @Value("${ai.doubao.api-key:}")
     private String doubaoApiKey;
 
@@ -231,81 +222,11 @@ public class IntelligenceInferenceOrchestrator {
         return value != null && !value.trim().isEmpty();
     }
 
-    /**
-     * 调用 Qwen-VL 视觉大模型分析款式图片。
-     *
-     * @param imageUrl   可公网访问的图片 URL
-     * @param textPrompt 文字指令
-     * @return 模型的文本描述，失败时返回 null
-     */
-    public String chatWithVision(String imageUrl, String textPrompt) {
-        if (!hasText(visionApiKey) || !hasText(imageUrl)) {
-            return null;
-        }
-        try {
-            var root = MAPPER.createObjectNode();
-            root.put("model", visionModel);
-            root.put("max_tokens", 512);
-
-            var messages = MAPPER.createArrayNode();
-            var userMsg = MAPPER.createObjectNode();
-            userMsg.put("role", "user");
-
-            // Qwen-VL 多模态格式：content 为 [{type:image_url,...},{type:text,...}]
-            var content = MAPPER.createArrayNode();
-            var imgNode = MAPPER.createObjectNode();
-            imgNode.put("type", "image_url");
-            var imgUrlObj = MAPPER.createObjectNode();
-            imgUrlObj.put("url", imageUrl);
-            imgNode.set("image_url", imgUrlObj);
-            content.add(imgNode);
-
-            var textNode = MAPPER.createObjectNode();
-            textNode.put("type", "text");
-            textNode.put("text", textPrompt);
-            content.add(textNode);
-
-            userMsg.set("content", content);
-            messages.add(userMsg);
-            root.set("messages", messages);
-
-            String body = MAPPER.writeValueAsString(root);
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(visionApiUrl))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + visionApiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .timeout(Duration.ofSeconds(30))
-                    .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonNode respNode = MAPPER.readTree(response.body());
-                JsonNode choices = respNode.path("choices");
-                if (choices.isArray() && choices.size() > 0) {
-                    String result = choices.get(0).path("message").path("content").asText(null);
-                    log.info("[VisionModel] 图像分析完成，返回 {} 字", result == null ? 0 : result.length());
-                    return result;
-                }
-            } else {
-                String body2 = response.body();
-                log.warn("[VisionModel] 调用失败 status={} body={}", response.statusCode(),
-                        body2.substring(0, Math.min(200, body2.length())));
-            }
-        } catch (Exception e) {
-            log.warn("[VisionModel] 图像分析异常: {}", e.getMessage());
-        }
-        return null;
-    }
-
     public boolean isVisionEnabled() {
-        // 优先使用 Doubao，次选 Qwen-VL
-        boolean doubaoReady = hasText(doubaoApiKey);
-        boolean qwenReady = hasText(visionApiKey);
-        if (!doubaoReady && !qwenReady) {
-            log.warn("[Vision] 无可用视觉模型：doubao 和 qwen-vl 均未配置");
+        if (!hasText(doubaoApiKey)) {
+            log.warn("[Vision] Doubao 未配置，视觉分析不可用");
         }
-        return doubaoReady || qwenReady;
+        return hasText(doubaoApiKey);
     }
 
     public String chatWithDoubaoVision(String imageUrl, String textPrompt) {

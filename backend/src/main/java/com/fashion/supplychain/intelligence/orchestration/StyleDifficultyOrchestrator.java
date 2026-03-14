@@ -220,11 +220,11 @@ public class StyleDifficultyOrchestrator {
                 .filter(n -> n != null && !n.isEmpty())
                 .collect(Collectors.joining("、"));
 
-        // ── 视觉模型：优先 Doubao，降级 Qwen-VL，开放式发现工艺难度特征（无固定列表限制） ──
+        // ── 视觉模型（Doubao）：开放式发现工艺难度特征（无固定列表限制） ──
         String visionDescription = "暂无视觉分析";
         boolean visionEnabled = inferenceOrchestrator.isVisionEnabled();
         if (!visionEnabled) {
-            log.warn("[StyleDifficulty] 视觉模型未启用（Doubao 和 Qwen-VL 均未配置），跳过视觉分析");
+            log.warn("[StyleDifficulty] Doubao 视觉模型未配置，跳过视觉分析");
         } else if (imageUrl == null || imageUrl.isBlank()) {
             log.warn("[StyleDifficulty] 该款式无封面图（cover=null），跳过视觉分析");
         } else {
@@ -246,18 +246,13 @@ public class StyleDifficultyOrchestrator {
                         "对每个识别的难点用「难」「中」「易」标记。\n" +
                         "严格控制在 200 字以内，着重讲工艺复杂度，无关颜色/风格等不涉及难度的信息。\n" +
                         "如果图片中根本看不出有什么难度特征，就直接写「简单基础款，无特殊难度因素」。";
-                // 优先 Doubao 视觉模型
+                // Doubao 视觉模型分析
                 String raw = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
-                if (raw == null || raw.isBlank()) {
-                    // Doubao 不可用（未配置或调用失败），降级使用 Qwen-VL
-                    log.info("[StyleDifficulty] Doubao 不可用，降级使用 Qwen-VL 视觉分析");
-                    raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
-                }
                 if (raw != null && !raw.isBlank()) {
                     visionDescription = raw.length() > 250 ? raw.substring(0, 250) : raw;
                     log.info("[StyleDifficulty] 视觉分析完成，描述长度={}", visionDescription.length());
                 } else {
-                    log.warn("[StyleDifficulty] 视觉模型（Doubao+Qwen-VL）均返回空，跳过视觉增强");
+                    log.warn("[StyleDifficulty] Doubao 视觉模型返回空，跳过视觉增强");
                 }
             } catch (Exception e) {
                 log.warn("[StyleDifficulty] 视觉分析异常，降级无描述: {}", e.getMessage());
@@ -298,7 +293,7 @@ public class StyleDifficultyOrchestrator {
                 "- BOM物料种数：%d 种\n" +
                 "- 工序（共%d道）：%s\n" +
                 "- 二次工艺（共%d道）：%s\n" +
-                "- AI图像发现的工艺难度因素（Qwen-VL 开放式分析）：%s\n%s\n" +
+                "- AI图像发现的工艺难度因素（Doubao 视觉分析）：%s\n%s\n" +
                 "结构化预评分：难度%s（%d/10），含高难工序%d道，二次工艺%s。\n\n" +
                 "请根据 AI 图像分析发现的工艺难度特征进行评估。\n" +
                 "AI 可能发现的工艺特征是动态的、开放式的，包括常见工艺和创新工艺（如激光切割、热风贴合等）。\n" +
