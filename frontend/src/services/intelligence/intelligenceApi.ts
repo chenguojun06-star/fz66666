@@ -1180,7 +1180,7 @@ export const intelligenceApi = {
     onDone: () => void,
     onError: (err: string) => void,
   ) => {
-    const token = localStorage.getItem('token') || '';
+    const token = localStorage.getItem('authToken') || '';
     const url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}`;
     const ctrl = new AbortController();
     fetch(url, {

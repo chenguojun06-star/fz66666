@@ -136,6 +136,11 @@ commit: `5f42cf66`
 
 ## 2026-04-19
 
+- fix: 修复 AI 顾问流式问答使用错误本地 token 键的问题。
+  - 文件：[frontend/src/services/intelligence/intelligenceApi.ts](frontend/src/services/intelligence/intelligenceApi.ts)
+  - 改动：`aiAdvisorChatStream()` 从 `localStorage.getItem('token')` 改为统一的 `authToken`。
+  - 作用：解决 `/api/intelligence/ai-advisor/chat/stream` 在已登录状态下仍返回 401，避免 SSE 直接失败并反复降级。
+
 ### 🔴 fix(production-order): 补全云端缺失 5 列（下单 500 第 2 批）
 
 `remarks`、`expected_ship_date`、`node_operations`、`procurement_confirmed_at`、`procurement_confirm_remark`
