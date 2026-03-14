@@ -116,10 +116,18 @@ interface ActionCard {
   }>;
 }
 
+interface QuickAction {
+  label: string;
+  command: string;
+  args?: Record<string, unknown>;
+  style?: 'primary' | 'danger' | 'default';
+}
+
 /** 从 AI 原始回复中提取 CHART/ACTIONS 标记块，返回干净展示文本 + 结构化数据 */
-function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[] } {
+function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[]; quickActions: QuickAction[] } {
   const charts: ChartSpec[] = [];
   const actionCards: ActionCard[] = [];
+  const quickActions: QuickAction[] = [];
   const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   let m: RegExpExecArray | null;
   while ((m = chartRe.exec(rawText)) !== null) {
@@ -132,11 +140,20 @@ function parseAiResponse(rawText: string): { displayText: string; charts: ChartS
       if (Array.isArray(parsed)) actionCards.push(...(parsed as ActionCard[]));
     } catch { /* skip */ }
   }
+  // 解析 ```ACTIONS_JSON\n[...]\n``` 代码块 → 快捷操作按钮
+  const actionsJsonRe = /```ACTIONS_JSON\s*\n([\s\S]*?)\n```/g;
+  while ((m = actionsJsonRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1].trim()) as unknown;
+      if (Array.isArray(parsed)) quickActions.push(...(parsed as QuickAction[]));
+    } catch { /* skip */ }
+  }
   const displayText = rawText
+    .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
     .trim();
-  return { displayText, charts, actionCards };
+  return { displayText, charts, actionCards, quickActions };
 }
 
 // ── 模块级 ECharts 懒加载（必须在组件外定义，不能在 render 函数中调用 lazy）
@@ -151,6 +168,7 @@ interface Message {
   reportType?: 'daily' | 'weekly' | 'monthly';
   charts?: ChartSpec[];
   actionCards?: ActionCard[];
+  quickActions?: QuickAction[];
 }
 
 const INITIAL_MSG: Message = {
@@ -618,10 +636,10 @@ const GlobalAiAssistant: React.FC = () => {
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
-            const { displayText, charts, actionCards } = parseAiResponse(rawContent);
+            const { displayText, charts, actionCards, quickActions } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards, quickActions }
               : m));
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
@@ -968,6 +986,20 @@ const GlobalAiAssistant: React.FC = () => {
                             else { void handleSend(`执行操作：${card.title}`); }
                           }}
                         />
+                      ))}
+                    </div>
+                  )}
+                  {/* ACTIONS_JSON 快捷操作按钮 */}
+                  {msg.role === 'ai' && !!msg.quickActions?.length && (
+                    <div className={styles.quickActionsRow}>
+                      {msg.quickActions.map((action, i) => (
+                        <button
+                          key={i}
+                          className={`${styles.actionBtn} ${action.style === 'danger' ? styles.actionBtnDanger : styles.actionBtnPrimary}`}
+                          onClick={() => handleSend(action.label)}
+                        >
+                          {action.label}
+                        </button>
                       ))}
                     </div>
                   )}

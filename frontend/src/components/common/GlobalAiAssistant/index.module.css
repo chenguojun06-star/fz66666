@@ -608,6 +608,16 @@
 .actionBtnDanger { background: #ff4d4f; color: #fff; }
 .actionBtnDanger:hover { background: #cf1322; }
 
+/* ACTIONS_JSON 快捷操作按钮行 */
+.quickActionsRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
 /* ── 迷你图表 ─────────────────────────────────────────────────────────────── */
 .chartsWrapper { margin-top: 6px; }
 .miniEChart {
