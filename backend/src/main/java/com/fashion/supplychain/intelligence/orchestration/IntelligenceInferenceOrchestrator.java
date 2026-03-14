@@ -287,6 +287,12 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isVisionEnabled() {
-        return hasText(visionApiKey);
+        boolean result = hasText(visionApiKey);
+        if (!result) {
+            log.warn("[Vision] Qwen-VL 未启用：visionApiKey 为空或未配置");
+        } else {
+            log.debug("[Vision] Qwen-VL 已启用，model={}", visionModel);
+        }
+        return result;
     }
 }

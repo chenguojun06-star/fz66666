@@ -218,7 +218,10 @@ public class StyleDifficultyOrchestrator {
 
         // ── Qwen-VL：真正看图，开放式发现工艺难度特征（无固定列表限制） ──
         String visionDescription = "暂无视觉分析";
-        if (imageUrl != null && !imageUrl.isBlank() && inferenceOrchestrator.isVisionEnabled()) {
+        boolean visionEnabled = inferenceOrchestrator.isVisionEnabled();
+        log.info("[StyleDifficulty] Qwen-VL 状态检查：imageUrl={}, visionEnabled={}", 
+            imageUrl != null && !imageUrl.isBlank() ? "有" : "无", visionEnabled);
+        if (imageUrl != null && !imageUrl.isBlank() && visionEnabled) {
             try {
                 String visionPrompt = "分析这件服装图片中存在的制作难度因素。\n" +
                         "直接列出图片中实际可见的工艺难点特征，对每个难点简述为什么会增加制作难度。\n" +
