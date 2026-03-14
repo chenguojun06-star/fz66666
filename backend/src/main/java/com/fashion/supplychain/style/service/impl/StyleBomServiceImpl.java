@@ -42,7 +42,33 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             log.debug("BOM缓存读取失败: styleId={}", styleId);
         }
 
-        List<StyleBom> result = list(new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, styleId));
+        List<StyleBom> result = list(new LambdaQueryWrapper<StyleBom>()
+            .select(
+                StyleBom::getId,
+                StyleBom::getStyleId,
+                StyleBom::getMaterialCode,
+                StyleBom::getMaterialName,
+                StyleBom::getMaterialType,
+                StyleBom::getColor,
+                StyleBom::getSpecification,
+                StyleBom::getSize,
+                StyleBom::getUnit,
+                StyleBom::getUsageAmount,
+                StyleBom::getLossRate,
+                StyleBom::getUnitPrice,
+                StyleBom::getTotalPrice,
+                StyleBom::getSupplier,
+                StyleBom::getSupplierContactPerson,
+                StyleBom::getSupplierContactPhone,
+                StyleBom::getRemark,
+                StyleBom::getStockStatus,
+                StyleBom::getAvailableStock,
+                StyleBom::getRequiredPurchase,
+                StyleBom::getCreateTime,
+                StyleBom::getUpdateTime,
+                StyleBom::getTenantId
+            )
+            .eq(StyleBom::getStyleId, styleId));
 
         // 写入缓存
         try {
@@ -60,6 +86,31 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             return java.util.Collections.emptyList();
         }
         return list(new LambdaQueryWrapper<StyleBom>()
+                .select(
+                        StyleBom::getId,
+                        StyleBom::getStyleId,
+                        StyleBom::getMaterialCode,
+                        StyleBom::getMaterialName,
+                        StyleBom::getMaterialType,
+                        StyleBom::getColor,
+                        StyleBom::getSpecification,
+                        StyleBom::getSize,
+                        StyleBom::getUnit,
+                        StyleBom::getUsageAmount,
+                        StyleBom::getLossRate,
+                        StyleBom::getUnitPrice,
+                        StyleBom::getTotalPrice,
+                        StyleBom::getSupplier,
+                        StyleBom::getSupplierContactPerson,
+                        StyleBom::getSupplierContactPhone,
+                        StyleBom::getRemark,
+                        StyleBom::getStockStatus,
+                        StyleBom::getAvailableStock,
+                        StyleBom::getRequiredPurchase,
+                        StyleBom::getCreateTime,
+                        StyleBom::getUpdateTime,
+                        StyleBom::getTenantId
+                )
                 .in(StyleBom::getMaterialCode, materialCodes));
     }
 

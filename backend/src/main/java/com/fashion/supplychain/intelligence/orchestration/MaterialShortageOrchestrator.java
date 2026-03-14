@@ -80,6 +80,28 @@ public class MaterialShortageOrchestrator {
         }
 
         QueryWrapper<StyleBom> bomQw = new QueryWrapper<>();
+        bomQw.select(
+            "id",
+            "style_id",
+            "material_code",
+            "material_name",
+            "material_type",
+            "color",
+            "specification",
+            "size",
+            "unit",
+            "usage_amount",
+            "loss_rate",
+            "unit_price",
+            "total_price",
+            "supplier",
+            "supplier_contact_person",
+            "supplier_contact_phone",
+            "remark",
+            "tenant_id",
+            "create_time",
+            "update_time"
+        );
         bomQw.eq(tenantId != null, "tenant_id", tenantId)
              .in("style_id", styleIds);
         // 注意：t_style_bom 表无 delete_flag 列，不可加此条件

@@ -12,6 +12,21 @@ import java.util.List;
 public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize> implements StyleSizeService {
     @Override
     public List<StyleSize> listByStyleId(Long styleId) {
-        return list(new LambdaQueryWrapper<StyleSize>().eq(StyleSize::getStyleId, styleId).orderByAsc(StyleSize::getSort));
+        return list(new LambdaQueryWrapper<StyleSize>()
+                .select(
+                        StyleSize::getId,
+                        StyleSize::getStyleId,
+                        StyleSize::getSizeName,
+                        StyleSize::getPartName,
+                        StyleSize::getMeasureMethod,
+                        StyleSize::getStandardValue,
+                        StyleSize::getTolerance,
+                        StyleSize::getSort,
+                        StyleSize::getCreateTime,
+                        StyleSize::getUpdateTime,
+                        StyleSize::getTenantId
+                )
+                .eq(StyleSize::getStyleId, styleId)
+                .orderByAsc(StyleSize::getSort));
     }
 }
