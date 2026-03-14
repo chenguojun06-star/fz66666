@@ -277,7 +277,7 @@ ai:
   doubao:
     api-key: ${DOUBAO_API_KEY:}            # 火山引擎豆包视觉模型
     api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
-    model: ${DOUBAO_MODEL:doubao-1.5-vision-pro-250328}
+    model: ${DOUBAO_MODEL:doubao-1-5-vision-pro-32k-250115}
     timeout-seconds: 60
   gateway:
     routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:direct}   # direct / failover / weighted
