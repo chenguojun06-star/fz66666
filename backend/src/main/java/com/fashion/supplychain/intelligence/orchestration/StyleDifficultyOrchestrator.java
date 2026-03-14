@@ -112,6 +112,10 @@ public class StyleDifficultyOrchestrator {
             return base;
         }
         String imageUrl = coverUrl != null ? coverUrl : style.getCover();
+        log.info("[StyleDifficulty] 款式{}：BOM={}种，工序={}道，封面图={}, visionEnabled={}",
+            style.getStyleNo(), boms.size(), processes.size(),
+            (imageUrl != null && !imageUrl.isBlank()) ? "有(" + imageUrl.substring(0, Math.min(60, imageUrl.length())) + "...)" : "无",
+            inferenceOrchestrator.isVisionEnabled());
         try {
             return enhanceWithAi(base, style, boms, processes, secondaryProcesses, imageUrl);
         } catch (Exception e) {
@@ -219,8 +223,13 @@ public class StyleDifficultyOrchestrator {
         // ── Doubao 视觉模型：真正看图，开放式发现工艺难度特征（无固定列表限制） ──
         String visionDescription = "暂无视觉分析";
         boolean visionEnabled = inferenceOrchestrator.isVisionEnabled();
-        log.info("[StyleDifficulty] 视觉模型状态检查：imageUrl={}, visionEnabled={}",
-            imageUrl != null && !imageUrl.isBlank() ? "有" : "无", visionEnabled);
+        if (!visionEnabled) {
+            log.warn("[StyleDifficulty] 视觉模型未启用（DOUBAO_API_KEY 未配置），跳过视觉分析");
+        } else if (imageUrl == null || imageUrl.isBlank()) {
+            log.warn("[StyleDifficulty] 该款式无封面图（cover=null），跳过视觉分析");
+        } else {
+            log.info("[StyleDifficulty] 开始Doubao视觉分析，imageUrl前60字符={}", imageUrl.substring(0, Math.min(60, imageUrl.length())));
+        }
         if (imageUrl != null && !imageUrl.isBlank() && visionEnabled) {
             try {
                 String visionPrompt = "分析这件服装图片中存在的制作难度因素。\n" +
