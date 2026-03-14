@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 
 /**
  * 启动时自动修复关键业务表可能缺失的列。
@@ -48,10 +49,39 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(32) DEFAULT NULL COMMENT '开发来源类型：SELF_DEVELOPED / SELECTION_CENTER'");
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_detail",
                     "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "image_insight",
+                    "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
+
+            int repairedTables = 0;
+            repairedTables += ensureTable(conn, schema,
+                    "t_intelligence_action_task_feedback",
+                    "CREATE TABLE IF NOT EXISTS `t_intelligence_action_task_feedback` ("
+                            + "`id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,"
+                            + "`tenant_id` BIGINT NOT NULL,"
+                            + "`task_code` VARCHAR(100) NOT NULL,"
+                            + "`related_order_no` VARCHAR(64) DEFAULT NULL,"
+                            + "`feedback_status` VARCHAR(32) NOT NULL,"
+                            + "`feedback_reason` VARCHAR(500) DEFAULT NULL,"
+                            + "`completion_note` VARCHAR(500) DEFAULT NULL,"
+                            + "`source_signal` VARCHAR(100) DEFAULT NULL,"
+                            + "`next_review_at` VARCHAR(32) DEFAULT NULL,"
+                            + "`operator_id` VARCHAR(64) DEFAULT NULL,"
+                            + "`operator_name` VARCHAR(100) DEFAULT NULL,"
+                            + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                            + "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                            + "`delete_flag` INT NOT NULL DEFAULT 0,"
+                            + "PRIMARY KEY (`id`),"
+                            + "KEY `idx_tenant_task` (`tenant_id`, `task_code`, `related_order_no`, `create_time`),"
+                            + "KEY `idx_tenant_status` (`tenant_id`, `feedback_status`, `create_time`)"
+                            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='动作中心任务回执表'");
 
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
-            } else {
+            }
+            if (repairedTables > 0) {
+                log.warn("[DbRepair] 共修复 {} 张缺失表，Flyway/DataInitializer 可能未正常执行", repairedTables);
+            }
+            if (repaired == 0 && repairedTables == 0) {
                 log.info("[DbRepair] 关键表结构完整，无需修复");
             }
         } catch (Exception e) {
@@ -75,6 +105,21 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         return 0;
     }
 
+    private int ensureTable(Connection conn, String schema, String table, String createSql) {
+        try {
+            if (!tableExists(conn, schema, table)) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute(createSql);
+                }
+                log.warn("[DbRepair] 已创建缺失表: {}", table);
+                return 1;
+            }
+        } catch (Exception e) {
+            log.error("[DbRepair] 创建表 {} 失败: {}", table, e.getMessage());
+        }
+        return 0;
+    }
+
     private boolean columnExists(Connection conn, String schema, String table, String column) throws Exception {
         String sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
                 "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
@@ -82,6 +127,17 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             ps.setString(1, schema);
             ps.setString(2, table);
             ps.setString(3, column);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    private boolean tableExists(Connection conn, String schema, String table) throws Exception {
+        String sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }

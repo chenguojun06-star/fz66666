@@ -1,3 +1,20 @@
+## 2026-03-14
+
+### 🔴 fix(db-self-heal): 启动期补齐云端缺失列/表，恢复成品库存与动作中心查询
+
+**问题**：云端仍存在库结构落后于代码的情况，导致多个页面继续报错：
+- `t_style_info.image_insight` 缺失，触发 `/api/production/order/list`、`/api/style/info/list` 等接口 500
+- `t_intelligence_action_task_feedback` 缺失，动作中心查询持续报 SQL 异常
+
+**修复**：扩展启动期 `DbColumnRepairRunner` 自愈范围，不再只修 `t_user` 和 `t_style_info` 的历史列：
+- 新增自动补齐 `t_style_info.image_insight`
+- 新增自动创建 `t_intelligence_action_task_feedback`
+
+**对系统的帮助**：
+- ✅ 即使云端 Flyway 当次未完全落库，服务启动后也能自愈关键结构
+- ✅ 成品库存、生产订单、款式列表等依赖 `image_insight` 的接口恢复可用
+- ✅ 动作中心不再因反馈表缺失而持续报库表不存在
+
 ## 2026-04-21
 
 ### 🔴 fix(flyway): 还原3个已执行脚本 — 消除checksum不匹配导致的**全系统500**
