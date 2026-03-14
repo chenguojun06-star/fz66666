@@ -271,8 +271,10 @@ public class StyleDifficultyOrchestrator {
                 // Doubao 视觉模型分析
                 String raw = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
                 if (raw != null && !raw.isBlank()) {
-                    visionDescription = raw.length() > 250 ? raw.substring(0, 250) : raw;
-                    log.info("[StyleDifficulty] 视觉分析完成，描述长度={}", visionDescription.length());
+                    visionDescription = raw.length() > 400 ? raw.substring(0, 400) : raw;
+                    log.info("[StyleDifficulty] Doubao视觉分析成功，描述长度={} 前80字符={}",
+                            visionDescription.length(),
+                            visionDescription.substring(0, Math.min(80, visionDescription.length())));
                 } else {
                     log.warn("[StyleDifficulty] Doubao 视觉模型返回空，跳过视觉增强");
                 }
@@ -316,6 +318,17 @@ public class StyleDifficultyOrchestrator {
         String processDataNote = processDataIncomplete
                 ? "⚠️ 工序数据尚未录入（0道），这并不代表该款式没有工序，请完全以图像分析结果为主要评估依据！"
                 : "";
+
+        // 根据视觉分析是否成功，给 DeepSeek 不同的 imageInsight 生成指令（避免生成误导性"未发现"文字）
+        boolean visionFailed = "暂无视觉分析".equals(visionDescription);
+        log.info("[StyleDifficulty] 视觉分析状态: visionFailed={} imageUrl类型={}",
+                visionFailed,
+                imageUrl == null ? "null" : (
+                        imageUrl.startsWith("data:") ? "base64(" + imageUrl.length() + "字符)" :
+                        imageUrl.startsWith("http") ? "http-url" : "other"));
+        String imageInsightInstruction = visionFailed
+                ? "必须填写：'视觉图片暂未获取到，评分依据结构化数据（BOM+品类）'"
+                : "一行总结Doubao视觉分析中发现的关键制作难点（50字以内，直接说工艺特征，不要写AI视觉分析这几个字）";
 
         String userMessage = String.format(
                 "款式信息：\n" +
@@ -376,6 +389,10 @@ public class StyleDifficultyOrchestrator {
         Object scoreObj = parsed.get("difficultyScore");
         int aiScore = scoreObj instanceof Number ? Math.max(1, Math.min(10, ((Number) scoreObj).intValue())) : base.getDifficultyScore();
         String imageInsight = String.valueOf(parsed.getOrDefault("imageInsight", ""));
+        // 视觉分析失败时覆盖 DeepSeek 生成的文字，避免出现"AI视觉分析未发现具体工艺特征"这类误导性描述
+        if (visionFailed) {
+            imageInsight = "封面图暂未获取，本次评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
+        }
         Object multiplierObj = parsed.get("pricingMultiplier");
         BigDecimal aiMultiplier = multiplierObj instanceof Number
                 ? BigDecimal.valueOf(((Number) multiplierObj).doubleValue()).setScale(2, java.math.RoundingMode.HALF_UP)
@@ -399,7 +416,11 @@ public class StyleDifficultyOrchestrator {
         base.setPricingMultiplier(aiMultiplier);
         base.setKeyFactors(mergedFactors.stream().limit(6).collect(Collectors.toList()));
         base.setImageAnalyzed(true);
-        base.setImageInsight(imageInsight.length() > 100 ? imageInsight.substring(0, 100) : imageInsight);
+        base.setImageInsight(imageInsight.length() > 300 ? imageInsight.substring(0, 300) : imageInsight);
+        // 视觉分析成功时，保存 Doubao 原始识别描述供前端展示（用户可直接看到 AI 识别了哪些工艺特征）
+        if (!visionFailed) {
+            base.setVisionRaw(visionDescription.length() > 400 ? visionDescription.substring(0, 400) : visionDescription);
+        }
         base.setAssessmentSource("AI_ENHANCED");
         // 存储款式图片向量，供后续相似款式搜索使用
         if (imageVec != null && style.getId() != null) {

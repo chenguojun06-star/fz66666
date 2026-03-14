@@ -235,6 +235,15 @@ public class IntelligenceInferenceOrchestrator {
             return null;
         }
         try {
+            // base64 数据URI超过8MB时跳过，避免Doubao API超时或拒绝请求（通常HTTP body限制10MB）
+            if (imageUrl.startsWith("data:") && imageUrl.length() > 8 * 1024 * 1024) {
+                log.warn("[DoubaoVision] Base64 数据URI超过8MB({}MB)，已跳过以防API超时。建议使用COS存储后用HTTP URL调用",
+                        imageUrl.length() / 1024 / 1024);
+                return null;
+            }
+            log.info("[DoubaoVision] 发送请求 类型={} 长度={}字符",
+                    imageUrl.startsWith("data:") ? "base64" : imageUrl.startsWith("http") ? "http-url" : "other",
+                    imageUrl.length());
             String payload = buildDoubaoVisionPayload(imageUrl, textPrompt);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(doubaoApiUrl))

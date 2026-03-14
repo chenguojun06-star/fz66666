@@ -620,6 +620,8 @@ export interface DifficultyAssessment {
   adjustedSuggestedPrice?: number | null;
   imageAnalyzed: boolean;
   imageInsight?: string | null;
+  /** Doubao 视觉模型原始识别描述（成功时有值，直接展示Doubao看到的工艺特征） */
+  visionRaw?: string | null;
   assessmentSource: 'STRUCTURED' | 'AI_ENHANCED';
 }
 

@@ -137,6 +137,8 @@ public class StyleIntelligenceProfileResponse {
         private Boolean imageAnalyzed = false;
         /** AI 图像分析摘要（仅 imageAnalyzed=true 时有值） */
         private String imageInsight;
+        /** Doubao 视觉模型原始识别描述（未经 DeepSeek 加工），用于前端展示"工艺识别详情" */
+        private String visionRaw;
         /** 评估来源：STRUCTURED（仅结构数据）/ AI_ENHANCED（含图像 LLM 分析） */
         private String assessmentSource = "STRUCTURED";
     }
