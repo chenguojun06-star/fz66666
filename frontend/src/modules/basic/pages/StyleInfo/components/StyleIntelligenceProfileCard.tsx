@@ -335,201 +335,140 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
         </span>
       </div>
 
-      {/* ── 展开区域 ── */}
+      {/* ── 展开区域（紧凑左右两栏布局）── */}
       {expanded && (
-        <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ padding: '0 12px 8px' }}>
           {/* 基本信息行 */}
-          <div style={{ color: '#595959', fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
-            <span>当前节点：{profile?.progressNode || style.progressNode || '未启动'} · {deliveryMeta.detail}</span>
+          <div style={{ color: '#8c8c8c', fontSize: 11, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
+            <span>节点：{profile?.progressNode || style.progressNode || '未启动'} · {deliveryMeta.detail}</span>
             {' · '}
             <span>最新订单：{profile?.production?.latestOrderNo || style.latestOrderNo || '暂无'} · 进度 {profile?.production?.latestProductionProgress != null ? `${profile.production.latestProductionProgress}%` : style.latestProductionProgress != null ? `${style.latestProductionProgress}%` : '—'}</span>
           </div>
 
-          {/* 四格统计 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
-            {[
-              {
-                key: 'delivery',
-                icon: <CalendarOutlined />,
-                title: '交期风险',
-                value: deliveryMeta.label,
-                extra: deliveryMeta.detail,
-                color: deliveryMeta.color === 'error' ? '#ff4d4f' : deliveryMeta.color === 'warning' ? '#fa8c16' : '#52c41a',
-              },
-              {
-                key: 'progress',
-                icon: <NodeIndexOutlined />,
-                title: '开发完成度',
-                value: `${completionRate}%`,
-                extra: `${doneCount}/${stageTags.length} 个关键节点已完成`,
-                color: '#1677ff',
-              },
-              {
-                key: 'quote',
-                icon: <BulbOutlined />,
-                title: 'AI建议报价',
-                value: loading ? '计算中' : fmtMoney(profile?.finance?.suggestedQuotation ?? quoteSuggestion?.suggestedPrice),
-                extra: activeDifficulty?.adjustedSuggestedPrice
-                  ? `难度调整后: ${fmtMoney(activeDifficulty.adjustedSuggestedPrice)} ×${activeDifficulty.pricingMultiplier}`
-                  : `当前报价 ${fmtMoney(profile?.finance?.currentQuotation ?? quoteSuggestion?.currentQuotation)} / 历史样本 ${(profile?.finance?.historicalOrderCount ?? quoteSuggestion?.historicalOrderCount) || 0} 单`,
-                color: '#d48806',
-              },
-              {
-                key: 'orders',
-                icon: <RadarChartOutlined />,
-                title: '系统联动',
-                value: `${orderCount} 单`,
-                extra: profile?.production?.latestOrderStatus ? `最近订单 ${profile.production.latestOrderStatus}` : style.latestOrderStatus ? `最近 ${style.latestOrderStatus}` : '暂无关联订单',
-                color: '#722ed1',
-              },
-            ].map((item) => (
-              <div
-                key={item.key}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: item.color, fontSize: 12, marginBottom: 6 }}>
-                  {item.icon}
-                  <span>{item.title}</span>
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1f1f1f', marginBottom: 4 }}>{item.value}</div>
-                <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.5 }}>{item.extra}</div>
+          {/* 左右两栏主体 */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+
+            {/* 左栏：4指标 + 节点标签 + 难度 */}
+            <div style={{ flex: '0 0 42%', minWidth: 0 }}>
+              {/* 4个指标 — 紧凑 2x2 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
+                {[
+                  {
+                    key: 'delivery',
+                    icon: <CalendarOutlined />,
+                    title: '交期风险',
+                    value: deliveryMeta.label,
+                    extra: deliveryMeta.detail,
+                    color: deliveryMeta.color === 'error' ? '#ff4d4f' : deliveryMeta.color === 'warning' ? '#fa8c16' : '#52c41a',
+                  },
+                  {
+                    key: 'progress',
+                    icon: <NodeIndexOutlined />,
+                    title: '开发完成度',
+                    value: `${completionRate}%`,
+                    extra: `${doneCount}/${stageTags.length} 节点完成`,
+                    color: '#1677ff',
+                  },
+                  {
+                    key: 'quote',
+                    icon: <BulbOutlined />,
+                    title: 'AI建议报价',
+                    value: loading ? '…' : fmtMoney(profile?.finance?.suggestedQuotation ?? quoteSuggestion?.suggestedPrice),
+                    extra: activeDifficulty?.adjustedSuggestedPrice
+                      ? `难度调整: ${fmtMoney(activeDifficulty.adjustedSuggestedPrice)}`
+                      : `历史 ${(profile?.finance?.historicalOrderCount ?? quoteSuggestion?.historicalOrderCount) || 0} 单`,
+                    color: '#d48806',
+                  },
+                  {
+                    key: 'orders',
+                    icon: <RadarChartOutlined />,
+                    title: '系统联动',
+                    value: `${orderCount} 单`,
+                    extra: profile?.production?.latestOrderStatus || style.latestOrderStatus || '暂无订单',
+                    color: '#722ed1',
+                  },
+                ].map((item) => (
+                  <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: '#fff', border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}>
+                      <span style={{ color: item.color, fontSize: 11 }}>{item.icon}</span>
+                      <span style={{ fontSize: 11, color: '#8c8c8c' }}>{item.title}</span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
+                    <div style={{ fontSize: 11, color: '#bfbfbf', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* 节点标签 */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-            {stageTags.map((item) => (
-              <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0 }}>
-                {item.label}{item.done ? ' ✓' : ' 待处理'}
-              </Tag>
-            ))}
-          </div>
-
-          {/* 难度评估区 */}
-          {activeDifficulty && (
-            <div
-              style={{
-                padding: '10px 12px',
-                borderRadius: 8,
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.06)',
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ExperimentOutlined style={{ color: '#722ed1' }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1f1f1f' }}>制作难度评估</span>
-                  <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0 }}>
-                    {activeDifficulty.difficultyLabel}
+              {/* 节点标签 */}
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
+                {stageTags.map((item) => (
+                  <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>
+                    {item.label}{item.done ? ' ✓' : ''}
                   </Tag>
-                  {activeDifficulty.assessmentSource === 'AI_ENHANCED' && (
-                    <Tag color="purple" style={{ margin: 0 }}>AI图像增强</Tag>
+                ))}
+              </div>
+
+              {/* 难度评估 — 紧凑版 */}
+              {activeDifficulty ? (
+                <div style={{ padding: '5px 7px', borderRadius: 6, background: '#fff', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ExperimentOutlined style={{ color: '#722ed1', fontSize: 11 }} />
+                      <span style={{ fontSize: 11, color: '#595959' }}>难度评估</span>
+                      <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
+                      {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
+                    </div>
+                    <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!style?.cover} style={{ fontSize: 11, height: 20, padding: '0 5px' }}>图像分析</Button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
+                      strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? '#52c41a' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? '#fa8c16' : '#ff4d4f'}
+                      style={{ flex: 1, margin: 0 }} size="small" />
+                    <span style={{ fontSize: 11, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
+                  {activeDifficulty.imageInsight && (
+                    <div style={{ fontSize: 11, color: '#434343', marginTop: 3, lineHeight: 1.5, background: 'rgba(114,46,209,0.04)', borderRadius: 4, padding: '3px 5px' }}>🔬 {activeDifficulty.imageInsight}</div>
                   )}
                 </div>
-                <Button
-                    size="small"
-                    icon={<ExperimentOutlined />}
-                    loading={difficultyLoading}
-                    onClick={handleAiImageAnalysis}
-                    disabled={!style?.cover}
-                    title={!style?.cover ? '款式暂无封面图' : '用 AI 视觉模型分析款式图难度'}
-                    style={{ fontSize: 12 }}
-                  >
-                    AI图像分析
-                  </Button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <Progress
-                  percent={activeDifficulty.difficultyScore * 10}
-                  showInfo={false}
-                  strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green'
-                    ? '#52c41a'
-                    : difficultyColor(activeDifficulty.difficultyLevel) === 'orange'
-                      ? '#fa8c16'
-                      : difficultyColor(activeDifficulty.difficultyLevel) === 'red'
-                        ? '#ff4d4f' : '#1677ff'}
-                  style={{ flex: 1, margin: 0 }}
-                />
-                <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap' }}>
-                  <b>{activeDifficulty.difficultyScore}</b>/10 • 定价倍率 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b>
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: activeDifficulty.imageInsight ? 8 : 0 }}>
-                <span style={{ fontSize: 12, color: '#8c8c8c' }}>BOM {activeDifficulty.bomCount}种 • 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' • 含二次工艺' : ''}</span>
-                {activeDifficulty.keyFactors?.map((f) => (
-                  <Tag key={f} style={{ margin: 0, fontSize: 11 }}>{f}</Tag>
-                ))}
-              </div>
-              {activeDifficulty.imageInsight && (
-                <div style={{ fontSize: 12, color: '#434343', marginTop: 6, lineHeight: 1.6, background: 'rgba(114,46,209,0.04)', borderRadius: 6, padding: '6px 8px' }}>
-                  🔬 {activeDifficulty.imageInsight}
-                </div>
-              )}
-              {activeDifficulty.adjustedSuggestedPrice && (
-                <div style={{ marginTop: 8, fontSize: 12, color: '#722ed1' }}>
-                  难度调整后建议报价：<b>{fmtMoney(activeDifficulty.adjustedSuggestedPrice)}</b>
-                </div>
+              ) : (
+                <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!style?.cover} style={{ fontSize: 11 }}>AI 难度分析</Button>
               )}
             </div>
-          )}
-          {!activeDifficulty && (
-            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Button
-                size="small"
-                icon={<ExperimentOutlined />}
-                loading={difficultyLoading}
-                onClick={handleAiImageAnalysis}
-                disabled={!style?.cover}
-                title={!style?.cover ? '款式暂无封面图' : '用 AI 视觉模型识别款式图制作难度'}
-                style={{ fontSize: 12 }}
-              >
-                AI 难度分析
-              </Button>
-              <span style={{ fontSize: 12, color: '#bfbfbf' }}>结构化评分已自动完成，AI 图像识别待接入视觉模型</span>
-            </div>
-          )}
 
-          {/* AI全链路判断 */}
-          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(24,144,255,0.06)' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#1f1f1f' }}>AI全链路判断</div>
-            {loading ? (
-              <Spin size="small" />
-            ) : diagnosticCards.length ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 8 }}>
-                {diagnosticCards.map((item) => {
-                  const tone = riskTone(item.level);
-                  return (
-                    <div key={item.key} style={{ padding: '10px 12px', borderRadius: 8, ...tone }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#262626' }}>{item.title}</span>
-                        <span style={{ padding: '1px 7px', borderRadius: 999, background: tone.tagBg, color: tone.tagColor, fontSize: 12, fontWeight: 600 }}>
-                          {item.level === 'high' ? '高风险' : item.level === 'medium' ? '需关注' : '已识别'}
-                        </span>
+            {/* 右栏：AI全链路判断 */}
+            <div style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(24,144,255,0.05)', border: '1px solid rgba(24,144,255,0.1)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 5, color: '#1677ff' }}>AI全链路判断</div>
+              {loading ? (
+                <Spin size="small" />
+              ) : diagnosticCards.length ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {diagnosticCards.map((item) => {
+                    const tone = riskTone(item.level);
+                    return (
+                      <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, ...tone }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>{item.title}</span>
+                          <span style={{ padding: '0 5px', borderRadius: 999, background: tone.tagBg, color: tone.tagColor, fontSize: 11, fontWeight: 600 }}>
+                            {item.level === 'high' ? '高风险' : item.level === 'medium' ? '需关注' : '已识别'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#262626', lineHeight: 1.5 }}>{item.issue}</div>
+                        <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4, marginTop: 2 }}>{item.cause}</div>
                       </div>
-                      <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>报了什么问题</div>
-                      <div style={{ fontSize: 13, color: '#262626', lineHeight: 1.6, marginBottom: 6 }}>{item.issue}</div>
-                      <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>是什么导致的</div>
-                      <div style={{ fontSize: 13, color: '#434343', lineHeight: 1.6 }}>{item.cause}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : insights.length ? (
-              <div style={{ display: 'grid', gap: 6 }}>
-                {insights.slice(0, 3).map((item) => (
-                  <div key={item} style={{ fontSize: 13, color: '#434343', lineHeight: 1.7 }}>• {item}</div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: '#595959' }}>当前款式信息较完整，建议继续按节点推进。</div>
-            )}
+                    );
+                  })}
+                </div>
+              ) : insights.length ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {insights.slice(0, 3).map((item) => (
+                    <div key={item} style={{ fontSize: 12, color: '#434343', lineHeight: 1.6 }}>• {item}</div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#595959' }}>当前款式信息较完整，建议继续按节点推进。</div>
+              )}
+            </div>
           </div>
         </div>
       )}
