@@ -10,9 +10,28 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 门禁：Entity-Flyway 对齐检查
+  # 规则：每新增 @TableField("xxx") 必须有对应 Flyway 脚本，否则阻断整个 CI
+  # ──────────────────────────────────────────────────────────────────────────
+  entity-flyway-check:
+    name: Entity-Flyway 字段对齐门禁
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码（含上一次提交，diff 对比用）
+      uses: actions/checkout@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 2          # 需要 HEAD~1 做基准
+
+    - name: 检查新增 @TableField 是否有 Flyway 迁移脚本
+      run: python3 scripts/check-entity-flyway.py
+
   backend-test:
     name: 后端测试
     runs-on: ubuntu-latest
+    needs: [entity-flyway-check]
 
     steps:
     - name: 检出代码
@@ -38,6 +57,7 @@ jobs:
   frontend-build:
     name: 前端构建
     runs-on: ubuntu-latest
+    needs: [entity-flyway-check]
 
     steps:
     - name: 检出代码

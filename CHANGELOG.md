@@ -1,3 +1,77 @@
+## 2026-04-20
+
+### 🛡️ audit(db-flyway): 全系统 Entity-DB 一致性审计（112个实体类扫描完毕）
+
+**背景**：连续发生多起"手动 ALTER DB → 无 Flyway 脚本 → 云端 500"事件，触发全面系统审计。
+用一个 Python 脚本扫描全部 112 个实体类，逐一对比本地 DB 列，找出全部缺口。
+
+**审计结论**：全部缺口均已有 Flyway 脚本覆盖，无新增待修复项。
+
+| 类别 | 数量 | 结论 |
+|------|------|------|
+| 完全对齐的表 | 80 | ✅ entity 字段全都有对应 DB 列 |
+| 本地 DB 缺失的表 | ~30 | ✅ 均有 Flyway CREATE TABLE 脚本（Flyway 本地因 V3 失败未运行，云端已运行） |
+| 列缺口（本地 DB） | 4列 | ✅ 均有 Flyway ADD COLUMN 脚本（V20260401001 / V20260419002） |
+
+**系统性根因（已记录到 copilot-instructions）**：
+```
+本地 DB：DataInitializer (Java) 创建所有表
+云端 DB：DataInitializer 禁用（FASHION_DB_INITIALIZER_ENABLED=false），由人工 SQL dump 初始化
+→ 人工 dump 时间点的表结构是云端"基线"
+→ dump 之后新增的字段/表，必须有 Flyway 脚本！！否则云端缺列 → INSERT 500
+```
+
+**本次审计发现的所有 t_production_order 缺失列（4批次全部修复）**：
+
+| Flyway 脚本 | 修复的列 | commit |
+|------------|---------|--------|
+| V20260418001 | progress_workflow_json/locked/locked_at/locked_by/locked_by_name | `45d12264` |
+| V20260419001 | remarks、expected_ship_date、node_operations、procurement_confirmed_at/remark | `893d3b1b` |
+| V20260420001 | qr_code、factory_contact_person、factory_contact_phone | `5f42cf66` |
+
+**其他受影响表（本次审计顺带确认已覆盖）**：
+- `t_style_info.image_insight` → V20260419002 ✅
+- `t_intelligence_prediction_log.factory_name/daily_velocity/remaining_qty` → V20260401001 ✅
+- `t_material_database` 整张表 → V20260314002 ✅
+
+**对系统的帮助**：
+- ✅ 消除"手动改 DB 忘写 Flyway"导致的云端 500 隐患
+- ✅ 建立全面基线：任何实体字段新增，均引用此审计工具验证
+- ✅ 本地 Flyway 卡在 V3 属于已知历史遗留（V3 非幂等 ALTER TABLE），不影响云端
+
+commit: HEAD = `5f42cf66`，所有修复脚本均已在 upstream/main
+
+---
+
+## 2026-04-20
+
+### 🔴 fix(production-order): 补全 qr_code / factory_contact_person / factory_contact_phone 缺失列
+
+**问题**：云端下单 500 的第 3 批修复。`ProductionOrder` entity 中 `qr_code`、
+`factory_contact_person`、`factory_contact_phone` 3 列在本地是 4 个月前手动 ALTER 添加，
+从未写 Flyway 脚本，云端 DB 一直缺失。`ProductionOrderServiceImpl:116` 始终写 qr_code，
+INSERT 必失败。
+
+**修复文件**：`V20260420001__add_production_order_contact_qrcode_columns.sql`（幂等）
+
+commit: `5f42cf66`
+
+---
+
+## 2026-04-19
+
+### 🔴 fix(production-order): 补全云端缺失 5 列（下单 500 第 2 批）
+
+`remarks`、`expected_ship_date`、`node_operations`、`procurement_confirmed_at`、`procurement_confirm_remark`
+→ `V20260419001__add_missing_production_order_columns.sql`，commit: `893d3b1b`
+
+### 🟢 feat(style-info): imageInsight 持久化缓存 + 选品中心 Google 图片 fallback
+
+AI 视觉分析结果写回 DB，页面加载即显示历史结果；gstatic.com 缩略图自动回退到附件表第一张。  
+→ `V20260419002__add_style_image_insight.sql` + `StyleInfo.imageInsight` 字段，commit: `9c3f5aff`
+
+---
+
 ## 2026-04-18
 
 ### 🔴 fix(production-order): 修复云端下单 HTTP 500「系统内部错误」
