@@ -10,9 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -84,6 +85,39 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             log.debug("清除BOM缓存失败: styleId={}", styleId);
         }
     }
+
+    // ── 写操作拦截：任何写入都自动失效缓存，防止调用方忘记手动清缓存 ──────────────
+
+    @Override
+    public boolean save(StyleBom entity) {
+        boolean result = super.save(entity);
+        if (result && entity.getStyleId() != null) {
+            clearBomCache(entity.getStyleId());
+        }
+        return result;
+    }
+
+    @Override
+    public boolean updateById(StyleBom entity) {
+        boolean result = super.updateById(entity);
+        if (entity.getStyleId() != null) {
+            clearBomCache(entity.getStyleId());
+        }
+        return result;
+    }
+
+    @Override
+    public boolean updateBatchById(Collection<StyleBom> entityList) {
+        boolean result = super.updateBatchById(entityList);
+        entityList.stream()
+                .map(StyleBom::getStyleId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(this::clearBomCache);
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * @deprecated 已迁移到 StyleBomOrchestrator.getBomStockSummary()
