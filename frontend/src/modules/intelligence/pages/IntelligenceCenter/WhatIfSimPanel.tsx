@@ -37,7 +37,7 @@ const WhatIfSimPanel: React.FC = () => {
 
   // 拉取活跃订单列表
   useEffect(() => {
-    api.post<any>('/production/orders/list', { filters: { status: 'IN_PROGRESS' }, pageSize: 50 })
+    api.get<any>('/production/order/list', { params: { status: 'IN_PROGRESS', page: 1, pageSize: 50 } })
       .then(res => {
         const rows = res?.data?.records ?? res?.data?.data?.records ?? [];
         setOrders(rows.map((o: any) => {

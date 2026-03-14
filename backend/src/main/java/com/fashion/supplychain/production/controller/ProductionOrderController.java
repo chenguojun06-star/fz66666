@@ -38,7 +38,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/production/order")
+@RequestMapping({"/api/production/order", "/api/production/orders"})
 @PreAuthorize("isAuthenticated()")
 public class ProductionOrderController {
 
@@ -126,6 +126,21 @@ public class ProductionOrderController {
             }
         }
 
+        IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
+        return Result.success(page);
+    }
+
+    @PostMapping("/list")
+    public Result<?> listPost(@RequestBody(required = false) Map<String, Object> body) {
+        java.util.Map<String, Object> params = new java.util.HashMap<>();
+        if (body != null) {
+            Object filters = body.get("filters");
+            if (filters instanceof Map) {
+                params.putAll((Map<String, Object>) filters);
+            }
+            params.putAll(body);
+        }
+        params.remove("filters");
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
         return Result.success(page);
     }

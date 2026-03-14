@@ -1,5 +1,34 @@
 ## 2026-03-14
 
+### 🔴 fix(api-compat-self-heal): 补回旧订单列表兼容，扩展云端自愈到面辅料库和智能表
+
+**问题**：云端仍有三类残留异常：
+- 旧前端仍请求 `POST /api/production/orders/list`，后端仅保留单数路由，导致 404
+- `/api/material/database/list` 在云端结构未补齐时仍可能 500
+- `t_intelligence_metrics` / `t_intelligence_signal` 等智能表缺失时，驾驶舱链路仍会报库表不存在
+
+**修复**：
+- `ProductionOrderController` 同时兼容 `/api/production/order` 与 `/api/production/orders`
+- 新增 `POST /list` 兼容入口，接受旧前端 `filters/pageSize` 请求体
+- `DbColumnRepairRunner` 扩展自愈：
+  - `t_material_database` 整表和关键实体字段
+  - `t_intelligence_metrics`
+  - `t_intelligence_signal`
+
+**对系统的帮助**：
+- ✅ 旧版页面不再因 `orders/list` 差异报 404
+- ✅ 面辅料数据库在 Flyway/Initializer 未完全执行时可在启动后自动补齐
+- ✅ 智能驾驶舱关键表缺失时不再持续炸库
+
+### 🔴 fix(file-auth): 绝对文件 URL 自动附带 token，恢复图片预览
+
+**问题**：后端有时返回完整绝对地址的 `tenant-download` 文件 URL，前端此前把这类 URL 直接原样返回，导致浏览器 `<img src>` 请求不带 `token`，直接 401。
+
+**修复**：`getAuthedFileUrl()` 现在对同源绝对文件 URL 也会自动补 `?token=`。
+
+**对系统的帮助**：
+- ✅ 物料图、款式图、头像等 `tenant-download` 图片不再因绝对地址丢 token 而 401
+
 ### 🔴 fix(db-self-heal): 启动期补齐云端缺失列/表，恢复成品库存与动作中心查询
 
 **问题**：云端仍存在库结构落后于代码的情况，导致多个页面继续报错：

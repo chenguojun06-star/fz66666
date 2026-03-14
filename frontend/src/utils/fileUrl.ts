@@ -19,13 +19,27 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
   const url = fileUrl.trim();
   if (!url) return '';
 
-  // 如果已经是完整的外部URL或本地 blob URL，直接返回（不追加 token）
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
-    return url;
-  }
-
   const token = localStorage.getItem('authToken');
   if (!token) return url;
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const parsed = new URL(url, window.location.origin);
+      const isSameOrigin = parsed.origin === window.location.origin;
+      const isFileApi = parsed.pathname.startsWith('/api/file/tenant-download/') || parsed.pathname.startsWith('/api/common/download/');
+      if (!isSameOrigin || !isFileApi) {
+        return url;
+      }
+      if (!parsed.searchParams.has('token')) {
+        parsed.searchParams.set('token', token);
+      }
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  if (url.startsWith('blob:')) return url;
 
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}token=${encodeURIComponent(token)}`;
