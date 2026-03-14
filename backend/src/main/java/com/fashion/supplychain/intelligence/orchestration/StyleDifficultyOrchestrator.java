@@ -70,7 +70,19 @@ public class StyleDifficultyOrchestrator {
     @Value("${fashion.upload-dir:./uploads}")
     private String uploadPath;
 
+    @Value("${ai.doubao.model:doubao-1.5-vision-pro}")
+    private String doubaoVisionModel;
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** 返回视觉模型的简短名称，用于错误提示信息。 */
+    private String getShortModelName() {
+        if (doubaoVisionModel == null || doubaoVisionModel.isBlank()) {
+            return "doubao-vision";
+        }
+        String[] parts = doubaoVisionModel.split("-");
+        return parts.length > 2 ? parts[0] + "-" + parts[1] : doubaoVisionModel;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 公开 API
@@ -343,6 +355,8 @@ public class StyleDifficultyOrchestrator {
         String imageInsightFallback;
         if (!visionEnabled) {
             imageInsightFallback = "AI视觉模型未配置，评分依据 BOM和品类结构数据";
+        } else if (!inferenceOrchestrator.isVisionModelValid()) {
+            imageInsightFallback = "视觉模型端点未开通（" + getShortModelName() + "），请在Volcengine控制台激活该模型";
         } else if (imageNotFound) {
             imageInsightFallback = "封面图未上传，评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";
         } else {

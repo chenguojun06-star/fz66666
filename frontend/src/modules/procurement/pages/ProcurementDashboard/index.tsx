@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Button, Card, Col, DatePicker, Form, Input, InputNumber,
   message, Row, Select, Space, Spin, Tabs, Tag, Typography,
@@ -17,6 +17,7 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
+import api from '@/utils/api';
 import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
 import SupplierPurchaseHistoryModal from './components/SupplierPurchaseHistoryModal';
 
@@ -339,6 +340,44 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [materialDbOptions, setMaterialDbOptions] = useState<Array<{ label: string; value: string; record?: Record<string, unknown> }>>([]);
+  const [materialDbLoading, setMaterialDbLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchMaterialDb = useCallback((keyword: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!keyword?.trim()) { setMaterialDbOptions([]); return; }
+    searchTimerRef.current = setTimeout(async () => {
+      setMaterialDbLoading(true);
+      try {
+        const res = await api.get('/material/database/list', {
+          params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+        });
+        const records: Record<string, unknown>[] = (res as any)?.data?.records ?? [];
+        setMaterialDbOptions(records.map(m => ({
+          label: `${m.materialCode ?? ''} - ${m.materialName ?? ''}`,
+          value: String(m.materialName ?? ''),
+          record: m,
+        })));
+      } catch {
+        setMaterialDbOptions([]);
+      } finally {
+        setMaterialDbLoading(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleMaterialDbSelect = (_value: string, option: { record?: Record<string, unknown> }) => {
+    const m = option?.record;
+    if (!m) return;
+    form.setFieldsValue({
+      materialName: m.materialName ?? '',
+      materialType: m.materialType ? String(m.materialType).toUpperCase() : undefined,
+      specifications: m.specifications ?? '',
+      unit: m.unit ?? '',
+      unitPrice: m.unitPrice ?? undefined,
+    });
+  };
 
   useEffect(() => {
     if (open) {
@@ -396,8 +435,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请输入物料名称' }]}>
-              <Input placeholder="如：红色涤纶面料" />
+            <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请选择物料名称' }]}>
+              <Select
+                showSearch
+                filterOption={false}
+                placeholder="输入物料名称/编码搜索数据库"
+                loading={materialDbLoading}
+                options={materialDbOptions}
+                onSearch={searchMaterialDb}
+                onSelect={handleMaterialDbSelect}
+                allowClear
+                notFoundContent={materialDbLoading ? '搜索中…' : '输入关键词搜索面辅料数据库'}
+              />
             </Form.Item>
           </Col>
         </Row>
