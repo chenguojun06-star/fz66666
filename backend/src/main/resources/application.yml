@@ -279,7 +279,7 @@ ai:
     api-url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
     model: qwen-vl-flash                   # 改为 flash 版本（免费/低成本）
   doubao:
-    api-key: ${DOUBAO_API_KEY:}            # 火山引擎豆包视觉模型（新）
+    api-key: ${DOUBAO_API_KEY:}            # 火山引擎豆包视觉模型
     api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
     model: ${DOUBAO_MODEL:doubao-1-5-vision-pro-32k-250115}
     timeout-seconds: 60
