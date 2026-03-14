@@ -335,7 +335,7 @@ export function useMaterialInventoryData() {
     if (!receiverOptions.length) loadReceivers();
   };
 
-  const handleMaterialSelect = (value: string) => {
+  const handleMaterialSelect = async (value: string) => {
     // value 为 materialCode（来自 DB 搜索结果）
     // 优先检查该物料是否有预警记录（有则自动填充缺口数量）
     const alertMatch = alertList.find((item) => item.materialCode === value) || null;
@@ -346,10 +346,11 @@ export function useMaterialInventoryData() {
       const shortage = Math.max(0, suggested - current);
       instructionForm.setFieldsValue({ purchaseQuantity: shortage > 0 ? shortage : 1 });
     } else {
-      // 无预警记录，从 DB 搜索结果中构建 instructionTarget
+      // 无预警记录，从 DB 搜索结果中构建 instructionTarget，并实时查询进销存库存
       const dbOpt = dbMaterialOptions.find((opt) => opt.value === value);
       const m = dbOpt?.dbRecord;
       if (m) {
+        // 先设置基本信息
         setInstructionTarget({
           materialId: String(m.id || ''),
           materialCode: m.materialCode || '',
@@ -358,7 +359,37 @@ export function useMaterialInventoryData() {
           unit: m.unit || '',
           supplierName: m.supplierName || '',
         });
-        instructionForm.setFieldsValue({ purchaseQuantity: 1 });
+        // 查询进销存获取真实库存，计算采购缺口
+        try {
+          const stockRes = await api.get('/production/material/stock/list', {
+            params: { materialCode: value, page: 1, pageSize: 1 },
+          });
+          const stockRecord = stockRes?.data?.records?.[0];
+          if (stockRecord) {
+            const availableQty =
+              Number(stockRecord.quantity || 0) - Number(stockRecord.lockedQuantity || 0);
+            const safetyStock = Number(stockRecord.safetyStock || 0);
+            const shortage = Math.max(0, safetyStock - availableQty);
+            instructionForm.setFieldsValue({ purchaseQuantity: shortage > 0 ? shortage : 1 });
+            // 同时更新 instructionTarget 中的库存字段，供提交时参考
+            setInstructionTarget((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    quantity: availableQty,
+                    safetyStock,
+                    lockedQuantity: Number(stockRecord.lockedQuantity || 0),
+                  }
+                : prev,
+            );
+          } else {
+            // 进销存中暂无记录（物料刚建档未入库），采购量默认 1
+            instructionForm.setFieldsValue({ purchaseQuantity: 1 });
+          }
+        } catch {
+          // 查询失败不影响选料，采购量默认 1
+          instructionForm.setFieldsValue({ purchaseQuantity: 1 });
+        }
       }
     }
   };

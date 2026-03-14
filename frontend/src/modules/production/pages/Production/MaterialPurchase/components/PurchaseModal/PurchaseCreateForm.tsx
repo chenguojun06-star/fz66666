@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload, message } from 'antd';
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import type { UploadChangeParam } from 'antd/es/upload';
@@ -39,6 +39,49 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedSize = Form.useWatch('size', form);
   const [stockInfo, setStockInfo] = useState<{ quantity: number, location: string, safetyStock: number } | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+
+  // 面辅料数据库搜索
+  const [materialDbOptions, setMaterialDbOptions] = useState<Array<{ label: string; value: string; record?: any }>>([]);
+  const [materialDbLoading, setMaterialDbLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchMaterialDb = useCallback((keyword: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!keyword || keyword.trim().length < 1) {
+      setMaterialDbOptions([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setMaterialDbLoading(true);
+      try {
+        const res = await api.get('/material/database/list', {
+          params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+        });
+        const records: any[] = res?.data?.records || [];
+        setMaterialDbOptions(
+          records.map((m) => ({
+            label: `${m.materialCode || ''} - ${m.materialName || ''}`,
+            value: m.materialCode || '',
+            record: m,
+          })),
+        );
+      } catch {
+        setMaterialDbOptions([]);
+      } finally {
+        setMaterialDbLoading(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleMaterialDbSelect = (_value: string, option: any) => {
+    const m = option?.record;
+    if (!m) return;
+    form.setFieldsValue({
+      materialCode: m.materialCode || '',
+      materialName: m.materialName || '',
+      unit: m.unit || '',
+    });
+  };
 
   // 图片上传前验证
   const beforeUpload = (file: RcFile) => {
@@ -234,7 +277,17 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
-            <Input />
+            <Select
+              showSearch
+              filterOption={false}
+              loading={materialDbLoading}
+              options={materialDbOptions}
+              onSearch={searchMaterialDb}
+              onSelect={handleMaterialDbSelect}
+              placeholder="输入编码/名称搜索"
+              allowClear
+              notFoundContent={materialDbLoading ? '搜索中...' : '暂无结果'}
+            />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
