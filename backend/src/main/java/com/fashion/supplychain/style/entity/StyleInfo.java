@@ -99,6 +99,12 @@ public class StyleInfo {
     private String cover;
 
     /**
+     * AI视觉图像分析摘要（豆包Vision识别结果，用于持久化缓存，避免重复调用AI）
+     */
+    @TableField("image_insight")
+    private String imageInsight;
+
+    /**
      * 状态：ENABLED-启用，DISABLED-禁用
      */
     private String status;

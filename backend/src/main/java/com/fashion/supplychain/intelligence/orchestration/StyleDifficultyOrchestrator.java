@@ -114,13 +114,22 @@ public class StyleDifficultyOrchestrator {
         }
         // 如果前端未传 coverUrl 且 style.cover 也为空，则尝试从附件表取第一张图
         // （通过款式详情上传的图片存在 t_style_attachment，style.cover 本身为空）
+        // 特殊处理：选品中心导入的款式 cover 可能是 Google Shopping 缩略图（gstatic.com），
+        //           服务器端无法下载该类图片，需回退到附件表
         String effectiveCoverUrl = coverUrl;
+        boolean coverUrlIsGoogle = effectiveCoverUrl != null && effectiveCoverUrl.contains("gstatic.com");
+        if (coverUrlIsGoogle) {
+            log.info("[StyleDifficulty] 传入 coverUrl 为 Google 缩略图，忽略: styleId={}", styleId);
+            effectiveCoverUrl = null;
+        }
+        boolean styleCoverIsGoogle = style.getCover() != null && style.getCover().contains("gstatic.com");
         if ((effectiveCoverUrl == null || effectiveCoverUrl.isBlank())
-                && (style.getCover() == null || style.getCover().isBlank())) {
+                && (style.getCover() == null || style.getCover().isBlank() || styleCoverIsGoogle)) {
             List<StyleAttachment> attachments = styleAttachmentService.listByStyleId(String.valueOf(styleId));
             if (attachments != null && !attachments.isEmpty()) {
                 effectiveCoverUrl = attachments.get(0).getFileUrl();
-                log.info("[StyleDifficulty] style.cover为空，从附件表回退第一张图: styleId={}, url={}",
+                log.info("[StyleDifficulty] {}从附件表回退第一张图: styleId={}, url={}",
+                        styleCoverIsGoogle ? "style.cover 为 Google 缩略图（选品中心），" : "style.cover 为空，",
                         styleId, effectiveCoverUrl);
             }
         }
@@ -149,6 +158,12 @@ public class StyleDifficultyOrchestrator {
             return base;
         }
         String rawImageUrl = coverUrl != null ? coverUrl : style.getCover();
+        // Google Shopping 缩略图（选品中心导入款式的 cover）服务器端无法下载，直接跳过
+        if (rawImageUrl != null && rawImageUrl.contains("gstatic.com")) {
+            log.warn("[StyleDifficulty] 封面图为 Google 缩略图（gstatic.com），服务器端无法下载，跳过视觉分析。" +
+                    "如需 AI 图像分析，请在款式详情上传本地封面图。");
+            rawImageUrl = null;
+        }
         // 将相对路径（/api/file/tenant-download/...）解析为 Doubao 可公开访问的 URL
         String imageUrl = resolveImageUrlForVision(rawImageUrl);
         log.info("[StyleDifficulty] 款式{}：BOM={}种，工序={}道，封面图={}(原始={}), visionEnabled={}",
@@ -246,6 +261,13 @@ public class StyleDifficultyOrchestrator {
                 : null);
         result.setImageAnalyzed(false);
         result.setAssessmentSource("STRUCTURED");
+        // 如果 DB 中已有 AI 分析缓存（上次图像分析结果），直接填充到结果中
+        // 使页面加载时即可显示上次的 imageInsight，无需重新调用 AI
+        if (style != null && style.getImageInsight() != null && !style.getImageInsight().isBlank()) {
+            result.setImageInsight(style.getImageInsight());
+            result.setImageAnalyzed(true);
+            result.setAssessmentSource("AI_ENHANCED");
+        }
         return result;
     }
 
@@ -456,9 +478,22 @@ public class StyleDifficultyOrchestrator {
         base.setKeyFactors(mergedFactors.stream().limit(6).collect(Collectors.toList()));
         base.setImageAnalyzed(true);
         base.setImageInsight(imageInsight.length() > 120 ? imageInsight.substring(0, 120) : imageInsight);
-        // 视觉分析成功时，保存 Doubao 原始识别描述供前端展示（用户可直接看到 AI 识别了哪些工艺特征）
+        // 视觉分析成功时：① 保存 Doubao 原始识别描述供前端展示  ② 将 imageInsight 持久化到 DB
         if (!visionFailed) {
             base.setVisionRaw(visionDescription.length() > 400 ? visionDescription.substring(0, 400) : visionDescription);
+            // 持久化到 t_style_info，下次加载款式档案卡时直接返回缓存，无需重新调用 AI
+            if (style != null && style.getId() != null) {
+                String insightToSave = base.getImageInsight();
+                if (insightToSave != null && !insightToSave.isBlank()) {
+                    style.setImageInsight(insightToSave);
+                    try {
+                        styleInfoService.updateById(style);
+                        log.info("[StyleDifficulty] imageInsight 已持久化: styleId={}", style.getId());
+                    } catch (Exception e) {
+                        log.warn("[StyleDifficulty] imageInsight 持久化失败（不影响当前结果）: {}", e.getMessage());
+                    }
+                }
+            }
         }
         base.setAssessmentSource("AI_ENHANCED");
         // 存储款式图片向量，供后续相似款式搜索使用
