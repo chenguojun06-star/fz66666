@@ -50,9 +50,6 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.doubao.timeout-seconds:60}")
     private int doubaoTimeoutSeconds;
 
-    /** 若 Doubao Vision API 返回 InvalidEndpointOrModel(404) 则置 true，避免重复调用浪费时间 */
-    private volatile boolean visionModelNotFound = false;
-
     @Value("${ai.gateway.litellm.api-key:}")
     private String litellmApiKey;
 
@@ -232,18 +229,9 @@ public class IntelligenceInferenceOrchestrator {
         return hasText(doubaoApiKey);
     }
 
-    /** 返回 true 表示视觉模型端点有效（未遭遇 InvalidEndpointOrModel 404） */
-    public boolean isVisionModelValid() {
-        return !visionModelNotFound;
-    }
-
     public String chatWithDoubaoVision(String imageUrl, String textPrompt) {
         if (!hasText(doubaoApiKey) || !hasText(imageUrl)) {
             log.warn("[DoubaoVision] 缺少必要参数：apiKey 或 imageUrl 为空");
-            return null;
-        }
-        if (visionModelNotFound) {
-            log.warn("[DoubaoVision] 上次调用发现模型端点无效({}), 跳过本次调用", doubaoModel);
             return null;
         }
         try {
@@ -275,8 +263,6 @@ public class IntelligenceInferenceOrchestrator {
                 }
                 log.warn("[DoubaoVision] 响应格式异常: {}", body);
             } else if (response.statusCode() == 404 && body.contains("InvalidEndpointOrModel")) {
-                // 模型端点不存在或无权限 — 缓存标志，后续请求直接跳过，不再反复调用
-                visionModelNotFound = true;
                 log.error("[DoubaoVision] 模型端点无效(404): model={} — 请在 Volcengine ARK 控制台开通该模型或改用有效端点ID。" +
                         " 可在 .run/backend.env 添加 DOUBAO_MODEL=<您的端点ID> 后重启后端。错误: {}",
                         doubaoModel, body.substring(0, Math.min(300, body.length())));
