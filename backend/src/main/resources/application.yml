@@ -277,7 +277,7 @@ ai:
   qwen-vl:
     api-key: ${QWEN_VL_API_KEY:}           # 阿里云 DashScope 视觉大模型
     api-url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-    model: qwen-vl-max                     # 可选 qwen3-vl-flash（更快更便宜）
+    model: qwen-vl-flash                   # 改为 flash 版本（免费/低成本）
   gateway:
     routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:direct}   # direct / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
