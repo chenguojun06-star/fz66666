@@ -235,6 +235,10 @@ public class StyleAttachmentOrchestrator {
         }
         boolean ok = styleAttachmentService.removeById(id);
         if (!ok) {
+            if (styleAttachmentService.getById(id) == null) {
+                log.warn("[ATTACHMENT-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         return true;

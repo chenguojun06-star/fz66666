@@ -112,6 +112,10 @@ public class StyleProcessOrchestrator {
         // }
         boolean ok = styleProcessService.removeById(id);
         if (!ok) {
+            if (styleProcessService.getById(id) == null) {
+                log.warn("[PROCESS-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
 

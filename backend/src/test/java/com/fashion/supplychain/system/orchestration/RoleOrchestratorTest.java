@@ -161,6 +161,7 @@ class RoleOrchestratorTest {
 
     @Test
     void delete_removeByIdFails_throwsIllegalState() {
+        when(roleService.getById(1L)).thenReturn(new Role()); // row still exists → genuine failure
         when(roleService.removeById(1L)).thenReturn(false);
         assertThatThrownBy(() -> orchestrator.delete(1L, "清理旧角色"))
                 .isInstanceOf(IllegalStateException.class)

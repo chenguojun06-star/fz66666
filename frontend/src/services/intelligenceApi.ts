@@ -379,4 +379,29 @@ export async function simulateWhatIf(params: WhatIfParams): Promise<WhatIfResult
   return response.data as unknown as WhatIfResult;
 }
 
+/** ── AI 智能预测（ForecastEngine v2.0）── */
+
+export interface ForecastRequest {
+  forecastType: 'COST' | 'MATERIAL' | 'DEMAND';
+  subjectId: string;
+  horizon?: string; // e.g. '30d', '90d'
+}
+
+export interface ForecastResult {
+  forecastType: string;
+  predictedValue: number;
+  confidence: number; // 0-100
+  optimisticLow: number;
+  pessimisticHigh: number;
+  algorithm: string;
+}
+
+export async function runForecast(params: ForecastRequest): Promise<ForecastResult> {
+  const response = await api.post<ApiResult<ForecastResult>>(
+    '/intelligence/forecast/run',
+    params
+  );
+  return response.data as unknown as ForecastResult;
+}
+
 export default intelligenceApi;

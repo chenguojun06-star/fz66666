@@ -276,6 +276,10 @@ public class ShipmentReconciliationOrchestrator {
         }
         boolean ok = shipmentReconciliationService.removeById(key);
         if (!ok) {
+            if (shipmentReconciliationService.getById(key) == null) {
+                log.warn("[RECON-DELETE] id={} already deleted, idempotent success", key);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         return true;

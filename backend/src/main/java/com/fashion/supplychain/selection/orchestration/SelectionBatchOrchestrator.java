@@ -151,7 +151,12 @@ public class SelectionBatchOrchestrator {
     public void deleteBatch(Long id) {
         Long tenantId = UserContext.tenantId();
         SelectionBatch batch = batchService.getById(id);
-        if (batch == null || !batch.getTenantId().equals(tenantId)) {
+        if (batch == null) {
+            // 幂等：已删除视为成功
+            log.warn("[BATCH-DELETE] id={} already deleted, idempotent success", id);
+            return;
+        }
+        if (!batch.getTenantId().equals(tenantId)) {
             throw new RuntimeException("批次不存在");
         }
         if ("APPROVED".equals(batch.getStatus())) {

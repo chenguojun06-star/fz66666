@@ -90,6 +90,10 @@ public class StyleSizeOrchestrator {
         }
         boolean ok = styleSizeService.removeById(id);
         if (!ok) {
+            if (styleSizeService.getById(id) == null) {
+                log.warn("[SIZE-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         return true;

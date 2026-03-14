@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class PermissionOrchestrator {
 
@@ -116,6 +119,10 @@ public class PermissionOrchestrator {
         }
         boolean success = permissionService.removeById(id);
         if (!success) {
+            if (permissionService.getById(id) == null) {
+                log.warn("[PERMISSION-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         return true;

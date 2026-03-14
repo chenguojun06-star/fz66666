@@ -15,6 +15,9 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class RoleOrchestrator {
 
@@ -81,6 +84,10 @@ public class RoleOrchestrator {
         }
         boolean success = roleService.removeById(id);
         if (!success) {
+            if (roleService.getById(id) == null) {
+                log.warn("[ROLE-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         saveOperationLog("role", id == null ? null : String.valueOf(id), "DELETE", normalized);

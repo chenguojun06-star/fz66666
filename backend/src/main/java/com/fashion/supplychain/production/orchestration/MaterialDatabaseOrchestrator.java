@@ -7,11 +7,13 @@ import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 public class MaterialDatabaseOrchestrator {
 
@@ -147,7 +149,15 @@ public class MaterialDatabaseOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
-        MaterialDatabase current = getById(id);
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("id不能为空");
+        }
+        // 直接查 service 避免 getById() 在软删除记录上抛异常（幂等性）
+        MaterialDatabase current = materialDatabaseService.getById(id.trim());
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            log.warn("[MATERIAL-DB-DELETE] id={} already deleted, idempotent success", id);
+            return true;
+        }
         MaterialDatabase patch = new MaterialDatabase();
         patch.setId(current.getId());
         patch.setDeleteFlag(1);

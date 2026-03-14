@@ -457,6 +457,10 @@ public class TemplateLibraryOrchestrator {
         }
         boolean ok = templateLibraryService.removeById(id);
         if (!ok) {
+            if (templateLibraryService.getById(id) == null) {
+                log.warn("[TEMPLATE-DELETE] id={} already deleted, idempotent success", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
         }
         return true;
