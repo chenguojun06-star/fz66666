@@ -447,7 +447,6 @@ const DataCenter: React.FC = () => {
       styleNo: record.styleNo,
       revisionType: 'MINOR',
       revisionReason: '',
-      revisionContent: '',
       revisionDate: dayjs(),
     });
     setPatternRevisionModalVisible(true);
@@ -492,7 +491,7 @@ const DataCenter: React.FC = () => {
         styleNo: values.styleNo,
         revisionType: values.revisionType,
         revisionReason: values.revisionReason,
-        revisionContent: values.revisionContent,
+        revisionContent: values.revisionReason,
         revisionDate: values.revisionDate?.format('YYYY-MM-DD'),
         patternMakerName: values.patternMakerName,
         expectedCompleteDate: values.expectedCompleteDate?.format('YYYY-MM-DD'),
@@ -740,7 +739,7 @@ const DataCenter: React.FC = () => {
         open={patternRevisionModalVisible}
         title={`纸样修改记录 - ${patternRevisionRecord?.styleNo || ''}`}
         width="40vw"
-        initialHeight={520}
+        initialHeight={460}
         onCancel={() => {
           setPatternRevisionModalVisible(false);
           setPatternRevisionRecord(null);
@@ -790,14 +789,6 @@ const DataCenter: React.FC = () => {
             rules={[{ required: true, message: '请填写修改原因' }]}
           >
             <TextArea rows={3} placeholder="请说明需要修改的原因" />
-          </Form.Item>
-
-          <Form.Item
-            name="revisionContent"
-            label="修改内容"
-            rules={[{ required: true, message: '请填写修改内容' }]}
-          >
-            <TextArea rows={3} placeholder="请详细描述需要修改的内容" />
           </Form.Item>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
