@@ -178,13 +178,23 @@ public class StyleBomOrchestrator {
     }
 
     public boolean delete(String id) {
-        // 先获取 styleId 再删除，以便重算报价
+        // 先获取 styleId 再删除，以便清缓存 + 重算报价
         StyleBom current = styleBomService.getById(id);
         Long styleId = current != null ? current.getStyleId() : null;
 
         boolean ok = styleBomService.removeById(id);
         if (!ok) {
+            if (current == null) {
+                // DB 中行已不存在（可能是 Redis 缓存中的幽灵行）→ 幂等成功
+                log.warn("[BOM-DELETE] id={} not found in DB, idempotent success (stale Redis cache?)", id);
+                return true;
+            }
             throw new IllegalStateException("删除失败");
+        }
+
+        // ✅ 删除成功后立即清除 Redis BOM 缓存，防止 listByStyleId 在 30min 内仍返回已删除行
+        if (styleId != null) {
+            styleBomService.clearBomCache(styleId);
         }
 
         // BOM删除后自动重算报价单
