@@ -48,6 +48,7 @@ const _MaterialInventory: React.FC = () => {
     txLoading, txList,
     batchDetails, setBatchDetails, generatingRolls,
     alertLoading, alertList, alertOptions,
+    dbMaterialOptions, dbSearchLoading, searchMaterialFromDatabase,
     instructionVisible, instructionSubmitting, instructionTarget, receiverOptions,
     safetyStockVisible, setSafetyStockVisible, safetyStockTarget, safetyStockValue, setSafetyStockValue, safetyStockSubmitting,
     pendingPickings, pendingPickingsLoading, confirmingPickingId,
@@ -280,12 +281,13 @@ const _MaterialInventory: React.FC = () => {
             >
               <Select
                 showSearch
-                placeholder="请选择预警物料"
-                options={alertOptions}
+                placeholder="输入物料名称或编码搜索数据库"
+                loading={dbSearchLoading}
+                options={dbMaterialOptions}
                 onChange={handleMaterialSelect}
-                filterOption={(input, option) =>
-                  String(option?.label || '').toLowerCase().includes(String(input || '').toLowerCase())
-                }
+                onSearch={searchMaterialFromDatabase}
+                filterOption={false}
+                notFoundContent={dbSearchLoading ? '搜索中...' : '请输入物料名称或编码搜索'}
               />
             </Form.Item>
           )}

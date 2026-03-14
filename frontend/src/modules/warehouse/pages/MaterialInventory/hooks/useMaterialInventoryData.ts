@@ -82,6 +82,8 @@ export function useMaterialInventoryData() {
 
   const [alertLoading, setAlertLoading] = useState(false);
   const [alertList, setAlertList] = useState<MaterialStockAlertItem[]>([]);
+  const [dbMaterialOptions, setDbMaterialOptions] = useState<Array<{ label: string; value: string; dbRecord?: any }>>([]);
+  const [dbSearchLoading, setDbSearchLoading] = useState(false);
   const [instructionVisible, setInstructionVisible] = useState(false);
   const [instructionSubmitting, setInstructionSubmitting] = useState(false);
   const [instructionTarget, setInstructionTarget] = useState<MaterialStockAlertItem | null>(null);
@@ -243,6 +245,35 @@ export function useMaterialInventoryData() {
     });
   }, [alertList]);
 
+  // 搜索面辅料数据库（全量，不限于预警列表）
+  const searchMaterialFromDatabase = async (keyword: string) => {
+    if (!keyword?.trim()) {
+      setDbMaterialOptions([]);
+      return;
+    }
+    setDbSearchLoading(true);
+    try {
+      const res = await api.get('/material/database/list', {
+        params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+      });
+      const records: any[] = res?.data?.records || [];
+      const opts = records.map((m: any) => {
+        const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
+        const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
+        return {
+          label: isAlert ? `${labelBase} ⚠️库存不足` : labelBase,
+          value: m.materialCode,
+          dbRecord: m,
+        };
+      });
+      setDbMaterialOptions(opts);
+    } catch {
+      setDbMaterialOptions([]);
+    } finally {
+      setDbSearchLoading(false);
+    }
+  };
+
   const loadReceivers = async () => {
     try {
       const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 200 } });
@@ -305,16 +336,30 @@ export function useMaterialInventoryData() {
   };
 
   const handleMaterialSelect = (value: string) => {
-    const target = alertList.find((item) => {
-      const key = `${item.materialCode || ''}|${item.color || ''}|${item.size || ''}`;
-      return key === value;
-    }) || null;
-    setInstructionTarget(target);
-    if (target) {
-      const suggested = Number(target.suggestedSafetyStock ?? target.safetyStock ?? 0);
-      const current = Number(target.quantity ?? 0);
+    // value 为 materialCode（来自 DB 搜索结果）
+    // 优先检查该物料是否有预警记录（有则自动填充缺口数量）
+    const alertMatch = alertList.find((item) => item.materialCode === value) || null;
+    if (alertMatch) {
+      setInstructionTarget(alertMatch);
+      const suggested = Number(alertMatch.suggestedSafetyStock ?? alertMatch.safetyStock ?? 0);
+      const current = Number(alertMatch.quantity ?? 0);
       const shortage = Math.max(0, suggested - current);
       instructionForm.setFieldsValue({ purchaseQuantity: shortage > 0 ? shortage : 1 });
+    } else {
+      // 无预警记录，从 DB 搜索结果中构建 instructionTarget
+      const dbOpt = dbMaterialOptions.find((opt) => opt.value === value);
+      const m = dbOpt?.dbRecord;
+      if (m) {
+        setInstructionTarget({
+          materialId: String(m.id || ''),
+          materialCode: m.materialCode || '',
+          materialName: m.materialName || '',
+          materialType: m.materialType || '',
+          unit: m.unit || '',
+          supplierName: m.supplierName || '',
+        });
+        instructionForm.setFieldsValue({ purchaseQuantity: 1 });
+      }
     }
   };
 
@@ -673,6 +718,7 @@ export function useMaterialInventoryData() {
     batchDetails, setBatchDetails, generatingRolls,
     // alerts
     alertLoading, alertList, alertOptions,
+    dbMaterialOptions, dbSearchLoading, searchMaterialFromDatabase,
     // instruction
     instructionVisible, instructionSubmitting, instructionTarget, receiverOptions,
     // safety stock
