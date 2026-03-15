@@ -348,34 +348,40 @@ html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-se
 async function printUCodeLabels(
   selected: SkuRow[],
   order: ProductionOrder,
-  factoryCode: string,
 ): Promise<void> {
   const W = 70, H = 40;
   // 日期：纯数字 YYYYMMDD，不加任何汉字
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
 
+  const styleNo   = order.styleNo   || '';
+  const styleName = order.styleName || '';
+  const factoryName = order.factoryName || '';
+
   const qrMap: Record<string, string> = {};
   for (const row of selected) {
     for (let i = 0; i < Math.max(1, row.printCount); i++) {
-      const code = [order.styleNo, row.color, row.size].filter(Boolean).join('-') + `-${i + 1}`;
+      const code = [styleNo, row.color, row.size].filter(Boolean).join('-') + `-${i + 1}`;
       if (!qrMap[code]) {
-        try { qrMap[code] = await QRCode.toDataURL(code, { width: 84, margin: 1, errorCorrectionLevel: 'M' }); }
+        try { qrMap[code] = await QRCode.toDataURL(code, { width: 96, margin: 1, errorCorrectionLevel: 'M' }); }
         catch { qrMap[code] = ''; }
       }
     }
   }
 
-  const qrS = Math.min(H - 8, 84 * 0.28);
+  const qrS = Math.min(H - 6, 96 * 0.28); // mm
   const labelsHtml = selected.flatMap(row =>
     Array.from({ length: Math.max(1, row.printCount) }, (_, i) => {
-      const uCode = [order.styleNo, row.color, row.size].filter(Boolean).join('-') + `-${i + 1}`;
+      const uCode = [styleNo, row.color, row.size].filter(Boolean).join('-') + `-${i + 1}`;
       return `<div class="page"><div class="label">
-        <div class="qr"><img src="${qrMap[uCode] || ''}" width="84" height="84"/></div>
+        <div class="qr"><img src="${qrMap[uCode] || ''}" width="96" height="96"/></div>
         <div class="text">
           <div class="ucode">${uCode}</div>
-          <div>${dateStr}</div>
-          ${factoryCode ? `<div>GC: ${factoryCode}</div>` : ''}
+          <div class="row"><span class="lbl">款号</span>${styleNo}</div>
+          ${styleName ? `<div class="row"><span class="lbl">款名</span>${styleName}</div>` : ''}
+          <div class="row"><span class="lbl">颜色</span>${row.color || ''}&nbsp;&nbsp;<span class="lbl">码数</span>${row.size || ''}</div>
+          ${factoryName ? `<div class="row"><span class="lbl">工厂</span>${factoryName}</div>` : ''}
+          <div class="date">${dateStr}</div>
         </div></div></div>`;
     })
   ).join('');
@@ -387,9 +393,11 @@ html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-se
 .page:last-child{page-break-after:auto}
 .label{width:${W - 4}mm;height:${H - 4}mm;border:1px solid #000;display:flex;flex-direction:row;padding:1.5mm;gap:1.5mm}
 .qr{flex:0 0 auto;display:flex;align-items:center}.qr img{width:${qrS}mm;height:${qrS}mm}
-.text{flex:1;display:flex;flex-direction:column;justify-content:space-around;font-size:7pt;line-height:1.3}
+.text{flex:1;display:flex;flex-direction:column;justify-content:space-between;font-size:6.5pt;line-height:1.25}
 .text>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ucode{font-weight:bold;font-size:7.5pt;letter-spacing:.5px}
+.row{font-size:6pt}.lbl{font-weight:bold;margin-right:1px}
+.date{font-size:6pt;color:#333;margin-top:auto}
 </style></head><body>${labelsHtml}</body></html>`;
 
   const iframe = document.createElement('iframe');
@@ -422,18 +430,6 @@ html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-se
 // ─── 主组件 ──────────────────────────────────────────────────────────────────
 
 export default function LabelPrintModal({ open, onClose, order, styleInfo }: Props) {
-  const [orderFactoryCode, setOrderFactoryCode] = useState<string>('');
-
-  useEffect(() => {
-    if (!order?.factoryId) { setOrderFactoryCode(''); return; }
-    void (api as any).get(`/system/factory/${order.factoryId}`)
-      .then((res: any) => {
-        const d = (res as any)?.data ?? res ?? {};
-        setOrderFactoryCode(String(d.factoryCode || ''));
-      })
-      .catch(() => setOrderFactoryCode(''));
-  }, [order?.factoryId]);
-
   const handleWashPrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) =>
       printWashLabels(selected, ord, si),
@@ -441,8 +437,8 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
   );
 
   const handleUCodePrint = useCallback(
-    (selected: SkuRow[], ord: ProductionOrder) => printUCodeLabels(selected, ord, orderFactoryCode),
-    [orderFactoryCode]
+    (selected: SkuRow[], ord: ProductionOrder) => printUCodeLabels(selected, ord),
+    []
   );
 
   return (
