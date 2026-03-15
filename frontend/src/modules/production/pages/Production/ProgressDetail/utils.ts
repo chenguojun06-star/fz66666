@@ -231,11 +231,12 @@ export const stageNameMatches = (a: any, b: any) => {
     const yOrig = normalizeStageKey(b);
     const xParent = findParent(x) || findParent(xOrig);
     const yParent = findParent(y) || findParent(yOrig);
-    // x 是父节点，y 的父节点 = x → 匹配
+    // x 是父节点，y 的父节点 = x → 匹配（父子关系）
     if (yParent && yParent === x) return true;
     if (xParent && xParent === y) return true;
-    // 都映射到同一个父节点 → 匹配
-    if (xParent && yParent && xParent === yParent) return true;
+    // 注意：故意不做「同父节点 = 匹配」的判断
+    // 「剪线」和「蒸烫」都属于「尾部」，但它们是不同的工序，不能互相匹配
+    // 同义词匹配已在 canonicalStageKey 的 synonymMap 中处理（如 大烫→整烫）
     // 原始名也尝试
     if (yParent && yParent === xOrig) return true;
     if (xParent && xParent === yOrig) return true;

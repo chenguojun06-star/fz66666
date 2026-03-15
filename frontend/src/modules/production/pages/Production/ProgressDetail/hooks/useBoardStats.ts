@@ -107,14 +107,21 @@ export const ensureBoardStatsForOrder = async ({
       const nName = String((node as any)?.name || '').trim();
       const rStageName = getRecordStageName(r);
       const rProcessName = String((r as any)?.processName || '').trim();
+      const nodeParent = String((node as any)?.progressStage || '').trim();
+
+      // ★ 子工序精确归属：节点有父分类 + 记录有明确 processName → 只用 processName 决定归属
+      // 避免 progressStage="尾部" 时，"蒸烫"节点错误地计入"剪线"的扫码记录
+      if (nodeParent && rProcessName) {
+        return rProcessName === nName || stageNameMatches(nName, rProcessName);
+      }
+
+      // processName 为空时的宽松兜底（旧数据仅有 progressStage 的场景）
       // 原有：通过 progressStage 别名匹配（大烫→整烫等）
       if (stageNameMatches(nName, rStageName)) return true;
-      if (stageNameMatches(nName, rProcessName)) return true;
       // 新增：processName 与节点名原始精确相等（处理 stageNameMatches canonicalKey 不认识的自定义词汇）
       if (rProcessName && rProcessName === nName) return true;
       // 新增：通过父分类（node.progressStage）兜底——父分类相同时再次尝试子工序名匹配
       // 解决模板改工序名后旧数据失配的问题（progressStage父分类不变但子工序名变了）
-      const nodeParent = String((node as any)?.progressStage || '').trim();
       if (nodeParent && stageNameMatches(nodeParent, rStageName)) {
         if (stageNameMatches(nName, rProcessName) || rProcessName === nName) return true;
       }
