@@ -1,3 +1,9 @@
+## 2026-03-16
+
+- Dashboard 热点查询改为最小字段选择：`DailyBriefOrchestrator` 的高风险订单查询与 `DashboardQueryServiceImpl` 的延期订单、最近订单、最近款号、最近扫码、最近采购查询不再默认读取实体全部列。
+- 修复云端 `t_production_order` 存在无关扩展列缺失时，`/api/dashboard/daily-brief` 与 `/api/dashboard/urgent-events` 被整条 SELECT 拖垮返回 500 的问题。
+- 本次修复把仪表盘热点接口与近期订单表扩展字段解耦，降低 schema 漂移对首页可用性的影响。
+
 ## 2026-03-12
 
 - 核对并移除 StyleInfo 旧删除兼容壳：删除 `DELETE /api/style/info/{id}`，审批流改为直接调用 `scrap(...)`，避免仓内继续保留误导性的删除语义。

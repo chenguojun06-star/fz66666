@@ -19,9 +19,17 @@ Page({
   },
 
   onLoad() {
-    this.setData({ conversationId: 'mp_' + Date.now() });
-    // 欢迎语
-    this._appendMsg({ role: 'ai', text: '你好！我是你的 AI 助手 👋\n可以帮你查产量、估工资、看订单进度，有什么想问的尽管说～' });
+    // 合并初始 setData 为一次调用，避免热重载时 "Expected updated data" 错误
+    const conversationId = 'mp_' + Date.now();
+    const welcomeId = conversationId + '_w';
+    this.setData({
+      conversationId,
+      messages: [{
+        id: welcomeId,
+        role: 'ai',
+        text: '你好！我是你的 AI 助手 👋\n可以帮你查产量、估工资、看订单进度，有什么想问的尽管说～',
+      }],
+    });
   },
 
   onInputChange(e) {

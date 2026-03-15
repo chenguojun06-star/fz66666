@@ -234,6 +234,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         int lim = Math.max(1, limit);
         // TenantInterceptor 已自动追加 tenant_id 条件
         return styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCreateTime)
                 .eq(StyleInfo::getStatus, "ENABLED")
                 .orderByDesc(StyleInfo::getCreateTime)
                 .page(new Page<>(1, lim))
@@ -247,6 +248,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         }
         int lim = Math.max(1, limit);
         return productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getCreateTime)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .orderByDesc(ProductionOrder::getCreateTime)
                 .page(new Page<>(1, lim))
@@ -261,6 +263,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         int lim = Math.max(1, limit);
         // 仅显示真实扫码操作，排除系统自动创建的记录；TenantInterceptor 追加 tenant_id 条件
         return scanRecordService.lambdaQuery()
+                .select(ScanRecord::getId, ScanRecord::getOrderNo, ScanRecord::getScanTime)
                 .ne(ScanRecord::getOperatorName, "system")
                 .isNotNull(ScanRecord::getOperatorId)
                 .orderByDesc(ScanRecord::getScanTime)
@@ -275,6 +278,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         }
         int lim = Math.max(1, limit);
         return materialPurchaseService.lambdaQuery()
+                .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo, MaterialPurchase::getCreateTime)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
                 .orderByDesc(MaterialPurchase::getCreateTime)
                 .page(new Page<>(1, lim))
@@ -327,6 +331,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         int lim = Math.max(1, limit);
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getPlannedEndDate)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .isNotNull(ProductionOrder::getPlannedEndDate)

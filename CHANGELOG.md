@@ -1,3 +1,27 @@
+## 2026-03-16
+
+### fix(dashboard): 仪表盘日报与紧急事件避免被订单表无关缺列拖垮
+
+**修改文件**：`backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java`、`backend/src/main/java/com/fashion/supplychain/dashboard/orchestration/DailyBriefOrchestrator.java`
+
+#### 对系统的改进
+- 修复 `GET /api/dashboard/daily-brief` 与 `GET /api/dashboard/urgent-events` 在云端 `t_production_order` 存在无关缺列时直接 500 的问题。
+- Dashboard 查询改为“最小字段选择”，只读取仪表盘真正展示需要的订单/款式/扫码/采购字段，不再默认 `SELECT` 整个实体全部列。
+- 即使云端数据库暂时缺少 `progress_workflow_*`、`node_operations`、`version`、联系人快照等近期扩展列，只要日报与紧急事件不依赖这些列，接口仍可正常返回。
+- 这次修复把问题根因从“schema 漂移导致热点接口整体不可用”收敛为“只有真正依赖缺列的功能才受影响”，显著提升仪表盘容错性。
+
+### docs(deployment): 新增云端订单表核对脚本，专查 dashboard 500 缺列问题
+
+**新增文件**：`deployment/cloud-db-production-order-dashboard-verify-20260316.sql`、`deployment/仪表盘订单表云端核对说明-20260316.md`
+
+#### 对系统的改进
+- 新增云端只读核对脚本，按“首页核心列”和“订单实体高风险扩展列”两组输出 `t_production_order` 缺列结果。
+- 结果可直接判断：首页 500 是因为核心列缺失，还是因为其他扩展列导致订单实体全字段查询被拖垮。
+- 脚本附带 `flyway_schema_history` 检查，能快速确认相关迁移版本是否真的在云端成功执行。
+- 配套执行说明明确写清：当前云端配置是 `FLYWAY_ENABLED=true`，verify SQL 只用于核验现状，不替代正式迁移。
+
+---
+
 ## 2026-04-30（第三批）
 
 ### docs: 租户开通SOP完善AI功能配置章节 + 压测脚本修复

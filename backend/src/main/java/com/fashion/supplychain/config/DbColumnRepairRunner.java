@@ -208,6 +208,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                             + "KEY `idx_tenant_status` (`tenant_id`, `feedback_status`, `create_time`)"
                             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='动作中心任务回执表'");
 
+            // t_secondary_process 二次工艺图片/附件字段（V20260501002 可能未执行）
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "images",
+                    "TEXT DEFAULT NULL COMMENT '工艺图片URL列表(JSON数组)'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "attachments",
+                    "TEXT DEFAULT NULL COMMENT '工艺附件列表(JSON数组，格式[{name,url}])'");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }

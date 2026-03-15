@@ -15,7 +15,15 @@ Component({
   },
   lifetimes: {
     attached() {
-      this.refreshLanguage(i18n.getLanguage());
+      // 延迟执行：避免在页面初始渲染周期内同步 setData，防止 FLOW_INITIAL_CREATION 冲突
+      // data.list 在 Component 定义时已用当前语言初始化，attached 只需在语言可能变化时刷新
+      const lang = i18n.getLanguage();
+      const currentText = this.data.list && this.data.list[0] && this.data.list[0].text;
+      const expectedText = i18n.t('tabbar.home', lang);
+      if (currentText !== expectedText) {
+        // 只有语言确实变化时才更新，且推迟到初始化完成后
+        setTimeout(() => { this.refreshLanguage(lang); }, 0);
+      }
     },
   },
   pageLifetimes: {

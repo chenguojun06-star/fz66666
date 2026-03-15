@@ -85,6 +85,14 @@ public class DailyBriefOrchestrator {
         LocalDateTime deadline = today.plusDays(7).atTime(LocalTime.MAX);
         List<ProductionOrder> highRisk = productionOrderService.list(
             new LambdaQueryWrapper<ProductionOrder>()
+                .select(
+                    ProductionOrder::getId,
+                    ProductionOrder::getOrderNo,
+                    ProductionOrder::getStyleNo,
+                    ProductionOrder::getFactoryName,
+                    ProductionOrder::getProductionProgress,
+                    ProductionOrder::getPlannedEndDate
+                )
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getStatus, "IN_PROGRESS")
                 .isNotNull(ProductionOrder::getPlannedEndDate)

@@ -36,39 +36,46 @@ Component({
   },
   lifetimes: {
     attached() {
-      let userName = '';
-      let isManager = false;
-      try {
-        // 兼容两种 storage key（userInfo / user_info）
-        const userInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
-        if (userInfo.realName) userName = userInfo.realName;
-        else if (userInfo.username) userName = userInfo.username;
-        else if (userInfo.nickname) userName = userInfo.nickname;
+      // 推迟到下一个 tick，避免在父页面初始渲染周期内同步触发 setData
+      // 防止 FLOW_INITIAL_CREATION / Expected updated data 渲染层错误
+      setTimeout(() => {
+        // 热重载保护：组件已卸载时不再执行
+        if (!this.data) return;
 
-        // 角色判断：租户老板 or 管理角色 => 管理员模式
-        const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
-        isManager = userInfo.isTenantOwner === true ||
-          ['admin', 'super_admin', 'manager', 'supervisor',
-           'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
-      } catch (err) {
-        console.error('get user info error', err);
-      }
+        let userName = '';
+        let isManager = false;
+        try {
+          // 兼容两种 storage key（userInfo / user_info）
+          const userInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
+          if (userInfo.realName) userName = userInfo.realName;
+          else if (userInfo.username) userName = userInfo.username;
+          else if (userInfo.nickname) userName = userInfo.nickname;
 
-      const greetingSuffix = isManager
-        ? '可以直接点下面的快捷问题，或者问我订单、工厂、日报、库存、财务等任何管理问题！'
-        : '可以问我您的生产任务、扫码记录或负责的订单进度哦！';
-      const greeting = userName
-        ? `Hi 👋 ${userName}，我是小云～ 有什么可以帮您的？\n${greetingSuffix}`
-        : `Hi 👋 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
+          // 角色判断：租户老板 or 管理角色 => 管理员模式
+          const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
+          isManager = userInfo.isTenantOwner === true ||
+            ['admin', 'super_admin', 'manager', 'supervisor',
+             'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
+        } catch (err) {
+          console.error('get user info error', err);
+        }
 
-      this.setData({
-        isManager,
-        messages: [{
-          id: Date.now(),
-          role: 'ai',
-          content: greeting,
-        }],
-      });
+        const greetingSuffix = isManager
+          ? '可以直接点下面的快捷问题，或者问我订单、工厂、日报、库存、财务等任何管理问题！'
+          : '可以问我您的生产任务、扫码记录或负责的订单进度哦！';
+        const greeting = userName
+          ? `Hi 👋 ${userName}，我是小云～ 有什么可以帮您的？\n${greetingSuffix}`
+          : `Hi 👋 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
+
+        this.setData({
+          isManager,
+          messages: [{
+            id: Date.now(),
+            role: 'ai',
+            content: greeting,
+          }],
+        });
+      }, 0);
     },
   },
   ready() {
