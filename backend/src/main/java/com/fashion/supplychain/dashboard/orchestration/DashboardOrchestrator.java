@@ -160,6 +160,11 @@ public class DashboardOrchestrator {
         DashboardResponse data = new DashboardResponse();
         // 查询本工厂的生产订单
         List<ProductionOrder> factoryOrders = productionOrderService.lambdaQuery()
+            .select(
+                ProductionOrder::getOrderQuantity,
+                ProductionOrder::getStatus,
+                ProductionOrder::getPlannedEndDate
+            )
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .list();
@@ -278,7 +283,20 @@ public class DashboardOrchestrator {
         LocalDate today = LocalDate.now();
 
         // 获取所有生产订单（优化：未来可添加数据库查询条件）
-        List<ProductionOrder> allOrders = productionOrderService.list();
+        List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
+            .select(
+                ProductionOrder::getId,
+                ProductionOrder::getOrderNo,
+                ProductionOrder::getStyleNo,
+                ProductionOrder::getStyleName,
+                ProductionOrder::getFactoryName,
+                ProductionOrder::getOrderQuantity,
+                ProductionOrder::getCompletedQuantity,
+                ProductionOrder::getProductionProgress,
+                ProductionOrder::getStatus,
+                ProductionOrder::getPlannedEndDate
+            )
+            .list();
 
         // 如果没有订单，直接返回空结果
         if (allOrders == null || allOrders.isEmpty()) {

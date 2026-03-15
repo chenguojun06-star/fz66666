@@ -19,6 +19,53 @@
 - 结果可直接判断：首页 500 是因为核心列缺失，还是因为其他扩展列导致订单实体全字段查询被拖垮。
 - 脚本附带 `flyway_schema_history` 检查，能快速确认相关迁移版本是否真的在云端成功执行。
 - 配套执行说明明确写清：当前云端配置是 `FLYWAY_ENABLED=true`，verify SQL 只用于核验现状，不替代正式迁移。
+- 补充说明：若首页核心列齐全而唯一缺列为 `customer_id`，这不构成当前 dashboard 500 的直接根因，应优先核查最新 dashboard 修复代码是否已部署到云端。
+
+### fix(dashboard): 继续收敛剩余订单全字段查询，避免其他首页接口被无关缺列拖垮
+
+**修改文件**：`backend/src/main/java/com/fashion/supplychain/dashboard/orchestration/DashboardOrchestrator.java`、`backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java`
+
+#### 对系统的改进
+- 将 `delivery-alert`、工厂首页统计、延期订单列表、订单数量折线图涉及的 `ProductionOrder` 查询继续改为最小字段选择。
+- 即使云端后续仍缺 `customer_id` 这类扩展列，dashboard 模块剩余热点接口也不应再被订单实体全字段查询连带拖垮。
+- 这次补齐后，dashboard 模块内与 `ProductionOrder` 相关的主要高频读接口已经基本完成字段收敛，后续排查更容易聚焦到真正依赖缺列的功能。
+
+### docs(deployment): 新增 dashboard 依赖表二轮核对脚本，覆盖款号/扫码/采购/入库四张表
+
+**新增文件**：`deployment/cloud-db-dashboard-dependent-tables-verify-20260316.sql`、`deployment/仪表盘依赖表云端核对说明-20260316.md`
+
+#### 对系统的改进
+- 新增二轮核对脚本，覆盖 `t_style_info`、`t_scan_record`、`t_material_purchase`、`t_product_warehousing` 四张 dashboard 核心依赖表。
+- 当 `t_production_order` 已排除后，这份脚本可以继续快速判断首页异常是否来自款号、扫码、采购或入库表的核心列缺失。
+- 配套说明把每张表对应的 dashboard 功能链路写清楚，后续排障不需要再从源码反推依赖。
+
+### docs(deployment): 新增 production_order.customer_id 云端补偿 SQL，单独处理 CRM 结构债
+
+**新增文件**：`deployment/cloud-db-production-order-customer-id-patch-20260316.sql`、`deployment/生产订单customer-id补偿说明-20260316.md`
+
+#### 对系统的改进
+- 把 `t_production_order.customer_id` 从“已识别但不阻塞首页”的隐性结构债，整理成可直接执行的幂等云端补偿材料。
+- 补偿脚本只补列、不回填历史数据，避免把 `company` 名称误写为 CRM 客户主键。
+- 后续如果启用 CRM 客户关联、应收联动或客户维度订单透视，可直接先执行这份补偿 SQL，再按业务规则规划历史数据回填。
+
+### fix(cache): 修复 BOM 缓存失效缺口与多租户缓存串读风险
+
+**修改文件**：`backend/src/main/java/com/fashion/supplychain/style/service/impl/StyleBomServiceImpl.java`、`backend/src/main/java/com/fashion/supplychain/template/service/impl/TemplateLibraryServiceImpl.java`、`backend/src/main/java/com/fashion/supplychain/datacenter/service/impl/DataCenterQueryServiceImpl.java`、`backend/src/main/java/com/fashion/supplychain/intelligence/service/AiAdvisorService.java`
+
+#### 对系统的改进
+- 修复 BOM 列表缓存清理键与真实缓存键不一致的问题，避免 BOM 保存后仍读取到旧缓存。
+- 模板库本地 Caffeine 缓存改为显式带租户维度，消除不同租户同款号模板互相污染的风险。
+- DataCenter 查询缓存统一增加租户前缀，避免数据中心统计、款式/BOM/尺码/附件缓存跨租户命中。
+- AI 日报建议缓存增加租户维度，避免不同租户因摘要文本相同而共用同一份 AI 建议结果。
+
+### docs: 新增缓存全盘审计报告，沉淀缓存规模、已修项与待治理风险
+
+**新增文件**：`docs/缓存全盘审计报告-20260316.md`
+
+#### 对系统的改进
+- 汇总 backend / frontend 当前主要缓存实现，明确后端 `@Cacheable`、Caffeine、手写 Redis 与前端持久化/内存缓存的粗规模。
+- 明确记录本轮已经修复的 4 条缓存风险链路，后续复盘不需要重新从代码里追溯。
+- 单独标出 `SecurityConfig.tenantInfoCache` 等暂未改动的结构性风险，为下一轮缓存治理提供直接入口。
 
 ---
 

@@ -476,6 +476,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
+                .select(ProductionOrder::getCreateTime, ProductionOrder::getOrderQuantity)
                 .orderByAsc(ProductionOrder::getCreateTime)
                 .list();
 
@@ -623,6 +624,14 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 获取所有延期订单：交货日期 < 今天 且 生产中（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
+            .select(
+                ProductionOrder::getId,
+                ProductionOrder::getOrderNo,
+                ProductionOrder::getStyleNo,
+                ProductionOrder::getOrderQuantity,
+                ProductionOrder::getPlannedEndDate,
+                ProductionOrder::getFactoryName
+            )
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")

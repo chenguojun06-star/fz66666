@@ -114,7 +114,7 @@ public class AiAdvisorService {
      * @param contextSummary 业务摘要（如：今日逾期3单，高风险2单，停滞1单）
      * @return 1~3句建议文案，未启用时返回 null
      */
-    @Cacheable(value = "daily-brief", key = "#contextSummary")
+    @Cacheable(value = "daily-brief", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + #contextSummary")
     public String getDailyAdvice(String contextSummary) {
         String systemPrompt = "你是一名服装供应链管理顾问，根据工厂今日生产数据，" +
                 "用简洁中文给出1~3条可执行的管理建议。每条建议一行，不超过30字。不要废话。";

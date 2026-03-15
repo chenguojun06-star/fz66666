@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
@@ -120,6 +121,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 || n.contains("到料");
     }
 
+    private String buildTemplateCacheKey(String styleNo) {
+        Long tenantId = UserContext.tenantId();
+        String tenantPart = tenantId == null ? "superadmin" : "t" + tenantId;
+        String stylePart = StringUtils.hasText(styleNo) ? styleNo.trim() : "__default__";
+        return tenantPart + ":" + stylePart;
+    }
+
     @Override
     public boolean isProgressQualityStageName(String name) {
         String n = normalizeStageName(name);
@@ -184,7 +192,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     private TemplateLibrary resolveProgressTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
-        String cacheKey = sn != null ? sn : "__default__";
+        String cacheKey = buildTemplateCacheKey(sn);
         TemplateLibrary cached = progressTemplateCache.getIfPresent(cacheKey);
         if (cached != null) {
             return cached;
@@ -231,7 +239,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (!StringUtils.hasText(sn)) {
             return null;
         }
-        TemplateLibrary cached = processPriceTemplateCache.getIfPresent(sn);
+        String cacheKey = buildTemplateCacheKey(sn);
+        TemplateLibrary cached = processPriceTemplateCache.getIfPresent(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -248,7 +257,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         }
 
         if (tpl != null) {
-            processPriceTemplateCache.put(sn, tpl);
+            processPriceTemplateCache.put(cacheKey, tpl);
         }
         return tpl;
     }
@@ -875,14 +884,14 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         try {
             if ("progress".equals(templateType)) {
                 if (StringUtils.hasText(sourceStyleNo)) {
-                    progressTemplateCache.invalidate(sourceStyleNo.trim());
+                    progressTemplateCache.invalidate(buildTemplateCacheKey(sourceStyleNo));
                 }
-                progressTemplateCache.invalidate("__default__");
+                progressTemplateCache.invalidate(buildTemplateCacheKey(null));
             } else if ("process_price".equals(templateType)) {
                 if (StringUtils.hasText(sourceStyleNo)) {
-                    processPriceTemplateCache.invalidate(sourceStyleNo.trim());
+                    processPriceTemplateCache.invalidate(buildTemplateCacheKey(sourceStyleNo));
                 }
-                processPriceTemplateCache.invalidate("__default__");
+                processPriceTemplateCache.invalidate(buildTemplateCacheKey(null));
             }
         } catch (Exception e) {
             log.warn("invalidateTemplateCache failed: type={}, styleNo={}", templateType, sourceStyleNo);

@@ -44,25 +44,25 @@ public class DataCenterQueryServiceImpl implements DataCenterQueryService {
     }
 
     @Override
-    @Cacheable(value = "dataCenter", key = "'enabledStylesCount'")
+    @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':enabledStylesCount'")
     public long countEnabledStyles() {
         return styleInfoService.lambdaQuery().eq(StyleInfo::getStatus, "ENABLED").count();
     }
 
     @Override
-    @Cacheable(value = "dataCenter", key = "'materialPurchasesCount'")
+    @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':materialPurchasesCount'")
     public long countMaterialPurchases() {
         return materialPurchaseService.lambdaQuery().eq(MaterialPurchase::getDeleteFlag, 0).count();
     }
 
     @Override
-    @Cacheable(value = "dataCenter", key = "'productionOrdersCount'")
+    @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':productionOrdersCount'")
     public long countProductionOrders() {
         return productionOrderService.lambdaQuery().eq(ProductionOrder::getDeleteFlag, 0).count();
     }
 
     @Override
-    @Cacheable(value = "style", key = "#styleId != null ? 'style:' + #styleId : (#styleNo != null ? 'styleByNo:' + #styleNo.trim() : 'style:null')")
+    @Cacheable(value = "style", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + (#styleId != null ? 'style:' + #styleId : (#styleNo != null ? 'styleByNo:' + #styleNo.trim() : 'style:null'))")
     public StyleInfo findStyle(Long styleId, String styleNo) {
         if (styleId != null) {
             return styleInfoService.getById(styleId);
@@ -75,19 +75,19 @@ public class DataCenterQueryServiceImpl implements DataCenterQueryService {
     }
 
     @Override
-    @Cacheable(value = "style", key = "'bom:' + #styleId")
+    @Cacheable(value = "style", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':bom:' + #styleId")
     public List<StyleBom> listBom(Long styleId) {
         return styleBomService.listByStyleId(styleId);
     }
 
     @Override
-    @Cacheable(value = "style", key = "'size:' + #styleId")
+    @Cacheable(value = "style", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':size:' + #styleId")
     public List<StyleSize> listSize(Long styleId) {
         return styleSizeService.listByStyleId(styleId);
     }
 
     @Override
-    @Cacheable(value = "style", key = "'attachments:' + #styleId")
+    @Cacheable(value = "style", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':attachments:' + #styleId")
     public List<StyleAttachment> listAttachments(Long styleId) {
         return styleAttachmentService.listByStyleId(String.valueOf(styleId));
     }

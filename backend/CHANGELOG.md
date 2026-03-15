@@ -3,6 +3,13 @@
 - Dashboard 热点查询改为最小字段选择：`DailyBriefOrchestrator` 的高风险订单查询与 `DashboardQueryServiceImpl` 的延期订单、最近订单、最近款号、最近扫码、最近采购查询不再默认读取实体全部列。
 - 修复云端 `t_production_order` 存在无关扩展列缺失时，`/api/dashboard/daily-brief` 与 `/api/dashboard/urgent-events` 被整条 SELECT 拖垮返回 500 的问题。
 - 本次修复把仪表盘热点接口与近期订单表扩展字段解耦，降低 schema 漂移对首页可用性的影响。
+- 继续收敛 dashboard 模块剩余的 `ProductionOrder` 全字段查询：工厂首页统计、交期预警、延期订单列表、订单数量折线图改为最小字段读取，进一步降低 `customer_id` 等扩展列缺失的连带影响。
+- 新增 dashboard 依赖表二轮核对脚本与说明，覆盖 `t_style_info`、`t_scan_record`、`t_material_purchase`、`t_product_warehousing`，把首页主要非订单依赖表的 schema drift 也纳入可复用排查流程。
+- 新增 `t_production_order.customer_id` 云端补偿 SQL 与说明，单独管理 CRM 客户关联列缺失这一低优先级结构债，避免继续与 dashboard 可用性问题混淆。
+- 修复 `StyleBomServiceImpl` 的 BOM 缓存失效缺口：删除逻辑从单键删除改为按 `style:bom:<styleId>:*` 模式清理，避免写后命中旧值。
+- `TemplateLibraryServiceImpl` 的进度模板 / 工价模板本地缓存键增加租户维度，消除同款号跨租户模板串用风险。
+- `DataCenterQueryServiceImpl` 与 `AiAdvisorService` 的缓存键统一补齐租户前缀，避免数据中心统计与 AI 日报建议结果跨租户复用。
+- 新增 `docs/缓存全盘审计报告-20260316.md`，记录当前缓存规模、已修复问题与待继续治理的结构性风险。
 
 ## 2026-03-12
 
