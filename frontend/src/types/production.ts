@@ -105,8 +105,6 @@ export interface ProductionOrder extends Record<string, unknown> {
   procurementConfirmRemark?: string;
   /** 下单业务类型：FOB=离岸价交货, ODM=原创设计制造, OEM=代工贴牌, CMT=纯加工 */
   orderBizType?: 'FOB' | 'ODM' | 'OEM' | 'CMT';
-  /** 二次工艺图片URL列表（JSON数组字符串，如 '["https://...","https://..."]'） */
-  secondaryProcessImages?: string;
 }
 
 export interface ScanRecord extends Record<string, unknown> {

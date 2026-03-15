@@ -464,12 +464,6 @@ public class ProductionOrder {
     @TableField(exist = false)
     private Boolean hasSecondaryProcess;
 
-    /**
-     * 二次工艺图片URL列表（JSON数组，存储腾讯云COS URL）
-     */
-    @TableField("secondary_process_images")
-    private String secondaryProcessImages;
-
     // ==================== 包装环节字段（新增）====================
 
     /**

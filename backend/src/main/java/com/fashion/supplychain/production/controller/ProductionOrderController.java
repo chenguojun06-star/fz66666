@@ -267,11 +267,6 @@ public class ProductionOrderController {
             order.setUrgencyLevel(StringUtils.hasText(urgencyLevel) ? urgencyLevel : "normal");
         }
 
-        // 更新二次工艺图片（JSON数组字符串）
-        if (payload.containsKey("secondaryProcessImages")) {
-            order.setSecondaryProcessImages((String) payload.get("secondaryProcessImages"));
-        }
-
         boolean success = productionOrderService.updateById(order);
 
         // 工序数据变更时，同步更新工序跟踪表中的单价（解决单价不同步问题）

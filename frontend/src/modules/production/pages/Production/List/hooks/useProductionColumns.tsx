@@ -1,6 +1,6 @@
 import React from 'react';
-import { Tag, Popover, Space, Tooltip, Badge, Upload, Image, message } from 'antd';
-import { ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
+import { Tag, Popover, Space, Tooltip, Badge } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { NavigateFunction } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
@@ -11,103 +11,11 @@ import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import api, { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
-import { productionOrderApi } from '@/services/production/productionApi';
 import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
 import dayjs from 'dayjs';
-
-/**
- * 二次工艺图片上传/预览单元格（独立组件，避免重复创建）
- * - 显示已上传的缩略图（最多 2 张 + "+N" 计数）
- * - 相机图标触发上传（通过 /common/upload → quick-edit 保存 URL）
- * - stopPropagation 防止触发行的 openProcessDetail 点击
- */
-const SecondaryProcessImagesCell: React.FC<{ record: ProductionOrder }> = ({ record }) => {
-  const [imgs, setImgs] = React.useState<string[]>(() => {
-    try { return JSON.parse(record.secondaryProcessImages || '[]') || []; }
-    catch { return []; }
-  });
-  const [uploading, setUploading] = React.useState(false);
-
-  // 当父组件刷新数据时同步本地状态
-  React.useEffect(() => {
-    try { setImgs(JSON.parse(record.secondaryProcessImages || '[]') || []); }
-    catch { setImgs([]); }
-  }, [record.secondaryProcessImages]);
-
-  const handleUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.post<{ code: number; data: string }>('/common/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      if (res.code === 200 && res.data) {
-        const newImgs = [...imgs, res.data];
-        const json = JSON.stringify(newImgs);
-        const upRes = await productionOrderApi.quickEdit({ id: String(record.id), secondaryProcessImages: json });
-        if ((upRes as any).code === 200) {
-          setImgs(newImgs);
-          message.success('上传成功');
-        } else {
-          message.error((upRes as any).message || '保存失败');
-        }
-      } else {
-        message.error((res as any).message || '上传失败');
-      }
-    } catch {
-      message.error('上传失败，请重试');
-    } finally {
-      setUploading(false);
-    }
-    return false;
-  };
-
-  return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, justifyContent: 'center', flexWrap: 'wrap' }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {imgs.length > 0 && (
-        <Image.PreviewGroup>
-          {imgs.slice(0, 2).map((url, i) => (
-            <Image
-              key={`${url}-${i}`}
-              src={url}
-              width={20}
-              height={20}
-              style={{ borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
-              wrapperStyle={{ display: 'inline-block', flexShrink: 0 }}
-            />
-          ))}
-        </Image.PreviewGroup>
-      )}
-      {imgs.length > 2 && (
-        <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', flexShrink: 0 }}>+{imgs.length - 2}</span>
-      )}
-      <Upload
-        showUploadList={false}
-        accept="image/*"
-        beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
-        disabled={uploading}
-      >
-        <Tooltip title={uploading ? '上传中…' : '上传二次工艺图片'} mouseEnterDelay={0.5}>
-          <CameraOutlined
-            style={{
-              fontSize: 11,
-              color: uploading ? 'var(--primary-color)' : 'var(--color-text-tertiary)',
-              cursor: uploading ? 'wait' : 'pointer',
-              flexShrink: 0,
-            }}
-          />
-        </Tooltip>
-      </Upload>
-    </div>
-  );
-};
 
 export interface UseProductionColumnsProps {
   sortField: string;
@@ -504,7 +412,6 @@ export function useProductionColumns({
               {completed}/{total}
             </div>
             <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
-            <SecondaryProcessImagesCell record={record} />
           </div>
         );
       },
