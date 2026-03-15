@@ -26,6 +26,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
@@ -408,6 +410,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         return BigDecimal.ZERO;
     }
 
+    @Cacheable(value = "templateProgressNodes",
+            key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':progressNodes:' + (#styleNo != null ? #styleNo.trim() : '')")
     @Override
     public List<Map<String, Object>> resolveProgressNodeUnitPrices(String styleNo) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -840,6 +844,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 .orderByAsc(TemplateLibrary::getTemplateKey));
     }
 
+    @CacheEvict(value = "templateProgressNodes", allEntries = true)
     @Override
     public boolean upsertTemplate(TemplateLibrary template) {
         if (template == null || !StringUtils.hasText(template.getTemplateType())
