@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.style.entity.StyleSize;
@@ -99,6 +100,33 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
                 .orderByAsc(StyleSize::getSort);
         }
         return list(queryWrapper);
+    }
+
+    @Override
+    public boolean updateNullableFieldsById(StyleSize styleSize) {
+        if (styleSize == null || styleSize.getId() == null) {
+            return false;
+        }
+
+        LambdaUpdateWrapper<StyleSize> updateWrapper = new LambdaUpdateWrapper<StyleSize>()
+            .eq(StyleSize::getId, styleSize.getId())
+            .set(StyleSize::getStyleId, styleSize.getStyleId())
+            .set(StyleSize::getSizeName, styleSize.getSizeName())
+            .set(StyleSize::getPartName, styleSize.getPartName())
+            .set(StyleSize::getMeasureMethod, styleSize.getMeasureMethod())
+            .set(StyleSize::getStandardValue, styleSize.getStandardValue())
+            .set(StyleSize::getTolerance, styleSize.getTolerance())
+            .set(StyleSize::getSort, styleSize.getSort())
+            .set(StyleSize::getUpdateTime, styleSize.getUpdateTime());
+
+        if (hasGroupNameColumn()) {
+            updateWrapper.set(StyleSize::getGroupName, styleSize.getGroupName());
+        }
+        if (hasImageUrlsColumn()) {
+            updateWrapper.set(StyleSize::getImageUrls, styleSize.getImageUrls());
+        }
+
+        return update(updateWrapper);
     }
 
     private boolean hasGroupNameColumn() {

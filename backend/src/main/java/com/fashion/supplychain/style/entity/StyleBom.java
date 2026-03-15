@@ -34,6 +34,11 @@ public class StyleBom {
      */
     private String materialName;
 
+    /**
+     * 物料成分（优先从面辅料资料带入）
+     */
+    private String fabricComposition;
+
     private String materialType;
 
     /**

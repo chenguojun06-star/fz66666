@@ -420,7 +420,7 @@ const _MaterialInventory: React.FC = () => {
               max={999999}
               value={safetyStockValue}
               onChange={(v) => setSafetyStockValue(v ?? 0)}
-              addonAfter={safetyStockTarget.unit || '件'}
+              suffix={safetyStockTarget.unit || '件'}
               placeholder="请输入安全库存"
             />
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginTop: 8 }}>

@@ -14,6 +14,7 @@ import { getMaterialTypeLabel } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import StandardModal from '@/components/common/StandardModal';
+import { getStyleInfoByRef } from '@/services/style/styleApi';
 
 /** 季节英文→中文映射 */
 const toSeasonCn = (v: unknown): string => {
@@ -140,8 +141,10 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
         // 款式详情（获取生产要求 description）
         promises.push(
-          api.get(`/style/info/${styleId}`)
-            .then(res => { if (res.code === 200) newData.productionSheet = res.data || null; })
+          getStyleInfoByRef(styleId, styleNo)
+            .then((styleInfo) => {
+              if (styleInfo) newData.productionSheet = styleInfo;
+            })
             .catch(() => {})
         );
 

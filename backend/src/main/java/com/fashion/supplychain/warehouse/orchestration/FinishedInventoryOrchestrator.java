@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -24,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +42,7 @@ public class FinishedInventoryOrchestrator {
 
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final ProductOutstockService productOutstockService;
     private final ProductionOrderService productionOrderService;
     private final StyleInfoService styleInfoService;
     private final StyleAttachmentService styleAttachmentService;
@@ -88,6 +94,12 @@ public class FinishedInventoryOrchestrator {
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
+
+        List<String> styleNos = skuPageResult.getRecords().stream()
+            .map(ProductSku::getStyleNo)
+            .filter(StringUtils::hasText)
+            .distinct()
+            .collect(Collectors.toList());
 
         // 批量查询款式信息（获取 styleName, cover 图片）
         Map<Long, StyleInfo> styleInfoMap = new HashMap<>();
@@ -211,6 +223,33 @@ public class FinishedInventoryOrchestrator {
                     .forEach(order -> orderByNo.put(order.getOrderNo(), order));
         }
 
+        Map<String, ProductOutstock> latestOutstockByStyleId = new HashMap<>();
+        if (!styleIds.isEmpty()) {
+            productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                            .in(ProductOutstock::getStyleId,
+                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                            .eq(ProductOutstock::getDeleteFlag, 0)
+                            .orderByDesc(ProductOutstock::getCreateTime))
+                    .forEach(outstock -> {
+                        if (outstock != null && StringUtils.hasText(outstock.getStyleId())) {
+                            latestOutstockByStyleId.putIfAbsent(outstock.getStyleId(), outstock);
+                        }
+                    });
+        }
+
+        Map<String, ProductOutstock> latestOutstockByStyleNo = new HashMap<>();
+        if (!styleNos.isEmpty()) {
+            productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                            .in(ProductOutstock::getStyleNo, styleNos)
+                            .eq(ProductOutstock::getDeleteFlag, 0)
+                            .orderByDesc(ProductOutstock::getCreateTime))
+                    .forEach(outstock -> {
+                        if (outstock != null && StringUtils.hasText(outstock.getStyleNo())) {
+                            latestOutstockByStyleNo.putIfAbsent(outstock.getStyleNo(), outstock);
+                        }
+                    });
+        }
+
         // 统计每个 styleId 的总入库数量
         Map<String, Integer> totalInboundQtyMap = new HashMap<>();
         if (!styleIds.isEmpty()) {
@@ -308,6 +347,20 @@ public class FinishedInventoryOrchestrator {
                 dto.setWarehouseLocation(latestWarehouseByStyleId.get(styleIdStr));
             }
 
+            ProductOutstock latestOutstock = StringUtils.hasText(styleIdStr)
+                    ? latestOutstockByStyleId.get(styleIdStr)
+                    : null;
+            if (latestOutstock == null && StringUtils.hasText(dto.getStyleNo())) {
+                latestOutstock = latestOutstockByStyleNo.get(dto.getStyleNo());
+            }
+            if (latestOutstock != null) {
+                dto.setLastOutboundDate(latestOutstock.getCreateTime());
+                dto.setLastOutstockNo(latestOutstock.getOutstockNo());
+                dto.setLastOutboundBy(StringUtils.hasText(latestOutstock.getOperatorName())
+                        ? latestOutstock.getOperatorName()
+                        : latestOutstock.getCreatorName());
+            }
+
             // 入库总量
             Integer totalInbound = totalInboundQtyMap.get(styleIdStr);
             int inboundQty = totalInbound != null ? totalInbound : 0;
@@ -383,6 +436,10 @@ public class FinishedInventoryOrchestrator {
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("出库明细不能为空");
         }
+        String requestOrderId = trimToNull(params.get("orderId"));
+        String requestOrderNo = trimToNull(params.get("orderNo"));
+        String requestWarehouse = trimToNull(params.get("warehouseLocation"));
+
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
             if (!StringUtils.hasText(skuCode)) {
@@ -405,6 +462,9 @@ public class FinishedInventoryOrchestrator {
             }
             sku.setStockQuantity(current - quantity);
             productSkuService.updateById(sku);
+
+                recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
+                    "成品库存页面出库|sku=" + skuCode);
         }
         // 出库后回写电商订单状态（如果同一批出库挺带了关联的生产单号 + 快递单号）
         String productionOrderNo = (String) params.get("productionOrderNo");
@@ -459,5 +519,47 @@ public class FinishedInventoryOrchestrator {
         Map<String, Object> params = new java.util.HashMap<>();
         params.put("items", stdItems);
         outbound(params);
+    }
+
+    private void recordProductOutstock(ProductSku sku,
+                                       int quantity,
+                                       String orderId,
+                                       String orderNo,
+                                       String warehouse,
+                                       String remark) {
+        ProductOutstock outstock = new ProductOutstock();
+        LocalDateTime now = LocalDateTime.now();
+        StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
+        outstock.setOutstockNo(buildOutstockNo(now));
+        outstock.setOrderId(orderId);
+        outstock.setOrderNo(StringUtils.hasText(orderNo)
+                ? orderNo
+                : styleInfo != null && StringUtils.hasText(styleInfo.getOrderNo()) ? styleInfo.getOrderNo() : null);
+        outstock.setStyleId(sku.getStyleId() == null ? null : String.valueOf(sku.getStyleId()));
+        outstock.setStyleNo(StringUtils.hasText(sku.getStyleNo())
+                ? sku.getStyleNo()
+                : styleInfo != null ? styleInfo.getStyleNo() : null);
+        outstock.setStyleName(styleInfo != null ? styleInfo.getStyleName() : null);
+        outstock.setOutstockQuantity(quantity);
+        outstock.setOutstockType("shipment");
+        outstock.setWarehouse(warehouse);
+        outstock.setRemark(remark);
+        outstock.setCreateTime(now);
+        outstock.setUpdateTime(now);
+        outstock.setDeleteFlag(0);
+        productOutstockService.save(outstock);
+    }
+
+    private String trimToNull(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return StringUtils.hasText(text) ? text : null;
+    }
+
+    private String buildOutstockNo(LocalDateTime now) {
+        return "FI" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)).toUpperCase(Locale.ROOT);
     }
 }

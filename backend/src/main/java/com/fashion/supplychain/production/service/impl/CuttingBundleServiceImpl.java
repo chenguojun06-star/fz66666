@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
@@ -229,13 +231,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             this.saveBatch(result);
             cuttingTaskService.markBundledByOrderId(order.getId());
 
-            // ✅ 裁剪完成后生成工序跟踪记录（用于工资结算）
-            try {
-                processTrackingOrchestrator.initializeProcessTracking(order.getId());
-                log.info("工序跟踪记录初始化成功: orderId={}, bundleCount={}", order.getId(), result.size());
-            } catch (Exception e) {
-                log.warn("工序跟踪记录初始化失败: orderId={}", order.getId(), e);
-            }
+            registerProcessTrackingInitialization(order.getId(), result.size());
 
             // 更新订单进度到下一阶段（车缝/缝制）
             try {
@@ -257,6 +253,31 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
 
         return result;
+    }
+
+    private void registerProcessTrackingInitialization(String orderId, int bundleCount) {
+        Runnable action = () -> {
+            try {
+                processTrackingOrchestrator.initializeProcessTracking(orderId);
+                log.info("工序跟踪记录初始化成功: orderId={}, bundleCount={}", orderId, bundleCount);
+            } catch (Exception e) {
+                log.warn("工序跟踪记录初始化失败: orderId={}", orderId, e);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()
+                && TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+            log.info("工序跟踪记录初始化已注册为事务后置动作: orderId={}, bundleCount={}", orderId, bundleCount);
+            return;
+        }
+
+        action.run();
     }
 
     @Override

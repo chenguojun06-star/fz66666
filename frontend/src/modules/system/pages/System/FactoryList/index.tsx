@@ -788,7 +788,7 @@ const FactoryList: React.FC = () => {
               precision={0}
               placeholder="请输入日产能，如：200"
               style={{ width: '100%' }}
-              addonAfter="件/天"
+              suffix="件/天"
             />
           </Form.Item>
           <Form.Item name="businessLicense" label="营业执照" hidden>

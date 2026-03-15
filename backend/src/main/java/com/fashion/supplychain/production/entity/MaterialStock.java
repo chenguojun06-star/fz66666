@@ -112,6 +112,18 @@ public class MaterialStock {
     private LocalDateTime lastOutboundDate;
 
     /**
+     * 最后入库操作人（列表展示用，非持久化字段）
+     */
+    @TableField(exist = false)
+    private String lastInboundBy;
+
+    /**
+     * 最后出库操作人（列表展示用，非持久化字段）
+     */
+    @TableField(exist = false)
+    private String lastOutboundBy;
+
+    /**
      * 安全库存 (默认100)
      */
     private Integer safetyStock;

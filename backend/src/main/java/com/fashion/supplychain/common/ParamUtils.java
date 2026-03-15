@@ -1,5 +1,6 @@
 package com.fashion.supplychain.common;
 
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -46,7 +47,12 @@ public final class ParamUtils {
         if (v == null) {
             return null;
         }
-        String s = String.valueOf(v);
+        String s;
+        if (v instanceof byte[] bytes) {
+            s = new String(bytes, StandardCharsets.UTF_8);
+        } else {
+            s = String.valueOf(v);
+        }
         s = s == null ? null : s.trim();
         if ("undefined".equalsIgnoreCase(s) || "null".equalsIgnoreCase(s)) {
             return null;

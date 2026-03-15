@@ -73,8 +73,37 @@ export function useBomColumns({
 }: UseBomColumnsProps) {
   const columns = [
     {
+      title: '图片',
+      dataIndex: 'imageUrls',
+      key: 'imageUrls',
+      width: 90,
+      render: (_: any, record: StyleBom) => {
+        const urls: string[] = (() => {
+          try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
+        })();
+        if (!urls.length) return null;
+        return (
+          <Image.PreviewGroup>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {urls.map((url) => (
+                <Image
+                  key={url}
+                  src={getFullAuthedFileUrl(url)}
+                  width={40}
+                  height={40}
+                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                  preview={{ src: getFullAuthedFileUrl(url) }}
+                />
+              ))}
+            </div>
+          </Image.PreviewGroup>
+        );
+      },
+    },
+    {
       title: '面料辅料类型',
       dataIndex: 'materialType',
+      key: 'materialType',
       width: 120,
       ellipsis: true,
       editable: true,
@@ -96,6 +125,7 @@ export function useBomColumns({
     {
       title: '物料编码',
       dataIndex: 'materialCode',
+      key: 'materialCode',
       width: 180,
       ellipsis: true,
       editable: true,
@@ -129,6 +159,7 @@ export function useBomColumns({
     {
       title: '物料名称',
       dataIndex: 'materialName',
+      key: 'materialName',
       width: 140,
       ellipsis: true,
       editable: true,
@@ -144,36 +175,27 @@ export function useBomColumns({
       }
     },
     {
-      title: '图片',
-      dataIndex: 'imageUrls',
-      key: 'imageUrls',
-      width: 90,
-      render: (_: any, record: StyleBom) => {
-        const urls: string[] = (() => {
-          try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
-        })();
-        if (!urls.length) return null;
-        return (
-          <Image.PreviewGroup>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {urls.map((url) => (
-                <Image
-                  key={url}
-                  src={getFullAuthedFileUrl(url)}
-                  width={40}
-                  height={40}
-                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                  preview={{ src: getFullAuthedFileUrl(url) }}
-                />
-              ))}
-            </div>
-          </Image.PreviewGroup>
-        );
-      },
+      title: '成分',
+      dataIndex: 'fabricComposition',
+      key: 'fabricComposition',
+      width: 180,
+      ellipsis: true,
+      editable: true,
+      render: (text: string, record: StyleBom) => {
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <Form.Item name={rowName(record.id, 'fabricComposition')} style={{ margin: 0 }}>
+              <Input placeholder="如：100%棉 / 95%棉5%氨纶" />
+            </Form.Item>
+          );
+        }
+        return text || '-';
+      }
     },
     {
       title: '颜色',
       dataIndex: 'color',
+      key: 'color',
       width: 90,
       ellipsis: true,
       editable: true,
@@ -191,6 +213,7 @@ export function useBomColumns({
     {
       title: '规格(cm)',
       dataIndex: 'specification',
+      key: 'specification',
       width: 120,
       ellipsis: true,
       editable: true,
@@ -208,6 +231,7 @@ export function useBomColumns({
     {
       title: '单件用量',
       dataIndex: 'usageAmount',
+      key: 'usageAmount',
       width: 120,
       editable: true,
       render: (text: number, record: StyleBom) => {
@@ -240,6 +264,7 @@ export function useBomColumns({
     {
       title: '损耗率(%)',
       dataIndex: 'lossRate',
+      key: 'lossRate',
       width: 100,
       editable: true,
       render: (text: number, record: StyleBom) => {

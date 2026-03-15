@@ -69,7 +69,7 @@ public class StyleSizeOrchestrator {
         }
         styleSize.setStyleId(current.getStyleId());
         styleSize.setUpdateTime(LocalDateTime.now());
-        boolean ok = styleSizeService.updateById(styleSize);
+        boolean ok = styleSizeService.updateNullableFieldsById(styleSize);
         // 样衣阶段不自动同步到模板库
         // if (ok) {
         //     tryCreateSizeTemplate(current.getStyleId());

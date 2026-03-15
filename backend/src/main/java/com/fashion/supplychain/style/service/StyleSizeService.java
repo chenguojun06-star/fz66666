@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface StyleSizeService extends IService<StyleSize> {
     List<StyleSize> listByStyleId(Long styleId);
+
+    boolean updateNullableFieldsById(StyleSize styleSize);
 }

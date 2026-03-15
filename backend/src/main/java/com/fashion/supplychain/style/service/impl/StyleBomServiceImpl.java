@@ -33,12 +33,14 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
     private static final long BOM_CACHE_TTL_MINUTES = 30;
 
     private volatile Boolean imageUrlsColumnExists;
+    private volatile Boolean fabricCompositionColumnExists;
 
     @Override
     public List<StyleBom> listByStyleId(Long styleId) {
         boolean includeImageUrls = hasImageUrlsColumn();
+        boolean includeFabricComposition = hasFabricCompositionColumn();
         // 尝试从Redis缓存获取
-        String cacheKey = BOM_CACHE_PREFIX + styleId + ":" + (includeImageUrls ? "img" : "base");
+        String cacheKey = BOM_CACHE_PREFIX + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp");
         try {
             List<StyleBom> cached = redisService.get(cacheKey);
             if (cached != null) {
@@ -50,7 +52,37 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         }
 
         LambdaQueryWrapper<StyleBom> queryWrapper;
-        if (includeImageUrls) {
+        if (includeImageUrls && includeFabricComposition) {
+            queryWrapper = new LambdaQueryWrapper<StyleBom>()
+                .select(
+                    StyleBom::getId,
+                    StyleBom::getStyleId,
+                    StyleBom::getMaterialCode,
+                    StyleBom::getMaterialName,
+                    StyleBom::getFabricComposition,
+                    StyleBom::getMaterialType,
+                    StyleBom::getColor,
+                    StyleBom::getSpecification,
+                    StyleBom::getSize,
+                    StyleBom::getUnit,
+                    StyleBom::getUsageAmount,
+                    StyleBom::getLossRate,
+                    StyleBom::getUnitPrice,
+                    StyleBom::getTotalPrice,
+                    StyleBom::getSupplier,
+                    StyleBom::getSupplierContactPerson,
+                    StyleBom::getSupplierContactPhone,
+                    StyleBom::getRemark,
+                    StyleBom::getStockStatus,
+                    StyleBom::getAvailableStock,
+                    StyleBom::getRequiredPurchase,
+                    StyleBom::getCreateTime,
+                    StyleBom::getUpdateTime,
+                    StyleBom::getImageUrls,
+                    StyleBom::getTenantId
+                )
+                .eq(StyleBom::getStyleId, styleId);
+        } else if (includeImageUrls) {
             queryWrapper = new LambdaQueryWrapper<StyleBom>()
                     .select(
                             StyleBom::getId,
@@ -79,6 +111,35 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                             StyleBom::getTenantId
                     )
                     .eq(StyleBom::getStyleId, styleId);
+        } else if (includeFabricComposition) {
+            queryWrapper = new LambdaQueryWrapper<StyleBom>()
+                .select(
+                    StyleBom::getId,
+                    StyleBom::getStyleId,
+                    StyleBom::getMaterialCode,
+                    StyleBom::getMaterialName,
+                    StyleBom::getFabricComposition,
+                    StyleBom::getMaterialType,
+                    StyleBom::getColor,
+                    StyleBom::getSpecification,
+                    StyleBom::getSize,
+                    StyleBom::getUnit,
+                    StyleBom::getUsageAmount,
+                    StyleBom::getLossRate,
+                    StyleBom::getUnitPrice,
+                    StyleBom::getTotalPrice,
+                    StyleBom::getSupplier,
+                    StyleBom::getSupplierContactPerson,
+                    StyleBom::getSupplierContactPhone,
+                    StyleBom::getRemark,
+                    StyleBom::getStockStatus,
+                    StyleBom::getAvailableStock,
+                    StyleBom::getRequiredPurchase,
+                    StyleBom::getCreateTime,
+                    StyleBom::getUpdateTime,
+                    StyleBom::getTenantId
+                )
+                .eq(StyleBom::getStyleId, styleId);
         } else {
             queryWrapper = new LambdaQueryWrapper<StyleBom>()
                     .select(
@@ -127,7 +188,39 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             return java.util.Collections.emptyList();
         }
         LambdaQueryWrapper<StyleBom> queryWrapper;
-        if (hasImageUrlsColumn()) {
+        boolean includeImageUrls = hasImageUrlsColumn();
+        boolean includeFabricComposition = hasFabricCompositionColumn();
+        if (includeImageUrls && includeFabricComposition) {
+            queryWrapper = new LambdaQueryWrapper<StyleBom>()
+                .select(
+                    StyleBom::getId,
+                    StyleBom::getStyleId,
+                    StyleBom::getMaterialCode,
+                    StyleBom::getMaterialName,
+                    StyleBom::getFabricComposition,
+                    StyleBom::getMaterialType,
+                    StyleBom::getColor,
+                    StyleBom::getSpecification,
+                    StyleBom::getSize,
+                    StyleBom::getUnit,
+                    StyleBom::getUsageAmount,
+                    StyleBom::getLossRate,
+                    StyleBom::getUnitPrice,
+                    StyleBom::getTotalPrice,
+                    StyleBom::getSupplier,
+                    StyleBom::getSupplierContactPerson,
+                    StyleBom::getSupplierContactPhone,
+                    StyleBom::getRemark,
+                    StyleBom::getStockStatus,
+                    StyleBom::getAvailableStock,
+                    StyleBom::getRequiredPurchase,
+                    StyleBom::getCreateTime,
+                    StyleBom::getUpdateTime,
+                    StyleBom::getImageUrls,
+                    StyleBom::getTenantId
+                )
+                .in(StyleBom::getMaterialCode, materialCodes);
+        } else if (includeImageUrls) {
             queryWrapper = new LambdaQueryWrapper<StyleBom>()
                 .select(
                     StyleBom::getId,
@@ -153,6 +246,35 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getCreateTime,
                     StyleBom::getUpdateTime,
                     StyleBom::getImageUrls,
+                    StyleBom::getTenantId
+                )
+                .in(StyleBom::getMaterialCode, materialCodes);
+        } else if (includeFabricComposition) {
+            queryWrapper = new LambdaQueryWrapper<StyleBom>()
+                .select(
+                    StyleBom::getId,
+                    StyleBom::getStyleId,
+                    StyleBom::getMaterialCode,
+                    StyleBom::getMaterialName,
+                    StyleBom::getFabricComposition,
+                    StyleBom::getMaterialType,
+                    StyleBom::getColor,
+                    StyleBom::getSpecification,
+                    StyleBom::getSize,
+                    StyleBom::getUnit,
+                    StyleBom::getUsageAmount,
+                    StyleBom::getLossRate,
+                    StyleBom::getUnitPrice,
+                    StyleBom::getTotalPrice,
+                    StyleBom::getSupplier,
+                    StyleBom::getSupplierContactPerson,
+                    StyleBom::getSupplierContactPhone,
+                    StyleBom::getRemark,
+                    StyleBom::getStockStatus,
+                    StyleBom::getAvailableStock,
+                    StyleBom::getRequiredPurchase,
+                    StyleBom::getCreateTime,
+                    StyleBom::getUpdateTime,
                     StyleBom::getTenantId
                 )
                 .in(StyleBom::getMaterialCode, materialCodes);
@@ -204,6 +326,26 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         } catch (Exception ex) {
             log.warn("检查 t_style_bom.image_urls 失败，降级为不查询图片列", ex);
             imageUrlsColumnExists = false;
+            return false;
+        }
+    }
+
+    private boolean hasFabricCompositionColumn() {
+        Boolean cached = fabricCompositionColumnExists;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_style_bom' AND COLUMN_NAME = 'fabric_composition'",
+                    Integer.class
+            );
+            boolean exists = count != null && count > 0;
+            fabricCompositionColumnExists = exists;
+            return exists;
+        } catch (Exception ex) {
+            log.warn("检查 t_style_bom.fabric_composition 失败，降级为不查询成分列", ex);
+            fabricCompositionColumnExists = false;
             return false;
         }
     }

@@ -32,6 +32,7 @@ import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
+import { getStyleInfoByRef } from '@/services/style/styleApi';
 import ExportButton from '@/components/common/ExportButton';
 import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -88,24 +89,36 @@ const ProductionList: React.FC = () => {
   // ===== 打印标签（洗水唛/吊牌）状态 =====
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
-  const [labelPrintStyle, setLabelPrintStyle] = useState<{ fabricComposition?: string; washInstructions?: string; uCode?: string } | null>(null);
+  const [labelPrintStyle, setLabelPrintStyle] = useState<{
+    fabricComposition?: string;
+    fabricCompositionParts?: string;
+    washInstructions?: string;
+    uCode?: string;
+    washTempCode?: string;
+    bleachCode?: string;
+    tumbleDryCode?: string;
+    ironCode?: string;
+    dryCleanCode?: string;
+  } | null>(null);
 
   const handlePrintLabel = async (record: ProductionOrder) => {
     setLabelPrintOrder(record);
     setLabelPrintStyle(null);
     setLabelPrintOpen(true);
-    if (record.styleId) {
-      try {
-        const res = await api.get(`/style/info/${record.styleId}`);
-        const d = (res as any)?.data ?? (res as any) ?? {};
-        setLabelPrintStyle({
-          fabricComposition: d.fabricComposition,
-          washInstructions: d.washInstructions,
-          uCode: d.uCode,
-        });
-      } catch {
-        setLabelPrintStyle({});
-      }
+    if (record.styleId || record.styleNo) {
+      const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
+      const d = styleInfo ?? {};
+      setLabelPrintStyle({
+        fabricComposition: d.fabricComposition,
+        fabricCompositionParts: d.fabricCompositionParts,
+        washInstructions: d.washInstructions,
+        uCode: d.uCode,
+        washTempCode: d.washTempCode,
+        bleachCode: d.bleachCode,
+        tumbleDryCode: d.tumbleDryCode,
+        ironCode: d.ironCode,
+        dryCleanCode: d.dryCleanCode,
+      });
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs } from 'antd';
+import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs, Image } from 'antd';
 import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -421,6 +421,7 @@ const StyleBomTab: React.FC<Props> = ({
     const patch: any = {
       materialCode: String(m.materialCode || '').trim(),
       materialName: String(m.materialName || '').trim(),
+      fabricComposition: String(m.fabricComposition || '').trim(),
       unit: String(m.unit || '').trim(),
       supplier: String(m.supplierName || '').trim(),
       specification: String(m.specifications ?? m.specification ?? '').trim(),
@@ -1194,8 +1195,29 @@ const StyleBomTab: React.FC<Props> = ({
                       },
                     })}
                     columns={[
-                      { title: '物料编码', dataIndex: 'materialCode', width: 140 },
-                      { title: '物料名称', dataIndex: 'materialName', width: 160, ellipsis: true },
+                      {
+                        title: '图片',
+                        dataIndex: 'image',
+                        width: 80,
+                        render: (v: unknown) => {
+                          const raw = String(v || '').trim();
+                          if (!raw) return null;
+                          const url = raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`;
+                          return (
+                            <Image
+                              src={url}
+                              width={40}
+                              height={40}
+                              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                              preview={{ src: url }}
+                            />
+                          );
+                        },
+                      },
+                      { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+                      { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 160, ellipsis: true },
+                      { title: '成分', dataIndex: 'fabricComposition', key: 'fabricComposition', width: 160, ellipsis: true,
+                        render: (v: unknown) => String(v || '').trim() || '-' },
                       { title: '类型', dataIndex: 'materialType', width: 90,
                         render: (v: unknown) => getMaterialTypeLabel(v) },
                       { title: '颜色', dataIndex: 'color', width: 90, ellipsis: true },
@@ -1266,6 +1288,7 @@ const StyleBomTab: React.FC<Props> = ({
                         supplierName: String(values.supplierName || '').trim(),
                         materialType: String(values.materialType || 'accessory').trim(),
                         specifications: String(values.specifications || '').trim(),
+                        fabricComposition: String(values.fabricComposition || '').trim(),
                         unitPrice: Number(values.unitPrice) || 0,
                         remark: String(values.remark || '').trim(),
                         styleNo: String(currentStyleNo || '').trim(),
@@ -1332,6 +1355,9 @@ const StyleBomTab: React.FC<Props> = ({
                     <Form.Item name="specifications" label="规格">
                       <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" />
                     </Form.Item>
+                    <Form.Item name="fabricComposition" label="成分">
+                      <Input placeholder="如：100%棉" />
+                    </Form.Item>
                     <Form.Item name="unitPrice" label="单价" initialValue={0}>
                       <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                     </Form.Item>
@@ -1366,7 +1392,7 @@ const StyleBomTab: React.FC<Props> = ({
           loading={loading}
           rowKey="id"
           scroll={{ x: 'max-content' }}
-          storageKey={`style-bom-${String(styleId)}`}
+          storageKey={`style-bom-v2-${String(styleId)}`}
           minColumnWidth={70}
         />
       </Form>

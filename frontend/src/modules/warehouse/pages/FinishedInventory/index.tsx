@@ -35,12 +35,14 @@ interface SKUDetail {
 
 interface FinishedInventory {
   id: string;
+  orderId?: string;
   orderNo: string;
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
   orgPath?: string;
+  styleId?: string;
   styleNo: string;
   styleName: string;
   styleImage?: string;
@@ -54,6 +56,9 @@ interface FinishedInventory {
   lastInboundDate: string;
   qualityInspectionNo?: string;  // 质检入库号
   lastInboundBy?: string;         // 最后入库操作人
+  lastOutboundDate?: string;
+  lastOutstockNo?: string;
+  lastOutboundBy?: string;
   totalInboundQty?: number;        // 累计入库总量
   costPrice?: number;              // 成本价
   salesPrice?: number;             // 销售价
@@ -269,6 +274,12 @@ const _FinishedInventory: React.FC = () => {
       }
       await api.post('/warehouse/finished-inventory/outbound', {
         items: outboundItems,
+        ...(outboundModal.data?.orderId ? { orderId: outboundModal.data.orderId } : {}),
+        ...(outboundModal.data?.orderNo ? { orderNo: outboundModal.data.orderNo } : {}),
+        ...(outboundModal.data?.styleId ? { styleId: outboundModal.data.styleId } : {}),
+        ...(outboundModal.data?.styleNo ? { styleNo: outboundModal.data.styleNo } : {}),
+        ...(outboundModal.data?.styleName ? { styleName: outboundModal.data.styleName } : {}),
+        ...(outboundModal.data?.warehouseLocation ? { warehouseLocation: outboundModal.data.warehouseLocation } : {}),
         ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
         ...(outboundTrackingNo ? { trackingNo: outboundTrackingNo } : {}),
         ...(outboundExpressCompany ? { expressCompany: outboundExpressCompany } : {}),
@@ -486,8 +497,8 @@ const _FinishedInventory: React.FC = () => {
       ),
     },
     {
-      title: '入库记录',
-      width: 220,
+      title: '出入库记录',
+      width: 260,
       render: (_, record) => (
         <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
@@ -506,6 +517,18 @@ const _FinishedInventory: React.FC = () => {
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库数量:</span>{' '}
             <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</span>
             {(record.totalInboundQty != null || record.availableQty != null) && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500, paddingTop: 4, borderTop: '1px dashed #f0f0f0' }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>最后出库:</span>{' '}
+            <span style={{ fontWeight: 600 }}>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库单号:</span>{' '}
+            <span style={{ color: 'var(--warning-color-dark)', fontWeight: 600 }}>{record.lastOutstockNo || '-'}</span>
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库人:</span>{' '}
+            <span style={{ fontWeight: 600 }}>{record.lastOutboundBy || '-'}</span>
           </div>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}

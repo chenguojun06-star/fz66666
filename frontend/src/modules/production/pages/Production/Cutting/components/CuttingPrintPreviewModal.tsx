@@ -52,7 +52,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           max={150}
           value={print.printConfig.qrSize}
           onChange={(v) => print.setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))}
-          addonAfter="px"
+          suffix="px"
           style={{ width: 120 }}
         />
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)', marginLeft: 16 }}>💡 每页打印一张菲号标签</span>

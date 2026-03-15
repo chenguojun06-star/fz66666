@@ -9,6 +9,18 @@ function normalizePositiveInt(value) {
   return parsed;
 }
 
+function parseOutboundQrCode(code) {
+  const parts = String(code || '').trim().split('-').filter(Boolean);
+  if (parts.length < 4) return null;
+  return {
+    sku: parts.slice(0, -1).join('-'),
+    styleNo: parts[0] || '',
+    color: parts.slice(1, -2).join('-') || '',
+    size: parts[parts.length - 2] || '',
+    serialNo: parts[parts.length - 1] || '',
+  };
+}
+
 // 尺码标准顺序排序（小→大）
 const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '4XXXXXL', '5XL'];
 function sortSizes(sizes) {
@@ -55,7 +67,10 @@ Page({
       submitting: false,
       skuList: [],           // SKU列表
       loadingSkus: false,    // 加载SKU中
-      totalOutbound: 0       // 总出库数量
+      totalOutbound: 0,      // 总出库数量
+      lastScannedSku: null,
+      lastScannedQrCode: '',
+      scannedSkuKey: ''
     }
   },
 
@@ -220,7 +235,10 @@ Page({
         submitting: false,
         skuList: [],
         loadingSkus: true,
-        totalOutbound: 0
+        totalOutbound: 0,
+        lastScannedSku: null,
+        lastScannedQrCode: '',
+        scannedSkuKey: ''
       }
     });
 
@@ -269,9 +287,16 @@ Page({
         submitting: false,
         skuList: [],
         loadingSkus: false,
-        totalOutbound: 0
+        totalOutbound: 0,
+        lastScannedSku: null,
+        lastScannedQrCode: '',
+        scannedSkuKey: ''
       }
     });
+  },
+
+  recalcOutboundTotal(skuList) {
+    return (skuList || []).reduce((sum, item) => sum + (item.outboundQty || 0), 0);
   },
 
   // 更新SKU出库数量
@@ -288,7 +313,7 @@ Page({
     skuList[index] = { ...sku, outboundQty: finalValue };
 
     // 计算总出库数量
-    const totalOutbound = skuList.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
+    const totalOutbound = this.recalcOutboundTotal(skuList);
 
     this.setData({
       'modal.skuList': skuList,
@@ -307,12 +332,80 @@ Page({
     skuList[index] = { ...sku, outboundQty: sku.availableQty };
 
     // 计算总出库数量
-    const totalOutbound = skuList.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
+    const totalOutbound = this.recalcOutboundTotal(skuList);
 
     this.setData({
       'modal.skuList': skuList,
       'modal.totalOutbound': totalOutbound
     });
+  },
+
+  onScanSkuQr() {
+    if (this.data.modal.loadingSkus) {
+      wx.showToast({ title: 'SKU加载中，请稍候', icon: 'none' });
+      return;
+    }
+
+    wx.scanCode({
+      scanType: ['qrCode', 'barCode'],
+      success: (res) => {
+        const code = (res && res.result ? String(res.result) : '').trim();
+        if (!code) {
+          wx.showToast({ title: '未识别到二维码内容', icon: 'none' });
+          return;
+        }
+        this.applyScannedQr(code);
+      },
+      fail: () => {
+        wx.showToast({ title: '扫码已取消', icon: 'none' });
+      }
+    });
+  },
+
+  applyScannedQr(code) {
+    const parsed = parseOutboundQrCode(code);
+    const order = this.data.modal.order;
+    const skuList = [...(this.data.modal.skuList || [])];
+
+    if (!parsed) {
+      wx.showToast({ title: '二维码格式不对', icon: 'none' });
+      return;
+    }
+    if (!order || parsed.styleNo !== order.styleNo) {
+      wx.showToast({ title: '该二维码不属于当前款式', icon: 'none' });
+      return;
+    }
+
+    const index = skuList.findIndex(item => item.sku === parsed.sku);
+    if (index < 0) {
+      wx.showToast({ title: '当前款式下未找到对应SKU库存', icon: 'none' });
+      return;
+    }
+
+    const current = skuList[index];
+    if (!current.availableQty || current.availableQty <= 0) {
+      wx.showToast({ title: '该SKU当前无可用库存', icon: 'none' });
+      return;
+    }
+
+    const nextQty = Math.min((current.outboundQty || 0) + 1, current.availableQty);
+    skuList[index] = { ...current, outboundQty: nextQty };
+
+    this.setData({
+      'modal.skuList': skuList,
+      'modal.totalOutbound': this.recalcOutboundTotal(skuList),
+      'modal.lastScannedQrCode': code,
+      'modal.lastScannedSku': {
+        sku: current.sku,
+        color: current.color,
+        size: current.size,
+        availableQty: current.availableQty,
+        outboundQty: nextQty,
+      },
+      'modal.scannedSkuKey': current.sku,
+    });
+
+    wx.showToast({ title: `已定位 ${current.color}-${current.size}`, icon: 'success' });
   },
 
   onModalRemarkInput(e) {
@@ -340,21 +433,19 @@ Page({
     this.setData({ 'modal.submitting': true });
 
     try {
-      // 批量创建出库单（为每个SKU创建一条出库记录）
-      const promises = outboundSkus.map(sku =>
-        api.production.createOutstock({
-          orderId: sku.orderId || order.orderId,  // 优先使用每个SKU自己的订单ID，兜底用父级orderId
-          orderNo: order.orderNo,
-          styleNo: order.styleNo,
-          styleName: order.styleName,
-          color: sku.color,
-          size: sku.size,
-          outstockQuantity: sku.outboundQty,
-          remark: `${modal.remark || ''} [SKU: ${sku.sku}]`.trim()
-        })
-      );
-
-      await Promise.all(promises);
+      // 与PC端保持一致：统一走仓库成品库存批量出库接口
+      await api.warehouse.outboundFinishedInventory({
+        items: outboundSkus.map(sku => ({
+          sku: sku.sku,
+          quantity: sku.outboundQty,
+        })),
+        ...(order.orderId ? { orderId: order.orderId } : {}),
+        ...(order.orderNo ? { orderNo: order.orderNo } : {}),
+        ...(order.styleId ? { styleId: order.styleId } : {}),
+        ...(order.styleNo ? { styleNo: order.styleNo } : {}),
+        ...(order.styleName ? { styleName: order.styleName } : {}),
+        ...(modal.remark ? { remark: modal.remark } : {}),
+      });
 
       wx.showToast({
         title: `已出库 ${outboundSkus.length} 个SKU，共 ${modal.totalOutbound} 件`,

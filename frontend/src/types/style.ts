@@ -86,6 +86,7 @@ export interface StyleBom extends Record<string, unknown> {
   | 'accessoryE';
   materialCode: string;
   materialName: string;
+  fabricComposition?: string;
   color: string;
   specification?: string;
   size: string;

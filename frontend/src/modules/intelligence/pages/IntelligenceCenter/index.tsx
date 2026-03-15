@@ -993,8 +993,12 @@ const IntelligenceCenter: React.FC = () => {
                   {actionCenter.summary.financeTasks > 0 && <Tag style={{ fontSize: 10, background: 'rgba(167,139,250,0.08)', color: '#a78bfa', borderColor: '#a78bfa33' }}>财务 {actionCenter.summary.financeTasks}</Tag>}
                   {actionCenter.summary.factoryTasks > 0 && <Tag style={{ fontSize: 10, background: 'rgba(247,166,0,0.08)', color: '#f7a600', borderColor: '#f7a60033' }}>工厂 {actionCenter.summary.factoryTasks}</Tag>}
                 </div>
-                {actionCenter.tasks.slice(0, 6).map((task) => (
-                  <div key={task.taskCode} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: task.routePath ? 'pointer' : 'default' }}
+                {actionCenter.tasks.slice(0, 6).map((task, index) => {
+                  const taskRowKey = [task.taskCode, task.relatedOrderNo, task.routePath, index]
+                    .filter(Boolean)
+                    .join('-');
+                  return (
+                  <div key={taskRowKey} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: task.routePath ? 'pointer' : 'default' }}
                     onClick={() => task.routePath && navigate(task.routePath)}>
                     <span style={{
                       fontSize: 9, fontWeight: 700, minWidth: 22, textAlign: 'center', padding: '1px 4px', borderRadius: 3,
@@ -1026,7 +1030,7 @@ const IntelligenceCenter: React.FC = () => {
                       )
                     )}
                   </div>
-                ))}
+                );})}
                 {/* 待审批 AI 命令 — 常驻显示，无需触发聊天 */}
                 <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
                   <div style={{ fontSize: 10, color: '#4a6d8a', marginBottom: 6 }}>

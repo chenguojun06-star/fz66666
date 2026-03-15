@@ -166,6 +166,74 @@
   gap: 12rpx;
 }
 
+.scan-toolbar {
+  margin: 20rpx 0 16rpx;
+  padding: 16rpx;
+  border-radius: var(--radius-sm);
+  background: rgba(45, 127, 249, 0.08);
+  border: 1rpx solid rgba(45, 127, 249, 0.18);
+}
+
+.scan-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220rpx;
+  height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.scan-tip {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.scan-result-card {
+  margin-bottom: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1rpx solid rgba(5, 150, 105, 0.18);
+}
+
+.scan-result-title {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.scan-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-top: 8rpx;
+  align-items: center;
+}
+
+.scan-result-main {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.scan-result-stock {
+  font-size: 22rpx;
+  color: var(--color-success);
+}
+
+.scan-result-code {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
 .sku-item {
   display: flex;
   align-items: center;
@@ -174,6 +242,11 @@
   padding: 12rpx 16rpx;
   border-radius: var(--radius-sm);
   border: 1rpx solid var(--color-border);
+}
+
+.sku-item-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2rpx rgba(45, 127, 249, 0.12);
 }
 
 .sku-info {

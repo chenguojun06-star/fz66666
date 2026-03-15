@@ -19,10 +19,15 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,7 +58,9 @@ public class MaterialStockController {
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
         }
-        return Result.success(materialStockService.queryPage(params));
+        IPage<MaterialStock> page = materialStockService.queryPage(params);
+        enrichLastOperationInfo(page.getRecords());
+        return Result.success(page);
     }
 
     @GetMapping("/summary")
@@ -207,5 +214,71 @@ public class MaterialStockController {
             return Result.fail("更新安全库存失败");
         }
         return Result.success(true);
+    }
+
+    private void enrichLastOperationInfo(List<MaterialStock> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        Set<String> stockIds = records.stream()
+                .map(MaterialStock::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Set<String> materialCodes = records.stream()
+                .map(MaterialStock::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        Map<String, MaterialInbound> latestInboundByKey = new HashMap<>();
+        if (!materialCodes.isEmpty()) {
+            List<MaterialInbound> inboundList = materialInboundMapper.selectList(new LambdaQueryWrapper<MaterialInbound>()
+                    .eq(MaterialInbound::getDeleteFlag, 0)
+                    .in(MaterialInbound::getMaterialCode, materialCodes)
+                    .orderByDesc(MaterialInbound::getInboundTime)
+                    .orderByDesc(MaterialInbound::getCreateTime));
+            for (MaterialInbound inbound : inboundList) {
+                latestInboundByKey.putIfAbsent(buildMaterialKey(inbound.getMaterialCode(), inbound.getColor(), inbound.getSize()), inbound);
+            }
+        }
+
+        Map<String, MaterialOutboundLog> latestOutboundByStockId = new HashMap<>();
+        if (!stockIds.isEmpty()) {
+            List<MaterialOutboundLog> outboundList = materialOutboundLogMapper.selectList(new LambdaQueryWrapper<MaterialOutboundLog>()
+                    .eq(MaterialOutboundLog::getDeleteFlag, 0)
+                    .in(MaterialOutboundLog::getStockId, stockIds)
+                    .orderByDesc(MaterialOutboundLog::getOutboundTime)
+                    .orderByDesc(MaterialOutboundLog::getCreateTime));
+            for (MaterialOutboundLog outbound : outboundList) {
+                if (StringUtils.hasText(outbound.getStockId())) {
+                    latestOutboundByStockId.putIfAbsent(outbound.getStockId(), outbound);
+                }
+            }
+        }
+
+        for (MaterialStock record : records) {
+            MaterialInbound inbound = latestInboundByKey.get(buildMaterialKey(record.getMaterialCode(), record.getColor(), record.getSize()));
+            if (inbound != null) {
+                record.setLastInboundBy(inbound.getOperatorName());
+                if (record.getLastInboundDate() == null) {
+                    record.setLastInboundDate(inbound.getInboundTime());
+                }
+            }
+
+            MaterialOutboundLog outbound = latestOutboundByStockId.get(record.getId());
+            if (outbound != null) {
+                record.setLastOutboundBy(outbound.getOperatorName());
+                if (record.getLastOutboundDate() == null) {
+                    record.setLastOutboundDate(outbound.getOutboundTime());
+                }
+            }
+        }
+    }
+
+    private String buildMaterialKey(String materialCode, String color, String size) {
+        return String.join("|",
+                Objects.toString(materialCode, ""),
+                Objects.toString(color, ""),
+                Objects.toString(size, ""));
     }
 }

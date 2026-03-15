@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
@@ -72,6 +73,9 @@ class WarehouseOrchestratorTest {
 
     @Mock
     private ProductionOrderService productionOrderService;
+
+    @Mock
+    private ProductOutstockService productOutstockService;
 
     @BeforeEach
     void setUp() {
@@ -157,7 +161,7 @@ class WarehouseOrchestratorTest {
     @Test
     void getFinishedInventoryPage_withEmptySkus_returnsEmptyPage() {
         FinishedInventoryOrchestrator orchestrator = new FinishedInventoryOrchestrator(
-                productSkuService, productWarehousingMapper, productionOrderService, styleInfoService, styleAttachmentService);
+                productSkuService, productWarehousingMapper, productOutstockService, productionOrderService, styleInfoService, styleAttachmentService);
 
         when(productSkuService.page(any(), any())).thenReturn(new Page<>());
 
@@ -174,7 +178,7 @@ class WarehouseOrchestratorTest {
     @Test
     void getFinishedInventoryPage_withStyleNoFilter_doesNotThrow() {
         FinishedInventoryOrchestrator orchestrator = new FinishedInventoryOrchestrator(
-                productSkuService, productWarehousingMapper, productionOrderService, styleInfoService, styleAttachmentService);
+                productSkuService, productWarehousingMapper, productOutstockService, productionOrderService, styleInfoService, styleAttachmentService);
 
         when(productSkuService.page(any(), any())).thenReturn(new Page<>());
 

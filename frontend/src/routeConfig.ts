@@ -209,7 +209,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '数据看板', path: paths.warehouseDashboard, icon: React.createElement(DashboardOutlined) },
       { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
-      { label: '面辅料数据库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
+      { label: '面辅料资料', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
       { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },    ],
   },

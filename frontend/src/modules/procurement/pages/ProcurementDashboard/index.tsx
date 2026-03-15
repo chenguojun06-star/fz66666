@@ -445,7 +445,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
                 onSearch={searchMaterialDb}
                 onSelect={handleMaterialDbSelect}
                 allowClear
-                notFoundContent={materialDbLoading ? '搜索中…' : '输入关键词搜索面辅料数据库'}
+                notFoundContent={materialDbLoading ? '搜索中…' : '输入关键词搜索面辅料资料'}
               />
             </Form.Item>
           </Col>

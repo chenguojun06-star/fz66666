@@ -132,6 +132,21 @@
         <view class="mf-kv"><text class="mf-kv-key">可用库存</text><text class="mf-kv-val">{{modal.order.availableQty || 0}} 件</text></view>
       </view>
 
+      <view class="scan-toolbar">
+        <view class="scan-btn" bindtap="onScanSkuQr">微信扫码定位SKU</view>
+        <text class="scan-tip">扫 U 编码后自动定位颜色/码数，并默认加 1 件</text>
+      </view>
+
+      <view wx:if="{{modal.lastScannedSku}}" class="scan-result-card">
+        <view class="scan-result-title">最近扫码</view>
+        <view class="scan-result-row">
+          <text class="scan-result-main">{{modal.lastScannedSku.color}} / {{modal.lastScannedSku.size}}</text>
+          <text class="scan-result-stock">库存 {{modal.lastScannedSku.availableQty}}</text>
+          <text class="scan-result-stock">出库 {{modal.lastScannedSku.outboundQty}}</text>
+        </view>
+        <view class="scan-result-code">{{modal.lastScannedQrCode}}</view>
+      </view>
+
       <!-- SKU列表 -->
       <view class="sku-section">
         <view class="section-title">📋 请选择需要出库的颜色和尺码：</view>
@@ -141,7 +156,7 @@
         </view>
 
         <view wx:elif="{{modal.skuList.length > 0}}" class="sku-list">
-          <view class="sku-item" wx:for="{{modal.skuList}}" wx:key="sku">
+          <view class="sku-item {{modal.scannedSkuKey === item.sku ? 'sku-item-active' : ''}}" wx:for="{{modal.skuList}}" wx:key="sku">
             <view class="sku-info">
               <view class="sku-header">
                 <text class="sku-color">{{item.color}}</text>

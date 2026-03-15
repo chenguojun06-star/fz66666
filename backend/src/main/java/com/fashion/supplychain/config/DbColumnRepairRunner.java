@@ -67,8 +67,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         "VARCHAR(20) DEFAULT NULL COMMENT '熨烫代码：LOW/MED/HIGH/NO'");
                     repaired += ensureColumn(conn, schema, "t_style_info", "dry_clean_code",
                         "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码：YES/NO'");
+                            repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition_parts",
+                                "TEXT DEFAULT NULL COMMENT '多部位面料成分JSON:[{part,materials}]'");
                 repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
+                repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '物料成分，优先从面辅料资料带入' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "group_name",

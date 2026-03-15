@@ -9,6 +9,8 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -61,6 +63,9 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialPickingService materialPickingService;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         return materialPurchaseService.queryPage(params);
@@ -1385,9 +1390,12 @@ public class MaterialPurchaseOrchestrator {
         // 1. 扣减库存
         List<com.fashion.supplychain.production.entity.MaterialPickingItem> items =
                 materialPickingService.getItemsByPickingId(pickingId);
+        LocalDateTime outboundTime = LocalDateTime.now();
         for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+            MaterialStock stock = materialStockService.getById(item.getMaterialStockId());
                 materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
+            recordOutboundLog(picking, item, stock, outboundTime);
             }
         }
 
@@ -1421,6 +1429,30 @@ public class MaterialPurchaseOrchestrator {
         }
 
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+    }
+
+    private void recordOutboundLog(MaterialPicking picking, MaterialPickingItem item, MaterialStock stock, LocalDateTime outboundTime) {
+        MaterialOutboundLog log = new MaterialOutboundLog();
+        log.setStockId(stock != null ? stock.getId() : item.getMaterialStockId());
+        log.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
+        log.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
+        log.setQuantity(item.getQuantity());
+        log.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
+        log.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
+        log.setWarehouseLocation(stock != null ? stock.getLocation() : null);
+        log.setRemark("仓库确认出库|pickingNo=" + picking.getPickingNo());
+        log.setOutboundTime(outboundTime);
+        log.setCreateTime(outboundTime);
+        log.setDeleteFlag(0);
+        materialOutboundLogMapper.insert(log);
+
+        if (stock != null && StringUtils.hasText(stock.getId())) {
+            MaterialStock patch = new MaterialStock();
+            patch.setId(stock.getId());
+            patch.setLastOutboundDate(outboundTime);
+            patch.setUpdateTime(outboundTime);
+            materialStockService.updateById(patch);
+        }
     }
 
     /**

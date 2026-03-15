@@ -6,6 +6,7 @@ import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import api from '@/utils/api';
+import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { downloadFile } from '@/utils/fileUrl';
 
 interface Props {
@@ -51,11 +52,8 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
     if (!styleId) return;
     setLoading(true);
     try {
-      const res = await api.get(`/style/info/${styleId}`);
-      if (res.code === 200 && res.data) {
-        const rows = res.data.description || '';
-        setProductionReq(rows);
-      }
+      const styleInfo = await getStyleInfoByRef(styleId, styleNo);
+      setProductionReq(String(styleInfo?.description || ''));
     } catch (error) {
       console.error('加载生产制单失败:', error);
     } finally {

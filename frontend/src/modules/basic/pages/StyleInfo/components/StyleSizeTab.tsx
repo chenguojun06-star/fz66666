@@ -47,6 +47,8 @@ type DisplayRow = MatrixRow & {
   resolvedGroupName: string;
   groupToneMeta: GroupToneMeta;
   isGroupStart: boolean;
+  isGroupChunkStart: boolean;
+  groupChunkSpan: number;
   isImageChunkStart: boolean;
   imageChunkSpan: number;
   chunkImageUrls: string[];
@@ -129,6 +131,44 @@ const normalizeRowSorts = (list: MatrixRow[]) => {
   }));
 };
 
+const normalizeChunkImageAssignments = (list: MatrixRow[]) => {
+  const sortedRows = normalizeRowSorts(list)
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const sortDiff = toNumberSafe(a.row.sort) - toNumberSafe(b.row.sort);
+      return sortDiff !== 0 ? sortDiff : a.index - b.index;
+    })
+    .map((item) => item.row);
+
+  const groupOrder: string[] = [];
+  const grouped = new Map<string, MatrixRow[]>();
+  sortedRows.forEach((row) => {
+    const groupName = resolveGroupName(row.groupName, row.partName);
+    if (!grouped.has(groupName)) {
+      grouped.set(groupName, []);
+      groupOrder.push(groupName);
+    }
+    grouped.get(groupName)!.push(row);
+  });
+
+  const normalizedRows: MatrixRow[] = [];
+  groupOrder.forEach((groupName) => {
+    const groupRows = grouped.get(groupName) || [];
+    for (let start = 0; start < groupRows.length; start += 5) {
+      const chunkRows = groupRows.slice(start, start + 5);
+      const ownerImages = chunkRows.find((row) => Array.isArray(row.imageUrls) && row.imageUrls.length > 0)?.imageUrls;
+      chunkRows.forEach((row, chunkIndex) => {
+        normalizedRows.push({
+          ...row,
+          imageUrls: chunkIndex === 0 && ownerImages?.length ? ownerImages.slice(0, 2) : undefined,
+        });
+      });
+    }
+  });
+
+  return normalizedRows;
+};
+
 const StyleSizeTab: React.FC<Props> = ({
   styleId,
   readOnly,
@@ -192,13 +232,14 @@ const StyleSizeTab: React.FC<Props> = ({
       groupRows.forEach((row, localIndex) => {
         const chunkStart = Math.floor(localIndex / 5) * 5;
         const chunkRows = groupRows.slice(chunkStart, chunkStart + 5);
-        const chunkImageUrls =
-          chunkRows.find((candidate) => Array.isArray(candidate.imageUrls) && candidate.imageUrls.length > 0)?.imageUrls || [];
+        const chunkImageUrls = Array.isArray(chunkRows[0]?.imageUrls) ? chunkRows[0].imageUrls : [];
         flatRows.push({
           ...row,
           resolvedGroupName: groupName,
           groupToneMeta,
           isGroupStart: localIndex === 0,
+          isGroupChunkStart: localIndex % 5 === 0,
+          groupChunkSpan: localIndex % 5 === 0 ? chunkRows.length : 0,
           isImageChunkStart: localIndex % 5 === 0,
           imageChunkSpan: localIndex % 5 === 0 ? chunkRows.length : 0,
           chunkImageUrls: chunkImageUrls.slice(0, 2),
@@ -376,7 +417,7 @@ const StyleSizeTab: React.FC<Props> = ({
           .sort((a, b) => (toNumberSafe(a.sort) || 0) - (toNumberSafe(b.sort) || 0));
 
         setSizeColumns(sizes);
-        setRows(nextRows);
+        setRows(normalizeChunkImageAssignments(nextRows));
         setDeletedIds([]);
       }
     } catch (error) {
@@ -421,36 +462,29 @@ const StyleSizeTab: React.FC<Props> = ({
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, partName } : r)));
   };
 
-  const updateGroupName = (rowKey: string, groupName: string) => {
+  const updateChunkGroupName = (chunkRowKeys: string[], groupName: string) => {
     const normalizedGroupName = String(groupName || '').trim() || '其他区';
+    if (!chunkRowKeys.length) return;
+
+    const rowKeySet = new Set(chunkRowKeys);
     setRows((prev) => {
-      const rowIndex = prev.findIndex((row) => row.key === rowKey);
-      if (rowIndex < 0) return prev;
+      let changed = false;
+      const nextRows = prev.map((row) => {
+        if (!rowKeySet.has(row.key)) return row;
 
-      const currentRow = prev[rowIndex];
-      const currentResolvedGroup = resolveGroupName(currentRow.groupName, currentRow.partName);
-      if (currentResolvedGroup === normalizedGroupName && String(currentRow.groupName || '').trim() === normalizedGroupName) {
-        return prev;
-      }
+        const currentResolvedGroup = resolveGroupName(row.groupName, row.partName);
+        if (currentResolvedGroup === normalizedGroupName && String(row.groupName || '').trim() === normalizedGroupName) {
+          return row;
+        }
 
-      const nextRows = [...prev];
-      const [movedRow] = nextRows.splice(rowIndex, 1);
-      const updatedRow: MatrixRow = {
-        ...movedRow,
-        groupName: normalizedGroupName,
-      };
+        changed = true;
+        return {
+          ...row,
+          groupName: normalizedGroupName,
+        };
+      });
 
-      const targetIndex = nextRows.findIndex(
-        (row) => resolveGroupName(row.groupName, row.partName) === normalizedGroupName,
-      );
-
-      if (targetIndex >= 0) {
-        nextRows.splice(targetIndex, 0, updatedRow);
-      } else {
-        nextRows.push(updatedRow);
-      }
-
-      return normalizeRowSorts(nextRows);
+      return changed ? normalizeRowSorts(nextRows) : prev;
     });
   };
 
@@ -479,10 +513,17 @@ const StyleSizeTab: React.FC<Props> = ({
   };
 
   const setChunkImageUrls = (chunkRowKeys: string[], nextImages: string[]) => {
+    const ownerRowKey = String(chunkRowKeys[0] || '');
     const rowKeySet = new Set(chunkRowKeys);
     const sanitized = nextImages.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 2);
     setRows((prev) =>
-      prev.map((row) => (rowKeySet.has(row.key) ? { ...row, imageUrls: sanitized.length ? sanitized : undefined } : row)),
+      prev.map((row) => {
+        if (!rowKeySet.has(row.key)) return row;
+        return {
+          ...row,
+          imageUrls: String(row.key) === ownerRowKey && sanitized.length ? sanitized : undefined,
+        };
+      }),
     );
   };
 
@@ -634,7 +675,8 @@ const StyleSizeTab: React.FC<Props> = ({
 
   const saveAll = async () => {
     if (readOnly) return;
-    const invalid = rows.some((r) => !String(r.partName || '').trim());
+    const normalizedRows = normalizeChunkImageAssignments(rows);
+    const invalid = normalizedRows.some((r) => !String(r.partName || '').trim());
     if (invalid) {
       message.error('请先填写部位');
       return;
@@ -661,7 +703,7 @@ const StyleSizeTab: React.FC<Props> = ({
       }
 
       const tasks: Array<Promise<any>> = [];
-      rows.forEach((r) => {
+      normalizedRows.forEach((r) => {
         const groupName = resolveGroupName(r.groupName, r.partName);
         const imageUrlsJson = r.imageUrls && r.imageUrls.length > 0 ? JSON.stringify(r.imageUrls.slice(0, 2)) : null;
         sizeColumns.forEach((sn) => {
@@ -713,6 +755,7 @@ const StyleSizeTab: React.FC<Props> = ({
       }
 
       message.success('保存成功');
+      setRows(normalizedRows);
       setEditMode(false);
       snapshotRef.current = null;
       await fetchSize();
@@ -732,14 +775,17 @@ const StyleSizeTab: React.FC<Props> = ({
         dataIndex: '__groupImage',
         width: 180,
         onCell: (record: DisplayRow) => {
-          return { rowSpan: record.isImageChunkStart ? record.imageChunkSpan : 0 };
+          return {
+            rowSpan: record.isImageChunkStart ? record.imageChunkSpan : 0,
+            style: { verticalAlign: 'top' as const },
+          };
         },
         render: (_: any, record: DisplayRow) => {
           if (!record.isImageChunkStart) return null;
           const imgs = record.chunkImageUrls || [];
           const blockHeight = imgs.length > 1 ? 108 : 220;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', justifyContent: 'center', width: '100%', minHeight: 240, padding: '8px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', justifyContent: 'flex-start', width: '100%', minHeight: 240, padding: '8px 0' }}>
               <Image.PreviewGroup>
                 {imgs.map((url, i) => (
                   <div key={url} style={{ position: 'relative', width: '100%' }}>
@@ -790,9 +836,17 @@ const StyleSizeTab: React.FC<Props> = ({
         title: '分组',
         dataIndex: 'groupName',
         width: 160,
-        render: (_: any, record: DisplayRow) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {record.isGroupStart ? (
+        onCell: (record: DisplayRow) => {
+          return {
+            rowSpan: record.isGroupChunkStart ? record.groupChunkSpan : 0,
+            style: { verticalAlign: 'top' as const },
+          };
+        },
+        render: (_: any, record: DisplayRow) => {
+          if (!record.isGroupChunkStart) return null;
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', padding: '8px 0' }}>
               <div
                 style={{
                   display: 'flex',
@@ -810,32 +864,23 @@ const StyleSizeTab: React.FC<Props> = ({
                   {record.resolvedGroupName}
                 </span>
                 <span style={{ fontSize: 'var(--font-size-xs)', opacity: 0.88, lineHeight: 1.4 }}>
-                  本分组每 5 行共用一个参考图区
+                  本区域每 5 行共用一个分组与参考图区
                 </span>
               </div>
-            ) : null}
-            {editableMode ? (
-              <Select
-                mode="tags"
-                value={[String(record.groupName || record.resolvedGroupName || '其他区')]}
-                placeholder="选择或新建分组"
-                style={{ width: '100%' }}
-                options={groupNameOptions}
-                maxCount={1}
-                tokenSeparators={[',', '，']}
-                onChange={(values) => updateGroupName(record.key, String(values?.[0] || '其他区'))}
-                onBlur={(event) => {
-                  const inputValue = String((event?.target as HTMLInputElement | null)?.value || '').trim();
-                  if (inputValue) {
-                    updateGroupName(record.key, inputValue);
-                  }
-                }}
-              />
-            ) : (
-              <span style={{ color: record.groupToneMeta.tagColor, fontWeight: 500 }}>{record.resolvedGroupName}</span>
-            )}
-          </div>
-        ),
+              {editableMode ? (
+                <Select
+                  value={String(record.groupName || record.resolvedGroupName || '其他区')}
+                  placeholder="选择分组"
+                  style={{ width: '100%' }}
+                  options={groupNameOptions}
+                  onChange={(value) => updateChunkGroupName(record.chunkRowKeys, String(value || '其他区'))}
+                />
+              ) : (
+                <span style={{ color: record.groupToneMeta.tagColor, fontWeight: 500 }}>{record.resolvedGroupName}</span>
+              )}
+            </div>
+          );
+        },
       },
       {
         title: '部位(cm)',
@@ -956,6 +1001,10 @@ const StyleSizeTab: React.FC<Props> = ({
   return (
     <div>
       <style>{`
+        .style-size-table .ant-table-tbody > tr > td {
+          vertical-align: top;
+        }
+
         .style-size-table .ant-table-tbody > tr.style-size-group-start > td {
           border-top: 12px solid #f5f7fa;
         }

@@ -2,8 +2,11 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
+import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.mapper.MaterialPickingMapper;
 import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
 import com.fashion.supplychain.production.service.MaterialPickingService;
@@ -11,6 +14,7 @@ import com.fashion.supplychain.production.service.MaterialStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,6 +27,9 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
 
     @Autowired
     private MaterialStockService materialStockService;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -49,18 +56,23 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         this.save(picking);
 
         // 2. 保存明细并扣减库存
+        LocalDateTime outboundTime = LocalDateTime.now();
         for (MaterialPickingItem item : items) {
             item.setPickingId(picking.getId());
             item.setCreateTime(LocalDateTime.now());
             materialPickingItemMapper.insert(item);
 
+            MaterialStock stock = resolveStock(item);
+
             // 扣减库存
-            if (item.getMaterialStockId() != null) {
+            if (StringUtils.hasText(item.getMaterialStockId())) {
                 materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
             } else {
                 // Fallback: decrease by properties
                 materialStockService.decreaseStock(item.getMaterialId(), item.getColor(), item.getSize(), item.getQuantity());
             }
+
+            recordOutboundLog(picking, item, stock, outboundTime, "领料单直接出库");
         }
 
         return picking.getId();
@@ -98,5 +110,58 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
             }
         }
         return picking.getId();
+    }
+
+    private MaterialStock resolveStock(MaterialPickingItem item) {
+        if (item == null) {
+            return null;
+        }
+        if (StringUtils.hasText(item.getMaterialStockId())) {
+            return materialStockService.getById(item.getMaterialStockId());
+        }
+
+        LambdaQueryWrapper<MaterialStock> query = new LambdaQueryWrapper<MaterialStock>()
+                .eq(MaterialStock::getDeleteFlag, 0)
+                .eq(StringUtils.hasText(item.getMaterialId()), MaterialStock::getMaterialId, item.getMaterialId())
+                .eq(StringUtils.hasText(item.getColor()), MaterialStock::getColor, item.getColor())
+                .eq(StringUtils.hasText(item.getSize()), MaterialStock::getSize, item.getSize());
+
+        if (!StringUtils.hasText(item.getColor())) {
+            query.and(wrapper -> wrapper.isNull(MaterialStock::getColor).or().eq(MaterialStock::getColor, ""));
+        }
+        if (!StringUtils.hasText(item.getSize())) {
+            query.and(wrapper -> wrapper.isNull(MaterialStock::getSize).or().eq(MaterialStock::getSize, ""));
+        }
+
+        return materialStockService.getOne(query, false);
+    }
+
+    private void recordOutboundLog(
+            MaterialPicking picking,
+            MaterialPickingItem item,
+            MaterialStock stock,
+            LocalDateTime outboundTime,
+            String reason) {
+        MaterialOutboundLog log = new MaterialOutboundLog();
+        log.setStockId(stock != null ? stock.getId() : item.getMaterialStockId());
+        log.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
+        log.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
+        log.setQuantity(item.getQuantity());
+        log.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
+        log.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
+        log.setWarehouseLocation(stock != null ? stock.getLocation() : null);
+        log.setRemark(reason + "|pickingNo=" + picking.getPickingNo());
+        log.setOutboundTime(outboundTime);
+        log.setCreateTime(outboundTime);
+        log.setDeleteFlag(0);
+        materialOutboundLogMapper.insert(log);
+
+        if (stock != null && StringUtils.hasText(stock.getId())) {
+            MaterialStock patch = new MaterialStock();
+            patch.setId(stock.getId());
+            patch.setLastOutboundDate(outboundTime);
+            patch.setUpdateTime(outboundTime);
+            materialStockService.updateById(patch);
+        }
     }
 }

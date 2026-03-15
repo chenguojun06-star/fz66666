@@ -88,15 +88,15 @@ const MaterialDatabasePage: React.FC = () => {
       );
       const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(
         res as any,
-        '获取面辅料数据库列表失败'
+        '获取面辅料资料列表失败'
       );
       const records = Array.isArray(data?.records) ? data.records : [];
       setDataList(records as MaterialDatabase[]);
       setTotal(Number(data?.total || 0) || 0);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
-      const errMessage = (error as Error)?.message || '获取面辅料数据库列表失败';
-      reportSmartError('面辅料数据库加载失败', errMessage, 'MATERIAL_DATABASE_LOAD_FAILED');
+      const errMessage = (error as Error)?.message || '获取面辅料资料列表失败';
+      reportSmartError('面辅料资料加载失败', errMessage, 'MATERIAL_DATABASE_LOAD_FAILED');
       message.error(errMessage);
     } finally {
       setLoading(false);
@@ -494,7 +494,7 @@ const MaterialDatabasePage: React.FC = () => {
         <Card>
           {/* 页面标题 */}
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 面辅料数据库</h2>
+            <h2 style={{ margin: 0 }}>📦 面辅料资料</h2>
           </div>
 
           {/* 筛选区 */}

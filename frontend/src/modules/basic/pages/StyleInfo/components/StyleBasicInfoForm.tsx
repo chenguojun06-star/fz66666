@@ -257,95 +257,50 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               洗水唛 / 标签信息
             </div>
             <Row gutter={[16, 0]}>
-              <Col xs={24} md={8}>
+              <Col xs={24} md={16}>
                 <Form.Item
-                  name="fabricComposition"
-                  label="面料成分"
-                  tooltip="填写在洗水唛上的成分，如：70%棉 30%涤纶"
+                  name="fabricCompositionParts"
+                  label="洗水唛成分（上装 / 下装）"
+                  tooltip="支持分别维护上装和下装的多条成分，打印洗水唛时会自动按上装 / 下装分段输出"
                 >
-                  <Input placeholder="如：70%棉 30%涤纶" disabled={editLocked} />
+                  <CompositionPartsEditor disabled={editLocked} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={10}>
+              <Col xs={24} md={8}>
                 <Form.Item
                   name="washInstructions"
                   label="洗涤说明"
                   tooltip="洗水唛上的洗涤注意事项，如：30°C水洗，不可漂白"
                 >
-                  <Input placeholder="如：30°C水洗，不可漂白，低温烘干" disabled={editLocked} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  name="uCode"
-                  label="U编码"
-                  tooltip="品质追溯码，印在吊牌或洗水唛上，用于扫码溯源"
-                >
-                  <Input placeholder="品质追溯码" disabled={editLocked} />
+                  <Input.TextArea rows={4} placeholder="如：30°C水洗，不可漂白，低温烘干" disabled={editLocked} />
                 </Form.Item>
               </Col>
             </Row>
-            <Row gutter={[16, 0]}>
-              <Col xs={24} md={5}>
-                <Form.Item name="washTempCode" label="洗涤温度" tooltip="打印洗水唛时自动显示对应护理图标">
-                  <Select placeholder="未设置" allowClear disabled={editLocked}>
-                    <Select.Option value="W30">30°C 机洗</Select.Option>
-                    <Select.Option value="W40">40°C 机洗</Select.Option>
-                    <Select.Option value="W60">60°C 机洗</Select.Option>
-                    <Select.Option value="W95">95°C 机洗</Select.Option>
-                    <Select.Option value="HAND">手洗</Select.Option>
-                    <Select.Option value="NO">不可水洗</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={5}>
-                <Form.Item name="bleachCode" label="漂白要求" tooltip="打印洗水唛时自动显示漂白图标">
-                  <Select placeholder="未设置" allowClear disabled={editLocked}>
-                    <Select.Option value="ANY">可漂白</Select.Option>
-                    <Select.Option value="NON_CHL">非氯漂</Select.Option>
-                    <Select.Option value="NO">不可漂白</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={5}>
-                <Form.Item name="tumbleDryCode" label="烘干要求" tooltip="打印洗水唛时自动显示烘干图标">
-                  <Select placeholder="未设置" allowClear disabled={editLocked}>
-                    <Select.Option value="NORMAL">可烘干</Select.Option>
-                    <Select.Option value="LOW">低温烘干</Select.Option>
-                    <Select.Option value="NO">不可烘干</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item name="ironCode" label="熨烫要求" tooltip="打印洗水唛时自动显示熨烫图标">
-                  <Select placeholder="未设置" allowClear disabled={editLocked}>
-                    <Select.Option value="LOW">低温熨烫</Select.Option>
-                    <Select.Option value="MED">中温熨烫</Select.Option>
-                    <Select.Option value="HIGH">高温熨烫</Select.Option>
-                    <Select.Option value="NO">不可熨烫</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={5}>
-                <Form.Item name="dryCleanCode" label="干洗要求" tooltip="打印洗水唛时自动显示干洗图标">
-                  <Select placeholder="未设置" allowClear disabled={editLocked}>
-                    <Select.Option value="YES">可干洗</Select.Option>
-                    <Select.Option value="NO">不可干洗</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={[16, 0]}>
-              <Col xs={24} md={24}>
-                <Form.Item
-                  name="fabricCompositionParts"
-                  label="多部位面料成分"
-                  tooltip="两件套/拼接款专用，可分部位填写成分（如 Lower / Top），打印在洗水唛上"
-                >
-                  <CompositionPartsEditor disabled={editLocked} />
-                </Form.Item>
-              </Col>
-            </Row>
+            <div style={{ marginTop: -4, fontSize: 12, color: '#8c8c8c' }}>
+              打印洗水唛时会自动带出 5 个标准护理图标；旧款式如果已经维护过专属护理码，打印时仍优先使用旧值。
+            </div>
+
+            <Form.Item name="fabricComposition" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="uCode" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="washTempCode" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="bleachCode" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="tumbleDryCode" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="ironCode" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="dryCleanCode" hidden>
+              <Input />
+            </Form.Item>
           </div>
 
           {/* 颜色码数配置 */}

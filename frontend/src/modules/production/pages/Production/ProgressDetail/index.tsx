@@ -21,6 +21,7 @@ import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } fro
 import type { TemplateLibrary } from '@/types/style';
 
 import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
+import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import {
@@ -350,24 +351,36 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ===== 打印标签（洗水唛/吊牌）状态 =====
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
-  const [labelPrintStyle, setLabelPrintStyle] = useState<{ fabricComposition?: string; washInstructions?: string; uCode?: string } | null>(null);
+  const [labelPrintStyle, setLabelPrintStyle] = useState<{
+    fabricComposition?: string;
+    fabricCompositionParts?: string;
+    washInstructions?: string;
+    uCode?: string;
+    washTempCode?: string;
+    bleachCode?: string;
+    tumbleDryCode?: string;
+    ironCode?: string;
+    dryCleanCode?: string;
+  } | null>(null);
 
   const handlePrintLabel = async (record: ProductionOrder) => {
     setLabelPrintOrder(record);
     setLabelPrintStyle(null);
     setLabelPrintOpen(true);
-    if (record.styleId) {
-      try {
-        const res = await api.get(`/style/info/${record.styleId}`);
-        const d = (res as any)?.data ?? (res as any) ?? {};
-        setLabelPrintStyle({
-          fabricComposition: d.fabricComposition,
-          washInstructions: d.washInstructions,
-          uCode: d.uCode,
-        });
-      } catch {
-        setLabelPrintStyle({});
-      }
+    if (record.styleId || record.styleNo) {
+      const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
+      const d = styleInfo ?? {};
+      setLabelPrintStyle({
+        fabricComposition: d.fabricComposition,
+        fabricCompositionParts: d.fabricCompositionParts,
+        washInstructions: d.washInstructions,
+        uCode: d.uCode,
+        washTempCode: d.washTempCode,
+        bleachCode: d.bleachCode,
+        tumbleDryCode: d.tumbleDryCode,
+        ironCode: d.ironCode,
+        dryCleanCode: d.dryCleanCode,
+      });
     }
   };
   const {

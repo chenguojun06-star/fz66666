@@ -151,7 +151,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
 
       /* 3. 构建每张标签 HTML（7×4cm = 70×40mm，与菲号标签完全相同规格） */
       const labelW = 70, labelH = 40;
-      const printQrSize = Math.min(labelH - 8, 84 * 0.28); // ≈23.5mm
+      const printQrSize = Math.min(labelH - 4, 29.5);
 
       const labelsHtml = labels.map(lb => `
         <div class="print-page">
@@ -160,7 +160,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
               <img src="${qrMap[lb.qrCode] || ''}" width="84" height="84" />
             </div>
             <div class="text">
-              <div>订单：${order.orderNo || '-'}</div>
+              <div class="top-code">${lb.qrCode}</div>
               <div>款号：${order.styleNo || '-'}</div>
               ${order.styleName ? `<div>款名：${order.styleName}</div>` : ''}
               <div>颜色：${lb.color || '-'}</div>
@@ -191,16 +191,22 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
       width: ${labelW - 4}mm; height: ${labelH - 4}mm;
       border: 1px solid #000;
       display: flex; flex-direction: row;
-      padding: 1.5mm; gap: 1.5mm; background: #fff;
+      padding: 1.2mm 1.6mm; gap: 1.8mm; background: #fff;
     }
-    .qr { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+    .qr { flex: 0 0 ${printQrSize + 2.5}mm; display: flex; align-items: center; justify-content: center; }
     .qr img { width: ${printQrSize}mm; height: ${printQrSize}mm; }
     .text {
       flex: 1; display: flex; flex-direction: column;
-      justify-content: space-around;
-      font-size: 7pt; line-height: 1.3; color: #000;
+      justify-content: flex-start;
+      font-size: 6.3pt; line-height: 1.22; color: #000; min-width: 0;
     }
-    .text > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .text > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .top-code {
+      font-size: 7.2pt; font-weight: 700;
+      border-bottom: 0.8pt dashed #9a9a9a;
+      padding-bottom: 0.8mm;
+      margin-bottom: 0.9mm;
+    }
   </style>
 </head>
 <body>${labelsHtml}</body>

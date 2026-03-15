@@ -131,9 +131,12 @@ public class AiAgentOrchestrator {
                 }
             } else {
                 // Done!
-                log.info("[AiAgent] 完成任务，返回给用户");
-                saveConversationTurn(userId, userMessage, result.getContent());
-                return Result.success(result.getContent());
+                log.info("[AiAgent] 完成任务，进入自反思审查层");
+                String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+
+                log.info("[AiAgent] 返回最终结果给用户");
+                saveConversationTurn(userId, userMessage, revisedContent);
+                return Result.success(revisedContent);
             }
         }
 
@@ -201,9 +204,13 @@ public class AiAgentOrchestrator {
                         messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
                     }
                 } else {
+                    // == 自反思审查 ==
+                    emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
+                    String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+
                     // 最终回答
-                    saveConversationTurn(userId, userMessage, result.getContent());
-                    emitSse(emitter, "answer", Map.of("content", result.getContent()));
+                    saveConversationTurn(userId, userMessage, revisedContent);
+                    emitSse(emitter, "answer", Map.of("content", revisedContent));
                     emitSse(emitter, "done", Map.of());
                     emitter.complete();
                     return;

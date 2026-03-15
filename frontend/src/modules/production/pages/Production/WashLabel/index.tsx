@@ -28,7 +28,17 @@ function genUCode(order: ProductionOrder): string {
   return parts.length ? `${parts.join('-')}-${suffix}` : order.orderNo || '';
 }
 
-type StyleLabelCache = Record<string, { fabricComposition?: string; washInstructions?: string; uCode?: string }>;
+type StyleLabelCache = Record<string, {
+  fabricComposition?: string;
+  fabricCompositionParts?: string;
+  washInstructions?: string;
+  uCode?: string;
+  washTempCode?: string;
+  bleachCode?: string;
+  tumbleDryCode?: string;
+  ironCode?: string;
+  dryCleanCode?: string;
+}>;
 
 const WashLabelPage: React.FC = () => {
   const { message } = App.useApp();
@@ -42,7 +52,7 @@ const WashLabelPage: React.FC = () => {
   const [searchStyleNo, setSearchStyleNo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  /** 缓存 styleId → {fabricComposition, washInstructions, uCode}（款式开发侧数据） */
+  /** 缓存 styleId → 款式标签字段（含成分/套装成分/洗护说明/U码/ISO护理码） */
   const styleCache = useRef<StyleLabelCache>({});
   /** 触发含缓存数据的列重新渲染 */
   const [, setCacheVer] = useState(0);
@@ -69,8 +79,14 @@ const WashLabelPage: React.FC = () => {
           const d = (res as any)?.data ?? res ?? {};
           styleCache.current[styleId] = {
             fabricComposition: d.fabricComposition,
+            fabricCompositionParts: d.fabricCompositionParts,
             washInstructions: d.washInstructions,
             uCode: d.uCode,
+            washTempCode: d.washTempCode,
+            bleachCode: d.bleachCode,
+            tumbleDryCode: d.tumbleDryCode,
+            ironCode: d.ironCode,
+            dryCleanCode: d.dryCleanCode,
           };
         } catch { /* silently ignore: 款式可能未填写 */ }
       })
@@ -122,8 +138,14 @@ const WashLabelPage: React.FC = () => {
         color: o.color,
         size: o.size,
         fabricComposition: cached.fabricComposition,
+        fabricCompositionParts: cached.fabricCompositionParts,
         washInstructions: cached.washInstructions,
         uCode: getUCode(o),
+        washTempCode: cached.washTempCode,
+        bleachCode: cached.bleachCode,
+        tumbleDryCode: cached.tumbleDryCode,
+        ironCode: cached.ironCode,
+        dryCleanCode: cached.dryCleanCode,
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -614,15 +614,15 @@ export function useMaterialPurchase() {
     setMaterialDatabaseLoading(true);
     try {
       const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>('/material/database/list', { params: materialDatabaseQueryParams });
-      const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(res as any, '获取面辅料数据库列表失败');
+      const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(res as any, '获取面辅料资料列表失败');
       const records = Array.isArray(data?.records) ? data.records : [];
       setMaterialDatabaseList(records as MaterialDatabase[]);
       setMaterialDatabaseTotal(Number(data?.total || 0) || 0);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
       const errMessage = (error as Error)?.message;
-      reportSmartError('面辅料数据库加载失败', errMessage || '网络异常或服务不可用，请稍后重试', 'MATERIAL_DATABASE_LIST_FAILED');
-      message.error(errMessage || '获取面辅料数据库列表失败');
+      reportSmartError('面辅料资料加载失败', errMessage || '网络异常或服务不可用，请稍后重试', 'MATERIAL_DATABASE_LIST_FAILED');
+      message.error(errMessage || '获取面辅料资料列表失败');
     } finally {
       setMaterialDatabaseLoading(false);
     }

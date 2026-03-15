@@ -944,7 +944,7 @@ const PatternProduction: React.FC = () => {
                         { type: 'number', min: 0, max: 100, message: '0-100' },
                       ]}
                     >
-                      <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" addonAfter="%" />
+                      <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" suffix="%" />
                     </Form.Item>
                   ))}
                 </div>

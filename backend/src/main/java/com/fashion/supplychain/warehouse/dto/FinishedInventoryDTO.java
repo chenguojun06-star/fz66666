@@ -109,6 +109,21 @@ public class FinishedInventoryDTO {
     private String lastInboundBy;
 
     /**
+     * 最后出库日期
+     */
+    private LocalDateTime lastOutboundDate;
+
+    /**
+     * 最后出库单号
+     */
+    private String lastOutstockNo;
+
+    /**
+     * 最后出库操作人
+     */
+    private String lastOutboundBy;
+
+    /**
      * 该款式的所有颜色列表
      */
     private List<String> colors;

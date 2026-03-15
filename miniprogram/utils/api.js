@@ -336,6 +336,10 @@ const warehouse = {
   listFinishedInventory(params) {
     return ok('/api/warehouse/finished-inventory/list', 'GET', params || {});
   },
+  /** 成品库存批量出库（与PC端一致的API） */
+  outboundFinishedInventory(payload) {
+    return ok('/api/warehouse/finished-inventory/outbound', 'POST', payload || {});
+  },
 };
 
 const orderManagement = {

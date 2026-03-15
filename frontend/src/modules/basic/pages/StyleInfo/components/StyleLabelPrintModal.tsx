@@ -6,9 +6,10 @@
  * 纸张规格：40×60mm（小水唛） / 50×80mm（标准吊牌） / 60×90mm（大吊牌）
  */
 import React, { useState, useRef } from 'react';
-import { Button, Radio, Space, Tag, Divider, Alert, Checkbox } from 'antd';
+import { Button, Radio, Space, Tag, Divider, Alert } from 'antd';
 import { PrinterOutlined, TagOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import { buildWashLabelSections, getDisplayWashCareCodes, hasWashLabelComposition } from '@/utils/washLabel';
 
 interface StyleLabelInfo {
   styleNo?: string;
@@ -16,6 +17,7 @@ interface StyleLabelInfo {
   color?: string;
   size?: string;
   fabricComposition?: string;
+  fabricCompositionParts?: string;
   washInstructions?: string;
   uCode?: string;
   /** 洗涤温度代码：W30/W40/W60/W95/HAND/NO */
@@ -55,15 +57,16 @@ const CARE_SVG_MAP: Record<string, string> = {
   dryclean_NO: _circ(_X),
 };
 function buildCareIconRow(info: StyleLabelInfo): string {
+  const codes = getDisplayWashCareCodes(info, info.washInstructions);
   const icons = [
-    info.washTempCode  ? (CARE_SVG_MAP[`wash_${info.washTempCode}`] ?? '')      : '',
-    info.bleachCode    ? (CARE_SVG_MAP[`bleach_${info.bleachCode}`] ?? '')      : '',
-    info.tumbleDryCode ? (CARE_SVG_MAP[`dry_${info.tumbleDryCode}`] ?? '')      : '',
-    info.ironCode      ? (CARE_SVG_MAP[`iron_${info.ironCode}`] ?? '')          : '',
-    info.dryCleanCode  ? (CARE_SVG_MAP[`dryclean_${info.dryCleanCode}`] ?? '') : '',
+    codes.washTempCode ? (CARE_SVG_MAP[`wash_${codes.washTempCode}`] ?? '') : '',
+    codes.bleachCode ? (CARE_SVG_MAP[`bleach_${codes.bleachCode}`] ?? '') : '',
+    codes.tumbleDryCode ? (CARE_SVG_MAP[`dry_${codes.tumbleDryCode}`] ?? '') : '',
+    codes.ironCode ? (CARE_SVG_MAP[`iron_${codes.ironCode}`] ?? '') : '',
+    codes.dryCleanCode ? (CARE_SVG_MAP[`dryclean_${codes.dryCleanCode}`] ?? '') : '',
   ].filter(Boolean);
   if (!icons.length) return '';
-  return `<div class="care-icons">${icons.join('')}</div>`;
+  return `<div class="care-icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
 }
 
 interface Props {
@@ -72,10 +75,11 @@ interface Props {
   style: StyleLabelInfo;
 }
 
-type PaperSize = '40x60' | '50x80' | '60x90';
+type PaperSize = '30x80' | '40x60' | '50x80' | '60x90';
 type LabelType = 'wash' | 'hangtag' | 'both';
 
 const PAPER_SIZES: Record<PaperSize, { w: number; h: number; label: string }> = {
+  '30x80': { w: 30,  h: 80,  label: '30×80mm（默认水唛）' },
   '40x60': { w: 40,  h: 60,  label: '40×60mm（小水唛）' },
   '50x80': { w: 50,  h: 80,  label: '50×80mm（标准吊牌）' },
   '60x90': { w: 60,  h: 90,  label: '60×90mm（大吊牌）' },
@@ -86,12 +90,21 @@ const PAPER_SIZES: Record<PaperSize, { w: number; h: number; label: string }> = 
  */
 function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize): string {
   const { w, h } = PAPER_SIZES[size];
-  const comp   = info.fabricComposition  || '（未填写成分）';
-  const wash   = info.washInstructions   || '（未填写洗涤说明）';
-  const styleNo = info.styleNo || '-';
-  const sizeStr = info.size   || '-';
-  const color   = info.color  || '';
+  const sections = buildWashLabelSections(info.fabricCompositionParts, info.fabricComposition);
+  const showPartTitle = sections.length > 1;
+  const comp = sections.length
+    ? sections.map(section => `
+      <div class="comp-group">
+        ${showPartTitle && section.key !== 'other' ? `<div class="group-title">${section.label}</div>` : ''}
+        ${section.items.map(item => `<div class="comp-line">${item}</div>`).join('')}
+      </div>
+    `).join('')
+    : '（未填写成分）';
+  const washRaw = info.washInstructions || '（未填写洗涤说明）';
+  const wash = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim() || '（未填写洗涤说明）';
   const careIconRow = buildCareIconRow(info);
+  const styleNo = info.styleNo || '-';
+  const styleName = info.styleName || '-';
 
   return `<!DOCTYPE html>
 <html>
@@ -104,28 +117,42 @@ function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize): string {
   body { font-family: 'PingFang SC', 'Heiti SC', Arial, sans-serif; }
   .page {
     width: ${w}mm; height: ${h}mm;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 3mm;
-    border: 0.5pt solid #333;
+    position: relative;
+    padding: 0 2.2mm;
   }
-  .title { font-size: ${w >= 50 ? 8 : 7}pt; font-weight: bold; margin-bottom: 2mm; text-align: center; }
-  .line  { font-size: ${w >= 50 ? 7 : 6}pt; margin-bottom: 1.5mm; text-align: center; line-height: 1.4; }
-  .comp  { font-size: ${w >= 50 ? 8 : 7}pt; font-weight: bold; text-align: center; margin: 2mm 0; line-height: 1.5; }
-  .divider { border-top: 0.3pt solid #999; width: 90%; margin: 1.5mm auto; }
-  .small { font-size: ${w >= 50 ? 6 : 5}pt; color: #555; text-align: center; }
-  .care-icons { display: flex; gap: 2mm; justify-content: center; align-items: center; padding: 1mm 0; }
+  .top-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 15mm; text-align: center; }
+  .style-no { font-size: ${w <= 30 ? 5.8 : 6.2}pt; font-weight: bold; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .style-name { font-size: ${w <= 30 ? 5.1 : 5.5}pt; line-height: 1.35; margin-top: 0.8mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .content-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 24mm; bottom: 24mm; overflow: hidden; }
+  .wash-text  { font-size: ${w <= 30 ? 5.1 : 5.6}pt; text-align: left; line-height: 1.55; word-break: break-word; color: #444; margin-top: 1.6mm; }
+  .wash-label { display: block; font-weight: 600; margin-bottom: 0.5mm; }
+  .comp  { font-size: ${w <= 30 ? 6.9 : 7.3}pt; text-align: left; line-height: 1.5; }
+  .comp-group { margin-bottom: 1.8mm; }
+  .group-title { font-weight: bold; margin-bottom: 0.8mm; font-size: ${w <= 30 ? 6.1 : 6.6}pt; }
+  .comp-line { font-weight: bold; }
+  .bottom-block { position: absolute; left: 2.2mm; right: 2.2mm; bottom: 6.5mm; display: flex; flex-direction: column; align-items: center; }
+  .care-icons { display: flex; gap: 0.45mm; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; margin: 1.8mm auto 0; min-height: 6mm; }
+  .icon-cell { width: 4.8mm; height: 4.8mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .care-icons svg { width: 100%; height: 100%; }
+  .country { margin-top: 2.1mm; font-size: ${w <= 30 ? 5.4 : 5.8}pt; font-weight: bold; letter-spacing: 0.6mm; line-height: 1.3; text-align: center; white-space: nowrap; }
+  .date-box { margin-top: 2.2mm; font-size: ${w <= 30 ? 5.1 : 5.5}pt; color: #444; text-align: center; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="title">成分 / Composition</div>
-  <div class="comp">${comp}</div>
-  <div class="divider"></div>
-  <div class="line">${wash}</div>
-  ${careIconRow ? `<div class="divider"></div>${careIconRow}` : ''}
-  <div class="divider"></div>
-  <div class="small">款号：${styleNo}${color ? '  颜色：' + color : ''}  码数：${sizeStr}</div>
+  <div class="top-block">
+    <div class="style-no">款号：${styleNo}</div>
+    <div class="style-name">款名：${styleName}</div>
+  </div>
+  <div class="content-block">
+    <div class="comp">${comp}</div>
+    <div class="wash-text"><span class="wash-label">洗涤说明</span>${wash}</div>
+  </div>
+  <div class="bottom-block">
+    ${careIconRow || ''}
+    <div class="country">MADE IN CHINA</div>
+    <div class="date-box">202603</div>
+  </div>
 </div>
 </body>
 </html>`;
@@ -174,7 +201,7 @@ function buildHangtagHtml(info: StyleLabelInfo, size: PaperSize, qrDataUrl: stri
   <div class="styleno">${styleNo}</div>
   ${name ? `<div class="name">${name}</div>` : ''}
   <div class="divider"></div>
-  <div class="row">颜色：${color}　　码数：${sizeStr}</div>
+  <div class="row">颜色：${color}&nbsp;&nbsp;码数：${sizeStr}</div>
   ${uCode ? `<div class="divider"></div><div class="ucode">U码：${uCode}</div>` : ''}
   ${qrDataUrl ? `<div class="qr"><img src="${qrDataUrl}" width="${qrSize}mm" height="${qrSize}mm"/></div>` : ''}
 </div>
@@ -183,11 +210,11 @@ function buildHangtagHtml(info: StyleLabelInfo, size: PaperSize, qrDataUrl: stri
 }
 
 const StyleLabelPrintModal: React.FC<Props> = ({ open, onClose, style }) => {
-  const [paperSize, setPaperSize] = useState<PaperSize>('50x80');
+  const [paperSize, setPaperSize] = useState<PaperSize>('30x80');
   const [labelType, setLabelType] = useState<LabelType>('both');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const hasMissingData = !style.fabricComposition || !style.washInstructions;
+  const hasMissingData = !hasWashLabelComposition(style.fabricCompositionParts, style.fabricComposition);
 
   const handlePrint = async () => {
     // 生成 U码 QR DataURL（仅吊牌需要）
@@ -258,8 +285,8 @@ ${tagBody}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message="面料成分或洗涤说明未填写，请先在基本信息中完善后再打印洗水唛"
-          description="可先打印吊牌，洗水唛待信息完善后再打印"
+          message="洗水唛成分未填写，请先在基本信息中完善上装 / 下装成分后再打印洗水唛"
+          description="打印会自动带出标准护理图标，洗涤说明可按需补充"
         />
       )}
 
@@ -275,11 +302,12 @@ ${tagBody}
           {style.size  && <Tag>码数：{style.size}</Tag>}
           {style.uCode && <Tag color="blue">U码：{style.uCode}</Tag>}
         </Space>
-        {style.fabricComposition && (
-          <div style={{ marginTop: 8, fontSize: 13 }}>
-            <span style={{ color: '#666' }}>成分：</span>{style.fabricComposition}
+        {buildWashLabelSections(style.fabricCompositionParts, style.fabricComposition).map(section => (
+          <div key={section.key} style={{ marginTop: 8, fontSize: 13 }}>
+            {section.key !== 'other' && <span style={{ color: '#666' }}>{section.label}：</span>}
+            <span>{section.items.join(' / ')}</span>
           </div>
-        )}
+        ))}
         {style.washInstructions && (
           <div style={{ marginTop: 4, fontSize: 13 }}>
             <span style={{ color: '#666' }}>洗涤：</span>{style.washInstructions}

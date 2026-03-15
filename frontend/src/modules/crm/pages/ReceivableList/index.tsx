@@ -38,9 +38,10 @@ const CreateReceivableModal: React.FC<{
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!open) form.resetFields();
-  }, [open, form]);
+  const handleClose = useCallback(() => {
+    form.resetFields();
+    onClose();
+  }, [form, onClose]);
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -57,7 +58,7 @@ const CreateReceivableModal: React.FC<{
       await receivableApi.create(payload);
       message.success('应收单创建成功');
       onSuccess();
-      onClose();
+      handleClose();
     } catch {
       message.error('创建失败，请重试');
     } finally {
@@ -70,7 +71,7 @@ const CreateReceivableModal: React.FC<{
       title="新建应收单"
       open={open}
       onOk={handleOk}
-      onCancel={onClose}
+      onCancel={handleClose}
       confirmLoading={saving}
       width="40vw"
       destroyOnClose
@@ -134,10 +135,13 @@ const MarkReceivedModal: React.FC<{
   useEffect(() => {
     if (open && record) {
       form.setFieldsValue({ amount: remaining });
-    } else {
-      form.resetFields();
     }
   }, [open, record, form, remaining]);
+
+  const handleClose = useCallback(() => {
+    form.resetFields();
+    onClose();
+  }, [form, onClose]);
 
   const handleOk = async () => {
     const { amount } = await form.validateFields();
@@ -147,7 +151,7 @@ const MarkReceivedModal: React.FC<{
       await receivableApi.markReceived(record.id, amount);
       message.success('到账金额已登记');
       onSuccess();
-      onClose();
+      handleClose();
     } catch {
       message.error('登记失败，请重试');
     } finally {
@@ -160,7 +164,7 @@ const MarkReceivedModal: React.FC<{
       title="登记到账"
       open={open}
       onOk={handleOk}
-      onCancel={onClose}
+      onCancel={handleClose}
       confirmLoading={saving}
       width="30vw"
       destroyOnClose
