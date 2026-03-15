@@ -151,9 +151,13 @@ public class CuttingTaskOrchestrator {
                 .eq(StyleInfo::getStatus, "ENABLED")
                 .last("limit 1")
                 .one();
-        if (style == null) {
-            throw new NoSuchElementException("款号不存在");
-        }
+        String resolvedStyleId = style == null || style.getId() == null ? null : String.valueOf(style.getId());
+        String resolvedStyleName = style != null && StringUtils.hasText(style.getStyleName())
+            ? style.getStyleName() : styleNo;
+        String resolvedColor = style != null && StringUtils.hasText(style.getColor())
+            ? style.getColor() : null;
+        String resolvedSize = style != null && StringUtils.hasText(style.getSize())
+            ? style.getSize() : null;
 
         // 生成 CUT 前缀订单号（若用户未提供）
         String finalOrderNo = StringUtils.hasText(orderNo)
@@ -199,11 +203,11 @@ public class CuttingTaskOrchestrator {
         // ── 2. 创建关联的 ProductionOrder（CUT 前缀，支持扫码计件）────────────
         ProductionOrder order = new ProductionOrder();
         order.setOrderNo(finalOrderNo);
-        order.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
+        order.setStyleId(resolvedStyleId);
         order.setStyleNo(styleNo);
-        order.setStyleName(style.getStyleName());
-        order.setColor(style.getColor());
-        order.setSize(style.getSize());
+        order.setStyleName(resolvedStyleName);
+        order.setColor(resolvedColor);
+        order.setSize(resolvedSize);
         order.setStatus("production");
         order.setDeleteFlag(0);
         order.setProgressWorkflowJson(progressWorkflowJson);
@@ -232,6 +236,8 @@ public class CuttingTaskOrchestrator {
         List<CuttingBundle> toSave = new ArrayList<>();
         int bundleNo = 1;
         int totalQty = 0;
+        String firstBundleColor = null;
+        String firstBundleSize = null;
 
         for (Map<String, Object> item : bundles) {
             if (item == null) {
@@ -251,11 +257,17 @@ public class CuttingTaskOrchestrator {
             if (!StringUtils.hasText(color) || !StringUtils.hasText(size) || quantity == null || quantity <= 0) {
                 continue;
             }
+            if (!StringUtils.hasText(firstBundleColor)) {
+                firstBundleColor = color;
+            }
+            if (!StringUtils.hasText(firstBundleSize)) {
+                firstBundleSize = size;
+            }
 
             CuttingBundle b = new CuttingBundle();
             b.setProductionOrderId(order.getId());   // ✅ 关联生产订单
             b.setProductionOrderNo(finalOrderNo);
-            b.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
+            b.setStyleId(resolvedStyleId);
             b.setStyleNo(styleNo);
             b.setColor(color);
             b.setSize(size);
@@ -280,11 +292,11 @@ public class CuttingTaskOrchestrator {
         task.setProductionOrderId(order.getId());    // ✅ 关联生产订单
         task.setProductionOrderNo(finalOrderNo);
         task.setOrderQrCode(null);
-        task.setStyleId(style.getId() == null ? null : String.valueOf(style.getId()));
+        task.setStyleId(resolvedStyleId);
         task.setStyleNo(styleNo);
-        task.setStyleName(style.getStyleName());
-        task.setColor(style.getColor());
-        task.setSize(style.getSize());
+        task.setStyleName(resolvedStyleName);
+        task.setColor(StringUtils.hasText(resolvedColor) ? resolvedColor : firstBundleColor);
+        task.setSize(StringUtils.hasText(resolvedSize) ? resolvedSize : firstBundleSize);
         task.setOrderQuantity(totalQty);
         task.setStatus("bundled");
         task.setReceiverId(receiverId);

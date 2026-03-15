@@ -228,44 +228,27 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     private TemplateLibrary resolveProcessPriceTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
-        String cacheKey = sn != null ? sn : "__default__";
-        TemplateLibrary cached = processPriceTemplateCache.getIfPresent(cacheKey);
+        if (!StringUtils.hasText(sn)) {
+            return null;
+        }
+        TemplateLibrary cached = processPriceTemplateCache.getIfPresent(sn);
         if (cached != null) {
             return cached;
         }
         TemplateLibrary tpl = null;
         try {
-            if (StringUtils.hasText(sn)) {
-                tpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
-                        .eq(TemplateLibrary::getTemplateType, "process_price")
-                        .eq(TemplateLibrary::getSourceStyleNo, sn)
-                        .orderByDesc(TemplateLibrary::getUpdateTime)
-                        .orderByDesc(TemplateLibrary::getCreateTime)
-                        .last("limit 1"));
-            }
-
-            if (tpl == null) {
-                tpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
-                        .eq(TemplateLibrary::getTemplateType, "process_price")
-                        .eq(TemplateLibrary::getTemplateKey, "default")
-                        .orderByDesc(TemplateLibrary::getUpdateTime)
-                        .orderByDesc(TemplateLibrary::getCreateTime)
-                        .last("limit 1"));
-            }
-
-            if (tpl == null) {
-                tpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
-                        .eq(TemplateLibrary::getTemplateType, "process_price")
-                        .orderByDesc(TemplateLibrary::getUpdateTime)
-                        .orderByDesc(TemplateLibrary::getCreateTime)
-                        .last("limit 1"));
-            }
+            tpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
+                    .eq(TemplateLibrary::getTemplateType, "process_price")
+                    .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .orderByDesc(TemplateLibrary::getUpdateTime)
+                    .orderByDesc(TemplateLibrary::getCreateTime)
+                    .last("limit 1"));
         } catch (Exception e) {
             log.warn("resolveProcessPriceTemplate failed: styleNo={}", sn, e);
         }
 
         if (tpl != null) {
-            processPriceTemplateCache.put(cacheKey, tpl);
+            processPriceTemplateCache.put(sn, tpl);
         }
         return tpl;
     }
@@ -423,6 +406,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (!StringUtils.hasText(sn)) {
             return out;
         }
+        Map<String, BigDecimal> processPriceOverrides = resolveProcessUnitPrices(sn);
 
         // 优先从模板库的 process 类型模板（单价维护-工序进度单价）读取
         try {
@@ -493,9 +477,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                         }
 
                         Map<String, Object> item = new LinkedHashMap<>();
+                        BigDecimal finalPrice = matchProcessUnitPrice(processPriceOverrides, processName);
+                        if (finalPrice == null) {
+                            finalPrice = up;
+                        }
                         item.put("id", processCode.trim());
                         item.put("name", processName);
-                        item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+                        item.put("unitPrice", finalPrice.setScale(2, RoundingMode.HALF_UP));
                         item.put("progressStage", progressStage.trim());
                         if (StringUtils.hasText(machineType)) {
                             item.put("machineType", machineType);
@@ -514,6 +502,12 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             }
         } catch (Exception e) {
             log.warn("Failed to resolve from process template: styleNo={}", sn, e);
+        }
+
+        List<Map<String, Object>> processPriceNodes = resolveProgressNodeUnitPricesFromProcessPriceTemplate(sn);
+        if (!processPriceNodes.isEmpty()) {
+            log.info("resolveProgressNodeUnitPrices from process_price template: styleNo={}, count={}", sn, processPriceNodes.size());
+            return processPriceNodes;
         }
 
         // 如果没有 process 模板，回退到旧的 progress 模板
@@ -569,6 +563,76 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     sn,
                     tpl.getId(),
                     e);
+        }
+
+        return out;
+    }
+
+    private List<Map<String, Object>> resolveProgressNodeUnitPricesFromProcessPriceTemplate(String styleNo) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        TemplateLibrary tpl = resolveProcessPriceTemplate(styleNo);
+        if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
+            return out;
+        }
+
+        Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
+        List<Map<String, Object>> items = coerceListOfMap(content.get("steps"));
+        if (items == null || items.isEmpty()) {
+            items = coerceListOfMap(content.get("nodes"));
+        }
+
+        for (Map<String, Object> item : items) {
+            if (item == null) {
+                continue;
+            }
+
+            String processName = String.valueOf(item.getOrDefault("processName", item.getOrDefault("name", ""))).trim();
+            if (!StringUtils.hasText(processName)) {
+                continue;
+            }
+
+            String processCode = String.valueOf(item.getOrDefault("processCode", item.getOrDefault("id", ""))).trim();
+            if (!StringUtils.hasText(processCode)) {
+                processCode = processName;
+            }
+
+            Object priceValue = item.containsKey("unitPrice") ? item.get("unitPrice") : item.get("price");
+            BigDecimal unitPrice = toBigDecimal(priceValue);
+            if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                unitPrice = BigDecimal.ZERO;
+            }
+
+            String progressStage = String.valueOf(item.getOrDefault("progressStage", "")).trim();
+            if (!StringUtils.hasText(progressStage)) {
+                progressStage = processName;
+            }
+
+            Map<String, Object> node = new LinkedHashMap<>();
+            node.put("id", processCode);
+            node.put("name", processName);
+            node.put("unitPrice", unitPrice.setScale(2, RoundingMode.HALF_UP));
+            node.put("progressStage", progressStage);
+
+            String machineType = String.valueOf(item.getOrDefault("machineType", "")).trim();
+            if (StringUtils.hasText(machineType)) {
+                node.put("machineType", machineType);
+            }
+
+            Object standardTimeValue = item.get("standardTime");
+            if (standardTimeValue instanceof Number number && number.intValue() > 0) {
+                node.put("standardTime", number.intValue());
+            } else if (standardTimeValue != null) {
+                try {
+                    int standardTime = Integer.parseInt(String.valueOf(standardTimeValue).trim());
+                    if (standardTime > 0) {
+                        node.put("standardTime", standardTime);
+                    }
+                } catch (Exception ignore) {
+                    // ignore invalid value
+                }
+            }
+
+            out.add(node);
         }
 
         return out;

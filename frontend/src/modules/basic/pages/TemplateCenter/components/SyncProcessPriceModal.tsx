@@ -3,6 +3,7 @@ import {
   App,
   AutoComplete,
   Button,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -11,20 +12,20 @@ import {
   Space,
   Tag,
   Typography,
+  Upload,
 } from 'antd';
-import { DeleteOutlined, SyncOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SyncOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import api, { toNumberSafe } from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 const { Text } = Typography;
 
-// ─── 类型定义 ───────────────────────────────────────────────────
 interface StyleProcessRow {
   id: string | number;
-  styleId?: string | number;
   processCode: string;
   processName: string;
   progressStage: string;
@@ -37,214 +38,199 @@ interface StyleProcessRow {
   sizePriceTouched?: Record<string, boolean>;
 }
 
-interface SizePrice {
-  id?: string;
-  styleId: number;
-  processCode: string;
-  processName: string;
-  progressStage?: string;
-  size: string;
-  price: number;
-}
-
 interface SyncProcessPriceModalProps {
   open: boolean;
   onCancel: () => void;
 }
 
-// ─── 常量 ───────────────────────────────────────────────────────
+type MatchedScope = 'style' | 'empty';
+
 const PROGRESS_STAGES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'];
 
 const norm = (v: unknown) => String(v || '').trim();
-const isTempId = (id: unknown) => {
-  const s = String(id ?? '').trim();
-  return !s || s.startsWith('-');
+
+const buildRowsFromContent = (content: any, fallbackSizes: string[] = DEFAULT_SIZES): { rows: StyleProcessRow[]; sizes: string[] } => {
+  const rawSteps = Array.isArray(content?.steps) ? content.steps : [];
+  const rawSizes = Array.isArray(content?.sizes)
+    ? content.sizes.map((item: unknown) => String(item || '').trim().toUpperCase()).filter(Boolean)
+    : [];
+  const sizes = (rawSizes.length ? rawSizes : fallbackSizes).slice().sort((a, b) => {
+    const ia = SIZE_ORDER.indexOf(a);
+    const ib = SIZE_ORDER.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b);
+  });
+
+  const rows: StyleProcessRow[] = rawSteps.map((item: any, index: number) => {
+    const sizePrices: Record<string, number> = {};
+    const sizePriceTouched: Record<string, boolean> = {};
+    sizes.forEach((size) => {
+      const sizePrice = toNumberSafe(item?.sizePrices?.[size]);
+      const basePrice = toNumberSafe(item?.unitPrice ?? item?.price);
+      sizePrices[size] = sizePrice || basePrice;
+      sizePriceTouched[size] = item?.sizePrices?.[size] != null;
+    });
+
+    return {
+      id: item?.processCode || `loaded-${index}`,
+      processCode: String(item?.processCode || String(index + 1).padStart(2, '0')),
+      processName: String(item?.processName || item?.name || ''),
+      progressStage: String(item?.progressStage || '车缝'),
+      machineType: String(item?.machineType || ''),
+      difficulty: String(item?.difficulty || ''),
+      standardTime: toNumberSafe(item?.standardTime),
+      price: toNumberSafe(item?.unitPrice ?? item?.price),
+      sortOrder: index + 1,
+      sizePrices,
+      sizePriceTouched,
+    };
+  });
+
+  return { rows, sizes };
 };
 
 const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onCancel }) => {
   const { message } = App.useApp();
 
-  // ─── 款号选择 ─────────────────────────────────────────────────
+  const [matchedScope, setMatchedScope] = useState<MatchedScope>('empty');
+  const [templateId, setTemplateId] = useState<string | null>(null);
+
   const [styleInputVal, setStyleInputVal] = useState('');
   const [styleNoOptions, setStyleNoOptions] = useState<{ value: string; label: string }[]>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
+  const [selectedStyleNo, setSelectedStyleNo] = useState('');
   const styleNoSeq = useRef(0);
   const styleNoTimer = useRef<number | undefined>(undefined);
 
-  const [selectedStyleNo, setSelectedStyleNo] = useState('');
-  const [selectedStyleId, setSelectedStyleId] = useState<number | null>(null);
-
-  // ─── 工序数据 ─────────────────────────────────────────────────
   const [data, setData] = useState<StyleProcessRow[]>([]);
-  const [loadingProcess, setLoadingProcess] = useState(false);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
-  const snapshotRef = useRef<StyleProcessRow[] | null>(null);
-
-  // ─── 多码单价 ─────────────────────────────────────────────────
   const [sizes, setSizes] = useState<string[]>([...DEFAULT_SIZES]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
   const [newSizeName, setNewSizeName] = useState('');
   const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
+  const snapshotRef = useRef<StyleProcessRow[] | null>(null);
 
-  // ─── 工艺模板 ─────────────────────────────────────────────────
-  const [processTemplates, setProcessTemplates] = useState<any[]>([]);
-  const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
-  const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
-  const [templateLoading, setTemplateLoading] = useState(false);
-  const [tplStyleOptions, setTplStyleOptions] = useState<{ value: string; label: string }[]>([]);
-  const tplStyleTimer = useRef<number | undefined>(undefined);
-
-  // ─── 搜索款号（主输入框）────────────────────────────────────────
-  const fetchMainStyleOptions = async (keyword: string) => {
+  const fetchStyleNoOptions = async (keyword: string) => {
     const seq = (styleNoSeq.current += 1);
     setStyleNoLoading(true);
     try {
-      const res = await api.get<any>('/style/info/list', {
-        params: { page: 1, pageSize: 200, styleNo: keyword.trim() },
+      const res = await api.get<any>('/template-library/process-price-style-options', {
+        params: { keyword: keyword.trim() },
       });
       if (seq !== styleNoSeq.current) return;
-      const records: any[] = (res as any)?.data?.records ?? [];
+      const records: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
       setStyleNoOptions(
-        records.map((r: any) => ({ value: String(r.styleNo || ''), label: String(r.styleNo || '') }))
+        records
+          .map((record: any) => {
+            const styleNo = String(record?.styleNo || '').trim();
+            const styleName = String(record?.styleName || '').trim();
+            return {
+              value: styleNo,
+              label: styleName ? `${styleNo}（${styleName}）` : styleNo,
+            };
+          })
+          .filter((record: any) => record.value)
       );
-    } catch { /* ignore */ } finally {
+    } catch {
+      // ignore
+    } finally {
       if (seq === styleNoSeq.current) setStyleNoLoading(false);
     }
   };
 
-  const scheduleMainSearch = (kw: string) => {
+  const scheduleStyleSearch = (keyword: string) => {
     if (styleNoTimer.current) window.clearTimeout(styleNoTimer.current);
-    styleNoTimer.current = window.setTimeout(() => fetchMainStyleOptions(kw), 250);
+    styleNoTimer.current = window.setTimeout(() => fetchStyleNoOptions(keyword), 250);
   };
 
-  // ─── 搜索款号（模板来源筛选框）───────────────────────────────────
-  const fetchTplStyleOptions = async (keyword: string) => {
-    try {
-      const res = await api.get<any>('/style/info/list', {
-        params: { page: 1, pageSize: 200, styleNo: keyword.trim() },
-      });
-      const records: any[] = (res as any)?.data?.records ?? [];
-      setTplStyleOptions(
-        records.map((r: any) => ({ value: String(r.styleNo || ''), label: String(r.styleNo || '') }))
-      );
-    } catch { /* ignore */ }
-  };
-
-  const scheduleTplStyleSearch = (kw: string) => {
-    if (tplStyleTimer.current) window.clearTimeout(tplStyleTimer.current);
-    tplStyleTimer.current = window.setTimeout(() => fetchTplStyleOptions(kw), 250);
-  };
-
-  // ─── 加载工艺模板列表 ─────────────────────────────────────────
-  const fetchProcessTemplates = async (sourceStyleNo?: string) => {
-    setTemplateLoading(true);
-    try {
-      const res = await api.get<any>('/template-library/list', {
-        params: { page: 1, pageSize: 200, templateType: 'process', keyword: '', sourceStyleNo: sourceStyleNo ?? '' },
-      });
-      const result = res as any;
-      if (result?.code === 200) {
-        const d = result.data;
-        const records = Array.isArray(d) ? d : (d?.records ?? []);
-        setProcessTemplates(records);
-      }
-    } catch { /* ignore */ } finally {
-      setTemplateLoading(false);
-    }
-  };
-
-  // ─── 挂载时初始加载 ───────────────────────────────────────────
-  useEffect(() => {
-    if (open) {
-      fetchMainStyleOptions('');
-      fetchProcessTemplates('');
-      fetchTplStyleOptions('');
-    }
-  }, [open]);
-
-  // ─── 加载指定款式的工序 ──────────────────────────────────────
-  const loadStyleProcess = async (styleNo: string) => {
-    if (!styleNo.trim()) return;
-    setLoadingProcess(true);
-    setData([]);
-    setDeletedIds([]);
+  const resetEditingState = () => {
     setEditMode(false);
     snapshotRef.current = null;
+  };
+
+  const loadTemplate = async (styleNo?: string) => {
+    setLoadingTemplate(true);
+    setTemplateId(null);
+    setMatchedScope('empty');
+    setData([]);
+    setSizes([...DEFAULT_SIZES]);
+    setImageUrls([]);
+    resetEditingState();
     try {
-      // 1. 精确匹配款号 → styleId
-      const infoRes = await api.get<any>('/style/info/list', {
-        params: { page: 1, pageSize: 10, styleNo: styleNo.trim() },
+      const res = await api.get<any>('/template-library/process-price-template', {
+        params: { styleNo: String(styleNo || '').trim() },
       });
-      const records: any[] = (infoRes as any)?.data?.records ?? [];
-      const matched = records.find((r: any) => r.styleNo === styleNo.trim());
-      if (!matched) { message.warning('未找到该款号，请确认是否正确'); return; }
-      const styleId = Number(matched.id);
-      setSelectedStyleId(styleId);
-
-      // 2. 同时拉工序 + 多码单价
-      const [procRes, szRes] = await Promise.all([
-        api.get<any>(`/style/process/list?styleId=${styleId}`),
-        api.get<any>('/style/size-price/list', { params: { styleId } }),
-      ]);
-      const procList: any[] = (procRes as any)?.data ?? (Array.isArray(procRes) ? procRes : []);
-      const szList: SizePrice[] = (szRes as any)?.data ?? [];
-
-      // 从已保存数据提取尺码列表
-      const savedSizes = new Set<string>();
-      szList.forEach((sp) => sp.size && savedSizes.add(sp.size.trim()));
-      if (savedSizes.size > 0) {
-        const sorted = Array.from(savedSizes).sort((a, b) => {
-          const ia = SIZE_ORDER.indexOf(a), ib = SIZE_ORDER.indexOf(b);
-          if (ia >= 0 && ib >= 0) return ia - ib;
-          if (ia >= 0) return -1; if (ib >= 0) return 1;
-          return a.localeCompare(b);
-        });
-        setSizes(sorted);
-      } else {
-        setSizes([...DEFAULT_SIZES]);
-      }
-      const sizeList = savedSizes.size > 0 ? Array.from(savedSizes) : [...DEFAULT_SIZES];
-
-      const rows: StyleProcessRow[] = procList
-        .sort((a, b) => toNumberSafe(a.sortOrder) - toNumberSafe(b.sortOrder))
-        .map((r, idx) => {
-          const sizePrices: Record<string, number> = {};
-          const sizePriceTouched: Record<string, boolean> = {};
-          sizeList.forEach((sz) => {
-            const found = szList.find((sp) => sp.processCode === r.processCode && sp.size === sz);
-            sizePrices[sz] = found ? toNumberSafe(found.price) : toNumberSafe(r.price);
-            sizePriceTouched[sz] = Boolean(found);
-          });
-          return {
-            id: r.id, styleId,
-            processCode: r.processCode || String(idx + 1).padStart(2, '0'),
-            processName: r.processName || '',
-            progressStage: r.progressStage || '车缝',
-            machineType: r.machineType || '',
-            standardTime: toNumberSafe(r.standardTime),
-            price: toNumberSafe(r.price),
-            sortOrder: toNumberSafe(r.sortOrder) || idx + 1,
-            sizePrices, sizePriceTouched,
-          };
-        });
-
+      const payload = (res as any)?.data ?? {};
+      const { rows, sizes: nextSizes } = buildRowsFromContent(payload?.content ?? {});
+      setTemplateId(payload?.templateId || null);
+      setMatchedScope((payload?.matchedScope as MatchedScope) || 'empty');
       setData(rows);
-      if (!rows.length) message.info('该款式暂无工序配置，点击「添加工序」开始配置');
-    } catch { message.error('加载工序数据失败'); }
-    finally { setLoadingProcess(false); }
+      setSizes(nextSizes.length ? nextSizes : [...DEFAULT_SIZES]);
+      setImageUrls(Array.isArray(payload?.content?.images) ? payload.content.images.filter((item: unknown) => String(item || '').trim()) : []);
+    } catch {
+      message.error('加载工序单价模板失败');
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    fetchStyleNoOptions('');
+    setStyleInputVal('');
+    setSelectedStyleNo('');
+    setData([]);
+    setSizes([...DEFAULT_SIZES]);
+    setImageUrls([]);
+    setTemplateId(null);
+    setMatchedScope('empty');
+  }, [open]);
+
+  const handleUploadImage = async (file: File) => {
+    if (!readyForScope) {
+      message.error('请先输入款号');
+      return Upload.LIST_IGNORE;
+    }
+    if (imageUrls.length >= 4) {
+      message.warning('最多上传4张图片');
+      return Upload.LIST_IGNORE;
+    }
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
+      if (res.code !== 200 || !res.data) {
+        message.error(res.message || '上传失败');
+        return Upload.LIST_IGNORE;
+      }
+      setImageUrls((prev) => [...prev, res.data].slice(0, 4));
+      message.success('图片已上传，保存后生效');
+    } catch (e: any) {
+      message.error(e?.message || '上传失败');
+    } finally {
+      setImageUploading(false);
+    }
+    return Upload.LIST_IGNORE;
   };
 
   const handleSelectStyle = (styleNo: string) => {
-    setSelectedStyleNo(styleNo);
-    setStyleInputVal(styleNo);
-    loadStyleProcess(styleNo);
+    const nextStyleNo = String(styleNo || '').trim();
+    setSelectedStyleNo(nextStyleNo);
+    setStyleInputVal(nextStyleNo);
+    if (nextStyleNo) {
+      loadTemplate(nextStyleNo);
+    }
   };
 
-  // ─── 编辑模式 ─────────────────────────────────────────────────
   const enterEdit = () => {
     if (editMode) return;
     snapshotRef.current = JSON.parse(JSON.stringify(data));
@@ -252,66 +238,90 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
   };
 
   const exitEdit = () => {
-    if (snapshotRef.current) setData(snapshotRef.current);
-    setDeletedIds([]);
-    setEditMode(false);
-    snapshotRef.current = null;
+    if (snapshotRef.current) {
+      setData(snapshotRef.current);
+    }
+    resetEditingState();
   };
 
-  // ─── 增删改 ───────────────────────────────────────────────────
   const handleAdd = () => {
     if (!editMode) enterEdit();
-    const maxSort = data.length ? Math.max(...data.map((d) => toNumberSafe(d.sortOrder))) : 0;
+    const maxSort = data.length ? Math.max(...data.map((item) => toNumberSafe(item.sortOrder))) : 0;
     const nextSort = maxSort + 1;
-    const autoCode = String(nextSort).padStart(2, '0');
     const sizePrices: Record<string, number> = {};
     const sizePriceTouched: Record<string, boolean> = {};
-    sizes.forEach((s) => { sizePrices[s] = 0; sizePriceTouched[s] = false; });
-    setData((prev) => [...prev, {
-      id: -Date.now(), styleId: selectedStyleId ?? undefined,
-      processCode: autoCode, processName: '', progressStage: '车缝',
-      machineType: '', standardTime: 0, price: 0,
-      sortOrder: nextSort, sizePrices, sizePriceTouched,
-    }]);
+    sizes.forEach((size) => {
+      sizePrices[size] = 0;
+      sizePriceTouched[size] = false;
+    });
+    setData((prev) => [
+      ...prev,
+      {
+        id: `tmp-${Date.now()}`,
+        processCode: String(nextSort).padStart(2, '0'),
+        processName: '',
+        progressStage: '车缝',
+        machineType: '',
+        difficulty: '',
+        standardTime: 0,
+        price: 0,
+        sortOrder: nextSort,
+        sizePrices,
+        sizePriceTouched,
+      },
+    ]);
   };
 
   const handleDelete = (id: string | number) => {
     if (!editMode) enterEdit();
-    if (!isTempId(id)) setDeletedIds((prev) => [...prev, id]);
-    setData((prev) => prev.filter((x) => x.id !== id)
-      .map((item, index) => ({ ...item, sortOrder: index + 1, processCode: String(index + 1).padStart(2, '0') }))
+    setData((prev) => prev
+      .filter((item) => item.id !== id)
+      .map((item, index) => ({
+        ...item,
+        sortOrder: index + 1,
+        processCode: String(index + 1).padStart(2, '0'),
+      }))
     );
   };
 
   const updateField = (id: string | number, field: keyof StyleProcessRow, value: any) => {
-    setData((prev) => prev.map((r) => {
-      if (r.id !== id) return r;
-      if (field !== 'price') return { ...r, [field]: value };
+    setData((prev) => prev.map((row) => {
+      if (row.id !== id) return row;
+      if (field !== 'price') {
+        return { ...row, [field]: value };
+      }
       const nextPrice = toNumberSafe(value);
-      const oldPrice = toNumberSafe(r.price);
-      const nextSizePrices = { ...(r.sizePrices || {}) };
-      const touched = r.sizePriceTouched || {};
-      sizes.forEach((s) => {
-        const cur = toNumberSafe(nextSizePrices[s]);
-        if (!touched[s] || cur === oldPrice) nextSizePrices[s] = nextPrice;
+      const oldPrice = toNumberSafe(row.price);
+      const nextSizePrices = { ...(row.sizePrices || {}) };
+      const touched = row.sizePriceTouched || {};
+      sizes.forEach((size) => {
+        const current = toNumberSafe(nextSizePrices[size]);
+        if (!touched[size] || current === oldPrice) {
+          nextSizePrices[size] = nextPrice;
+        }
       });
-      return { ...r, price: nextPrice, sizePrices: nextSizePrices };
+      return { ...row, price: nextPrice, sizePrices: nextSizePrices };
     }));
   };
 
   const updateSizePrice = (id: string | number, size: string, value: number) => {
-    setData((prev) => prev.map((r) => r.id !== id ? r : {
-      ...r,
-      sizePrices: { ...(r.sizePrices || {}), [size]: value },
-      sizePriceTouched: { ...(r.sizePriceTouched || {}), [size]: true },
+    setData((prev) => prev.map((row) => row.id !== id ? row : {
+      ...row,
+      sizePrices: { ...(row.sizePrices || {}), [size]: value },
+      sizePriceTouched: { ...(row.sizePriceTouched || {}), [size]: true },
     }));
   };
 
-  // ─── 尺码管理 ─────────────────────────────────────────────────
   const handleAddSize = () => {
     const trimmed = newSizeName.trim().toUpperCase();
-    if (!trimmed) { message.warning('请输入尺码'); return; }
-    if (sizes.includes(trimmed)) { message.warning('该尺码已存在'); return; }
+    if (!trimmed) {
+      message.warning('请输入尺码');
+      return;
+    }
+    if (sizes.includes(trimmed)) {
+      message.warning('该尺码已存在');
+      return;
+    }
     setSizes((prev) => [...prev, trimmed]);
     setData((prev) => prev.map((row) => ({
       ...row,
@@ -323,342 +333,492 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
   };
 
   const handleRemoveSize = (size: string) => {
-    setSizes((prev) => prev.filter((s) => s !== size));
+    setSizes((prev) => prev.filter((item) => item !== size));
     setData((prev) => prev.map((row) => {
-      const { [size]: _a, ...sp } = row.sizePrices || {};
-      const { [size]: _b, ...st } = row.sizePriceTouched || {};
-      return { ...row, sizePrices: sp, sizePriceTouched: st };
+      const { [size]: _removedPrice, ...nextSizePrices } = row.sizePrices || {};
+      const { [size]: _removedTouched, ...nextTouched } = row.sizePriceTouched || {};
+      return { ...row, sizePrices: nextSizePrices, sizePriceTouched: nextTouched };
     }));
   };
 
-  // ─── 套用工艺模板 ─────────────────────────────────────────────
-  const applyProcessTemplate = async (templateId: string) => {
-    if (!selectedStyleId) { message.error('请先选择款号'); return; }
-    if (editMode) { message.error('请先保存或取消编辑再导入模板'); return; }
-    try {
-      const res = await api.post<any>('/template-library/apply-to-style', {
-        templateId, targetStyleId: selectedStyleId, mode: 'overwrite',
-      });
-      if ((res as any)?.code !== 200) { message.error((res as any)?.message || '导入失败'); return; }
-      message.success('已导入工艺模板');
-      setProcessTemplateKey(undefined);
-      await loadStyleProcess(selectedStyleNo);
-    } catch (e: any) { message.error(e?.message || '导入失败'); }
-  };
-
-  // ─── 保存到 t_style_process ──────────────────────────────────
   const saveAll = async (): Promise<boolean> => {
-    if (!selectedStyleId) { message.error('请先选择款号'); return false; }
-    const rows = data.map((r, idx) => ({
-      ...r, sortOrder: idx + 1, processCode: String(idx + 1).padStart(2, '0'),
+    if (!selectedStyleNo.trim()) {
+      message.error('请先输入要配置的款号');
+      return false;
+    }
+    const rows = data.map((row, index) => ({
+      ...row,
+      sortOrder: index + 1,
+      processCode: String(index + 1).padStart(2, '0'),
     }));
-    if (!rows.length) { message.error('请先添加工序'); return false; }
-    const invalid = rows.find((r) => !norm(r.processCode) || !norm(r.processName) || r.price == null);
-    if (invalid) { message.error('请完善必填项：工序名称、工价'); return false; }
+    if (!rows.length) {
+      message.error('请先添加工序');
+      return false;
+    }
+    const invalid = rows.find((row) => !norm(row.processName));
+    if (invalid) {
+      message.error('请完善必填项：工序名称');
+      return false;
+    }
 
     setSaving(true);
     try {
-      // 删除
-      const delResults = await Promise.all(
-        Array.from(new Set(deletedIds.map(String).filter(Boolean))).map((id) => api.delete(`/style/process/${id}`))
-      );
-      const delBad = delResults.find((r: any) => r?.code !== 200);
-      if (delBad) { message.error((delBad as any)?.message || '删除失败'); return false; }
-
-      // 新增/更新
-      const results = await Promise.all(rows.map((r) => {
-        const payload: any = {
-          id: r.id, styleId: selectedStyleId,
-          processCode: norm(r.processCode), processName: norm(r.processName),
-          progressStage: norm(r.progressStage) || '车缝', machineType: norm(r.machineType),
-          standardTime: toNumberSafe(r.standardTime), price: toNumberSafe(r.price),
-          sortOrder: toNumberSafe(r.sortOrder),
-        };
-        if (!isTempId(r.id)) return api.put('/style/process', payload);
-        const { id: _id, ...c } = payload; return api.post('/style/process', c);
-      }));
-      const bad = results.find((r: any) => r?.code !== 200);
-      if (bad) { message.error((bad as any)?.message || '保存失败'); return false; }
-
-      // 多码单价
-      if (sizes.length > 0) {
-        const szList: SizePrice[] = [];
-        rows.forEach((row) => {
-          sizes.forEach((sz) => {
-            szList.push({
-              styleId: selectedStyleId, processCode: norm(row.processCode),
-              processName: norm(row.processName), progressStage: norm(row.progressStage) || '车缝',
-              size: sz, price: toNumberSafe(row.sizePrices?.[sz] ?? row.price),
-            });
-          });
-        });
-        await api.post('/style/size-price/batch-save', szList);
+      const payload = {
+        styleNo: selectedStyleNo.trim(),
+        templateContent: {
+          sizes,
+          images: imageUrls,
+          steps: rows.map((row) => ({
+            processCode: norm(row.processCode),
+            processName: norm(row.processName),
+            progressStage: norm(row.progressStage) || '车缝',
+            machineType: norm(row.machineType),
+            difficulty: norm(row.difficulty),
+            standardTime: toNumberSafe(row.standardTime),
+            unitPrice: toNumberSafe(row.price),
+            sizePrices: sizes.reduce((acc, size) => {
+              acc[size] = toNumberSafe(row.sizePrices?.[size] ?? row.price);
+              return acc;
+            }, {} as Record<string, number>),
+          })),
+        },
+      };
+      const res = await api.post<any>('/template-library/process-price-template', payload);
+      if ((res as any)?.code !== 200) {
+        message.error((res as any)?.message || '保存失败');
+        return false;
       }
-
-      setEditMode(false);
-      snapshotRef.current = null;
-      setDeletedIds([]);
-      await loadStyleProcess(selectedStyleNo);
+      resetEditingState();
+      await loadTemplate(selectedStyleNo.trim());
+      message.success('款号工序单价已保存');
       return true;
-    } catch (e: any) { message.error(e?.message || '保存失败'); return false; }
-    finally { setSaving(false); }
+    } catch (error: any) {
+      message.error(error?.message || '保存失败');
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // ─── 同步到生产订单 ───────────────────────────────────────────
   const syncToOrders = async (): Promise<boolean> => {
     setSyncing(true);
     try {
-      const res = await api.post<any>('/template-library/sync-process-prices', { styleNo: selectedStyleNo.trim() });
-      if ((res as any)?.code === 200) {
-        const d = (res as any).data;
-        message.success(`同步完成：${d?.totalOrders ?? 0} 个订单，共更新 ${d?.totalSynced ?? 0} 条工序单价`);
-        return true;
+      const res = await api.post<any>('/template-library/sync-process-prices', {
+        styleNo: selectedStyleNo.trim(),
+      });
+      if ((res as any)?.code !== 200) {
+        message.error((res as any)?.message || '同步失败');
+        return false;
       }
-      message.error((res as any)?.message || '同步失败'); return false;
-    } catch { message.error('同步失败'); return false; }
-    finally { setSyncing(false); }
+      const result = (res as any)?.data || {};
+      message.success(
+        `${result.scopeLabel || '同步完成'}：${result.totalOrders || 0} 个订单，更新 ${result.totalSynced || 0} 条跟踪单价，刷新 ${result.workflowUpdatedNodes || 0} 个订单工价节点`
+      );
+      return true;
+    } catch {
+      message.error('同步失败');
+      return false;
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const handleSaveOnly = async () => { if (await saveAll()) message.success('款式工序单价已保存'); };
-  const handleSaveAndSync = async () => { if (await saveAll()) await syncToOrders(); };
+  const handleSaveAndSync = async () => {
+    if (await saveAll()) {
+      await syncToOrders();
+    }
+  };
 
-  const handleCancel = () => {
-    setStyleInputVal(''); setSelectedStyleNo(''); setSelectedStyleId(null);
-    setData([]); setDeletedIds([]); setEditMode(false); snapshotRef.current = null;
+  const handleClose = () => {
+    setMatchedScope('empty');
+    setTemplateId(null);
+    setStyleInputVal('');
+    setSelectedStyleNo('');
+    setData([]);
     setSizes([...DEFAULT_SIZES]);
+    setImageUrls([]);
+    resetEditingState();
     onCancel();
   };
 
-  const isBusy = saving || syncing || loadingProcess || templateLoading;
+  const isBusy = saving || syncing || loadingTemplate;
+  const readyForScope = Boolean(selectedStyleNo.trim());
 
-  // ─── 表格列 ───────────────────────────────────────────────────
   const columns = useMemo(() => {
-    const em = editMode;
-    const base = [
+    const editable = editMode;
+    const baseColumns = [
       {
-        title: '排序', dataIndex: 'sortOrder', width: 60, align: 'center' as const,
-        render: (_: any, __: StyleProcessRow, idx: number) => idx + 1,
-      },
-      { title: '工序编码', dataIndex: 'processCode', width: 88, ellipsis: true },
-      {
-        title: '工序名称', dataIndex: 'processName', width: 150, ellipsis: true,
-        render: (v: string, r: StyleProcessRow) => em
-          ? <DictAutoComplete
-              dictType="process_name"
-              autoCollect
-              size="small"
-              value={v}
-              onChange={(value) => updateField(r.id, 'processName', value as string)}
-            />
-          : (v || '-'),
+        title: '排序',
+        dataIndex: 'sortOrder',
+        width: 60,
+        align: 'center' as const,
+        render: (_: any, __: StyleProcessRow, index: number) => index + 1,
       },
       {
-        title: '进度节点', dataIndex: 'progressStage', width: 110,
-        render: (v: string, r: StyleProcessRow) => em
-          ? <Select size="small" value={v || '车缝'} style={{ width: '100%' }}
-              onChange={(val) => updateField(r.id, 'progressStage', val)}
-              options={PROGRESS_STAGES.map((s) => ({ value: s, label: s }))} />
-          : (v || '车缝'),
+        title: '工序编码',
+        dataIndex: 'processCode',
+        width: 88,
+        ellipsis: true,
       },
       {
-        title: '机器类型', dataIndex: 'machineType', width: 110, ellipsis: true,
-        render: (v: string, r: StyleProcessRow) => em
-          ? <DictAutoComplete
-              dictType="machine_type"
-              autoCollect
-              size="small"
-              value={v}
-              placeholder="请选择或输入机器类型"
-              onChange={(value) => updateField(r.id, 'machineType', value as string)}
-            />
-          : (v || '-'),
+        title: '工序名称',
+        dataIndex: 'processName',
+        width: 150,
+        ellipsis: true,
+        render: (value: string, record: StyleProcessRow) => editable
+          ? (
+              <DictAutoComplete
+                dictType="process_name"
+                autoCollect
+                size="small"
+                value={value}
+                onChange={(nextValue) => updateField(record.id, 'processName', nextValue as string)}
+              />
+            )
+          : (value || '-'),
       },
       {
-        title: '工序难度', dataIndex: 'difficulty', width: 90,
-        render: (v: string, r: StyleProcessRow) => em
-          ? <Select
-              size="small"
-              value={v || undefined}
-              allowClear
-              placeholder="选择"
-              style={{ width: '100%' }}
-              onChange={(val) => updateField(r.id, 'difficulty', val)}
-              options={[
-                { value: '易', label: '易' },
-                { value: '中', label: '中' },
-                { value: '难', label: '难' },
-              ]}
-            />
-          : (v || '-'),
+        title: '进度节点',
+        dataIndex: 'progressStage',
+        width: 110,
+        render: (value: string, record: StyleProcessRow) => editable
+          ? (
+              <Select
+                size="small"
+                value={value || '车缝'}
+                style={{ width: '100%' }}
+                onChange={(nextValue) => updateField(record.id, 'progressStage', nextValue)}
+                options={PROGRESS_STAGES.map((stage) => ({ value: stage, label: stage }))}
+              />
+            )
+          : (value || '车缝'),
       },
       {
-        title: '标准工时(秒)', dataIndex: 'standardTime', width: 110,
-        render: (v: number, r: StyleProcessRow) => em
-          ? <InputNumber size="small" value={v} min={0} style={{ width: '100%' }}
-              onChange={(val) => updateField(r.id, 'standardTime', toNumberSafe(val))} />
-          : v,
+        title: '机器类型',
+        dataIndex: 'machineType',
+        width: 110,
+        ellipsis: true,
+        render: (value: string, record: StyleProcessRow) => editable
+          ? (
+              <DictAutoComplete
+                dictType="machine_type"
+                autoCollect
+                size="small"
+                value={value}
+                placeholder="请选择或输入机器类型"
+                onChange={(nextValue) => updateField(record.id, 'machineType', nextValue as string)}
+              />
+            )
+          : (value || '-'),
       },
       {
-        title: '工价(元)', dataIndex: 'price', width: 110,
-        render: (v: number, r: StyleProcessRow) => em
-          ? <InputNumber size="small" value={v} min={0} step={0.01} prefix="¥" style={{ width: '100%' }}
-              onChange={(val) => updateField(r.id, 'price', val)} />
-          : `¥${toNumberSafe(v)}`,
+        title: '工序难度',
+        dataIndex: 'difficulty',
+        width: 90,
+        render: (value: string, record: StyleProcessRow) => editable
+          ? (
+              <Select
+                size="small"
+                value={value || undefined}
+                allowClear
+                placeholder="选择"
+                style={{ width: '100%' }}
+                onChange={(nextValue) => updateField(record.id, 'difficulty', nextValue)}
+                options={[
+                  { value: '易', label: '易' },
+                  { value: '中', label: '中' },
+                  { value: '难', label: '难' },
+                ]}
+              />
+            )
+          : (value || '-'),
+      },
+      {
+        title: '标准工时(秒)',
+        dataIndex: 'standardTime',
+        width: 110,
+        render: (value: number, record: StyleProcessRow) => editable
+          ? (
+              <InputNumber
+                size="small"
+                value={value}
+                min={0}
+                style={{ width: '100%' }}
+                onChange={(nextValue) => updateField(record.id, 'standardTime', toNumberSafe(nextValue))}
+              />
+            )
+          : value,
+      },
+      {
+        title: '工价(元)',
+        dataIndex: 'price',
+        width: 110,
+        render: (value: number, record: StyleProcessRow) => editable
+          ? (
+              <InputNumber
+                size="small"
+                value={value}
+                min={0}
+                step={0.01}
+                prefix="¥"
+                style={{ width: '100%' }}
+                onChange={(nextValue) => updateField(record.id, 'price', nextValue)}
+              />
+            )
+          : `¥${toNumberSafe(value)}`,
       },
     ];
 
-    const sizeCols = sizes.map((size) => ({
+    const sizeColumns = sizes.map((size) => ({
       title: (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span>{size}码</span>
-          {em && (
-            <DeleteOutlined style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                Modal.confirm({ width: '30vw', title: `确定删除"${size}"码？`, content: '删除后该尺码单价数据将被清除', onOk: () => handleRemoveSize(size) });
-              }} />
+          {editable && (
+            <DeleteOutlined
+              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}
+              onClick={(event) => {
+                event.stopPropagation();
+                Modal.confirm({
+                  width: '30vw',
+                  title: `确定删除"${size}"码？`,
+                  content: '删除后该尺码单价数据将被清除',
+                  onOk: () => handleRemoveSize(size),
+                });
+              }}
+            />
           )}
         </div>
       ),
-      dataIndex: `sz_${size}`, width: 90,
-      render: (_: any, r: StyleProcessRow) => {
-        const price = r.sizePrices?.[size] ?? r.price ?? 0;
-        return em
-          ? <InputNumber size="small" value={price} min={0} step={0.01} prefix="¥" style={{ width: '100%' }}
-              onChange={(val) => updateSizePrice(r.id, size, toNumberSafe(val))} />
+      dataIndex: `size_${size}`,
+      width: 90,
+      render: (_: any, record: StyleProcessRow) => {
+        const price = record.sizePrices?.[size] ?? record.price ?? 0;
+        return editable
+          ? (
+              <InputNumber
+                size="small"
+                value={price}
+                min={0}
+                step={0.01}
+                prefix="¥"
+                style={{ width: '100%' }}
+                onChange={(nextValue) => updateSizePrice(record.id, size, toNumberSafe(nextValue))}
+              />
+            )
           : `¥${toNumberSafe(price)}`;
       },
     }));
 
-    const opCol = {
-      title: '操作', dataIndex: 'op', width: 80, resizable: false,
-      render: (_: any, r: StyleProcessRow) => em
-        ? <RowActions maxInline={1} actions={[{
-            key: 'del', label: '删除', danger: true,
-            onClick: () => Modal.confirm({ width: '30vw', title: '确定删除?', onOk: () => handleDelete(r.id) }),
-          }]} />
+    const actionColumn = {
+      title: '操作',
+      dataIndex: 'action',
+      width: 80,
+      resizable: false,
+      render: (_: any, record: StyleProcessRow) => editable
+        ? (
+            <RowActions
+              maxInline={1}
+              actions={[
+                {
+                  key: 'delete',
+                  label: '删除',
+                  danger: true,
+                  onClick: () => Modal.confirm({
+                    width: '30vw',
+                    title: '确定删除?',
+                    onOk: () => handleDelete(record.id),
+                  }),
+                },
+              ]}
+            />
+          )
         : null,
     };
 
-    return [...base, ...sizeCols, opCol];
-  }, [data, editMode, sizes]);
+    return [...baseColumns, ...sizeColumns, actionColumn];
+  }, [editMode, sizes, data]);
 
-  // ─── 渲染 ─────────────────────────────────────────────────────
   return (
     <ResizableModal
       open={open}
       title="工序单价维护 · 同步到生产订单"
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
-      onCancel={handleCancel}
+      onCancel={handleClose}
       footer={
         <Space>
-          <Button onClick={handleCancel} disabled={isBusy}>关闭</Button>
+          <Button onClick={handleClose} disabled={isBusy}>关闭</Button>
           {editMode && (
-            <Button disabled={saving} onClick={() => Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit })}>
+            <Button
+              disabled={saving}
+              onClick={() => Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit })}
+            >
               取消编辑
             </Button>
           )}
-          <Button onClick={handleSaveOnly} disabled={isBusy || !selectedStyleId} loading={saving && !syncing}>
-            保存款式单价
+          <Button onClick={saveAll} disabled={isBusy || !readyForScope} loading={saving && !syncing}>
+            保存款号单价
           </Button>
-          <Button type="primary" icon={<SyncOutlined />} onClick={handleSaveAndSync}
-            disabled={isBusy || !selectedStyleId} loading={syncing || saving}>
-            保存并同步到所有订单
+          <Button
+            type="primary"
+            icon={<SyncOutlined />}
+            onClick={handleSaveAndSync}
+            disabled={isBusy || !readyForScope}
+            loading={syncing || saving}
+          >
+            保存并同步该款订单
           </Button>
         </Space>
       }
     >
       <Space direction="vertical" style={{ width: '100%' }}>
-        {/* 款号选择 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Text style={{ whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 500 }}>款号：</Text>
           <AutoComplete
             value={styleInputVal}
-            style={{ width: 220 }}
-            placeholder="输入/选择款号"
+            style={{ width: 240 }}
+            placeholder="可直接输入新款号或选择已有款号"
             options={styleNoOptions}
-            onSearch={scheduleMainSearch}
+            onSearch={scheduleStyleSearch}
             onSelect={handleSelectStyle}
-            onChange={(v) => {
-              setStyleInputVal(String(v || ''));
-              if (!v) { setSelectedStyleNo(''); setSelectedStyleId(null); setData([]); }
+            onChange={(value) => {
+              const next = String(value || '');
+              setStyleInputVal(next);
+              if (!next) {
+                setSelectedStyleNo('');
+                setTemplateId(null);
+                setMatchedScope('empty');
+                setData([]);
+                setSizes([...DEFAULT_SIZES]);
+              }
             }}
             onBlur={() => {
-              if (styleInputVal.trim() && !selectedStyleId) handleSelectStyle(styleInputVal.trim());
+              const next = styleInputVal.trim();
+              if (!next) {
+                return;
+              }
+              if (next !== selectedStyleNo) {
+                handleSelectStyle(next);
+              }
             }}
             allowClear
             disabled={isBusy}
           />
-          {selectedStyleId && <Tag color="success">{data.length} 道工序</Tag>}
-          {loadingProcess && <Tag color="processing">加载中...</Tag>}
-          <div style={{ flex: 1 }} />
-          {/* 工艺模板区 */}
-          <Select allowClear showSearch filterOption={false} loading={styleNoLoading}
-            value={templateSourceStyleNo || undefined} placeholder="来源款号筛选"
-            style={{ width: 160 }} options={tplStyleOptions}
-            onSearch={scheduleTplStyleSearch}
-            onChange={(v) => setTemplateSourceStyleNo(String(v || ''))}
-            onOpenChange={(o) => { if (o) fetchTplStyleOptions(''); }}
-            disabled={isBusy}
-          />
-          <Button disabled={isBusy} onClick={() => fetchProcessTemplates(templateSourceStyleNo)}>筛选</Button>
-          <Button disabled={isBusy} onClick={() => { setTemplateSourceStyleNo(''); fetchProcessTemplates(''); }}>全部</Button>
-          <Select allowClear style={{ width: 200 }} placeholder="选择工艺模板"
-            value={processTemplateKey} onChange={(v) => setProcessTemplateKey(v)}
-            options={processTemplates.map((t) => ({
-              value: String(t.id || ''), label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName,
-            }))}
-            disabled={isBusy}
-          />
-          <Button disabled={isBusy || !processTemplateKey}
-            onClick={() => { if (!processTemplateKey) { message.error('请先选择模板'); return; } applyProcessTemplate(processTemplateKey); }}>
-            导入模板
-          </Button>
+
+          {selectedStyleNo && matchedScope === 'style' && <Tag color="success">当前编辑：{selectedStyleNo} 工价模板</Tag>}
+          {selectedStyleNo && matchedScope === 'empty' && <Tag color="blue">新款号模板：{selectedStyleNo}</Tag>}
+          {templateId && <Tag color="processing">模板已存在</Tag>}
+          {loadingTemplate && <Tag color="processing">加载中...</Tag>}
         </div>
 
-        {/* 操作栏 */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button type="primary" onClick={handleAdd} disabled={!selectedStyleId || isBusy}>添加工序</Button>
-          <Popover trigger="click" placement="bottomRight" open={addSizePopoverOpen} onOpenChange={setAddSizePopoverOpen}
-            content={
-              <div style={{ width: 200 }}>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>添加新尺码</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Input size="small" placeholder="如: 3XL, 4XL" value={newSizeName}
-                    onChange={(e) => setNewSizeName(e.target.value)}
-                    onPressEnter={() => { handleAddSize(); setAddSizePopoverOpen(false); }}
-                    style={{ flex: 1 }}
-                  />
-                  <Button size="small" type="primary" onClick={() => { handleAddSize(); setAddSizePopoverOpen(false); }}>添加</Button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Text type="secondary">
+            可直接输入一个新款号独立配置工序单价；只有这个款号保存后，才允许同步到该款生产订单。
+          </Text>
+
+          <Space>
+            <Button type="primary" onClick={handleAdd} disabled={isBusy || !readyForScope}>添加工序</Button>
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              open={addSizePopoverOpen}
+              onOpenChange={setAddSizePopoverOpen}
+              content={
+                <div style={{ width: 200 }}>
+                  <div style={{ marginBottom: 8, fontWeight: 500 }}>添加新尺码</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Input
+                      size="small"
+                      placeholder="如: 3XL, 4XL"
+                      value={newSizeName}
+                      onChange={(event) => setNewSizeName(event.target.value)}
+                      onPressEnter={() => {
+                        handleAddSize();
+                        setAddSizePopoverOpen(false);
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <Button size="small" type="primary" onClick={() => {
+                      handleAddSize();
+                      setAddSizePopoverOpen(false);
+                    }}>
+                      添加
+                    </Button>
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 11, color: '#999' }}>当前: {sizes.join(', ')}</div>
                 </div>
-                <div style={{ marginTop: 8, fontSize: 11, color: '#999' }}>当前: {sizes.join(', ')}</div>
-              </div>
-            }
-          >
-            <Button disabled={!editMode || !selectedStyleId}>添加码数</Button>
-          </Popover>
-          {!editMode
-            ? <Button type="primary" onClick={enterEdit} disabled={!selectedStyleId || isBusy}>编辑</Button>
-            : <>
+              }
+            >
+              <Button disabled={!editMode || !readyForScope}>添加码数</Button>
+            </Popover>
+            {!editMode ? (
+              <Button type="primary" onClick={enterEdit} disabled={isBusy || !readyForScope}>编辑</Button>
+            ) : (
+              <>
                 <Button type="primary" onClick={saveAll} loading={saving} disabled={syncing}>保存</Button>
                 <Button disabled={saving} onClick={() => Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit })}>取消</Button>
               </>
-          }
+            )}
+          </Space>
         </div>
 
-        {/* 工序表格 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 500, marginBottom: 8 }}>款号参考图</div>
+            <div style={{ color: 'rgba(0,0,0,0.45)', fontSize: 12, marginBottom: 8 }}>
+              图片只保存在当前工序单价模板，不回写上游款号资料。
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {imageUrls.map((url) => (
+                <div key={url} style={{ position: 'relative' }}>
+                  <Image
+                    src={getFullAuthedFileUrl(url)}
+                    width={72}
+                    height={72}
+                    style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #f0f0f0' }}
+                  />
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    style={{ position: 'absolute', top: -8, right: -8, background: '#fff', borderRadius: '50%' }}
+                    onClick={() => setImageUrls((prev) => prev.filter((item) => item !== url))}
+                  >
+                    ×
+                  </Button>
+                </div>
+              ))}
+              {imageUrls.length < 4 && (
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => handleUploadImage(file as File)}
+                  disabled={!readyForScope || imageUploading || isBusy}
+                >
+                  <Button icon={<UploadOutlined />} loading={imageUploading} disabled={!readyForScope || isBusy}>
+                    上传图片
+                  </Button>
+                </Upload>
+              )}
+            </div>
+          </div>
+        </div>
+
         <ResizableTable
           bordered
           dataSource={data as any[]}
           columns={columns as any[]}
           pagination={false}
-          loading={loadingProcess}
+          loading={loadingTemplate}
           rowKey="id"
           scroll={{ x: 'max-content', y: 440 }}
           storageKey="sync-process-price-modal"
           minColumnWidth={70}
-          locale={{ emptyText: selectedStyleNo ? '该款式暂无工序配置，点击「添加工序」' : '请先在上方选择款号' }}
+          locale={{
+            emptyText: !selectedStyleNo
+              ? '请先输入款号后再维护工序单价'
+              : '当前规则暂无工序配置，点击「添加工序」开始维护',
+          }}
         />
       </Space>
     </ResizableModal>

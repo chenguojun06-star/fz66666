@@ -30,7 +30,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ modalWidth, createTask }) => 
           <AutoComplete
             value={createTask.createStyleNo}
             style={{ width: 260 }}
-            placeholder="输入或搜索款号"
+            placeholder="输入或选择已维护工价的款号"
             options={createTask.createStyleOptions.map((x) => ({
               value: x.styleNo,
               label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,

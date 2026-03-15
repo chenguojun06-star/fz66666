@@ -1,5 +1,21 @@
 ## 2026-04-（最新）
 
+### 🧵 feat(process-price-template): 工序单价维护改为独立款号模板
+
+**改动内容**：
+- 模板中心的“工序单价维护 · 同步到生产订单”改成独立款号模板维护，不再依赖款式详情页进入
+- 弹窗支持直接输入新款号，不要求该款号必须先存在于款式档案中
+- 后端新增 `GET/POST /api/template-library/process-price-template`，按款号独立读写 `process_price` 模板
+- 新增 `GET /api/template-library/process-price-style-options`，统一返回“款号资料 + 已维护工价模板款号”，给模板中心和裁剪建单共用
+- `POST /api/template-library/sync-process-prices` 恢复为必须传 `styleNo`，只允许同步该款号订单，禁止空款号全量同步
+- `TemplateLibraryServiceImpl.resolveProcessPriceTemplate(...)` 删除默认工价回退，只认当前款号自己的 `process_price` 模板
+- 裁剪建单允许直接使用这里新建的模板款号下单，不再强依赖 `StyleInfo` 已先建档
+
+**对系统的帮助**：
+- ✅ 工序工价维护从“必须绑定现有款式页面”改成“可直接独立建一个新款号模板”，更适合先建工价、后补资料的业务节奏
+- ✅ 同步范围被严格限制在指定款号，避免误操作把未确认工价批量推到所有生产订单
+- ✅ 模板侧新建的款号现在可以直接进入裁剪下单链路，符合“先建工价款号，再去裁剪下单”的业务顺序
+
 ### 🔎 feat(qdrant-hybrid): 知识库检索升级为语义召回 + 关键词召回 + 本地重排
 
 **改动内容**：
@@ -180,6 +196,13 @@
 ---
 
 ## 2026-03-15
+
+### 🤖 智能体能力核心升级 (后端化)
+- **多智能体自反思 (Critics & Self-Reflection)**: 新增 `AiCriticOrchestrator`，在 `AiAgentOrchestrator` 返回结果前进行二次校验，极大降低 AI 幻觉，防止敏感信息越权越界。在 SSE 流中自动发送“思考中”状态以优化前端体验（无需任何 UI/前端层修改）。
+- **沙盘系统 (Sandbox "What-if" Mode)**: 新增 `AiSandboxOrchestrator` 与 `NewOrderSimulationTool`。通过注入虚拟订单进行产能推演（如：接5000件大单后的排期影响），基于 `FactoryCapacityOrchestrator` 给厂长提供数据决策辅助。
+- **全局自主风险巡检 (Autonomous Patrol)**: 新增 `AiPatrolOrchestrator` 与 `DailyPatrolTool`，使得 AI 具备主动发掘停滞订单、库存卡点、风险告警的功能，响应用户要求“检查系统状态”的自然语言需求。
+- **架构隔离升级**: 所有新增能力严格遵守 `Controller → Orchestrator → Service` 隔离原则。将所有智能体扩展独立为新的编排器，保证主流程代码（150+ 其他编排器）0 侵入、0 破坏，并通过 100% 回归测试。
+
 
 ### 🔴 fix(cloud-hotfix): 修复生产下单空指针，并为 BOM/尺寸图片字段补启动自愈
 

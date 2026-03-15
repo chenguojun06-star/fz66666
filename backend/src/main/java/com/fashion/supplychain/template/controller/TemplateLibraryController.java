@@ -55,6 +55,21 @@ public class TemplateLibraryController {
         return Result.success(templateLibraryOrchestrator.resolveProgressNodeUnitPrices(styleNo));
     }
 
+    @GetMapping("/process-price-template")
+    public Result<?> processPriceTemplate(@RequestParam(required = false) String styleNo) {
+        return Result.success(templateLibraryOrchestrator.getProcessPriceTemplate(styleNo));
+    }
+
+    @GetMapping("/process-price-style-options")
+    public Result<?> processPriceStyleOptions(@RequestParam(required = false) String keyword) {
+        return Result.success(templateLibraryOrchestrator.listProcessPriceStyleOptions(keyword));
+    }
+
+    @PostMapping("/process-price-template")
+    public Result<?> saveProcessPriceTemplate(@RequestBody Map<String, Object> body) {
+        return Result.success(templateLibraryOrchestrator.saveProcessPriceTemplate(body));
+    }
+
     @PostMapping
     public Result<?> create(@RequestBody TemplateLibrary tpl) {
         return Result.success(templateLibraryOrchestrator.create(tpl));
@@ -94,8 +109,7 @@ public class TemplateLibraryController {
     }
 
     /**
-     * 按款号批量同步工序进度单价到大货生产订单
-     * 找出该款号下所有有效生产订单，自动刷新其工序单价
+     * 按款号同步工序进度单价到生产订单
      */
     @PostMapping("/sync-process-prices")
     public Result<?> syncProcessPrices(@RequestBody Map<String, Object> body) {

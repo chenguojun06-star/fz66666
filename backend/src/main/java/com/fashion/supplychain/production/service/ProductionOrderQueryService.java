@@ -17,6 +17,10 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.template.entity.TemplateLibrary;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,6 +66,12 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
@@ -315,6 +325,59 @@ public class ProductionOrderQueryService {
                     order.setStyleCover(attachCover);
                 }
             }
+        }
+
+        List<String> missingTemplateStyleNos = records.stream()
+                .filter(o -> o != null && !StringUtils.hasText(o.getStyleCover()) && StringUtils.hasText(o.getStyleNo()))
+                .map(ProductionOrder::getStyleNo)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!missingTemplateStyleNos.isEmpty()) {
+            List<TemplateLibrary> templates = templateLibraryService.list(new LambdaQueryWrapper<TemplateLibrary>()
+                    .eq(TemplateLibrary::getTemplateType, "process_price")
+                    .in(TemplateLibrary::getSourceStyleNo, missingTemplateStyleNos)
+                    .orderByDesc(TemplateLibrary::getUpdateTime)
+                    .orderByDesc(TemplateLibrary::getCreateTime));
+
+            Map<String, String> coverByTemplateStyleNo = new HashMap<>();
+            for (TemplateLibrary template : templates) {
+                if (template == null || !StringUtils.hasText(template.getSourceStyleNo()) || !StringUtils.hasText(template.getTemplateContent())) {
+                    continue;
+                }
+                coverByTemplateStyleNo.putIfAbsent(template.getSourceStyleNo(), extractFirstTemplateImage(template.getTemplateContent()));
+            }
+
+            for (ProductionOrder order : records) {
+                if (order == null || StringUtils.hasText(order.getStyleCover()) || !StringUtils.hasText(order.getStyleNo())) {
+                    continue;
+                }
+                String templateCover = coverByTemplateStyleNo.get(order.getStyleNo());
+                if (StringUtils.hasText(templateCover)) {
+                    order.setStyleCover(templateCover);
+                }
+            }
+        }
+    }
+
+    private String extractFirstTemplateImage(String templateContent) {
+        if (!StringUtils.hasText(templateContent)) {
+            return null;
+        }
+        try {
+            Map<String, Object> content = objectMapper.readValue(templateContent, new TypeReference<Map<String, Object>>() {});
+            Object rawImages = content.get("images");
+            if (!(rawImages instanceof List<?> imageList)) {
+                return null;
+            }
+            for (Object item : imageList) {
+                String url = String.valueOf(item == null ? "" : item).trim();
+                if (StringUtils.hasText(url)) {
+                    return url;
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

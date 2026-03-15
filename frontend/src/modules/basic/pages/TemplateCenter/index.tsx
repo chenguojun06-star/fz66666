@@ -136,20 +136,19 @@ const TemplateCenter: React.FC = () => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: Array<{ styleNo: string }> } }>('/style/info/list', {
-        params: {
-          page: 1,
-          pageSize: 200,
-          styleNo: String(keyword ?? '').trim(),
-        },
+      const res = await api.get<{ code: number; data: Array<{ styleNo: string; styleName?: string }> }>('/template-library/process-price-style-options', {
+        params: { keyword: String(keyword ?? '').trim() },
       });
       if (seq !== styleNoReqSeq.current) return;
       if (res.code !== 200) return;
-      const records = (res.data?.records || []) as Array<{ styleNo?: unknown }>;
+      const records = Array.isArray(res.data) ? res.data : [];
       const next = (Array.isArray(records) ? records : [])
-        .map((r) => String(r?.styleNo || '').trim())
-        .filter(Boolean)
-        .map((sn) => ({ value: sn, label: sn }));
+        .map((r) => {
+          const styleNo = String(r?.styleNo || '').trim();
+          const styleName = String(r?.styleName || '').trim();
+          return styleNo ? { value: styleNo, label: styleName ? `${styleNo}（${styleName}）` : styleNo } : null;
+        })
+        .filter(Boolean) as Array<{ value: string; label: string }>;
       setStyleNoOptions(next);
     } catch {
       // Intentionally empty
@@ -850,7 +849,7 @@ const TemplateCenter: React.FC = () => {
                 <Button
                   onClick={() => setSyncPriceOpen(true)}
                 >
-                  按款号更新工序单价
+                  独立维护工序单价
                 </Button>
               </Space>
             </div>

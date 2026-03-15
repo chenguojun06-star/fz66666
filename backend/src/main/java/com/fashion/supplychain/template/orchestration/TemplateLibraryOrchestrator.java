@@ -2,6 +2,8 @@ package com.fashion.supplychain.template.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -18,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -58,6 +61,9 @@ public class TemplateLibraryOrchestrator {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
         IPage<TemplateLibrary> pageResult = templateLibraryService.queryPage(params);
         // 补充来源款式封面图
@@ -79,7 +85,11 @@ public class TemplateLibraryOrchestrator {
             pageResult.getRecords().forEach(r -> {
                 if (StringUtils.hasText(r.getSourceStyleNo())) {
                     String cover = coverMap.get(r.getSourceStyleNo());
-                    r.setStyleCoverUrl(StringUtils.hasText(cover) ? cover : null);
+                    if (StringUtils.hasText(cover)) {
+                        r.setStyleCoverUrl(cover);
+                    } else {
+                        r.setStyleCoverUrl(extractFirstTemplateImage(r.getTemplateContent()));
+                    }
                 }
             });
         }
@@ -112,6 +122,193 @@ public class TemplateLibraryOrchestrator {
             throw new IllegalArgumentException("styleNo不能为空");
         }
         return templateLibraryService.resolveProgressNodeUnitPrices(sn);
+    }
+
+    public Map<String, Object> getProcessPriceTemplate(String styleNo) {
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        TemplateLibrary matched = StringUtils.hasText(sn) ? findStyleScopedProcessPriceTemplate(sn) : null;
+
+        String matchedScope = "empty";
+        if (matched != null) {
+            matchedScope = "style";
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("exists", matched != null);
+        result.put("requestedStyleNo", sn);
+        result.put("matchedScope", matchedScope);
+        result.put("templateId", matched == null ? null : matched.getId());
+        result.put("templateKey", matched == null ? null : matched.getTemplateKey());
+        result.put("templateName", matched == null ? null : matched.getTemplateName());
+        result.put("sourceStyleNo", matched == null ? null : matched.getSourceStyleNo());
+        result.put("content", parseProcessPriceTemplateContent(matched == null ? null : matched.getTemplateContent()));
+        return result;
+    }
+
+    public List<Map<String, Object>> listProcessPriceStyleOptions(String keyword) {
+        String keywordText = StringUtils.hasText(keyword) ? keyword.trim() : null;
+        Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
+
+        List<StyleInfo> styleInfos = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+                .like(StringUtils.hasText(keywordText), StyleInfo::getStyleNo, keywordText)
+                .orderByDesc(StyleInfo::getUpdateTime)
+                .orderByDesc(StyleInfo::getCreateTime)
+                .last("limit 30"));
+        for (StyleInfo styleInfo : styleInfos) {
+            String styleNo = styleInfo == null ? null : String.valueOf(styleInfo.getStyleNo() == null ? "" : styleInfo.getStyleNo()).trim();
+            if (!StringUtils.hasText(styleNo) || merged.containsKey(styleNo)) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("styleNo", styleNo);
+            item.put("styleName", StringUtils.hasText(styleInfo.getStyleName()) ? styleInfo.getStyleName().trim() : null);
+            item.put("source", "style_info");
+            merged.put(styleNo, item);
+        }
+
+        List<TemplateLibrary> templates = templateLibraryService.list(new LambdaQueryWrapper<TemplateLibrary>()
+                .eq(TemplateLibrary::getTemplateType, "process_price")
+                .isNotNull(TemplateLibrary::getSourceStyleNo)
+                .ne(TemplateLibrary::getSourceStyleNo, "")
+                .like(StringUtils.hasText(keywordText), TemplateLibrary::getSourceStyleNo, keywordText)
+                .orderByDesc(TemplateLibrary::getUpdateTime)
+                .orderByDesc(TemplateLibrary::getCreateTime)
+                .last("limit 50"));
+        for (TemplateLibrary template : templates) {
+            String styleNo = template == null ? null : String.valueOf(template.getSourceStyleNo() == null ? "" : template.getSourceStyleNo()).trim();
+            if (!StringUtils.hasText(styleNo) || merged.containsKey(styleNo)) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("styleNo", styleNo);
+            item.put("styleName", null);
+            item.put("source", "process_price_template");
+            merged.put(styleNo, item);
+        }
+
+        return new ArrayList<>(merged.values());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> saveProcessPriceTemplate(Map<String, Object> body) {
+        Map<String, Object> payload = body == null ? Map.of() : body;
+        String styleNo = String.valueOf(payload.getOrDefault("styleNo", "")).trim();
+        if (!StringUtils.hasText(styleNo)) {
+            throw new IllegalArgumentException("styleNo不能为空");
+        }
+
+        Map<String, Object> content = coerceMap(payload.get("templateContent"));
+        List<Map<String, Object>> rawSteps = coerceListOfMap(content.get("steps"));
+        if (rawSteps.isEmpty()) {
+            throw new IllegalArgumentException("请至少配置一条工序单价");
+        }
+
+        List<Map<String, Object>> normalizedSteps = new ArrayList<>();
+        int index = 1;
+        for (Map<String, Object> rawStep : rawSteps) {
+            String processName = String.valueOf(rawStep.getOrDefault("processName", rawStep.getOrDefault("name", ""))).trim();
+            if (!StringUtils.hasText(processName)) {
+                continue;
+            }
+
+            Map<String, Object> step = new LinkedHashMap<>();
+            String processCode = String.valueOf(rawStep.getOrDefault("processCode", "")).trim();
+            step.put("processCode", StringUtils.hasText(processCode) ? processCode : String.format("%02d", index));
+            step.put("processName", processName);
+
+            String progressStage = String.valueOf(rawStep.getOrDefault("progressStage", "")).trim();
+            if (StringUtils.hasText(progressStage)) {
+                step.put("progressStage", progressStage);
+            }
+
+            String machineType = String.valueOf(rawStep.getOrDefault("machineType", "")).trim();
+            if (StringUtils.hasText(machineType)) {
+                step.put("machineType", machineType);
+            }
+
+            String difficulty = String.valueOf(rawStep.getOrDefault("difficulty", "")).trim();
+            if (StringUtils.hasText(difficulty)) {
+                step.put("difficulty", difficulty);
+            }
+
+            Object standardTimeValue = rawStep.get("standardTime");
+            Integer standardTime = null;
+            if (standardTimeValue instanceof Number number) {
+                standardTime = number.intValue();
+            } else if (standardTimeValue != null) {
+                try {
+                    standardTime = Integer.parseInt(String.valueOf(standardTimeValue).trim());
+                } catch (Exception ignore) {
+                    standardTime = null;
+                }
+            }
+            if (standardTime != null && standardTime >= 0) {
+                step.put("standardTime", standardTime);
+            }
+
+            BigDecimal unitPrice = toBigDecimal(rawStep.containsKey("unitPrice") ? rawStep.get("unitPrice") : rawStep.get("price"));
+            step.put("unitPrice", unitPrice == null ? BigDecimal.ZERO : unitPrice.max(BigDecimal.ZERO));
+
+            Map<String, Object> rawSizePrices = coerceMap(rawStep.get("sizePrices"));
+            if (!rawSizePrices.isEmpty()) {
+                Map<String, Object> sizePrices = new LinkedHashMap<>();
+                for (Map.Entry<String, Object> entry : rawSizePrices.entrySet()) {
+                    String key = String.valueOf(entry.getKey() == null ? "" : entry.getKey()).trim();
+                    if (!StringUtils.hasText(key)) {
+                        continue;
+                    }
+                    BigDecimal price = toBigDecimal(entry.getValue());
+                    sizePrices.put(key, price == null ? BigDecimal.ZERO : price.max(BigDecimal.ZERO));
+                }
+                if (!sizePrices.isEmpty()) {
+                    step.put("sizePrices", sizePrices);
+                }
+            }
+
+            normalizedSteps.add(step);
+            index++;
+        }
+
+        if (normalizedSteps.isEmpty()) {
+            throw new IllegalArgumentException("请至少填写一条有效工序");
+        }
+
+        List<String> sizes = coerceListOfString(content.get("sizes"));
+        List<String> images = coerceListOfString(content.get("images"));
+        Map<String, Object> normalizedContent = new LinkedHashMap<>();
+        normalizedContent.put("steps", normalizedSteps);
+        if (!sizes.isEmpty()) {
+            normalizedContent.put("sizes", sizes);
+        }
+        if (!images.isEmpty()) {
+            normalizedContent.put("images", images);
+        }
+
+        String normalizedStyleNo = styleNo;
+        String templateName = String.valueOf(payload.getOrDefault("templateName", "")).trim();
+        if (!StringUtils.hasText(templateName)) {
+            templateName = normalizedStyleNo + "-工序单价模板";
+        }
+
+        TemplateLibrary template = new TemplateLibrary();
+        template.setTemplateType("process_price");
+        template.setTemplateKey("style_" + normalizedStyleNo);
+        template.setTemplateName(templateName);
+        template.setSourceStyleNo(normalizedStyleNo);
+        try {
+            template.setTemplateContent(objectMapper.writeValueAsString(normalizedContent));
+        } catch (Exception e) {
+            throw new IllegalStateException("工序单价模板序列化失败");
+        }
+        template.setLocked(1);
+        template.setOperatorName(UserContext.username());
+
+        boolean ok = templateLibraryService.upsertTemplate(template);
+        if (!ok) {
+            throw new IllegalStateException("保存工序单价模板失败");
+        }
+
+        return getProcessPriceTemplate(normalizedStyleNo);
     }
 
     public TemplateLibrary create(TemplateLibrary tpl) {
@@ -523,7 +720,7 @@ public class TemplateLibraryOrchestrator {
     }
 
     /**
-     * 按款号批量同步工序进度单价（反推大货生产订单）
+     * 批量同步工序进度单价（反推生产订单）
      *
      * @param styleNo 款号
      * @return 同步结果摘要
@@ -533,38 +730,251 @@ public class TemplateLibraryOrchestrator {
         if (!StringUtils.hasText(sn)) {
             throw new IllegalArgumentException("款号不能为空");
         }
-        // 找该款号下所有未完成订单
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getStyleNo, sn)
-                .isNotNull(ProductionOrder::getProgressWorkflowJson)
-                .ne(ProductionOrder::getProgressWorkflowJson, "")
+                .isNotNull(ProductionOrder::getStyleNo)
                 .list();
         int totalOrders = orders.size();
         int successCount = 0;
         int totalSynced = 0;
+        int workflowUpdatedOrders = 0;
+        int workflowUpdatedNodes = 0;
         List<Map<String, Object>> details = new ArrayList<>();
         for (ProductionOrder order : orders) {
+            int synced = 0;
+            int workflowUpdated = 0;
+            boolean touched = false;
             try {
-                int synced = processTrackingOrchestrator.syncUnitPrices(order.getId());
+                synced = processTrackingOrchestrator.syncUnitPrices(order.getId());
                 if (synced > 0) {
-                    successCount++;
                     totalSynced += synced;
+                    touched = true;
                 }
-                Map<String, Object> d = new HashMap<>();
-                d.put("orderNo", order.getOrderNo());
-                d.put("syncedRecords", synced);
-                details.add(d);
             } catch (Exception e) {
                 log.warn("订单 {} 单价同步失败: {}", order.getOrderNo(), e.getMessage());
             }
+
+            try {
+                workflowUpdated = refreshOrderWorkflowPrices(order);
+                if (workflowUpdated > 0) {
+                    workflowUpdatedOrders++;
+                    workflowUpdatedNodes += workflowUpdated;
+                    touched = true;
+                }
+            } catch (Exception e) {
+                log.warn("订单 {} 工序单价快照刷新失败: {}", order.getOrderNo(), e.getMessage());
+            }
+
+            if (touched) {
+                successCount++;
+            }
+            Map<String, Object> d = new HashMap<>();
+            d.put("orderNo", order.getOrderNo());
+            d.put("styleNo", order.getStyleNo());
+            d.put("syncedRecords", synced);
+            d.put("workflowUpdatedNodes", workflowUpdated);
+            details.add(d);
         }
         Map<String, Object> result = new HashMap<>();
         result.put("styleNo", sn);
+        result.put("scopeLabel", "款号 " + sn);
         result.put("totalOrders", totalOrders);
         result.put("successOrders", successCount);
         result.put("totalSynced", totalSynced);
+        result.put("workflowUpdatedOrders", workflowUpdatedOrders);
+        result.put("workflowUpdatedNodes", workflowUpdatedNodes);
         result.put("details", details);
         return result;
+    }
+
+    private TemplateLibrary findStyleScopedProcessPriceTemplate(String styleNo) {
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        if (StringUtils.hasText(sn)) {
+            return templateLibraryService.getOne(new LambdaQueryWrapper<TemplateLibrary>()
+                    .eq(TemplateLibrary::getTemplateType, "process_price")
+                    .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .orderByDesc(TemplateLibrary::getUpdateTime)
+                    .orderByDesc(TemplateLibrary::getCreateTime)
+                    .last("limit 1"));
+        }
+        return null;
+    }
+
+    private Map<String, Object> parseProcessPriceTemplateContent(String rawJson) {
+        Map<String, Object> content = new LinkedHashMap<>();
+        List<Map<String, Object>> steps = new ArrayList<>();
+        List<String> sizes = new ArrayList<>();
+        List<String> images = new ArrayList<>();
+
+        if (StringUtils.hasText(rawJson)) {
+            try {
+                Map<String, Object> raw = objectMapper.readValue(rawJson, new TypeReference<Map<String, Object>>() {});
+                sizes.addAll(coerceListOfString(raw.get("sizes")));
+                images.addAll(coerceListOfString(raw.get("images")));
+                List<Map<String, Object>> items = coerceListOfMap(raw.get("steps"));
+                if (items.isEmpty()) {
+                    items = coerceListOfMap(raw.get("nodes"));
+                }
+                for (Map<String, Object> item : items) {
+                    String processName = String.valueOf(item.getOrDefault("processName", item.getOrDefault("name", ""))).trim();
+                    if (!StringUtils.hasText(processName)) {
+                        continue;
+                    }
+                    Map<String, Object> step = new LinkedHashMap<>();
+                    step.put("processCode", String.valueOf(item.getOrDefault("processCode", item.getOrDefault("id", ""))).trim());
+                    step.put("processName", processName);
+                    step.put("progressStage", String.valueOf(item.getOrDefault("progressStage", "")).trim());
+                    step.put("machineType", String.valueOf(item.getOrDefault("machineType", "")).trim());
+                    step.put("difficulty", String.valueOf(item.getOrDefault("difficulty", "")).trim());
+                    step.put("standardTime", item.get("standardTime"));
+                    step.put("unitPrice", item.containsKey("unitPrice") ? item.get("unitPrice") : item.get("price"));
+                    Map<String, Object> sizePrices = coerceMap(item.get("sizePrices"));
+                    if (!sizePrices.isEmpty()) {
+                        step.put("sizePrices", sizePrices);
+                    }
+                    steps.add(step);
+                }
+            } catch (Exception e) {
+                log.warn("解析工序单价模板内容失败");
+            }
+        }
+
+        content.put("steps", steps);
+        content.put("sizes", sizes);
+        content.put("images", images);
+        return content;
+    }
+
+    private String extractFirstTemplateImage(String rawJson) {
+        if (!StringUtils.hasText(rawJson)) {
+            return null;
+        }
+        try {
+            Map<String, Object> raw = objectMapper.readValue(rawJson, new TypeReference<Map<String, Object>>() {});
+            List<String> images = coerceListOfString(raw.get("images"));
+            return images.isEmpty() ? null : images.get(0);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private int refreshOrderWorkflowPrices(ProductionOrder order) throws Exception {
+        if (order == null || !StringUtils.hasText(order.getStyleNo()) || !StringUtils.hasText(order.getProgressWorkflowJson())) {
+            return 0;
+        }
+
+        List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
+        if (templateNodes == null || templateNodes.isEmpty()) {
+            return 0;
+        }
+
+        Map<String, BigDecimal> priceMap = new HashMap<>();
+        for (Map<String, Object> templateNode : templateNodes) {
+            String name = String.valueOf(templateNode.getOrDefault("name", "")).trim();
+            if (!StringUtils.hasText(name)) {
+                continue;
+            }
+            BigDecimal price = toBigDecimal(templateNode.get("unitPrice"));
+            priceMap.put(name, price == null ? BigDecimal.ZERO : price);
+        }
+        if (priceMap.isEmpty()) {
+            return 0;
+        }
+
+        Map<String, Object> workflow = objectMapper.readValue(order.getProgressWorkflowJson(), new TypeReference<Map<String, Object>>() {});
+        List<Map<String, Object>> nodes = coerceListOfMap(workflow.get("nodes"));
+        if (nodes.isEmpty()) {
+            return 0;
+        }
+
+        int changedCount = 0;
+        for (Map<String, Object> node : nodes) {
+            String nodeName = String.valueOf(node.getOrDefault("name", "")).trim();
+            if (!StringUtils.hasText(nodeName) || !priceMap.containsKey(nodeName)) {
+                continue;
+            }
+            BigDecimal nextPrice = priceMap.get(nodeName);
+            BigDecimal currentPrice = toBigDecimal(node.get("unitPrice"));
+            if (currentPrice == null || currentPrice.compareTo(nextPrice) != 0) {
+                node.put("unitPrice", nextPrice);
+                changedCount++;
+            }
+        }
+        if (changedCount <= 0) {
+            return 0;
+        }
+
+        workflow.put("nodes", nodes);
+        productionOrderService.lambdaUpdate()
+                .eq(ProductionOrder::getId, order.getId())
+                .set(ProductionOrder::getProgressWorkflowJson, objectMapper.writeValueAsString(workflow))
+                .update();
+        return changedCount;
+    }
+
+    private static Map<String, Object> coerceMap(Object value) {
+        if (value instanceof Map<?, ?> rawMap) {
+            Map<String, Object> mapped = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                if (entry.getKey() == null) {
+                    continue;
+                }
+                mapped.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+            return mapped;
+        }
+        return new LinkedHashMap<>();
+    }
+
+    private static List<Map<String, Object>> coerceListOfMap(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
+        }
+        List<Map<String, Object>> mapped = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?>) {
+                mapped.add(coerceMap(item));
+            }
+        }
+        return mapped;
+    }
+
+    private static List<String> coerceListOfString(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
+        }
+        List<String> out = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item == null) {
+                continue;
+            }
+            String text = String.valueOf(item).trim();
+            if (StringUtils.hasText(text)) {
+                out.add(text);
+            }
+        }
+        return out;
+    }
+
+    private static BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        if (value instanceof Number number) {
+            return new BigDecimal(number.toString());
+        }
+        try {
+            String text = String.valueOf(value).trim();
+            if (!StringUtils.hasText(text)) {
+                return null;
+            }
+            return new BigDecimal(text);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

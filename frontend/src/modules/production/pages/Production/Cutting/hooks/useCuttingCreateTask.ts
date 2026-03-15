@@ -45,15 +45,15 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: Array<{ id: string; styleNo: string; styleName: string }> } }>('/style/info/list', {
-        params: { page: 1, pageSize: 20, styleNo: String(keyword || '').trim() },
+      const res = await api.get<{ code: number; data: Array<{ styleNo: string; styleName?: string }> }>('/template-library/process-price-style-options', {
+        params: { keyword: String(keyword || '').trim() },
       });
       if (res.code === 200) {
-        const records = (res.data?.records || []) as Array<Record<string, unknown>>;
+        const records = Array.isArray(res.data) ? res.data : [];
         setCreateStyleOptions(
           records
             .map((r) => ({
-              id: r?.id as string | number,
+              id: String(r?.styleNo || '').trim(),
               styleNo: String(r?.styleNo || '').trim(),
               styleName: String(r?.styleName || '').trim(),
             }))
@@ -133,7 +133,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const handleSubmitCreateTask = async () => {
     const styleNo = String(createStyleNo || '').trim();
     if (!styleNo) {
-      message.error('请选择款号');
+      message.error('请输入或选择款号');
       return;
     }
     const validItems = createBundles
