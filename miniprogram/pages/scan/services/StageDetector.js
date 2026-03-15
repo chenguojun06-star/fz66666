@@ -52,8 +52,9 @@ class StageDetector {
     // processConfig 格式: [{processName, price, sortOrder, progressStage, scanType}, ...]
     this.processConfigCache = new Map();
 
-    // 缓存有效期：5分钟（PC端修改工序后，最多5分钟小程序就能同步）
-    this.CACHE_TTL = 5 * 60 * 1000;
+    // 缓存有效期：60秒（PC端刷新单价后，最多1分钟小程序新扫码就能使用最新价格）
+    // 注：历史扫码记录的工资金额由后端 syncUnitPrices 统一回填
+    this.CACHE_TTL = 60 * 1000;
 
     // scanType 推断规则（根据 progressStage 或 processName 推断扫码类型）
     // ⚠️ 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType

@@ -691,10 +691,52 @@ public class ProductionProcessTrackingOrchestrator {
             updatedCount++;
         }
 
-        log.info("订单 {} 单价同步完成：共 {} 条记录，更新 {} 条",
+        log.info("订单 {} 跟踪记录单价同步完成：共 {} 条，更新 {} 条",
                 order.getOrderNo(), trackingRecords.size(), updatedCount);
 
-        return updatedCount;
+        // 6. 补充：同步更新未结算扫码记录的价格字段，确保工资核算页面立即反映最新单价
+        //    payroll 聚合查询使用 total_amount → scan_cost → unit_price×quantity 兜底链，
+        //    必须同时更新全部三个字段才能保证优先级最高的 total_amount 不拉低聚合结果。
+        int scanUpdated = 0;
+        for (Map.Entry<String, BigDecimal> entry : priceMap.entrySet()) {
+            String pName = entry.getKey();
+            BigDecimal newPrice = entry.getValue();
+            if (newPrice == null || newPrice.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            List<ScanRecord> scanRecords = scanRecordService.lambdaQuery()
+                    .eq(ScanRecord::getOrderId, productionOrderId)
+                    .eq(ScanRecord::getScanResult, "success")
+                    .and(w -> w.eq(ScanRecord::getProcessName, pName)
+                              .or().eq(ScanRecord::getProgressStage, pName))
+                    .and(w -> w.isNull(ScanRecord::getPayrollSettlementId)
+                              .or().eq(ScanRecord::getPayrollSettlementId, ""))
+                    .and(w -> w.isNull(ScanRecord::getSettlementStatus)
+                              .or().ne(ScanRecord::getSettlementStatus, "payroll_settled"))
+                    .list();
+
+            for (ScanRecord sr : scanRecords) {
+                if (sr.getQuantity() == null || sr.getQuantity() <= 0) continue;
+                // 跳过该记录若单价已是最新值（避免无效更新）
+                if (newPrice.compareTo(sr.getProcessUnitPrice() != null ? sr.getProcessUnitPrice()
+                        : (sr.getUnitPrice() != null ? sr.getUnitPrice() : BigDecimal.ZERO)) == 0) {
+                    continue;
+                }
+                BigDecimal cost = newPrice.multiply(new BigDecimal(sr.getQuantity()));
+                ScanRecord patch = new ScanRecord();
+                patch.setId(sr.getId());
+                patch.setUnitPrice(newPrice);
+                patch.setProcessUnitPrice(newPrice);
+                patch.setScanCost(cost);
+                patch.setTotalAmount(cost);
+                scanRecordService.updateById(patch);
+                scanUpdated++;
+            }
+        }
+
+        log.info("订单 {} 单价同步完成：跟踪记录更新 {} 条，扫码记录更新 {} 条",
+                order.getOrderNo(), updatedCount, scanUpdated);
+
+        return updatedCount + scanUpdated;
     }
 
     /**
