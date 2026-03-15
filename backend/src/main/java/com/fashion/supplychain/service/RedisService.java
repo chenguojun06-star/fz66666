@@ -2,10 +2,15 @@ package com.fashion.supplychain.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -81,19 +86,37 @@ public class RedisService {
     }
 
     /**
-     * 按 pattern 批量删除缓存（用于启动时清理旧格式缓存）
+     * 按 pattern 批量删除缓存（SCAN游标实现，兼容云端 managed Redis）
      * 示例: deleteByPattern("role:perms:*")
-     * 注意: keys() 是阻塞操作，仅在启动阶段调用
+     * 使用 SCAN 而非 KEYS，避免云端 managed Redis 禁用 KEYS 命令导致静默失败
      */
     public long deleteByPattern(String pattern) {
         try {
-            Set<String> keys = redisTemplate.keys(pattern);
-            if (keys != null && !keys.isEmpty()) {
-                redisTemplate.delete(keys);
-                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, keys.size());
-                return keys.size();
+            Long deleted = redisTemplate.execute((RedisCallback<Long>) connection -> {
+                long count = 0;
+                ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+                List<byte[]> toDelete = new ArrayList<>();
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        toDelete.add(cursor.next());
+                        if (toDelete.size() >= 500) {
+                            connection.del(toDelete.toArray(new byte[0][]));
+                            count += toDelete.size();
+                            toDelete.clear();
+                        }
+                    }
+                    if (!toDelete.isEmpty()) {
+                        connection.del(toDelete.toArray(new byte[0][]));
+                        count += toDelete.size();
+                    }
+                }
+                return count;
+            });
+            long result = deleted != null ? deleted : 0;
+            if (result > 0) {
+                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, result);
             }
-            return 0;
+            return result;
         } catch (Exception e) {
             log.warn("Redis deleteByPattern failed, pattern={}, err={}", pattern, e.getMessage());
             return 0;

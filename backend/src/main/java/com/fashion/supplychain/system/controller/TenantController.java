@@ -2,6 +2,8 @@ package com.fashion.supplychain.system.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.service.RedisService;
+import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.TenantBillingRecord;
@@ -28,6 +30,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
  * - /api/system/tenant/sub/*    租户主账号管理子账号
  * - /api/system/tenant/my       获取当前租户信息
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/system/tenant")
 @PreAuthorize("isAuthenticated()")
@@ -44,6 +47,9 @@ public class TenantController {
 
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
+
+    @Autowired(required = false)
+    private RedisService redisService;
 
     // ========== 公开接口（无需登录） ==========
 
@@ -544,6 +550,29 @@ public class TenantController {
                 .map(Number::longValue).collect(java.util.stream.Collectors.toList()) : null;
         tenantOrchestrator.setUserPermissionOverrides(userId, grantIds, revokeIds);
         return Result.success(true);
+    }
+
+    /**
+     * 超级管理员：立即清理全部权限缓存
+     * 适用于云端无法直接执行 Redis CLI 时通过 API 触发
+     * 清理范围：role:perms:* / user:perms:* / tenant:ceiling:*
+     */
+    @PostMapping("/admin/clear-permission-cache")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Map<String, Object>> clearPermissionCache() {
+        if (redisService == null) {
+            return Result.fail("Redis服务不可用");
+        }
+        long role = redisService.deleteByPattern("role:perms:*");
+        long user = redisService.deleteByPattern("user:perms:*");
+        long ceiling = redisService.deleteByPattern("tenant:ceiling:*");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("rolePermKeys", role);
+        result.put("userPermKeys", user);
+        result.put("tenantCeilingKeys", ceiling);
+        result.put("total", role + user + ceiling);
+        log.info("[ClearPermCache] 超管触发权限缓存清理 — role={}, user={}, ceiling={}", role, user, ceiling);
+        return Result.success(result);
     }
 
     /**
