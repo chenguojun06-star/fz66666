@@ -348,6 +348,7 @@ html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-se
 async function printUCodeLabels(
   selected: SkuRow[],
   order: ProductionOrder,
+  factoryCode: string,
 ): Promise<void> {
   const W = 70, H = 40;
   // 日期：纯数字 YYYYMMDD，不加任何汉字
@@ -356,7 +357,6 @@ async function printUCodeLabels(
 
   const styleNo   = order.styleNo   || '';
   const styleName = order.styleName || '';
-  const factoryName = order.factoryName || '';
 
   const qrMap: Record<string, string> = {};
   for (const row of selected) {
@@ -379,7 +379,7 @@ async function printUCodeLabels(
           <div class="ucode">${uCode}</div>
           <div class="r"><b>款号</b>&thinsp;${styleNo}${styleName ? `&emsp;<b>款名</b>&thinsp;${styleName}` : ''}</div>
           <div class="r"><b>颜色</b>&thinsp;${row.color || ''}&emsp;<b>码数</b>&thinsp;${row.size || ''}</div>
-          ${factoryName ? `<div class="r"><b>GC</b>&thinsp;:&thinsp;${factoryName}</div>` : ''}
+          ${factoryCode ? `<div class="r"><b>GC</b>&thinsp;:&thinsp;${factoryCode}</div>` : ''}
           <div class="date">${dateStr}</div>
         </div></div></div>`;
     })
@@ -429,6 +429,18 @@ html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-se
 // ─── 主组件 ──────────────────────────────────────────────────────────────────
 
 export default function LabelPrintModal({ open, onClose, order, styleInfo }: Props) {
+  const [orderFactoryCode, setOrderFactoryCode] = useState<string>('');
+
+  useEffect(() => {
+    if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
+    void (api as any).get(`/system/factory/${order.factoryId}`)
+      .then((res: any) => {
+        const d = (res as any)?.data ?? res ?? {};
+        setOrderFactoryCode(String(d.factoryCode || ''));
+      })
+      .catch(() => setOrderFactoryCode(''));
+  }, [open, order?.factoryId]);
+
   const handleWashPrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) =>
       printWashLabels(selected, ord, si),
@@ -436,8 +448,8 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
   );
 
   const handleUCodePrint = useCallback(
-    (selected: SkuRow[], ord: ProductionOrder) => printUCodeLabels(selected, ord),
-    []
+    (selected: SkuRow[], ord: ProductionOrder) => printUCodeLabels(selected, ord, orderFactoryCode),
+    [orderFactoryCode]
   );
 
   return (

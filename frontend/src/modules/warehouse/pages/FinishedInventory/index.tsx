@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, Button, Space, Tag, Row, Col, InputNumber, Input, Select, App } from 'antd';
-import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
+import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined, ScanOutlined } from '@ant-design/icons';
+import QrcodeOutboundModal from './QrcodeOutboundModal';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -76,6 +77,7 @@ const _FinishedInventory: React.FC = () => {
   // ===== 使用 useModal 管理弹窗 =====
   const outboundModal = useModal<FinishedInventory>();
   const inboundHistoryModal = useModal<FinishedInventory>();
+  const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
@@ -701,6 +703,7 @@ const _FinishedInventory: React.FC = () => {
             right={(
               <>
                 <Button icon={<DownloadOutlined />}>导出</Button>
+                <Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                   if (dataSource.length > 0) {
                     handleOutbound(dataSource[0]);
@@ -986,6 +989,13 @@ const _FinishedInventory: React.FC = () => {
             </Space>
           )}
         </StandardModal>
+
+        {/* 扫码批量出库弹窗 */}
+        <QrcodeOutboundModal
+          open={qrcodeOutboundOpen}
+          onClose={() => setQrcodeOutboundOpen(false)}
+          onSuccess={loadData}
+        />
     </Layout>
   );
 };

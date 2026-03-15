@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,6 +51,20 @@ public class FinishedInventoryController {
     @PostMapping("/outbound")
     public Result<Void> outbound(@RequestBody Map<String, Object> params) {
         finishedInventoryOrchestrator.outbound(params);
+        return Result.success(null);
+    }
+
+    /**
+     * QR码扫码批量出库：传入 items 列表（每项含 qrCode 和 quantity），自动剥离序号映射到 skuCode 后出库。
+     * 支持分批出库、可填写自定义数量。
+     *
+     * @param body 包含 items（[{qrCode: "款号-颜色-尺码-序号", quantity: 2}]）
+     */
+    @PostMapping("/qrcode-outbound")
+    public Result<Void> qrcodeOutbound(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+        finishedInventoryOrchestrator.qrcodeOutbound(items);
         return Result.success(null);
     }
 }

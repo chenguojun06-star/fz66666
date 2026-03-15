@@ -418,4 +418,46 @@ public class FinishedInventoryOrchestrator {
             }
         }
     }
+
+    /**
+     * QR码扫码出库：支持批量，每项传入 qrCode（格式 款号-颜色-尺码-序号）和 quantity。
+     * 自动剥离末尾序号，映射到 skuCode 后复用标准出库逻辑。
+     *
+     * @param items 列表，每项含 qrCode 和 quantity
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void qrcodeOutbound(List<Map<String, Object>> items) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("出库明细不能为空");
+        }
+        // 合并同一 skuCode 的数量（同一款式可能扫多个序号）
+        Map<String, Integer> skuQtyMap = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> item : items) {
+            String qrCode = (String) item.get("qrCode");
+            if (!StringUtils.hasText(qrCode)) {
+                throw new IllegalArgumentException("二维码内容不能为空");
+            }
+            int quantity = Integer.parseInt(item.getOrDefault("quantity", "1").toString());
+            if (quantity <= 0) {
+                throw new IllegalArgumentException("出库数量必须大于0: " + qrCode);
+            }
+            // 剥离末尾序号：款号-颜色-尺码-序号 → 款号-颜色-尺码
+            String[] parts = qrCode.split("-");
+            String skuCode = parts.length > 3
+                    ? String.join("-", java.util.Arrays.copyOf(parts, parts.length - 1))
+                    : qrCode;
+            skuQtyMap.merge(skuCode, quantity, Integer::sum);
+        }
+        // 构造 params 复用标准出库逻辑
+        List<Map<String, Object>> stdItems = new java.util.ArrayList<>();
+        for (Map.Entry<String, Integer> e : skuQtyMap.entrySet()) {
+            Map<String, Object> m = new java.util.HashMap<>();
+            m.put("sku", e.getKey());
+            m.put("quantity", e.getValue());
+            stdItems.add(m);
+        }
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("items", stdItems);
+        outbound(params);
+    }
 }
