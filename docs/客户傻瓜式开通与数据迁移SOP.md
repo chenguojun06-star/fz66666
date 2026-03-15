@@ -59,3 +59,60 @@
 - 做一个“上传 CSV 一键导入”后台页（客户经理用）。
 - 增加失败回滚机制（按批次回滚）。
 - 增加导入审计日志（谁在什么时候导了什么数据）。
+
+---
+
+## 附录：智能功能开通配置（2026-04-30 新增）
+
+> 本节面向**平台运营人员**，开通租户后可按需启用 AI/RAG 智能功能。
+
+### 最小配置（普通租户）
+
+普通租户开通**无需**配置任何 AI 环境变量。系统默认：
+- 知识库检索：MySQL 关键词召回（全量兜底，无需向量库）
+- AI 助手：如租户有使用需求，平台统一配置 `DEEPSEEK_API_KEY`
+- Reranker：默认关闭（`AI_COHERE_RERANK_ENABLED=false`）
+
+### 完整 AI 功能配置（高级租户 / 平台级开关）
+
+以下为 `cloudbaserc.json` 或微信云托管环境变量面板中的 AI 相关变量：
+
+| 变量名 | 默认值 | 说明 | 必需程度 |
+|--------|--------|------|----------|
+| `DEEPSEEK_API_KEY` | 空 | AI 对话/分析，DeepSeek Chat | ⭐ 推荐 |
+| `VOYAGE_API_KEY` | 空 | 语义向量嵌入（RAG 召回质量+40%） | 🟡 可选 |
+| `QDRANT_URL` | `http://localhost:6333` | Qdrant 向量库地址 | 🟡 可选 |
+| `QDRANT_API_KEY` | 空 | Qdrant Cloud 认证（自部署留空） | 🟡 可选 |
+| `AI_COHERE_RERANK_ENABLED` | `false` | 开启 Cohere Reranker 精排 | 🟡 可选 |
+| `COHERE_API_KEY` | 空 | Cohere 精排 API Key | 🟡 与上同步 |
+| `AI_OBSERVABILITY_ENABLED` | `false` | 开启 Langfuse 链路追踪 | ⚪ 可选 |
+| `LANGFUSE_PUBLIC_KEY` | 空 | Langfuse 公钥 | ⚪ 与上同步 |
+| `LANGFUSE_SECRET_KEY` | 空 | Langfuse 私钥 | ⚪ 与上同步 |
+
+### RAG 功能分级说明
+
+```
+Level 0（仅 MySQL）      → 关键词匹配，无向量库，开箱即用
+Level 1（+ Voyage + Qdrant）→ 语义召回，RAG 质量大幅提升
+Level 2（+ Cohere Rerank）  → 在 Level 1 基础上精排，Top5 精准度最高
+```
+
+启用 Level 2 需要：
+1. 配置 `VOYAGE_API_KEY`（向量嵌入）
+2. 配置 `QDRANT_URL` + `QDRANT_API_KEY`（向量库）
+3. 设置 `AI_COHERE_RERANK_ENABLED=true` + `COHERE_API_KEY`
+
+### 开通后功能验收（含 AI 功能）
+
+```bash
+# 验证 AI 知识库搜索
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://backend-226678-6-1405390085.sh.run.tcloudbase.com/api/intelligence/knowledge/search?q=FOB"
+# → 返回包含 "items" 数组，retrievalMode 字段值：
+#   "hybrid"（Level 0/1）或 "reranked"（Level 2）
+
+# 验证智能日报
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://backend-226678-6-1405390085.sh.run.tcloudbase.com/api/dashboard/daily-brief"
+# → 返回昨日入库/今日扫码/风险订单数据
+```

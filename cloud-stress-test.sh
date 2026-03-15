@@ -8,10 +8,14 @@
 # 配置项（根据实际环境修改）
 # ════════════════════════════════════════════════════
 
-# 后端服务地址（云端）
-BACKEND_URL="http://backend-670:8088"  # 或使用云端公网地址
+# 后端服务地址（云端公网地址，2026-04-30 更新）
+BACKEND_URL="${STRESS_BACKEND_URL:-https://backend-226678-6-1405390085.sh.run.tcloudbase.com}"
 
-# 测试目标接口（快速响应，便于压力测试）
+# JWT 认证 Token（可选，设为空则测试匿名端点）
+# 获取方式：登录系统后从 F12 Network 任意请求的 Authorization 头复制
+AUTH_TOKEN="${STRESS_AUTH_TOKEN:-}"
+
+# 测试目标接口（需要认证；无 TOKEN 时返回 401，仍可测 Auth 层吞吐）
 TEST_ENDPOINT="/api/production/notice/unread-count"
 
 # 测试参数
@@ -117,6 +121,7 @@ for vu in "${VU_SCENARIOS[@]}"; do
 
     ab -n "$requests" -c "$vu" \
        -g "$RESULT_DIR/result_${vu}vu.tsv" \
+       ${AUTH_TOKEN:+-H "Authorization: Bearer $AUTH_TOKEN"} \
        "$BACKEND_URL$TEST_ENDPOINT" > "$result_file" 2>&1
 
     # 解析结果

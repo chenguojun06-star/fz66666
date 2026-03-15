@@ -1,3 +1,18 @@
+## 2026-04-30（第三批）
+
+### docs: 租户开通SOP完善AI功能配置章节 + 压测脚本修复
+
+**修改文件**：`docs/客户傻瓜式开通与数据迁移SOP.md`、`cloud-stress-test.sh`
+
+#### 系统收益
+- SOP文档新增"附录：智能功能开通配置"章节，覆盖三级RAG配置（Level 0/1/2）及9个AI环境变量说明
+- 明确区分普通租户（开箱即用）与高级租户（Voyage+Qdrant+Cohere完整AI链路）开通步骤
+- 压测脚本修复内网URL残留问题（旧 `http://backend-670:8088` → 真实云端HTTPS地址）
+- 压测脚本新增 `AUTH_TOKEN` 可选参数，支持认证场景与公开端点两种模式的吞吐对比
+- 验证结果：`bash -n` 语法✅，`curl` 云端401正常响应189ms✅，`ab` 烟雾测试5req/0失败✅
+
+---
+
 ## 2026-04-30（第二批）
 
 ### feat(rag): KnowledgeSearchTool 接入 Cohere Reranker — RAG精排质量提升
