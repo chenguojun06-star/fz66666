@@ -101,54 +101,14 @@ type OrderFrozenSource = { status?: string; hasStockOut?: boolean };
 type DirectCuttingSource = {
   orderNo?: string;
   orderBizType?: string;
-  progressWorkflowJson?: unknown;
-  progressNodeUnitPrices?: unknown;
-};
-
-const PROCUREMENT_STAGE_REGEX = /采购|物料|备料|辅料|面料/i;
-
-const extractWorkflowNodes = (source?: DirectCuttingSource | null): Array<Record<string, unknown>> => {
-  if (!source) return [];
-
-  // ⚠️ 注意：不能用 progressNodeUnitPrices 来判断是否存在采购阶段。
-  // progressNodeUnitPrices 存储的是工序工资单价（裁剪/车缝/尾部等），
-  // 普通订单里绝不会包含"采购"关键词，会导致所有已设置单价的订单被误判为"无采购"。
-  // 采购阶段检测只能依赖 progressWorkflowJson（工作流节点配置）。
-  const rawWorkflow = (source as any)?.progressWorkflowJson;
-  if (!rawWorkflow) return [];
-
-  let parsed: unknown = rawWorkflow;
-  if (typeof rawWorkflow === 'string') {
-    const text = rawWorkflow.trim();
-    if (!text) return [];
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return [];
-    }
-  }
-
-  if (parsed && typeof parsed === 'object') {
-    const nodes = (parsed as any)?.nodes ?? (parsed as any)?.stages ?? (parsed as any)?.progressNodes;
-    if (Array.isArray(nodes)) {
-      return nodes.filter((node) => node && typeof node === 'object') as Array<Record<string, unknown>>;
-    }
-  }
-
-  return [];
 };
 
 export const hasProcurementStage = (source?: DirectCuttingSource | null): boolean => {
   if (!source) return true;
 
-  const nodes = extractWorkflowNodes(source);
-  if (nodes.length > 0) {
-    return nodes.some((node) => {
-      const name = String(node?.name ?? node?.processName ?? node?.progressStage ?? '').trim();
-      return PROCUREMENT_STAGE_REGEX.test(name);
-    });
-  }
-
+  // "无采购"只取决于订单类型和订单号前缀，不依赖工作流节点内容。
+  // progressWorkflowJson 里的节点是裁剪/车缝/尾部等生产工序，不代表采购阶段是否存在，
+  // 用节点名称匹配会对所有配置了工作流的普通订单造成误判。
   const bizType = String((source as any)?.orderBizType || '').trim().toUpperCase();
   if (bizType === 'CUTTING_DIRECT') return false;
 
