@@ -294,6 +294,19 @@ ai:
     endpoint: ${AI_OBSERVABILITY_ENDPOINT:}
     capture-prompts: ${AI_OBSERVABILITY_CAPTURE_PROMPTS:false}
     sample-rate: ${AI_OBSERVABILITY_SAMPLE_RATE:100}
+  langfuse:
+    public-key: ${LANGFUSE_PUBLIC_KEY:}          # Langfuse Project Public Key
+    secret-key: ${LANGFUSE_SECRET_KEY:}          # Langfuse Project Secret Key
+    # 推送端点复用 ai.observability.endpoint（如 https://cloud.langfuse.com）
+
+# Qdrant 向量库配置（QdrantService @Value 读取）
+intelligence:
+  qdrant:
+    url: ${QDRANT_URL:http://localhost:6333}
+    collection: ${QDRANT_COLLECTION:fashion_memory}
+    vector-size: ${QDRANT_VECTOR_SIZE:1024}
+    api-key: ${QDRANT_API_KEY:}                  # Qdrant Cloud 需要；本地部署留空
+    timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:

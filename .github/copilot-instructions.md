@@ -2396,11 +2396,11 @@ commit: 6260b04d
 
 ---
 
-### 编排器分布统计（2026-03-31 更新）
+### 编排器分布统计（2026-04-28 更新）
 
 | 模块 | 编排器数 | 代表成员 |
 |------|---------|---------|
-| intelligence（智能驾驶舱） | 60+ | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator等 |
+| intelligence（智能驾驶舱） | 63 | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator、**LiteLLMAdminOrchestrator**、**QdrantAdminOrchestrator**、**LangfuseTraceOrchestrator**等 |
 | production（生产管理） | 23 | ProductionOrderOrchestrator、ScanRecordOrchestrator、PayrollSettlementOrchestrator等 |
 | system（系统配置） | 15 | UserOrchestrator、PermissionOrchestrator、SysNoticeOrchestrator等 |
 | finance（财务结算） | 17 | FinancialSettlementOrchestrator、ReconciliationOrchestrator等 |
@@ -2410,7 +2410,7 @@ commit: 6260b04d
 | crm（客户管理） | 3 | CustomerOrchestrator、FollowupTaskOrchestrator等 |
 | procurement（采购管理） | 2 | ProcurementOrchestrator、SupplierOrchestrator |
 | 其他模块 | 22 | integration、wechat、search、datacenter、template等 |
-| **总计** | **152** | — |
+| **总计** | **155** | — |
 
 ---
 
@@ -2463,6 +2463,88 @@ commit: 6260b04d
 
 commit: 45d12264
 ```
+
+---
+
+### 2026-04-28 变更批次（feat: 三大开源工具独立编排器接入 — LiteLLM / Qdrant / Langfuse）
+
+#### 变更 #I ｜ ✨ 新增 — LiteLLMAdminOrchestrator（LiteLLM 网关管理编排器）
+
+```
+文件：intelligence/orchestration/LiteLLMAdminOrchestrator.java（新建，~110行）
+
+- ping() — 对 LiteLLM 实例发起 GET /health 真实 HTTP 健康探活，返回 boolean
+- listModels() — 调用 GET /v1/models 获取已注册可用模型 ID 列表
+- summary() — 综合汇总 alive/activeModel/modelCount/models/fallbackEnabled/status
+
+分工说明：
+  IntelligenceModelGatewayOrchestrator 只读 Spring 配置状态（enabled/baseUrl/modelName）
+  LiteLLMAdminOrchestrator 负责真实网络通信，做管理面探活
+
+依赖：IntelligenceModelGatewayOrchestrator + RestTemplate
+```
+
+#### 变更 #II ｜ ✨ 新增 — QdrantAdminOrchestrator（Qdrant 向量库管理编排器）
+
+```
+文件：intelligence/orchestration/QdrantAdminOrchestrator.java（新建，~115行）
+
+- @PostConstruct ensureCollectionReady() — Spring 启动后自愈：集合不存在自动创建，
+  Qdrant 离线时 catch 静默跳过，不阻塞 Spring 启动
+- isHealthy() — 代理 QdrantService.isAvailable()（GET /healthz）
+- summary() — 向量库统计：available/url/collection/vectorCount/status
+- clearTenantVectors(tenantId) — 租户向量清理（租户注销/冷数据清理场景）
+
+依赖：QdrantService + @Value intelligence.qdrant.*
+```
+
+#### 变更 #III ｜ ✨ 新增 — LangfuseTraceOrchestrator（Langfuse Trace 推送编排器）
+
+```
+文件：intelligence/orchestration/LangfuseTraceOrchestrator.java（新建，~155行）
+
+- @Async pushTrace(scene, tenantId, userId, result) — 异步推送 trace 到 Langfuse
+  Ingestion API v1（POST /api/public/ingestion，Basic Auth，不阻塞业务主链路）
+- @Async submitScore(traceId, scoreName, value) — 提交采纳/拒绝评分（RLHF 数据采集）
+- isConfigured() — 检查 provider=langfuse && publicKey && secretKey && endpoint 均配置
+
+分工说明：
+  IntelligenceObservabilityOrchestrator 写本地 DB 度量（t_intelligence_metrics）
+  LangfuseTraceOrchestrator 推外部 Langfuse 可观测平台，两者独立不耦合
+
+依赖：IntelligenceObservabilityOrchestrator + @Value ai.langfuse.*/ai.observability.*
+```
+
+#### 变更 #IV ｜ 🔧 增强 — QdrantService 新增公开管理方法
+
+```
+文件：intelligence/service/QdrantService.java（修改，+3 个 public 方法）
+
+- ensureCollection() — public 集合初始化包装器（原 ensureCollectionExists() 为 private）
+- countVectors() — GET /collections/{name} 获取向量总数，失败返回 -1
+- deleteVectorsByTenant(tenantId) — Qdrant payload filter 批量删除租户所有向量
+```
+
+#### 变更 #V ｜ ⚙️ 配置 — application.yml 新增 Langfuse + Qdrant 配置段
+
+新增内容（在 ai.observability 块之后、serpapi 之前）：
+```yaml
+  langfuse:
+    public-key: ${LANGFUSE_PUBLIC_KEY:}
+    secret-key: ${LANGFUSE_SECRET_KEY:}
+    # endpoint 复用 ai.observability.endpoint
+
+intelligence:
+  qdrant:
+    url: ${QDRANT_URL:http://localhost:6333}
+    collection: ${QDRANT_COLLECTION:fashion_memory}
+    vector-size: ${QDRANT_VECTOR_SIZE:1024}
+    api-key: ${QDRANT_API_KEY:}
+    timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
+```
+
+编译验证：mvn clean compile → [INFO] BUILD SUCCESS ✅
+全部新增文件均在 intelligence/orchestration/ 包，遵循独立编排器架构原则。
 
 ---
 

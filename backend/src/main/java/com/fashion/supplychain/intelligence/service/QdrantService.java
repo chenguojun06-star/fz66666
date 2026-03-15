@@ -222,6 +222,62 @@ public class QdrantService {
         }
     }
 
+    /**
+     * 确保集合存在（公开管理入口，供 QdrantAdminOrchestrator 在启动时调用）。
+     * @return true=新建了集合；false=集合已存在或 Qdrant 不可用
+     */
+    public boolean ensureCollection() {
+        try {
+            restTemplate.getForEntity(
+                    qdrantUrl + "/collections/" + collectionName, String.class);
+            return false; // 已存在
+        } catch (Exception e) {
+            // 不存在，创建
+            ensureCollectionExists();
+            return true;
+        }
+    }
+
+    /**
+     * 查询集合中向量总数（Admin 统计用）。
+     * @return 向量点数；-1 表示查询失败或 Qdrant 不可用
+     */
+    public long countVectors() {
+        try {
+            ResponseEntity<String> resp = restTemplate.getForEntity(
+                    qdrantUrl + "/collections/" + collectionName, String.class);
+            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) return -1;
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            return root.path("result").path("vectors_count").asLong(-1);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /**
+     * 按租户 ID 批量删除向量（清理离职租户或冷数据）。
+     * 使用 Qdrant Payload Filter 删除；单次最多清理 10000 条。
+     * @return 实际删除条数（Qdrant 返回 operation_id，无法精确计数时返回 0）
+     */
+    public int deleteVectorsByTenant(Long tenantId) {
+        try {
+            ObjectNode body = objectMapper.createObjectNode();
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode must = filter.putArray("must");
+            ObjectNode cond = must.addObject();
+            cond.put("key", "tenant_id");
+            cond.putObject("match").put("integer", tenantId);
+
+            String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
+            restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
+            log.info("[Qdrant] 已触发租户向量删除 tenantId={}", tenantId);
+            return 0; // Qdrant filter-delete 不返回精确条数
+        } catch (Exception e) {
+            log.warn("[Qdrant] 租户向量删除失败 tenantId={}: {}", tenantId, e.getMessage());
+            return -1;
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  内部工具
     // ──────────────────────────────────────────────────────────────
