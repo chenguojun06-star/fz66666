@@ -74,6 +74,10 @@ public class PayrollAggregationOrchestrator {
             qw.le("scan_time", endTime);
         }
 
+        // ★ 关键：只统计成功的扫码记录，排除失败/取消记录，否则会导致工资页金额高于实际
+        qw.eq("scan_result", "success");
+        qw.gt("quantity", 0);
+
         // 工资统计只包含生产和裁剪类型的扫码记录
         // 排除：procurement(采购)、quality(质检领取/验收/入库)、warehouse(仓储)等系统流程记录
         qw.in("scan_type", "production", "cutting");
@@ -147,18 +151,21 @@ public class PayrollAggregationOrchestrator {
                 .mapToLong(r -> r.getQuantity() != null ? r.getQuantity() : 0)
                 .sum();
 
-        // 优先使用 scanCost，如果为空则使用 quantity * unitPrice 计算
-        // 只统计有单价的记录到工资总额（与小程序端一致）
+        // 金额优先级：total_amount → scanCost → unitPrice × quantity
+        // 与 selectPersonalStats SQL 保持一致：COALESCE(NULLIF(total_amount,0), NULLIF(scan_cost,0), unit_price*quantity, 0)
         BigDecimal totalAmount = records.stream()
                 .map(r -> {
-                    // 优先使用scanCost
+                    // 优先使用 totalAmount（已写入DB的最终金额）
+                    if (r.getTotalAmount() != null && r.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        return r.getTotalAmount();
+                    }
+                    // 其次使用 scanCost（工序单价×数量）
                     if (r.getScanCost() != null && r.getScanCost().compareTo(BigDecimal.ZERO) > 0) {
                         return r.getScanCost();
                     }
-                    // 如果 scanCost 为空，使用 quantity * unitPrice 计算
+                    // 兜底：unitPrice × quantity
                     BigDecimal price = r.getUnitPrice() != null ? r.getUnitPrice() : BigDecimal.ZERO;
                     long qty = r.getQuantity() != null ? r.getQuantity() : 0;
-                    // 只有单价>0且数量>0才计入工资
                     if (price.compareTo(BigDecimal.ZERO) > 0 && qty > 0) {
                         return price.multiply(BigDecimal.valueOf(qty));
                     }
