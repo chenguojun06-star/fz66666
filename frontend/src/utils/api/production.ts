@@ -110,11 +110,10 @@ const PROCUREMENT_STAGE_REGEX = /采购|物料|备料|辅料|面料/i;
 const extractWorkflowNodes = (source?: DirectCuttingSource | null): Array<Record<string, unknown>> => {
   if (!source) return [];
 
-  const fromUnitPrices = (source as any)?.progressNodeUnitPrices;
-  if (Array.isArray(fromUnitPrices) && fromUnitPrices.length > 0) {
-    return fromUnitPrices.filter((node) => node && typeof node === 'object') as Array<Record<string, unknown>>;
-  }
-
+  // ⚠️ 注意：不能用 progressNodeUnitPrices 来判断是否存在采购阶段。
+  // progressNodeUnitPrices 存储的是工序工资单价（裁剪/车缝/尾部等），
+  // 普通订单里绝不会包含"采购"关键词，会导致所有已设置单价的订单被误判为"无采购"。
+  // 采购阶段检测只能依赖 progressWorkflowJson（工作流节点配置）。
   const rawWorkflow = (source as any)?.progressWorkflowJson;
   if (!rawWorkflow) return [];
 
