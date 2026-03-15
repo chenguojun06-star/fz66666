@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Select, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Col, Form, Image, Input, InputNumber, Popover, Row, Select, Space, Tag, Tooltip, Upload } from 'antd';
+import { CameraOutlined, PaperClipOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -32,6 +32,8 @@ interface SecondaryProcess {
   status?: string;
   createdAt?: string;
   remark?: string;
+  images?: string;
+  attachments?: string;
 }
 
 interface Props {
@@ -45,6 +47,134 @@ interface Props {
   onRefresh?: () => void; // 刷新父组件的回调
   simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮
 }
+
+/** 工艺图片上传/预览单元格（行内操作，避免频繁开弹窗） */
+const ProcessImageCell: React.FC<{ record: SecondaryProcess; readOnly?: boolean }> = ({ record, readOnly }) => {
+  const { message: msg } = App.useApp();
+  const [imgs, setImgs] = React.useState<string[]>(() => {
+    try { return JSON.parse(record.images || '[]') || []; } catch { return []; }
+  });
+  const [uploading, setUploading] = React.useState(false);
+
+  React.useEffect(() => {
+    try { setImgs(JSON.parse(record.images || '[]') || []); } catch { setImgs([]); }
+  }, [record.images]);
+
+  const handleUpload = async (file: File) => {
+    if (!record.id) { msg.warning('请先保存记录再上传图片'); return false; }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      if (res.code === 200 && res.data) {
+        const newImgs = [...imgs, res.data];
+        await api.put(`/style/secondary-process/${record.id}`, { images: JSON.stringify(newImgs) });
+        setImgs(newImgs);
+        msg.success('图片上传成功');
+      } else {
+        msg.error(res.message || '上传失败');
+      }
+    } catch { msg.error('上传失败，请重试'); }
+    finally { setUploading(false); }
+    return false;
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
+      onClick={(e) => e.stopPropagation()}>
+      {imgs.length > 0 && (
+        <Image.PreviewGroup>
+          {imgs.slice(0, 2).map((url, i) => (
+            <Image key={i} src={url} width={28} height={28}
+              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+              wrapperStyle={{ display: 'inline-block', flexShrink: 0 }}
+            />
+          ))}
+        </Image.PreviewGroup>
+      )}
+      {imgs.length > 2 && <span style={{ fontSize: 10, color: '#999' }}>+{imgs.length - 2}</span>}
+      {!readOnly && record.id && (
+        <Upload showUploadList={false} accept="image/*"
+          beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
+          disabled={uploading}>
+          <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
+            <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }} />
+          </Tooltip>
+        </Upload>
+      )}
+    </div>
+  );
+};
+
+interface AttachmentFile { name: string; url: string; }
+
+/** 工艺附件上传/查看单元格 */
+const ProcessAttachmentCell: React.FC<{ record: SecondaryProcess; readOnly?: boolean }> = ({ record, readOnly }) => {
+  const { message: msg } = App.useApp();
+  const [files, setFiles] = React.useState<AttachmentFile[]>(() => {
+    try { return JSON.parse(record.attachments || '[]') || []; } catch { return []; }
+  });
+  const [uploading, setUploading] = React.useState(false);
+
+  React.useEffect(() => {
+    try { setFiles(JSON.parse(record.attachments || '[]') || []); } catch { setFiles([]); }
+  }, [record.attachments]);
+
+  const handleUpload = async (file: File) => {
+    if (!record.id) { msg.warning('请先保存记录再上传附件'); return false; }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      if (res.code === 200 && res.data) {
+        const newFiles = [...files, { name: file.name, url: res.data }];
+        await api.put(`/style/secondary-process/${record.id}`, { attachments: JSON.stringify(newFiles) });
+        setFiles(newFiles);
+        msg.success('附件上传成功');
+      } else {
+        msg.error(res.message || '上传失败');
+      }
+    } catch { msg.error('上传失败，请重试'); }
+    finally { setUploading(false); }
+    return false;
+  };
+
+  const popoverContent = (
+    <div style={{ minWidth: 180, maxWidth: 300 }}>
+      {files.length === 0 && <div style={{ color: '#999', fontSize: 12, padding: '4px 0' }}>暂无附件</div>}
+      {files.map((f, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+          <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
+          <a href={f.url} target="_blank" rel="noreferrer"
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>
+            {f.name}
+          </a>
+        </div>
+      ))}
+      {!readOnly && record.id && (
+        <Upload showUploadList={false}
+          beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
+          disabled={uploading}>
+          <Button size="small" icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+            上传附件
+          </Button>
+        </Upload>
+      )}
+    </div>
+  );
+
+  return (
+    <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
+      <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
+        onClick={(e) => e.stopPropagation()}>
+        <PaperClipOutlined style={{ fontSize: 14, color: files.length > 0 ? '#1677ff' : '#bbb' }} />
+        {files.length > 0 && <span style={{ fontSize: 12, color: '#1677ff' }}>{files.length}</span>}
+      </div>
+    </Popover>
+  );
+};
 
 const StyleSecondaryProcessTab: React.FC<Props> = ({
   styleId,
@@ -203,6 +333,15 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   // 表格列定义
   const columns: ColumnsType<SecondaryProcess> = [
     {
+      title: '图片',
+      key: 'images',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, record: SecondaryProcess) => (
+        <ProcessImageCell record={record} readOnly={readOnly} />
+      )
+    },
+    {
       title: '工艺类型',
       dataIndex: 'processType',
       key: 'processType',
@@ -269,6 +408,15 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           <Tag color={option.color}>{option.label}</Tag>
         ) : <Tag>{value || '-'}</Tag>;
       }
+    },
+    {
+      title: '附件',
+      key: 'attachments',
+      width: 80,
+      align: 'center' as const,
+      render: (_: any, record: SecondaryProcess) => (
+        <ProcessAttachmentCell record={record} readOnly={readOnly} />
+      )
     },
     {
       title: '创建时间',
@@ -365,7 +513,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
         rowKey="id"
         loading={loading}
         pagination={false}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1200 }}
         size="middle"
       />
 

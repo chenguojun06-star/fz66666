@@ -95,6 +95,18 @@ public class SecondaryProcess {
     private String remark;
 
     /**
+     * 工艺图片URL列表（JSON数组，存储腾讯云COS URL）
+     */
+    @TableField("images")
+    private String images;
+
+    /**
+     * 工艺附件列表（JSON数组，格式：[{"name":"xx.pdf","url":"https://..."}]）
+     */
+    @TableField("attachments")
+    private String attachments;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
