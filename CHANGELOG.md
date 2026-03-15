@@ -1,3 +1,33 @@
+## 2026-05-01
+
+### fix(redis): RedisService.deleteByPattern 改用 SCAN 兼容腾讯云 managed Redis + 超管权限缓存清理 API
+
+**修改文件**：`backend/.../service/RedisService.java`、`backend/.../system/controller/TenantController.java`
+
+#### 问题根因
+`RedisService.deleteByPattern()` 使用 `redisTemplate.keys(pattern)`，底层映射到 Redis `KEYS` 命令。腾讯云 managed Redis（`my-redis-003`）出于性能保护默认**禁用 KEYS 命令**，导致该方法静默返回 0——  
+所有依赖此方法的启动自愈清理（`DbColumnRepairRunner` + `PermissionCalculationEngine @PostConstruct`）在云端**从未真正执行**，旧格式 `role:perms:*` 缓存键持续积压，每次登录都多走一次 DB 查询。
+
+#### 修复内容
+1. **`RedisService.deleteByPattern`**：`KEYS` 命令改为 SCAN cursor（`RedisCallback<Long>`），批量 500 条删除，兼容所有 Redis 实例（含 managed Redis）。  
+2. **新增 `POST /api/system/tenant/admin/clear-permission-cache`**（需 `ROLE_SUPER_ADMIN`）：  
+   一键清理 `role:perms:*` / `user:perms:*` / `tenant:ceiling:*` 三类权限缓存键，返回各类型删除数量与 total，解决云端无 Redis CLI 无法手动清理的困境。  
+3. **`TenantController`** 补全 `@Slf4j` 注解。
+
+#### 对系统的改进
+- 云端下次部署后，`@PostConstruct clearLegacyPermissionCache` 与 `DbColumnRepairRunner` 启动自愈清理终于真实生效
+- 后续超管可通过 API 随时触发权限缓存全量刷新，无需 Redis CLI 权限
+- Redis 写压力下降：积压的旧格式缓存被清除后，命中率提升，RDB bgsave 频率将降低
+
+#### 调用示例（部署后执行一次）
+```bash
+curl -X POST https://backend-226678-6-1405390085.sh.run.tcloudbase.com/api/system/tenant/admin/clear-permission-cache \
+  -H "Authorization: Bearer <super-admin-token>"
+# 预期返回：{"code":200,"data":{"rolePermKeys":N,"userPermKeys":N,"tenantCeilingKeys":N,"total":N}}
+```
+
+---
+
 ## 2026-03-16
 
 ### fix(dashboard): 仪表盘日报与紧急事件避免被订单表无关缺列拖垮
