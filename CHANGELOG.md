@@ -1,4 +1,25 @@
-## 2026-04-30
+## 2026-04-30（第二批）
+
+### feat(rag): KnowledgeSearchTool 接入 Cohere Reranker — RAG精排质量提升
+
+**新增文件**：`backend/.../intelligence/service/CohereRerankService.java`
+**修改文件**：`KnowledgeSearchTool.java`、`application.yml`
+
+#### 系统收益
+- 原有 RAG 管道：Qdrant语义召回 + MySQL关键词召回 → 混合评分 → Top5
+- 升级后管道：同上 → **Cohere Reranker精排（候选扩大至15条）** → Top5
+- 混合评分公式（`semantic×0.55 + keyword×0.40 + 热度×0.05`）保留为初排依据
+- Cohere不可用时自动降级（`@Autowired(required = false)`），不影响已有功能
+
+#### 技术实现
+- `CohereRerankService`：调用 `POST https://api.cohere.com/v2/rerank`，超时 8秒，失败降级
+- `KnowledgeSearchTool` STEP 4.5：Cohere可用时候选池 5→15，精排后截取Top5
+- 响应新增 `"retrievalMode":"reranked"` 字段，供日志观测区分
+- 配置开关：`AI_COHERE_RERANK_ENABLED=true` + `COHERE_API_KEY` 即可启用，零代码改动
+
+---
+
+## 2026-04-30（第一批）
 
 ### feat(knowledge-base): 知识库扩充 32条 → 50条（补充洗水唛/报废/出口合规/智能功能/外贸术语）
 

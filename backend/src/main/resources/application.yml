@@ -298,6 +298,12 @@ ai:
     public-key: ${LANGFUSE_PUBLIC_KEY:}          # Langfuse Project Public Key
     secret-key: ${LANGFUSE_SECRET_KEY:}          # Langfuse Project Secret Key
     # 推送端点复用 ai.observability.endpoint（如 https://cloud.langfuse.com）
+  cohere:
+    rerank:
+      enabled: ${AI_COHERE_RERANK_ENABLED:false}   # 设为 true 并设置 COHERE_API_KEY 开启 RAG 精排
+      api-key: ${COHERE_API_KEY:}                   # Cohere API Key（https://cohere.com）
+      model: ${AI_COHERE_RERANK_MODEL:rerank-v3.5}  # rerank-v3.5（多语言，推荐）/ rerank-multilingual-v3.0
+      top-n: ${AI_COHERE_RERANK_TOP_N:5}            # 精排后返回条数（候选池 15 → 精排后 top-n）
 
 # Qdrant 向量库配置（QdrantService @Value 读取）
 intelligence:

@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.service.KnowledgeBaseService;
+import com.fashion.supplychain.intelligence.service.CohereRerankService;
 import com.fashion.supplychain.intelligence.service.QdrantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,10 @@ public class KnowledgeSearchTool implements AgentTool {
     /** 向量检索引擎 — Qdrant不可用时自动降级为纯SQL检索 */
     @Autowired(required = false)
     private QdrantService qdrantService;
+
+    /** Cohere Reranker 精排服务 — 未配置时自动降级为混合评分排序 */
+    @Autowired(required = false)
+    private CohereRerankService cohereRerankService;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -135,14 +140,32 @@ public class KnowledgeSearchTool implements AgentTool {
                         candidateMap.putIfAbsent(kb.getId(), kb);
                         }
 
-                        List<KnowledgeHit> rankedHits = candidateMap.values().stream()
+                        // 有 Reranker 时扩大初排候选数（15条 → 精排后取5），无则直接 limit 5
+                        int candidateLimit = (cohereRerankService != null && cohereRerankService.isAvailable()) ? 15 : 5;
+                        List<KnowledgeHit> candidateHits = candidateMap.values().stream()
                             .map(kb -> buildKnowledgeHit(kb, query, category, semanticScoreMap.containsKey(kb.getId())
                                 ? semanticScoreMap.get(kb.getId()) : 0f))
                             .sorted(Comparator.comparing(KnowledgeHit::getHybridScore).reversed()
                                 .thenComparing(KnowledgeHit::getKeywordScore).reversed()
                                 .thenComparing(KnowledgeHit::getSemanticScore).reversed())
-                            .limit(5)
+                            .limit(candidateLimit)
                             .collect(Collectors.toList());
+
+                        // ── STEP 4.5: Cohere Reranker 精排（可选，不可用时自动降级）──
+                        List<KnowledgeHit> rankedHits;
+                        if (cohereRerankService != null && cohereRerankService.isAvailable()) {
+                            List<KnowledgeBase> candidateKbs = candidateHits.stream()
+                                    .map(KnowledgeHit::getKnowledgeBase).collect(Collectors.toList());
+                            List<KnowledgeBase> rerankedKbs = cohereRerankService.rerank(query, candidateKbs, 5);
+                            Map<String, KnowledgeHit> hitMap = candidateHits.stream()
+                                    .collect(Collectors.toMap(h -> h.getKnowledgeBase().getId(), h -> h));
+                            rankedHits = rerankedKbs.stream()
+                                    .map(kb -> hitMap.get(kb.getId()))
+                                    .filter(Objects::nonNull)
+                                    .collect(Collectors.toList());
+                        } else {
+                            rankedHits = candidateHits;
+                        }
 
                         List<KnowledgeBase> finalList = rankedHits.stream()
                             .map(KnowledgeHit::getKnowledgeBase)
@@ -197,7 +220,7 @@ public class KnowledgeSearchTool implements AgentTool {
             result.put("count", finalList.size());
             result.put("items", formatted);
             result.put("semantic", !semanticKbList.isEmpty());
-            result.put("retrievalMode", "hybrid");
+            result.put("retrievalMode", cohereRerankService != null && cohereRerankService.isAvailable() ? "reranked" : "hybrid");
             result.put("semanticHits", semanticKbList.size());
             result.put("keywordHits", sqlResults.size());
             return objectMapper.writeValueAsString(result);
