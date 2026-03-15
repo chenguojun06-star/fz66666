@@ -92,26 +92,30 @@ describe('stageNameMatches — 有动态映射（尾部子工序）', () => {
   });
 });
 
-// ─── 有动态映射（跨父节点完全隔离）─────────────────────────────────
-describe('stageNameMatches — 有动态映射（跨父节点完全隔离）', () => {
+// ─── 有动态映射（二次工艺子工序）────────────────────────────────────
+// 节点结构：二次工艺（父）→ 绣花、印花（子）；尾部（父）→ 剪线、整烫（子）
+describe('stageNameMatches — 有动态映射（二次工艺子工序）', () => {
   beforeEach(() => {
     setDynamicParentMapping({
-      // 尾部的子工序
       '剪线': '尾部',
       '整烫': '尾部',
-      // 绣花是顶级父节点，无需在映射里（或映射到自身）
+      '绣花': '二次工艺',
+      '印花': '二次工艺',
     });
   });
 
-  it('不同父节点下的工序不匹配（剪线 vs 绣花）→ false', () => {
+  it('【核心】不同父节点下的工序不匹配（剪线 vs 绣花）→ false', () => {
+    // 剪线属尾部，绣花属二次工艺，跨父不匹配
     expect(stageNameMatches('绣花', '剪线')).toBe(false);
   });
 
-  it('尾部子工序不匹配绣花父节点 → false', () => {
-    expect(stageNameMatches('绣花', '整烫')).toBe(false);
+  it('绣花不能匹配印花（同父兄弟）→ false', () => {
+    // 同属二次工艺，但兄弟之间不匹配
+    expect(stageNameMatches('绣花', '印花')).toBe(false);
   });
 
-  it('绣花节点匹配绣花扫码记录 → true', () => {
-    expect(stageNameMatches('绣花', '绣花')).toBe(true);
+  it('二次工艺父节点匹配绣花 → true', () => {
+    // 父节点可聚合其下所有子工序扫码
+    expect(stageNameMatches('二次工艺', '绣花')).toBe(true);
   });
 });
