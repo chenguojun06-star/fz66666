@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -57,6 +59,24 @@ public class PermissionCalculationEngine {
 
     @Autowired
     private RedisService redisService;
+
+    /**
+     * 启动时清理旧格式权限缓存，防止序列化版本升级后反复出现 WARN
+     * 触发场景：新容器替换旧容器时，旧 Redis key 格式不兼容新序列化配置
+     * 清理后首次访问自动以新格式重建，零 WARN 运行
+     */
+    @PostConstruct
+    public void clearLegacyPermissionCache() {
+        try {
+            long role = redisService.deleteByPattern(ROLE_PERM_CACHE_PREFIX + "*");
+            long user = redisService.deleteByPattern(USER_PERM_CACHE_PREFIX + "*");
+            long ceiling = redisService.deleteByPattern(TENANT_CEILING_CACHE_PREFIX + "*");
+            log.info("[PermissionCache] 启动清理完成：role={}, user={}, ceiling={} — 旧格式缓存已删除，将按新格式重建",
+                    role, user, ceiling);
+        } catch (Exception e) {
+            log.warn("[PermissionCache] 启动清理失败，影响不大，首次访问时自愈: {}", e.getMessage());
+        }
+    }
 
     /**
      * 计算用户最终权限代码列表

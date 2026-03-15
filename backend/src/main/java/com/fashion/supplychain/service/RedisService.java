@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,6 +77,26 @@ public class RedisService {
             redisTemplate.delete(keys);
         } catch (Exception e) {
             log.error("Redis batch delete error", e);
+        }
+    }
+
+    /**
+     * 按 pattern 批量删除缓存（用于启动时清理旧格式缓存）
+     * 示例: deleteByPattern("role:perms:*")
+     * 注意: keys() 是阻塞操作，仅在启动阶段调用
+     */
+    public long deleteByPattern(String pattern) {
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, keys.size());
+                return keys.size();
+            }
+            return 0;
+        } catch (Exception e) {
+            log.warn("Redis deleteByPattern failed, pattern={}, err={}", pattern, e.getMessage());
+            return 0;
         }
     }
 
