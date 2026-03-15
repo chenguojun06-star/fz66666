@@ -415,8 +415,27 @@ async function loadMyHistory(page, refresh = false) {
     });
 
     // 异步丰富订单数据（交期、件数）
+    // 注意：不能用闭包里的 groupedHistory 直接覆盖 my.groupedHistory，
+    // 因为 enrichGroups 是异步的，完成时 my.groupedHistory 可能已被更新的
+    // loadMyHistory(true) 调用替换（扫码后连续两次刷新的竞态条件）。
+    // 修复：按 groupId 合并回当前列表，只更新交期等丰富字段，不替换整列表。
     enrichGroupsWithOrderData(groupedHistory).then(() => {
-      page.setData({ 'my.groupedHistory': groupedHistory });
+      const enrichedById = {};
+      groupedHistory.forEach(function(g) { enrichedById[g.id] = g; });
+      const current = page.data.my.groupedHistory;
+      if (!current || current.length === 0) return;
+      const merged = current.map(function(g) {
+        const enriched = enrichedById[g.id];
+        if (!enriched) return g;
+        return Object.assign({}, g, {
+          deliveryDateStr: enriched.deliveryDateStr || g.deliveryDateStr || '',
+          remainDaysText:  enriched.remainDaysText  || g.remainDaysText  || '',
+          remainDaysClass: enriched.remainDaysClass || g.remainDaysClass || '',
+          orderQuantity:   enriched.orderQuantity   != null ? enriched.orderQuantity   : g.orderQuantity,
+          completedQuantity: enriched.completedQuantity != null ? enriched.completedQuantity : g.completedQuantity,
+        });
+      });
+      page.setData({ 'my.groupedHistory': merged });
     });
 
     if (DEBUG_MODE) {
