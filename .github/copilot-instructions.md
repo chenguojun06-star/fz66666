@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（155个编排器）| **规模**：251.7k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-04-28 | **AI指令版本**：v3.18（ISO 3758 洗护图标打印 + 报废链路稳定性修复 + DbColumnRepairRunner）
+> **最后更新**：2026-04-30 | **AI指令版本**：v3.19（知识库确认50条 + Cohere Reranker精排接入 + SOP智能功能附录 + 压测脚本云端修复）
 
 ---
 
@@ -314,10 +314,11 @@ backend/src/main/java/com/fashion/supplychain/
 >   - `SysNoticeOrchestrator` 补全催单消息推送到手机端，支持内联回复（出货日期+备注）
 >   - 小程序新增 `pages/work/ai-assistant`：聊天页面按工人能力提问（今日产量/本周工资/订单进度）
 > - **知识库+AI Agent三大Skill（2026-03-31 新增）**：
->   - 知识库：13条 → **35条**，涵盖所有8大模块SOP+常见问题+新员工入职路径（后续扩充至 **50条**，补充洗水唛/出口合规/报废流程/智能功能使用/外贸术语）
->   - `KnowledgeSearchTool`：RAG查询知识库、行业术语、操作指南
+>   - 知识库：13条 → **35条** → **50条**（✅ 已扩充完成，含洗水唛/出口合规/报废流程/智能功能使用/外贸术语/Care Label/ISO 3758）
+>   - `KnowledgeSearchTool`：RAG查询知识库、行业术语、操作指南；**STEP 4.5 Cohere Reranker精排**：候选池由5条扩至15条，精排后截取 Top5，`retrievalMode` 返回 `"reranked"` / `"hybrid"`
 >   - `BomCostCalculator`：AI计算任意款式BOM成本（物料+工序+汇率）
 >   - `QuickOrderBuilder`：AI智能建单（一句话建订单 → 提取款号、颜色、尺码、数量）
+>   - **`CohereRerankService`**（2026-04-30 新增）：`backend/.../intelligence/service/` 独立精排服务，调用 `POST https://api.cohere.com/v2/rerank`，8秒超时，Cohere 不可用时自动降级透明回退。配置：`AI_COHERE_RERANK_ENABLED=true` + `COHERE_API_KEY`
 > - **编排器总数升级**：134 → 152 个（+18新增编排器分布在intelligence/production/system模块）
 > - **腾讯云 COS 文件存储**：`common/CosService.java` — 统一处理文件上传/下载，替代本地文件系统。调用 `cosService.uploadFile(file)` 返回访问 URL
 > - **Excel 批量导入**：`ExcelImportOrchestrator` + `ExcelImportController` — 支持生产订单、工序等数据的 Excel 批量导入，前端对应 `modules/basic/pages/DataImport/`
@@ -2613,3 +2614,82 @@ intelligence:
 ```
 
 ---
+
+### 2026-04-30 变更批次（docs: 知识库扩充50条确认 + Cohere Reranker精排 + SOP智能功能附录 + 压测脚本修复）
+
+#### 变更 #K ｜ 📚 知识库扩充 — 35条 → 50条（✅ 已完成）
+
+```
+新增 Flyway 脚本：V20260430001__knowledge_base_expansion_35_to_50.sql
+新增 18 条记录，t_knowledge_base 总计 50 条。
+
+新增分类：
+  FAQ补充（4条）：洗护图标含义、颜色差异处理、Excel批量导出、报废流程Q&A
+  SOP补充（2条）：洗水唛制作规范（iso3758标准）、物料报废审批流程
+  系统指南（4条）：打印洗水唛操作、停滞订单预警使用、产能雷达面板、健康度评分理解
+  术语（8条）：Care Label / ISO 3758 / SKU / BOM / 报废 / 外贸术语 / 缩水率 / 颜色下单率
+
+废弃代码清查：✅ 无废弃代码，纯新增数据
+commit: 65b7ff03
+```
+
+#### 变更 #L ｜ 🎯 新增 CohereRerankService — RAG 管道 STEP 4.5 精排
+
+```
+新增文件：backend/.../intelligence/service/CohereRerankService.java
+
+RAG 管道升级：
+  升级前：query → Qdrant语义召回(10) + MySQL关键词召回(10) → 合并去重 → Top5
+  升级后：同上 → STEP 4.5 Cohere Reranker精排（候选扩大至15条）→ Top5
+
+核心设计：
+  调用 POST https://api.cohere.com/v2/rerank，超时 8 秒
+  @Autowired(required=false) 降级透明：Cohere 不可用时回退到 hybridScore 排序
+  KnowledgeSearchTool 返回增加 retrievalMode 字段（"reranked" / "hybrid"）
+
+配置开关（无需重启代码，仅加环境变量）：
+  AI_COHERE_RERANK_ENABLED=true
+  COHERE_API_KEY=<your-key>
+  ai.cohere.rerank.model=rerank-v3.5（默认值）
+  ai.cohere.rerank.top-n=5（默认值）
+
+废弃代码清查：✅ 无废弃代码，纯新增服务
+commit: 663e502d
+```
+
+#### 变更 #M ｜ 📄 SOP 文档 — 追加「附录：智能功能开通配置」章节
+
+```
+文件：docs/客户傻瓜式开通与数据迁移SOP.md
+变更：62行 → 119行（+57行附录）
+
+新增内容：
+  普通租户最小配置说明（开箱即用，无需 AI 环境变量）
+  AI 环境变量完整表格（9个变量：DEEPSEEK/VOYAGE/QDRANT/COHERE/LANGFUSE）
+  三级 RAG 配置说明：
+    Level 0（纯关键词） → Level 1（+向量语义召回） → Level 2（+Cohere精排）
+  功能验收 curl 脚本（knowledge/search + dashboard/daily-brief 接口冒烟）
+
+废弃代码清查：✅ 纯追加，原有内容未修改
+commit: 0f85181a
+```
+
+#### 变更 #N ｜ 🔧 压测脚本修复 — cloud-stress-test.sh 支持云端 URL + Auth Token
+
+```
+文件：cloud-stress-test.sh
+
+问题：BACKEND_URL 硬编码本地地址，云端压测无效；AUTH_TOKEN 无法注入
+修复：
+  BACKEND_URL="${STRESS_BACKEND_URL:-https://backend-226678-6-1405390085.sh.run.tcloudbase.com}"
+  AUTH_TOKEN="${STRESS_AUTH_TOKEN:-}"
+  ab 命令追加 ${AUTH_TOKEN:+-H "Authorization: Bearer $AUTH_TOKEN"}
+
+验证：
+  bash -n cloud-stress-test.sh → 语法 ✅
+  curl HEAD → 401（云端认证正常）✅
+  ab 5req/0failed → 脚本完整执行 ✅
+
+废弃代码清查：✅ 删除硬编码本地地址，无遗留
+commit: 0f85181a
+```
