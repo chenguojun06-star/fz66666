@@ -1,5 +1,29 @@
 ## 2026-05-01
 
+### perf: resolveProgressNodeUnitPrices 增加 Redis 缓存，消除 N+1 模板 DB 查询
+
+**修改文件**：`backend/.../template/service/impl/TemplateLibraryServiceImpl.java`、`backend/.../config/RedisConfig.java`
+
+#### 问题根因
+`TemplateLibraryServiceImpl.resolveProgressNodeUnitPrices(styleNo)` 每次调用触发最多 3 次 DB 查询（工序模板 → 工序单价模板 → 进度模板回退），但整个方法**没有任何缓存**。  
+生产环境日志显示同一个 requestId（如 `4f98034f`）内该方法被重复调用 3-5 次，9 个调用点（`ProductionProcessTrackingOrchestrator` 4 处、`QualityScanExecutor`、`ProductionScanExecutor`、`CuttingTaskOrchestrator`、`TemplateLibraryOrchestrator`、`SKUServiceImpl`）共同导致 N+1，引发慢查询 WARN：  
+```
+慢方法警告: ProductionOrderQueryService.queryPage(..) 执行耗时 1681ms
+```
+
+#### 修复内容
+1. **`@Cacheable`**：在 `resolveProgressNodeUnitPrices` 方法上增加 Redis 缓存注解，缓存名 `templateProgressNodes`，键 = `tenantId + ':progressNodes:' + styleNo.trim()`，TTL 5 分钟，租户隔离。  
+2. **`@CacheEvict(allEntries=true)`**：在 `upsertTemplate` 方法上增加缓存失效注解，保存模板时自动清除该租户下所有工序节点缓存，防止价格改动后命中旧缓存。  
+3. **`RedisConfig`** 注册 `templateProgressNodes` TTL 条目（5 分钟）。
+
+#### 对系统的改进
+- 同一请求内对同一款式的 3-5 次重复 DB 调用降为 1 次 Redis 命中（后续命中直接 0 DB 查询）
+- `/api/production/order/list` 预计响应时间从 1681ms 降至百毫秒级
+- 所有 9 个调用点无需改动，通过 Spring AOP 自动受益
+- 模板保存后缓存即时失效，价格实时性有保障
+
+---
+
 ### fix(redis): RedisService.deleteByPattern 改用 SCAN 兼容腾讯云 managed Redis + 超管权限缓存清理 API
 
 **修改文件**：`backend/.../service/RedisService.java`、`backend/.../system/controller/TenantController.java`
