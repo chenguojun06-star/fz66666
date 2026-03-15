@@ -41,6 +41,28 @@ const isLogAction = (a: RowAction) => {
   return key === 'log' || labelText === '日志';
 };
 
+const collectActionHandlers = (items?: MenuProps['items']) => {
+  const handlers = new Map<string, () => void>();
+
+  const visit = (list?: MenuProps['items']) => {
+    (list || []).forEach((item) => {
+      if (!item || item.type === 'divider') {
+        return;
+      }
+      const key = String(item.key || '').trim();
+      if (key && typeof item.onClick === 'function') {
+        handlers.set(key, item.onClick as () => void);
+      }
+      if (Array.isArray(item.children) && item.children.length) {
+        visit(item.children);
+      }
+    });
+  };
+
+  visit(items);
+  return handlers;
+};
+
 /**
  * 行操作组件
  * 用于展示表格行的操作按钮，支持自动折叠溢出的操作到下拉菜单
@@ -103,6 +125,8 @@ const RowActions: React.FC<{
     return mapped;
   })();
 
+  const menuActionHandlers = collectActionHandlers(menuItems);
+
   // 判断下拉菜单是否所有操作都禁用
   const isDropdownDisabled = (menuItems || []).every((it: any) => {
     if (!it) return true;
@@ -142,7 +166,17 @@ const RowActions: React.FC<{
 
       {/* 渲染下拉菜单（如果有溢出的操作项） */}
       {menuItems.length ? (
-        <Dropdown trigger={['click']} menu={{ items: menuItems }}>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: menuItems,
+            onClick: ({ key, domEvent }) => {
+              domEvent?.stopPropagation?.();
+              const handler = menuActionHandlers.get(String(key || '').trim());
+              handler?.();
+            },
+          }}
+        >
           <Button
             type="link"
             size={size}

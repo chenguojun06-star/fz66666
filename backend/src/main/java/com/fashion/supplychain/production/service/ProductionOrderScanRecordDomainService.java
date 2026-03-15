@@ -26,6 +26,8 @@ public class ProductionOrderScanRecordDomainService {
 
     private static final String PACKAGING_PROCESS_NAME = "包装";
     private static final String UNKNOWN_OPERATOR = "未知操作人";
+    private static final int REQUEST_SCOPE_MAX_LEN = 16;
+    private static final int REQUEST_NONCE_LEN = 12;
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
@@ -39,6 +41,31 @@ public class ProductionOrderScanRecordDomainService {
         }
         String trimmed = value.trim();
         return StringUtils.hasText(trimmed) ? trimmed : null;
+    }
+
+    private String compactRequestScope(String value) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) {
+            return "na";
+        }
+
+        String normalized = trimmed.replaceAll("[^A-Za-z0-9]", "");
+        if (!StringUtils.hasText(normalized)) {
+            normalized = Integer.toHexString(trimmed.hashCode());
+        }
+        if (normalized.length() <= REQUEST_SCOPE_MAX_LEN) {
+            return normalized;
+        }
+        return normalized.substring(0, 8) + normalized.substring(normalized.length() - 8);
+    }
+
+    private String shortNonce() {
+        String raw = UUID.randomUUID().toString().replace("-", "");
+        return raw.substring(0, REQUEST_NONCE_LEN);
+    }
+
+    private String buildCompactRequestId(String prefix, String scopeId) {
+        return prefix + compactRequestScope(scopeId) + ":" + shortNonce();
     }
 
     /**
@@ -182,7 +209,7 @@ public class ProductionOrderScanRecordDomainService {
 
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
         ScanRecord sr = new ScanRecord();
-        sr.setRequestId("ORCH_FAIL:" + oid + ":" + act + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setRequestId(buildCompactRequestId("ORCH_FAIL:", oid));
         sr.setOrderId(oid);
         sr.setOrderNo(StringUtils.hasText(orderNo) ? orderNo.trim() : null);
         sr.setStyleId(StringUtils.hasText(styleId) ? styleId.trim() : null);
@@ -425,7 +452,7 @@ public class ProductionOrderScanRecordDomainService {
         String operatorNameTrimmed = trimToNull(operatorName);
 
         ScanRecord sr = new ScanRecord();
-        sr.setRequestId("ORDER_ADVANCE:" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setRequestId(buildCompactRequestId("ORDER_ADVANCE:", order.getId()));
         sr.setOrderId(order.getId());
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
@@ -472,7 +499,7 @@ public class ProductionOrderScanRecordDomainService {
 
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
         ScanRecord sr = new ScanRecord();
-        sr.setRequestId("ORDER_OP:" + act + ":" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setRequestId(buildCompactRequestId("ORDER_OP:", order.getId()));
         sr.setOrderId(order.getId());
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
@@ -515,7 +542,7 @@ public class ProductionOrderScanRecordDomainService {
         String operatorNameTrimmed = trimToNull(operatorName);
 
         ScanRecord sr = new ScanRecord();
-        sr.setRequestId("ORDER_ROLLBACK:" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setRequestId(buildCompactRequestId("ORDER_ROLLBACK:", order.getId()));
         sr.setOrderId(order.getId());
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());

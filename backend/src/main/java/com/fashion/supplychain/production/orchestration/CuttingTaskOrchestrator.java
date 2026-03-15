@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -9,10 +11,14 @@ import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -32,6 +38,15 @@ import org.springframework.security.access.AccessDeniedException;
 @Slf4j
 public class CuttingTaskOrchestrator {
 
+    private boolean isDirectCuttingOrder(ProductionOrder order, CuttingTask task) {
+        String orderNo = order != null && StringUtils.hasText(order.getOrderNo())
+                ? order.getOrderNo().trim()
+                : (task != null && StringUtils.hasText(task.getProductionOrderNo())
+                ? task.getProductionOrderNo().trim()
+                : null);
+        return StringUtils.hasText(orderNo) && orderNo.toUpperCase().startsWith("CUT");
+    }
+
     @Autowired
     private CuttingTaskService cuttingTaskService;
 
@@ -43,6 +58,15 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
@@ -76,6 +100,7 @@ public class CuttingTaskOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
                         .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                .ne(ProductionOrder::getStatus, "scrapped")
         );
         List<String> validOrderIds = allOrders.stream()
                 .map(ProductionOrder::getId)
@@ -132,18 +157,16 @@ public class CuttingTaskOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public CuttingTask createCustom(Map<String, Object> body) {
         String styleNo = getTrimmedText(body, "styleNo");
-        String receiverId = getTrimmedText(body, "receiverId");
-        String receiverName = getTrimmedText(body, "receiverName");
         String orderNo = getTrimmedText(body, "orderNo");
+        LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
+        LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
+        List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> bundles = body == null ? null : (List<Map<String, Object>>) body.get("bundles");
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> processUnitPrices = body == null ? null : (List<Map<String, Object>>) body.get("processUnitPrices");
-
-        if (!StringUtils.hasText(styleNo) || bundles == null || bundles.isEmpty()) {
+        if (!StringUtils.hasText(styleNo)) {
             throw new IllegalArgumentException("参数错误");
+        }
+        if (requestedOrderLines.isEmpty()) {
+            throw new IllegalArgumentException("请至少填写一行颜色、尺码和数量");
         }
 
         StyleInfo style = styleInfoService.lambdaQuery()
@@ -152,12 +175,17 @@ public class CuttingTaskOrchestrator {
                 .last("limit 1")
                 .one();
         String resolvedStyleId = style == null || style.getId() == null ? null : String.valueOf(style.getId());
+        if (!StringUtils.hasText(resolvedStyleId)) {
+            resolvedStyleId = styleNo;
+        }
+        int totalOrderQuantity = requestedOrderLines.stream()
+                .map(line -> line.get("quantity"))
+                .mapToInt(value -> Integer.parseInt(String.valueOf(value)))
+                .sum();
+        String resolvedColor = summarizeLineField(requestedOrderLines, "color", "多色");
+        String resolvedSize = summarizeLineField(requestedOrderLines, "size", "多码");
         String resolvedStyleName = style != null && StringUtils.hasText(style.getStyleName())
             ? style.getStyleName() : styleNo;
-        String resolvedColor = style != null && StringUtils.hasText(style.getColor())
-            ? style.getColor() : null;
-        String resolvedSize = style != null && StringUtils.hasText(style.getSize())
-            ? style.getSize() : null;
 
         // 生成 CUT 前缀订单号（若用户未提供）
         String finalOrderNo = StringUtils.hasText(orderNo)
@@ -173,45 +201,30 @@ public class CuttingTaskOrchestrator {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
 
-        // ── 1. 构建 progressWorkflowJson（从前端传来的 processUnitPrices）──────
-        String progressWorkflowJson = null;
-        if (processUnitPrices != null && !processUnitPrices.isEmpty()) {
-            List<Map<String, Object>> nodes = new ArrayList<>();
-            for (Map<String, Object> p : processUnitPrices) {
-                String processName = p.get("processName") == null ? null : String.valueOf(p.get("processName")).trim();
-                if (!StringUtils.hasText(processName)) continue;
-                Map<String, Object> node = new java.util.LinkedHashMap<>();
-                node.put("name", processName);
-                if (StringUtils.hasText(p.get("processCode") == null ? null : String.valueOf(p.get("processCode")).trim())) {
-                    node.put("processCode", String.valueOf(p.get("processCode")).trim());
-                }
-                node.put("unitPrice", p.get("unitPrice") != null ? p.get("unitPrice") : 0);
-                nodes.add(node);
-            }
-            if (!nodes.isEmpty()) {
-                Map<String, Object> workflow = new java.util.LinkedHashMap<>();
-                workflow.put("nodes", nodes);
-                try {
-                    progressWorkflowJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
-                } catch (Exception ex) {
-                    log.warn("构建 progressWorkflowJson 失败", ex);
-                }
-            }
-        }
+        String progressWorkflowJson = buildProgressWorkflowJson(styleNo);
 
-        // ── 2. 创建关联的 ProductionOrder（CUT 前缀，支持扫码计件）────────────
+        // ── 1. 创建关联的 ProductionOrder（只建立正常裁剪起点）────────────
         ProductionOrder order = new ProductionOrder();
         order.setOrderNo(finalOrderNo);
+        order.setQrCode(finalOrderNo);
         order.setStyleId(resolvedStyleId);
         order.setStyleNo(styleNo);
         order.setStyleName(resolvedStyleName);
         order.setColor(resolvedColor);
         order.setSize(resolvedSize);
-        order.setStatus("production");
+        order.setOrderQuantity(totalOrderQuantity);
+        order.setOrderDetails(buildOrderDetailsJson(requestedOrderLines));
+        order.setCompletedQuantity(0);
+        order.setProductionProgress(0);
+        // 模板裁剪任务从裁剪起点直接开始，不经过采购回料链路，避免生成菲号时被采购校验误拦截。
+        order.setMaterialArrivalRate(100);
+        order.setStatus("pending");
         order.setDeleteFlag(0);
+        order.setPlannedEndDate(requestedDeliveryDate);
         order.setProgressWorkflowJson(progressWorkflowJson);
-        order.setCreateTime(now);
+        order.setCreateTime(orderCreateTime);
         order.setUpdateTime(now);
         // factory_name NOT NULL — 自定义裁剪单无绑定工厂，置为空串避免 SQL STRICT 报错
         order.setFactoryName("");
@@ -229,109 +242,184 @@ public class CuttingTaskOrchestrator {
         if (!orderOk) {
             throw new IllegalStateException("创建生产订单失败");
         }
-        log.info("自定义裁剪单已关联生产订单: orderNo={}, orderId={}, progressWorkflowJson={}",
+        log.info("模板款号裁剪任务已关联正常生产起点: orderNo={}, orderId={}, progressWorkflowJson={}",
                 finalOrderNo, order.getId(), progressWorkflowJson != null ? "已设置" : "未设置（无工序单价）");
 
-        // ── 3. 构建 CuttingBundle 并关联 productionOrderId ──────────────────
-        List<CuttingBundle> toSave = new ArrayList<>();
-        int bundleNo = 1;
-        int totalQty = 0;
-        String firstBundleColor = null;
-        String firstBundleSize = null;
+        CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
+        if (task == null) {
+            throw new IllegalStateException("创建裁剪任务失败");
+        }
 
-        for (Map<String, Object> item : bundles) {
+        try {
+            scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
+            productionOrderService.recomputeProgressFromRecords(order.getId().trim());
+        } catch (Exception e) {
+            log.warn("模板款号裁剪任务创建后初始化基础记录失败: orderId={}", order.getId(), e);
+        }
+
+        return task;
+    }
+
+    private LocalDateTime parseDate(Map<String, Object> body, String key, boolean endOfDay) {
+        String value = getTrimmedText(body, key);
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            LocalDate parsed = LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
+            return endOfDay ? parsed.atTime(23, 59, 59) : parsed.atStartOfDay();
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("日期格式错误，请使用 yyyy-MM-dd");
+        }
+    }
+
+    private Integer getPositiveInteger(Map<String, Object> body, String key) {
+        if (body == null || key == null) {
+            return null;
+        }
+        Object v = body.get(key);
+        if (v == null) {
+            return null;
+        }
+        try {
+            int value = Integer.parseInt(String.valueOf(v).trim());
+            return value > 0 ? value : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private List<Map<String, Object>> resolveRequestedOrderLines(Map<String, Object> body) {
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        if (body != null) {
+            Object raw = body.get("orderLines");
+            if (raw instanceof List<?>) {
+                for (Object item : (List<?>) raw) {
+                    if (!(item instanceof Map<?, ?> rawMap)) {
+                        continue;
+                    }
+                    Object colorRaw = rawMap.get("color");
+                    Object sizeRaw = rawMap.get("size");
+                    String color = colorRaw == null ? "" : String.valueOf(colorRaw).trim();
+                    String size = sizeRaw == null ? "" : String.valueOf(sizeRaw).trim();
+                    Integer quantity = null;
+                    Object quantityRaw = rawMap.get("quantity");
+                    if (quantityRaw != null) {
+                        try {
+                            int parsed = Integer.parseInt(String.valueOf(quantityRaw).trim());
+                            if (parsed > 0) {
+                                quantity = parsed;
+                            }
+                        } catch (Exception ignored) {
+                            quantity = null;
+                        }
+                    }
+                    if (StringUtils.hasText(color) || StringUtils.hasText(size) || quantity != null) {
+                        if (!StringUtils.hasText(color) || !StringUtils.hasText(size) || quantity == null) {
+                            throw new IllegalArgumentException("请完整填写每一行颜色、尺码和数量");
+                        }
+                        normalized.add(Map.of(
+                                "color", color,
+                                "size", size,
+                                "quantity", quantity));
+                    }
+                }
+            }
+        }
+        if (!normalized.isEmpty()) {
+            return normalized;
+        }
+
+        String color = getTrimmedText(body, "color");
+        String size = getTrimmedText(body, "size");
+        Integer quantity = getPositiveInteger(body, "orderQuantity");
+        if (StringUtils.hasText(color) && StringUtils.hasText(size) && quantity != null) {
+            return List.of(Map.of(
+                    "color", color,
+                    "size", size,
+                    "quantity", quantity));
+        }
+        return normalized;
+    }
+
+    private String summarizeLineField(List<Map<String, Object>> orderLines, String field, String fallbackWhenMultiple) {
+        Set<String> values = orderLines.stream()
+                .map(line -> String.valueOf(line.get(field)).trim())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        if (values.isEmpty()) {
+            return null;
+        }
+        if (values.size() == 1) {
+            return values.iterator().next();
+        }
+        return fallbackWhenMultiple;
+    }
+
+    private String buildOrderDetailsJson(List<Map<String, Object>> orderLines) {
+        try {
+            return objectMapper.writeValueAsString(orderLines);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("构造订单明细失败", e);
+        }
+    }
+
+    private String buildProgressWorkflowJson(String styleNo) {
+        List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
+        if (nodes == null || nodes.isEmpty()) {
+            return null;
+        }
+
+        List<Map<String, Object>> normalizedNodes = new ArrayList<>();
+        for (Map<String, Object> item : nodes) {
             if (item == null) {
                 continue;
             }
-            String color = item.get("color") == null ? null : String.valueOf(item.get("color")).trim();
-            String size = item.get("size") == null ? null : String.valueOf(item.get("size")).trim();
-            Object quantityObj = item.get("quantity");
-            Integer quantity = null;
-            if (quantityObj != null) {
-                try {
-                    quantity = Integer.parseInt(String.valueOf(quantityObj).trim());
-                } catch (Exception e) {
-                    log.warn("Invalid cutting bundle quantity when creating task: value={}", quantityObj, e);
-                }
-            }
-            if (!StringUtils.hasText(color) || !StringUtils.hasText(size) || quantity == null || quantity <= 0) {
+            String processName = item.get("name") == null ? null : String.valueOf(item.get("name")).trim();
+            if (!StringUtils.hasText(processName)) {
                 continue;
             }
-            if (!StringUtils.hasText(firstBundleColor)) {
-                firstBundleColor = color;
+
+            Map<String, Object> node = new java.util.LinkedHashMap<>();
+            node.put("name", processName);
+
+            String processCode = item.get("id") == null ? null : String.valueOf(item.get("id")).trim();
+            if (StringUtils.hasText(processCode)) {
+                node.put("processCode", processCode);
             }
-            if (!StringUtils.hasText(firstBundleSize)) {
-                firstBundleSize = size;
+
+            String progressStage = item.get("progressStage") == null ? null : String.valueOf(item.get("progressStage")).trim();
+            if (StringUtils.hasText(progressStage)) {
+                node.put("progressStage", progressStage);
             }
 
-            CuttingBundle b = new CuttingBundle();
-            b.setProductionOrderId(order.getId());   // ✅ 关联生产订单
-            b.setProductionOrderNo(finalOrderNo);
-            b.setStyleId(resolvedStyleId);
-            b.setStyleNo(styleNo);
-            b.setColor(color);
-            b.setSize(size);
-            b.setQuantity(quantity);
-            b.setBundleNo(bundleNo);
-            b.setQrCode(buildQrCode(finalOrderNo, styleNo, color, size, quantity, bundleNo));
-            b.setStatus("created");
-            b.setCreateTime(now);
-            b.setUpdateTime(now);
-            toSave.add(b);
-
-            totalQty += quantity;
-            bundleNo++;
-        }
-
-        if (toSave.isEmpty()) {
-            throw new IllegalArgumentException("请至少录入一行有效的颜色/尺码/数量");
-        }
-
-        // ── 4. 保存 CuttingTask，关联 productionOrderId ──────────────────────
-        CuttingTask task = new CuttingTask();
-        task.setProductionOrderId(order.getId());    // ✅ 关联生产订单
-        task.setProductionOrderNo(finalOrderNo);
-        task.setOrderQrCode(null);
-        task.setStyleId(resolvedStyleId);
-        task.setStyleNo(styleNo);
-        task.setStyleName(resolvedStyleName);
-        task.setColor(StringUtils.hasText(resolvedColor) ? resolvedColor : firstBundleColor);
-        task.setSize(StringUtils.hasText(resolvedSize) ? resolvedSize : firstBundleSize);
-        task.setOrderQuantity(totalQty);
-        task.setStatus("bundled");
-        task.setReceiverId(receiverId);
-        task.setReceiverName(receiverName);
-        task.setReceivedTime(now);
-        task.setBundledTime(now);
-        task.setCreateTime(now);
-        task.setUpdateTime(now);
-
-        boolean ok = cuttingTaskService.save(task);
-        if (!ok) {
-            throw new IllegalStateException("创建失败");
-        }
-
-        boolean bundlesOk = cuttingBundleService.saveBatch(toSave);
-        if (!bundlesOk) {
-            throw new IllegalStateException("创建失败");
-        }
-
-        // ── 5. 初始化工序跟踪（有 progressWorkflowJson 才会生成记录）──────────
-        if (StringUtils.hasText(progressWorkflowJson)) {
-            try {
-                int trackingCount = processTrackingOrchestrator.initializeProcessTracking(order.getId());
-                log.info("自定义裁剪单初始化工序跟踪成功: orderId={}, 菲号数={}, tracking记录数={}",
-                        order.getId(), toSave.size(), trackingCount);
-            } catch (Exception e) {
-                log.error("初始化工序跟踪失败：orderId={}", order.getId(), e);
+            BigDecimal unitPrice = BigDecimal.ZERO;
+            Object unitPriceObj = item.get("unitPrice");
+            if (unitPriceObj instanceof BigDecimal decimal) {
+                unitPrice = decimal;
+            } else if (unitPriceObj != null) {
+                try {
+                    unitPrice = new BigDecimal(String.valueOf(unitPriceObj));
+                } catch (Exception ignore) {
+                    unitPrice = BigDecimal.ZERO;
+                }
             }
-        } else {
-            log.info("自定义裁剪单未配置工序单价，跳过工序跟踪初始化 orderId={}", order.getId());
+            node.put("unitPrice", unitPrice);
+            normalizedNodes.add(node);
         }
 
-        task.setCuttingQuantity(totalQty);
-        task.setCuttingBundleCount(toSave.size());
-        return task;
+        if (normalizedNodes.isEmpty()) {
+            return null;
+        }
+
+        Map<String, Object> workflow = new java.util.LinkedHashMap<>();
+        workflow.put("nodes", normalizedNodes);
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
+        } catch (Exception ex) {
+            log.warn("构建 progressWorkflowJson 失败", ex);
+            return null;
+        }
     }
 
     public CuttingTask receive(Map<String, Object> body) {
@@ -354,11 +442,11 @@ public class CuttingTaskOrchestrator {
             ProductionOrder order = productionOrderService.getById(orderId.trim());
             int rate = order == null || order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
 
-            // 检查物料是否完成：要么到货率100%，要么已手动确认完成
-            boolean materialReady = false;
-            if (rate >= 100) {
+            // 裁剪入口直下单不经过采购回料链路，领取裁剪任务时直接放行。
+            boolean materialReady = isDirectCuttingOrder(order, task);
+            if (!materialReady && rate >= 100) {
                 materialReady = true;
-            } else if (order != null && order.getProcurementManuallyCompleted() != null
+            } else if (!materialReady && order != null && order.getProcurementManuallyCompleted() != null
                     && order.getProcurementManuallyCompleted() == 1) {
                 materialReady = true;
             }
@@ -440,10 +528,17 @@ public class CuttingTaskOrchestrator {
         }
         TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
 
+        String taskStatus = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
+        if ("bundled".equals(taskStatus) || task.getBundledTime() != null) {
+            throw new IllegalStateException("裁剪已完成并生成菲号，不允许退回");
+        }
+
         boolean ok = cuttingTaskService.rollbackTask(taskId);
         if (!ok) {
             throw new IllegalStateException("退回失败");
         }
+
+        markCustomCutOrderScrapped(task, reason);
 
         cuttingTaskService.insertRollbackLog(task, currentUserId, currentUsername, reason);
 
@@ -452,6 +547,35 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("退回失败");
         }
         return updated;
+    }
+
+    private void markCustomCutOrderScrapped(CuttingTask task, String reason) {
+        if (task == null || !StringUtils.hasText(task.getProductionOrderId())) {
+            return;
+        }
+        String orderNo = StringUtils.hasText(task.getProductionOrderNo()) ? task.getProductionOrderNo().trim() : "";
+        if (!orderNo.startsWith("CUT")) {
+            return;
+        }
+
+        ProductionOrder order = productionOrderService.getById(task.getProductionOrderId().trim());
+        if (order == null || order.getDeleteFlag() != 0) {
+            return;
+        }
+        String currentStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+        if ("scrapped".equals(currentStatus)) {
+            return;
+        }
+
+        order.setStatus("scrapped");
+        order.setUpdateTime(LocalDateTime.now());
+        if (StringUtils.hasText(reason)) {
+            order.setOperationRemark(reason.trim());
+        }
+        boolean updated = productionOrderService.updateById(order);
+        if (!updated) {
+            throw new IllegalStateException("退回成功但更新订单报废状态失败");
+        }
     }
 
     private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo) {

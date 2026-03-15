@@ -27,6 +27,13 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class OrderFlowStageFillHelper {
 
+    private boolean isDirectCuttingOrder(ProductionOrder order) {
+        if (order == null || !StringUtils.hasText(order.getOrderNo())) {
+            return false;
+        }
+        return order.getOrderNo().trim().toUpperCase().startsWith("CUT");
+    }
+
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
@@ -284,9 +291,13 @@ public class OrderFlowStageFillHelper {
                 o.setOrderOperatorName(orderOperator);
                 o.setOrderCompletionRate(orderRate);
 
-                // 采购完成率：优先使用物料到货率
+                boolean directCuttingOrder = isDirectCuttingOrder(o);
+
+                // 采购完成率：裁剪直下单默认无采购环节，不参与采购进度识别
                 Integer procurementRate;
-                if (o.getMaterialArrivalRate() != null) {
+                if (directCuttingOrder) {
+                    procurementRate = null;
+                } else if (o.getMaterialArrivalRate() != null) {
                     procurementRate = scanRecordDomainService.clampPercent(o.getMaterialArrivalRate());
                 } else if (procurementRateFromPurchases != null) {
                     procurementRate = scanRecordDomainService.clampPercent(procurementRateFromPurchases);
@@ -302,7 +313,7 @@ public class OrderFlowStageFillHelper {
                 // 采购时间显示逻辑：
                 // 1. 物料到货率>0%：显示采购开始时间
                 // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
-                if (procurementRate != null && procurementRate > 0) {
+                if (!directCuttingOrder && procurementRate != null && procurementRate > 0) {
                     o.setProcurementStartTime(procurementStart);
 
                     boolean showCompleted = false;
@@ -869,15 +880,22 @@ public class OrderFlowStageFillHelper {
             }
 
             // ── 采购完成率 ──────────────────────────────────────────────
-            int procRate = (o.getMaterialArrivalRate() != null)
+                boolean directCuttingOrder = isDirectCuttingOrder(o);
+                Integer procRate = directCuttingOrder
+                    ? null
+                    : ((o.getMaterialArrivalRate() != null)
                     ? scanRecordDomainService.clampPercent(o.getMaterialArrivalRate())
-                    : 0;
-            o.setProcurementCompletionRate(procRate);
+                    : 0);
+                o.setProcurementCompletionRate(procRate);
 
             // ── 采购时间字段 ────────────────────────────────────────────
             String oid = o.getId() == null ? "" : o.getId().trim();
             Map<String, Object> procRow = procByOrder.get(oid);
-            if (procRow != null) {
+            if (directCuttingOrder) {
+                o.setProcurementStartTime(null);
+                o.setProcurementEndTime(null);
+                o.setProcurementOperatorName(null);
+            } else if (procRow != null) {
                 if (o.getProcurementStartTime() == null) {
                     o.setProcurementStartTime(toLocalDateTime(ParamUtils.getIgnoreCase(procRow, "procurementStartTime")));
                 }

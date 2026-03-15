@@ -89,8 +89,19 @@ export function useProductionActions({
     const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
     const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
 
+    const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+    if (normalizedStatus === 'scrapped') {
+      message.info('该订单已报废，无需关单');
+      return;
+    }
+
     if ((order as any)?.status === 'completed') {
       message.info('该订单已完成，无需关单');
+      return;
+    }
+
+    if (isOrderFrozenByStatus(order)) {
+      message.info('该订单已终态，无需关单');
       return;
     }
 
@@ -159,7 +170,12 @@ export function useProductionActions({
       return;
     }
     if (isOrderFrozenByStatus(order)) {
-      message.error('订单已完成，无法报废');
+      const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+      if (normalizedStatus === 'scrapped') {
+        message.error('订单已报废，无需重复报废');
+      } else {
+        message.error('订单已关单或完成，无法报废');
+      }
       return;
     }
 

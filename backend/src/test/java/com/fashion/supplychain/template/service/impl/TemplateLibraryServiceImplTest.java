@@ -80,6 +80,32 @@ class TemplateLibraryServiceImplTest {
     }
 
     @Test
+    void testQueryPage_ProcessTypeIncludesProcessPriceTemplates() {
+        Map<String, Object> params = new HashMap<>();
+        params.put("page", "1");
+        params.put("pageSize", "10");
+        params.put("templateType", "process");
+
+        Page<TemplateLibrary> page = new Page<>(1, 10);
+        List<TemplateLibrary> records = Arrays.asList(
+            createTemplate("1", "process", "style_HHY0001", "HHY0001 process 模板", "{}"),
+            createTemplate("2", "process_price", "style_HHY0003", "HHY0003 工序单价模板", "{}")
+        );
+        page.setRecords(records);
+        page.setTotal(2);
+
+        when(templateLibraryMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class)))
+            .thenReturn(page);
+
+        IPage<TemplateLibrary> result = templateLibraryService.queryPage(params);
+
+        assertNotNull(result);
+        assertEquals(2, result.getTotal());
+        assertEquals(2, result.getRecords().size());
+        assertTrue(result.getRecords().stream().anyMatch(item -> "process_price".equals(item.getTemplateType())));
+    }
+
+    @Test
     void testListByType() {
         // Given
         String templateType = "progress";

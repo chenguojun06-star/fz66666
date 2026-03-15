@@ -25,6 +25,15 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class OrderProgressFillHelper {
 
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
+    private boolean isDirectCuttingOrder(ProductionOrder order) {
+        if (order == null || !StringUtils.hasText(order.getOrderNo())) {
+            return false;
+        }
+        return order.getOrderNo().trim().toUpperCase().startsWith("CUT");
+    }
+
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
@@ -260,15 +269,16 @@ public class OrderProgressFillHelper {
             Integer materialArrivalRate = order.getMaterialArrivalRate();
             Integer manuallyCompleted = order.getProcurementManuallyCompleted();
             boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+            boolean directCuttingOrder = isDirectCuttingOrder(order);
 
             // 采购完成判断规则：
             // 1. 物料到货率=100%：自动认为采购完成
             // 2. 物料到货率≥50%且已人工确认：可以进入下一步
             // 3. 物料到货率<50%：必须停留在采购阶段，不允许人工确认
-            boolean procurementComplete = false;
-            if (materialArrivalRate != null && materialArrivalRate >= 100) {
+            boolean procurementComplete = directCuttingOrder;
+            if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 100) {
                 procurementComplete = true;
-            } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
+            } else if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
                 procurementComplete = true;
             }
 
@@ -294,7 +304,7 @@ public class OrderProgressFillHelper {
             if (inProcurement) {
                 order.setCurrentProcessName("采购");
                 String st = order.getStatus() == null ? "" : order.getStatus().trim();
-                if (!"completed".equals(st)) {
+                if (!isTerminalStatus(st)) {
                     order.setStatus("production");
                 }
                 continue;
@@ -322,10 +332,14 @@ public class OrderProgressFillHelper {
             order.setCurrentProcessName(productionProcesses.get(currentIdx));
 
             String st = order.getStatus() == null ? "" : order.getStatus().trim();
-            if (!"completed".equals(st) && (realStarted || stageStarted)) {
+            if (!isTerminalStatus(st) && (realStarted || stageStarted)) {
                 order.setStatus("production");
             }
         }
+    }
+
+    private boolean isTerminalStatus(String status) {
+        return TERMINAL_STATUSES.contains(status == null ? "" : status.trim().toLowerCase());
     }
 
     private long sumDoneByStageName(Map<String, Long> doneByProcess, String stageName) {

@@ -533,13 +533,14 @@ public class ProductionOrderOrchestrator {
         //     throw new IllegalStateException("物料采购完成，无法报废");
         // }
 
-        boolean ok = productionOrderService.deleteById(oid);
+        existed.setStatus("scrapped");
+        existed.setOperationRemark(r);
+        existed.setUpdateTime(LocalDateTime.now());
+
+        boolean ok = productionOrderService.updateById(existed);
         if (!ok) {
             throw new IllegalStateException("报废失败");
         }
-
-        // 报废时同样级联清理子表数据
-        cascadeCleanupChildTables(oid);
 
         try {
             scanRecordDomainService.insertOrderOperationRecord(existed, "报废", r, LocalDateTime.now());

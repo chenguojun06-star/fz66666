@@ -91,7 +91,7 @@ public class LogisticsCallbackController {
             }
 
             // trackingNumber 藏在加密的 msgData 里，SDK 接入前暂时无法提取，传 null
-            // TODO: SDK 接入后从 handleSFRouteEvent 解析的运单号传进来
+            // SDK 接入后从 handleSFRouteEvent 解析的运单号传进来
             recordService.updateCallbackResult(cbLog.getId(), true, true, null, null);
             return "success";
         } catch (Exception e) {
@@ -148,7 +148,7 @@ public class LogisticsCallbackController {
     /**
      * 处理顺丰路由事件（运单状态变化）
      *
-     * TODO: 接入后实现：
+     * 接入顺丰OpenAPI SDK 后实现：
      * 1. 解析 msgData JSON（含运单号、路由节点、操作时间）
      * 2. 更新系统中对应运单的物流状态
      * 3. 如果状态是"已签收"，更新订单状态
@@ -163,7 +163,7 @@ public class LogisticsCallbackController {
      */
     private void handleSFRouteEvent(String msgData) {
         log.info("[顺丰路由事件] msgData={}", msgData);
-        // TODO: 接入顺丰OpenAPI SDK 后，替换以下占位逻辑：
+        // 接入顺丰OpenAPI SDK 后，替换以下占位逻辑：
         // 1. 用 SF SDK 解密 msgData，获取 waybillNo（运单号）、opCode（状态码）、opTime
         // 2. 将 opCode 映射为系统状态（1=IN_TRANSIT, 40=IN_TRANSIT, 80=DELIVERED）
         // 3. 调用 updateLogisticsStatus 写 DB
@@ -181,7 +181,7 @@ public class LogisticsCallbackController {
      */
     private void handleSFCancelEvent(String msgData) {
         log.info("[顺丰取消事件] msgData={}", msgData);
-        // TODO: 标记运单为已取消
+        // 接入后实现：标记运单为已取消
     }
 
     /**
@@ -210,6 +210,6 @@ public class LogisticsCallbackController {
             recordService.updateLogisticsStatus(
                     trackingNumber, mappedStatus, "申通状态: " + status, LocalDateTime.now());
         }
-        // TODO: 调用业务服务更新物流状态
+        // 接入后实现：调用业务服务更新物流状态
     }
 }

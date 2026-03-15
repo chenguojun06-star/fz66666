@@ -174,6 +174,8 @@ function _addRecordToGroup(group, record) {
 
   // 是否已参与工资结算（已结算禁止撤回/退回）
   const payrollSettled = !!(record.payrollSettlementId);
+  const scanType = String(record.scanType || '').trim().toLowerCase();
+  const canRollbackCurrentScan = scanType !== 'warehouse';
 
   // 下一生产环节是否已有人完成扫码（由后端计算，精确可靠，跨操作员）
   // 例：车缝扫了 → 此条生产记录不可退回
@@ -196,8 +198,8 @@ function _addRecordToGroup(group, record) {
     operatorName: record.operatorName || record.operator_name || '',
     operatorId: record.operatorId || record.operator_id || '',
     displayOperator: record.operatorName || record.operator_name || record.operatorId || record.operator_id || '',
-    canRescan: canRescan && !payrollSettled && !hasNextStageScan,
-    canUndo: canRescan && !payrollSettled && !hasNextStageScan,
+    canRescan: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
+    canUndo: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
     payrollSettled: payrollSettled,
     cuttingBundleId: record.cuttingBundleId || '',
   });

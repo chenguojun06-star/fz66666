@@ -17,6 +17,7 @@ interface ProcessTrackingRecord {
   quantity: number;
   processCode: string;
   processName: string;
+  scanType?: string;
   processOrder: number;
   unitPrice: number;
   scanStatus: 'pending' | 'scanned' | 'reset';
@@ -67,6 +68,16 @@ interface ProcessTrackingTableProps {
  */
 function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string, isAdmin?: boolean): boolean {
   if (record.scanStatus !== 'scanned') return false;
+  const scanType = String(record.scanType || '').trim().toLowerCase();
+  const processCode = String(record.processCode || '').trim().toLowerCase();
+  const processName = String(record.processName || '').trim();
+  const isWarehouseRecord = scanType === 'warehouse'
+    || processCode.startsWith('warehousing')
+    || processCode === 'quality_warehousing'
+    || processName === '入库'
+    || processName === '质检入库'
+    || processName === '次品入库';
+  if (isWarehouseRecord) return false;
   if (record.isSettled) return false;
   if (record.hasNextStageScanned) return false;
   if (!record.scanRecordId) return false;

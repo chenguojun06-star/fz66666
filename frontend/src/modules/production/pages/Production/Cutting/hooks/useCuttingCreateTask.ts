@@ -1,14 +1,24 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
-import type { CuttingBundleRow } from './useCuttingBundles';
 
 interface StyleOption {
   id: number | string;
   styleNo: string;
   styleName?: string;
 }
+
+export interface CuttingCreateOrderLine {
+  color: string;
+  size: string;
+  quantity: number | null;
+}
+
+const createEmptyOrderLine = (): CuttingCreateOrderLine => ({
+  color: '',
+  size: '',
+  quantity: null,
+});
 
 export interface ProcessUnitPrice {
   processName: string;
@@ -27,20 +37,17 @@ interface UseCuttingCreateTaskOptions {
  * 管理创建弹窗、款号搜索、自定义裁剪单
  */
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
-  const { user } = useAuth();
+  useAuth();
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
-  const [createOrderNo, setCreateOrderNo] = useState('');
+  const [createOrderDate, setCreateOrderDate] = useState('');
+  const [createDeliveryDate, setCreateDeliveryDate] = useState('');
+  const [createOrderLines, setCreateOrderLines] = useState<CuttingCreateOrderLine[]>([createEmptyOrderLine()]);
   const [createStyleOptions, setCreateStyleOptions] = useState<StyleOption[]>([]);
   const [createStyleLoading, setCreateStyleLoading] = useState(false);
   const [createStyleNo, setCreateStyleNo] = useState<string>('');
   const [createStyleName, setCreateStyleName] = useState<string>('');
-  const [createBundles, setCreateBundles] = useState<CuttingBundleRow[]>([{ color: '', size: '', quantity: 0 }]);
-
-  // 工序进度单价
-  const [createProcessPrices, setCreateProcessPrices] = useState<ProcessUnitPrice[]>([]);
-  const [processPricesLoading, setProcessPricesLoading] = useState(false);
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
@@ -67,102 +74,75 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     }
   };
 
-  /** 根据款号加载工序进度单价（反推大货生产单价用） */
-  const fetchProcessUnitPrices = useCallback(async (styleNo: string) => {
-    const sn = String(styleNo || '').trim();
-    if (!sn) { setCreateProcessPrices([]); return; }
-    setProcessPricesLoading(true);
-    try {
-      const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-      if (res.code === 200 && Array.isArray(res.data)) {
-        const prices: ProcessUnitPrice[] = (res.data as Array<Record<string, unknown>>)
-          .map((item) => ({
-            processName: String(item.processName || item.process_name || '').trim(),
-            unitPrice: item.unitPrice != null ? Number(item.unitPrice)
-              : item.unit_price != null ? Number(item.unit_price) : null,
-            processCode: String(item.processCode || item.process_code || '').trim() || undefined,
-          }))
-          .filter((x) => x.processName);
-        setCreateProcessPrices(prices);
-      } else {
-        setCreateProcessPrices([]);
-      }
-    } catch {
-      setCreateProcessPrices([]);
-    } finally {
-      setProcessPricesLoading(false);
-    }
-  }, []);
-
-  /** 款号选择/输入变更时同步款名并拉取工序单价 */
+  /** 款号选择/输入变更时同步款名 */
   const handleStyleNoChange = (value: string) => {
     const sn = String(value || '').trim();
     setCreateStyleNo(sn);
     const hit = createStyleOptions.find((x) => x.styleNo === sn);
     setCreateStyleName(String(hit?.styleName || '').trim());
-    if (sn) fetchProcessUnitPrices(sn);
-    else setCreateProcessPrices([]);
   };
 
   const openCreateTask = () => {
-    setCreateOrderNo('');
+    setCreateOrderDate('');
+    setCreateDeliveryDate('');
+    setCreateOrderLines([createEmptyOrderLine()]);
     setCreateStyleNo('');
     setCreateStyleName('');
-    setCreateBundles([{ color: '', size: '', quantity: 0 }]);
-    setCreateProcessPrices([]);
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
   };
 
-  const handleCreateBundleChange = (index: number, key: keyof CuttingBundleRow, value: any) => {
-    setCreateBundles((prev) => {
-      const next = prev.slice();
-      next[index] = { ...next[index], [key]: value } as CuttingBundleRow;
-      return next;
+  const updateCreateOrderLine = (index: number, field: keyof CuttingCreateOrderLine, value: string | number | null) => {
+    setCreateOrderLines((prev) => prev.map((line, idx) => {
+      if (idx !== index) return line;
+      return {
+        ...line,
+        [field]: field === 'quantity' ? (typeof value === 'number' ? value : null) : String(value || ''),
+      };
+    }));
+  };
+
+  const addCreateOrderLine = () => {
+    setCreateOrderLines((prev) => [...prev, createEmptyOrderLine()]);
+  };
+
+  const removeCreateOrderLine = (index: number) => {
+    setCreateOrderLines((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, idx) => idx !== index);
     });
-  };
-
-  const handleCreateBundleAdd = () => {
-    setCreateBundles((prev) => [...prev, { color: '', size: '', quantity: 0 }]);
-  };
-
-  const handleCreateBundleRemove = (index: number) => {
-    setCreateBundles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitCreateTask = async () => {
     const styleNo = String(createStyleNo || '').trim();
+    const orderLines = createOrderLines
+      .map((line) => ({
+        color: String(line.color || '').trim(),
+        size: String(line.size || '').trim(),
+        quantity: Number(line.quantity || 0),
+      }))
+      .filter((line) => line.color || line.size || line.quantity > 0);
     if (!styleNo) {
       message.error('请输入或选择款号');
       return;
     }
-    const validItems = createBundles
-      .map((x) => ({
-        color: String(x.color || '').trim(),
-        size: String(x.size || '').trim(),
-        quantity: Number(x.quantity || 0) || 0,
-      }))
-      .filter((x) => x.quantity > 0);
-    if (!validItems.length) {
-      message.error('请至少录入一行有效的颜色/尺码/数量');
+    if (orderLines.length === 0) {
+      message.error('请至少填写一行颜色、尺码、数量');
       return;
     }
-    const invalid = validItems.find((x) => !x.color || !x.size);
-    if (invalid) {
-      message.error('颜色/尺码不能为空');
+    const invalidLineIndex = orderLines.findIndex((line) => !line.color || !line.size || !Number.isFinite(line.quantity) || line.quantity <= 0);
+    if (invalidLineIndex >= 0) {
+      message.error(`第 ${invalidLineIndex + 1} 行请完整填写颜色、尺码、数量`);
       return;
     }
 
     setCreateTaskSubmitting(true);
     try {
       const res = await api.post<{ code: number; message: string; data?: Record<string, unknown> }>('/production/cutting-task/custom/create', {
-        orderNo: String(createOrderNo || '').trim() || undefined,
         styleNo,
-        receiverId: user?.id,
-        receiverName: (user as unknown as any)?.name,
-        bundles: validItems,
-        // 附带工序进度单价，后端可反推大货生产单价
-        processUnitPrices: createProcessPrices.length > 0 ? createProcessPrices : undefined,
+        orderDate: String(createOrderDate || '').trim() || undefined,
+        deliveryDate: String(createDeliveryDate || '').trim() || undefined,
+        orderLines,
       });
       if (res.code === 200) {
         message.success('新建裁剪任务成功');
@@ -185,16 +165,17 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   return {
     createTaskOpen, setCreateTaskOpen,
     createTaskSubmitting,
-    createOrderNo, setCreateOrderNo,
+    createOrderDate, setCreateOrderDate,
+    createDeliveryDate, setCreateDeliveryDate,
+    createOrderLines, setCreateOrderLines,
+    updateCreateOrderLine,
+    addCreateOrderLine,
+    removeCreateOrderLine,
     createStyleOptions, createStyleLoading, createStyleNo, setCreateStyleNo,
     createStyleName, setCreateStyleName,
-    createBundles,
-    createProcessPrices, setCreateProcessPrices, processPricesLoading,
     fetchStyleInfoOptions,
-    fetchProcessUnitPrices,
     handleStyleNoChange,
     openCreateTask,
-    handleCreateBundleChange, handleCreateBundleAdd, handleCreateBundleRemove,
     handleSubmitCreateTask,
   };
 }

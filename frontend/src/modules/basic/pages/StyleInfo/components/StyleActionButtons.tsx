@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button, Space } from 'antd';
 
-
 interface StyleActionButtonsProps {
   // 状态
   saving: boolean;
@@ -36,7 +35,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
   onSave,
   onCompleteSample,
   onPushToOrder,
-  onUnlock
+  onUnlock,
 }) => {
   const primaryButtonStyle: React.CSSProperties = {
     paddingInline: 12,
@@ -111,6 +110,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           {pushedToOrder ? '已推送' : '推送到下单管理'}
         </Button>
       )}
+
     </Space>
   );
 };

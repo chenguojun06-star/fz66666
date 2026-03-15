@@ -10,7 +10,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
-import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
+import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
@@ -37,6 +37,7 @@ export interface UseProductionColumnsProps {
   deliveryRiskMap?: Map<string, DeliveryRiskItem>;
   stagnantOrderIds?: Map<string, number>;
   handleShareOrder: (record: ProductionOrder) => void;
+  handlePrintLabel?: (record: ProductionOrder) => void;
 }
 
 /**
@@ -52,6 +53,7 @@ export function useProductionColumns({
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
   stagnantOrderIds,
   handleShareOrder,
+  handlePrintLabel,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -299,10 +301,28 @@ export function useProductionColumns({
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        const directCutting = isDirectCuttingOrder(record as any);
         const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const frozen = isOrderFrozenByStatus(record);
         const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
+
+        if (directCutting) {
+          return (
+            <div
+              style={{ cursor: 'default', padding: '4px', opacity: 0.8 }}
+              onClick={(e) => { e.stopPropagation(); }}
+            >
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+                无采购
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+                -/-
+              </div>
+              <LiquidProgressBar percent={0} width="100%" height={16} status="default" />
+            </div>
+          );
+        }
 
         return (
           <div
@@ -627,6 +647,7 @@ export function useProductionColumns({
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);
         const completed = isOrderFrozenByStatus(record);
+        const directCutting = isDirectCuttingOrder(record as any);
 
         return (
           <RowActions
@@ -640,6 +661,12 @@ export function useProductionColumns({
                 disabled: frozen,
                 onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); },
               },
+              ...(handlePrintLabel ? [{
+                key: 'printLabel',
+                label: '打印标签',
+                title: '打印洗水唛 / 吊牌',
+                onClick: () => handlePrintLabel(record),
+              }] : []),
               {
                 key: 'process',
                 label: '工序',
@@ -648,7 +675,7 @@ export function useProductionColumns({
                 children: [
                   { key: 'all', label: '📋 全部工序', onClick: () => openProcessDetail(record, 'all') },
                   { type: 'divider' },
-                  { key: 'procurement', label: '采购', onClick: () => openProcessDetail(record, 'procurement') },
+                  ...(!directCutting ? [{ key: 'procurement', label: '采购', onClick: () => openProcessDetail(record, 'procurement') }] : []),
                   { key: 'cutting', label: '裁剪', onClick: () => openProcessDetail(record, 'cutting') },
                   { key: 'carSewing', label: '车缝', onClick: () => openProcessDetail(record, 'carSewing') },
                   ...(() => {

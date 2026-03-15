@@ -83,6 +83,9 @@ public class CuttingTask {
     @TableField(exist = false)
     private String factoryType;
 
+    @TableField(exist = false)
+    private String styleCover;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

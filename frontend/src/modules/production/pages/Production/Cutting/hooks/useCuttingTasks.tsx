@@ -62,7 +62,7 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'status', acceptAnyData: false });
 
   const ensureOrderUnlockedById = async (orderId: any) => {
-    return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
+    return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已关单/报废/完成，无法操作'));
   };
 
   const isOrderFrozenById = (orderId: any) => {

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
@@ -60,6 +62,10 @@ class ProductionOrderOrchestratorTest {
         ctx.setRole("admin");
         ctx.setTenantId(1L);
         UserContext.set(ctx);
+        lenient().when(helper.safeText(any())).thenAnswer(invocation -> {
+            Object value = invocation.getArgument(0);
+            return value == null ? "" : String.valueOf(value);
+        });
     }
 
     @AfterEach
@@ -275,6 +281,34 @@ class ProductionOrderOrchestratorTest {
         // 即使采购删除失败，其他级联删除仍继续
         verify(cuttingTaskService).deleteByOrderId(orderId);
         verify(scanRecordService).deleteByOrderId(orderId);
+    }
+
+    @Test
+    void scrapOrder_updatesStatusInsteadOfDeletingOrder() {
+        String orderId = "order123";
+        ProductionOrder order = createTestOrder();
+        order.setId(orderId);
+        order.setDeleteFlag(0);
+
+        when(productionOrderService.getById(orderId)).thenReturn(order);
+        when(materialPurchaseService.lambdaQuery()).thenReturn(mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class, RETURNS_SELF));
+        com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<MaterialPurchase> query = materialPurchaseService.lambdaQuery();
+        when(query.eq(any(), any())).thenReturn(query);
+        when(query.count()).thenReturn(0L);
+        when(productionOrderService.updateById(any(ProductionOrder.class))).thenReturn(true);
+
+        boolean result = orchestrator.scrapOrder(orderId, "测试报废");
+
+        assertTrue(result);
+        verify(productionOrderService, never()).deleteById(any());
+        verify(materialPurchaseService, never()).deleteByOrderId(any());
+        verify(cuttingTaskService, never()).deleteByOrderId(any());
+        verify(scanRecordService, never()).deleteByOrderId(any());
+        ArgumentCaptor<ProductionOrder> captor = ArgumentCaptor.forClass(ProductionOrder.class);
+        verify(productionOrderService).updateById(captor.capture());
+        assertEquals(orderId, captor.getValue().getId());
+        assertEquals("scrapped", captor.getValue().getStatus());
+        assertEquals("测试报废", captor.getValue().getOperationRemark());
     }
 
     // ==================== 异常处理测试 ====================

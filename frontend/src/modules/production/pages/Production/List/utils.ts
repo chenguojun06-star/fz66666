@@ -20,6 +20,7 @@ export const getStatusConfig = (status: ProductionOrder['status'] | string | und
     production: { text: '生产中', color: 'success' },
     completed: { text: '已完成', color: 'default' },
     delayed: { text: '已逾期', color: 'warning' },
+    scrapped: { text: '报废', color: 'default' },
     cancelled: { text: '已取消', color: 'error' },
     canceled: { text: '已取消', color: 'error' },
     paused: { text: '已暂停', color: 'default' },

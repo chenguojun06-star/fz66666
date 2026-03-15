@@ -1,6 +1,9 @@
 package com.fashion.supplychain.style.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -18,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 
@@ -49,6 +51,9 @@ class StyleInfoOrchestratorTest {
 
     @BeforeEach
     void setUp() {
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, StyleInfo.class);
+
         UserContext.clear();
         UserContext ctx = new UserContext();
         ctx.setTenantId(1L);
@@ -73,10 +78,27 @@ class StyleInfoOrchestratorTest {
     @Test
     void detail_notFound_throwsNoSuchElement() {
         when(styleInfoService.getDetailById(99L)).thenReturn(null);
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(null);
 
         assertThatThrownBy(() -> orchestrator.detail(99L))
                 .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("款号不存在");
+    }
+
+    @Test
+    void detail_byStyleNo_returnsStyleInfo() {
+        StyleInfo matched = new StyleInfo();
+        matched.setId(10L);
+        StyleInfo detail = new StyleInfo();
+        detail.setId(10L);
+        detail.setStyleNo("HYY0003");
+
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(matched);
+        when(styleInfoService.getDetailById(10L)).thenReturn(detail);
+
+        StyleInfo result = orchestrator.detail("HYY0003");
+
+        assertThat(result.getStyleNo()).isEqualTo("HYY0003");
     }
 
     // ── save() 参数校验 ────────────────────────────────────────────────────────
@@ -114,11 +136,8 @@ class StyleInfoOrchestratorTest {
         style.setStyleName("春季款");
         when(styleInfoService.saveOrUpdateStyle(style)).thenReturn(true);
         // 新增时查询自动创建样板生产记录的 lambdaQuery 返回 null 避免 NPE
-        var mockQuery = mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class);
+        var mockQuery = mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class, RETURNS_SELF);
         when(styleInfoService.lambdaQuery()).thenReturn(mockQuery);
-        when(mockQuery.eq(any(), any())).thenReturn(mockQuery);
-        when(mockQuery.orderByDesc(any())).thenReturn(mockQuery);
-        when(mockQuery.last(any())).thenReturn(mockQuery);
         when(mockQuery.one()).thenReturn(null); // 没查到，跳过自动创建
 
         boolean ok = orchestrator.save(style);

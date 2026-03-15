@@ -358,6 +358,59 @@ public class StyleInfo {
     private String orderNo;
 
     /**
+     * 面料成分（洗水唛标签专用）
+     * 如：70%棉 30%涤纶
+     */
+    private String fabricComposition;
+
+    /**
+     * 洗涤说明（洗水唛标签专用）
+     * 如：30°C水洗，不可漂白，低温烘干
+     */
+    private String washInstructions;
+
+    /**
+     * U编码（品质追溯码）
+     * 用于吊牌/洗水唛的品质追溯唯一编码
+     */
+    private String uCode;
+
+    /**
+     * 洗涤温度代码（洗水唛图标）
+     * 枚举：W30/W40/W60/W95/HAND/NO
+     */
+    @TableField("wash_temp_code")
+    private String washTempCode;
+
+    /**
+     * 漂白代码（洗水唛图标）
+     * 枚举：ANY/NON_CHL/NO
+     */
+    @TableField("bleach_code")
+    private String bleachCode;
+
+    /**
+     * 烘干代码（洗水唛图标）
+     * 枚举：NORMAL/LOW/NO
+     */
+    @TableField("tumble_dry_code")
+    private String tumbleDryCode;
+
+    /**
+     * 熨烫代码（洗水唛图标）
+     * 枚举：LOW/MED/HIGH/NO
+     */
+    @TableField("iron_code")
+    private String ironCode;
+
+    /**
+     * 干洗代码（洗水唛图标）
+     * 枚举：YES/NO
+     */
+    @TableField("dry_clean_code")
+    private String dryCleanCode;
+
+    /**
      * 租户ID（多租户隔离，自动填充）
      */
     @TableField(fill = FieldFill.INSERT)

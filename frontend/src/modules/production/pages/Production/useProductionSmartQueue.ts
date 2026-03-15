@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import type { Dispatch, SetStateAction } from 'react';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import type { ProductionOrder } from '@/types/production';
+import { isOrderFrozenByStatus } from '@/utils/api';
 
 export type SmartQueueFilter = 'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue';
 
@@ -29,17 +30,18 @@ type UseProductionSmartQueueParams = {
 };
 
 const isUrgentOrder = (order: ProductionOrder) => {
-  if (order.status === 'completed' || !order.plannedEndDate) return false;
+  if (isOrderFrozenByStatus(order) || !order.plannedEndDate) return false;
   return dayjs(order.plannedEndDate).diff(dayjs(), 'day') <= 3;
 };
 
 const isBehindOrder = (order: ProductionOrder) => {
-  if (order.status === 'completed' || !order.plannedEndDate) return false;
+  if (isOrderFrozenByStatus(order) || !order.plannedEndDate) return false;
   const daysLeft = dayjs(order.plannedEndDate).diff(dayjs(), 'day');
   return daysLeft <= 7 && (Number(order.productionProgress) || 0) < 50;
 };
 
 const isOverdueRiskOrder = (order: ProductionOrder, deliveryRiskMap: Map<string, DeliveryRiskItem>) => {
+  if (isOrderFrozenByStatus(order)) return false;
   return deliveryRiskMap.get(String(order.orderNo || ''))?.riskLevel === 'overdue';
 };
 
@@ -57,7 +59,7 @@ export const useProductionSmartQueue = ({
   const behindOrders = useMemo(() => orders.filter(isBehindOrder), [orders]);
 
   const stagnantOrders = useMemo(
-    () => orders.filter((order) => stagnantOrderIds.has(String(order.id || ''))),
+    () => orders.filter((order) => !isOrderFrozenByStatus(order) && stagnantOrderIds.has(String(order.id || ''))),
     [orders, stagnantOrderIds]
   );
 

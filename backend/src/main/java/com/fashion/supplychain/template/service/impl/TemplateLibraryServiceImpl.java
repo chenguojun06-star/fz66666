@@ -801,11 +801,20 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         String sourceStyleNo = String.valueOf(params.getOrDefault("sourceStyleNo", "")).trim();
 
         LambdaQueryWrapper<TemplateLibrary> wrapper = new LambdaQueryWrapper<TemplateLibrary>()
-                .eq(StringUtils.hasText(templateType), TemplateLibrary::getTemplateType, templateType)
                 .like(StringUtils.hasText(keyword), TemplateLibrary::getTemplateName, keyword)
                 .eq(StringUtils.hasText(sourceStyleNo), TemplateLibrary::getSourceStyleNo, sourceStyleNo)
                 .orderByDesc(TemplateLibrary::getUpdateTime)
                 .orderByDesc(TemplateLibrary::getCreateTime);
+
+        if (StringUtils.hasText(templateType)) {
+            if ("process".equalsIgnoreCase(templateType)) {
+                wrapper.and(q -> q.eq(TemplateLibrary::getTemplateType, "process")
+                        .or()
+                        .eq(TemplateLibrary::getTemplateType, "process_price"));
+            } else {
+                wrapper.eq(TemplateLibrary::getTemplateType, templateType);
+            }
+        }
 
         return baseMapper.selectPage(pageInfo, wrapper);
     }

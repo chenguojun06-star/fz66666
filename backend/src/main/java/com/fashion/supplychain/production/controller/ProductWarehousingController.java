@@ -90,7 +90,7 @@ public class ProductWarehousingController {
 
     @PostMapping("/rollback-by-bundle")
     public Result<?> rollbackByBundle(@RequestBody Map<String, Object> body) {
-        return Result.success(productWarehousingOrchestrator.rollbackByBundle(body));
+        throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");
     }
 
     /**

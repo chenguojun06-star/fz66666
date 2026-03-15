@@ -9,11 +9,13 @@ import com.fashion.supplychain.template.service.TemplateLibraryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -93,6 +95,7 @@ class ProductionScanExecutorTest {
         mockOrder.setId("order-001");
         mockOrder.setOrderNo("PO-2024-001");
         mockOrder.setStyleId("style-001");
+        mockOrder.setStyleNo("FZ001");
         mockOrder.setDeleteFlag(0);  // 必须设置，否则resolveOrder返回null
 
         // 解析器
@@ -328,6 +331,66 @@ class ProductionScanExecutorTest {
                 "版型缺少时应提示版型文件，实际: " + ex.getMessage());
         verify(styleAttachmentService, atLeastOnce()).list(any(LambdaQueryWrapper.class));
     }
+
+    @Test
+    void testExecute_TemplateChildProcessMapsToParentStage() {
+        // Given: 模板定义 子工序 剪线 -> 父节点 尾部
+        baseParams.put("processName", "剪线");
+        when(templateLibraryService.resolveProgressNodeUnitPrices("FZ001")).thenReturn(List.of(
+                Map.of(
+                        "id", "TAIL-TRIM",
+                        "name", "剪线",
+                        "progressStage", "尾部",
+                        "unitPrice", new java.math.BigDecimal("1.80"))));
+        when(templateLibraryService.resolveProcessUnitPrices("FZ001"))
+            .thenReturn(Map.of("剪线", new java.math.BigDecimal("1.80")));
+
+        ArgumentCaptor<ScanRecord> recordCaptor = ArgumentCaptor.forClass(ScanRecord.class);
+        when(scanRecordService.saveScanRecord(recordCaptor.capture())).thenReturn(true);
+
+        // When
+        Map<String, Object> result = executor.execute(
+                baseParams, "req-parent-001", "operator-001", "王五",
+                "production", 50, false, colorResolver, sizeResolver);
+
+        // Then: 扫码记录保存父节点=尾部，子工序=剪线
+        assertNotNull(result);
+        assertTrue((Boolean) result.get("success"));
+        ScanRecord saved = recordCaptor.getValue();
+        assertNotNull(saved);
+        assertEquals("尾部", saved.getProgressStage());
+        assertEquals("剪线", saved.getProcessName());
+        assertEquals(new java.math.BigDecimal("1.80"), saved.getUnitPrice());
+    }
+
+        @Test
+        void testExecute_TemplateChildProcessTrackingFallsBackToParentStage() {
+        // Given: 子工序剪线归类到父节点尾部，tracking 先按子工序更新失败，再回退父节点成功
+        baseParams.put("processName", "剪线");
+        when(templateLibraryService.resolveProgressNodeUnitPrices("FZ001")).thenReturn(List.of(
+            Map.of(
+                "id", "TAIL-TRIM",
+                "name", "剪线",
+                "progressStage", "尾部",
+                "unitPrice", new java.math.BigDecimal("1.80"))));
+        when(templateLibraryService.resolveProcessUnitPrices("FZ001"))
+            .thenReturn(Map.of("剪线", new java.math.BigDecimal("1.80")));
+        when(processTrackingOrchestrator.updateScanRecord("bundle-001", "剪线", "operator-001", "王五", null))
+            .thenReturn(false);
+        when(processTrackingOrchestrator.updateScanRecord("bundle-001", "尾部", "operator-001", "王五", null))
+            .thenReturn(true);
+
+        // When
+        Map<String, Object> result = executor.execute(
+            baseParams, "req-parent-track-001", "operator-001", "王五",
+            "production", 50, false, colorResolver, sizeResolver);
+
+        // Then
+        assertNotNull(result);
+        assertTrue((Boolean) result.get("success"));
+        verify(processTrackingOrchestrator).updateScanRecord("bundle-001", "剪线", "operator-001", "王五", null);
+        verify(processTrackingOrchestrator).updateScanRecord("bundle-001", "尾部", "operator-001", "王五", null);
+        }
 
     @Test
     void testExecute_OrderModeWithoutBundle_Success() {

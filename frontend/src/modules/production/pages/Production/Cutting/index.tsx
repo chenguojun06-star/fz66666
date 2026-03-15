@@ -227,7 +227,7 @@ const CuttingManagement: React.FC = () => {
       key: 'cover',
       width: 72,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={activeTask?.styleId} styleNo={record.styleNo || activeTask?.styleNo} size={24} borderRadius={4} />
+        <StyleCoverThumb src={activeTask?.styleCover || null} styleId={activeTask?.styleId} styleNo={record.styleNo || activeTask?.styleNo} size={24} borderRadius={4} />
       )
     },
     {
@@ -380,7 +380,7 @@ const CuttingManagement: React.FC = () => {
                     key: 'cover',
                     width: 72,
                     render: (_: any, record: any) => (
-                      <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} size={48} borderRadius={6} />
+                      <StyleCoverThumb src={record.styleCover || null} styleId={record.styleId} styleNo={record.styleNo} size={48} borderRadius={6} />
                     )
                   },
                   {
@@ -510,13 +510,14 @@ const CuttingManagement: React.FC = () => {
                       const isPending = record.status === 'pending';
                       const isReceived = record.status === 'received';
                       const isCompleted = record.status === 'completed';
+                      const canRollback = tasks.isAdmin && !isPending && !isCompleted && record.status !== 'bundled';
                       return (
                         <RowActions
                           actions={[
                             {
                               key: 'edit',
                               label: '编辑',
-                              title: isCompleted ? '已完成，不可编辑' : frozen ? '编辑（订单已关单）' : '编辑',
+                              title: isCompleted ? '已完成，不可编辑' : frozen ? '编辑（订单已关单/报废/完成）' : '编辑',
                               disabled: frozen || isCompleted,
                               onClick: () => {
                                 tasks.setQuickEditRecord(record);
@@ -543,7 +544,7 @@ const CuttingManagement: React.FC = () => {
                                   primary: isReceived,
                                 }]
                               : []),
-                            ...(tasks.isAdmin && record.status !== 'pending'
+                            ...(canRollback
                               ? [{
                                   key: 'rollback',
                                   label: '退回',
@@ -589,6 +590,7 @@ const CuttingManagement: React.FC = () => {
                       styleNo={String(activeTask.styleNo || '').trim()}
                       styleName={String(activeTask.styleName || '').trim()}
                       styleId={activeTask?.styleId}
+                      styleCover={activeTask?.styleCover || null}
                       color={String(bundles.entryColorText || activeTask.color || '').trim()}
                       sizeItems={bundles.entryOrderDetailLoading ? [] : bundles.entrySizeItems.map((x) => ({ size: x.size, quantity: Number(x.quantity || 0) || 0 }))}
                       totalQuantity={bundles.entrySizeItems.length
@@ -599,7 +601,7 @@ const CuttingManagement: React.FC = () => {
                   </div>
 
                   <div>
-                    {tasks.isAdmin && activeTask && activeTask.status !== 'pending' ? (
+                    {tasks.isAdmin && activeTask && activeTask.status !== 'pending' && activeTask.status !== 'bundled' && activeTask.status !== 'completed' ? (
                       <div className="cutting-entry-actions">
                         <Button
                           danger
@@ -774,7 +776,7 @@ const CuttingManagement: React.FC = () => {
           ) : null}
 
           {/* ====== 新建裁剪任务弹窗 ====== */}
-          <CuttingCreateTaskModal modalWidth={modalWidth} createTask={createTask} />
+          <CuttingCreateTaskModal createTask={createTask} />
 
           {/* 快速编辑弹窗 */}
           <QuickEditModal

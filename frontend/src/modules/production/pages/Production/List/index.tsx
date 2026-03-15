@@ -10,11 +10,15 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import LabelPrintModal from './components/LabelPrintModal';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
+  hasProcurementStage,
   parseProductionOrderLines,
   isApiSuccess,
+  isOrderFrozenByStatus,
+  isOrderTerminal,
 } from '@/utils/api';
 import { getWorkspaceRole, isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { Dayjs } from 'dayjs';
@@ -80,6 +84,30 @@ const ProductionList: React.FC = () => {
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
+
+  // ===== 打印标签（洗水唛/吊牌）状态 =====
+  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
+  const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
+  const [labelPrintStyle, setLabelPrintStyle] = useState<{ fabricComposition?: string; washInstructions?: string; uCode?: string } | null>(null);
+
+  const handlePrintLabel = async (record: ProductionOrder) => {
+    setLabelPrintOrder(record);
+    setLabelPrintStyle(null);
+    setLabelPrintOpen(true);
+    if (record.styleId) {
+      try {
+        const res = await api.get(`/style/info/${record.styleId}`);
+        const d = (res as any)?.data ?? (res as any) ?? {};
+        setLabelPrintStyle({
+          fabricComposition: d.fabricComposition,
+          washInstructions: d.washInstructions,
+          uCode: d.uCode,
+        });
+      } catch {
+        setLabelPrintStyle({});
+      }
+    }
+  };
 
   // ===== 分享进度弹窗状态 =====
   const [shareModal, setShareModal] = useState<{
@@ -215,11 +243,14 @@ const ProductionList: React.FC = () => {
   const calcCardProgress = useCallback((record: ProductionOrder): number => {
     const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
     if (record.status === 'completed') return 100;
+    if (isOrderFrozenByStatus(record)) return dbProgress;
     const orderId = String(record.id || '');
     const stats = boardStatsByOrder[orderId];
     if (!stats) return dbProgress;
     const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
-    const PIPELINE = ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
+    const PIPELINE = hasProcurementStage(record as any)
+      ? ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库']
+      : ['裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
     const normalizeKey = (k: string) => {
       if (k.includes('入库') || k.includes('入仓')) return '入库';
       if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '质检';
@@ -509,12 +540,12 @@ const ProductionList: React.FC = () => {
     }
   );
 
-  // 排序：已关单/已完成始终排到最后，智能条筛选结果也走同一套共享逻辑
+  // 排序：终态订单（关单/报废/完成）始终排到最后，智能条筛选结果也走同一套共享逻辑
   const sortedProductionList = useMemo(() => {
     const filtered = [...smartQueueOrders];
     filtered.sort((a: any, b: any) => {
-      const aClose = (a.actualEndDate || a.status === 'CLOSED' || a.status === 'closed' || a.status === 'completed') ? 1 : 0;
-      const bClose = (b.actualEndDate || b.status === 'CLOSED' || b.status === 'closed' || b.status === 'completed') ? 1 : 0;
+      const aClose = isOrderTerminal(a) ? 1 : 0;
+      const bClose = isOrderTerminal(b) ? 1 : 0;
       if (aClose !== bClose) return aClose - bClose;
       if (sortField === 'createTime') {
         const aTime = a[sortField] ? new Date(a[sortField]).getTime() : 0;
@@ -569,6 +600,7 @@ const ProductionList: React.FC = () => {
     deliveryRiskMap,
     stagnantOrderIds,
     handleShareOrder,
+    handlePrintLabel,
   });
 
   // 根据 visibleColumns 过滤列
@@ -1017,7 +1049,7 @@ const ProductionList: React.FC = () => {
               ]}
               progressConfig={{
                 calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
                 type: 'liquid',
@@ -1027,13 +1059,18 @@ const ProductionList: React.FC = () => {
                 boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
                 transform: 'translateY(-2px)',
               } : undefined}
-              actions={(record: ProductionOrder) => [
-                { key: 'print', label: '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
-                { key: 'close', label: '关单', onClick: () => { handleCloseOrder(record); } },
+              actions={(record: ProductionOrder) => {
+                const frozen = isOrderFrozenByStatus(record);
+                const frozenTitle = '订单已关单/报废/完成，无法操作';
+                return [
+                { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
+                { key: 'close', label: '关单', disabled: frozen, title: frozen ? frozenTitle : '关单', onClick: () => { handleCloseOrder(record); } },
                 { key: 'divider1', type: 'divider' as const, label: '' },
-                { key: 'edit', label: '编辑', onClick: () => { quickEditModal.open(record); } },
-                { key: 'share', label: '分享', onClick: () => { void handleShareOrder(record); } },
-              ].filter(Boolean)}
+                { key: 'edit', label: '编辑', disabled: frozen, title: frozen ? frozenTitle : '编辑', onClick: () => { quickEditModal.open(record); } },
+                { key: 'share', label: '分享', disabled: frozen, title: frozen ? frozenTitle : '分享', onClick: () => { void handleShareOrder(record); } },
+              ].filter(Boolean);
+              }}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
               titleTags={(record) => (
                 <>
@@ -1529,6 +1566,14 @@ const ProductionList: React.FC = () => {
             </div>
           ) : null}
         </ResizableModal>
+
+        {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
+        <LabelPrintModal
+          open={labelPrintOpen}
+          onClose={() => { setLabelPrintOpen(false); setLabelPrintOrder(null); setLabelPrintStyle(null); }}
+          order={labelPrintOrder}
+          styleInfo={labelPrintStyle}
+        />
 
         {/* 打印预览弹窗 */}
         <StylePrintModal

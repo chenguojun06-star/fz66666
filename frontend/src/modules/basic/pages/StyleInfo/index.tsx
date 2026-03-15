@@ -595,6 +595,8 @@ const StyleInfoDetailPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+
     </Layout>
   );
 };

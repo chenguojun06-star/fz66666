@@ -51,12 +51,30 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
             repaired += ensureColumn(conn, schema, "t_style_info", "image_insight",
                     "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '面料成分，如：70%棉 30%涤纶'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "wash_instructions",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '洗涤说明，如：30°C水洗，不可漂白'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "u_code",
+                    "VARCHAR(100) DEFAULT NULL COMMENT 'U编码/品质追溯码，用于吊牌打印'");
+                    repaired += ensureColumn(conn, schema, "t_style_info", "wash_temp_code",
+                        "VARCHAR(20) DEFAULT NULL COMMENT '洗涤温度代码：W30/W40/W60/W95/HAND/NO'");
+                    repaired += ensureColumn(conn, schema, "t_style_info", "bleach_code",
+                        "VARCHAR(20) DEFAULT NULL COMMENT '漂白代码：ANY/NON_CHL/NO'");
+                    repaired += ensureColumn(conn, schema, "t_style_info", "tumble_dry_code",
+                        "VARCHAR(20) DEFAULT NULL COMMENT '烘干代码：NORMAL/LOW/NO'");
+                    repaired += ensureColumn(conn, schema, "t_style_info", "iron_code",
+                        "VARCHAR(20) DEFAULT NULL COMMENT '熨烫代码：LOW/MED/HIGH/NO'");
+                    repaired += ensureColumn(conn, schema, "t_style_info", "dry_clean_code",
+                        "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码：YES/NO'");
                 repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
                     "VARCHAR(50) DEFAULT NULL COMMENT '尺寸分组名，如上装区/下装区' ");
+                    repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
+                        "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,
@@ -231,6 +249,25 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         return 0;
     }
 
+    private int ensureColumnType(Connection conn, String schema, String table, String column,
+            String expectedTypePrefix, String alterFragment) {
+        try {
+            String actualType = getColumnType(conn, schema, table, column);
+            if (actualType == null || actualType.toLowerCase().startsWith(expectedTypePrefix.toLowerCase())) {
+                return 0;
+            }
+            String sql = "ALTER TABLE `" + table + "` " + alterFragment;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.executeUpdate();
+            }
+            log.warn("[DbRepair] 已修正列类型: {}.{} {} -> {}", table, column, actualType, expectedTypePrefix);
+            return 1;
+        } catch (Exception e) {
+            log.error("[DbRepair] 修正列类型 {}.{} 失败: {}", table, column, e.getMessage());
+        }
+        return 0;
+    }
+
     private boolean columnExists(Connection conn, String schema, String table, String column) throws Exception {
         String sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
                 "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
@@ -242,6 +279,22 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                 return rs.next() && rs.getInt(1) > 0;
             }
         }
+    }
+
+    private String getColumnType(Connection conn, String schema, String table, String column) throws Exception {
+        String sql = "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS " +
+                "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
+            ps.setString(3, column);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+        return null;
     }
 
     private boolean tableExists(Connection conn, String schema, String table) throws Exception {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
+import { isOrderFrozenByStatus } from '@/utils/api';
 
 /** 无新扫码超过多少天判定为停滞 */
 const STAGNANT_DAYS = 3;
@@ -20,7 +21,7 @@ export function useStagnantDetection(
     const now = dayjs();
 
     for (const order of orders) {
-      if (order.status === 'completed' || !order.id) continue;
+      if (isOrderFrozenByStatus(order) || !order.id) continue;
 
       const timeMap = boardTimesByOrder[String(order.id)];
       // 数据尚未加载 → 不判断（避免误报）

@@ -15,6 +15,7 @@ import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.common.UserContext;
@@ -47,6 +48,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private ProductionOrderQueryService productionOrderQueryService;
+
     // NOTE [架构债务] TemplateLibraryService 是跨模块依赖（template→production）
     // 应迁移 resolveCuttingUnitPrice() 到 CuttingBundleOrchestrator，
     // 通过参数传递价格给 markBundledByOrderId()，需同时修改2个接口+3个实现
@@ -75,6 +79,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
                         .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                .ne(ProductionOrder::getStatus, "scrapped")
         );
         List<String> validOrderIds = allOrders.stream()
                 .map(ProductionOrder::getId)
@@ -197,9 +202,11 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             List<ProductionOrder> orders = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .in(ProductionOrder::getId, orderIdsFiltered)
-                            .select(ProductionOrder::getId, ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime,
+                    .select(ProductionOrder::getId, ProductionOrder::getStyleNo,
+                        ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime,
                                     ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
             );
+            productionOrderQueryService.fillStyleCover(orders);
             Map<String, ProductionOrder> orderMap = orders.stream()
                     .filter(o -> o != null && StringUtils.hasText(o.getId()))
                     .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a1, b) -> a1));
@@ -212,6 +219,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                     t.setOrderTime(order.getCreateTime());
                     t.setFactoryName(order.getFactoryName());
                     t.setFactoryType(order.getFactoryType());
+                    t.setStyleCover(order.getStyleCover());
                 }
             }
         }
@@ -555,6 +563,11 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
         CuttingTask task = this.getById(taskId);
         if (task == null) {
+            return false;
+        }
+
+        String status = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
+        if ("bundled".equals(status) || task.getBundledTime() != null) {
             return false;
         }
 

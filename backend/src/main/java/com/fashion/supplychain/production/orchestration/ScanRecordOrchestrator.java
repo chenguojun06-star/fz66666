@@ -284,7 +284,10 @@ public class ScanRecordOrchestrator {
 
         if (target == null) {
             String st = hasText(scanType) ? scanType.trim().toLowerCase() : "";
-            if (("warehouse".equals(st) || "quality".equals(st)) && hasText(scanCode)
+            if ("warehouse".equals(st)) {
+                throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");
+            }
+            if ("quality".equals(st) && hasText(scanCode)
                     && qtyParam != null && qtyParam > 0) {
                 // 检查订单是否已完成
                 String fallbackOrderId = TextUtils.safeText(safeParams.get("orderId"));
@@ -358,6 +361,9 @@ public class ScanRecordOrchestrator {
 
         String targetType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase()
                 : (hasText(scanType) ? scanType.trim().toLowerCase() : "");
+        if ("warehouse".equals(targetType)) {
+            throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");
+        }
         boolean warehousingLike = "warehouse".equals(targetType) || "quality".equals(targetType)
                 || "quality_warehousing".equalsIgnoreCase(target.getProcessCode());
 

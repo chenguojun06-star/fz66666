@@ -54,7 +54,7 @@ public class PlatformNotifyService {
     // ──────────────────────────────────────────────
 
     private void notifyTaobao(EcommerceOrder order) {
-        // TODO: POST https://eco.taobao.com/router/rest → method=logistic.offline.send
+        // 待接入：POST https://eco.taobao.com/router/rest → method=logistic.offline.send
         // 参数: tid={platformOrderNo}, out_sid={trackingNo}, company_name={expressCompany}
         // 需配置: TAOBAO_APP_KEY / TAOBAO_APP_SECRET / TAOBAO_SESSION_KEY
         log.info("[物流回调][淘宝/天猫] 待接入 platformOrderNo={} trackingNo={}",
@@ -62,7 +62,7 @@ public class PlatformNotifyService {
     }
 
     private void notifyJd(EcommerceOrder order) {
-        // TODO: POST https://api.jd.com/routerjson → method=jingdong.order.deliverEorder
+        // 待接入：POST https://api.jd.com/routerjson → method=jingdong.order.deliverEorder
         // 参数: jdOrderId={platformOrderNo}, venderOrderId={orderNo}, logisticsId={trackingNo}
         // 需配置: JD_APP_KEY / JD_ACCESS_TOKEN
         log.info("[物流回调][京东] 待接入 platformOrderNo={} trackingNo={}",
@@ -70,7 +70,7 @@ public class PlatformNotifyService {
     }
 
     private void notifyPdd(EcommerceOrder order) {
-        // TODO: POST https://gw-api.pinduoduo.com/api/router → type=pdd.logistics.ship
+        // 待接入：POST https://gw-api.pinduoduo.com/api/router → type=pdd.logistics.ship
         // 参数: order_sn={platformOrderNo}, logistics_name={expressCompany},
         //       tracking_number={trackingNo}
         // 需配置: PDD_CLIENT_ID / PDD_CLIENT_SECRET
@@ -79,7 +79,7 @@ public class PlatformNotifyService {
     }
 
     private void notifyDouyin(EcommerceOrder order) {
-        // TODO: POST https://open-api.douyin.com/api/trade/v1/ship/mark
+        // 待接入：POST https://open-api.douyin.com/api/trade/v1/ship/mark
         // 参数: order_id={platformOrderNo}, delivey_id={trackingNo}
         // 需配置: DY_APP_ID / DY_APP_SECRET / DY_ACCESS_TOKEN
         log.info("[物流回调][抖音] 待接入 platformOrderNo={} trackingNo={}",
@@ -87,13 +87,13 @@ public class PlatformNotifyService {
     }
 
     private void notifyXhs(EcommerceOrder order) {
-        // TODO: 小红书开放平台 → 物流发货接口（需申请资质）
+        // 待接入：小红书开放平台 → 物流发货接口（需申请资质）
         log.info("[物流回调][小红书] 待接入 platformOrderNo={} trackingNo={}",
                 order.getPlatformOrderNo(), order.getTrackingNo());
     }
 
     private void notifyWechat(EcommerceOrder order) {
-        // TODO: 微信小商店 → POST https://api.weixin.qq.com/shop/aftersale/updatemchaftersale
+        // 待接入：微信小商店 → POST https://api.weixin.qq.com/shop/aftersale/updatemchaftersale
         // 需微信商家授权 access_token
         log.info("[物流回调][微信小店] 待接入 platformOrderNo={} trackingNo={}",
                 order.getPlatformOrderNo(), order.getTrackingNo());

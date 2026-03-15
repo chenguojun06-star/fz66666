@@ -16,7 +16,7 @@ export interface CardField {
 
 export interface CardProgressConfig {
   calculate: (record: any) => number;
-  getStatus?: (record: any) => 'normal' | 'warning' | 'danger'; // liquid 类型使用 normal/warning/danger
+  getStatus?: (record: any) => 'normal' | 'warning' | 'danger' | 'default'; // liquid 类型使用 normal/warning/danger/default
   isCompleted?: (record: any) => boolean; // 明确指定是否完成
   show?: boolean; // 是否显示进度条
   type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
@@ -28,6 +28,8 @@ export interface CardAction {
   label?: React.ReactNode | string;
   onClick?: (record: any) => void;
   danger?: boolean;
+  disabled?: boolean;
+  title?: string;
   type?: 'divider';
 }
 
@@ -255,8 +257,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                           type="link"
                           danger={action.danger}
                           size="small"
+                          disabled={action.disabled}
+                          title={action.title}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (action.disabled) return;
                             action.onClick?.(record);
                           }}
                           style={{

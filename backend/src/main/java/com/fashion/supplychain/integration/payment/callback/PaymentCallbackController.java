@@ -129,7 +129,7 @@ public class PaymentCallbackController {
             }
 
             // Step 2: 解密并解析回调数据
-            // TODO: 接入微信SDK后，使用 NotificationParser 解密 body
+            // 待接入微信SDK（wechatpay-java），使用 NotificationParser 解密 body
             // DecryptNotifyResult result = parser.parse(headers, body, DecryptNotifyResult.class);
             // String orderId = result.getOutTradeNo();
             // String transactionId = result.getTransactionId();
@@ -153,7 +153,7 @@ public class PaymentCallbackController {
     /**
      * 支付成功处理
      *
-     * TODO: 接入后在这里填写支付成功的业务逻辑：
+     * 接入支付SDK后填写支付成功的业务逻辑：
      * 1. 更新订单支付状态（order.status → PAID）
      * 2. 触发发货流程
      * 3. 发送支付成功通知（短信/微信消息）
@@ -173,7 +173,7 @@ public class PaymentCallbackController {
         // 更新支付流水状态为成功
         recordService.updatePaymentStatus(thirdPartyNo, "SUCCESS", null);
 
-        // TODO: 注入业务服务后实现
+        // 注入业务服务后实现
         // @Autowired private ProductionOrderService orderService;
         // orderService.markAsPaid(orderId, thirdPartyNo, paymentType.name());
     }
@@ -183,7 +183,7 @@ public class PaymentCallbackController {
      */
     private void handlePaymentClosed(String orderId, PaymentGateway.PaymentType paymentType) {
         log.info("[支付关闭] orderId={} channel={}", orderId, paymentType.getDisplayName());
-        // TODO: 更新订单状态为已关闭
+        // 接入后实现：更新订单状态为已关闭
     }
 
     // =====================================================

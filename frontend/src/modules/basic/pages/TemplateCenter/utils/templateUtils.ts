@@ -120,7 +120,7 @@ export const typeColor = (t: string) => {
   const v = String(t || '').trim().toLowerCase();
   if (v === 'bom') return 'blue';
   if (v === 'size') return 'purple';
-  if (v === 'process') return 'green';
+  if (v === 'process' || v === 'process_price') return 'green';
   return 'default';
 };
 
@@ -137,7 +137,7 @@ export const typeLabel = (t: string) => {
   const v = String(t || '').trim().toLowerCase();
   if (v === 'bom') return 'BOM';
   if (v === 'size') return '尺寸';
-  if (v === 'process') return '工序进度单价';
+  if (v === 'process' || v === 'process_price') return '工序进度单价';
   return v || '-';
 };
 

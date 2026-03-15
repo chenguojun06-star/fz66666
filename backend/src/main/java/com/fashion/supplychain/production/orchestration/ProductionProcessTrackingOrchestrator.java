@@ -84,7 +84,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param productionOrderId 生产订单ID（String类型）
      * @return 生成的记录数量
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public int initializeProcessTracking(String productionOrderId) {
         log.info("开始初始化工序跟踪记录，订单ID: {}", productionOrderId);
 

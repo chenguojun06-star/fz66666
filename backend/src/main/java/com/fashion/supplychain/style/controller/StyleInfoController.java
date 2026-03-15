@@ -41,8 +41,8 @@ public class StyleInfoController {
      * 根据ID查询款号资料详情
      */
     @GetMapping("/{id}")
-    public Result<?> detail(@PathVariable Long id) {
-        return Result.success(styleInfoOrchestrator.detail(id));
+    public Result<?> detail(@PathVariable("id") String idOrStyleNo) {
+        return Result.success(styleInfoOrchestrator.detail(idOrStyleNo));
     }
 
     /**

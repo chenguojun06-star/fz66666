@@ -1,6 +1,55 @@
+## 2026-03-15
+
+- 修复模板中心“单价维护 > 模板列表”不显示独立维护款号的问题：`process_price` 模板不再被前端列表过滤，且“工序进度单价”筛选会同时包含 `process` 与 `process_price`。
+- 补充 `TemplateLibraryServiceImplTest` 回归校验，锁定模板列表查询兼容独立维护工序单价模板的行为。
+- 修复独立款号模板在“编辑模板”弹窗里丢失父子关系编辑能力的问题：`process_price` 现改为复用完整工序编辑器，支持查看和维护 `进度节点/机器类型/工序难度/工时/多码单价`，不再只剩旧版三列表格。
+- 模板列表中的独立款号模板“保存”已切到专用 `process-price-template` 链路，保存成功后可直接在同一入口触发“同步到该款号订单”，避免保存口与同步口行为分裂；同时压缩了编辑弹窗字号和列宽，观感向正常模板靠齐。
+- 收紧图片能力边界：模板列表编辑页中的图片上传仅对独立款号模板 `process_price` 开放，普通开发流程的 `process` 模板在该入口不显示也不保存图片，避免跨流程混用。
+- 修复模板款号新建裁剪任务 500：当模板款号尚未建立 `StyleInfo` 档案时，`custom/create` 会用款号本身兜底写入 `styleId`，避免 `t_production_order.style_id` 非空约束导致创建失败。
+- 补充 `CuttingTaskControllerTest`，直接覆盖 `POST /api/production/cutting-task/custom/create` 的 HTTP 返回，锁定模板款号裁剪建单入口可用。
+- 修复模板裁剪单创建后详情跳转 404：前端订单详情查询不再把 `CUT...` 单号误判成订单主键，而是统一按订单号查询，避免进入裁剪明细后立即提示“生产订单不存在”。
+- 补齐模板款号裁剪建单的基础下单信息：创建弹窗改为可增删多行 `颜色 / 尺码 / 数量` 明细，并由后端自动汇总数量、生成 `orderDetails`，创建后可直接沿用正常裁剪逻辑继续生成菲号。
+- 调整模板款号裁剪建单弹窗字段：移除无业务价值的“裁剪单号”输入，新增通用日期组件版 `下单日期 / 订单交期`，后端创建时分别写入生产订单 `createTime / plannedEndDate`，让裁剪起点与后续交期看板保持一致。
+- 修复模板裁剪单退回后的终态显示错误：`CUT` 单退回时会同步把关联生产订单标记为 `scrapped`，后端进度填充不再把 `scrapped` 订单覆盖回 `production`，前端状态标签同步显示灰色“报废”，避免报废单继续以绿色“生产中”显示。
+- 统一报废订单的终态交互：生产列表、生产进度卡片、扫码入口、裁剪任务入口、停滞预警和智能催办现在都把 `scrapped` 视为终态订单，进度条改为灰色静止、悬浮卡隐藏、操作入口禁用，状态继续显示“报废”。
+- 修复模板裁剪任务“保存并生成菲号”400：模板裁剪起点创建时不再把 `materialArrivalRate` 固定为 0，而是直接标记为可裁剪状态，避免后续 `/api/production/cutting/receive` 被“物料未到齐，无法生成裁剪单”错误拦截；同时前端会透传后端真实报错，不再只显示笼统“生成失败”。
+- 统一裁剪入口直下单的采购阶段识别：`CUT` 直裁订单在“我的订单 / 生产进度 / 悬浮卡”中一律按“无采购环节”处理，采购列默认灰态显示“无采购”，进度起点直接从裁剪开始，后端也不再回填这类订单的采购完成率、采购时间与当前环节“采购”。
+- 继续收紧裁剪与入库撤回规则：`CUT` 直裁订单领取裁剪任务时彻底跳过采购到料校验，避免仍被“物料未到齐”错误拦截；已生成菲号的裁剪任务前后端统一禁止“退回”，避免裁剪完成后再回滚；入库记录也统一禁止直接撤回，必须先走出库再重做入库，其中 PC/小程序的手工入库回退入口会直接拒绝，扫码页里的 `warehouse` 记录不再显示“撤回/退回重扫”，PC 工序跟踪表里的入库类记录也不再显示“撤回”。
+- 修复生产订单“报废”误删主单的问题：后端报废逻辑改为仅更新订单状态为 `scrapped` 并保留原有订单与子表数据，不再走删除订单和级联清理；我的订单页继续显示报废单，状态可见，不会再出现“提示报废成功但订单像被删掉”的错误表现。
+- 修复生产订单报废/推进/回退后的结构性 500：根因不是列表查询本身，而是订单操作写入 `t_scan_record` 时把 `request_id` 生成为超长字符串，触发 `request_id VARCHAR(64)` 截断异常，继而把 `includeScrapped=true` 的列表刷新一并拖成 500。现已统一收紧 `ORDER_OP / ORDER_ADVANCE / ORDER_ROLLBACK / ORCH_FAIL` 四类业务 request_id 生成规则，保持前缀语义不变但长度稳定落在数据库上限内；并补充 `ProductionOrderScanRecordDomainServiceTest` 回归覆盖，锁定报废等正常链路不会再因为 request_id 写爆库而假成功、真失败。
+- 修复本地环境首页仪表盘与样衣列表 500：本地库缺少 `t_style_info.wash_instructions / fabric_composition / u_code` 护理标签字段时，`/api/dashboard` 与 `/api/style/info/list` 会因实体字段新增而触发 SQL 缺列异常；现已补齐本地数据库列，并把这 3 列纳入 `DbColumnRepairRunner` 启动自愈，重启后不再重复炸出同类问题。
+- 修复本地样衣资料/生产订单/采购/裁剪列表连锁 500：`StyleInfo` 新增了 `wash_temp_code / bleach_code / tumble_dry_code / iron_code / dry_clean_code` 5 个洗护图标代码字段，但本地以 `FLYWAY_ENABLED=false` 启动时没有自动补列，导致所有间接查询 `t_style_info` 的页面统一报 `Unknown column 'wash_temp_code' in 'field list'`。现已直接补齐本地数据库列，并把这 5 列同步纳入 `DbColumnRepairRunner` 启动自愈，避免下次重启或重建本地库后再次出现“数据库操作异常，请联系管理员”的批量 500。
+- 修复样衣详情按款号打开 500：`/api/style/info/{id}` 现兼容数字主键和款号两种入参，像 `HYY0003` 这类前端路由键会先按 `styleNo` 回查真实主键再加载完整详情，不再因为 `Long.parseLong("HYY0003")` 直接报错。
+- 修复“生成菲号”提交即回滚 500：根因是本地 `t_production_process_tracking.id` 仍是历史 `bigint`，但当前代码按 UUID 字符串写入；同时工序跟踪初始化原本参与裁剪扎号主事务，哪怕外层 catch 了异常也会把整单标记成 rollback-only。现已把 `initializeProcessTracking` 改为独立事务，并将 `t_production_process_tracking.id` 纳入 `DbColumnRepairRunner` 启动自愈，避免本地再次因旧表结构把扎号主流程一起拖死。
 ## 2026-04-（最新）
 
-### 🧵 feat(process-price-template): 工序单价维护改为独立款号模板
+### � feat(wash-care-icons): 款式档案新增 ISO 3758 洗涤护理图标打印
+
+**改动内容**：
+- `t_style_info` 新增 3 个标签字段（Flyway `V20260427002`）：
+  · `fabric_composition VARCHAR(500)` — 面料成分（如：70%棉 30%涤纶）
+  · `wash_instructions VARCHAR(500)` — 洗涤说明文字
+  · `u_code VARCHAR(100)` — U编码/品质追溯码
+- `t_style_info` 新增 5 个 ISO 3758 护理图标代码字段（Flyway `V20260428001`）：
+  · `wash_temp_code VARCHAR(20)` — 洗涤温度（W30/W40/W60/W95/HAND/NO）
+  · `bleach_code VARCHAR(20)` — 漂白代码（ANY/NON_CHL/NO）
+  · `tumble_dry_code VARCHAR(20)` — 烘干代码（NORMAL/LOW/NO）
+  · `iron_code VARCHAR(20)` — 熨烫代码（LOW/MED/HIGH/NO）
+  · `dry_clean_code VARCHAR(20)` — 干洗代码（YES/NO）
+- `StyleInfo.java` 同步添加 5 个护理代码字段：`washTempCode / bleachCode / tumbleDryCode / ironCode / dryCleanCode`
+- `StyleBasicInfoForm.tsx` 在款式档案编辑页新增 5 个 ISO 3758 护理图标 Select 下拉组件
+- `StyleLabelPrintModal.tsx` + `LabelPrintModal.tsx` 的 `buildWashLabelHtml()` 升级：存有护理代码时洗水唛 PDF 自动渲染标准 SVG 护理符号，无护理代码时兜底显示文字说明
+
+**对系统的帮助**：
+- ✅ 洗水唛吊牌从"只能印文字洗涤说明"升级为"可打印 ISO 3758 标准护理符号"，符合出口服装合规要求
+- ✅ 款式档案可结构化存储面料成分与品质追溯码（U编码），不再依赖备注字段人工维护
+- ✅ 标签打印入口（样板生产 + 生产列表两处）统一复用同一套护理图标渲染逻辑，输出一致
+
+**稳定性补充**：
+- 新增 `DbColumnRepairRunner`：本地以 `FLYWAY_ENABLED=false` 启动时，启动阶段自动检测并补齐 `t_style_info` 的 8 个新字段，避免重建本地库后再次出现批量 500
+- 编译验证：后端 `mvn clean compile` → BUILD SUCCESS；前端 `npx tsc --noEmit` → 0 errors
+
+### �🧵 feat(process-price-template): 工序单价维护改为独立款号模板
 
 **改动内容**：
 - 模板中心的“工序单价维护 · 同步到生产订单”改成独立款号模板维护，不再依赖款式详情页进入
@@ -10,11 +59,22 @@
 - `POST /api/template-library/sync-process-prices` 恢复为必须传 `styleNo`，只允许同步该款号订单，禁止空款号全量同步
 - `TemplateLibraryServiceImpl.resolveProcessPriceTemplate(...)` 删除默认工价回退，只认当前款号自己的 `process_price` 模板
 - 裁剪建单允许直接使用这里新建的模板款号下单，不再强依赖 `StyleInfo` 已先建档
+- 模板款号从裁剪页新建时，已改成只创建“正常裁剪起点”：创建后状态与正常订单一致，后续领取、录入颜色尺码数量、生成菲号全部回到裁剪页原有流程，不再在创建弹窗里提前快进到 `bundled`
+- 模板图片已继续沿用 `styleCover` 向下游透传，裁剪任务列表、裁剪详情头图、生产列表等后续环节都会优先显示模板图片
 
 **对系统的帮助**：
 - ✅ 工序工价维护从“必须绑定现有款式页面”改成“可直接独立建一个新款号模板”，更适合先建工价、后补资料的业务节奏
 - ✅ 同步范围被严格限制在指定款号，避免误操作把未确认工价批量推到所有生产订单
 - ✅ 模板侧新建的款号现在可以直接进入裁剪下单链路，符合“先建工价款号，再去裁剪下单”的业务顺序
+- ✅ 模板款号进入裁剪模块后不再走特殊分支，现场人员看到的领取、裁剪、菲号生成流程与正常订单完全一致
+- ✅ 模板图片不只停留在模板维护页，而是能继续贯穿裁剪与生产环节，避免后续页面出现“无图”断链
+
+**测试补强**：
+- 新增 `CuttingTaskOrchestratorTest` 断言：模板款号创建裁剪单后只建立正常 `pending` 起点，不再直接落到 `bundled`
+- 新增 `CuttingBundleServiceImplTest` 断言：模板款号创建起点被领取后，可正常生成菲号并推进到 `bundled/车缝` 后续链路；未领取时禁止直接生成菲号
+- 新增 `ProductionScanExecutorTest` 断言：模板子工序扫码时，会按模板 `progressStage` 归类到正确父节点，同时保留子工序名
+- 新增 `ProductionScanExecutorTest` 断言：工序跟踪更新会先按子工序匹配，找不到时回退到模板父节点，保证工资跟踪链路不断
+- 已完成前端 `npx tsc --noEmit` 与裁剪/扫码相关定向后端测试 42 项验证
 
 ### 🔎 feat(qdrant-hybrid): 知识库检索升级为语义召回 + 关键词召回 + 本地重排
 
@@ -196,13 +256,6 @@
 ---
 
 ## 2026-03-15
-
-### 🤖 智能体能力核心升级 (后端化)
-- **多智能体自反思 (Critics & Self-Reflection)**: 新增 `AiCriticOrchestrator`，在 `AiAgentOrchestrator` 返回结果前进行二次校验，极大降低 AI 幻觉，防止敏感信息越权越界。在 SSE 流中自动发送“思考中”状态以优化前端体验（无需任何 UI/前端层修改）。
-- **沙盘系统 (Sandbox "What-if" Mode)**: 新增 `AiSandboxOrchestrator` 与 `NewOrderSimulationTool`。通过注入虚拟订单进行产能推演（如：接5000件大单后的排期影响），基于 `FactoryCapacityOrchestrator` 给厂长提供数据决策辅助。
-- **全局自主风险巡检 (Autonomous Patrol)**: 新增 `AiPatrolOrchestrator` 与 `DailyPatrolTool`，使得 AI 具备主动发掘停滞订单、库存卡点、风险告警的功能，响应用户要求“检查系统状态”的自然语言需求。
-- **架构隔离升级**: 所有新增能力严格遵守 `Controller → Orchestrator → Service` 隔离原则。将所有智能体扩展独立为新的编排器，保证主流程代码（150+ 其他编排器）0 侵入、0 破坏，并通过 100% 回归测试。
-
 
 ### 🔴 fix(cloud-hotfix): 修复生产下单空指针，并为 BOM/尺寸图片字段补启动自愈
 

@@ -25,12 +25,15 @@ function startUndoTimer(page, record) {
     undoTimer = null;
   }
 
+  const scanType = String(record && record.scanType || '').trim().toLowerCase();
+  const canUndoCurrentScan = scanType !== 'warehouse';
+
   page.setData({
     undoVisible: true,
     undoCountdown: UNDO_COUNTDOWN_SECONDS,
     undoRecord: record,
     // 让 WXML 撤回按钮可见（wx:if="{{lastResult.success && undo.canUndo}}"）
-    'undo.canUndo': true,
+    'undo.canUndo': canUndoCurrentScan,
     'undo.loading': false,
   });
 
@@ -75,9 +78,16 @@ function stopUndoTimer(page) {
 async function handleUndo(page) {
   const record = page.data.undoRecord;
   const recordId = record?.recordId || record?.data?.recordId || record?.data?.id;
+  const scanType = String(record && record.scanType || '').trim().toLowerCase();
 
   if (!record || !recordId) {
     toast.error('撤销失败：未找到扫码记录信息');
+    stopUndoTimer(page);
+    return;
+  }
+
+  if (scanType === 'warehouse') {
+    toast.error('入库记录不支持直接撤回，请先走出库，再重新入库');
     stopUndoTimer(page);
     return;
   }

@@ -38,7 +38,7 @@ export interface ProductionOrder extends Record<string, unknown> {
   inStockQuantity?: number;
   materialArrivalRate: number;
   productionProgress: number;
-  status: 'pending' | 'production' | 'completed' | 'delayed';
+  status: 'pending' | 'production' | 'completed' | 'delayed' | 'scrapped' | 'cancelled' | 'paused' | 'returned';
   /** 紧急程度: urgent=急单, normal=普通，默认普通 */
   urgencyLevel?: 'urgent' | 'normal';
   /** 订单类型: FIRST=首单, REORDER=翻单 */
@@ -203,6 +203,7 @@ export interface CuttingTask {
   expectedShipDate?: string;
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
+  styleCover?: string;
 }
 
 export interface MaterialPurchase extends Record<string, unknown> {

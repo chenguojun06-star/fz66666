@@ -50,7 +50,7 @@ export const useOpenScan = ({
 }: UseOpenScanParams) => {
   return useCallback(async (order: ProductionOrder) => {
     if (isOrderFrozenByStatus(order)) {
-      message.error('订单已完成，无法操作');
+      message.error('订单已关单/报废/完成，无法操作');
       return;
     }
     const detail = order?.id ? await fetchOrderDetail(order.id) : null;

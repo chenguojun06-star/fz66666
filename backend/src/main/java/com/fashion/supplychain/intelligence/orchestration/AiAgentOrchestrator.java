@@ -31,6 +31,9 @@ import java.util.stream.Collectors;
 @Service
 public class AiAgentOrchestrator {
 
+    @Autowired
+    private AiCriticOrchestrator criticOrchestrator;
+
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_TOOL_RAW_CHARS = 1800;
 

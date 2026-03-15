@@ -192,8 +192,6 @@ const TemplateCenter: React.FC = () => {
       const pageData: PageResp<TemplateLibrary> = res.data || { records: [], total: 0 };
       const records = Array.isArray(pageData.records) ? pageData.records : [];
       const filtered = records.filter((row) => {
-        const t = String(row?.templateType || '').trim().toLowerCase();
-        if (t === 'process_price' || t === 'progress') return false;
         if (selectedType === 'process_size') {
           try {
             const raw = (row as TemplateLibrary & Record<string, unknown>)?.templateContent;

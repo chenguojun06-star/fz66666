@@ -217,8 +217,9 @@ export function useCuttingBundles({
           } else {
             message.error(res.message || '生成失败');
           }
-        } catch {
-          message.error('生成失败');
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.message || err?.message || '生成失败';
+          message.error(errMsg);
         } finally {
           setGenerateLoading(false);
         }

@@ -1,0 +1,29 @@
+package com.fashion.supplychain.intelligence.job;
+
+import com.fashion.supplychain.intelligence.orchestration.AiPatrolOrchestrator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+/**
+ * 智能体自主巡检定时任务 (每天9点、14点、17点巡回一次)
+ */
+@Slf4j
+@Component
+public class AiAutonomousPatrolJob {
+
+    @Autowired
+    private AiPatrolOrchestrator aiPatrolOrchestrator;
+
+    @Scheduled(cron = "0 0 9,14,17 * * ?")
+    public void executePatrol() {
+        log.info("[AiAutonomousPatrolJob] 开始执行AI大脑全盘巡检...");
+        try {
+            aiPatrolOrchestrator.patrolAndAlert();
+        } catch (Exception e) {
+            log.error("[AiAutonomousPatrolJob] 智能巡检时发生异常:", e);
+        }
+        log.info("[AiAutonomousPatrolJob] 智能巡检完成.");
+    }
+}

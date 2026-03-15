@@ -4,20 +4,27 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
-import java.util.HashMap;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-
+import com.fashion.supplychain.template.service.TemplateLibraryService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,18 +38,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
+import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
-/**
- * CuttingTaskOrchestrator 单元测试
- *
- * <p>重点验证 2026-02-26 修复的 NULL BUG：
- * createCustom() 中 task.productionOrderId 和 bundle.productionOrderId 必须被赋值（不为 null）。
- */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CuttingTaskOrchestrator 单元测试")
 class CuttingTaskOrchestratorTest {
@@ -59,10 +56,21 @@ class CuttingTaskOrchestratorTest {
     @Mock
     private ProductionOrderService productionOrderService;
 
+    @Mock
+    private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Mock
+    private TemplateLibraryService templateLibraryService;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    @Mock
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
     @InjectMocks
     private CuttingTaskOrchestrator orchestrator;
 
-    /** lambdaQuery 链式 Mock：RETURNS_SELF 使 .eq()/.last() 回传自身 */
     @SuppressWarnings("unchecked")
     private final LambdaQueryChainWrapper<StyleInfo> styleQuery =
             (LambdaQueryChainWrapper<StyleInfo>) Mockito.mock(
@@ -76,6 +84,11 @@ class CuttingTaskOrchestratorTest {
         ctx.setUsername("操作员");
         ctx.setTenantId(1L);
         UserContext.set(ctx);
+        try {
+            lenient().when(objectMapper.writeValueAsString(any())).thenReturn("[{\"color\":\"黑色\",\"size\":\"XL\",\"quantity\":120},{\"color\":\"白色\",\"size\":\"L\",\"quantity\":50}]");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @AfterEach
@@ -88,13 +101,9 @@ class CuttingTaskOrchestratorTest {
         org.apache.ibatis.builder.MapperBuilderAssistant ass =
                 new org.apache.ibatis.builder.MapperBuilderAssistant(
                         new com.baomidou.mybatisplus.core.MybatisConfiguration(), "");
-        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(ass, ProductionOrder.class);
-        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(ass, CuttingTask.class);
+        TableInfoHelper.initTableInfo(ass, ProductionOrder.class);
+        TableInfoHelper.initTableInfo(ass, CuttingTask.class);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // getStatusStats
-    // ─────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getStatusStats - 无订单时各状态均返回 0")
@@ -130,10 +139,6 @@ class CuttingTaskOrchestratorTest {
         assertEquals(1L, getCount(stats, "bundledCount"));
     }
 
-    // ─────────────────────────────────────────────────────────
-    // createCustom - 参数校验
-    // ─────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("createCustom - 缺少款号抛 IllegalArgumentException")
     void createCustom_missingStyleNo_throws() {
@@ -143,118 +148,106 @@ class CuttingTaskOrchestratorTest {
     }
 
     @Test
-    @DisplayName("createCustom - 菲号列表为空抛 IllegalArgumentException")
-    void createCustom_emptyBundles_throws() {
-        Map<String, Object> body = new HashMap<>();
-        body.put("styleNo", "STY-001");
-        body.put("bundles", Collections.emptyList());
-        assertThrows(IllegalArgumentException.class, () -> orchestrator.createCustom(body));
-    }
-
-    @Test
-    @DisplayName("createCustom - 款式不存在抛 IllegalArgumentException")
-    void createCustom_styleNotFound_throws() {
+    @DisplayName("createCustom - 无主数据款号也创建正常待领取起点")
+    void createCustom_withoutStyleInfo_createsNormalPendingStart() {
         when(styleInfoService.lambdaQuery()).thenReturn(styleQuery);
         doReturn(null).when(styleQuery).one();
-        assertThrows(NoSuchElementException.class, () ->
-                orchestrator.createCustom(buildValidCreateBody()));
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // createCustom - 核心 BUG 修复验证
-    // ─────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("createCustom - task.productionOrderId 必须被赋值（BUG FIX #1）")
-    void createCustom_success_taskProductionOrderIdNotNull() {
-        StyleInfo style = buildStyle("STY-001");
-        when(styleInfoService.lambdaQuery()).thenReturn(styleQuery);
-        doReturn(style).when(styleQuery).one();
         when(cuttingTaskService.getOne(any())).thenReturn(null);
+        when(templateLibraryService.resolveProgressNodeUnitPrices("TPL-001")).thenReturn(Collections.emptyList());
 
-        // 模拟 productionOrderService.save 并捕获保存的订单
-        final String[] savedOrderId = {null};
+        ArgumentCaptor<ProductionOrder> orderCaptor = ArgumentCaptor.forClass(ProductionOrder.class);
         doAnswer((Answer<Boolean>) inv -> {
-            ProductionOrder o = inv.getArgument(0);
-            o.setId("new-order-id"); // 模拟 MyBatis-Plus 回写 id
-            savedOrderId[0] = o.getId();
-            return true;
-        }).when(productionOrderService).save(any(ProductionOrder.class));
-
-        // 捕获保存的 CuttingTask
-        ArgumentCaptor<CuttingTask> taskCaptor = ArgumentCaptor.forClass(CuttingTask.class);
-        doReturn(true).when(cuttingTaskService).save(taskCaptor.capture());
-
-        doReturn(true).when(cuttingBundleService).saveBatch(any());
-
-        orchestrator.createCustom(buildValidCreateBody());
-
-        CuttingTask savedTask = taskCaptor.getValue();
-        assertNotNull(savedTask.getProductionOrderId(),
-                "❌ BUG: task.productionOrderId 不应为 null（2026-02-26 Bug Fix）");
-        assertEquals("new-order-id", savedTask.getProductionOrderId());
-    }
-
-    @Test
-    @DisplayName("createCustom - bundle.productionOrderId 必须被赋值（BUG FIX #2）")
-    void createCustom_success_bundleProductionOrderIdNotNull() {
-        StyleInfo style = buildStyle("STY-001");
-        when(styleInfoService.lambdaQuery()).thenReturn(styleQuery);
-        doReturn(style).when(styleQuery).one();
-        when(cuttingTaskService.getOne(any())).thenReturn(null);
-
-        doAnswer((Answer<Boolean>) inv -> {
-            ProductionOrder o = inv.getArgument(0);
-            o.setId("new-order-id-2");
-            return true;
-        }).when(productionOrderService).save(any(ProductionOrder.class));
-
-        doReturn(true).when(cuttingTaskService).save(any());
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<CuttingBundle>> bundleCaptor =
-                ArgumentCaptor.forClass(List.class);
-        doReturn(true).when(cuttingBundleService).saveBatch(bundleCaptor.capture());
-
-        orchestrator.createCustom(buildValidCreateBody());
-
-        List<CuttingBundle> bundles = bundleCaptor.getValue();
-        assertFalse(bundles.isEmpty(), "至少应有一个菲号");
-        for (CuttingBundle b : bundles) {
-            assertNotNull(b.getProductionOrderId(),
-                    "❌ BUG: bundle.productionOrderId 不应为 null（2026-02-26 Bug Fix）");
-        }
-    }
-
-    @Test
-    @DisplayName("createCustom - factoryName 赋空串避免 MySql STRICT 500")
-    void createCustom_factoryName_isEmptyStringNotNull() {
-        StyleInfo style = buildStyle("STY-001");
-        when(styleInfoService.lambdaQuery()).thenReturn(styleQuery);
-        doReturn(style).when(styleQuery).one();
-        when(cuttingTaskService.getOne(any())).thenReturn(null);
-
-        ArgumentCaptor<ProductionOrder> orderCaptor =
-                ArgumentCaptor.forClass(ProductionOrder.class);
-        doAnswer((Answer<Boolean>) inv -> {
-            ProductionOrder o = inv.getArgument(0);
-            o.setId("order-id-3");
+            ProductionOrder order = inv.getArgument(0);
+            order.setId("order-1");
             return true;
         }).when(productionOrderService).save(orderCaptor.capture());
-        doReturn(true).when(cuttingTaskService).save(any());
-        doReturn(true).when(cuttingBundleService).saveBatch(any());
 
-        orchestrator.createCustom(buildValidCreateBody());
+        CuttingTask createdTask = new CuttingTask();
+        createdTask.setId("task-1");
+        createdTask.setProductionOrderId("order-1");
+        createdTask.setProductionOrderNo("CUT-ORDER-001");
+        createdTask.setStatus("pending");
+        when(cuttingTaskService.createTaskIfAbsent(any(ProductionOrder.class))).thenReturn(createdTask);
+
+        CuttingTask result = orchestrator.createCustom(buildCreateBody("TPL-001", "CUT-ORDER-001"));
 
         ProductionOrder savedOrder = orderCaptor.getValue();
-        assertNotNull(savedOrder.getFactoryName(),
-                "factoryName 不允许为 null，应赋空串 \"\"");
+        assertNotNull(result);
+        assertEquals("task-1", result.getId());
+        assertEquals("pending", result.getStatus());
+        assertEquals("CUT-ORDER-001", savedOrder.getOrderNo());
+        assertEquals("CUT-ORDER-001", savedOrder.getQrCode());
+        assertEquals("TPL-001", savedOrder.getStyleNo());
+        assertEquals("TPL-001", savedOrder.getStyleName());
+        assertEquals("TPL-001", savedOrder.getStyleId());
+        assertEquals("多色", savedOrder.getColor());
+        assertEquals("多码", savedOrder.getSize());
+        assertEquals("pending", savedOrder.getStatus());
+        assertEquals(170, savedOrder.getOrderQuantity());
+        assertEquals(LocalDateTime.of(2026, 3, 15, 0, 0), savedOrder.getCreateTime());
+        assertEquals(LocalDateTime.of(2026, 3, 25, 23, 59, 59), savedOrder.getPlannedEndDate());
+        assertNotNull(savedOrder.getOrderDetails());
+        assertTrue(savedOrder.getOrderDetails().contains("黑色"));
+        assertTrue(savedOrder.getOrderDetails().contains("白色"));
+        assertTrue(savedOrder.getOrderDetails().contains("XL"));
+        assertTrue(savedOrder.getOrderDetails().contains("L"));
+        assertTrue(savedOrder.getOrderDetails().contains("120"));
+        assertTrue(savedOrder.getOrderDetails().contains("50"));
+        assertEquals(0, savedOrder.getCompletedQuantity());
+        assertEquals(0, savedOrder.getProductionProgress());
+        assertEquals(100, savedOrder.getMaterialArrivalRate());
         assertEquals("", savedOrder.getFactoryName());
+        assertNull(savedOrder.getProgressWorkflowJson());
+
+        verify(cuttingTaskService).createTaskIfAbsent(any(ProductionOrder.class));
+        verify(scanRecordDomainService).ensureBaseStageScanRecordsOnCreate(savedOrder);
+        verify(productionOrderService).recomputeProgressFromRecords("order-1");
+        verify(cuttingBundleService, never()).saveBatch(any());
+        verify(cuttingTaskService, never()).save(any(CuttingTask.class));
     }
 
-    // ─────────────────────────────────────────────────────────
-    // receive
-    // ─────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("createCustom - 模板工序单价会写入正常订单 workflow JSON")
+    void createCustom_writesWorkflowJsonFromTemplateNodes() {
+        StyleInfo style = buildStyle("STY-001");
+        style.setColor("红色");
+        style.setSize("XL");
+        when(styleInfoService.lambdaQuery()).thenReturn(styleQuery);
+        doReturn(style).when(styleQuery).one();
+        when(cuttingTaskService.getOne(any())).thenReturn(null);
+        when(templateLibraryService.resolveProgressNodeUnitPrices("STY-001")).thenReturn(List.of(
+                Map.of(
+                        "id", "SEWING",
+                        "name", "车缝",
+                        "progressStage", "车缝",
+                        "unitPrice", new BigDecimal("3.25"))));
+
+        ArgumentCaptor<ProductionOrder> orderCaptor = ArgumentCaptor.forClass(ProductionOrder.class);
+        doAnswer((Answer<Boolean>) inv -> {
+            ProductionOrder order = inv.getArgument(0);
+            order.setId("order-2");
+            return true;
+        }).when(productionOrderService).save(orderCaptor.capture());
+
+        CuttingTask createdTask = new CuttingTask();
+        createdTask.setId("task-2");
+        createdTask.setProductionOrderId("order-2");
+        createdTask.setStatus("pending");
+        when(cuttingTaskService.createTaskIfAbsent(any(ProductionOrder.class))).thenReturn(createdTask);
+
+        orchestrator.createCustom(buildSingleLineCreateBody("STY-001", "CUT-ORDER-002"));
+
+        ProductionOrder savedOrder = orderCaptor.getValue();
+        assertEquals(1L, savedOrder.getTenantId());
+        assertEquals("operator1", savedOrder.getCreatedById());
+        assertEquals("操作员", savedOrder.getCreatedByName());
+        assertEquals("黑色", savedOrder.getColor());
+        assertEquals("XL", savedOrder.getSize());
+        assertNotNull(savedOrder.getProgressWorkflowJson());
+        assertTrue(savedOrder.getProgressWorkflowJson().contains("车缝"));
+        assertTrue(savedOrder.getProgressWorkflowJson().contains("SEWING"));
+        assertTrue(savedOrder.getProgressWorkflowJson().contains("3.25"));
+    }
 
     @Test
     @DisplayName("receive - 任务不存在抛异常")
@@ -268,8 +261,8 @@ class CuttingTaskOrchestratorTest {
     }
 
     @Test
-    @DisplayName("receive - 正常领取更新 receiverId 字段")
-    void receive_success_updatesReceiver() {
+    @DisplayName("receive - CUT直下裁剪单不校验采购也可领取")
+    void receive_directCuttingOrder_skipsProcurementGate() {
         Map<String, Object> body = new HashMap<>();
         body.put("taskId", "task-1");
         body.put("receiverId", "worker1");
@@ -278,7 +271,13 @@ class CuttingTaskOrchestratorTest {
         CuttingTask task = new CuttingTask();
         task.setId("task-1");
         task.setStatus("pending");
-        task.setTenantId(1L); // TenantAssert 需要与 UserContext.tenantId() 一致
+        task.setTenantId(1L);
+        task.setProductionOrderId("order-1");
+
+        ProductionOrder order = new ProductionOrder();
+        order.setId("order-1");
+        order.setOrderNo("CUT-ORDER-001");
+        order.setMaterialArrivalRate(0);
 
         CuttingTask updatedTask = new CuttingTask();
         updatedTask.setId("task-1");
@@ -290,6 +289,7 @@ class CuttingTaskOrchestratorTest {
         when(cuttingTaskService.getById("task-1"))
                 .thenReturn(task)
                 .thenReturn(updatedTask);
+        when(productionOrderService.getById("order-1")).thenReturn(order);
         when(cuttingTaskService.receiveTask("task-1", "worker1", "张三")).thenReturn(true);
 
         CuttingTask result = orchestrator.receive(body);
@@ -299,49 +299,105 @@ class CuttingTaskOrchestratorTest {
         verify(cuttingTaskService).receiveTask("task-1", "worker1", "张三");
     }
 
-    // ─────────────────────────────────────────────────────────
-    // 辅助方法
-    // ─────────────────────────────────────────────────────────
-
-    private Map<String, Object> buildValidCreateBody() {
+    @Test
+    @DisplayName("rollback - 缺少原因时抛 IllegalArgumentException")
+    void rollback_missingReason_throws() {
         Map<String, Object> body = new HashMap<>();
-        body.put("styleNo", "STY-001");
-        Map<String, Object> bundle = new HashMap<>();
-        bundle.put("bundleNo", "B-001");
-        bundle.put("quantity", 50);
-        bundle.put("color", "红色");
-        bundle.put("size", "XL");
-        body.put("bundles", List.of(bundle));
+        body.put("taskId", "task-1");
+
+        assertThrows(IllegalArgumentException.class, () -> orchestrator.rollback(body));
+    }
+
+    @Test
+    @DisplayName("rollback - 裁剪已完成并生成菲号时不允许退回")
+    void rollback_bundledTask_throwsIllegalState() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("taskId", "task-1");
+        body.put("reason", "重新分配");
+
+        CuttingTask current = new CuttingTask();
+        current.setId("task-1");
+        current.setTenantId(1L);
+        current.setStatus("bundled");
+        current.setProductionOrderId("order-1");
+        current.setProductionOrderNo("CUT-ORDER-001");
+
+        when(cuttingTaskService.getById("task-1")).thenReturn(current);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> orchestrator.rollback(body));
+
+        assertEquals("裁剪已完成并生成菲号，不允许退回", ex.getMessage());
+        verify(cuttingTaskService, never()).rollbackTask("task-1");
+        verify(cuttingTaskService, never()).insertRollbackLog(any(), any(), any(), any());
+        verify(productionOrderService, never()).updateById(any(ProductionOrder.class));
+    }
+
+    @Test
+    @DisplayName("rollback - 未登录时拒绝操作")
+    void rollback_withoutLogin_throwsAccessDenied() {
+        UserContext.clear();
+        Map<String, Object> body = new HashMap<>();
+        body.put("taskId", "task-1");
+        body.put("reason", "重新分配");
+
+        assertThrows(AccessDeniedException.class, () -> orchestrator.rollback(body));
+    }
+
+    private Map<String, Object> buildCreateBody(String styleNo, String orderNo) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("styleNo", styleNo);
+        body.put("orderNo", orderNo);
+        body.put("orderDate", "2026-03-15");
+        body.put("deliveryDate", "2026-03-25");
+        body.put("orderLines", List.of(
+                Map.of("color", "黑色", "size", "XL", "quantity", 120),
+                Map.of("color", "白色", "size", "L", "quantity", 50)));
+        return body;
+    }
+
+    private Map<String, Object> buildSingleLineCreateBody(String styleNo, String orderNo) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("styleNo", styleNo);
+        body.put("orderNo", orderNo);
+        body.put("orderDate", "2026-03-15");
+        body.put("deliveryDate", "2026-03-25");
+        body.put("orderLines", List.of(
+                Map.of("color", "黑色", "size", "XL", "quantity", 120)));
         return body;
     }
 
     private ProductionOrder buildOrder(String id) {
-        ProductionOrder o = new ProductionOrder();
-        o.setId(id);
-        o.setTenantId(1L);
-        return o;
+        ProductionOrder order = new ProductionOrder();
+        order.setId(id);
+        order.setTenantId(1L);
+        return order;
     }
 
     private CuttingTask buildTask(String id, String status) {
-        CuttingTask t = new CuttingTask();
-        t.setId(id);
-        t.setStatus(status);
-        return t;
+        CuttingTask task = new CuttingTask();
+        task.setId(id);
+        task.setStatus(status);
+        return task;
     }
 
     private StyleInfo buildStyle(String styleNo) {
-        StyleInfo s = new StyleInfo();
-        s.setId(1L);
-        s.setStyleNo(styleNo);
-        s.setStyleName("测试款式");
-        s.setTenantId(1L);
-        return s;
+        StyleInfo style = new StyleInfo();
+        style.setId(1L);
+        style.setStyleNo(styleNo);
+        style.setStyleName("测试款式");
+        style.setTenantId(1L);
+        style.setStatus("ENABLED");
+        return style;
     }
 
     private long getCount(Map<String, Object> stats, String key) {
         Object val = stats.get(key);
-        if (val == null) return 0L;
-        if (val instanceof Number) return ((Number) val).longValue();
+        if (val == null) {
+            return 0L;
+        }
+        if (val instanceof Number) {
+            return ((Number) val).longValue();
+        }
         return 0L;
     }
 }

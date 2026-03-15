@@ -2,6 +2,7 @@ import React from 'react';
 import { useCallback } from 'react';
 import { Input } from 'antd';
 import type { ProductionOrder } from '@/types/production';
+import { isOrderFrozenByStatus } from '@/utils/api';
 
 type UseCloseOrderParams = {
   isSupervisorOrAbove: boolean;
@@ -43,8 +44,19 @@ export const useCloseOrder = ({
     const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
     const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
 
+    const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+    if (normalizedStatus === 'scrapped') {
+      message.info('该订单已报废，无需关单');
+      return;
+    }
+
     if ((order as any)?.status === 'completed') {
       message.info('该订单已完成，无需关单');
+      return;
+    }
+
+    if (isOrderFrozenByStatus(order)) {
+      message.info('该订单已终态，无需关单');
       return;
     }
 

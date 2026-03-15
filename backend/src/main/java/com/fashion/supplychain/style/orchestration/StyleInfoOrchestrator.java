@@ -126,12 +126,36 @@ public class StyleInfoOrchestrator {
         return page;
     }
 
-    public StyleInfo detail(Long id) {
-        StyleInfo styleInfo = styleInfoService.getDetailById(id);
+    public StyleInfo detail(String idOrStyleNo) {
+        String key = idOrStyleNo == null ? null : idOrStyleNo.trim();
+        if (!StringUtils.hasText(key)) {
+            throw new NoSuchElementException("款号不存在");
+        }
+
+        if (isNumericKey(key)) {
+            StyleInfo styleInfo = styleInfoService.getDetailById(Long.parseLong(key));
+            if (styleInfo != null) {
+                return styleInfo;
+            }
+        }
+
+        StyleInfo matched = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+            .select(StyleInfo::getId)
+            .eq(StyleInfo::getStyleNo, key)
+            .last("limit 1"));
+        if (matched == null || matched.getId() == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+
+        StyleInfo styleInfo = styleInfoService.getDetailById(matched.getId());
         if (styleInfo == null) {
             throw new NoSuchElementException("款号不存在");
         }
         return styleInfo;
+    }
+
+    public StyleInfo detail(Long id) {
+        return detail(id == null ? null : String.valueOf(id));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -215,6 +239,15 @@ public class StyleInfoOrchestrator {
     public boolean rollbackProductionRequirements(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
         return styleStageHelper.rollbackProductionRequirements(id, body);
+    }
+
+    private boolean isNumericKey(String key) {
+        for (int i = 0; i < key.length(); i++) {
+            if (!Character.isDigit(key.charAt(i))) {
+                return false;
+            }
+        }
+        return !key.isEmpty();
     }
 
     public boolean startProductionStage(Long id) {

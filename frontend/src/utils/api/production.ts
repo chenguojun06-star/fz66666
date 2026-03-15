@@ -98,10 +98,88 @@ export const isDuplicateScanMessage = (serverMessage: unknown): boolean => {
 
 type OrderFrozenSource = { status?: string; hasStockOut?: boolean };
 
-export const isOrderFrozenByStatus = (source?: OrderFrozenSource | null): boolean => {
+type DirectCuttingSource = {
+  orderNo?: string;
+  orderBizType?: string;
+  progressWorkflowJson?: unknown;
+  progressNodeUnitPrices?: unknown;
+};
+
+const PROCUREMENT_STAGE_REGEX = /采购|物料|备料|辅料|面料/i;
+
+const extractWorkflowNodes = (source?: DirectCuttingSource | null): Array<Record<string, unknown>> => {
+  if (!source) return [];
+
+  const fromUnitPrices = (source as any)?.progressNodeUnitPrices;
+  if (Array.isArray(fromUnitPrices) && fromUnitPrices.length > 0) {
+    return fromUnitPrices.filter((node) => node && typeof node === 'object') as Array<Record<string, unknown>>;
+  }
+
+  const rawWorkflow = (source as any)?.progressWorkflowJson;
+  if (!rawWorkflow) return [];
+
+  let parsed: unknown = rawWorkflow;
+  if (typeof rawWorkflow === 'string') {
+    const text = rawWorkflow.trim();
+    if (!text) return [];
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return [];
+    }
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const nodes = (parsed as any)?.nodes ?? (parsed as any)?.stages ?? (parsed as any)?.progressNodes;
+    if (Array.isArray(nodes)) {
+      return nodes.filter((node) => node && typeof node === 'object') as Array<Record<string, unknown>>;
+    }
+  }
+
+  return [];
+};
+
+export const hasProcurementStage = (source?: DirectCuttingSource | null): boolean => {
+  if (!source) return true;
+
+  const nodes = extractWorkflowNodes(source);
+  if (nodes.length > 0) {
+    return nodes.some((node) => {
+      const name = String(node?.name ?? node?.processName ?? node?.progressStage ?? '').trim();
+      return PROCUREMENT_STAGE_REGEX.test(name);
+    });
+  }
+
+  const bizType = String((source as any)?.orderBizType || '').trim().toUpperCase();
+  if (bizType === 'CUTTING_DIRECT') return false;
+
+  const orderNo = String((source as any)?.orderNo || '').trim().toUpperCase();
+  if (orderNo.startsWith('CUT')) return false;
+
+  return true;
+};
+
+export const isDirectCuttingOrder = (source?: DirectCuttingSource | null): boolean => {
   if (!source) return false;
-  const s = String(source.status || '').trim().toLowerCase();
-  return s === 'completed' || s === 'closed' || s === 'cancelled';
+  return !hasProcurementStage(source);
+};
+
+const TERMINAL_ORDER_STATUSES = new Set(['completed', 'closed', 'cancelled', 'scrapped', 'archived']);
+
+export const isOrderTerminalByStatus = (source?: OrderFrozenSource | null): boolean => {
+  if (!source) return false;
+  const status = String(source.status || '').trim().toLowerCase();
+  return TERMINAL_ORDER_STATUSES.has(status);
+};
+
+export const isOrderTerminal = (source?: (OrderFrozenSource & { actualEndDate?: unknown }) | null): boolean => {
+  if (!source) return false;
+  if (isOrderTerminalByStatus(source)) return true;
+  return Boolean((source as any)?.actualEndDate);
+};
+
+export const isOrderFrozenByStatus = (source?: OrderFrozenSource | null): boolean => {
+  return isOrderTerminalByStatus(source);
 };
 
 export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null): boolean => {
@@ -131,8 +209,9 @@ export const fetchProductionOrderDetail = async (
   const key = String(idOrOrderNo || '').trim();
   if (!key) throw new Error('缺少订单ID或订单号');
 
-  // 判断是ID还是订单号：订单号通常以PO开头，ID是32位UUID
-  const isOrderNo = key.startsWith('PO') || key.length < 20;
+  // 只有明确像 UUID/ASSIGN_UUID 主键时才按 id 查询，其他如 PO/CUT 等都按订单号查
+  const isUuidLike = /^[0-9a-f]{32}$/i.test(key) || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key);
+  const isOrderNo = !isUuidLike;
   const params = isOrderNo ? { orderNo: key } : { id: key };
 
   // 统一使用 /list 端点查询单个订单

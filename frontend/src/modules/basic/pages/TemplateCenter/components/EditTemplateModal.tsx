@@ -4,16 +4,19 @@ import {
   Button,
   Checkbox,
   Form,
+  Image,
   Input,
   InputNumber,
   Select,
   Tag,
+  Upload,
 } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import api from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { TemplateLibrary } from '@/types/style';
 import {
   MAIN_PROGRESS_STAGE_OPTIONS,
@@ -33,6 +36,9 @@ import type {
   ProcessStepRow,
   SizeTablePart,
 } from '../utils/templateUtils';
+
+const EDITOR_FONT_SIZE = 12;
+const EDITOR_CELL_PADDING = '4px 6px';
 
 interface EditTemplateModalProps {
   /** 款号下拉选项 */
@@ -79,6 +85,111 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
     const [showSizePrices, setShowSizePrices] = useState(false);
     const [templateSizes, setTemplateSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
     const [newSizeName, setNewSizeName] = useState('');
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [imageUploading, setImageUploading] = useState(false);
+
+    const buildProcessLikeTemplateContent = useCallback((includeSizes: boolean, includeImages: boolean) => {
+      if (!editTableData || !isProcessTableData(editTableData)) {
+        return null;
+      }
+
+      const normalizedSteps = normalizeProcessSteps(editTableData.steps as ProcessStepRow[]).map((step) => {
+        const unitPrice = Number(step.unitPrice ?? step.price ?? 0) || 0;
+        const normalizedStep: ProcessStepRow = {
+          processCode: String(step.processCode || '').trim(),
+          processName: String(step.processName || '').trim(),
+          progressStage: String(step.progressStage || '').trim(),
+          machineType: String(step.machineType || '').trim(),
+          difficulty: String(step.difficulty || '').trim(),
+          standardTime: Number(step.standardTime || 0) || 0,
+          unitPrice,
+        };
+
+        if (includeSizes && templateSizes.length > 0) {
+          normalizedStep.sizePrices = templateSizes.reduce((acc, size) => {
+            const value = Number(step.sizePrices?.[size] ?? unitPrice) || 0;
+            acc[size] = value;
+            return acc;
+          }, {} as Record<string, number>);
+        }
+
+        return normalizedStep;
+      });
+
+      const nextContent: { steps: ProcessStepRow[]; sizes?: string[] } = {
+        steps: normalizedSteps,
+      };
+      if (includeImages && imageUrls.length > 0) {
+        (nextContent as { images?: string[] }).images = imageUrls;
+      }
+      if (includeSizes && templateSizes.length > 0) {
+        nextContent.sizes = templateSizes;
+      }
+      return nextContent;
+    }, [editTableData, imageUrls, templateSizes]);
+
+    const promptSyncProcessPriceOrders = useCallback(async (styleNo: string) => {
+      const shouldSync = await new Promise<boolean>((resolve) => {
+        modal.confirm({
+          width: '30vw',
+          title: '独立工序单价已保存',
+          content: (
+            <div>
+              <p style={{ marginBottom: 8 }}>是否同步到该款号已有的未完成生产订单？</p>
+              <p style={{ margin: 0, color: '#8c8c8c', fontSize: 12 }}>
+                款号：{styleNo}
+              </p>
+            </div>
+          ),
+          okText: '保存并同步',
+          cancelText: '仅保存',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+
+      if (!shouldSync) {
+        message.success('更新成功');
+        return;
+      }
+
+      const syncRes = await api.post<{ code: number; data?: Record<string, unknown>; message?: string }>('/template-library/sync-process-prices', {
+        styleNo,
+      });
+      if (syncRes.code !== 200) {
+        message.warning(syncRes.message || '模板已保存，但同步订单失败');
+        return;
+      }
+
+      const result = syncRes.data || {};
+      message.success(
+        `${result.scopeLabel || '同步完成'}：${result.totalOrders || 0} 个订单，更新 ${result.totalSynced || 0} 条跟踪单价，刷新 ${result.workflowUpdatedNodes || 0} 个订单工价节点`
+      );
+    }, [message, modal]);
+
+    const handleUploadImage = useCallback(async (file: File) => {
+      if (imageUrls.length >= 4) {
+        message.warning('最多上传4张图片');
+        return Upload.LIST_IGNORE;
+      }
+      setImageUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
+        if (res.code !== 200 || !res.data) {
+          message.error(res.message || '上传失败');
+          return Upload.LIST_IGNORE;
+        }
+        setImageUrls((prev) => [...prev, res.data].slice(0, 4));
+        message.success('图片已上传，保存后生效');
+      } catch (e: any) {
+        message.error(e?.message || '上传失败');
+      } finally {
+        setImageUploading(false);
+      }
+      return Upload.LIST_IGNORE;
+    }, [imageUrls.length, message]);
 
     const isLocked = (row?: TemplateLibrary | null) => {
       const v = Number(row?.locked);
@@ -132,11 +243,13 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
       }
 
       const normalizedType = String(latestRow?.templateType || '').trim().toLowerCase();
-      if (normalizedType === 'process' && Array.isArray(parsed)) {
+      const allowProcessPriceImages = normalizedType === 'process_price';
+      const isProcessLikeType = normalizedType === 'process' || normalizedType === 'process_price';
+      if (isProcessLikeType && Array.isArray(parsed)) {
         parsed = { steps: normalizeProcessSteps(parsed as ProcessStepRow[]) };
       }
       if (
-        normalizedType === 'process' &&
+        isProcessLikeType &&
         parsed &&
         typeof parsed === 'object' &&
         Array.isArray((parsed as any).steps)
@@ -150,6 +263,11 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
         parsed = convertStyleSizeListToTable(parsed as any[]);
       }
       setEditTableData(parsed);
+      if (allowProcessPriceImages && parsed && typeof parsed === 'object' && Array.isArray((parsed as { images?: unknown[] }).images)) {
+        setImageUrls(((parsed as { images?: unknown[] }).images || []).map((item) => String(item || '').trim()).filter(Boolean));
+      } else {
+        setImageUrls([]);
+      }
       if (parsed && typeof parsed === 'object' && 'sizes' in parsed && Array.isArray((parsed as any).sizes)) {
         setTemplateSizes((parsed as any).sizes);
         setShowSizePrices(true);
@@ -163,10 +281,10 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
       setTimeout(() => {
         createForm.resetFields();
         createForm.setFieldsValue({
-          templateName: row.templateName,
-          templateKey: row.templateKey,
-          templateType: row.templateType,
-          sourceStyleNo: row.sourceStyleNo || undefined,
+          templateName: latestRow.templateName,
+          templateKey: latestRow.templateKey,
+          templateType: latestRow.templateType,
+          sourceStyleNo: latestRow.sourceStyleNo || undefined,
         });
       }, 50);
     }, [createForm, message]);
@@ -187,22 +305,29 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
           message.error('请选择模板类型');
           return;
         }
+        const normalizedType = templateType.toLowerCase();
+        const isProcessLikeType = normalizedType === 'process' || normalizedType === 'process_price';
+        const includeSizes = isProcessLikeType && showSizePrices && templateSizes.length > 0;
+        const includeImages = normalizedType === 'process_price';
 
         let templateContent = '';
         if (editTableData) {
-          const finalData = { ...editTableData };
-          if (templateType === 'process' && showSizePrices && templateSizes.length > 0) {
-            finalData.sizes = templateSizes;
-          } else if (templateType === 'process') {
-            delete finalData.sizes;
+          if (isProcessLikeType) {
+            const nextContent = buildProcessLikeTemplateContent(includeSizes, includeImages);
+            if (!nextContent) {
+              message.error('模板内容无效');
+              return;
+            }
+            templateContent = JSON.stringify(nextContent);
+          } else {
+            templateContent = JSON.stringify(editTableData);
           }
-          templateContent = JSON.stringify(finalData);
         } else {
           message.error('模板内容无效');
           return;
         }
 
-        if (templateType === 'process') {
+        if (normalizedType === 'process') {
           const confirmed = await new Promise<boolean>((resolve) => {
             modal.confirm({
               width: '30vw',
@@ -230,6 +355,39 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
         }
 
         setEditSaving(true);
+
+        if (normalizedType === 'process_price') {
+          const styleNo = String(v.sourceStyleNo || editingRow?.sourceStyleNo || '').trim();
+          if (!styleNo) {
+            message.error('独立款号模板必须绑定来源款号');
+            return;
+          }
+
+          const processPriceContent = buildProcessLikeTemplateContent(includeSizes, true);
+          if (!processPriceContent) {
+            message.error('模板内容无效');
+            return;
+          }
+
+          const saveRes = await api.post<{ code: number; message?: string }>('/template-library/process-price-template', {
+            styleNo,
+            templateName,
+            templateContent: processPriceContent,
+          });
+          if (saveRes.code !== 200) {
+            message.error(saveRes.message || '更新失败');
+            return;
+          }
+
+          setEditOpen(false);
+          setEditingRow(null);
+          setEditTableData(null);
+          setImageUrls([]);
+          onFetchList({ page: 1 });
+          await promptSyncProcessPriceOrders(styleNo);
+          return;
+        }
+
         const body = {
           id: editingRow?.id,
           templateName,
@@ -249,6 +407,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
         setEditOpen(false);
         setEditingRow(null);
         setEditTableData(null);
+        setImageUrls([]);
         onFetchList({ page: 1 });
       } catch (e: any) {
         if (hasErrorFields(e)) return;
@@ -326,6 +485,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
         onCancel={() => {
           setEditOpen(false);
           setEditingRow(null);
+          setImageUrls([]);
         }}
         onOk={submitEdit}
         okText="保存"
@@ -342,10 +502,10 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
               rules={[{ required: true, message: '请输入模板名称' }]}
               style={{ flex: 2, marginBottom: 0 }}
             >
-              <Input placeholder="例如：外协款-BOM模板" />
+              <Input placeholder="例如：外协款-BOM模板" size="small" />
             </Form.Item>
             <Form.Item name="templateKey" label="模板标识(可选)" style={{ flex: 1, marginBottom: 0 }}>
-              <Input placeholder="不填则保持原标识" />
+              <Input placeholder="不填则保持原标识" size="small" />
             </Form.Item>
             <Form.Item
               name="templateType"
@@ -355,10 +515,12 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
             >
               <Select
                 placeholder="请选择"
+                size="small"
                 options={[
                   { value: 'bom', label: 'BOM' },
                   { value: 'size', label: '尺寸' },
                   { value: 'process', label: '工艺' },
+                  { value: 'process_price', label: '工序进度单价' },
                 ]}
                 disabled
               />
@@ -366,6 +528,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
             <Form.Item name="sourceStyleNo" label="来源款号(可选)" style={{ flex: 1, marginBottom: 0 }}>
               <Select
                 allowClear
+                size="small"
                 showSearch={{ filterOption: false, onSearch: onStyleNoSearch }}
                 loading={styleNoLoading}
                 placeholder="搜索/选择款号"
@@ -376,7 +539,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
           </div>
           <Form.Item label="模板内容">
             {editTableData ? (
-              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid var(--color-border)', padding: 8 }}>
+              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid var(--color-border)', padding: 8, fontSize: EDITOR_FONT_SIZE }}>
                 {(() => {
                   const type = editingRow?.templateType;
 
@@ -488,9 +651,47 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                   }
 
                   // ---- 工序进度单价模板（合并后的综合模板）----
-                  if (type === 'process' && isProcessTableData(editTableData)) {
+                  if ((type === 'process' || type === 'process_price') && isProcessTableData(editTableData)) {
+                    const allowProcessPriceImages = type === 'process_price';
                     const SizePriceManager = () => (
-                      <div style={{ marginBottom: 12, padding: 12, background: '#f9f9f9' }}>
+                      <div style={{ marginBottom: 12, padding: '10px 12px', background: '#f9f9f9', fontSize: EDITOR_FONT_SIZE }}>
+                        {allowProcessPriceImages ? (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: EDITOR_FONT_SIZE, fontWeight: 500, marginBottom: 6 }}>款号参考图</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {imageUrls.map((url) => (
+                              <div key={url} style={{ position: 'relative', width: 52, height: 52 }}>
+                                <Image
+                                  src={getFullAuthedFileUrl(url)}
+                                  width={52}
+                                  height={52}
+                                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
+                                  preview
+                                />
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => setImageUrls((prev) => prev.filter((item) => item !== url))}
+                                  style={{ position: 'absolute', top: -8, right: -8, minWidth: 18, width: 18, height: 18, padding: 0, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
+                                />
+                              </div>
+                            ))}
+                            {imageUrls.length < 4 && (
+                              <Upload
+                                accept="image/*"
+                                showUploadList={false}
+                                beforeUpload={(file) => handleUploadImage(file as File)}
+                              >
+                                <Button size="small" icon={<UploadOutlined />} loading={imageUploading}>
+                                  上传图片
+                                </Button>
+                              </Upload>
+                            )}
+                          </div>
+                        </div>
+                        ) : null}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                           <Checkbox
                             checked={showSizePrices}
@@ -513,6 +714,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               <Tag
                                 key={s}
                                 closable
+                                style={{ fontSize: EDITOR_FONT_SIZE, lineHeight: '18px', marginInlineEnd: 4 }}
                                 onClose={() => {
                                   setTemplateSizes((prev) => prev.filter((x) => x !== s));
                                   const newData = {
@@ -589,9 +791,9 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                     const baseColumns = [
                       {
                         title: '排序',
-                        width: 40,
+                        width: 44,
                         render: (_: unknown, __: ProcessStepRow, idx: number) => (
-                          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)' }}>
+                          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: EDITOR_FONT_SIZE }}>
                             {idx + 1}
                           </span>
                         ),
@@ -599,7 +801,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                       {
                         title: '工序编号',
                         dataIndex: 'processCode',
-                        width: 55,
+                        width: 72,
                         render: (text: string, _: ProcessStepRow, idx: number) => (
                           <Input
                             size="small"
@@ -609,14 +811,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
                               setEditTableData(newData);
                             }}
-                            style={{ border: 'none', fontSize: 'var(--font-size-xs)' }}
+                            style={{ border: 'none', fontSize: EDITOR_FONT_SIZE, padding: 0 }}
                           />
                         ),
                       },
                       {
                         title: '工序名称',
                         dataIndex: 'processName',
-                        width: 80,
+                        width: 110,
                         render: (text: string, _: ProcessStepRow, idx: number) => (
                           <DictAutoComplete
                             dictType="process_name"
@@ -628,14 +830,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], processName: value as string };
                               setEditTableData(newData);
                             }}
-                            style={{ border: 'none', fontSize: 'var(--font-size-xs)' }}
+                            style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
                       },
                       {
                         title: '进度节点',
                         dataIndex: 'progressStage',
-                        width: 70,
+                        width: 96,
                         render: (value: string, _: ProcessStepRow, idx: number) => (
                           <Select
                             size="small"
@@ -648,7 +850,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], progressStage: val || '' };
                               setEditTableData(newData);
                             }}
-                            style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                            style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                             variant="borderless"
                           />
                         ),
@@ -656,7 +858,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                       {
                         title: '机器类型',
                         dataIndex: 'machineType',
-                        width: 70,
+                        width: 120,
                         render: (text: string, _: ProcessStepRow, idx: number) => (
                           <DictAutoComplete
                             dictType="machine_type"
@@ -668,14 +870,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], machineType: value as string };
                               setEditTableData(newData);
                             }}
-                            style={{ border: 'none', fontSize: 'var(--font-size-xs)' }}
+                            style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
                       },
                       {
                         title: '工序难度',
                         dataIndex: 'difficulty',
-                        width: 65,
+                        width: 92,
                         render: (value: string, _: ProcessStepRow, idx: number) => (
                           <Select
                             size="small"
@@ -692,7 +894,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               { value: '中', label: '中' },
                               { value: '难', label: '难' },
                             ]}
-                            style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                            style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                             variant="borderless"
                           />
                         ),
@@ -700,7 +902,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                       {
                         title: '工时(秒)',
                         dataIndex: 'standardTime',
-                        width: 55,
+                        width: 84,
                         render: (value: number, _: ProcessStepRow, idx: number) => (
                           <InputNumber
                             size="small"
@@ -711,14 +913,14 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
                               setEditTableData(newData);
                             }}
-                            style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                            style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
                       },
                       {
                         title: '工价(元)',
                         dataIndex: 'unitPrice',
-                        width: 60,
+                        width: 88,
                         render: (_: unknown, item: ProcessStepRow, idx: number) => (
                           <InputNumber
                             size="small"
@@ -730,7 +932,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
                               setEditTableData(newData);
                             }}
-                            style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                            style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
                       },
@@ -739,7 +941,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                     const sizePriceCols = showSizePrices
                       ? templateSizes.map((size) => ({
                           title: `${size}码`,
-                          width: 55,
+                          width: 78,
                           render: (_: unknown, item: ProcessStepRow, idx: number) => (
                             <div style={{ background: 'var(--color-bg-container)' }}>
                               <InputNumber
@@ -758,7 +960,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                                   };
                                   setEditTableData(newData);
                                 }}
-                                style={{ width: '100%', fontSize: 'var(--font-size-xs)' }}
+                                style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                               />
                             </div>
                           ),
@@ -767,13 +969,13 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
 
                     const actionColumn = {
                       title: '操作',
-                      width: 36,
+                      width: 44,
                       render: (_: unknown, __: ProcessStepRow, idx: number) => (
                         <Button
                           type="link"
                           danger
                           size="small"
-                          icon={<DeleteOutlined style={{ fontSize: 'var(--font-size-xs)' }} />}
+                          icon={<DeleteOutlined style={{ fontSize: EDITOR_FONT_SIZE }} />}
                           onClick={() => {
                             const kept = editTableData.steps.filter((_s: ProcessStepRow, i: number) => i !== idx);
                             const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };
@@ -796,7 +998,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                           pagination={false}
                           size="small"
                           bordered
-                          scroll={{ x: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}
+                          scroll={{ x: showSizePrices ? 860 + templateSizes.length * 78 : 860 }}
                           rowKey={(record) =>
                             (record as any).processCode || (record as any).id || `process-${Math.random()}`
                           }

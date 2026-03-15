@@ -11,7 +11,7 @@ import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
-import { isOrderFrozenByStatus } from '@/utils/api';
+import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { stageAliasMap } from '@/utils/productionStage';
@@ -32,7 +32,9 @@ function calcHealthScore(record: ProductionOrder): { score: number; level: 'good
   } else {
     score += 20;
   }
-  const proc = (record as any).procurementCompletionRate ?? null;
+  const proc = isDirectCuttingOrder(record as any)
+    ? 100
+    : ((record as any).procurementCompletionRate ?? null);
   score += proc != null ? Math.round(proc * 0.25) : 18;
   score = Math.max(0, Math.min(100, score));
   return { score, level: score >= 75 ? 'good' : score >= 50 ? 'warn' : 'danger' };

@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
+import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
 
@@ -57,8 +58,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const processWorkers = processWorkerCountsByOrder[String(order.id)] ?? {};
 
   const total       = Number(order.orderQuantity) || 0;
-  // 已完成（status=completed）或已关单（status=CLOSED / actualEndDate 有值）均不显示悬浮卡
-  const isCompleted = order.status === 'completed' || (order.status as string) === 'CLOSED' || !!order.actualEndDate;
+  const directCutting = isDirectCuttingOrder(order as any);
+  // 已完成 / 已关单 / 已报废等终态订单均不显示悬浮卡
+  const isCompleted = isOrderTerminal(order);
   const now         = dayjs();
   const planEnd     = order.plannedEndDate ? dayjs(order.plannedEndDate) : null;
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
@@ -129,12 +131,14 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       if (!normBoardTimeMap.has(nk)) normBoardTimeMap.set(nk, t);
     }
     const boardKeys = Array.from(normBoardMap.keys());
+    const stageDefs = directCutting ? STAGES_DEF.filter(s => s.label !== '采购') : STAGES_DEF;
+    const stageOrder = directCutting ? STAGE_ORDER.filter(label => label !== '采购') : STAGE_ORDER;
     const allLabels = Array.from(
-      new Set([...boardKeys, ...STAGES_DEF.map(s => s.label)])
+      new Set([...boardKeys, ...stageDefs.map(s => s.label)])
     );
     allLabels.sort((a, b) => {
-      const ai = STAGE_ORDER.indexOf(a);
-      const bi = STAGE_ORDER.indexOf(b);
+      const ai = stageOrder.indexOf(a);
+      const bi = stageOrder.indexOf(b);
       if (ai === -1 && bi === -1) return 0;
       if (ai === -1) return 1;
       if (bi === -1) return -1;
@@ -142,7 +146,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     });
     return allLabels.map(label => {
       const fromBoard = normBoardMap.get(label) ?? 0;
-      const fieldDef = STAGES_DEF.find(s => s.label === label);
+      const fieldDef = stageDefs.find(s => s.label === label);
       const fromField = fieldDef ? fieldRate(order, fieldDef.key) : 0;
       const qty = fromBoard > 0
         ? fromBoard
@@ -156,7 +160,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       const lastTime = rawT ? dayjs(rawT).format('MM-DD HH:mm') : null;
       return { label, stageName: '' as string, qty, pct, lastTime, workerCount: 0 };
     });
-  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes, processWorkers]);
+  }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes, processWorkers, directCutting]);
 
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
