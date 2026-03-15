@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import com.fashion.supplychain.service.RedisService;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,6 +26,9 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired(required = false)
+    private RedisService redisService;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -225,6 +229,19 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             }
         } catch (Exception e) {
             log.error("[DbRepair] 列修复失败，应用继续启动。原因: {}", e.getMessage());
+        }
+
+        // 清理旧格式 role:perms:* 缓存（一次性，启动时执行）
+        // 避免登录时因缓存命中旧数据而多走一次 DB
+        if (redisService != null) {
+            try {
+                long deleted = redisService.deleteByPattern("role:perms:*");
+                if (deleted > 0) {
+                    log.info("[DbRepair] 已清理 {} 个 role:perms:* 旧格式权限缓存", deleted);
+                }
+            } catch (Exception e) {
+                log.warn("[DbRepair] role:perms:* 缓存清理失败（忽略）: {}", e.getMessage());
+            }
         }
     }
 
