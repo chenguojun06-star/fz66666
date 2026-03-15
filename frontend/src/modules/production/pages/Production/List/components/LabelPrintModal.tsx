@@ -408,31 +408,47 @@ async function printUCodeLabels(
   const qrPx = 480;
   const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
 
-  // 每行 SKU 生成一张出库标签，QR码使用仓库出库接口兼容格式：款号-颜色-码数-序号
-  const qrMap: Record<string, string> = {};
-  for (const row of selected) {
-    const qrContent = [styleNo, row.color, row.size, '1'].filter(Boolean).join('-');
-    if (!qrMap[row.key]) {
-      try { qrMap[row.key] = await QRCode.toDataURL(qrContent, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }); }
-      catch { qrMap[row.key] = ''; }
-    }
+  // 每件独立生成标签：把每行 SKU 的 printCount 展开成 printCount 张标签
+  // 每张标签有唯一 QR 码（款号-颜色-码数-序号），序号从 1 到 printCount
+  type PieceEntry = { rowKey: string; color: string; size: string; seq: number; total: number; qrContent: string };
+  const pieceList: PieceEntry[] = selected.flatMap(row => {
+    const total = Math.max(1, row.printCount);
+    return Array.from({ length: total }, (_, i) => ({
+      rowKey: row.key,
+      color: row.color,
+      size: row.size,
+      seq: i + 1,
+      total,
+      qrContent: [styleNo, row.color, row.size, String(i + 1)].filter(Boolean).join('-'),
+    }));
+  });
+
+  // 并行生成所有 QR DataURL（data URL 不需要网络，速度快）
+  const BATCH_SIZE = 20;
+  const qrUrls: string[] = new Array(pieceList.length).fill('');
+  for (let i = 0; i < pieceList.length; i += BATCH_SIZE) {
+    const batchResults = await Promise.all(
+      pieceList.slice(i, i + BATCH_SIZE).map(e =>
+        QRCode.toDataURL(e.qrContent, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '')
+      )
+    );
+    batchResults.forEach((url, j) => { qrUrls[i + j] = url; });
   }
 
-  const labelsHtml = selected.map(row => {
-    const qty = Math.max(1, row.printCount);
-    const qrLabel = [styleNo, row.color, row.size, '1'].filter(Boolean).join('-');
+  const labelsHtml = pieceList.map((entry, idx) => {
+    const seqStr = `${entry.seq}/${entry.total}`;
     return `<div class="page">
       <div class="label">
         <div class="qr-col">
-          <img src="${qrMap[row.key] || ''}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/>
+          <img src="${qrUrls[idx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/>
         </div>
         <div class="info-col">
-          <div class="ucode-row">${qrLabel}</div>
+          <div class="ucode-row">${entry.qrContent}</div>
           <div class="info-row"><span class="lbl">款号</span><span class="val">${styleNo}</span></div>
           ${styleName ? `<div class="info-row"><span class="lbl">款名</span><span class="val">${styleName}</span></div>` : ''}
-          <div class="info-row"><span class="lbl">颜色</span><span class="val">${row.color || '-'}</span></div>
-          <div class="info-row"><span class="lbl">码数</span><span class="val">${row.size || '-'}</span></div>
-          <div class="info-row qty-row"><span class="lbl">数量</span><span class="qty-val">${qty}</span></div>
+          <div class="info-row"><span class="lbl">颜色</span><span class="val">${entry.color || '-'}</span></div>
+          <div class="info-row"><span class="lbl">码数</span><span class="val">${entry.size || '-'}</span></div>
+          <div class="info-row seq-row"><span class="lbl">编号</span><span class="seq-val">${seqStr}</span></div>
           ${factoryCode ? `<div class="info-row"><span class="lbl">GC:</span><span class="val">${factoryCode}</span></div>` : ''}
           <div class="info-row date-row">${dateStr}</div>
         </div>
@@ -454,8 +470,8 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
 .info-row { font-size: ${fs}pt; display: flex; align-items: baseline; flex-wrap: nowrap; min-width: 0; margin-bottom: 0.65mm; }
 .lbl { color: #555; white-space: nowrap; }
 .val { font-weight: 600; margin-left: 0.8mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.qty-row { margin-top: 1.1mm; margin-bottom: 1mm; }
-.qty-val { font-size: ${fs + 3}pt; font-weight: bold; color: #000; margin-left: 0.8mm; }
+.seq-row { margin-top: 1.1mm; margin-bottom: 1mm; }
+.seq-val { font-size: ${fs + 0.8}pt; font-weight: bold; color: #000; margin-left: 0.8mm; }
 .date-row { color: #777; font-size: ${fs - 0.4}pt; margin-top: 2mm; padding-top: 0.4mm; }
 </style></head><body>${labelsHtml}</body></html>`;
 

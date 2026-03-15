@@ -6,13 +6,14 @@ import api from '@/utils/api';
 
 interface QrcodeItem {
   key: string;
-  qrCode: string;
-  skuCode: string;
+  qrCode: string;    // 第一次扫入的完整码（款号-颜色-尺码-序号），用于提交及显示
+  skuCode: string;   // 款号-颜色-尺码，合并键
   styleNo: string;
   color: string;
   size: string;
   stock: number | null;
   quantity: number;
+  scanCount: number; // 已扫件数（每次扫码 +1）
 }
 
 function parseOutboundQr(code: string) {
@@ -71,26 +72,30 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     }
 
     setItems(prev => {
-      // 相同 QR 码合并数量，或新增一行
-      const idx = prev.findIndex(it => it.qrCode === code);
+      // 按 skuCode 合并：同款号-颜色-尺码（不论序号）自动累加数量，
+      // 支持每件唯一 QR 码（款号-颜色-尺码-序号）批量扫码聚合成 1 行
+      const idx = prev.findIndex(it => it.skuCode === parsed.skuCode);
       if (idx >= 0) {
         const next = [...prev];
-        const nextQty = next[idx].quantity + 1;
+        const nextScan = next[idx].scanCount + 1;
+        const nextQty = nextScan;
         next[idx] = {
           ...next[idx],
+          scanCount: nextScan,
           quantity: next[idx].stock != null ? Math.min(nextQty, Math.max(next[idx].stock, 1)) : nextQty,
         };
         return next;
       }
       return [...prev, {
-        key: `${code}-${Date.now()}`,
-        qrCode: code,
+        key: `${parsed.skuCode}-${Date.now()}`,
+        qrCode: code,             // 保留原始扫入的完整码（含序号），用于显示与提交
         skuCode: parsed.skuCode,
         styleNo: parsed.styleNo,
         color: parsed.color,
         size: parsed.size,
         stock,
-        quantity: stock != null ? Math.min(Math.max(stock, 1), 1) : 1,
+        quantity: 1,
+        scanCount: 1,
       }];
     });
     setInputVal('');
@@ -137,30 +142,31 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   const columns = [
     {
-      title: '二维码内容',
-      dataIndex: 'qrCode',
-      key: 'qrCode',
-      ellipsis: true,
-    },
-    {
-      title: 'SKU',
+      title: 'SKU码',
       dataIndex: 'skuCode',
       key: 'skuCode',
-      width: 200,
+      ellipsis: true,
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      width: 100,
+      width: 80,
       render: (v: string) => v || '-',
     },
     {
       title: '码数',
       dataIndex: 'size',
       key: 'size',
-      width: 90,
+      width: 70,
       render: (v: string) => v || '-',
+    },
+    {
+      title: '已扫件数',
+      dataIndex: 'scanCount',
+      key: 'scanCount',
+      width: 80,
+      align: 'center' as const,
     },
     {
       title: '库存',
