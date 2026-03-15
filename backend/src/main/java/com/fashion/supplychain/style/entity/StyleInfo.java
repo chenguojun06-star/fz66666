@@ -411,6 +411,14 @@ public class StyleInfo {
     private String dryCleanCode;
 
     /**
+     * 多部位面料成分（JSON字符串）
+     * 格式：[{"part":"Lower","materials":"91.00% Polyester\n9.00% Spandex"},...]
+     * 用于两件套/拼接款分部位标注成分，对应洗水唛打印
+     */
+    @TableField("fabric_composition_parts")
+    private String fabricCompositionParts;
+
+    /**
      * 租户ID（多租户隔离，自动填充）
      */
     @TableField(fill = FieldFill.INSERT)

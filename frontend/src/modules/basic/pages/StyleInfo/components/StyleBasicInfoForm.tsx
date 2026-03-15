@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
+import CompositionPartsEditor from './CompositionPartsEditor';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CoverImageUpload from './CoverImageUpload';
@@ -331,6 +332,17 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                     <Select.Option value="YES">可干洗</Select.Option>
                     <Select.Option value="NO">不可干洗</Select.Option>
                   </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={[16, 0]}>
+              <Col xs={24} md={24}>
+                <Form.Item
+                  name="fabricCompositionParts"
+                  label="多部位面料成分"
+                  tooltip="两件套/拼接款专用，可分部位填写成分（如 Lower / Top），打印在洗水唛上"
+                >
+                  <CompositionPartsEditor disabled={editLocked} />
                 </Form.Item>
               </Col>
             </Row>
