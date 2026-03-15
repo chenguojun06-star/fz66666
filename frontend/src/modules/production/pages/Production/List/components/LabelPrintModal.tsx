@@ -369,18 +369,17 @@ async function printUCodeLabels(
     }
   }
 
-  const qrS = Math.min(H - 6, 96 * 0.28); // mm
+  const qrS = Math.min(H - 4, 96 * 0.29); // mm
   const labelsHtml = selected.flatMap(row =>
     Array.from({ length: Math.max(1, row.printCount) }, (_, i) => {
       const uCode = [styleNo, row.color, row.size].filter(Boolean).join('-') + `-${i + 1}`;
       return `<div class="page"><div class="label">
         <div class="qr"><img src="${qrMap[uCode] || ''}" width="96" height="96"/></div>
-        <div class="text">
+        <div class="info">
           <div class="ucode">${uCode}</div>
-          <div class="row"><span class="lbl">款号</span>${styleNo}</div>
-          ${styleName ? `<div class="row"><span class="lbl">款名</span>${styleName}</div>` : ''}
-          <div class="row"><span class="lbl">颜色</span>${row.color || ''}&nbsp;&nbsp;<span class="lbl">码数</span>${row.size || ''}</div>
-          ${factoryName ? `<div class="row"><span class="lbl">工厂</span>${factoryName}</div>` : ''}
+          <div class="r"><b>款号</b>&thinsp;${styleNo}${styleName ? `&emsp;<b>款名</b>&thinsp;${styleName}` : ''}</div>
+          <div class="r"><b>颜色</b>&thinsp;${row.color || ''}&emsp;<b>码数</b>&thinsp;${row.size || ''}</div>
+          ${factoryName ? `<div class="r"><b>GC</b>&thinsp;:&thinsp;${factoryName}</div>` : ''}
           <div class="date">${dateStr}</div>
         </div></div></div>`;
     })
@@ -391,13 +390,13 @@ async function printUCodeLabels(
 html,body{width:${W}mm;height:${H}mm;font-family:Arial,"Microsoft YaHei",sans-serif}
 .page{width:${W}mm;height:${H}mm;page-break-after:always;display:flex;align-items:center;justify-content:center}
 .page:last-child{page-break-after:auto}
-.label{width:${W - 4}mm;height:${H - 4}mm;border:1px solid #000;display:flex;flex-direction:row;padding:1.5mm;gap:1.5mm}
-.qr{flex:0 0 auto;display:flex;align-items:center}.qr img{width:${qrS}mm;height:${qrS}mm}
-.text{flex:1;display:flex;flex-direction:column;justify-content:space-between;font-size:6.5pt;line-height:1.25}
-.text>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ucode{font-weight:bold;font-size:7.5pt;letter-spacing:.5px}
-.row{font-size:6pt}.lbl{font-weight:bold;margin-right:1px}
-.date{font-size:6pt;color:#333;margin-top:auto}
+.label{width:${W-4}mm;height:${H-4}mm;border:1px solid #000;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm;gap:2mm}
+.qr{flex:0 0 auto;display:flex;align-items:center;justify-content:center}.qr img{width:${qrS}mm;height:${qrS}mm}
+.info{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;overflow:hidden}
+.info>*{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+.ucode{font-weight:700;font-size:7pt;letter-spacing:.4px;border-bottom:.5px solid #bbb;padding-bottom:.6mm}
+.r{font-size:6pt}.r b{font-weight:700}
+.date{font-size:5.5pt;color:#555}
 </style></head><body>${labelsHtml}</body></html>`;
 
   const iframe = document.createElement('iframe');
