@@ -1,3 +1,40 @@
+## 2026-05-03（下午更新）
+
+### fix(backend): 面辅料智能一键领取 — 出库日志推送给仓库系统
+
+**问题**: 用户点击"一键智能领取"显示成功，但仓库系统没有收到任何出库指令。
+
+**根本原因**: `MaterialPurchaseOrchestrator.createOutboundPicking()` 在本地数据库创建了出库单 (MaterialPicking)，但没有推送指令给仓库系统，导致仓库完全不知道用户要领料。
+
+**修复内容**（`MaterialPurchaseOrchestrator.java` 第 1164 行）:
+- 出库单创建后，同步创建 `MaterialOutboundLog` 记录  
+- 每条出库明细都生成一条日志，作为"推送给仓库系统"的指令凭证
+- 日志中包含：物料编码、数量、操作人、pickingId、purchaseId 等完整信息
+- 仓库系统现在可以通过查询 `t_material_outbound_log` 表获取待处理的出库指令
+
+**代码变动**：
+```java
+// 🔥 关键修复：创建出库日志记录 → 作为推送给仓库系统的指令凭证
+for (MaterialPickingItem item : items) {
+    MaterialOutboundLog outboundLog = new MaterialOutboundLog();
+    outboundLog.setMaterialCode(item.getMaterialCode());
+    outboundLog.setMaterialName(item.getMaterialName());
+    outboundLog.setQuantity(item.getQuantity());
+    outboundLog.setOperatorId(receiverId);
+    outboundLog.setOperatorName(receiverName);
+    outboundLog.setRemark("SMART_RECEIVE_OUTBOUND|pickingId=" + pickingId + "|purchaseId=" + purchase.getId());
+    outboundLog.setOutboundTime(LocalDateTime.now());
+    materialOutboundLogMapper.insert(outboundLog);
+}
+```
+
+**对系统的改进**:
+- ✅ 一键智能领取现在真正推送指令到仓库系统，仓库能收到出库指令
+- ✅ 出库完整链路贯通：PC端 → 后端数据库 → 仓库日志表 → 仓库系统接收
+- ✅ 编译检查：0 errors
+
+---
+
 ## 2026-05-03
 
 ### fix(frontend): 补齐 modal.confirm + Input 遮挡 Bug 第三轮（4处）+ 删除样板生产「维护」入口

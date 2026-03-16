@@ -1148,7 +1148,25 @@ public class MaterialPurchaseOrchestrator {
         purchase.setUpdateTime(LocalDateTime.now());
         materialPurchaseService.updateById(purchase);
 
-        log.info("✅ 待出库单创建成功（等仓库确认）: pickingId={}, materialCode={}, qty={}",
+        // 🔥 关键修复：创建出库日志记录 → 作为推送给仓库系统的指令凭证
+        for (MaterialPickingItem item : items) {
+            MaterialOutboundLog outboundLog = new MaterialOutboundLog();
+            outboundLog.setMaterialCode(item.getMaterialCode());
+            outboundLog.setMaterialName(item.getMaterialName());
+            outboundLog.setQuantity(item.getQuantity());
+            outboundLog.setOperatorId(receiverId);
+            outboundLog.setOperatorName(receiverName);
+            // 出库原因：关联到出库单ID，便于迁移追溯
+            outboundLog.setRemark("SMART_RECEIVE_OUTBOUND|pickingId=" + pickingId + "|purchaseId=" + purchase.getId());
+            outboundLog.setOutboundTime(LocalDateTime.now());
+            outboundLog.setCreateTime(LocalDateTime.now());
+            outboundLog.setDeleteFlag(0);
+            materialOutboundLogMapper.insert(outboundLog);
+            log.info("✅ 出库日志创建（推送给仓库）: material={}, qty={}, pickingId={}",
+                item.getMaterialCode(), item.getQuantity(), pickingId);
+        }
+
+        log.info("✅ 智能一键领取出库单完成：pickingId={}, materialCode={}, qty={}, 已推送仓库系统",
             pickingId, purchase.getMaterialCode(), pickQty);
     }
 
