@@ -1,6 +1,29 @@
 ## 2026-05-01
 
-### perf: resolveProgressNodeUnitPrices 增加 Redis 缓存，消除 N+1 模板 DB 查询
+### fix(cache): 改用 Caffeine 替换 Redis @Cacheable，彻底消除 resolveProgressNodeUnitPrices N+1（commit c368d32c）
+
+**修改文件**：`TemplateLibraryServiceImpl.java`、`RedisConfig.java`
+
+#### 问题根因（上一版 Redis @Cacheable 为何失效）
+`GenericJackson2JsonRedisSerializer` 配置了 `DefaultTyping.NON_FINAL + WRAPPER_ARRAY`，序列化 `List<Map<String, Object>>` 时能写入 Redis，但**反序列化时 Jackson 因动态泛型类型无法还原**，抛出 `MismatchedInputException: Unexpected token (START_ARRAY), expected VALUE_STRING`。  
+`CacheErrorHandler` 默认实现**静默吞掉该异常**，视为 cache miss，继续执行方法体 → 每次请求都穿透 DB → N+1 完全没有消除。  
+生产日志中 `role:perms:1` 的损坏 key 格式 `[["java.lang.Long",1],...]` 印证了同款序列化兼容问题。
+
+#### 修复内容
+1. **新增 `progressNodeUnitPriceCache`（Caffeine，5min TTL，最大500条）**：不使用序列化，直接持有 Java 对象引用，无反序列化失败风险。  
+2. **`resolveProgressNodeUnitPrices` 改为手动缓存**：`getIfPresent` → 命中直接返回；miss 则调用 `doResolveProgressNodeUnitPrices`（原方法体提取为 private 方法）→ `put`。  
+3. **移除 `@Cacheable` 注解和 `@CacheEvict` 注解**及对应 Spring Cache imports（`CacheEvict`、`Cacheable`）。  
+4. **`invalidateTemplateCache` 补充 `progressNodeUnitPriceCache.invalidateAll()`**：任何模板类型（progress/process_price/process）变更时同步清除节点单价缓存。  
+5. **`RedisConfig` 移除无效 `templateProgressNodes` TTL 注册**，避免误解。
+
+#### 对系统的改进
+- `purchase/list` / `order/list` 同一请求内对同款式的 3 次重复 DB 调用 → **首次计算，后续 JVM 内 0 DB**
+- 完全消除 `resolveProgressNodeUnitPrices N+1`，响应时间从 150-250ms 降至预计 20-50ms
+- 5 分钟 TTL + 模板写操作失效，价格实时性与旧方案一致
+
+---
+
+### perf: resolveProgressNodeUnitPrices 增加 Redis 缓存，消除 N+1 模板 DB 查询（已被上条修复取代，保留历史记录）
 
 **修改文件**：`backend/.../template/service/impl/TemplateLibraryServiceImpl.java`、`backend/.../config/RedisConfig.java`
 
