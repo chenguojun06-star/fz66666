@@ -8,6 +8,10 @@ import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.mapper.PatternProductionMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PatternProductionService;
+import com.fashion.supplychain.style.entity.SecondaryProcess;
+import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.service.SecondaryProcessService;
+import com.fashion.supplychain.style.service.StyleProcessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +31,12 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private StyleProcessService styleProcessService;
+
+    @Autowired
+    private SecondaryProcessService secondaryProcessService;
 
     @Override
     public PatternDevelopmentStatsDTO getDevelopmentStats(String rangeType) {
@@ -52,13 +62,13 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                 startTime = now.with(LocalTime.MIN);
         }
 
-        // 1. 统计样衣数量
+        // 1. 统计样衣列表（同时用于数量统计和费用计算）
         LambdaQueryWrapper<PatternProduction> ppWrapper = new LambdaQueryWrapper<>();
         ppWrapper.eq(PatternProduction::getDeleteFlag, 0)
                 .ge(PatternProduction::getCreateTime, startTime)
                 .le(PatternProduction::getCreateTime, endTime);
-        long patternCount = this.count(ppWrapper);
-        stats.setPatternCount((int) patternCount);
+        List<PatternProduction> patterns = this.list(ppWrapper);
+        stats.setPatternCount(patterns.size());
 
         // 2. 统计面辅料费用（只统计样衣采购，即 sourceType='sample' 或 patternProductionId 不为空）
         LambdaQueryWrapper<MaterialPurchase> mpWrapper = new LambdaQueryWrapper<>();
@@ -74,13 +84,37 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.setMaterialCost(materialCost);
 
-        // 3. 工序单价费用（暂时返回0，因为样衣的工序单价存储在 t_style_process 中，需要通过样衣关联款式查询）
-        // 如果有需要，可以通过 style_id 关联查询样衣工序费用
-        stats.setProcessCost(BigDecimal.ZERO);
+        // 3. 工序单价费用：样衣件数 × 该款式所有工序单价之和
+        BigDecimal processCost = BigDecimal.ZERO;
+        for (PatternProduction pp : patterns) {
+            if (pp.getStyleId() == null || pp.getQuantity() == null || pp.getQuantity() == 0) continue;
+            try {
+                Long styleIdLong = Long.parseLong(pp.getStyleId());
+                List<StyleProcess> processes = styleProcessService.listByStyleId(styleIdLong);
+                BigDecimal totalProcessPrice = processes.stream()
+                        .map(sp -> sp.getPrice() != null ? sp.getPrice() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                processCost = processCost.add(totalProcessPrice.multiply(BigDecimal.valueOf(pp.getQuantity())));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        stats.setProcessCost(processCost);
 
-        // 4. 二次工艺费用（暂时返回0，t_secondary_process 通过 style_id 关联）
-        // 如果有需要，可以通过样衣的 style_id 关联查询二次工艺费用
-        stats.setSecondaryProcessCost(BigDecimal.ZERO);
+        // 4. 二次工艺费用：样衣件数 × 该款式所有二次工艺单价之和
+        BigDecimal secondaryProcessCost = BigDecimal.ZERO;
+        for (PatternProduction pp : patterns) {
+            if (pp.getStyleId() == null || pp.getQuantity() == null || pp.getQuantity() == 0) continue;
+            try {
+                Long styleIdLong = Long.parseLong(pp.getStyleId());
+                List<SecondaryProcess> secondaryProcesses = secondaryProcessService.listByStyleId(styleIdLong);
+                BigDecimal totalUnitPrice = secondaryProcesses.stream()
+                        .map(sp -> sp.getUnitPrice() != null ? sp.getUnitPrice() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                secondaryProcessCost = secondaryProcessCost.add(totalUnitPrice.multiply(BigDecimal.valueOf(pp.getQuantity())));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        stats.setSecondaryProcessCost(secondaryProcessCost);
 
         // 5. 计算总费用
         BigDecimal totalCost = materialCost
