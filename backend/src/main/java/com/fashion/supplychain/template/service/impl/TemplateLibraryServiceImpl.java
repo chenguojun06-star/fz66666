@@ -26,8 +26,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
@@ -49,6 +47,12 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     private final Cache<String, TemplateLibrary> processPriceTemplateCache = Caffeine.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .maximumSize(200)
+            .build();
+
+    /** 工序节点单价列表缓存（替代 Redis @Cacheable，避免 List<Map> 泛型在 DefaultTyping 序列化模式下反序列化失败），5分钟过期，最多500条 */
+    private final Cache<String, List<Map<String, Object>>> progressNodeUnitPriceCache = Caffeine.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .maximumSize(500)
             .build();
 
     private static final String STAGE_ORDER_CREATED = "下单";
@@ -410,10 +414,21 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         return BigDecimal.ZERO;
     }
 
-    @Cacheable(value = "templateProgressNodes",
-            key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':progressNodes:' + (#styleNo != null ? #styleNo.trim() : '')")
     @Override
     public List<Map<String, Object>> resolveProgressNodeUnitPrices(String styleNo) {
+        String cacheKey = UserContext.tenantId() + ":progressNodes:" + (styleNo != null ? styleNo.trim() : "");
+        List<Map<String, Object>> cached = progressNodeUnitPriceCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        List<Map<String, Object>> result = doResolveProgressNodeUnitPrices(styleNo);
+        if (!result.isEmpty()) {
+            progressNodeUnitPriceCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> doResolveProgressNodeUnitPrices(String styleNo) {
         List<Map<String, Object>> out = new ArrayList<>();
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
         if (!StringUtils.hasText(sn)) {
@@ -844,7 +859,6 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 .orderByAsc(TemplateLibrary::getTemplateKey));
     }
 
-    @CacheEvict(value = "templateProgressNodes", allEntries = true)
     @Override
     public boolean upsertTemplate(TemplateLibrary template) {
         if (template == null || !StringUtils.hasText(template.getTemplateType())
@@ -898,6 +912,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 }
                 processPriceTemplateCache.invalidate(buildTemplateCacheKey(null));
             }
+            // progress/process_price/process 三种类型均影响 resolveProgressNodeUnitPrices，统一全量清除
+            progressNodeUnitPriceCache.invalidateAll();
         } catch (Exception e) {
             log.warn("invalidateTemplateCache failed: type={}, styleNo={}", templateType, sourceStyleNo);
         }

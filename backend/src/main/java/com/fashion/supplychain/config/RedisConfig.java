@@ -102,7 +102,7 @@ public class RedisConfig implements CachingConfigurer {
         configMap.put("order", defaultConfig.entryTtl(Duration.ofMinutes(5)));  // 订单缓存5分钟
         configMap.put("permission", defaultConfig.entryTtl(Duration.ofHours(1)));  // 权限缓存1小时
         configMap.put("daily-brief", defaultConfig.entryTtl(Duration.ofMinutes(5)));  // AI日报建议缓存5分钟
-        configMap.put("templateProgressNodes", defaultConfig.entryTtl(Duration.ofMinutes(5)));  // 模板工序单价缓存5分钟（消除N+1）
+        // templateProgressNodes 已迁移为 Caffeine 本地缓存（避免 Redis DefaultTyping 模式下 List<Map> 反序列化失败），无需 Redis TTL 注册
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
