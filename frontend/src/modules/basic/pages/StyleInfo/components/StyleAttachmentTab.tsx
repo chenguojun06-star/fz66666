@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Upload, Tag, Space, Modal } from 'antd';
+import { App, Button, Upload, Tag, Space, Modal, Table } from 'antd';
 import {
   FileOutlined,
   FileImageOutlined,
@@ -7,10 +7,8 @@ import {
 } from '@ant-design/icons';
 import { StyleAttachment } from '@/types/style';
 import api from '@/utils/api';
-import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
-import { useViewport } from '@/utils/useViewport';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface Props {
@@ -24,7 +22,6 @@ interface Props {
 const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, readOnly, onListChange }) => {
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [loading, setLoading] = useState(false);
-  const { tableScrollY } = useViewport();
   const { message } = App.useApp();
 
   const isPattern = useMemo(() => {
@@ -267,7 +264,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     {
       title: '文件名',
       dataIndex: 'fileName',
-      width: 260,
       ellipsis: true,
       render: (text: string, record: StyleAttachment) => {
         // 将相对路径转换为带认证的完整URL
@@ -298,7 +294,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     ...(isPattern ? [{
       title: '版本',
       dataIndex: 'version',
-      width: 80,
       render: (v: number, record: any) => {
         const version = v || 1;
         const status = record?.status || 'active';
@@ -313,37 +308,32 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     {
       title: '类型',
       dataIndex: 'fileType',
-      width: 110,
       render: (_: any, record: StyleAttachment) => {
-        const type = resolveFileType(record);
-        const show = type.includes('/') ? type.split('/')[1] || type : type;
-        return <Tag>{show || '-'}</Tag>;
+        // 优先用文件名后缀，比原始 MIME type 更直观
+        const ext = getExt(record.fileName);
+        const show = ext ? ext.slice(1).toUpperCase() : resolveFileType(record).toUpperCase() || '-';
+        return <Tag>{show}</Tag>;
       }
     },
     {
       title: '大小',
       dataIndex: 'fileSize',
-      width: 110,
       render: (size: number) => formatSize(size)
     },
     {
       title: '上传人',
       dataIndex: 'uploader',
-      width: 140,
       ellipsis: true,
     },
     {
       title: '上传时间',
       dataIndex: 'createTime',
-      width: 180,
       ellipsis: true,
       render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '操作',
       key: 'action',
-      width: 170,
-      resizable: false,
       render: (_: any, record: StyleAttachment) => {
         const triggerDownload = () => {
           const url = buildDownloadUrl(record.fileUrl);
@@ -431,15 +421,14 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         </span>
       </div>
 
-      <ResizableTable
-        columns={columns}
+      <Table
+        columns={columns as any}
         dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={false}
-        scroll={{ x: 'max-content', y: tableScrollY }}
-        storageKey={`style-attachment-${String(styleId)}`}
-        minColumnWidth={70}
+        size="small"
+        tableLayout="fixed"
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
-import { message } from 'antd';
+
 import api from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 interface AutoCollectOptions {
   dictType: string;

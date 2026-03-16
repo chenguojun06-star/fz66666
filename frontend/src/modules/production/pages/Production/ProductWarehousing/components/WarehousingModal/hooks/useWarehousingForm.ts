@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, message, Upload } from 'antd';
+import { Form, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
@@ -21,6 +21,7 @@ import {
   mapBundleStatusText
 } from '../../../utils';
 import { intelligenceApi } from '@/services/production/productionApi';
+import { message } from '@/utils/antdStatic';
 
 export const useWarehousingForm = (
   visible: boolean,

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Button, Input, Space, message, Modal, Form, Select, Tag } from 'antd';
+import { Button, Input, Space, Modal, Form, Select, Tag } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 
 import { safePrint } from '@/utils/safePrint';
 import StyleStageControlBar from './StyleStageControlBar';
+import { message } from '@/utils/antdStatic';
 
 const REVIEW_STATUS_OPTIONS = [
   { label: '✅ 通过', value: 'PASS' },
@@ -290,7 +291,7 @@ const StyleProductionTab: React.FC<Props> = ({
         okText="保存"
         cancelText="取消"
         width="40vw"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={reviewForm} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item

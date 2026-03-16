@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Form, message } from 'antd';
+import { Form } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { useModal, useTablePagination } from '@/hooks';
@@ -11,6 +11,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import type { MaterialInventory } from '../types';
 import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking';
 import QRCode from 'qrcode';
+import { message } from '@/utils/antdStatic';
 
 // 物料批次明细接口
 export interface MaterialBatchDetail {

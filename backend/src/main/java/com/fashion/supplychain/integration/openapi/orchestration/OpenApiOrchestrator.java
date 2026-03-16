@@ -1132,7 +1132,7 @@ public class OpenApiOrchestrator {
                     purchase.setMaterialType(valueAsString(item.get("materialType"), "FABRIC"));
                     purchase.setSpecifications(valueAsString(item.get("specifications"), null));
                     purchase.setUnit(valueAsString(item.get("unit"), "米"));
-                    purchase.setPurchaseQuantity(purchaseQuantity);
+                    purchase.setPurchaseQuantity(purchaseQuantity != null ? new BigDecimal(purchaseQuantity) : null);
                     purchase.setArrivedQuantity(parseInteger(item.get("arrivedQuantity")) == null ? 0 : parseInteger(item.get("arrivedQuantity")));
                     purchase.setSupplierName(valueAsString(item.get("supplierName"), app.getAppName()));
                     purchase.setRemark(valueAsString(item.get("remark"), "[OpenAPI批量上传]"));

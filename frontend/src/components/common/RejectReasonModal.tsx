@@ -65,7 +65,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
 
   // 关闭时重置表单
   React.useEffect(() => {
-    if (!open) {
+    if (open) {
       form.resetFields();
     }
   }, [open, form]);
@@ -82,7 +82,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
       onOk={handleOk}
       onCancel={handleCancel}
       destroyOnHidden
-      afterClose={() => form.resetFields()}
+      
     >
       {description && (
         <div style={{ marginBottom: 16, color: 'var(--text-secondary, #888)' }}>

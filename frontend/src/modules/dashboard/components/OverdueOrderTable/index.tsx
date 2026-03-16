@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, message, Spin } from 'antd';
+import { Button, Card, Spin } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import './styles.css';
+import { message } from '@/utils/antdStatic';
 
 interface OverdueOrder {
   id: string;  // 修复：后端返回的是字符串类型的UUID

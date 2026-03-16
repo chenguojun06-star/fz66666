@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert, Button, Card, Col, DatePicker, Descriptions, Form,
-  InputNumber, message, Modal, Row, Select, Space, Statistic, Tag, Typography,
-} from 'antd';
+import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import {
   CheckCircleOutlined, DollarOutlined, ExclamationCircleOutlined,
   PlusOutlined, WarningOutlined,
@@ -13,6 +10,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { receivableApi, type Receivable, type ReceivableStats } from '@/services/crm/customerApi';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 
@@ -74,7 +72,7 @@ const CreateReceivableModal: React.FC<{
       onCancel={handleClose}
       confirmLoading={saving}
       width="40vw"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Row gutter={16}>
@@ -167,7 +165,7 @@ const MarkReceivedModal: React.FC<{
       onCancel={handleClose}
       confirmLoading={saving}
       width="30vw"
-      destroyOnClose
+      destroyOnHidden
     >
       {record && (
         <div style={{ marginTop: 16 }}>

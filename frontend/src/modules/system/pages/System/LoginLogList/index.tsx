@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { LoginLog, LoginLogQueryParams } from '@/types/system';
 import api from '@/utils/api';
-import { Button, Card, Input, Select, Space, Tag, message } from 'antd';
+import { Button, Card, Input, Select, Space, Tag } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -10,6 +10,7 @@ import { useViewport } from '@/utils/useViewport';
 import './styles.css';
 
 import dayjs from 'dayjs';
+import { message } from '@/utils/antdStatic';
 
 const LoginLogList: React.FC = () => {
   const [queryParams, setQueryParams] = useState<LoginLogQueryParams>({

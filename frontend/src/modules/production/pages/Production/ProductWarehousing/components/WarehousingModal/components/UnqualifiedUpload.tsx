@@ -1,7 +1,8 @@
 import React from 'react';
-import { Upload, message } from 'antd';
+import { Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { MAX_UNQUALIFIED_IMAGES } from '../../../constants';
+import { message } from '@/utils/antdStatic';
 
 interface UnqualifiedUploadProps {
   fileList: UploadFile[];

@@ -145,7 +145,9 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         boolean ok = this.saveOrUpdate(productionOrder);
         if (ok && isCreate) {
             cuttingTaskService.createTaskIfAbsent(productionOrder);
-            this.generateMaterialPurchases(productionOrder);
+            // 采购需求由 ProductionOrderOrchestrator.saveOrUpdateOrder() 统一调用
+            // materialPurchaseService.generateDemandByOrderId() 生成（含 sizeUsageMap 各码精确逻辑），
+            // 此处不再重复调用旧的 generateMaterialPurchases()，避免错误数据先写入后被拦截。
             try {
                 scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(productionOrder);
                 this.recomputeProgressFromRecords(productionOrder.getId().trim());
@@ -341,11 +343,11 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             BigDecimal totalUsage = usage.multiply(BigDecimal.valueOf(orderQty));
             BigDecimal withLoss = totalUsage
                     .multiply(BigDecimal.ONE.add(loss.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)));
-            mp.setPurchaseQuantity(withLoss.setScale(0, RoundingMode.CEILING).intValue());
+            mp.setPurchaseQuantity(withLoss.setScale(4, RoundingMode.HALF_UP));
 
             mp.setUnitPrice(bom.getUnitPrice());
             if (mp.getPurchaseQuantity() != null && mp.getUnitPrice() != null) {
-                mp.setTotalAmount(mp.getUnitPrice().multiply(BigDecimal.valueOf(mp.getPurchaseQuantity())));
+                mp.setTotalAmount(mp.getUnitPrice().multiply(mp.getPurchaseQuantity()));
             }
 
             // if (order.getPlannedEndDate() != null) {

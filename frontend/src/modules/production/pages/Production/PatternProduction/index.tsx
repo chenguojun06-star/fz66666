@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Button, Input, message, Modal, Form, InputNumber, Tag, Select } from 'antd';
+import { App, Card, Button, Input, Modal, Form, InputNumber, Tag, Select, Switch, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -75,6 +75,7 @@ interface PatternProductionRecord {
   reviewBy?: string;
   reviewTime?: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'PRODUCTION_COMPLETED' | 'COMPLETED';
+  hasSecondaryProcess?: number;
 }
 
 // 进度节点中文名→英文key映射（与后竭resolveProgressKey保持一致）
@@ -91,6 +92,16 @@ const stageToKey: Record<string, string> = {
   '二次工艺': 'secondary',
   '包装': 'packaging',
 };
+
+/** 样衣生产固定6个父进度节点（采购→裁剪→二次工艺→车缝→尾部→入库） */
+const PATTERN_PARENT_STAGES = [
+  { id: 'procurement', name: '采购' },
+  { id: 'cutting',     name: '裁剪' },
+  { id: 'secondary',   name: '二次工艺' },
+  { id: 'sewing',      name: '车缝' },
+  { id: 'tail',        name: '尾部' },
+  { id: 'warehousing', name: '入库' },
+];
 
 /** 从 progressNodes 中读某个 stage 的进度（兼容英文key和中文key） */
 const _getNodePercent = (progressNodes: Record<string, number>, stageName: string): number => {
@@ -124,6 +135,7 @@ const calculateProgress = (record: PatternProductionRecord): number => {
 };
 
 const PatternProduction: React.FC = () => {
+  const { message } = App.useApp();
   const [dataSource, setDataSource] = useState<PatternProductionRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -299,6 +311,7 @@ const PatternProduction: React.FC = () => {
           reviewBy: item.reviewBy,
           reviewTime: formatDateTime(item.reviewTime) || '-',
           status: normalizedStatus,
+          hasSecondaryProcess: item.hasSecondaryProcess ?? 1,
         };
       });
 
@@ -425,6 +438,10 @@ const PatternProduction: React.FC = () => {
   const handleUpdateProgress = async () => {
     try {
       const values = await form.validateFields();
+      // 无二次工艺时自动注入 secondary=100，避免后端覆盖时丢弃该节点
+      if ((progressModal.data?.hasSecondaryProcess ?? 1) === 0) {
+        values.secondary = 100;
+      }
       await api.post(`/production/pattern/${progressModal.data!.id}/progress`, values);
       message.success('进度更新成功');
       progressModal.close();
@@ -532,27 +549,8 @@ const PatternProduction: React.FC = () => {
         // 从后端获取的进度节点配置和单价汇总
         const processUnitPrices = record.processUnitPrices || {};
 
-        // 动态构建进度节点列表（从样板开发的工艺配置读取，按 processName 逐个显示）
-        // ⚠️ 注意：key 必须用 processName 而非 progressStage，否则同属一个 stage 的多个工序
-        //         会被合并成一个球（如 整烫/验检/包装 同属"尾部" → 只显示第一个）
-        const rawConfig = (record.processConfig as ProcessConfigItem[]) || [];
-        const seenNames = new Set<string>();
-        const dynamicNodes = rawConfig.length > 0
-          ? rawConfig
-              .slice()
-              .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-              .filter(item => {
-                const name = (item.processName || item.progressStage || '').trim();
-                if (!name || seenNames.has(name)) return false;
-                seenNames.add(name);
-                return true;
-              })
-              .map(item => ({
-                // id 用所属 stage 的英文 key，同 stage 的子工序共享进度值
-                id: stageToKey[item.progressStage || item.processName] || item.progressStage || item.processName,
-                name: (item.processName || item.progressStage || '').trim(),
-              }))
-          : ['采购', '裁剪', '车缝', '尾部', '入库'].map(s => ({ id: stageToKey[s] || s, name: s }));
+        // 固定6个父进度节点（不再动态读 processConfig 的子工序）
+        const dynamicNodes = PATTERN_PARENT_STAGES.map(s => ({ ...s }));
         const nodesWithPrices = dynamicNodes.map(node => ({
           ...node,
           unitPrice: processUnitPrices[node.name] || 0,
@@ -582,6 +580,26 @@ const PatternProduction: React.FC = () => {
                 percent = progressNodes[node.id] || 0;
                 completedQty = percent >= 100 ? record.quantity : Math.floor(record.quantity * percent / 100);
                 const _remaining = record.quantity - completedQty;
+              }
+
+              // 无二次工艺：显示灰色占位球，不显示液态进度
+              if (node.id === 'secondary' && (record.hasSecondaryProcess ?? 1) === 0) {
+                return (
+                  <div
+                    key={`${node.id}-${node.name}`}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1, padding: 4 }}
+                  >
+                    <Tooltip title="已标记为无二次工艺">
+                      <div style={{
+                        width: 60, height: 60, borderRadius: '50%',
+                        background: '#f5f5f5', border: '2px dashed #d9d9d9',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, color: '#bfbfbf',
+                      }}>⊘</div>
+                    </Tooltip>
+                    <span style={{ fontSize: 11, color: '#bfbfbf' }}>无二次工艺</span>
+                  </div>
+                );
               }
 
               return (
@@ -663,6 +681,36 @@ const PatternProduction: React.FC = () => {
         const isCompleted = record.status === 'COMPLETED';
 
         const menuItems: MenuProps['items'] = [
+          {
+            key: 'secondary-toggle',
+            label: (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                   onClick={e => e.stopPropagation()}>
+                <span>二次工艺</span>
+                <Switch
+                  size="small"
+                  checked={(record.hasSecondaryProcess ?? 1) === 1}
+                  checkedChildren="有"
+                  unCheckedChildren="无"
+                  onChange={async (checked) => {
+                    try {
+                      await api.post(`/production/pattern/${record.id}/secondary-flag`, null, {
+                        params: { hasSecondaryProcess: checked ? 1 : 0 },
+                      });
+                      message.success(checked ? '已设置有二次工艺' : '已设置无二次工艺');
+                      loadData();
+                    } catch {
+                      message.error('设置失败');
+                    }
+                  }}
+                />
+              </div>
+            ),
+          },
+          {
+            key: 'divider0',
+            type: 'divider',
+          },
           record.status === 'PENDING' && {
             key: 'receive',
             label: '领取',
@@ -868,40 +916,40 @@ const PatternProduction: React.FC = () => {
           )}
           <Form form={form} layout="horizontal" labelCol={{ flex: '60px' }} wrapperCol={{ flex: 1 }}>
             {(() => {
-              const cfg = progressModal.data?.processConfig || [];
-              const stageMap = new Map<string, ProcessConfigItem>();
-              cfg.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).forEach(item => {
-                const stage = item.progressStage || item.processName;
-                if (stage && !stageMap.has(stage)) stageMap.set(stage, item);
-              });
-              const formNodes = Array.from(stageMap.entries()).map(([stage, item]) => ({
-                key: stageToKey[stage] || stage,
-                label: item.progressStage || stage,
-              }));
-              const fallback = formNodes.length > 0
-                ? formNodes
-                : ['裁剪','车缝','尾部','入库'].map(s => ({ key: stageToKey[s] || s, label: s }));
+              const noSecondary = (progressModal.data?.hasSecondaryProcess ?? 1) === 0;
+              const fallback = PATTERN_PARENT_STAGES
+                .filter(s => !(s.id === 'secondary' && noSecondary))
+                .map(s => ({ key: s.id, label: s.name }));
               // 2列网格
               const rows: Array<typeof fallback> = [];
               for (let i = 0; i < fallback.length; i += 2) rows.push(fallback.slice(i, i + 2));
-              return rows.map((row, ri) => (
-                <div key={ri} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
-                  {row.map(node => (
-                    <Form.Item
-                      key={node.key}
-                      name={node.key}
-                      label={node.label}
-                      style={{ marginBottom: 10 }}
-                      rules={[
-                        { required: true, message: '请填写' },
-                        { type: 'number', min: 0, max: 100, message: '0-100' },
-                      ]}
-                    >
-                      <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" suffix="%" />
-                    </Form.Item>
+              return (
+                <>
+                  {noSecondary && (
+                    <div style={{ textAlign: 'center', color: '#bfbfbf', padding: '4px 0 8px', fontSize: 12 }}>
+                      ⊘ 二次工艺节点已标记为"无"，自动设为100%
+                    </div>
+                  )}
+                  {rows.map((row, ri) => (
+                    <div key={ri} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                      {row.map(node => (
+                        <Form.Item
+                          key={node.key}
+                          name={node.key}
+                          label={node.label}
+                          style={{ marginBottom: 10 }}
+                          rules={[
+                            { required: true, message: '请填写' },
+                            { type: 'number', min: 0, max: 100, message: '0-100' },
+                          ]}
+                        >
+                          <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0-100" suffix="%" />
+                        </Form.Item>
+                      ))}
+                    </div>
                   ))}
-                </div>
-              ));
+                </>
+              );
             })()}
           </Form>
         </StandardModal>

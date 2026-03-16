@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Tag, Space, message, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
+import { Tabs, Button, Tag, Space, Input, Modal, Select, Card, Statistic, Row, Col, Typography, Descriptions, Badge, Tooltip, Timeline, Empty } from 'antd';
 import { SafetyCertificateOutlined, ApiOutlined, CopyOutlined, StopOutlined, PlayCircleOutlined, CodeOutlined, DashboardOutlined, LinkOutlined, CheckCircleOutlined, SwapOutlined, EyeOutlined, BookOutlined, ShopOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -16,6 +16,7 @@ import tenantAppService from '@/services/tenantAppService';
 import type { TenantAppInfo, TenantAppLogInfo, IntegrationOverview, IntegrationModuleInfo } from '@/services/tenantAppService';
 import type { RoleTemplate } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Radio, Space, Select, message } from 'antd';
+import { Row, Col, Button, Radio, Space, Select } from 'antd';
 import {
   InboxOutlined,
   ExportOutlined,
@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 interface WarehouseStats {
   totalValue: number;           // 库存总值

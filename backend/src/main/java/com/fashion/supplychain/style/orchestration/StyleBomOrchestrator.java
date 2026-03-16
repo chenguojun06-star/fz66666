@@ -881,9 +881,9 @@ public class StyleBomOrchestrator {
                 BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
                 BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                 BigDecimal totalUsage = usageAmount.multiply(BigDecimal.valueOf(styleTotalQty)).multiply(lossFactor);
-                int purchaseQty = totalUsage.setScale(0, RoundingMode.CEILING).intValue();
+                BigDecimal purchaseQty = totalUsage.setScale(4, RoundingMode.HALF_UP);
 
-                if (purchaseQty <= 0) {
+                if (purchaseQty.compareTo(BigDecimal.ZERO) <= 0) {
                     log.warn("BOM配置用量为0或未设置，跳过该物料: styleId={}, materialName={}", styleId, bom.getMaterialName());
                     continue;
                 }
@@ -903,7 +903,7 @@ public class StyleBomOrchestrator {
 
                 purchase.setUnitPrice(bomUnitPrice);
                 BigDecimal totalAmount = bomUnitPrice != null
-                        ? bomUnitPrice.multiply(BigDecimal.valueOf(purchaseQty))
+                        ? bomUnitPrice.multiply(purchaseQty)
                         : BigDecimal.ZERO;
                 purchase.setTotalAmount(totalAmount);
 

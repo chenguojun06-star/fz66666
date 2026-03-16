@@ -212,6 +212,25 @@ public class PatternProductionController {
     }
 
     /**
+     * 更新是否有二次工艺标志（0=无，1=有）
+     */
+    @PostMapping("/{id}/secondary-flag")
+    public Result<String> updateSecondaryFlag(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "1") int hasSecondaryProcess) {
+        PatternProduction record = patternProductionService.getById(id);
+        if (record == null) {
+            return Result.fail("记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+        record.setHasSecondaryProcess(hasSecondaryProcess);
+        record.setUpdateTime(LocalDateTime.now());
+        record.setUpdateBy(UserContext.username());
+        patternProductionService.updateById(record);
+        return Result.success(hasSecondaryProcess == 1 ? "已设置有二次工艺" : "已设置无二次工艺");
+    }
+
+    /**
      * 删除记录（软删除）
      */
     @DeleteMapping("/{id}")

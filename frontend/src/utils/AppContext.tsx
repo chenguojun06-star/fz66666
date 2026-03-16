@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { message } from 'antd';
+import { message } from '@/utils/antdStatic';
+
 
 // 定义消息类型
 type MessageType = 'success' | 'error' | 'warning' | 'info';

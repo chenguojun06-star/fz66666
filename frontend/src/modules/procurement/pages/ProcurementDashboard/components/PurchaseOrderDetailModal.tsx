@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Divider, Form, Input, InputNumber, Space, Spin, Tag, Typography, message } from 'antd';
+import { Alert, Button, DatePicker, Divider, Form, Input, InputNumber, Space, Spin, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
@@ -13,6 +13,7 @@ import { procurementApi, type PurchaseOrder } from '@/services/procurement/procu
 import MaterialInboundHistoryModal from './MaterialInboundHistoryModal';
 import MaterialReconciliationHistoryModal from './MaterialReconciliationHistoryModal';
 import { useAuth } from '@/utils/AuthContext';
+import { message } from '@/utils/antdStatic';
 
 const { Paragraph, Text } = Typography;
 
@@ -229,7 +230,7 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <div style={{ padding: '48px 0', textAlign: 'center' }}>

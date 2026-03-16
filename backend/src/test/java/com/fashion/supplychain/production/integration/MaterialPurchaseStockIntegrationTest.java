@@ -57,7 +57,7 @@ public class MaterialPurchaseStockIntegrationTest {
         purchase.setColor("Red");
         purchase.setSize("L");
         purchase.setUnit("米"); // Set required unit field
-        purchase.setPurchaseQuantity(100);
+        purchase.setPurchaseQuantity(new BigDecimal(100));
         purchase.setArrivedQuantity(0); // 初始未到货
         purchase.setUnitPrice(new BigDecimal("10.0"));
         purchase.setSupplierName("Test Supplier");

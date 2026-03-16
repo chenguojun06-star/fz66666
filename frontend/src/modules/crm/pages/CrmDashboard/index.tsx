@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Button, Card, Col, Descriptions, Form, Input,
-  message, Modal, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography,
-} from 'antd';
+import { Button, Card, Col, Descriptions, Form, Input, Modal, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   ArrowRightOutlined, CheckCircleOutlined, DollarOutlined,
@@ -18,6 +15,7 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, receivableApi, generatePortalLink, type Customer, type Receivable } from '@/services/crm/customerApi';
+import { message } from '@/utils/antdStatic';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -155,7 +153,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
       onCancel={onClose}
       confirmLoading={saving}
       width="40vw"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Row gutter={16}>
@@ -441,7 +439,7 @@ const CustomerManagement: React.FC = () => {
         footer={null}
         width="60vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
-        destroyOnClose
+        destroyOnHidden
       >
         {drawerData && (
           <Tabs

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Form, message } from 'antd';
+import { Form } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 
 // 质检入库统计数据类型

@@ -448,13 +448,14 @@
     </view>
   </view>
 
-  <!-- 确认弹窗 -->
-  <view wx:if="{{scanConfirm.visible}}" class="modal">
-    <view class="modal-box {{(scanConfirm.detail.isProcurement || scanConfirm.detail.isPattern) ? 'wide' : ''}}">
-      <view class="modal-head">
-        {{scanConfirm.detail.isPattern ? '样板生产' : (scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交')}}
-      </view>
-      <view class="modal-body">
+  <!-- 确认弹窗（通用 mp-modal 组件） -->
+  <!-- catchtouchmove 必须在宿主页面标签上才能阻止页面级滚动，组件内部的 catchtouchmove 无法拦截宿主页面 -->
+  <mp-modal
+    visible="{{scanConfirm.visible}}"
+    title="{{scanConfirm.detail.isPattern ? '样板生产' : (scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交')}}"
+    size="large"
+    catchtouchmove="stopPropagation"
+    bind:close="onCancelScan">
         <view wx:if="{{scanConfirm.detail}}" class="cf-list">
           <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v hl">{{scanConfirm.detail.styleNo || '-'}}</text></view>
           <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item"><text class="cf-k">颜色</text><text class="cf-v">{{scanConfirm.detail.color || '-'}}</text></view>
@@ -499,12 +500,14 @@
                   <view
                     wx:for="{{scanConfirm.detail.operationOptions}}"
                     wx:key="value"
-                    class="inline-selector-item {{scanConfirm.detail.operationType == item.value ? 'active' : ''}}"
+                    class="inline-selector-item {{scanConfirm.detail.operationType == item.value ? 'active' : ''}} {{item.disabled ? 'inline-selector-item--disabled' : ''}}"
                     data-type="{{item.value}}"
+                    data-disabled="{{item.disabled}}"
                     bindtap="onPatternOperationChange">
                     <view class="inline-selector-left">
-                      <view class="inline-selector-radio {{scanConfirm.detail.operationType == item.value ? 'checked' : ''}}">
-                        <view wx:if="{{scanConfirm.detail.operationType == item.value}}" class="inline-selector-radio-dot"></view>
+                      <view class="inline-selector-radio {{!item.disabled && scanConfirm.detail.operationType == item.value ? 'checked' : ''}}">
+                        <view wx:if="{{!item.disabled && scanConfirm.detail.operationType == item.value}}" class="inline-selector-radio-dot"></view>
+                        <text wx:if="{{item.disabled}}" style="color:#bfbfbf;font-size:16rpx;">—</text>
                       </view>
                       <text class="inline-selector-label">{{item.icon || '🧵'}} {{item.label || item.value}}</text>
                     </view>
@@ -557,37 +560,84 @@
           </view>
         </view>
 
-        <!--裁剪任务列表 - 在弹窗中显示 -->
-        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTasks && scanConfirm.cuttingTasks.length}}" class="purchase-modal-list">
-          <!-- 一键导入按钮（仅来自"我的任务"时显示） -->
-          <view wx:if="{{scanConfirm.fromMyTasks}}" class="cutting-action-bar">
-            <view class="cutting-btn auto" hover-class="cutting-btn-hover" hover-stay-time="100" bindtap="onAutoImportCutting">一键导入(20件/扎)</view>
-            <view class="cutting-btn clear" hover-class="cutting-btn-hover" hover-stay-time="100" bindtap="onClearCuttingInput">清空</view>
+        <!-- 裁剪配比面板 - 与 PC 端 CuttingRatioPanel 功能完全一致 -->
+        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingRatio}}" class="crp-panel">
+          <!-- 配置行 1：颜色 + 到货面料量 -->
+          <view class="crp-config-row">
+            <view class="crp-config-cell">
+              <text class="crp-cfg-label">颜色</text>
+              <text class="crp-cfg-color">{{scanConfirm.cuttingRatio.color || '-'}}</text>
+            </view>
+            <view class="crp-config-cell">
+              <text class="crp-cfg-label">到货面料</text>
+              <input class="crp-cfg-input" type="digit" value="{{scanConfirm.cuttingRatio.arrivedFabric}}" bindinput="onCuttingArrivedFabricInput" placeholder="米数" disabled="{{!scanConfirm.fromMyTasks}}" />
+              <text class="crp-cfg-unit">m</text>
+            </view>
           </view>
-
-          <view wx:for="{{scanConfirm.cuttingTasks}}" wx:key="index" class="purchase-modal-item">
-            <view class="pmi-header">
-              <text class="pmi-name">{{item.color || '颜色'}} - {{item.size || '尺码'}}</text>
+          <!-- 配置行 2：总件数 + 每扎件数 -->
+          <view class="crp-config-row">
+            <view class="crp-config-cell">
+              <text class="crp-cfg-label">总件数</text>
+              <input class="crp-cfg-input" type="number" value="{{scanConfirm.cuttingRatio.totalQty}}" bindinput="onCuttingTotalQtyInput" disabled="{{!scanConfirm.fromMyTasks}}" />
+              <text class="crp-cfg-unit">件</text>
             </view>
-            <view class="pmi-row pmi-row-inline">
-              <view class="pmi-col">
-                <text class="pmi-label">计划数量</text>
-                <text class="pmi-value demand">{{item.plannedQuantity || 0}}</text>
-              </view>
-              <view class="pmi-col">
-                <text class="pmi-label">裁剪数量</text>
-                <input
-                  class="pmi-input"
-                  type="digit"
-                  placeholder="请填写数量"
-                  value="{{item.cuttingInput}}"
-                  bindinput="onModalCuttingInput"
-                  data-color="{{item.color}}"
-                  data-size="{{item.size}}"
-                  data-idx="{{index}}"
-                />
-              </view>
+            <view class="crp-config-cell">
+              <text class="crp-cfg-label">每扎件数</text>
+              <input class="crp-cfg-input" type="number" value="{{scanConfirm.cuttingRatio.piecesPerBundle}}" bindinput="onCuttingPiecesPerBundleInput" placeholder="全25" disabled="{{!scanConfirm.fromMyTasks}}" />
+              <text class="crp-cfg-unit">件/扎</text>
             </view>
+          </view>
+          <!-- 面料消耗提示 -->
+          <view wx:if="{{scanConfirm.cuttingRatio.hasUsageMap && scanConfirm.cuttingRatio.consumedFabric > 0}}" class="crp-fabric-tip {{scanConfirm.cuttingRatio.fabricOk ? '' : 'crp-fabric-warn'}}">
+            <text>预计消耗 {{scanConfirm.cuttingRatio.consumedFabric}} m</text>
+            <text wx:if="{{scanConfirm.cuttingRatio.arrivedFabric}}"> / 到货 {{scanConfirm.cuttingRatio.arrivedFabric}} m</text>
+            <text wx:if="{{!scanConfirm.cuttingRatio.fabricOk}}" class="crp-warn-badge">⚠️面料不足</text>
+          </view>
+          <!-- 表格头 -->
+          <view class="crp-tbl-head">
+            <text class="crp-th crp-th-size">尺码</text>
+            <text wx:if="{{scanConfirm.cuttingRatio.hasUsageMap}}" class="crp-th crp-th-usage">纸样m/件</text>
+            <text class="crp-th crp-th-ratio">配比</text>
+            <text class="crp-th crp-th-qty">裁剪件数</text>
+            <text class="crp-th crp-th-del"></text>
+          </view>
+          <!-- 配比明细行 -->
+          <view wx:for="{{scanConfirm.cuttingRatio.ratioRows}}" wx:key="index" class="crp-tbl-row">
+            <input class="crp-td crp-td-size" value="{{item.size}}" bindinput="onCuttingSizeInput" data-idx="{{index}}" placeholder="尺码" disabled="{{!scanConfirm.fromMyTasks}}" />
+            <text wx:if="{{scanConfirm.cuttingRatio.hasUsageMap}}" class="crp-td crp-td-usage">{{item.usage || '-'}}</text>
+            <input class="crp-td crp-td-ratio" type="digit" value="{{item.ratio}}" bindinput="onCuttingRatioInput" data-idx="{{index}}" disabled="{{!scanConfirm.fromMyTasks}}" />
+            <view class="crp-td crp-td-qty">
+              <text class="crp-qty-val {{item.qty > 0 ? 'crp-qty-ok' : 'crp-qty-zero'}}">{{item.qty}}件</text>
+              <text wx:if="{{item.sizeBundles > 0}}" class="crp-qty-bnd">·{{item.sizeBundles}}扎</text>
+            </view>
+            <view wx:if="{{scanConfirm.fromMyTasks}}" class="crp-td crp-td-del {{scanConfirm.cuttingRatio.ratioRows.length <= 1 ? 'crp-del-disabled' : ''}}" bindtap="onCuttingRemoveRow" data-idx="{{index}}">✕</view>
+            <view wx:else class="crp-td crp-td-del"></view>
+          </view>
+          <!-- 添加尺码 -->
+          <view wx:if="{{scanConfirm.fromMyTasks}}" class="crp-add-row" bindtap="onCuttingAddRow">
+            <text class="crp-add-icon">+</text>
+            <text class="crp-add-label"> 添加尺码</text>
+          </view>
+          <!-- 汇总区 -->
+          <view class="crp-summary">
+            <view class="crp-sum-item">
+              <text class="crp-sum-label">总配比</text>
+              <text class="crp-sum-val">{{scanConfirm.cuttingRatio.totalRatio}}</text>
+            </view>
+            <text class="crp-sum-sep">|</text>
+            <view class="crp-sum-item">
+              <text class="crp-sum-label crp-blue">扎数</text>
+              <text class="crp-sum-val crp-blue">{{scanConfirm.cuttingRatio.bundles}}扎</text>
+            </view>
+            <text class="crp-sum-sep">|</text>
+            <view class="crp-sum-item">
+              <text class="crp-sum-label crp-green">实际裁剪</text>
+              <text class="crp-sum-val crp-green">{{scanConfirm.cuttingRatio.actualTotal}}件</text>
+            </view>
+          </view>
+          <!-- 清空按钮 -->
+          <view wx:if="{{scanConfirm.fromMyTasks}}" class="cutting-action-bar">
+            <view class="cutting-btn clear" hover-class="cutting-btn-hover" hover-stay-time="100" bindtap="onClearCuttingInput">清空</view>
           </view>
         </view>
 
@@ -758,17 +808,16 @@
           <text style="display: block;">materialPurchases: {{scanConfirm.materialPurchases.length}}条</text>
           <text style="display: block;">按钮条件: {{scanConfirm.detail.isProcurement && scanConfirm.fromMyTasks ? '满足' : '不满足'}}</text>
         </view>
-      </view>
-      <view class="modal-btns">
+      <view slot="footer" class="modal-btns">
         <view class="mbtn sos-btn" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onOpenSosModal">⚠️ 异常呼救</view>
           <view class="mbtn cancel" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onCancelScan">取消</view>
         <!-- 裁剪模式：扫码时只显示"领取任务"（未领取状态） -->
         <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.progressStage === '裁剪' && !scanConfirm.cuttingTaskReceived && !scanConfirm.fromMyTasks}}" class="mbtn" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
           {{scanConfirm.loading ? '...' : '领取任务'}}
         </view>
-        <!-- 裁剪模式：来自"我的任务"显示"确认裁剪" -->
+        <!-- 裁剪模式：来自"我的任务"显示"确认 → 生成菲号" -->
         <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.progressStage === '裁剪' && scanConfirm.fromMyTasks}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onRegenerateCuttingBundles">
-          {{scanConfirm.loading ? '...' : '确认裁剪'}}
+          {{scanConfirm.loading ? '...' : '生成菲号'}}
         </view>
         <!-- 采购模式 -->
         <!-- BOM回退模式：仅显示参考信息，不允许操作 -->
@@ -783,7 +832,11 @@
         <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.isProcurement && scanConfirm.fromMyTasks && !scanConfirm.bomFallback}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onSubmitProcurement">
           {{scanConfirm.loading ? '...' : '确认提交'}}
         </view>
-        <!-- 其他模式 -->
+        <!-- 样衣：一键领取全部生产工序（排除入库/出库/审核） -->
+        <view wx:if="{{scanConfirm.detail.isPattern && scanConfirm.detail.hasClaimAllOps}}" class="mbtn {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a;" bindtap="claimAllPatternOps">
+          {{scanConfirm.loading ? '领取中...' : '一键领取全部工序'}}
+        </view>
+        <!-- 样衣：提交当前选中的单个工序 -->
         <view wx:if="{{scanConfirm.detail.isPattern}}" class="mbtn {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" style="background: #10b981;" bindtap="submitPatternScanAll">
           {{scanConfirm.loading ? '提交中...' : (scanConfirm.detail.operationLabel ? ('提交：' + scanConfirm.detail.operationLabel) : '确认提交')}}
         </view>
@@ -791,8 +844,7 @@
           {{scanConfirm.loading ? '...' : (scanConfirm.detail.isQualityReceive ? '领取' : '确认')}}
         </view>
       </view>
-    </view>
-  </view>
+  </mp-modal>
 </view>
 
 <!-- 质检结果弹窗 -->
@@ -962,15 +1014,15 @@
 </view>
 
 <!-- 物料采购处理弹窗 -->
-<view class="modal-backdrop" wx:if="{{procurementModal.show}}" catchtap="closeProcurementModal"></view>
+<view class="modal-backdrop" wx:if="{{procurementModal.show}}" catchtap="closeProcurementModal" catchtouchmove="stopPropagation"></view>
 <view wx:if="{{procurementModal.show}}" class="modal-wrap procurement-modal show">
-  <view class="modal-container" catchtap="stopPropagation">
+  <view class="modal-container" catchtap="stopPropagation" catchtouchmove="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">物料采购</text>
       <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closeProcurementModal">×</view>
     </view>
 
-    <view class="modal-body">
+    <scroll-view class="modal-body" scroll-y="true" show-scrollbar="false">
       <!-- 订单信息 -->
       <view class="pm-info">
         <text class="pm-label">订单号：</text>
@@ -1006,7 +1058,7 @@
           </view>
         </view>
       </view>
-    </view>
+    </scroll-view>
 
     <view class="modal-footer">
       <button class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeProcurementModal">取消</button>

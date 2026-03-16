@@ -22,9 +22,14 @@
       <view wx:if="{{showClose}}" class="mp-modal-close" bindtap="onClose">✕</view>
     </view>
 
-    <!-- 内容区（默认 slot，flex:1 + overflow-y:auto 自动滚动）-->
-    <view class="mp-modal-body">
+    <!-- 内容区（scroll-view 原生滚动，不受 catchtouchmove 拦截）-->
+    <scroll-view class="mp-modal-body" scroll-y="true" show-scrollbar="false">
       <slot></slot>
+    </scroll-view>
+
+    <!-- 底部操作区（不参与滚动，footer 具名 slot）-->
+    <view class="mp-modal-footer">
+      <slot name="footer"></slot>
     </view>
 
   </view>

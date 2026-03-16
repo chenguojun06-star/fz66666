@@ -55,13 +55,14 @@
 import { initFrontendErrorReporter } from './utils/frontendErrorReporter';
 initFrontendErrorReporter();
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider, theme, App as AntApp } from 'antd';
+import { App as AntApp, ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
 import App from './App';
+import { setAntdStaticRefs } from './utils/antdStatic';
 import { AuthProvider } from './utils/AuthContext';
 import { AppProvider } from './utils/AppContext';
 import { type AppLanguage } from './i18n/languagePreference';
@@ -214,6 +215,19 @@ const lightBlueThemeTokens = {
   colorWarning: '#f59e0b',
   colorError: '#ef4444',
   colorInfo: '#3b82f6',
+};
+
+// ── AntdStaticLoader：在 AntApp context 内捕获 context-aware 实例 ──────────
+// 解决 "Static function can not consume context like dynamic theme" 警告
+// 原理：useApp() 在 <AntApp> 内部调用，拿到主题感知实例后存入 antdStatic 模块级变量
+const AntdStaticLoader: React.FC = () => {
+  const { message, modal, notification } = AntApp.useApp();
+  const initialized = useRef(false);
+  if (!initialized.current) {
+    setAntdStaticRefs(message, modal, notification);
+    initialized.current = true;
+  }
+  return null;
 };
 
 // 主应用包装组件
@@ -404,6 +418,7 @@ const AppWrapper: React.FC = () => {
       theme={themeConfig}
     >
       <AntApp>
+        <AntdStaticLoader />
         <AppProvider>
           <AuthProvider>
             <App />

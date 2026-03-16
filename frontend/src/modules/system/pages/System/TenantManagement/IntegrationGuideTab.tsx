@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Steps, Typography, Tag, Alert, Collapse, Tabs, Row, Col, Button, message, Divider } from 'antd';
+import { Card, Steps, Typography, Tag, Alert, Collapse, Tabs, Row, Col, Button, Divider } from 'antd';
+import { message } from '@/utils/antdStatic';
 import {
   ShoppingCartOutlined, KeyOutlined, ApiOutlined, SendOutlined, BookOutlined,
   CheckCircleOutlined, CodeOutlined, SafetyCertificateOutlined, QuestionCircleOutlined,

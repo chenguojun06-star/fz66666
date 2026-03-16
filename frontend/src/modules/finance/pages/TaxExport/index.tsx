@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Card, Row, Col, Button, DatePicker, Space, Tag, Typography, message, Divider, Alert, Modal,
-  Tabs, Form, Input, Select, InputNumber, Popconfirm, Statistic,
-} from 'antd';
+import { Card, Row, Col, Button, DatePicker, Space, Tag, Typography, Divider, Alert, Modal, Tabs, Form, Input, Select, InputNumber, Popconfirm, Statistic } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined,
@@ -22,6 +19,7 @@ import type { InvoiceStatus, InvoiceType } from '@/services/finance/invoiceApi';
 import payableApi from '@/services/finance/payableApi';
 import type { PayableStatus } from '@/services/finance/payableApi';
 import taxConfigApi from '@/services/finance/taxConfigApi';
+import { message } from '@/utils/antdStatic';
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;

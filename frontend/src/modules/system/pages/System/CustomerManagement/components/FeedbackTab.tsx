@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, Select, Card, Descriptions, Row, Col, Statistic } from 'antd';
+import { Button, Tag, Space, Form, Input, Select, Card, Descriptions, Row, Col, Statistic } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -8,6 +8,7 @@ import { useModal } from '@/hooks';
 import feedbackService from '@/services/feedbackService';
 import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '@/utils/antdStatic';
 
 const FEEDBACK_CATEGORY: Record<string, { label: string; color: string }> = {
   BUG: { label: '缺陷', color: 'red' },

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Empty, Space, Spin, Tag, Typography, message } from 'antd';
+import { Button, Empty, Space, Spin, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/components/common/ModalContentLayout';
 import { procurementApi } from '@/services/procurement/procurementApi';
 import type { MaterialReconciliation } from '@/types/finance';
+import { message } from '@/utils/antdStatic';
 
 const { Paragraph, Text } = Typography;
 
@@ -124,7 +125,7 @@ const MaterialReconciliationHistoryModal: React.FC<MaterialReconciliationHistory
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <div style={{ padding: '48px 0', textAlign: 'center' }}>

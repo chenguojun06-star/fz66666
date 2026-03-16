@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import java.math.BigDecimal;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.ParamUtils;
@@ -146,7 +147,7 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity();
+        int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity().intValue();
         if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK) {
             if (!StringUtils.hasText(remark)) {
                 throw new IllegalArgumentException(
@@ -194,7 +195,7 @@ public class MaterialPurchaseOrchestrator {
         purchase.setUnit(unit);
         purchase.setColor(color);
         purchase.setSize(size);
-        purchase.setPurchaseQuantity(qty);
+        purchase.setPurchaseQuantity(BigDecimal.valueOf(qty));
         purchase.setArrivedQuantity(0);
         purchase.setStatus(MaterialConstants.STATUS_RECEIVED);
         purchase.setReceiverId(receiverId);
@@ -478,7 +479,7 @@ public class MaterialPurchaseOrchestrator {
         if (returnQuantity < 0) {
             throw new IllegalArgumentException("实际回料数量不能小于0");
         }
-        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity();
+        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
         int arrivedQty = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
         int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
         if (max >= 0 && returnQuantity > max) {
@@ -826,7 +827,7 @@ public class MaterialPurchaseOrchestrator {
                 .filter(p -> {
                     if (p.getArrivedQuantity() == null) return true;
                     if (p.getPurchaseQuantity() == null) return true;
-                    return p.getArrivedQuantity() < p.getPurchaseQuantity();
+                    return p.getArrivedQuantity() < p.getPurchaseQuantity().intValue();
                 })
                 .collect(Collectors.toList());
 
@@ -948,7 +949,7 @@ public class MaterialPurchaseOrchestrator {
 
         for (MaterialPurchase p : all) {
             String status = p.getStatus() == null ? "" : p.getStatus().trim().toLowerCase();
-            int qty = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity();
+            int qty = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
             totalQuantity += qty;
             switch (status) {
                 case "pending": pendingCount++; break;
@@ -1016,7 +1017,7 @@ public class MaterialPurchaseOrchestrator {
             String materialCode = purchase.getMaterialCode();
             String color = purchase.getColor();
             String size = purchase.getSize();
-            Integer requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : 0;
+            int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
 
             // 2.1 查询库存（按 materialCode + color + size 匹配）
             LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
@@ -1061,8 +1062,53 @@ public class MaterialPurchaseOrchestrator {
                     detail.put("status", "failed");
                     detail.put("error", e.getMessage());
                 }
+            } else if (availableStock > 0 && !stockList.isEmpty()) {
+                // 🔄 部分出库：有多少领多少，不足部分创建新采购任务
+                try {
+                    createOutboundPicking(purchase, receiverId, receiverName, stockList, availableStock);
+                    outboundCount++;
+                    int deficitQty = requiredQty - availableStock;
+                    // 为不足部分补建新采购任务（status=pending，等待外部采购）
+                    MaterialPurchase deficitPurchase = new MaterialPurchase();
+                    deficitPurchase.setOrderId(purchase.getOrderId());
+                    deficitPurchase.setOrderNo(purchase.getOrderNo());
+                    deficitPurchase.setStyleId(purchase.getStyleId());
+                    deficitPurchase.setStyleNo(purchase.getStyleNo());
+                    deficitPurchase.setStyleName(purchase.getStyleName());
+                    deficitPurchase.setMaterialId(purchase.getMaterialId());
+                    deficitPurchase.setMaterialCode(purchase.getMaterialCode());
+                    deficitPurchase.setMaterialName(purchase.getMaterialName());
+                    deficitPurchase.setMaterialType(purchase.getMaterialType());
+                    deficitPurchase.setColor(purchase.getColor());
+                    deficitPurchase.setSize(purchase.getSize());
+                    deficitPurchase.setUnit(purchase.getUnit());
+                    deficitPurchase.setSpecifications(purchase.getSpecifications());
+                    deficitPurchase.setPurchaseQuantity(BigDecimal.valueOf(deficitQty));
+                    deficitPurchase.setStatus("pending");
+                    deficitPurchase.setRemark("部分领取补采|原任务ID=" + purchase.getId() + "|缺口=" + deficitQty);
+                    deficitPurchase.setTenantId(purchase.getTenantId());
+                    deficitPurchase.setCreatorId(receiverId);
+                    deficitPurchase.setCreateTime(LocalDateTime.now());
+                    deficitPurchase.setUpdateTime(LocalDateTime.now());
+                    deficitPurchase.setDeleteFlag(0);
+                    materialPurchaseService.save(deficitPurchase);
+                    purchaseCount++;
+                    detail.put("action", "partial");
+                    detail.put("pickedQty", availableStock);
+                    detail.put("deficitQty", deficitQty);
+                    detail.put("status", "partial");
+                    detail.put("message", String.format("部分出库 %d%s，缺口 %d%s 已创建采购任务",
+                        availableStock, purchase.getUnit() != null ? purchase.getUnit() : "",
+                        deficitQty, purchase.getUnit() != null ? purchase.getUnit() : ""));
+                } catch (Exception e) {
+                    log.error("创建部分出库单失败: materialCode={}, error={}", materialCode, e.getMessage());
+                    purchaseCount++;
+                    detail.put("action", "purchase");
+                    detail.put("status", "pending");
+                    detail.put("message", "部分出库失败，保持采购状态");
+                }
             } else {
-                // ❌ 保持采购状态（等待外部采购）
+                // ❌ 无库存，保持采购状态（等待外部采购）
                 purchaseCount++;
                 detail.put("action", "purchase");
                 detail.put("status", "pending");
@@ -1089,8 +1135,12 @@ public class MaterialPurchaseOrchestrator {
      */
     private void createOutboundPicking(MaterialPurchase purchase, String receiverId, String receiverName,
                                        List<MaterialStock> stockList) {
-        Integer pickQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : 0;
+        int pickQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        createOutboundPicking(purchase, receiverId, receiverName, stockList, pickQty);
+    }
 
+    private void createOutboundPicking(MaterialPurchase purchase, String receiverId, String receiverName,
+                                       List<MaterialStock> stockList, int pickQty) {
         // 1. 创建主表（MaterialPicking）—— status="pending"，等待仓库确认后再扣库存
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
@@ -1192,7 +1242,7 @@ public class MaterialPurchaseOrchestrator {
             String materialCode = purchase.getMaterialCode();
             String color = purchase.getColor();
             String size = purchase.getSize();
-            Integer requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : 0;
+            int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
             String status = purchase.getStatus() != null ? purchase.getStatus() : "";
 
             // 查询库存
@@ -1215,7 +1265,8 @@ public class MaterialPurchaseOrchestrator {
                 .sum();
 
             boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
-            if (isPending) pendingCount++;
+            boolean isWarehousePending = "warehouse_pending".equals(status);
+            if (isPending || isWarehousePending) pendingCount++;
 
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("purchaseId", purchase.getId());
@@ -1295,10 +1346,15 @@ public class MaterialPurchaseOrchestrator {
             throw new NoSuchElementException("采购任务不存在");
         }
 
+        // 幂等校验：已提交仓库出库申请，禁止重复提交
+        if ("warehouse_pending".equals(purchase.getStatus())) {
+            throw new IllegalStateException("该物料已提交仓库出库申请（待仓库确认），请勿重复提交");
+        }
+
         String materialCode = purchase.getMaterialCode();
         String color = purchase.getColor();
         String size = purchase.getSize();
-        Integer requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : 0;
+        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
 
         // 查询库存
         LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();

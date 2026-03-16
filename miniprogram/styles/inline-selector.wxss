@@ -69,6 +69,18 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
+/* === 禁用项（如"无二次工艺"信息提示） === */
+.inline-selector-item--disabled {
+  opacity: 0.45;
+  background: #f9fafb;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+.inline-selector-item--disabled .inline-selector-label {
+  color: var(--color-text-secondary, #94a3b8);
+  font-weight: 400;
+}
+
 /* === 左侧：radio + 文字 === */
 .inline-selector-left {
   display: flex;

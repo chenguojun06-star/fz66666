@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Space, Tag, Tooltip, message } from 'antd';
+import { Button, Space, Tag, Tooltip } from 'antd';
 import QRCode from 'qrcode';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -37,6 +37,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
 import { getQualityStatusConfig } from '../utils';
 import { analyzeQuality, renderQualityTooltip } from '../utils/qualityIntelligence';
+import { message } from '@/utils/antdStatic';
 
 const getUrgencyTag = (value: unknown): { text: string; color: string } | null => {
   const key = String(value || '').trim().toLowerCase();

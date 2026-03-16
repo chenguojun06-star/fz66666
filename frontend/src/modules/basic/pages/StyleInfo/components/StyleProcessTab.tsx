@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Space, Select, Modal, App, Popover, Tag, Tooltip } from 'antd';
+import { Button, Input, InputNumber, Space, Select, App, Popover, Tag, Tooltip } from 'antd';
+import { modal } from '@/utils/antdStatic';
 import { DeleteOutlined, BulbOutlined, LoadingOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
@@ -664,7 +665,7 @@ const StyleProcessTab: React.FC<Props> = ({
               value={record.processName}
               placeholder="请选择或输入工序名称"
               popupMatchSelectWidth={false}
-              dropdownStyle={{ minWidth: 260 }}
+              styles={{ popup: { root: { minWidth: 260 } } }}
               onChange={(v) => updateField(record.id!, 'processName', v)}
             />
           ) : (
@@ -708,7 +709,7 @@ const StyleProcessTab: React.FC<Props> = ({
               value={record.machineType}
               placeholder="请选择或输入机器类型"
               popupMatchSelectWidth={false}
-              dropdownStyle={{ minWidth: 260 }}
+              styles={{ popup: { root: { minWidth: 260 } } }}
               onChange={(v) => updateField(record.id!, 'machineType', v)}
             />
           ) : (
@@ -750,7 +751,7 @@ const StyleProcessTab: React.FC<Props> = ({
               value={record.description || ''}
               placeholder="请选择或输入制作描述"
               popupMatchSelectWidth={false}
-              dropdownStyle={{ minWidth: 260 }}
+              styles={{ popup: { root: { minWidth: 260 } } }}
               onChange={(v) => updateField(record.id!, 'description', v || null)}
             />
           ) : (
@@ -839,7 +840,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: "var(--font-size-xs)" }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  Modal.confirm({
+                  modal.confirm({
                     width: '30vw',
                     title: `确定删除"${size}"码？`,
                     content: '删除后该尺码的单价数据将被清除',
@@ -885,7 +886,7 @@ const StyleProcessTab: React.FC<Props> = ({
                   title: '删除',
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
+                    modal.confirm({
                       width: '30vw',
                       title: '确定删除?',
                       onOk: () => handleDelete(record.id!),
@@ -1105,7 +1106,7 @@ const StyleProcessTab: React.FC<Props> = ({
               <Button
                 disabled={saving}
                 onClick={() => {
-                  Modal.confirm({
+                  modal.confirm({
                     width: '30vw',
                     title: '放弃未保存的修改？',
                     onOk: exitEdit,

@@ -1,18 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import {
-  Tabs,
-  Card,
-  Button,
-  Upload,
-  Alert,
-  Space,
-  Typography,
-  Tag,
-  message,
-  Result as AntResult,
-  Progress,
-  Steps,
-} from 'antd';
+import { Tabs, Card, Button, Upload, Alert, Space, Typography, Tag, Result as AntResult, Progress, Steps } from 'antd';
 import {
   DownloadOutlined,
   UploadOutlined,
@@ -31,6 +18,7 @@ import Layout from '@/components/Layout';
 import { dataImportService } from '@/services/system/dataImport';
 import type { ImportResult } from '@/services/system/dataImport';
 import ResizableTable from '@/components/common/ResizableTable';
+import { message } from '@/utils/antdStatic';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;

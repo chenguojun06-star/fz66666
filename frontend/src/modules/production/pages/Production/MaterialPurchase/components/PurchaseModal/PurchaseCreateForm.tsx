@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload, message } from 'antd';
+import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload } from 'antd';
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import type { UploadChangeParam } from 'antd/es/upload';
 import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
@@ -8,6 +8,7 @@ import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import { message } from '@/utils/antdStatic';
 
 const { Option } = Select;
 

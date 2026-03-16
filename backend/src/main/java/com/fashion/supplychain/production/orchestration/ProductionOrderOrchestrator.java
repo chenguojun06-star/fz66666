@@ -517,13 +517,32 @@ public class ProductionOrderOrchestrator {
             throw new IllegalStateException("订单已完成，无法报废");
         }
 
-        // 仅允许无采购记录的订单报废（有采购数据说明生产已实质推进，禁止报废）
-        long purchaseCount = materialPurchaseService.lambdaQuery()
+        // 已领取的采购记录说明面辅料已实质流转，禁止报废
+        long receivedCount = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getOrderId, oid)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
+                .ne(MaterialPurchase::getStatus, "pending")
                 .count();
-        if (purchaseCount > 0) {
-            throw new IllegalStateException("订单已有采购记录（" + purchaseCount + "条），无法报废。如需报废请先删除全部采购记录");
+        if (receivedCount > 0) {
+            throw new IllegalStateException("订单已有" + receivedCount + "条已领取的采购记录，无法报废");
+        }
+
+        // 待领取（pending）的采购记录随订单报废一并软删除
+        List<MaterialPurchase> pendingList = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getOrderId, oid)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getStatus, "pending")
+                .list();
+        if (!pendingList.isEmpty()) {
+            MaterialPurchase upd = new MaterialPurchase();
+            upd.setDeleteFlag(1);
+            upd.setUpdateTime(LocalDateTime.now());
+            materialPurchaseService.lambdaUpdate()
+                    .eq(MaterialPurchase::getOrderId, oid)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .eq(MaterialPurchase::getStatus, "pending")
+                    .update(upd);
+            log.info("scrapOrder: 订单{}报废，自动作废{}条待领取采购记录", oid, pendingList.size());
         }
 
         // 2026-02-01: 移除采购完成限制 - 允许在任何阶段报废订单

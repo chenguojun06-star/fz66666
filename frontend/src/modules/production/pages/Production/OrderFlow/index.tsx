@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Space, Tabs, Tag, message } from 'antd';
+import { Alert, Button, Card, Space, Tabs, Tag } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
@@ -18,6 +18,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import '../../../styles.css';
+import { message } from '@/utils/antdStatic';
 
 type FlowStage = {
   processName: string;

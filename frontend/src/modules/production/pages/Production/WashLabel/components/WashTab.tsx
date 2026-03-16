@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Input, Button, Space, Tag, message } from 'antd';
+import { Input, Button, Space, Tag } from 'antd';
 import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import WashCareLabelModal from './WashCareLabelModal';
+import { message } from '@/utils/antdStatic';
 
 export default function WashTab() {
   const [orders, setOrders]               = useState<ProductionOrder[]>([]);

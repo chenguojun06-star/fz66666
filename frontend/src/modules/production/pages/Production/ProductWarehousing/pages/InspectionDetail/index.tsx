@@ -1,10 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Card, Spin, Button, message, Tabs, Alert, Descriptions, Table, Tag,
-  Image, List, Typography, Select, Space, Statistic, Row, Col,
-  Form, InputNumber, Input, Popconfirm,
-} from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Table, Tag, Image, List, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ExperimentOutlined,
@@ -25,6 +21,7 @@ import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useW
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
 import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
+import { message } from '@/utils/antdStatic';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -1153,7 +1150,7 @@ const InspectionDetail: React.FC = () => {
           footer={null}
           width="60vw"
           initialHeight={Math.round(window.innerHeight * 0.82)}
-          destroyOnClose
+          destroyOnHidden
         >
           {renderWarehousingAction()}
         </ResizableModal>

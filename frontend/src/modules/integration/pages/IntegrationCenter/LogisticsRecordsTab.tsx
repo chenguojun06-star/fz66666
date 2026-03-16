@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Select, Button, Tag, Space, message, Tooltip } from 'antd';
+import { Card, Input, Select, Button, Tag, Space, Tooltip } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 interface LogisticsRecord {
   id: number;

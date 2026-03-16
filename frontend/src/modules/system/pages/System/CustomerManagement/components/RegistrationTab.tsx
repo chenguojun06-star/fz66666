@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
+import { Button, Tag, Space, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -10,6 +10,7 @@ import { useAuth } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '@/utils/antdStatic';
 
 // ========== 注册审批 Tab ==========
 const RegistrationTab: React.FC = () => {

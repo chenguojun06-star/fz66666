@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Col, Row, Space, Tag, message, Tooltip } from 'antd';
+import { Button, Col, Row, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
@@ -10,6 +10,7 @@ import ResizableModal, {
 import ResizableTable from './common/ResizableTable';
 import { useAuth } from '../utils/AuthContext';
 import { getFullAuthedFileUrl } from '../utils/fileUrl';
+import { message } from '@/utils/antdStatic';
 
 /**
  * 标识类型定义

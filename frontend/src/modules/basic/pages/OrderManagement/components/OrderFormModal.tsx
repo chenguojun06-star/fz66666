@@ -737,7 +737,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
               children: (
                 <div>
                   <div style={{ marginBottom: 8, color: 'var(--neutral-text-light)' }}>
-                    预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)
+                    预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)；<span style={{ color: 'var(--warning-color, #f7a600)' }}>★</span> 表示已配置码数用量，按每码分别计算，单件用量显示加权平均值
                   </div>
                   <Tabs
                     items={[

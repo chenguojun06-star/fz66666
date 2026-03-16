@@ -462,6 +462,8 @@ public class StyleInfoOrchestrator {
         patternProduction.setProgressNodes(progressNodesJson);
         patternProduction.setCreateTime(LocalDateTime.now());
         patternProduction.setUpdateTime(LocalDateTime.now());
+        // 默认有二次工艺，PC端可按需切换
+        patternProduction.setHasSecondaryProcess(1);
 
         UserContext ctx = UserContext.get();
         if (ctx != null) {

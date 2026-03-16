@@ -544,7 +544,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
       onCancel={onClose}
       width="50vw"
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Tabs
         defaultActiveKey="wash"

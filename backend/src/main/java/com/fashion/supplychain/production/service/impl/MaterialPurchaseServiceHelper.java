@@ -320,16 +320,20 @@ public class MaterialPurchaseServiceHelper {
                     // 优先用纸样各码用量，找不到则降级为 BOM 统一用量
                     BigDecimal usage = sizeUsageMapParsed.getOrDefault(ls,
                             bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
-                    totalRequired = totalRequired.add(usage.multiply(BigDecimal.valueOf(qty)));
+                    // 应用损耗率：quantity × usage × (1 + lossRate/100)
+                    BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+                    BigDecimal lossMultiplier = BigDecimal.ONE.add(
+                            lossRate.divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP));
+                    totalRequired = totalRequired.add(usage.multiply(lossMultiplier).multiply(BigDecimal.valueOf(qty)));
                 }
             }
             if (!hasMatchedLine || totalRequired.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
-            int requiredInt = totalRequired.setScale(0, java.math.RoundingMode.CEILING).intValue();
+            BigDecimal requiredQty = totalRequired.setScale(4, java.math.RoundingMode.HALF_UP);
 
-            if (requiredInt <= 0) {
+            if (requiredQty.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
@@ -351,7 +355,7 @@ public class MaterialPurchaseServiceHelper {
                 mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
                 mp.setSpecifications(bom.getSpecification());
                 mp.setUnit(bom.getUnit());
-                mp.setPurchaseQuantity(requiredInt);
+                mp.setPurchaseQuantity(requiredQty);
                 mp.setArrivedQuantity(0);
                 mp.setSupplierName(bom.getSupplier());
                 mp.setSupplierId("");
@@ -374,7 +378,7 @@ public class MaterialPurchaseServiceHelper {
                 mp.setDeleteFlag(0);
                 grouped.put(key, mp);
             } else {
-                int nextQty = (agg.getPurchaseQuantity() == null ? 0 : agg.getPurchaseQuantity()) + requiredInt;
+                BigDecimal nextQty = (agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(requiredQty);
                 agg.setPurchaseQuantity(nextQty);
                 agg.setTotalAmount(BigDecimal.ZERO);
             }

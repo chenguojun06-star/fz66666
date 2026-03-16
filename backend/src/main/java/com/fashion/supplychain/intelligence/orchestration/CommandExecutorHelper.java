@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -223,7 +224,7 @@ public class CommandExecutorHelper {
         }
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setMaterialName(materialName);
-        purchase.setPurchaseQuantity(quantity);
+        purchase.setPurchaseQuantity(BigDecimal.valueOf(quantity));
         purchase.setSourceType("AI");
         purchase.setRemark("[AI创建] " + command.getReason());
         purchase.setStatus("pending");
@@ -291,7 +292,7 @@ public class CommandExecutorHelper {
         }
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setMaterialName(materialName);
-        purchase.setPurchaseQuantity(quantity);
+        purchase.setPurchaseQuantity(BigDecimal.valueOf(quantity));
         purchase.setSourceType("AI");
         purchase.setRemark("[AI订货] " + command.getReason() + (supplier.isBlank() ? "" : " 供应商: " + supplier));
         purchase.setStatus("pending");

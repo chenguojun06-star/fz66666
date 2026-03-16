@@ -407,6 +407,15 @@ Page({
     CuttingHandler.onClearCuttingInput(this);
   },
 
+  // --- 裁剪配比面板事件（委托 CuttingHandler）---
+  onCuttingTotalQtyInput(e) { CuttingHandler.onCuttingTotalQtyInput(this, e); },
+  onCuttingArrivedFabricInput(e) { CuttingHandler.onCuttingArrivedFabricInput(this, e); },
+  onCuttingPiecesPerBundleInput(e) { CuttingHandler.onCuttingPiecesPerBundleInput(this, e); },
+  onCuttingRatioInput(e) { CuttingHandler.onCuttingRatioInput(this, e); },
+  onCuttingSizeInput(e) { CuttingHandler.onCuttingSizeInput(this, e); },
+  onCuttingAddRow() { CuttingHandler.onCuttingAddRow(this); },
+  onCuttingRemoveRow(e) { CuttingHandler.onCuttingRemoveRow(this, e); },
+
   // ==================== 采购任务操作（委托 ProcurementHandler） ====================
 
   /**
@@ -753,6 +762,14 @@ Page({
    */
   async submitPatternScanAll() {
     await PatternHandler.submitPatternScanAll(this);
+  },
+
+  /**
+   * 样衣一键领取全部生产工序
+   * @returns {Promise<void>} 无返回值
+   */
+  async claimAllPatternOps() {
+    await PatternHandler.claimAllPatternOps(this);
   },
 
   // ==================== 仓库选择（入库扫码时显示）====================

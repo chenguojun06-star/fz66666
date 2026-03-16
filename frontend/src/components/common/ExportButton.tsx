@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Button, message } from 'antd';
+import { Button } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { getAuthedFileUrl } from '@/utils/fileUrl';
+import { message } from '@/utils/antdStatic';
 
 interface ExportButtonProps {
   /** 导出 label，默认"导出 Excel" */

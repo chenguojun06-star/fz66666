@@ -414,9 +414,24 @@ const OrderManagement: React.FC = () => {
     if (rawMap) {
       try {
         const usageMap = JSON.parse(rawMap) as Record<string, number>;
+        const { byColorSize, bySize: bySizeMap, byColor } = orderQtyStats;
+        const colorRaw = (record as Record<string, unknown>).color;
+        // 预判BOM颜色是否存在于订单颜色集中：
+        // 若不存在（如白色里料配蓝色外套），说明是辅料自身颜色，应忽略颜色差异、按码数全量匹配
+        const colorOpts = colorRaw ? buildOptionSet(colorRaw) : null;
+        const bomColorInOrder = colorOpts ? Array.from(colorOpts).some(c => byColor.has(c)) : false;
         let total = 0;
-        for (const [sz, usage] of Object.entries(usageMap)) {
-          const qty = getMatchedQty((record as Record<string, unknown>).color, sz);
+        for (const [szRaw, usage] of Object.entries(usageMap)) {
+          // ⚠️ 必须normalize：byColorSize/bySize的key全部是小写，JSON里的码数key可能是"XS"大写
+          const sz = normalizeMatchKey(szRaw);
+          let qty = 0;
+          if (colorOpts && bomColorInOrder) {
+            // BOM颜色存在于订单颜色中（如蓝色面料只匹配蓝色订单），精确颜色+码数匹配
+            for (const c of colorOpts) qty += byColorSize.get(`${c}|${sz}`) || 0;
+          } else {
+            // BOM颜色不在订单颜色中（里料/辅料颜色与成品颜色不同），或无颜色约束，按码数汇总
+            qty = bySizeMap.get(sz) || 0;
+          }
           total += usage * (1 + loss / 100) * qty;
         }
         if (total > 0 && Number.isFinite(total)) return Number(total.toFixed(4));
@@ -451,7 +466,32 @@ const OrderManagement: React.FC = () => {
       align: 'right' as const,
       render: (_: any, record: StyleBom) => getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size),
     },
-    { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
+    {
+      title: '单件用量',
+      key: 'usageAmount',
+      width: 120,
+      render: (_: any, record: StyleBom) => {
+        const rawMap = (record as Record<string, unknown>).sizeUsageMap as string | undefined;
+        if (rawMap) {
+          const matchedQty = getMatchedQty(
+            (record as Record<string, unknown>).color,
+            (record as Record<string, unknown>).size
+          );
+          const loss = Number((record as Record<string, unknown>).lossRate) || 0;
+          const divisor = matchedQty * (1 + loss / 100);
+          if (divisor > 0) {
+            const effectiveUnit = calcBomBudgetQty(record) / divisor;
+            return (
+              <span title="已配置码数用量，此处为加权平均值">
+                {Number(effectiveUnit.toFixed(4))}<span style={{ color: 'var(--warning-color, #f7a600)', marginLeft: 2 }}>★</span>
+              </span>
+            );
+          }
+          return <span style={{ color: 'var(--neutral-text-light)' }}>按配比</span>;
+        }
+        return <span>{Number((record as Record<string, unknown>).usageAmount) || 0}</span>;
+      },
+    },
     { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
     {
       title: '预算采购数量',
@@ -466,37 +506,6 @@ const OrderManagement: React.FC = () => {
       key: 'totalPrice',
       width: 100,
       render: (_: any, record: StyleBom) => calcBomTotalPrice(record),
-    },
-  ];
-
-  const demandColumns = [
-    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-    { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-    {
-      title: '预算采购数量',
-      dataIndex: 'budgetQty',
-      key: 'budgetQty',
-      width: 140,
-      align: 'right' as const,
-    },
-    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true },
-    {
-      title: '单价',
-      dataIndex: 'unitPrice',
-      key: 'unitPrice',
-      width: 100,
-      align: 'right' as const,
-    },
-    {
-      title: '金额',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      width: 120,
-      align: 'right' as const,
     },
   ];
 
@@ -517,128 +526,12 @@ const OrderManagement: React.FC = () => {
     }
   }, [location.search]);
 
-  const demandRows = useMemo(() => {
-    const grouped: Record<string, any> = {};
-
-    for (const bom of bomList) {
-      const materialType = String((bom as Record<string, unknown>).materialType || 'fabric');
-      const bomColor = String((bom as Record<string, unknown>).color || '').trim();
-      const bomSize = String((bom as Record<string, unknown>).size || '').trim();
-
-      const loss = Number((bom as Record<string, unknown>).lossRate) || 0;
-      const rawMap = (bom as Record<string, unknown>).sizeUsageMap as string | undefined;
-      let required = 0;
-
-      // 优先使用码数用量配比（来自纸样设置），按每个码分别匹配订单数量
-      if (rawMap) {
-        try {
-          const usageMap = JSON.parse(rawMap) as Record<string, number>;
-          for (const [sz, usage] of Object.entries(usageMap)) {
-            const qty = getMatchedQty(bomColor, sz);
-            required += usage * (1 + loss / 100) * qty;
-          }
-        } catch { /* fall through */ }
-      }
-
-      if (required <= 0) {
-        // 兜底：使用平均单件用量
-        const matchedQty = getMatchedQty(bomColor, bomSize);
-        if (!matchedQty) continue;
-        const usage = Number((bom as Record<string, unknown>).usageAmount) || 0;
-        required = usage * (1 + loss / 100) * matchedQty;
-      }
-
-      if (!Number.isFinite(required) || required <= 0) continue;
-
-      const key = [
-        materialType,
-        (bom as Record<string, unknown>).materialCode || '',
-        (bom as Record<string, unknown>).specification || '',
-        (bom as Record<string, unknown>).unit || '',
-        bomColor,
-        bomSize,
-        (bom as Record<string, unknown>).supplier || '',
-      ].join('|');
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          key,
-          materialType,
-          materialCode: (bom as Record<string, unknown>).materialCode,
-          materialName: (bom as Record<string, unknown>).materialName,
-          specification: (bom as Record<string, unknown>).specification,
-          unit: (bom as Record<string, unknown>).unit,
-          color: bomColor,
-          size: bomSize,
-          supplierName: (bom as Record<string, unknown>).supplier,
-          unitPrice: Number((bom as Record<string, unknown>).unitPrice) || 0,
-          budgetQty: 0,
-        };
-      }
-
-      grouped[key].budgetQty += required;
-    }
-
-    return Object.values(grouped)
-      .map((r: any) => {
-        const budgetQty = Number(r.budgetQty.toFixed(4));
-        const totalAmount = Number((budgetQty * (Number(r.unitPrice) || 0)).toFixed(2));
-        return { ...r, budgetQty, totalAmount };
-      })
-      .sort((a: any, b: any) => String(a.materialCode || '').localeCompare(String(b.materialCode || '')));
-  }, [bomList, getMatchedQty]);
-
   const bomByType = useMemo(() => {
     const fabric = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'fabric');
     const lining = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'lining');
     const accessory = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'accessory');
     return { fabric, lining, accessory };
   }, [bomList]);
-
-  const demandRowsByType = useMemo(() => {
-    const fabric = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'fabric');
-    const lining = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'lining');
-    const accessory = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'accessory');
-    return { fabric, lining, accessory };
-  }, [demandRows]);
-
-  const generateDemand = async () => {
-    if (!createdOrder?.id) {
-      message.error('请先下单');
-      setActiveTabKey('base');
-      return;
-    }
-
-    try {
-      const res = await api.post<{ code: number; message: string; data: unknown[] }>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: false });
-      if (res.code === 200) {
-        const generated = Array.isArray(res.data) ? res.data.length : undefined;
-        if (generated === 0) {
-          message.warning('未生成采购需求：请检查BOM颜色/尺码是否与订单明细匹配');
-        } else {
-          message.success('已生成采购单');
-        }
-        navigate(withQuery('/production/material', { orderNo: createdOrder.orderNo }));
-        return;
-      }
-      const msg = res.message || '生成采购单失败';
-      if (String(msg).includes('已生成')) {
-        const ok = window.confirm('该订单已存在采购单，是否覆盖重新生成？');
-        if (!ok) return;
-        const res2 = await api.post<{ code: number; message: string }>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: true });
-        if (res2.code === 200) {
-          message.success('已覆盖生成采购单');
-          navigate(withQuery('/production/material', { orderNo: createdOrder.orderNo }));
-        } else {
-          message.error(res2.message || '覆盖生成失败');
-        }
-      } else {
-        message.error(msg);
-      }
-    } catch (e: any) {
-      message.error(e?.message || '生成采购单失败');
-    }
-  };
 
   const _watchedOrderNo = Form.useWatch('orderNo', form) as string | undefined;
   const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
@@ -2207,125 +2100,41 @@ const OrderManagement: React.FC = () => {
               },
               {
                 key: 'bom',
-                label: '面辅料与预算',
+                label: '面辅料预算',
                 children: (
                   <div>
-                    <div style={{ marginBottom: 8, color: 'var(--neutral-text-light)' }}>
-                      预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)
+                    <div style={{ marginBottom: 12, color: 'var(--neutral-text-light)' }}>
+                      预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)；<span style={{ color: 'var(--warning-color, #f7a600)' }}>★</span> 表示已配置码数用量，按每码分别计算，单件用量显示加权平均值
                     </div>
-                    <Tabs
-                      items={[
-                        {
-                          key: 'fabric',
-                          label: '面料',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                              loading={bomLoading}
-                              dataSource={bomByType.fabric}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={bomColumns}
-                            />
-                          )
-                        },
-                        {
-                          key: 'lining',
-                          label: '里料',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                              loading={bomLoading}
-                              dataSource={bomByType.lining}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={bomColumns}
-                            />
-                          )
-                        },
-                        {
-                          key: 'accessory',
-                          label: '辅料',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                              loading={bomLoading}
-                              dataSource={bomByType.accessory}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={bomColumns}
-                            />
-                          )
-                        }
-                      ]}
+                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>面料</div>
+                    <ResizableTable
+                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
+                      loading={bomLoading}
+                      dataSource={bomByType.fabric}
+                      pagination={false}
+                      scroll={{ x: 'max-content' }}
+                      size={isMobile ? 'small' : 'middle'}
+                      columns={bomColumns}
                     />
-                  </div>
-                )
-              },
-              {
-                key: 'demand',
-                label: '采购需求',
-                children: (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ color: 'var(--neutral-text-light)' }}>
-                        汇总条数：<span style={{ fontWeight: 600 }}>{demandRows.length}</span>
-                      </div>
-                      <Space>
-                        <Button type="primary" onClick={generateDemand} disabled={!createdOrder?.id}>
-                          生成采购单
-                        </Button>
-                      </Space>
-                    </div>
-
-                    <Tabs
-                      items={[
-                        {
-                          key: 'demand-fabric',
-                          label: '面料需求',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).key)}
-                              dataSource={demandRowsByType.fabric as any}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={demandColumns}
-                            />
-                          )
-                        },
-                        {
-                          key: 'demand-lining',
-                          label: '里料需求',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).key)}
-                              dataSource={demandRowsByType.lining as any}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={demandColumns}
-                            />
-                          )
-                        },
-                        {
-                          key: 'demand-accessory',
-                          label: '辅料需求',
-                          children: (
-                            <ResizableTable
-                              rowKey={(r) => String((r as Record<string, unknown>).key)}
-                              dataSource={demandRowsByType.accessory as any}
-                              pagination={false}
-                              scroll={{ x: 'max-content' }}
-                              size={isMobile ? 'small' : 'middle'}
-                              columns={demandColumns}
-                            />
-                          )
-                        }
-                      ]}
+                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>里料</div>
+                    <ResizableTable
+                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
+                      loading={bomLoading}
+                      dataSource={bomByType.lining}
+                      pagination={false}
+                      scroll={{ x: 'max-content' }}
+                      size={isMobile ? 'small' : 'middle'}
+                      columns={bomColumns}
+                    />
+                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>辅料</div>
+                    <ResizableTable
+                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
+                      loading={bomLoading}
+                      dataSource={bomByType.accessory}
+                      pagination={false}
+                      scroll={{ x: 'max-content' }}
+                      size={isMobile ? 'small' : 'middle'}
+                      columns={bomColumns}
                     />
                   </div>
                 )

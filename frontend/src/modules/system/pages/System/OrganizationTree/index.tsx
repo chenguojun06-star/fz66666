@@ -435,18 +435,21 @@ const OrganizationTreePage: React.FC = () => {
       <Card className="page-card" loading={loading}>
         <div className="page-header" style={{ marginBottom: 16 }}>
           <div>
-            <h2 className="page-title">
+            <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+              {currentFactoryName ? (
+                <>
+                  <BankOutlined style={{ marginRight: 6, color: '#1677ff', fontSize: 22 }} />
+                  <span style={{ fontSize: 22, fontWeight: 700, color: '#1677ff', marginRight: 14 }}>
+                    {currentFactoryName}
+                  </span>
+                  <span style={{ color: '#d9d9d9', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
+                </>
+              ) : null}
               <ApartmentOutlined style={{ marginRight: 8 }} />
               组织架构
-              {currentFactoryName ? (
-                <Tag color="blue" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
-                  {currentFactoryName}
-                </Tag>
-              ) : null}
             </h2>
             <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
               管理公司组织结构，包含部门、工厂及人员分配。
-              {currentFactoryName ? <span style={{ marginLeft: 12 }}>当前工厂：{currentFactoryName}</span> : null}
               <span style={{ marginLeft: 12 }}>
                 共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
               </span>

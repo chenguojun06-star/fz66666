@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Tag, InputNumber, Modal, Input, message, Tooltip, Space, Divider, Empty } from 'antd';
+import { App, Button, Tag, InputNumber, Modal, Input, Tooltip, Space, Divider, Empty } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   ShopOutlined,
@@ -83,6 +83,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
   userId,
   userName,
 }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [pickingRecords, setPickingRecords] = useState<PickingRecord[]>([]);
@@ -357,6 +358,89 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
     });
   };
 
+  // 忽略库存全部外采（跳过仓库库存，所有待处理项直接走外部采购）
+  const handleForcePurchaseAll = async () => {
+    const allPendingItems = materials.filter((m) => m.purchaseStatus === 'pending');
+    if (allPendingItems.length === 0) {
+      message.info('没有待处理的采购任务');
+      return;
+    }
+    const hasStockCount = allPendingItems.filter((m) => m.availableStock > 0).length;
+
+    Modal.confirm({
+      width: '30vw',
+      title: '确认跳过库存全部外采',
+      icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+      content: (
+        <div>
+          {hasStockCount > 0 && (
+            <p style={{ color: '#fa8c16', fontWeight: 600 }}>
+              ⚠ 有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。
+            </p>
+          )}
+          <p>
+            以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：
+          </p>
+          <div
+            style={{
+              maxHeight: 200,
+              overflow: 'auto',
+              margin: '8px 0',
+              padding: '8px 12px',
+              background: 'var(--color-bg-container)',
+              borderRadius: 4,
+            }}
+          >
+            {allPendingItems.map((item) => (
+              <div key={item.purchaseId} style={{ fontSize: 13, padding: '2px 0' }}>
+                • {item.materialName}（{item.materialCode}）— {item.requiredQty} {item.unit}
+                {item.availableStock > 0 && (
+                  <span style={{ color: '#fa8c16', marginLeft: 4, fontSize: 12 }}>有库存</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <Divider style={{ margin: '8px 0' }} />
+          <p style={{ color: '#fa8c16', fontWeight: 600 }}>确认后请联系供应商进行采购，不使用仓库库存。</p>
+        </div>
+      ),
+      okText: `确认外采 ${allPendingItems.length} 项`,
+      cancelText: '取消',
+      onOk: async () => {
+        setActionLoading((prev) => ({ ...prev, _forcePurchase: true }));
+        let successCount = 0;
+        let failCount = 0;
+        try {
+          for (const item of allPendingItems) {
+            try {
+              const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
+                purchaseId: item.purchaseId,
+                receiverId: userId,
+                receiverName: userName,
+              });
+              if (res.code === 200) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch {
+              failCount++;
+            }
+          }
+          if (failCount === 0) {
+            message.success(`全部外采完成：${successCount} 项已标记为采购中`);
+          } else {
+            message.warning(`外采完成：${successCount} 项成功，${failCount} 项失败`);
+          }
+          loadPreview();
+          onSuccess();
+        } finally {
+          setActionLoading((prev) => ({ ...prev, _forcePurchase: false }));
+        }
+      },
+    });
+  };
+
   // 一键智能领取全部（使用原有接口）
   const handleSmartReceiveAll = async () => {
     if (pendingCount === 0) {
@@ -375,7 +459,13 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         const data = res.data || {};
         const outCount = Number(data.outboundCount || 0);
         const purCount = Number(data.purchaseCount || 0);
-        message.success(`处理完成：${outCount} 项出库，${purCount} 项采购`);
+        if (outCount > 0 && purCount === 0) {
+          message.success(`已提交 ${outCount} 项出库申请，等待仓库确认出库`);
+        } else if (outCount > 0 && purCount > 0) {
+          message.info(`${outCount} 项已提交出库申请；${purCount} 项库存不足，需先完成采购入库后再领取`);
+        } else {
+          message.warning(`${purCount} 项物料库存不足，请先完成采购入库后再领取`);
+        }
         loadPreview();
         onSuccess();
       } else {
@@ -398,6 +488,12 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
     }
     if (status === 'cancelled') {
       return <Tag color="default">已取消</Tag>;
+    }
+    if (status === 'warehouse_pending') {
+      return <Tag color="blue">待仓库出库</Tag>;
+    }
+    if (status === 'purchasing') {
+      return <Tag color="purple">采购中</Tag>;
     }
     // pending 状态根据库存显示
     if (item.availableStock <= 0) {
@@ -527,7 +623,11 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         key: 'actions',
         width: 180,
         render: (_: unknown, record: MaterialItem) => {
-          // 非 pending 状态，不显示操作按钮
+          // warehouse_pending：等待仓库确认出库中
+          if (record.purchaseStatus === 'warehouse_pending') {
+            return <span style={{ color: 'var(--color-primary)', fontSize: 12 }}>⏳ 待仓库出库确认</span>;
+          }
+          // 其他非 pending 状态，不显示操作按钮
           if (record.purchaseStatus !== 'pending') {
             return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>已处理</span>;
           }
@@ -590,8 +690,11 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         dataIndex: 'status',
         key: 'status',
         width: 80,
-        render: (status: string) =>
-          status === 'cancelled' ? <Tag color="red">已撤销</Tag> : <Tag color="green">已完成</Tag>,
+        render: (status: string) => {
+          if (status === 'cancelled') return <Tag color="red">已撤销</Tag>;
+          if (status === 'pending') return <Tag color="blue">待仓库确认</Tag>;
+          return <Tag color="green">已出库</Tag>;
+        },
       },
       {
         title: '领料人',
@@ -656,16 +759,21 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
   // 汇总统计
   const pendingMaterials = materials.filter((m) => m.purchaseStatus === 'pending');
   const noStockCount = pendingMaterials.filter((m) => m.availableStock <= 0).length;
+  const partialStockCount = pendingMaterials.filter((m) => m.availableStock > 0 && m.availableStock < m.requiredQty).length;
   const fullStockCount = pendingMaterials.filter((m) => m.availableStock >= m.requiredQty).length;
   const activePickings = pickingRecords.filter((p) => p.status !== 'cancelled');
 
   const stockStatusText = pendingMaterials.length === 0
     ? '全部已处理'
-    : noStockCount === pendingMaterials.length
-      ? '全部缺货'
-      : noStockCount > 0
-        ? `${noStockCount} 项缺货`
-        : '全部充足';
+    : fullStockCount === pendingMaterials.length
+      ? '全部充足'
+      : noStockCount === pendingMaterials.length
+        ? '全部缺货'
+        : noStockCount > 0 && partialStockCount > 0
+          ? `${noStockCount}项缺货 ${partialStockCount}项部分有货`
+          : noStockCount > 0
+            ? `${noStockCount}项缺货`
+            : `${partialStockCount}项部分有货`;
 
   const stockStatusColor = pendingMaterials.length === 0 || fullStockCount === pendingMaterials.length
     ? 'var(--color-success)'
@@ -702,22 +810,56 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         >
           一键采购全部{noStockCount > 0 ? `（${noStockCount}项）` : ''}
         </Button>,
-        <Button
-          key="smartAll"
-          type="primary"
-          icon={<CheckCircleOutlined />}
-          loading={actionLoading._all}
-          disabled={pendingCount === 0}
-          onClick={handleSmartReceiveAll}
+        <Tooltip
+          key="forcePurchase"
+          title={
+            pendingMaterials.filter((m) => m.availableStock > 0).length === 0
+              ? '当前所有待处理物料均无可用库存，无需跳过库存'
+              : ''
+          }
         >
-          一键智能领取
-        </Button>,
+          <Button
+            icon={<ExclamationCircleOutlined />}
+            loading={!!actionLoading._forcePurchase}
+            disabled={
+              pendingMaterials.filter((m) => m.availableStock > 0).length === 0 ||
+              !!actionLoading._forcePurchase
+            }
+            onClick={handleForcePurchaseAll}
+            style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+          >
+            忽略库存全部外采（{pendingMaterials.length}项）
+          </Button>
+        </Tooltip>,
+        <Tooltip
+          key="smartAll"
+          title={
+            pendingMaterials.length > 0 && noStockCount === pendingMaterials.length
+              ? `全部 ${noStockCount} 项物料库存为零，请先点"一键采购全部"完成采购入库后再领取`
+              : ''
+          }
+        >
+          <Button
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            loading={actionLoading._all}
+            disabled={
+              pendingMaterials.length === 0 ||
+              noStockCount === pendingMaterials.length ||
+              actionLoading._all
+            }
+            onClick={handleSmartReceiveAll}
+          >
+            一键智能领取
+          </Button>
+        </Tooltip>,
       ]}
     >
-      {/* AI 智能分流建议 */}
+      {/* 库存状态智能提示 */}
       <InoutRecommendBanner
-        orderNo={orderNo}
-        purchaseIds={materials.filter(m => m.purchaseStatus === 'pending').map(m => m.purchaseId)}
+        pendingCount={pendingMaterials.length}
+        noStockCount={noStockCount}
+        partialStockCount={partialStockCount}
         visible={open}
       />
 

@@ -14,6 +14,230 @@ const { toast } = require('../../../utils/uiHelper');
 
 const { eventBus } = require('../../../utils/eventBus');
 
+// ==================== 配比面板核心算法 ====================
+
+/**
+ * 根据当前配比数据重新计算所有派生值（与PC端 useMemo 算法完全一致）
+ * @param {Object} data - 当前 cuttingRatio 状态
+ * @returns {Object} 更新后的完整配比状态
+ */
+function _computeRatioData(data) {
+  const rows = data.ratioRows || [];
+  const totalQty = Number(data.totalQty) || 0;
+  const piecesPerBundle = Number(data.piecesPerBundle) || 0;
+  const sizeUsageMap = data.sizeUsageMap || {};
+  const hasUsageMap = Object.keys(sizeUsageMap).length > 0;
+
+  const totalRatio = rows.reduce((s, r) => s + (Number(r.ratio) || 0), 0);
+  const baseCount = (totalRatio > 0 && totalQty > 0) ? Math.ceil(totalQty / totalRatio) : 0;
+
+  let actualTotal = 0;
+  let consumedFabric = 0;
+  let totalBundles = 0;
+
+  const updatedRows = rows.map(r => {
+    const ratio = Number(r.ratio) || 0;
+    const qty = ratio * baseCount;
+    const sizeBundles = (piecesPerBundle > 0 && qty > 0) ? Math.ceil(qty / piecesPerBundle) : 0;
+    actualTotal += qty;
+    if (hasUsageMap && sizeUsageMap[r.size] != null) {
+      consumedFabric += qty * Number(sizeUsageMap[r.size]);
+    }
+    if (piecesPerBundle > 0) totalBundles += sizeBundles;
+    const row = { ...r, qty, sizeBundles };
+    if (hasUsageMap) {
+      const u = sizeUsageMap[r.size];
+      row.usage = (u != null) ? Number(u).toFixed(2) : '-';
+    }
+    return row;
+  });
+
+  if (!piecesPerBundle) totalBundles = baseCount;
+
+  const arrived = Number(data.arrivedFabric) || 0;
+  const consumed = Math.round(consumedFabric * 100) / 100;
+  const fabricOk = arrived <= 0 || consumed <= arrived;
+
+  return {
+    ...data,
+    ratioRows: updatedRows,
+    hasUsageMap,
+    totalRatio,
+    bundles: totalBundles,
+    actualTotal,
+    consumedFabric: consumed > 0 ? consumed.toFixed(2) : '0',
+    fabricOk,
+  };
+}
+
+/**
+ * 从 SKU列表 + 任务对象构建初始配比面板状态（同步）
+ * @param {Array} skuItems - 订单SKU条目
+ * @param {Object} task - 任务/订单对象（兜底颜色/件数）
+ * @returns {Object} 完整的 cuttingRatio 初始状态
+ */
+function buildCuttingRatioState(skuItems, task) {
+  const items = (Array.isArray(skuItems) && skuItems.length > 0)
+    ? skuItems
+    : [{ color: (task && task.color) || '', size: (task && task.size) || '均码', quantity: (task && (task.orderQuantity || task.quantity)) || 0 }];
+
+  const colorSizeMap = new Map();
+  let firstColor = '';
+  for (const item of items) {
+    const color = String(item.color || '').trim() || '默认色';
+    const sizeStr = String(item.size || '').trim();
+    const qty = Number(item.quantity || item.num || 0);
+    const sizes = sizeStr.includes(',')
+      ? sizeStr.split(',').map(s => s.trim()).filter(Boolean)
+      : [sizeStr || '均码'];
+    if (!firstColor) firstColor = color;
+    for (const size of sizes) {
+      const key = color + '|' + size;
+      const prev = colorSizeMap.get(key) || { color, size, qty: 0 };
+      const perSize = sizes.length > 1 ? Math.round(qty / sizes.length) : qty;
+      colorSizeMap.set(key, { color, size, qty: prev.qty + perSize });
+    }
+  }
+
+  const allEntries = Array.from(colorSizeMap.values());
+  const targetColor = (task && (task.color || task.orderColor)) || firstColor;
+  const colorEntries = allEntries.filter(e => e.color === targetColor);
+  const rowEntries = colorEntries.length > 0 ? colorEntries : allEntries;
+
+  const totalQty = rowEntries.reduce((s, e) => s + e.qty, 0)
+    || Number((task && (task.orderQuantity || task.quantity)) || 0);
+  const ratioRows = rowEntries.map(e => ({ size: e.size, ratio: 1, qty: 0, sizeBundles: 0 }));
+
+  return _computeRatioData({
+    color: targetColor || firstColor,
+    totalQty,
+    arrivedFabric: '',
+    piecesPerBundle: '',
+    sizeUsageMap: {},
+    hasUsageMap: false,
+    ratioRows,
+    totalRatio: 0,
+    bundles: 0,
+    actualTotal: 0,
+    consumedFabric: '0',
+    fabricOk: true,
+  });
+}
+
+/**
+ * 异步从BOM获取纸样用量并更新 cuttingRatio（可选，失败静默）
+ * @param {Object} ctx - Page 上下文
+ * @param {string} styleNo - 款式编号
+ */
+async function fetchBomAndUpdate(ctx, styleNo) {
+  if (!styleNo) return;
+  try {
+    const res = await api.style.getBomList({ styleNo, pageSize: 50 });
+    const list = Array.isArray(res) ? res : ((res && res.records) ? res.records : []);
+    const fabricBom = list.find(
+      b => String(b.materialType || '').toLowerCase().includes('fabric') && b.sizeUsageMap,
+    );
+    if (!fabricBom || !fabricBom.sizeUsageMap) return;
+    const raw = typeof fabricBom.sizeUsageMap === 'string'
+      ? JSON.parse(fabricBom.sizeUsageMap)
+      : fabricBom.sizeUsageMap;
+    const clean = {};
+    for (const [k, v] of Object.entries(raw)) {
+      const n = Number(v);
+      if (!isNaN(n) && n > 0) clean[k] = n;
+    }
+    if (!Object.keys(clean).length) return;
+    const curr = ctx.data.scanConfirm && ctx.data.scanConfirm.cuttingRatio;
+    if (!curr) return;
+    ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, sizeUsageMap: clean }) });
+  } catch (_) {
+    // BOM 纸样用量是可选功能，失败静默处理
+  }
+}
+
+/**
+ * 从配比面板状态构建菲号生成参数（与PC端 handleConfirm 逻辑一致）
+ * @param {Object} cuttingRatio - 当前配比状态
+ * @returns {Array} bundleParams [{ color, size, quantity }]
+ */
+function _buildBundleParamsFromRatio(cuttingRatio) {
+  if (!cuttingRatio || !cuttingRatio.ratioRows) {
+    throw new Error('裁剪配比数据缺失');
+  }
+  const color = String(cuttingRatio.color || '').trim();
+  const piecesPerBundle = Number(cuttingRatio.piecesPerBundle) || 0;
+  const bundleParams = [];
+  for (const r of cuttingRatio.ratioRows) {
+    const size = String(r.size || '').trim();
+    const qty = Number(r.qty) || 0;
+    if (!size || qty <= 0) continue;
+    if (piecesPerBundle > 0) {
+      for (const chunkQty of _splitIntoChunks(qty, piecesPerBundle)) {
+        bundleParams.push({ color, size, quantity: chunkQty });
+      }
+    } else {
+      bundleParams.push({ color, size, quantity: qty });
+    }
+  }
+  if (bundleParams.length === 0) {
+    throw new Error('没有有效的裁剪数量，请检查配比设置后重试');
+  }
+  return bundleParams;
+}
+
+// ==================== 配比面板事件处理器 ====================
+
+function onCuttingTotalQtyInput(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, totalQty: Number(e.detail.value) || 0 }) });
+}
+
+function onCuttingArrivedFabricInput(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, arrivedFabric: e.detail.value }) });
+}
+
+function onCuttingPiecesPerBundleInput(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, piecesPerBundle: e.detail.value }) });
+}
+
+function onCuttingRatioInput(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  const idx = Number(e.currentTarget.dataset.idx);
+  const rows = curr.ratioRows.map((r, i) => i === idx ? { ...r, ratio: Number(e.detail.value) || 0 } : r);
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, ratioRows: rows }) });
+}
+
+function onCuttingSizeInput(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  const idx = Number(e.currentTarget.dataset.idx);
+  const rows = curr.ratioRows.map((r, i) => i === idx ? { ...r, size: String(e.detail.value || '') } : r);
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, ratioRows: rows }) });
+}
+
+function onCuttingAddRow(ctx) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr) return;
+  const rows = [...curr.ratioRows, { size: '', ratio: 1, qty: 0, sizeBundles: 0 }];
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, ratioRows: rows }) });
+}
+
+function onCuttingRemoveRow(ctx, e) {
+  const curr = ctx.data.scanConfirm.cuttingRatio;
+  if (!curr || curr.ratioRows.length <= 1) return;
+  const idx = Number(e.currentTarget.dataset.idx);
+  const rows = curr.ratioRows.filter((_, i) => i !== idx);
+  ctx.setData({ 'scanConfirm.cuttingRatio': _computeRatioData({ ...curr, ratioRows: rows }) });
+}
+
+// ==================== 状态管理辅助 ====================
+
 function _normalizeCuttingStatus(status) {
   return String(status || '').trim().toLowerCase();
 }
@@ -79,14 +303,18 @@ async function handleCuttingTaskFromBell(ctx, task) {
     const orderId = task.productionOrderId || task.id;
 
     const skuItems = await _fetchCuttingSkuItems(orderNo, task);
-    const cuttingTasks = _buildCuttingTasksFromItems(skuItems);
+    const cuttingRatio = buildCuttingRatioState(skuItems, {
+      ...task,
+      orderQuantity: task.orderQuantity || 0,
+    });
 
     ctx.setData({
       scanConfirm: {
         visible: true,
         loading: false,
         detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId: task.id, quantity: task.orderQuantity || 0 },
-        cuttingTasks: cuttingTasks,
+        cuttingRatio: cuttingRatio,
+        cuttingTasks: [],
         cuttingTaskReceived: true,
         fromMyTasks: true,
         skuList: [],
@@ -94,6 +322,8 @@ async function handleCuttingTaskFromBell(ctx, task) {
       },
     });
 
+    // 异步加载BOM纸样用量（成功则自动更新面板）
+    fetchBomAndUpdate(ctx, task.styleNo);
     toast.success('已打开裁剪任务');
   } catch (e) {
     toast.error('加载裁剪任务失败');
@@ -203,20 +433,27 @@ async function onHandleCutting(ctx, e) {
     const orderId = task.productionOrderId;
 
     const skuItems = await _fetchCuttingSkuItems(orderNo, task);
-    const cuttingTasks = _buildCuttingTasksFromItems(skuItems);
+    const cuttingRatio = buildCuttingRatioState(skuItems, {
+      ...task,
+      orderQuantity: task.orderQuantity || 0,
+    });
 
     ctx.setData({
       scanConfirm: {
         visible: true,
         loading: false,
         detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId, quantity: task.orderQuantity || 0 },
-        cuttingTasks: cuttingTasks,
+        cuttingRatio: cuttingRatio,
+        cuttingTasks: [],
         cuttingTaskReceived: true,
         fromMyTasks: true,
         skuList: [],
         materialPurchases: [],
       },
     });
+
+    // 异步加载BOM纸样用量
+    fetchBomAndUpdate(ctx, task.styleNo);
   } catch (err) {
     toast.error(err.errMsg || err.message || '加载失败');
   } finally {
@@ -316,14 +553,27 @@ function onAutoImportCutting(ctx) {
 }
 
 /**
- * 清空裁剪数量输入
+ * 清空裁剪输入（配比面板回到初始ratio=1状态）
  * @param {Object} ctx - Page 上下文
  * @returns {void}
  */
 function onClearCuttingInput(ctx) {
+  const cuttingRatio = ctx.data.scanConfirm.cuttingRatio;
+  if (cuttingRatio) {
+    const resetRows = cuttingRatio.ratioRows.map(r => ({ ...r, ratio: 1 }));
+    const updated = _computeRatioData({
+      ...cuttingRatio,
+      ratioRows: resetRows,
+      arrivedFabric: '',
+      piecesPerBundle: '',
+    });
+    ctx.setData({ 'scanConfirm.cuttingRatio': updated });
+  }
+  // 旧模型兼容（以防旧数据遗留）
   const cuttingTasks = ctx.data.scanConfirm.cuttingTasks || [];
-  const cleared = cuttingTasks.map(task => ({ ...task, cuttingInput: 0 }));
-  ctx.setData({ 'scanConfirm.cuttingTasks': cleared });
+  if (cuttingTasks.length > 0) {
+    ctx.setData({ 'scanConfirm.cuttingTasks': cuttingTasks.map(t => ({ ...t, cuttingInput: 0 })) });
+  }
 }
 
 /**
@@ -438,34 +688,35 @@ function _buildBundleParams(cuttingTasks) {
 }
 
 /**
- * 重新生成裁剪菲号
+ * 确认生成菲号（优先使用配比面板模型，兼容旧模型）
  * @param {Object} ctx - Page 上下文
  * @returns {Promise<void>} 生成完成后关闭弹窗并刷新
  */
 async function onRegenerateCuttingBundles(ctx) {
-  if (ctx.data.scanConfirm.loading) {
-    return;
-  }
+  if (ctx.data.scanConfirm.loading) return;
   ctx.setData({ 'scanConfirm.loading': true });
 
   try {
     const detail = ctx.data.scanConfirm.detail;
-    const cuttingTasks = ctx.data.scanConfirm.cuttingTasks;
-
-    // orderId 优先取 detail.orderId，兜底从 orderDetail.id 获取
     const orderId = detail.orderId || (detail.orderDetail && detail.orderDetail.id) || '';
-    _validateCuttingData(cuttingTasks, orderId);
-    const bundleParams = _buildBundleParams(cuttingTasks);
+    if (!orderId) throw new Error('订单ID缺失');
+
+    // ★ 优先使用新配比面板模型
+    const cuttingRatio = ctx.data.scanConfirm.cuttingRatio;
+    let bundleParams;
+    if (cuttingRatio && cuttingRatio.ratioRows && cuttingRatio.ratioRows.length > 0) {
+      bundleParams = _buildBundleParamsFromRatio(cuttingRatio);
+    } else {
+      // 兜底旧模型
+      const cuttingTasks = ctx.data.scanConfirm.cuttingTasks || [];
+      _validateCuttingData(cuttingTasks, orderId);
+      bundleParams = _buildBundleParams(cuttingTasks);
+    }
 
     await api.production.generateCuttingBundles(orderId, bundleParams);
 
     toast.success('菲号生成成功');
-
-    ctx.setData({
-      'scanConfirm.visible': false,
-      'scanConfirm.loading': false,
-    });
-
+    ctx.setData({ 'scanConfirm.visible': false, 'scanConfirm.loading': false });
     ctx.loadMyPanel(true);
     loadMyCuttingTasks(ctx);
 
@@ -473,7 +724,6 @@ async function onRegenerateCuttingBundles(ctx) {
       eventBus.emit('DATA_REFRESH');
       eventBus.emit('taskStatusChanged');
     }
-
     const appEventBus = getApp()?.globalData?.eventBus;
     if (appEventBus && typeof appEventBus.emit === 'function') {
       appEventBus.emit('taskStatusChanged');
@@ -487,13 +737,27 @@ async function onRegenerateCuttingBundles(ctx) {
 }
 
 module.exports = {
+  // 配比面板状态构建（供 ConfirmModalHandler 调用）
+  buildCuttingRatioState,
+  fetchBomAndUpdate,
+  // 任务加载与领取
   checkPendingCuttingTask,
   handleCuttingTaskFromBell,
   loadMyCuttingTasks,
   onHandleCutting,
   receiveCuttingTask,
-  onAutoImportCutting,
+  // 配比面板事件处理器（新增）
+  onCuttingTotalQtyInput,
+  onCuttingArrivedFabricInput,
+  onCuttingPiecesPerBundleInput,
+  onCuttingRatioInput,
+  onCuttingSizeInput,
+  onCuttingAddRow,
+  onCuttingRemoveRow,
+  // 提交 / 清空
   onClearCuttingInput,
-  onModalCuttingInput,
   onRegenerateCuttingBundles,
+  // 旧版（向下兼容保留）
+  onAutoImportCutting,
+  onModalCuttingInput,
 };

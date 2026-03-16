@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Button, Tag, Space, message, Input, Descriptions, Select, Typography, Alert, Tooltip } from 'antd';import { CheckCircleOutlined, ReloadOutlined, BellOutlined, BellFilled } from '@ant-design/icons';
+import { Button, Tag, Space, Input, Descriptions, Select, Typography, Alert, Tooltip } from 'antd';import { CheckCircleOutlined, ReloadOutlined, BellOutlined, BellFilled } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -10,6 +10,7 @@ import { appStoreService } from '@/services/system/appStore';
 import type { AppOrder } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
 import request from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

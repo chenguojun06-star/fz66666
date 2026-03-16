@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Spin, message, List, Button, Space, Tag } from 'antd';
+import { Card, Tabs, Spin, List, Button, Space, Tag } from 'antd';
 import { FileOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleAttachment } from '@/types/style';
@@ -8,6 +8,7 @@ import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components
 import api from '@/utils/api';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { downloadFile } from '@/utils/fileUrl';
+import { message } from '@/utils/antdStatic';
 
 interface Props {
   styleId: string | number;

@@ -10,6 +10,8 @@ import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.warehouse.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,9 @@ public class WarehouseDashboardOrchestrator {
 
     @Autowired
     private ProductOutstockMapper productOutstockMapper;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     /**
      * 获取仓库统计数据
@@ -96,18 +101,25 @@ public class WarehouseDashboardOrchestrator {
         stats.setTodayInbound((materialInbound != null ? materialInbound : 0) +
                              (productInbound != null ? productInbound : 0));
 
-        // 6. 今日出库次数（从出库记录表查询）
+        // 6. 今日出库次数（成品出库 + 面辅料出库）
+        int todayOutboundTotal = 0;
         try {
             Long outstockCount = productOutstockMapper.selectCount(
                 new QueryWrapper<ProductOutstock>()
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
             );
-            stats.setTodayOutbound(outstockCount != null ? outstockCount.intValue() : 0);
+            todayOutboundTotal += (outstockCount != null ? outstockCount.intValue() : 0);
         } catch (Exception e) {
-            log.warn("查询今日出库次数失败: {}", e.getMessage());
-            stats.setTodayOutbound(0);
+            log.warn("查询今日成品出库次数失败: {}", e.getMessage());
         }
+        try {
+            Integer materialOutboundCount = materialOutboundLogMapper.selectTodayOutboundCount(today);
+            todayOutboundTotal += (materialOutboundCount != null ? materialOutboundCount : 0);
+        } catch (Exception e) {
+            log.warn("查询今日面辅料出库次数失败: {}", e.getMessage());
+        }
+        stats.setTodayOutbound(todayOutboundTotal);
 
         return stats;
     }
@@ -160,7 +172,7 @@ public class WarehouseDashboardOrchestrator {
             dto.setId(purchase.getId().toString());
             dto.setType("inbound");
             dto.setMaterialName(purchase.getMaterialName());
-            dto.setQuantity(purchase.getPurchaseQuantity());
+            dto.setQuantity(purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : null);
             dto.setOperator(purchase.getReceiverName() != null ? purchase.getReceiverName() : "系统");
             dto.setTime(formatTime(purchase.getActualArrivalDate()));
             operations.add(dto);
@@ -179,7 +191,48 @@ public class WarehouseDashboardOrchestrator {
             operations.add(dto);
         }
 
-        // 3. 按时间倒序排序，取最新10条
+        // 3. 获取今日面辅料出库记录
+        try {
+            List<MaterialOutboundLog> todayOutbounds = materialOutboundLogMapper.selectTodayOutbounds(today);
+            for (MaterialOutboundLog outboundRecord : todayOutbounds) {
+                RecentOperationDTO dto = new RecentOperationDTO();
+                dto.setId(outboundRecord.getId());
+                dto.setType("outbound");
+                dto.setMaterialName(outboundRecord.getMaterialName());
+                dto.setQuantity(outboundRecord.getQuantity());
+                dto.setOperator(outboundRecord.getOperatorName() != null ? outboundRecord.getOperatorName() : "仓管");
+                LocalDateTime t = outboundRecord.getOutboundTime() != null ? outboundRecord.getOutboundTime() : outboundRecord.getCreateTime();
+                dto.setTime(formatTime(t));
+                operations.add(dto);
+            }
+        } catch (Exception e) {
+            log.warn("查询今日面辅料出库记录失败: {}", e.getMessage());
+        }
+
+        // 4. 获取今日成品出库记录
+        try {
+            List<ProductOutstock> todayOutstock = productOutstockMapper.selectList(
+                new QueryWrapper<ProductOutstock>()
+                    .apply("DATE(create_time) = {0}", today)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .orderByDesc("create_time")
+                    .last("LIMIT 20")
+            );
+            for (ProductOutstock outstock : todayOutstock) {
+                RecentOperationDTO dto = new RecentOperationDTO();
+                dto.setId(outstock.getId() != null ? outstock.getId() : "");
+                dto.setType("outbound");
+                dto.setMaterialName("成品出库-" + (outstock.getOrderNo() != null ? outstock.getOrderNo() : ""));
+                dto.setQuantity(outstock.getOutstockQuantity());
+                dto.setOperator(outstock.getOperatorName() != null ? outstock.getOperatorName() : "仓管");
+                dto.setTime(formatTime(outstock.getCreateTime()));
+                operations.add(dto);
+            }
+        } catch (Exception e) {
+            log.warn("查询今日成品出库记录失败: {}", e.getMessage());
+        }
+
+        // 5. 按时间倒序排序，取最新10条
         operations.sort((a, b) -> b.getTime().compareTo(a.getTime()));
         return operations.stream().limit(10).collect(Collectors.toList());
     }
@@ -241,6 +294,7 @@ public class WarehouseDashboardOrchestrator {
 
         Map<Integer, Integer> outboundByHour = new HashMap<>();
         try {
+            // 成品出库（t_product_outstock）
             List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                 new QueryWrapper<ProductOutstock>()
                     .select("HOUR(create_time) as hour, COUNT(*) as count")
@@ -252,6 +306,13 @@ public class WarehouseDashboardOrchestrator {
                 Integer hour = ((Number) row.get("hour")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
                 outboundByHour.put(hour, count);
+            }
+            // 面辅料出库（t_material_outbound_log）—— 累加合并
+            List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectTodayOutboundByHour(today);
+            for (Map<String, Object> row : materialOutList) {
+                Integer hour = ((Number) row.get("hour")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByHour.merge(hour, count, Integer::sum);
             }
         } catch (Exception e) {
             log.warn("查询日出库趋势失败: {}", e.getMessage());
@@ -307,6 +368,7 @@ public class WarehouseDashboardOrchestrator {
 
         Map<LocalDate, Integer> outboundByDate = new HashMap<>();
         try {
+            // 成品出库（t_product_outstock）
             List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                 new QueryWrapper<ProductOutstock>()
                     .select("DATE(create_time) as date, COUNT(*) as count")
@@ -318,6 +380,13 @@ public class WarehouseDashboardOrchestrator {
                 LocalDate date = LocalDate.parse(row.get("date").toString());
                 Integer count = ((Number) row.get("count")).intValue();
                 outboundByDate.put(date, count);
+            }
+            // 面辅料出库（t_material_outbound_log）—— 累加合并
+            List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast7DaysOutbound(startDate, today);
+            for (Map<String, Object> row : materialOutList) {
+                LocalDate date = LocalDate.parse(row.get("date").toString());
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByDate.merge(date, count, Integer::sum);
             }
         } catch (Exception e) {
             log.warn("查询周出库趋势失败: {}", e.getMessage());
@@ -375,6 +444,7 @@ public class WarehouseDashboardOrchestrator {
 
         Map<Integer, Integer> outboundByDay = new HashMap<>();
         try {
+            // 成品出库（t_product_outstock）
             List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                 new QueryWrapper<ProductOutstock>()
                     .select("DAY(create_time) as day, COUNT(*) as count")
@@ -386,6 +456,13 @@ public class WarehouseDashboardOrchestrator {
                 Integer day = ((Number) row.get("day")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
                 outboundByDay.put(day, count);
+            }
+            // 面辅料出库（t_material_outbound_log）—— 累加合并
+            List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast30DaysOutbound(startDate, today);
+            for (Map<String, Object> row : materialOutList) {
+                Integer day = ((Number) row.get("day")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByDay.merge(day, count, Integer::sum);
             }
         } catch (Exception e) {
             log.warn("查询月出库趋势失败: {}", e.getMessage());
@@ -439,6 +516,7 @@ public class WarehouseDashboardOrchestrator {
 
         Map<Integer, Integer> outboundByMonth = new HashMap<>();
         try {
+            // 成品出库（t_product_outstock）
             List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                 new QueryWrapper<ProductOutstock>()
                     .select("MONTH(create_time) as month, COUNT(*) as count")
@@ -450,6 +528,13 @@ public class WarehouseDashboardOrchestrator {
                 Integer month = ((Number) row.get("month")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
                 outboundByMonth.put(month, count);
+            }
+            // 面辅料出库（t_material_outbound_log）—— 累加合并
+            List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectYearOutboundByMonth(currentYear);
+            for (Map<String, Object> row : materialOutList) {
+                Integer month = ((Number) row.get("month")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByMonth.merge(month, count, Integer::sum);
             }
         } catch (Exception e) {
             log.warn("查询年出库趋势失败: {}", e.getMessage());

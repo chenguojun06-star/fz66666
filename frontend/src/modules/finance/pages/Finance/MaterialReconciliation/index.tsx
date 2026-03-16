@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Dropdown, Input, Select, Tag, Form, message, Modal } from 'antd';
+import { Button, Card, Dropdown, Input, Select, Tag, Form, Modal } from 'antd';
 
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -28,6 +28,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { FinanceAuditResponse } from '@/services/production/productionApi';
+import { message } from '@/utils/antdStatic';
 
 const { Option } = Select;
 

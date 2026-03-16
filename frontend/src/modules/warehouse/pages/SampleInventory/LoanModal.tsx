@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Form, Input, InputNumber, DatePicker, message } from 'antd';
+import { Form, Input, InputNumber, DatePicker } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 interface LoanModalProps {
   visible: boolean;

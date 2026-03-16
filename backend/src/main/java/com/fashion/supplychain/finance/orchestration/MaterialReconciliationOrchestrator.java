@@ -607,7 +607,7 @@ public class MaterialReconciliationOrchestrator {
             return 0;
         }
         int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
-        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity();
+        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
         if (pq > 0) {
             try {
                 return Math.max(0, materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq));

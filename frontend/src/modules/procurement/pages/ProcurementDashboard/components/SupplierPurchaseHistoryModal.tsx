@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Space, Tag, Typography, message } from 'antd';
+import { Card, Space, Tag, Typography } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { ModalField, ModalFieldGrid, ModalHeaderCard } from '@/components/common/ModalContentLayout';
 import { procurementApi, type PurchaseOrder, type Supplier } from '@/services/procurement/procurementApi';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 
@@ -107,7 +108,7 @@ const SupplierPurchaseHistoryModal: React.FC<SupplierPurchaseHistoryModalProps> 
       cancelButtonProps={{ style: { display: 'none' } }}
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginTop: 12 }}>
         <ModalHeaderCard>

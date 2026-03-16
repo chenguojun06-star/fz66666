@@ -16,6 +16,7 @@ export const MATERIAL_PURCHASE_STATUS = {
   PARTIAL_ARRIVAL: 'partial_arrival',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+  WAREHOUSE_PENDING: 'warehouse_pending',
 } as const;
 
 // 物料类型

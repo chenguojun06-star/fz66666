@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Badge, Button, Input, message, Modal, Tabs, Tag } from 'antd';
+import { Badge, Button, Input, Modal, Tabs, Tag } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { message } from '@/utils/antdStatic';
 
 const { TextArea } = Input;
 

@@ -1,8 +1,9 @@
+import { message } from '@/utils/antdStatic';
 /**
  * 统一的错误处理和日志系统
  */
 
-import { message } from 'antd';
+
 
 declare const process: { env?: { NODE_ENV?: string } };
 

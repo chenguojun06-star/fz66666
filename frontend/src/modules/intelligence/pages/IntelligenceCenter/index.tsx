@@ -763,8 +763,8 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['shortage'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {shortage?.shortageItems?.length ? (
-              shortage.shortageItems.slice(0, 6).map(item => (
-                <div key={item.materialCode} className="c-shortage-row">
+              shortage.shortageItems.slice(0, 6).map((item, idx) => (
+                <div key={`${item.materialCode}-${idx}`} className="c-shortage-row">
                   <span className="c-shortage-risk" style={{ color: risk2color(item.riskLevel), borderColor: risk2color(item.riskLevel) }}>
                     {item.riskLevel}
                   </span>

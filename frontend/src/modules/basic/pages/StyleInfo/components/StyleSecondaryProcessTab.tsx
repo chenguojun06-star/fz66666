@@ -8,6 +8,7 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StyleStageControlBar from './StyleStageControlBar';
 import api, { toNumberSafe } from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
 import { useModal } from '@/hooks';
@@ -86,9 +87,9 @@ const ProcessImageCell: React.FC<{ record: SecondaryProcess; readOnly?: boolean 
       {imgs.length > 0 && (
         <Image.PreviewGroup>
           {imgs.slice(0, 2).map((url, i) => (
-            <Image key={i} src={url} width={28} height={28}
+            <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
               style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
-              wrapperStyle={{ display: 'inline-block', flexShrink: 0 }}
+              styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
             />
           ))}
         </Image.PreviewGroup>
@@ -537,14 +538,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
               <Form.Item
                 label="工艺类型"
                 name="processType"
-                rules={[{ required: true, message: '请输入工艺类型' }]}
-                tooltip="默认为'二次工艺'，可自定义如：刺绣、印花、水洗、染色、烫印、打褶、钉珠等"
               >
-                <DictAutoComplete
-                  dictType="二次工艺类型"
-                  autoCollect
-                  placeholder="输入工艺类型，如：二次工艺、刺绣、印花"
-                />
+                <Input disabled />
               </Form.Item>
             </Col>
 

@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "扫码",
   "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index"
+    "ai-assistant": "/components/ai-assistant/index",
+    "mp-modal": "/components/common/mp-modal/index"
   }
 }

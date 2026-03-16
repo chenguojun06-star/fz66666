@@ -172,7 +172,7 @@ const StyleQuotePopover: React.FC<{
       trigger="hover"
       placement="bottom"
       mouseEnterDelay={0.3}
-      destroyTooltipOnHide
+      destroyOnHidden
       overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
       getPopupContainer={(node) => node.closest('.ant-modal-body') || document.body}
       onOpenChange={(open) => { if (open) fetchData(); }}

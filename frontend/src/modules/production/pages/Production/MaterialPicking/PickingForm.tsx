@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ResizableModal from '@/components/common/ResizableModal';
-import { Form, Select, Input, InputNumber, message } from 'antd';
+import { Form, Select, Input, InputNumber } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
+import { message } from '@/utils/antdStatic';
 
 interface PickingFormProps {
   visible: boolean;

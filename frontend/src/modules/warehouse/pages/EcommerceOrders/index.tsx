@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import {
-  Tabs, Tag, Button, Input, Select, Card, Space, Modal, Form,
-  message, Row, Col, Statistic, Drawer, Descriptions, Divider,
-  InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image,
-} from 'antd';
+import { Tabs, Tag, Button, Input, Select, Card, Space, Modal, Form, Row, Col, Statistic, Drawer, Descriptions, Divider, InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image } from 'antd';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
@@ -14,6 +10,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 const { Option } = Select;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Input, message, Modal, Select, Space } from 'antd';
+import { Alert, Button, Card, Empty, Input, Modal, Select, Space } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -8,6 +8,7 @@ import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import './styles.css';
+import { message } from '@/utils/antdStatic';
 
 const { TextArea } = Input;
 

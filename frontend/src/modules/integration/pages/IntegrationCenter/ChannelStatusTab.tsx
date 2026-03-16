@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Card, Badge, Statistic, Button, Tag, Spin, message, Tooltip, Divider } from 'antd';
+import { Row, Col, Card, Badge, Statistic, Button, Tag, Spin, Tooltip, Divider } from 'antd';
 import {
   CheckCircleOutlined,
   WarningOutlined,
@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import api from '@/utils/api';
 import ChannelConfigModal from './ChannelConfigModal';
+import { message } from '@/utils/antdStatic';
 
 interface ChannelInfo {
   name: string;

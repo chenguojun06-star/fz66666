@@ -1244,6 +1244,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               loading={loading && orders.length === 0}
               columns={columns}
               dataSource={orders}
+              maxColumnWidth={1600}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1573,6 +1574,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               loading={loading && orders.length === 0}
               columns={columns}
               dataSource={smartQueueOrders}
+              maxColumnWidth={1600}
               rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               pagination={{
                 current: queryParams.page,

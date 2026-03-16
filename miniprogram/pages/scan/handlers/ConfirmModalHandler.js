@@ -13,6 +13,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 const SKUProcessor = require('../processors/SKUProcessor');
+const CuttingHandler = require('./CuttingHandler');
 
 /**
  * 显示确认弹窗
@@ -43,6 +44,10 @@ function showConfirmModal(ctx, data) {
   const sizeDetails = _buildSizeDetails(skuList);
   const cuttingTasks = _buildCuttingTasks(data);
 
+  const cuttingRatio = (data.progressStage === '裁剪' && data.skuItems)
+    ? CuttingHandler.buildCuttingRatioState(data.skuItems, data)
+    : null;
+
   ctx.setData({
     scanConfirm: {
       visible: true,
@@ -51,6 +56,7 @@ function showConfirmModal(ctx, data) {
       skuList: formItems,
       summary: summary,
       cuttingTasks: cuttingTasks,
+      cuttingRatio: cuttingRatio,
       materialPurchases: materialPurchases,
       bomFallback: data.bomFallback || false,
       fromMyTasks: data.fromMyTasks || false,
@@ -58,6 +64,11 @@ function showConfirmModal(ctx, data) {
       aiTipData: null
     },
   });
+
+  // 异步加载 BOM 纸样用量（裁剪模式）
+  if (data.progressStage === '裁剪' && data.styleNo) {
+    CuttingHandler.fetchBomAndUpdate(ctx, data.styleNo);
+  }
 
   // 异步获取 AI 扫码工艺提醒
   if (data.orderNo && data.processName) {

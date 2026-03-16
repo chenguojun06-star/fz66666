@@ -3,9 +3,10 @@
  * 功能：扫码提交、进度回退、快速编辑
  */
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+
 import { ProductionOrder } from '@/types/production';
 import { productionScanApi, productionOrderApi } from '@/services/production/productionApi';
+import { message } from '@/utils/antdStatic';
 
 export const useProgressActions = (refreshCallback?: () => void) => {
   const [scanSubmitting, setScanSubmitting] = useState(false);

@@ -28,6 +28,16 @@ Component({
   },
   pageLifetimes: {
     show() {
+      // 自动同步 selected：防止直接 switchTab 或外部跳转后选中态不更新
+      try {
+        const pages = getCurrentPages();
+        const curPage = pages && pages.length ? pages[pages.length - 1] : null;
+        const curRoute = curPage && curPage.route ? `/${curPage.route}` : '';
+        const idx = this.data.list.findIndex(t => t.pagePath === curRoute);
+        if (idx >= 0 && this.data.selected !== idx) {
+          this.setData({ selected: idx });
+        }
+      } catch (e) { /* 容错 */ }
       this.refreshLanguage(i18n.getLanguage());
     },
   },

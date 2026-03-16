@@ -153,4 +153,10 @@ public class PatternProduction {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /**
+     * 是否有二次工艺（1=是，0=否，默认1）
+     */
+    @TableField("has_secondary_process")
+    private Integer hasSecondaryProcess;
 }

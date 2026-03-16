@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, message, Form, Input, Row, Col, Spin, Alert } from 'antd';
+import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -20,6 +20,7 @@ import { canViewPrice } from '@/utils/sensitiveDataMask';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 const { TextArea } = Input;
 

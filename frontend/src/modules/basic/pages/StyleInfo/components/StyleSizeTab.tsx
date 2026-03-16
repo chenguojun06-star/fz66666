@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, message as antMsg } from 'antd';
+import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, } from 'antd';
+import { message } from '@/utils/antdStatic';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -154,16 +155,13 @@ const normalizeChunkImageAssignments = (list: MatrixRow[]) => {
   const normalizedRows: MatrixRow[] = [];
   groupOrder.forEach((groupName) => {
     const groupRows = grouped.get(groupName) || [];
-    for (let start = 0; start < groupRows.length; start += 5) {
-      const chunkRows = groupRows.slice(start, start + 5);
-      const ownerImages = chunkRows.find((row) => Array.isArray(row.imageUrls) && row.imageUrls.length > 0)?.imageUrls;
-      chunkRows.forEach((row, chunkIndex) => {
-        normalizedRows.push({
-          ...row,
-          imageUrls: chunkIndex === 0 && ownerImages?.length ? ownerImages.slice(0, 2) : undefined,
-        });
+    const ownerImages = groupRows.find((row) => Array.isArray(row.imageUrls) && row.imageUrls.length > 0)?.imageUrls;
+    groupRows.forEach((row, index) => {
+      normalizedRows.push({
+        ...row,
+        imageUrls: index === 0 && ownerImages?.length ? ownerImages.slice(0, 2) : undefined,
       });
-    }
+    });
   });
 
   return normalizedRows;
@@ -203,7 +201,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const displayRows = useMemo<DisplayRow[]>(() => {
     const sortedRows = rows
@@ -229,21 +227,20 @@ const StyleSizeTab: React.FC<Props> = ({
     groupOrder.forEach((groupName) => {
       const groupRows = grouped.get(groupName) || [];
       const groupToneMeta = resolveGroupToneMeta(groupName);
+      const groupChunkImageUrls = Array.isArray(groupRows[0]?.imageUrls) ? groupRows[0].imageUrls : [];
+      const groupRowKeys = groupRows.map((item) => item.key);
       groupRows.forEach((row, localIndex) => {
-        const chunkStart = Math.floor(localIndex / 5) * 5;
-        const chunkRows = groupRows.slice(chunkStart, chunkStart + 5);
-        const chunkImageUrls = Array.isArray(chunkRows[0]?.imageUrls) ? chunkRows[0].imageUrls : [];
         flatRows.push({
           ...row,
           resolvedGroupName: groupName,
           groupToneMeta,
           isGroupStart: localIndex === 0,
-          isGroupChunkStart: localIndex % 5 === 0,
-          groupChunkSpan: localIndex % 5 === 0 ? chunkRows.length : 0,
-          isImageChunkStart: localIndex % 5 === 0,
-          imageChunkSpan: localIndex % 5 === 0 ? chunkRows.length : 0,
-          chunkImageUrls: chunkImageUrls.slice(0, 2),
-          chunkRowKeys: chunkRows.map((item) => item.key),
+          isGroupChunkStart: localIndex === 0,
+          groupChunkSpan: localIndex === 0 ? groupRows.length : 0,
+          isImageChunkStart: localIndex === 0,
+          imageChunkSpan: localIndex === 0 ? groupRows.length : 0,
+          chunkImageUrls: groupChunkImageUrls.slice(0, 2),
+          chunkRowKeys: groupRowKeys,
         });
       });
     });
@@ -527,16 +524,23 @@ const StyleSizeTab: React.FC<Props> = ({
     );
   };
 
-  const handleAddPart = () => {
+  const handleAddPartInGroup = (groupName: string) => {
     if (readOnly) return;
-    const nextSort = rows.length ? Math.max(...rows.map((r) => toNumberSafe(r.sort))) + 1 : 1;
     const key = `tmp-part-${Date.now()}-${Math.random()}`;
-    const defaultGroupName = rows.length ? resolveGroupName(rows[rows.length - 1]?.groupName, rows[rows.length - 1]?.partName) : '上装区';
     const cells: Record<string, MatrixCell> = {};
     sizeColumns.forEach((sn) => {
       cells[sn] = { value: 0 };
     });
-    setRows((prev) => [...prev, { key, groupName: defaultGroupName, partName: '', measureMethod: '', tolerance: 0, sort: nextSort, cells }]);
+    setRows((prev) => {
+      const groupRowIndices: number[] = [];
+      prev.forEach((r, i) => {
+        if (resolveGroupName(r.groupName, r.partName) === groupName) groupRowIndices.push(i);
+      });
+      const insertAt = groupRowIndices.length ? groupRowIndices[groupRowIndices.length - 1] + 1 : prev.length;
+      const next = [...prev];
+      next.splice(insertAt, 0, { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: 0, cells });
+      return normalizeRowSorts(next);
+    });
     if (!editMode) enterEdit();
   };
 
@@ -555,8 +559,8 @@ const StyleSizeTab: React.FC<Props> = ({
     });
 
     setRows((prev) => normalizeRowSorts([
-      { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: 1, cells },
       ...prev,
+      { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1, cells },
     ]));
     setAddGroupOpen(false);
     setNewGroupName('');
@@ -616,7 +620,7 @@ const StyleSizeTab: React.FC<Props> = ({
     if (!editMode) enterEdit();
   };
 
-  const applySizeTemplate = async (templateId: string) => {
+  const applySizeTemplate = (templateId: string) => {
     if (readOnly) return;
     if (editMode) {
       message.error('请先保存或退出编辑再导入模板');
@@ -627,23 +631,47 @@ const StyleSizeTab: React.FC<Props> = ({
       message.error('styleId不合法');
       return;
     }
-    try {
-      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
-        templateId,
-        targetStyleId: sid,
-        mode: 'overwrite',
-      });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message as any || '导入失败');
-        return;
+
+    const doImport = async (mode: 'merge' | 'overwrite') => {
+      try {
+        const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
+          templateId,
+          targetStyleId: sid,
+          mode,
+        });
+        const result = res as any;
+        if (result.code !== 200) {
+          message.error(result.message as any || '导入失败');
+          return;
+        }
+        message.success(mode === 'merge' ? '已追加导入尺寸模板' : '已覆盖导入尺寸模板');
+        setSizeTemplateKey(undefined);
+        fetchSize();
+      } catch (e: unknown) {
+        message.error((e as any)?.message || '导入失败');
       }
-      message.success('已导入尺寸模板');
-      setSizeTemplateKey(undefined);
-      fetchSize();
-    } catch (e: unknown) {
-      message.error((e as any)?.message || '导入失败');
-    }
+    };
+
+    modal.confirm({
+      title: '导入尺寸模板',
+      content: (
+        <div>
+          <p style={{ marginBottom: 8 }}>请选择导入方式：</p>
+          <p style={{ marginBottom: 4 }}>• <b>追加</b>：将模板部位行添加到现有数据后面（保留现有部位）</p>
+          <p style={{ marginBottom: 0 }}>• <b>覆盖</b>：清除现有所有尺寸行，以模板数据替换</p>
+        </div>
+      ),
+      okText: '追加导入',
+      cancelText: '取消',
+      footer: (_, { OkBtn, CancelBtn }) => (
+        <>
+          <CancelBtn />
+          <Button danger onClick={() => { Modal.destroyAll(); void doImport('overwrite'); }}>覆盖导入</Button>
+          <OkBtn />
+        </>
+      ),
+      onOk: () => doImport('merge'),
+    });
   };
 
   const handleDeletePart = (row: MatrixRow) => {
@@ -817,10 +845,10 @@ const StyleSizeTab: React.FC<Props> = ({
                       if (res?.code === 200 && res?.data) {
                         setChunkImageUrls(record.chunkRowKeys, [...imgs, String(res.data)].slice(0, 2));
                       } else {
-                        antMsg.error('图片上传失败');
+                        message.error('图片上传失败');
                       }
                     } catch {
-                      antMsg.error('图片上传失败');
+                      message.error('图片上传失败');
                     }
                     return false;
                   }}
@@ -863,9 +891,6 @@ const StyleSizeTab: React.FC<Props> = ({
                 <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, lineHeight: 1.5 }}>
                   {record.resolvedGroupName}
                 </span>
-                <span style={{ fontSize: 'var(--font-size-xs)', opacity: 0.88, lineHeight: 1.4 }}>
-                  本区域每 5 行共用一个分组与参考图区
-                </span>
               </div>
               {editableMode ? (
                 <Select
@@ -875,8 +900,17 @@ const StyleSizeTab: React.FC<Props> = ({
                   options={groupNameOptions}
                   onChange={(value) => updateChunkGroupName(record.chunkRowKeys, String(value || '其他区'))}
                 />
-              ) : (
-                <span style={{ color: record.groupToneMeta.tagColor, fontWeight: 500 }}>{record.resolvedGroupName}</span>
+              ) : null}
+              {editableMode && (
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  type="dashed"
+                  style={{ width: '100%', marginTop: 8 }}
+                  onClick={() => handleAddPartInGroup(record.resolvedGroupName)}
+                >
+                  添加行
+                </Button>
               )}
             </div>
           );
@@ -1044,7 +1078,9 @@ const StyleSizeTab: React.FC<Props> = ({
       )}
       {!simpleView && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div />
+          <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+            💡 提示：相关文件请在“文件管理”标签页统一上传
+          </div>
           <Space>
           <Select
             allowClear
@@ -1101,9 +1137,6 @@ const StyleSizeTab: React.FC<Props> = ({
           >
             导入模板
           </Button>
-          <Button type="default" onClick={handleAddPart} disabled={loading || saving || notStarted}>
-            新增部位
-          </Button>
           <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
             新增分组
           </Button>
@@ -1134,9 +1167,6 @@ const StyleSizeTab: React.FC<Props> = ({
             </>
           )}
         </Space>
-        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
-          💡 提示：相关文件请在"文件管理"标签页统一上传
-        </div>
       </div>
       )}
 

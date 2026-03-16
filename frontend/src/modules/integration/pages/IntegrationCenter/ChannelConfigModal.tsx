@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Form, Input, Switch, message, Alert, Descriptions, Spin } from 'antd';
+import { Form, Input, Switch, Alert, Descriptions, Spin } from 'antd';
 import {
   KeyOutlined,
   LinkOutlined,
@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 /** 各渠道表单字段定义 */
 const CHANNEL_FIELDS: Record<string, { label: string; key: string; icon: React.ReactNode; required?: boolean; isSecret?: boolean; placeholder?: string }[]> = {
@@ -130,7 +131,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
       okText="保存配置"
       confirmLoading={saving}
       width="40vw"
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={loading}>
         <Alert

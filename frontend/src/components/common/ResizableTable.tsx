@@ -495,6 +495,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   // 处理列配置
   const mergedColumns = React.useMemo(() => {
     if (!columns) return columns;
+    // 不启用列宽调整时，直接透传原始列配置（避免注入 fixed/onHeaderCell/宽度等副作用）
+    if (!resizableColumns) return columns;
 
     const rawCols = (Array.isArray(columns) ? columns : []) as any[];
     const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
@@ -577,8 +579,11 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         // 判断是否可拖拽排序
         const draggable = reorderableColumns && !maybeAction && topLevelLeaf && parentPath.length === 0;
 
+        // Strip `resizable` from column props to prevent it leaking as a DOM attribute
+        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
+
         return {
-          ...colRecord,
+          ...safeColRecord,
           width: baseWidth,
           fixed,
           onHeaderCell: () => ({

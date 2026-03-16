@@ -9,6 +9,11 @@ const OPERATION_LABELS = {
   PLATE: '车板扫码',
   FOLLOW_UP: '跟单确认',
   COMPLETE: '完成确认',
+  PROCUREMENT: '采购',
+  CUTTING: '裁剪',
+  SECONDARY: '二次工艺',
+  SEWING: '车缝',
+  TAIL: '尾部',
   REVIEW: '样衣审核',
   WAREHOUSE_IN: '样衣入库',
   WAREHOUSE_OUT: '样衣出库',
@@ -16,6 +21,8 @@ const OPERATION_LABELS = {
 };
 
 const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
+// 一键领取时排除的类型：仓库类（需仓位编号）+ 审核（需填备注）
+const CLAIM_EXCLUDED_OPS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN', 'REVIEW']);
 
 function _isPatternInScanConfirm(page) {
   const detail = page.data && page.data.scanConfirm && page.data.scanConfirm.detail;
@@ -100,6 +107,11 @@ function showPatternConfirmModal(page, data) {
   const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
   const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
   const confirmedQty = normalizePositiveInt(data.quantity, 1);
+  // 计算"一键领取"可批量提交的工序（排除仓库类和审核）
+  const productionOnlyOps = operationOptions.filter(
+    op => !CLAIM_EXCLUDED_OPS.has(String(op.value || '').toUpperCase())
+  );
+  const hasClaimAllOps = productionOnlyOps.length >= 1;
   page.setData({
     scanConfirm: {
       visible: true,
@@ -118,6 +130,7 @@ function showPatternConfirmModal(page, data) {
         requiresWarehouseInput,
         requiresReviewBeforeInbound,
         reviewApproved,
+        hasClaimAllOps,
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
@@ -172,6 +185,8 @@ function closePatternConfirm(page) {
  * @returns {void}
  */
 function onPatternOperationChange(page, e) {
+  // 无二次工艺等禁用项：直接忽略点击
+  if (e.currentTarget.dataset.disabled) return;
   const operationType = e.currentTarget.dataset.type;
   const state = _getPatternState(page);
   const options = Array.isArray(state.operationOptions)
@@ -354,6 +369,75 @@ async function submitPatternScanAll(page) {
   }
 }
 
+/**
+ * 一键领取样板全部生产工序（排除仓库/审核，逐个顺序提交）
+ * @param {Object} page - 页面实例
+ * @returns {Promise<void>} 异步批量提交
+ */
+async function claimAllPatternOps(page) {
+  const patternConfirm = _getPatternState(page);
+  if (patternConfirm.loading) return;
+
+  const confirmedQty = normalizePositiveInt(patternConfirm.quantity, 0);
+  if (confirmedQty <= 0) {
+    toast.error('请输入正确数量');
+    return;
+  }
+
+  const ops = (patternConfirm.operationOptions || [])
+    .filter(op => !CLAIM_EXCLUDED_OPS.has(String(op.value || '').toUpperCase()));
+  if (!ops.length) {
+    toast.error('当前没有可领取的生产工序');
+    return;
+  }
+
+  _setPatternLoading(page, true);
+  try {
+    let successCount = 0;
+    for (const op of ops) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await page.scanHandler.submitPatternScan({
+        patternId: patternConfirm.patternId,
+        operationType: op.value,
+        operatorRole: 'PLATE_WORKER',
+        quantity: confirmedQty,
+        warehouseCode: '',
+        remark: '',
+      });
+      if (result && result.success) {
+        successCount++;
+      } else {
+        toast.error(`${op.label || op.value} 提交失败：${(result && result.message) || '未知错误'}`);
+        break;
+      }
+    }
+    if (successCount > 0) {
+      toast.success(`✅ 已领取 ${successCount} 个工序`);
+      closePatternConfirm(page);
+      page.addToLocalHistory({
+        time: new Date().toLocaleString(),
+        type: 'pattern',
+        data: {
+          patternId: patternConfirm.patternId,
+          styleNo: patternConfirm.styleNo,
+          color: patternConfirm.color,
+          quantity: confirmedQty,
+          operationType: 'CLAIM_ALL',
+        },
+      });
+      const eventBus = getApp().globalData && getApp().globalData.eventBus;
+      if (eventBus && typeof eventBus.emit === 'function') {
+        eventBus.emit('DATA_REFRESH');
+      }
+    }
+  } catch (e) {
+    console.error('[扫码页] 样板一键领取失败:', e);
+    toast.error(e.errMsg || e.message || '一键领取失败');
+  } finally {
+    _setPatternLoading(page, false);
+  }
+}
+
 module.exports = {
   showPatternConfirmModal,
   closePatternConfirm,
@@ -363,4 +447,5 @@ module.exports = {
   onPatternRemarkInput,
   submitPatternScan,
   submitPatternScanAll,
+  claimAllPatternOps,
 };

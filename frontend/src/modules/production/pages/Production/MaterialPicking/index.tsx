@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, message, Tag } from 'antd';
+import { Button, Card, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -11,6 +11,7 @@ import PickingDetailModal from './PickingDetailModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 const MaterialPickingList: React.FC = () => {
   const [loading, setLoading] = useState(false);

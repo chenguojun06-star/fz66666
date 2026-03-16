@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Space, message, Card, Typography, Badge, Alert, Row, Col, Progress, Descriptions, Statistic } from 'antd';
+import { Button, Space, Card, Typography, Badge, Alert, Row, Col, Progress, Descriptions, Statistic } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import systemStatusService from '@/services/systemStatusService';
 import type { SystemStatusOverview } from '@/services/systemStatusService';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

@@ -3,11 +3,12 @@
  * Used by both WarehousingDetail (full page) and IndependentDetailModal (popup).
  */
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { message } from 'antd';
+
 import api, { toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import { CuttingBundleRow, OrderLine, WarehousingDetailRecord, OrderLineWarehousingRow } from '../types';
 import { parseUrlsValue } from '../utils';
+import { message } from '@/utils/antdStatic';
 
 export interface UseWarehousingDataOptions {
   /** Warehousing number to load detail for */

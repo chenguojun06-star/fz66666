@@ -230,7 +230,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
           </Button>
         </Space>
       }
-      destroyOnClose
+      destroyOnHidden
     >
       <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
         <input

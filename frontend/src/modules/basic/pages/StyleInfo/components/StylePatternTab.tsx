@@ -28,11 +28,8 @@ interface Props {
   sizeColorConfig?: SizeColorConfigInput;
 }
 
-/** fabric/lining 类物料才需要按码录入用量 */
-const USAGE_MATERIAL_TYPES = new Set([
-  'fabric', 'fabricA', 'fabricB', 'fabricC', 'fabricD', 'fabricE',
-  'lining', 'liningA', 'liningB', 'liningC', 'liningD', 'liningE',
-]);
+/** 单位为「米」的物料需要在纸样开发中录入各码用量和损耗率 */
+const isMeterUnit = (unit?: string) => String(unit || '').trim() === '米';
 
 const StylePatternTab: React.FC<Props> = ({
   styleId,
@@ -54,6 +51,8 @@ const StylePatternTab: React.FC<Props> = ({
   const [bomLoading, setBomLoading] = useState(false);
   /** { [bomId]: { [size]: value } } */
   const [usageEdits, setUsageEdits] = useState<Record<string | number, Record<string, number | null>>>({});
+  /** { [bomId]: lossRate } */
+  const [lossEdits, setLossEdits] = useState<Record<string | number, number | null>>({});
   const [savingUsage, setSavingUsage] = useState(false);
 
   // 检查纸样是否齐全
@@ -81,10 +80,23 @@ const StylePatternTab: React.FC<Props> = ({
     try {
       const res = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
       const list = Array.isArray(res) ? res : (res as any)?.data ?? [];
-      const fabricBoms = list.filter((b: StyleBom) => USAGE_MATERIAL_TYPES.has(b.materialType ?? ''));
+      const sortOrder = (t?: string) => {
+        if (!t) return 9;
+        if (t.startsWith('fabric')) return 1;
+        if (t.startsWith('lining')) return 2;
+        return 5;
+      };
+      const fabricBoms = list
+        .filter((b: StyleBom) => isMeterUnit(b.unit))
+        .sort((a: StyleBom, b: StyleBom) => {
+          const d = sortOrder(a.materialType) - sortOrder(b.materialType);
+          if (d !== 0) return d;
+          return String(a.materialName || '').localeCompare(String(b.materialName || ''), 'zh');
+        });
       setBomList(fabricBoms);
-      // 从已保存的 sizeUsageMap 初始化编辑状态
+      // 从已保存的 sizeUsageMap 和 lossRate 初始化编辑状态
       const initEdits: Record<string | number, Record<string, number | null>> = {};
+      const initLoss: Record<string | number, number | null> = {};
       for (const b of fabricBoms) {
         if (!b.id) continue;
         const parsed: Record<string, number | null> = {};
@@ -99,8 +111,10 @@ const StylePatternTab: React.FC<Props> = ({
           }
         }
         initEdits[b.id] = parsed;
+        initLoss[b.id] = b.lossRate != null ? Number(b.lossRate) : 0;
       }
       setUsageEdits(initEdits);
+      setLossEdits(initLoss);
     } catch {
       // ignore – BOM list optional for pattern tab
     } finally {
@@ -150,6 +164,10 @@ const StylePatternTab: React.FC<Props> = ({
     }));
   }, []);
 
+  const handleLossChange = useCallback((bomId: string | number, val: number | null) => {
+    setLossEdits((prev) => ({ ...prev, [bomId]: val }));
+  }, []);
+
   const handleSaveUsage = useCallback(async () => {
     if (bomList.length === 0) return;
     setSavingUsage(true);
@@ -166,19 +184,21 @@ const StylePatternTab: React.FC<Props> = ({
           }
         }
         const newMapJson = Object.keys(mapObj).length > 0 ? JSON.stringify(mapObj) : '';
-        // 只对比 sizeUsageMap，有变化才提交（不改 usageAmount）
         const currentMap = bom.sizeUsageMap ?? '';
-        if (newMapJson !== currentMap) {
+        const newLoss = lossEdits[bom.id] ?? Number(bom.lossRate ?? 0);
+        const lossChanged = Number(newLoss) !== Number(bom.lossRate ?? 0);
+        if (newMapJson !== currentMap || lossChanged) {
           promises.push(
             api.put('/style/bom', {
               ...bom,
               sizeUsageMap: newMapJson || null,
+              lossRate: newLoss,
             })
           );
         }
       }
       if (promises.length === 0) {
-        message.info('无变更，无需保存');
+        message.info('请先填写各码用量（或修改损耗率）后点击保存');
         return;
       }
       await Promise.all(promises);
@@ -190,7 +210,7 @@ const StylePatternTab: React.FC<Props> = ({
     } finally {
       setSavingUsage(false);
     }
-  }, [bomList, usageEdits, message, fetchBomList]);
+  }, [bomList, usageEdits, lossEdits, message, fetchBomList]);
 
   // 各码用量配比表格列
   const usageColumns = useMemo(() => {
@@ -235,6 +255,28 @@ const StylePatternTab: React.FC<Props> = ({
           return <Text strong>{avg}</Text>;
         },
       },
+      {
+        title: '损耗率(%)',
+        key: 'lossRate',
+        width: 100,
+        render: (_: unknown, record: StyleBom) => {
+          if (!record.id) return null;
+          const val = lossEdits[record.id] ?? Number(record.lossRate ?? 0);
+          return (
+            <InputNumber
+              size="small"
+              min={0}
+              max={100}
+              step={1}
+              precision={1}
+              value={val}
+              onChange={(v) => handleLossChange(record.id!, v)}
+              disabled={childReadOnly}
+              style={{ width: '100%' }}
+            />
+          );
+        },
+      },
     ];
     // 为每个有效码数添加一列输入
     for (const size of activeSizes) {
@@ -264,7 +306,7 @@ const StylePatternTab: React.FC<Props> = ({
       });
     }
     return cols;
-  }, [activeSizes, usageEdits, handleUsageChange, childReadOnly]);
+  }, [activeSizes, usageEdits, lossEdits, handleUsageChange, handleLossChange, childReadOnly]);
 
   return (
     <div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Form, Input, Select, Button, Alert, message, Card, Space } from 'antd';
+import { Form, Input, Select, Button, Alert, Card, Space } from 'antd';
 import { SendOutlined, NotificationOutlined } from '@ant-design/icons';
 import request from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 const { TextArea } = Input;
 

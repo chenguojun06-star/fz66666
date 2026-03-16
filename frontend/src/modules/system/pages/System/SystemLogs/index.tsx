@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Tabs, Input, Select, Space, Tag, Button, message, App } from 'antd';
+import { Card, Tabs, Input, Select, Space, Tag, Button, App } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
@@ -11,6 +11,7 @@ import { LoginLog, LoginLogQueryParams } from '@/types/system';
 import { OperationLog, OperationLogQueryParams } from '@/types/operation-log';
 
 import './styles.css';
+import { message } from '@/utils/antdStatic';
 
 const SystemLogs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'operation'>('login');

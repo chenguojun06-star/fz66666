@@ -30,7 +30,7 @@
     "color": "#8e8e93",
     "selectedColor": "#475569",
     "backgroundColor": "#f2f2f7",
-    "borderStyle": "black",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",

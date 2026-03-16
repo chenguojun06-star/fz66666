@@ -168,7 +168,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                             record.setTotalAmount(record.getUnitPrice().multiply(BigDecimal.valueOf(rq)));
                         }
 
-                        int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity();
+                        int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity().intValue();
                         String s = beforeStatus == null ? "" : beforeStatus.trim();
                         record.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(s, rq, pq));
                     }
@@ -277,7 +277,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
             int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity();
+                    : materialPurchase.getPurchaseQuantity().intValue();
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
@@ -338,7 +338,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
             int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity();
+                    : materialPurchase.getPurchaseQuantity().intValue();
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
@@ -421,7 +421,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 if ("cancelled".equalsIgnoreCase(st)) {
                     continue;
                 }
-                int pq = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity();
+                int pq = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
                 int aq = p.getArrivedQuantity() == null ? 0 : p.getArrivedQuantity();
                 if (pq <= 0) {
                     continue;
@@ -544,7 +544,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String currentStatus = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!"cancelled".equals(currentStatus)) {
             int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity();
+                    : materialPurchase.getPurchaseQuantity().intValue();
             String nextStatus = MaterialPurchaseHelper.resolveStatusByArrived(currentStatus, newArrived, purchaseQty);
             materialPurchase.setStatus(nextStatus);
             if ("completed".equalsIgnoreCase(nextStatus) && materialPurchase.getActualArrivalDate() == null) {
@@ -698,7 +698,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (rq < 0) {
             return false;
         }
-        int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity();
+        int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
         int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
         int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
         if (max >= 0 && rq > max) {
@@ -722,7 +722,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
 
-        int pq = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity();
+        int pq = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
         patch.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, rq, pq));
 
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);

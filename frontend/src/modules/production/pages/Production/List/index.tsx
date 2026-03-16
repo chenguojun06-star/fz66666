@@ -1123,7 +1123,7 @@ const ProductionList: React.FC = () => {
           cancelText="取消"
           confirmLoading={remarkSaving}
           width="40vw"
-          destroyOnClose
+          destroyOnHidden
         >
           <Input.TextArea
             value={remarkText}
@@ -1540,7 +1540,7 @@ const ProductionList: React.FC = () => {
           onCancel={() => setShareModal({ open: false, record: null, token: null, loading: false, revoking: false })}
           footer={null}
           width="30vw"
-          destroyOnClose
+          destroyOnHidden
         >
           {shareModal.loading ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>正在生成链接……</div>

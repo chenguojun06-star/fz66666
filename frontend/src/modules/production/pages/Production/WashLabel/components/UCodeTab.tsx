@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Input, Button, Space, Tag, message } from 'antd';
+import { Input, Button, Space, Tag } from 'antd';
 import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import WashLabelPrintModal from './WashLabelPrintModal';
+import { message } from '@/utils/antdStatic';
 
 export default function UCodeTab() {
   const [orders, setOrders]               = useState<ProductionOrder[]>([]);

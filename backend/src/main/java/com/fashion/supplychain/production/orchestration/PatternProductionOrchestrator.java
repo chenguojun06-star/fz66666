@@ -915,6 +915,34 @@ public class PatternProductionOrchestrator {
                 pattern.setStatus("COMPLETED");
                 needUpdate = true;
                 break;
+            case "PROCUREMENT":
+                updateProgressNode(pattern, "采购", 100);
+                ensureInProgress(pattern, operatorName);
+                needUpdate = true;
+                break;
+            case "CUTTING":
+                updateProgressNode(pattern, "裁剪", 100);
+                ensureInProgress(pattern, operatorName);
+                needUpdate = true;
+                break;
+            case "SECONDARY":
+                updateProgressNode(pattern, "二次工艺", 100);
+                ensureInProgress(pattern, operatorName);
+                needUpdate = true;
+                break;
+            case "SEWING":
+                updateProgressNode(pattern, "车缝", 100);
+                ensureInProgress(pattern, operatorName);
+                needUpdate = true;
+                break;
+            case "TAIL":
+                updateProgressNode(pattern, "尾部", 100);
+                pattern.setStatus("PRODUCTION_COMPLETED");
+                if (!StringUtils.hasText(pattern.getReviewStatus())) {
+                    pattern.setReviewStatus("PENDING");
+                }
+                needUpdate = true;
+                break;
             default:
                 ensureInProgress(pattern, operatorName);
                 String dynamicStage = resolveOperationProgressStage(pattern, normalizedOperation);
@@ -962,6 +990,11 @@ public class PatternProductionOrchestrator {
         legacyStageMap.put("WAREHOUSE_IN", "入库");
         legacyStageMap.put("WAREHOUSE_OUT", "出库");
         legacyStageMap.put("WAREHOUSE_RETURN", "归还");
+        legacyStageMap.put("PROCUREMENT", "采购");
+        legacyStageMap.put("CUTTING", "裁剪");
+        legacyStageMap.put("SECONDARY", "二次工艺");
+        legacyStageMap.put("SEWING", "车缝");
+        legacyStageMap.put("TAIL", "尾部");
         if (legacyStageMap.containsKey(operationType)) {
             return legacyStageMap.get(operationType);
         }

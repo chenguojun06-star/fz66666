@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
+import { Form, Input, InputNumber, Select, Row, Col } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
@@ -7,6 +7,7 @@ import api from '@/utils/api';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { message } from '@/utils/antdStatic';
 
 interface InboundModalProps {
   visible: boolean;

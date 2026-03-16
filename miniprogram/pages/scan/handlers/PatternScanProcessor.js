@@ -172,31 +172,25 @@ function buildPatternOperationOptions({ patternDetail, processConfig, scanRecord
     return options; // 已完成只展示入库，不展示其他生产工序
   }
 
-  // ── 阶段三：生产中，展示待做工序 ───────────────────────────────────
-  if (status === 'PENDING' && !scannedSet.has('RECEIVE')) {
-    options.push({ value: 'RECEIVE', label: '领取样衣', icon: '📥' });
-  }
-
-  const sortedConfig = (processConfig || [])
-    .slice()
-    .sort((a, b) => (Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0)));
-
-  sortedConfig.forEach(item => {
-    const value = String(item?.operationType || item?.processName || '').trim();
-    if (!value) return;
-    // 跳过已扫过的工序
-    if (scannedSet.has(value)) return;
-    // 跳过仓库类操作（由上面阶段一/二统一处理）
-    if (['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN', 'REVIEW'].includes(value)) return;
-
-    const stage = String(item?.progressStage || '').trim();
-    const processName = String(item?.processName || value).trim();
-    const stageSuffix = stage && stage !== processName ? ` · ${stage}` : '';
-    options.push({
-      value,
-      label: `${processName}${stageSuffix}`,
-      icon: '🧵',
-    });
+  // ── 阶段三：生产中，展示固定6个父进度工序（未扫的才显示）─────────
+  const PARENT_PRODUCTION_STAGES = [
+    { value: 'PROCUREMENT', label: '采购',    icon: '🛒' },
+    { value: 'CUTTING',     label: '裁剪',    icon: '✂️' },
+    { value: 'SECONDARY',   label: '二次工艺', icon: '🪡' },
+    { value: 'SEWING',      label: '车缝',    icon: '🧵' },
+    { value: 'TAIL',        label: '尾部',    icon: '🔧' },
+  ];
+  PARENT_PRODUCTION_STAGES.forEach(stage => {
+    if (stage.value === 'SECONDARY') {
+      // 无二次工艺：显示不可点击的提示项（不计入已扫逻辑）
+      if (patternDetail.hasSecondaryProcess === 0) {
+        options.push({ value: 'NO_SECONDARY', label: '无二次工艺', icon: '⊘', disabled: true });
+        return;
+      }
+    }
+    if (!scannedSet.has(stage.value)) {
+      options.push(stage);
+    }
   });
 
   // 兜底
@@ -237,6 +231,11 @@ function determinePatternOperation(patternDetail, manualScanType) {
       'plate': 'PLATE',
       'followup': 'FOLLOW_UP',
       'complete': 'COMPLETE',
+      'procurement': 'PROCUREMENT',
+      'cutting': 'CUTTING',
+      'secondary': 'SECONDARY',
+      'sewing': 'SEWING',
+      'tail': 'TAIL',
       'review': 'REVIEW',
       'warehouse': 'WAREHOUSE_IN',
       'out': 'WAREHOUSE_OUT',
@@ -339,6 +338,11 @@ function getPatternSuccessMessage(operationType) {
     'PLATE': '✅ 车板扫码成功',
     'FOLLOW_UP': '✅ 跟单扫码成功',
     'COMPLETE': '✅ 完成确认成功',
+    'PROCUREMENT': '✅ 采购完成',
+    'CUTTING': '✅ 裁剪完成',
+    'SECONDARY': '✅ 二次工艺完成',
+    'SEWING': '✅ 车缝完成',
+    'TAIL': '✅ 尾部完成',
     'REVIEW': '✅ 样衣审核通过',
     'WAREHOUSE_IN': '✅ 样衣入库成功',
     'WAREHOUSE_OUT': '✅ 样衣出库成功',

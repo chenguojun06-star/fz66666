@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import java.math.BigDecimal;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationSyncOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialInbound;
@@ -168,7 +169,7 @@ class MaterialInboundOrchestratorTest {
     private MaterialPurchase buildPurchase(String id, int purchaseQty, int arrivedQty) {
         MaterialPurchase p = new MaterialPurchase();
         p.setId(id);
-        p.setPurchaseQuantity(purchaseQty);
+        p.setPurchaseQuantity(new BigDecimal(purchaseQty));
         p.setArrivedQuantity(arrivedQty);
         return p;
     }

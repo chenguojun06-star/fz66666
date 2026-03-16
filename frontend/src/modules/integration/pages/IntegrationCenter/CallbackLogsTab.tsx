@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Select, Button, Tag, Space, message, Typography } from 'antd';
+import { Card, Select, Button, Tag, Space, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SearchOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

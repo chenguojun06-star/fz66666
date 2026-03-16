@@ -190,7 +190,7 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
   };
 
   return (
-    <ResizableModal title="打印洗水唛" open={open} onCancel={onCancel} width="40vw" footer={null} destroyOnClose>
+    <ResizableModal title="打印洗水唛" open={open} onCancel={onCancel} width="40vw" footer={null} destroyOnHidden>
       <Spin spinning={loading}>
         {noInfo && !loading && (
           <Alert

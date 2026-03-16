@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Button, Card, Col, DatePicker, Form, Input, InputNumber,
-  message, Row, Select, Space, Spin, Tabs, Tag, Typography,
-} from 'antd';
+import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   ArrowRightOutlined, CheckCircleOutlined, LockOutlined, PlusOutlined, RocketOutlined, SearchOutlined,
@@ -20,6 +17,7 @@ import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/pr
 import api from '@/utils/api';
 import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
 import SupplierPurchaseHistoryModal from './components/SupplierPurchaseHistoryModal';
+import { message } from '@/utils/antdStatic';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -419,7 +417,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
       onCancel={onClose}
       confirmLoading={saving}
       width="40vw"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
         <Row gutter={16}>

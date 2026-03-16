@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { message } from 'antd';
+
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
+import { message } from '@/utils/antdStatic';
 
 interface UseStyleListReturn {
   loading: boolean;

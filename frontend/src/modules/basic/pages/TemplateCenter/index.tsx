@@ -809,6 +809,9 @@ const TemplateCenter: React.FC = () => {
                 </Form.Item>
               </Space>
               <Space>
+                <Button onClick={() => setCreateOpen(true)}>
+                  从款号生成模板
+                </Button>
                 <Button type="primary" onClick={() => fetchList({ page: 1 })}>
                   刷新
                 </Button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Typography, Descriptions, Divider, Row, Col, Progress, Radio, Alert } from 'antd';
+import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Typography, Descriptions, Divider, Row, Col, Progress, Radio, Alert } from 'antd';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -9,6 +9,7 @@ import { useModal } from '@/hooks';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo, PlanDefinition, BillingRecord } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '@/utils/antdStatic';
 
 const PLAN_LABELS: Record<string, { label: string; color: string }> = {
   TRIAL: { label: '免费试用', color: 'default' },
@@ -544,7 +545,7 @@ const BillingTab: React.FC = () => {
         okText="确认开票"
         confirmLoading={issueInvoiceLoading}
         width="30vw"
-        destroyOnClose
+        destroyOnHidden
       >
         <p>租户：{pendingIssueInvoiceBill?.tenantName}，金额：¥{pendingIssueInvoiceBill?.totalAmount}</p>
         <p>抬头：{(pendingIssueInvoiceBill as any)?.invoiceTitle || '—'}</p>

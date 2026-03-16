@@ -1294,26 +1294,35 @@ export function useMaterialPurchase() {
     openReturnConfirm(targets);
   };
 
-  const handleSavePreview = async () => {
+  const handleSavePreview = async (overwrite = false) => {
     try {
       setSubmitLoading(true);
       if (!previewOrderId) {
         message.error('缺少订单ID，无法生成采购单');
         return;
       }
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/demand/generate', {
+      // 后端返回 HTTP 400（IllegalStateException）时 axios 拦截器会 reject，进入 catch 分支
+      await api.post('/production/purchase/demand/generate', {
         orderId: previewOrderId,
-        overwrite: false,
+        overwrite,
       });
-      if (res.code === 200) {
-        message.success('生成采购单成功');
-        closeDialog();
-        fetchMaterialPurchaseList();
-      } else {
-        message.error(res.message || '生成失败');
-      }
+      message.success(overwrite ? '已重新生成采购单（旧数据已覆盖）' : '生成采购单成功');
+      closeDialog();
+      fetchMaterialPurchaseList();
     } catch (e) {
-      message.error((e as Error)?.message || '生成失败');
+      const errMsg = (e as Error)?.message || '';
+      if (!overwrite && errMsg.includes('已生成')) {
+        // 该订单已有旧采购记录，询问是否按最新BOM数据覆盖重新生成
+        Modal.confirm({
+          title: '采购单已存在',
+          content: '该订单已有采购需求记录，是否按当前BOM数据重新生成？（旧数据将被替换）',
+          okText: '重新生成',
+          cancelText: '取消',
+          onOk: () => handleSavePreview(true),
+        });
+      } else {
+        message.error(errMsg || '生成失败');
+      }
     } finally {
       setSubmitLoading(false);
     }

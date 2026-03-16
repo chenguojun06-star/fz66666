@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Radio, Checkbox } from 'antd';
+import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Radio, Checkbox } from 'antd';
 import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -10,6 +10,7 @@ import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';
 import { appStoreService } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

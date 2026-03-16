@@ -80,9 +80,10 @@ public class MaterialInboundOrchestrator {
         Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
         Integer totalArrived = currentArrived + arrivedQuantity;
 
-        if (totalArrived > purchase.getPurchaseQuantity()) {
-            throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%d, 本次到货=%d, 采购数量=%d",
-                    currentArrived, arrivedQuantity, purchase.getPurchaseQuantity()));
+        if (purchase.getPurchaseQuantity() == null || totalArrived > purchase.getPurchaseQuantity().intValue()) {
+            throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%d, 本次到货=%d, 采购数量=%s",
+                    currentArrived, arrivedQuantity,
+                    purchase.getPurchaseQuantity() == null ? "null" : purchase.getPurchaseQuantity().toPlainString()));
         }
 
         // 3. 创建入库记录
@@ -118,7 +119,7 @@ public class MaterialInboundOrchestrator {
         purchase.setActualArrivalDate(LocalDateTime.now());
 
         // 根据到货情况更新状态
-        if (totalArrived.equals(purchase.getPurchaseQuantity())) {
+        if (purchase.getPurchaseQuantity() == null || totalArrived >= purchase.getPurchaseQuantity().intValue()) {
             purchase.setStatus("completed"); // 全部到货
         } else {
             purchase.setStatus("partial_arrival"); // 部分到货

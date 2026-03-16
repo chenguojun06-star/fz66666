@@ -1,8 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Card, Tag, Select, Input, Button, Space, Row, Col, Statistic,
-  message, Popconfirm, Tooltip, Typography,
-} from 'antd';
+import { Card, Tag, Select, Input, Button, Space, Row, Col, Statistic, Popconfirm, Tooltip, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   SearchOutlined, ReloadOutlined, CheckCircleOutlined,
@@ -11,6 +8,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
+import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
 

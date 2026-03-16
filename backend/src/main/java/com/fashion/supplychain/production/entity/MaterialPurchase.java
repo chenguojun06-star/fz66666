@@ -33,7 +33,7 @@ public class MaterialPurchase {
 
     private String unit;
 
-    private Integer purchaseQuantity;
+    private BigDecimal purchaseQuantity;
 
     private Integer arrivedQuantity;
 

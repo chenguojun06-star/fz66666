@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, Button, Space, Radio, message as antdMessage } from 'antd';
+import { Modal, Button, Space, Radio } from 'antd';
+import { message } from '@/utils/antdStatic';
 import type { CuttingBundleRow } from '@/modules/production/pages/Production/Cutting/hooks';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
@@ -35,7 +36,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
   const handlePrint = () => {
     if (!bundles.length) {
-      antdMessage.warning('没有可打印的裁剪单');
+      message.warning('没有可打印的裁剪单');
       return;
     }
 
@@ -51,7 +52,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
     const orderKeys = Object.keys(groupedByOrder);
     if (!orderKeys.length) {
-      antdMessage.warning('没有有效的订单数据');
+      message.warning('没有有效的订单数据');
       return;
     }
 

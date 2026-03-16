@@ -486,12 +486,12 @@ export const useProgressColumns = ({
             display: 'flex',
             flexDirection: 'column',
             gap: 4,
-            alignItems: 'stretch',
+            alignItems: 'flex-start',
             width: '100%',
           }}>
             {procurementTime && !hasProcureNodeInTemplate && (
               <div style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
                 padding: '2px 8px',
