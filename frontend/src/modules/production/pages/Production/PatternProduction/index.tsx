@@ -374,49 +374,6 @@ const PatternProduction: React.FC = () => {
     printModal.open(record);
   };
 
-  // 维护操作
-  const handleMaintenance = (record: PatternProductionRecord) => {
-    let maintenanceReason = '';
-    Modal.confirm({
-      width: '30vw',
-      title: '维护',
-      content: (
-        <div>
-          <div style={{ marginBottom: 12, fontWeight: 600 }}>
-            维护样板：{record.styleNo} - {record.color}
-          </div>
-          <div style={{ marginBottom: 8, fontWeight: 600 }}>维护原因：</div>
-          <Input.TextArea
-            placeholder="请输入维护原因"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => {
-              maintenanceReason = e.target.value;
-            }}
-          />
-        </div>
-      ),
-      okText: '确认维护',
-      cancelText: '取消',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        const reason = maintenanceReason.trim();
-        if (!reason) {
-          message.error('请输入维护原因');
-          return Promise.reject(new Error('请输入维护原因'));
-        }
-        try {
-          await api.post(`/production/pattern/${record.id}/workflow-action`, { reason }, { params: { action: 'maintenance' } });
-          message.success('维护成功');
-          addOperationLog('维护记录', `维护样板：${record.styleNo}，原因：${reason}`);
-          loadData();
-        } catch (error: any) {
-          message.error(error.message || '维护失败');
-        }
-      },
-    });
-  };
 
   // 删除样板生产记录（保留但标记为未使用）
   const _handleDelete = async (record: PatternProductionRecord) => {
@@ -647,20 +604,20 @@ const PatternProduction: React.FC = () => {
                     size={60}
                     color1={
                       percent >= 100
-                        ? '#9ca3af'
+                        ? '#d1d5db'
                         : getDeliveryStatus(record.deliveryTime) === 'danger'
-                          ? '#ef4444'
+                          ? '#ff4d4f'
                           : getDeliveryStatus(record.deliveryTime) === 'warning'
-                            ? '#f59e0b'
-                            : 'var(--success-color)'
+                            ? '#faad14'
+                            : '#52c41a'
                     }
                     color2={
                       percent >= 100
-                        ? '#d1d5db'
+                        ? '#e5e7eb'
                         : getDeliveryStatus(record.deliveryTime) === 'danger'
-                          ? '#fca5a5'
+                          ? '#ff7875'
                           : getDeliveryStatus(record.deliveryTime) === 'warning'
-                            ? '#fbbf24'
+                            ? '#ffc53d'
                             : '#95de64'
                     }
                     nodeName={node.name}
@@ -730,11 +687,7 @@ const PatternProduction: React.FC = () => {
             label: '附件',
             onClick: () => attachmentModal.open(record),
           },
-          {
-            key: 'maintenance',
-            label: '维护',
-            onClick: () => handleMaintenance(record),
-          },
+
         ].filter(Boolean) as MenuProps['items'];
 
         return (
@@ -884,7 +837,7 @@ const PatternProduction: React.FC = () => {
                 }
                 items.push(
                   { key: 'attachment', label: '附件', onClick: () => attachmentModal.open(record) },
-                  { key: 'maintenance', label: '维护', onClick: () => handleMaintenance(record) },
+
                 );
                 return items;
               }}

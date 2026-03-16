@@ -31,6 +31,7 @@ import {
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
@@ -83,6 +84,10 @@ const PaymentCenterPage: React.FC = () => {
   // ---- 待付款批量选择 ----
   const [selectedPayableKeys, setSelectedPayableKeys] = useState<React.Key[]>([]);
   const [batchPaySubmitting, setBatchPaySubmitting] = useState(false);
+
+  // ---- 驳回待付款弹窗 ----
+  const [pendingRejectPayable, setPendingRejectPayable] = useState<PayableItem | null>(null);
+  const [rejectPayableLoading, setRejectPayableLoading] = useState(false);
 
   // ---- 支付记录列表 ----
   const [payments, setPayments] = useState<WagePayment[]>([]);
@@ -441,47 +446,26 @@ const PaymentCenterPage: React.FC = () => {
   //  驳回待付款项
   // ============================================================
   const handleRejectPayable = (record: PayableItem) => {
-    let reason = '';
-    Modal.confirm({
-      width: '30vw',
-      title: '驳回待付款',
-      content: (
-        <div>
-          <p>确定驳回 <strong>{record.payeeName}</strong> 的待付款项？</p>
-          <p style={{ fontSize: 12, color: '#999' }}>
-            {BIZ_TYPE_MAP[record.bizType]?.text} · ¥{Number(record.amount).toFixed(2)}
-          </p>
-          <Input.TextArea
-            placeholder="请输入驳回原因（必填）"
-            rows={2}
-            onChange={(e) => { reason = e.target.value; }}
-          />
-        </div>
-      ),
-      okText: '确认驳回',
-      okButtonProps: { danger: true, type: 'default' },
-      cancelText: '取消',
-      onOk: async () => {
-        if (!reason.trim()) {
-          msg.warning('请填写驳回原因');
-          throw new Error('请填写驳回原因');
-        }
-        try {
-          await wagePaymentApi.rejectPayable({
-            bizType: record.bizType,
-            bizId: record.bizId,
-            reason: reason.trim(),
-          });
-          msg.success('已驳回');
-          fetchPayables();
-        } catch (err: any) {
-          if (err?.message !== '请填写驳回原因') {
-            msg.error(err?.message || '驳回失败');
-          }
-          throw err;
-        }
-      },
-    });
+    setPendingRejectPayable(record);
+  };
+
+  const handleRejectPayableConfirm = async (reason: string) => {
+    if (!pendingRejectPayable) return;
+    setRejectPayableLoading(true);
+    try {
+      await wagePaymentApi.rejectPayable({
+        bizType: pendingRejectPayable.bizType,
+        bizId: pendingRejectPayable.bizId,
+        reason: reason.trim(),
+      });
+      msg.success('已驳回');
+      setPendingRejectPayable(null);
+      fetchPayables();
+    } catch (err: any) {
+      msg.error(err?.message || '驳回失败');
+    } finally {
+      setRejectPayableLoading(false);
+    }
   };
 
   // ============================================================
@@ -1165,6 +1149,14 @@ const PaymentCenterPage: React.FC = () => {
             </Form>
           </div>
         </ResizableModal>
+      <RejectReasonModal
+        open={!!pendingRejectPayable}
+        title="驳回待付款"
+        description={pendingRejectPayable ? `确定驳回 ${pendingRejectPayable.payeeName} 的待付款项？${BIZ_TYPE_MAP[pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[pendingRejectPayable.bizType].text} · ¥${Number(pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
+        onOk={handleRejectPayableConfirm}
+        onCancel={() => setPendingRejectPayable(null)}
+        loading={rejectPayableLoading}
+      />
     </Layout>
   );
 };

@@ -7,6 +7,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useUserListColumns } from './hooks/useUserListColumns';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { Role, User as UserType, UserQueryParams } from '@/types/system';
 import api, { requestWithPathFallback } from '@/utils/api';
 import tenantService from '@/services/tenantService';
@@ -23,7 +24,7 @@ import './styles.css';
 const { Option } = Select;
 
 const UserList: React.FC = () => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const { user, isSuperAdmin, isTenantOwner } = useAuth();
   const navigate = useNavigate();
   const [form] = Form.useForm();
@@ -52,6 +53,16 @@ const UserList: React.FC = () => {
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
+
+  type RemarkModalState = {
+    open: boolean;
+    title: string;
+    okText: string;
+    okDanger: boolean;
+    onConfirm: (remark: string) => Promise<void>;
+  };
+  const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
+  const [remarkLoading, setRemarkLoading] = useState(false);
 
   const [roleOptions, setRoleOptions] = useState<Role[]>([]);
   const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
@@ -498,36 +509,26 @@ const UserList: React.FC = () => {
     okButtonProps: any,
     onConfirm: (remark: string) => Promise<void>
   ) => {
-    let remarkValue = '';
-    modal.confirm({
-      width: '30vw',
+    setRemarkModalState({
+      open: true,
       title,
-      content: (
-        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
-          <Form.Item label="操作原因">
-            <Input.TextArea
-              rows={4}
-              maxLength={200}
-              showCount
-              onChange={(e) => {
-                remarkValue = e.target.value;
-              }}
-            />
-          </Form.Item>
-        </Form>
-      ),
       okText,
-      cancelText: '取消',
-      okButtonProps: okButtonProps as any,
-      onOk: async () => {
-        const remark = String(remarkValue || '').trim();
-        if (!remark) {
-          message.error('请输入操作原因');
-          return Promise.reject(new Error('请输入操作原因'));
-        }
-        await onConfirm(remark);
-      },
+      okDanger: (okButtonProps as any)?.danger === true,
+      onConfirm,
     });
+  };
+
+  const handleRemarkConfirm = async (remark: string) => {
+    if (!remarkModalState) return;
+    setRemarkLoading(true);
+    try {
+      await remarkModalState.onConfirm(remark);
+      setRemarkModalState(null);
+    } catch {
+      // error already shown inside onConfirm
+    } finally {
+      setRemarkLoading(false);
+    }
   };
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
@@ -1123,6 +1124,18 @@ const UserList: React.FC = () => {
           </div>
         </ResizableModal>
 
+      <RejectReasonModal
+        open={remarkModalState?.open === true}
+        title={remarkModalState?.title ?? ''}
+        okText={remarkModalState?.okText}
+        okDanger={remarkModalState?.okDanger ?? false}
+        fieldLabel="操作原因"
+        placeholder="请输入操作原因（必填）"
+        required
+        loading={remarkLoading}
+        onOk={handleRemarkConfirm}
+        onCancel={() => setRemarkModalState(null)}
+      />
     </Layout>
   );
 };

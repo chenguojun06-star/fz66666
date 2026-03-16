@@ -49,12 +49,14 @@ const collectActionHandlers = (items?: MenuProps['items']) => {
       if (!item || item.type === 'divider') {
         return;
       }
-      const key = String(item.key || '').trim();
-      if (key && typeof item.onClick === 'function') {
-        handlers.set(key, item.onClick as () => void);
+      // antd MenuProps['items'] 联合类型不直接暴露 onClick/children，用 unknown→any 收窄
+      const it = item as unknown as Record<string, unknown>;
+      const key = String(it['key'] || '').trim();
+      if (key && typeof it['onClick'] === 'function') {
+        handlers.set(key, it['onClick'] as () => void);
       }
-      if (Array.isArray(item.children) && item.children.length) {
-        visit(item.children);
+      if (Array.isArray(it['children']) && (it['children'] as unknown[]).length) {
+        visit(it['children'] as MenuProps['items']);
       }
     });
   };
@@ -76,7 +78,7 @@ const RowActions: React.FC<{
   size?: 'small' | 'middle' | 'large';
   /** 自定义类名 */
   className?: string;
-}> = ({ actions, size = 'small', className }) => {
+}> = ({ actions, maxInline, size = 'small', className }) => {
   // 过滤无效操作项
   const list = (Array.isArray(actions) ? actions : []).filter((x) => x && String(x.key || '').trim());
   if (!list.length) return null;
@@ -100,8 +102,9 @@ const RowActions: React.FC<{
   const logActions = ordered.filter((a) => isLogAction(a));
   const nonLogActions = ordered.filter((a) => !isLogAction(a));
 
-  // 行内显示的操作项：如果操作数 <= 2，全部显示；否则只显示1个
-  const effectiveMaxInline = nonLogActions.length <= 2 ? nonLogActions.length : 1;
+  // 行内显示的操作项：优先使用外部传入的 maxInline；未传时默认逻辑（<=2全显，否则1个）
+  const effectiveMaxInline =
+    maxInline != null ? maxInline : nonLogActions.length <= 2 ? nonLogActions.length : 1;
   const inline = nonLogActions.slice(0, Math.max(0, Math.min(nonLogActions.length, effectiveMaxInline)));
   // 溢出到下拉菜单的操作项
   const rest = [...logActions, ...nonLogActions.slice(inline.length)];

@@ -153,10 +153,10 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       width: 220,
       render: (_text, record) => (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
             <span>{record.factoryName || '-'}</span>
-            {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ margin: 0 }}>内部</Tag> : null}
-            {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ margin: 0 }}>外部</Tag> : null}
           </div>
           {(record.orgPath || record.parentOrgUnitName) &&
            (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (

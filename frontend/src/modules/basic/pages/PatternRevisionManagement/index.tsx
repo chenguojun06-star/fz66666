@@ -571,7 +571,6 @@ const PatternRevisionManagement: React.FC = () => {
         cancelText={modalMode === 'view' ? '关闭' : '取消'}
         confirmLoading={saving}
         width="40vw"
-        initialHeight={520}
       >
         <Form
           form={form}

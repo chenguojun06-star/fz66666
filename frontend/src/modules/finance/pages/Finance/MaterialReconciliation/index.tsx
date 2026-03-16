@@ -21,6 +21,7 @@ import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -53,6 +54,8 @@ const MaterialReconciliation: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [submitLoading, setSubmitLoading] = useState(false); // 表单提交加载状态
   const [approvalSubmitting, setApprovalSubmitting] = useState(false); // 状态更新加载状态
+  const [pendingRejectIds, setPendingRejectIds] = useState<string[] | null>(null);
+  const [rejectIdsLoading, setRejectIdsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
@@ -290,57 +293,35 @@ const MaterialReconciliation: React.FC = () => {
   const openRejectModal = (ids: string[]) => {
     const normalized = ids.map((id) => String(id || '').trim()).filter(Boolean);
     if (!normalized.length) return;
-    let reasonValue = '';
-    Modal.confirm({
-      width: '30vw',
-      title: normalized.length > 1 ? `批量驳回（${normalized.length}条）` : '驳回',
-      content: (
-        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
-          <Form.Item label="驳回原因">
-            <Input.TextArea
-              rows={4}
-              maxLength={200}
-              showCount
-              placeholder="请输入驳回原因"
-              onChange={(e) => {
-                reasonValue = e.target.value;
-              }}
-            />
-          </Form.Item>
-        </Form>
-      ),
-      okText: '确认驳回',
-      cancelText: '取消',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        const remark = String(reasonValue || '').trim();
-        if (!remark) {
-          message.error('请输入驳回原因');
-          return Promise.reject(new Error('请输入驳回原因'));
-        }
-        setApprovalSubmitting(true);
-        try {
-          // 驳回操作：将状态改为 rejected
-          const settled = await Promise.allSettled(
-            normalized.map((id) => materialReconciliationApi.updateMaterialReconciliationStatus(id, 'rejected')),
-          );
-          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
-          const failed = normalized.length - okCount;
-          if (okCount <= 0) {
-            message.error('驳回失败');
-            return;
-          }
-          if (failed) message.error(`部分驳回失败（${failed}/${normalized.length}）`);
-          else message.success('驳回成功');
-          setSelectedRowKeys([]);
-          fetchReconciliationList();
-        } catch (e: any) {
-          errorHandler.handleApiError(e, '驳回失败');
-        } finally {
-          setApprovalSubmitting(false);
-        }
-      },
-    });
+    setPendingRejectIds(normalized);
+  };
+
+  const handleRejectConfirm = async (remark: string) => {
+    if (!pendingRejectIds) return;
+    setRejectIdsLoading(true);
+    setApprovalSubmitting(true);
+    try {
+      const normalized = pendingRejectIds;
+      const settled = await Promise.allSettled(
+        normalized.map((id) => materialReconciliationApi.updateMaterialReconciliationStatus(id, 'rejected')),
+      );
+      const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+      const failed = normalized.length - okCount;
+      if (okCount <= 0) {
+        message.error('驳回失败');
+        return;
+      }
+      if (failed) message.error(`部分驳回失败（${failed}/${normalized.length}）`);
+      else message.success('驳回成功');
+      setPendingRejectIds(null);
+      setSelectedRowKeys([]);
+      fetchReconciliationList();
+    } catch (e: any) {
+      errorHandler.handleApiError(e, '驳回失败');
+    } finally {
+      setRejectIdsLoading(false);
+      setApprovalSubmitting(false);
+    }
   };
 
   /**
@@ -894,6 +875,13 @@ const MaterialReconciliation: React.FC = () => {
             }}
           />
         </ResizableModal>
+      <RejectReasonModal
+        open={!!pendingRejectIds}
+        title={pendingRejectIds && pendingRejectIds.length > 1 ? `批量驳回（${pendingRejectIds.length}条）` : '驳回'}
+        onOk={handleRejectConfirm}
+        onCancel={() => setPendingRejectIds(null)}
+        loading={rejectIdsLoading}
+      />
     </Layout>
   );
 };

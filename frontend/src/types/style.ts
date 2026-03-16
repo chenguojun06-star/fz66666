@@ -92,6 +92,8 @@ export interface StyleBom extends Record<string, unknown> {
   size: string;
   unit: string;
   usageAmount: number;
+  /** 纸样各码实际用量（JSON，格式：{"S":1.5,"M":1.6}；为空则用统一 usageAmount） */
+  sizeUsageMap?: string;
   lossRate: number;
   unitPrice?: number;
   totalPrice?: number;

@@ -16,10 +16,11 @@ import { useModal } from '@/hooks';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import './styles.css';
 
 const RoleList: React.FC = () => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
   const roleModal = useModal<Role>();
@@ -209,42 +210,42 @@ const RoleList: React.FC = () => {
     form.resetFields();
   };
 
+  type RemarkModalState = {
+    open: boolean;
+    title: string;
+    okText: string;
+    okDanger: boolean;
+    onConfirm: (remark: string) => Promise<void>;
+  };
+  const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
+  const [remarkLoading, setRemarkLoading] = useState(false);
+
   const openRemarkModal = (
     title: string,
     okText: string,
     okButtonProps: ButtonProps | undefined,
     onConfirm: (remark: string) => Promise<void>
   ) => {
-    let remarkValue = '';
-    modal.confirm({
-      width: '30vw',
+    setRemarkModalState({
+      open: true,
       title,
-      content: (
-        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
-          <Form.Item label="操作原因">
-            <Input.TextArea
-              rows={4}
-              maxLength={200}
-              showCount
-              onChange={(e) => {
-                remarkValue = e.target.value;
-              }}
-            />
-          </Form.Item>
-        </Form>
-      ),
       okText,
-      cancelText: '取消',
-      okButtonProps,
-      onOk: async () => {
-        const remark = String(remarkValue || '').trim();
-        if (!remark) {
-          message.error('请输入操作原因');
-          return Promise.reject(new Error('请输入操作原因'));
-        }
-        await onConfirm(remark);
-      },
+      okDanger: okButtonProps?.danger === true,
+      onConfirm,
     });
+  };
+
+  const handleRemarkConfirm = async (remark: string) => {
+    if (!remarkModalState) return;
+    setRemarkLoading(true);
+    try {
+      await remarkModalState.onConfirm(remark);
+      setRemarkModalState(null);
+    } catch {
+      // error already shown inside onConfirm
+    } finally {
+      setRemarkLoading(false);
+    }
   };
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
@@ -871,6 +872,18 @@ const RoleList: React.FC = () => {
           scroll={{ x: 'max-content' }}
         />
       </ResizableModal>
+      <RejectReasonModal
+        open={remarkModalState?.open === true}
+        title={remarkModalState?.title ?? ''}
+        okText={remarkModalState?.okText}
+        okDanger={remarkModalState?.okDanger ?? false}
+        fieldLabel="操作原因"
+        placeholder="请输入操作原因（必填）"
+        required
+        loading={remarkLoading}
+        onOk={handleRemarkConfirm}
+        onCancel={() => setRemarkModalState(null)}
+      />
     </Layout>
   );
 };

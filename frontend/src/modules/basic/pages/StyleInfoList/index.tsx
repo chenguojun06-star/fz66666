@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Modal } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import api from '@/utils/api';
@@ -26,7 +27,7 @@ import '../StyleInfo/styles.css';
  * 独立列表页面，路由: /style-info
  */
 const StyleInfoListPage: React.FC = () => {
-  const { message, modal: _antdModal } = App.useApp();
+  const { message } = App.useApp();
   const navigate = useNavigate();
 
   // 使用现有Hooks
@@ -47,7 +48,7 @@ const StyleInfoListPage: React.FC = () => {
     loadDevelopmentStats
   } = useStyleStats();
 
-  const { handleScrap, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
+  const { handleScrap, confirmScrap, cancelScrap, pendingScrapId, scrapLoading, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
   // 视图模式（持久化）
   const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
@@ -329,6 +330,20 @@ const StyleInfoListPage: React.FC = () => {
           />
         </div>
       </Modal>
+
+      <RejectReasonModal
+        open={pendingScrapId !== null}
+        title="确认报废"
+        description="报废后记录会保留在当前页面，进度停止，并显示为开发样报废。"
+        fieldLabel="报废原因"
+        okText="确认报废"
+        placeholder="请输入报废原因"
+        required
+        okDanger
+        loading={scrapLoading}
+        onOk={confirmScrap}
+        onCancel={cancelScrap}
+      />
     </Layout>
   );
 };

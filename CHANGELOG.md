@@ -1,3 +1,46 @@
+## 2026-05-03
+
+### fix(frontend): 补齐 modal.confirm + Input 遮挡 Bug 第三轮（4处）+ 删除样板生产「维护」入口
+
+**修改文件**：`PatternProduction/index.tsx`、`MaterialReconciliation/index.tsx`、`WagePayment/index.tsx`、`BillingTab.tsx`
+
+#### 修复内容
+1. **`PatternProduction/index.tsx`**：删除 `handleMaintenance` 函数及列表视图、卡片视图两处「维护」按钮菜单项，彻底移除该功能入口
+2. **`MaterialReconciliation/index.tsx`**：`openRejectModal`（`Modal.confirm + Input.TextArea rows=4`）→ `useState` + `<RejectReasonModal>`，支持批量驳回
+3. **`WagePayment/index.tsx`**：`handleRejectPayable`（`Modal.confirm + Input.TextArea rows=2`）→ `useState` + `<RejectReasonModal>`
+4. **`BillingTab.tsx`**：`handleIssueInvoice`（`Modal.confirm + <Input id="..."> + document.getElementById` DOM hack）→ 受控 `<Input value={invoiceNoValue}>` + 独立 `<Modal confirmLoading>` 正式弹窗
+
+#### 对系统的改进
+- 所有 `modal.confirm` + 动态输入框的遮挡 Bug 全部清零（累计修复 18 处）
+- 消除 `document.getElementById` DOM 时序隐患（1 处）
+- TypeScript 编译 0 错误验证通过
+
+---
+
+## 2026-05-02
+
+### fix(frontend): 全系统 modal.confirm + Input.TextArea 按钮遮挡 Bug 彻底修复（14 处统一替换为 RejectReasonModal）
+
+**修改文件**：`src/components/common/RejectReasonModal.tsx`（新建）+ 14 个页面/Hook 文件
+
+#### 问题根因
+`modal.confirm({ content: <Input.TextArea autoSize …> })` 在弹窗打开时静态计算高度，`autoSize` TextArea 因用户输入动态增高后会遮挡底部 OK/Cancel 按钮，导致按钮完全无法点击。变体：`Modal.confirm + <Input.TextArea id="x"> + document.getElementById('x')` 同样存在高度问题且依赖不稳定的 DOM 时序。
+
+#### 修复内容
+1. **新建 `RejectReasonModal.tsx`**（`src/components/common/`）：封装完整的"带原因输入确认弹窗"，使用真正的 Ant Design Modal + Form，按钮不会被遮挡。
+2. **替换 14 个文件**中的 `modal.confirm + Input.TextArea` 模式：
+   - StyleStageControlBar、useCuttingTasks、Cutting/index、RoleList、UserList、FactoryList、MaterialTable、useStyleActions、StyleInfoList、useProductionActions、Production/List/index（prior sessions）
+   - TemplateCenter/index、BillingTab、RegistrationTab（本次 session 第一批）
+   - `useCloseOrder.tsx` + `ProgressDetail/index.tsx`（本次 session 第二批，Hook 露出 state 让父组件渲染）
+3. **Hook 重构模式**：Hook 内部用 `useState` + `useCallback` 暴露 `{ handleXxx, pendingXxx, xxxLoading, confirmXxx, cancelXxx }`，父组件负责渲染 `<RejectReasonModal>`。
+
+#### 对系统的改进
+- 所有"带原因"确认弹窗（关单、退回、删除、拒绝入驻、减免账单等）彻底解决按钮无法点击的 UI Bug
+- 交互一致：全系统统一使用同一个 `RejectReasonModal` 组件，视觉和体验统一
+- TypeScript 编译 0 错误验证通过
+
+---
+
 ## 2026-05-01
 
 ### fix(cache): 改用 Caffeine 替换 Redis @Cacheable，彻底消除 resolveProgressNodeUnitPrices N+1（commit c368d32c）

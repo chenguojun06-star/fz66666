@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Tag, Space, message, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -18,6 +19,10 @@ const RegistrationTab: React.FC = () => {
   const editModal = useModal<TenantInfo>();
   const [editForm] = Form.useForm();
   const [editSaving, setEditSaving] = useState(false);
+
+  // 拒绝入驻弹窗状态
+  const [pendingRejectTenant, setPendingRejectTenant] = useState<TenantInfo | null>(null);
+  const [rejectTenantLoading, setRejectTenantLoading] = useState(false);
 
   const fetchTenantApps = useCallback(async () => {
     if (!isSuperAdmin) { setTenantApps([]); return; }
@@ -49,24 +54,23 @@ const RegistrationTab: React.FC = () => {
     });
   };
 
-  const handleRejectTenant = async (record: TenantInfo) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `拒绝「${record.tenantName}」的入驻申请`,
-      content: <Input.TextArea placeholder="请输入拒绝原因" id="reject-tenant-reason" />,
-      okText: '确认拒绝',
-      cancelText: '取消',
-      onOk: async () => {
-        const reason = (document.getElementById('reject-tenant-reason') as HTMLTextAreaElement)?.value || '不符合要求';
-        try {
-          await tenantService.rejectApplication(record.id, reason);
-          message.success('已拒绝');
-          fetchTenantApps();
-        } catch (e: any) {
-          message.error(e?.message || '操作失败');
-        }
-      },
-    });
+  const handleRejectTenant = (record: TenantInfo) => {
+    setPendingRejectTenant(record);
+  };
+
+  const handleRejectConfirm = async (reason: string) => {
+    if (!pendingRejectTenant) return;
+    setRejectTenantLoading(true);
+    try {
+      await tenantService.rejectApplication(pendingRejectTenant.id, reason || '不符合要求');
+      message.success('已拒绝');
+      setPendingRejectTenant(null);
+      fetchTenantApps();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    } finally {
+      setRejectTenantLoading(false);
+    }
   };
 
   const handleEditApplication = (record: TenantInfo) => {
@@ -184,6 +188,17 @@ const RegistrationTab: React.FC = () => {
           </Form.Item>
         </Form>
       </ResizableModal>
+
+      {/* 拒绝原因弹窗 */}
+      <RejectReasonModal
+        open={pendingRejectTenant !== null}
+        title={`拒绝「${pendingRejectTenant?.tenantName || ''}」的入驻申请`}
+        fieldLabel="拒绝原因"
+        okText="确认拒绝"
+        loading={rejectTenantLoading}
+        onOk={handleRejectConfirm}
+        onCancel={() => setPendingRejectTenant(null)}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -31,7 +32,7 @@ const getDepartmentLabel = (item?: OrganizationUnit | null) => {
 };
 
 const FactoryList: React.FC = () => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
   const location = useLocation();
@@ -40,6 +41,16 @@ const FactoryList: React.FC = () => {
   // ===== 使用 useModal 管理弹窗 =====
   const factoryModal = useModal<FactoryType>();
   const logModal = useModal();
+
+  type RemarkModalState = {
+    open: boolean;
+    title: string;
+    okText: string;
+    okDanger: boolean;
+    onConfirm: (remark: string) => Promise<void>;
+  };
+  const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
+  const [remarkLoading, setRemarkLoading] = useState(false);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
   const [activeTab, setActiveTab] = useState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('ALL');
@@ -242,36 +253,26 @@ const FactoryList: React.FC = () => {
     okButtonProps: any,
     onConfirm: (remark: string) => Promise<void>
   ) => {
-    let remarkValue = '';
-    modal.confirm({
-      width: '30vw',
+    setRemarkModalState({
+      open: true,
       title,
-      content: (
-        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
-          <Form.Item label="操作原因">
-            <Input.TextArea
-              rows={4}
-              maxLength={200}
-              showCount
-              onChange={(e) => {
-                remarkValue = e.target.value;
-              }}
-            />
-          </Form.Item>
-        </Form>
-      ),
       okText,
-      cancelText: '取消',
-      okButtonProps,
-      onOk: async () => {
-        const remark = String(remarkValue || '').trim();
-        if (!remark) {
-          message.error('请输入操作原因');
-          return Promise.reject(new Error('请输入操作原因'));
-        }
-        await onConfirm(remark);
-      },
+      okDanger: (okButtonProps as any)?.danger === true,
+      onConfirm,
     });
+  };
+
+  const handleRemarkConfirm = async (remark: string) => {
+    if (!remarkModalState) return;
+    setRemarkLoading(true);
+    try {
+      await remarkModalState.onConfirm(remark);
+      setRemarkModalState(null);
+    } catch {
+      // error already shown inside onConfirm
+    } finally {
+      setRemarkLoading(false);
+    }
   };
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
@@ -446,7 +447,7 @@ const FactoryList: React.FC = () => {
       key: 'factoryType',
       width: 110,
       render: (v: string) => {
-        if (v === 'INTERNAL') return <Tag color="orange">内部</Tag>;
+        if (v === 'INTERNAL') return <Tag color="blue">内部</Tag>;
         if (v === 'EXTERNAL') return <Tag color="purple">外部</Tag>;
         return <Tag>未标记</Tag>;
       },
@@ -861,6 +862,18 @@ const FactoryList: React.FC = () => {
         ownerId={accountFactory.id}
         ownerName={accountFactory.name}
         onClose={() => setAccountModalOpen(false)}
+      />
+      <RejectReasonModal
+        open={remarkModalState?.open === true}
+        title={remarkModalState?.title ?? ''}
+        okText={remarkModalState?.okText}
+        okDanger={remarkModalState?.okDanger ?? false}
+        fieldLabel="操作原因"
+        placeholder="请输入操作原因（必填）"
+        required
+        loading={remarkLoading}
+        onOk={handleRemarkConfirm}
+        onCancel={() => setRemarkModalState(null)}
       />
     </Layout>
   );

@@ -578,10 +578,10 @@ const DataCenter: React.FC = () => {
       {
         title: '操作',
         key: 'action',
-        width: 280,
+        width: 160,
         render: (_: any, record: StyleInfo) => (
           <RowActions
-            maxInline={4}
+            maxInline={1}
             actions={[
               {
                 key: 'view',
@@ -718,7 +718,6 @@ const DataCenter: React.FC = () => {
           </Space>
         }
         width="40vw"
-        initialHeight={500}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
@@ -739,7 +738,6 @@ const DataCenter: React.FC = () => {
         open={patternRevisionModalVisible}
         title={`纸样修改记录 - ${patternRevisionRecord?.styleNo || ''}`}
         width="40vw"
-        initialHeight={460}
         onCancel={() => {
           setPatternRevisionModalVisible(false);
           setPatternRevisionRecord(null);

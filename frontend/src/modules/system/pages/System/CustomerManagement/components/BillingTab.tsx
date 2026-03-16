@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Typography, Descriptions, Divider, Row, Col, Progress, Radio, Alert } from 'antd';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -50,6 +51,14 @@ const BillingTab: React.FC = () => {
   const [billsTotal, setBillsTotal] = useState(0);
   const [billsLoading, setBillsLoading] = useState(false);
   const [billParams, setBillParams] = useState({ page: 1, pageSize: 20, tenantId: undefined as number | undefined, status: '' });
+
+  // 减免弹窗状态
+  const [pendingWaiveBill, setPendingWaiveBill] = useState<BillingRecord | null>(null);
+  const [waiveBillLoading, setWaiveBillLoading] = useState(false);
+  // 开票弹窗状态
+  const [pendingIssueInvoiceBill, setPendingIssueInvoiceBill] = useState<BillingRecord | null>(null);
+  const [invoiceNoValue, setInvoiceNoValue] = useState('');
+  const [issueInvoiceLoading, setIssueInvoiceLoading] = useState(false);
 
   const fetchTenants = useCallback(async () => {
     setLoading(true);
@@ -189,51 +198,44 @@ const BillingTab: React.FC = () => {
     });
   };
 
-  const handleWaiveBill = async (bill: BillingRecord) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `减免账单 ${bill.billingNo}`,
-      content: <Input.TextArea placeholder="减免原因（选填）" id="waive-remark" />,
-      okText: '确认减免',
-      onOk: async () => {
-        const remark = (document.getElementById('waive-remark') as HTMLTextAreaElement)?.value || '';
-        try {
-          await tenantService.waiveBill(bill.id, remark);
-          message.success('已减免');
-          fetchBills();
-        } catch (e: any) {
-          message.error(e?.message || '操作失败');
-        }
-      },
-    });
+  const handleWaiveBill = (bill: BillingRecord) => {
+    setPendingWaiveBill(bill);
   };
 
-  const handleIssueInvoice = async (bill: BillingRecord) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `确认开票 - ${bill.billingNo}`,
-      content: (
-        <div>
-          <p>租户：{bill.tenantName}，金额：¥{bill.totalAmount}</p>
-          <p>抬头：{(bill as any).invoiceTitle || '—'}</p>
-          <p>税号：{(bill as any).invoiceTaxNo || '—'}</p>
-          <Input placeholder="请输入发票号码" id="invoice-no-input" style={{ marginTop: 8 }} />
-        </div>
-      ),
-      okText: '确认开票',
-      onOk: async () => {
-        const invoiceNo = (document.getElementById('invoice-no-input') as HTMLInputElement)?.value || '';
-        if (!invoiceNo.trim()) { message.warning('请输入发票号码'); throw new Error('cancel'); }
-        try {
-          await tenantService.issueInvoice(bill.id, invoiceNo.trim());
-          message.success('已确认开票');
-          fetchBills();
-        } catch (e: any) {
-          if (e?.message === 'cancel') throw e;
-          message.error(e?.message || '操作失败');
-        }
-      },
-    });
+  const handleWaiveConfirm = async (remark: string) => {
+    if (!pendingWaiveBill) return;
+    setWaiveBillLoading(true);
+    try {
+      await tenantService.waiveBill(pendingWaiveBill.id, remark);
+      message.success('已减免');
+      setPendingWaiveBill(null);
+      fetchBills();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    } finally {
+      setWaiveBillLoading(false);
+    }
+  };
+
+  const handleIssueInvoice = (bill: BillingRecord) => {
+    setInvoiceNoValue('');
+    setPendingIssueInvoiceBill(bill);
+  };
+
+  const handleIssueInvoiceConfirm = async () => {
+    if (!pendingIssueInvoiceBill) return;
+    if (!invoiceNoValue.trim()) { message.warning('请输入发票号码'); return; }
+    setIssueInvoiceLoading(true);
+    try {
+      await tenantService.issueInvoice(pendingIssueInvoiceBill.id, invoiceNoValue.trim());
+      message.success('已确认开票');
+      setPendingIssueInvoiceBill(null);
+      fetchBills();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    } finally {
+      setIssueInvoiceLoading(false);
+    }
   };
 
   const tenantColumns: ColumnsType<TenantInfo> = [
@@ -532,6 +534,41 @@ const BillingTab: React.FC = () => {
           <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无数据</div>
         )}
       </ResizableModal>
+
+      {/* 开票弹窗 */}
+      <Modal
+        open={!!pendingIssueInvoiceBill}
+        title={`确认开票 - ${pendingIssueInvoiceBill?.billingNo || ''}`}
+        onOk={handleIssueInvoiceConfirm}
+        onCancel={() => setPendingIssueInvoiceBill(null)}
+        okText="确认开票"
+        confirmLoading={issueInvoiceLoading}
+        width="30vw"
+        destroyOnClose
+      >
+        <p>租户：{pendingIssueInvoiceBill?.tenantName}，金额：¥{pendingIssueInvoiceBill?.totalAmount}</p>
+        <p>抬头：{(pendingIssueInvoiceBill as any)?.invoiceTitle || '—'}</p>
+        <p>税号：{(pendingIssueInvoiceBill as any)?.invoiceTaxNo || '—'}</p>
+        <Input
+          placeholder="请输入发票号码"
+          value={invoiceNoValue}
+          onChange={(e) => setInvoiceNoValue(e.target.value)}
+          style={{ marginTop: 8 }}
+        />
+      </Modal>
+
+      {/* 减免原因弹窗 */}
+      <RejectReasonModal
+        open={pendingWaiveBill !== null}
+        title={`减免账单 ${pendingWaiveBill?.billingNo || ''}`}
+        fieldLabel="减免原因"
+        required={false}
+        okDanger={false}
+        okText="确认减免"
+        loading={waiveBillLoading}
+        onOk={handleWaiveConfirm}
+        onCancel={() => setPendingWaiveBill(null)}
+      />
     </div>
   );
 };

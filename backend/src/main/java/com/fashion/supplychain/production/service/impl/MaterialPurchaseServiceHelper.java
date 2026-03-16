@@ -299,7 +299,10 @@ public class MaterialPurchaseServiceHelper {
             bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
             bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
 
-            int matchedQty = 0;
+            // 解析纸样录入的各码实际用量（sizeUsageMap），不存在则降级为统一用量 usageAmount
+            Map<String, BigDecimal> sizeUsageMapParsed = parseSizeUsageMap(bom.getSizeUsageMap());
+            BigDecimal totalRequired = BigDecimal.ZERO;
+            boolean hasMatchedLine = false;
             for (OrderLine l : lines) {
                 if (l == null) {
                     continue;
@@ -309,16 +312,22 @@ public class MaterialPurchaseServiceHelper {
                 boolean colorOk = bomColorSet == null || bomColorSet.contains(lc);
                 boolean sizeOk = bomSizeSet == null || bomSizeSet.contains(ls);
                 if (colorOk && sizeOk) {
-                    matchedQty += l.quantity == null ? 0 : l.quantity;
+                    int qty = l.quantity == null ? 0 : l.quantity;
+                    if (qty <= 0) {
+                        continue;
+                    }
+                    hasMatchedLine = true;
+                    // 优先用纸样各码用量，找不到则降级为 BOM 统一用量
+                    BigDecimal usage = sizeUsageMapParsed.getOrDefault(ls,
+                            bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
+                    totalRequired = totalRequired.add(usage.multiply(BigDecimal.valueOf(qty)));
                 }
             }
-            if (matchedQty <= 0) {
+            if (!hasMatchedLine || totalRequired.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
-            BigDecimal usage = bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount();
-            BigDecimal required = usage.multiply(BigDecimal.valueOf(matchedQty));
-            int requiredInt = required.setScale(0, java.math.RoundingMode.CEILING).intValue();
+            int requiredInt = totalRequired.setScale(0, java.math.RoundingMode.CEILING).intValue();
 
             if (requiredInt <= 0) {
                 continue;
@@ -372,6 +381,32 @@ public class MaterialPurchaseServiceHelper {
         }
 
         return new ArrayList<>(grouped.values());
+    }
+
+    // ──────────── 各码用量解析 ────────────
+
+    /**
+     * 解析 BOM 的各码用量 JSON（如 {"S":1.5,"M":1.6,"XL":1.8}），
+     * 返回规范化（小写 trim）后的 map；JSON 为空或解析失败时返回空 map。
+     */
+    private Map<String, BigDecimal> parseSizeUsageMap(String json) {
+        if (!StringUtils.hasText(json)) {
+            return Collections.emptyMap();
+        }
+        try {
+            TypeReference<Map<String, BigDecimal>> typeRef = new TypeReference<>() {};
+            Map<String, BigDecimal> raw = objectMapper.readValue(json, typeRef);
+            Map<String, BigDecimal> normalized = new HashMap<>(raw.size());
+            for (Map.Entry<String, BigDecimal> entry : raw.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    normalized.put(entry.getKey().trim().toLowerCase(), entry.getValue());
+                }
+            }
+            return normalized;
+        } catch (Exception e) {
+            log.debug("sizeUsageMap 解析失败，将使用统一 usageAmount 替代: {}", json);
+            return Collections.emptyMap();
+        }
     }
 
     // ──────────── 采购单号生成 ────────────

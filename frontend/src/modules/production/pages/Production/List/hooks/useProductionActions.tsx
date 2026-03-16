@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Input } from 'antd';
 import { ProductionOrder } from '@/types/production';
 import api, { isApiSuccess, isOrderFrozenByStatus } from '@/utils/api';
 import { productionOrderApi } from '@/services/production/productionApi';
@@ -8,9 +7,17 @@ import { safeString, getCloseMinRequired, buildOrdersCsv, downloadTextFile } fro
 
 interface UseProductionActionsOptions {
   message: any;
-  modal: any;
   isSupervisorOrAbove: boolean;
   fetchProductionList: () => void;
+}
+
+/** Rich state for close-order confirm dialog */
+export interface PendingCloseOrder {
+  order: ProductionOrder;
+  orderQty: number;
+  minRequired: number;
+  cuttingQty: number;
+  warehousingQualified: number;
 }
 
 /**
@@ -19,14 +26,17 @@ interface UseProductionActionsOptions {
  */
 export function useProductionActions({
   message,
-  modal,
   isSupervisorOrAbove,
   fetchProductionList,
 }: UseProductionActionsOptions) {
+  // 关单确认状态
+  const [pendingCloseOrder, setPendingCloseOrder] = useState<PendingCloseOrder | null>(null);
+  const [closeOrderLoading, setCloseOrderLoading] = useState(false);
+  // 报废确认状态
+  const [pendingScrapOrder, setPendingScrapOrder] = useState<ProductionOrder | null>(null);
+  const [scrapOrderLoading, setScrapOrderLoading] = useState(false);
   // 快速编辑状态
   const [quickEditSaving, setQuickEditSaving] = useState(false);
-
-  // 跟单员备注状态
   const [remarkPopoverId, setRemarkPopoverId] = useState<string | null>(null);
   const [remarkText, setRemarkText] = useState('');
   const [remarkSaving, setRemarkSaving] = useState(false);
@@ -115,47 +125,7 @@ export function useProductionActions({
       return;
     }
 
-    // 使用闭包变量捕获备注（消除 window 全局变量）
-    let closeRemark = '';
-
-    modal.confirm({
-      width: '30vw',
-      title: `确认关单：${safeString((order as any)?.orderNo)}`,
-      okText: '确认关单',
-      cancelText: '取消',
-      content: (
-        <div>
-          <div>订单数量：{orderQty}</div>
-          <div>关单阈值（裁剪数90%）：{minRequired}</div>
-          <div>当前裁剪数：{cuttingQty}</div>
-          <div>当前合格入库：{warehousingQualified}</div>
-          <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
-          <div style={{ marginTop: 12 }}>
-            <div style={{ marginBottom: 4, color: '#666' }}>关闭原因（可选，将记录到操作日志）：</div>
-            <Input.TextArea
-              rows={2}
-              placeholder="请输入关闭原因..."
-              onChange={(e) => { closeRemark = e.target.value; }}
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
-      ),
-      onOk: async () => {
-        const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
-          '/production/order/close',
-          { id: orderId, sourceModule: 'myOrders', remark: closeRemark || undefined }
-        );
-        if (!isApiSuccess(result)) {
-          const msg = typeof result === 'object' && result !== null && 'message' in result
-            ? String((result as any).message) || '关单失败'
-            : '关单失败';
-          throw new Error(msg);
-        }
-        message.success('关单成功');
-        fetchProductionList();
-      },
-    });
+    setPendingCloseOrder({ order, orderQty, minRequired, cuttingQty, warehousingQualified });
   };
 
   /** 报废操作 */
@@ -179,47 +149,58 @@ export function useProductionActions({
       return;
     }
 
-    let remark = '';
-    modal.confirm({
-      width: '30vw',
-      title: `确认报废：${safeString((order as any)?.orderNo)}`,
-      okText: '确认报废',
-      cancelText: '取消',
-      content: (
-        <div>
-          <div style={{ marginBottom: 12, fontWeight: 600 }}>报废原因</div>
-          <Input.TextArea
-            placeholder="请输入报废原因"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => {
-              remark = String(e?.target?.value || '');
-            }}
-          />
-        </div>
-      ),
-      onOk: async () => {
-        const opRemark = String(remark || '').trim();
-        if (!opRemark) {
-          message.error('请输入报废原因');
-          return Promise.reject(new Error('请输入报废原因'));
-        }
-        const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
-          '/production/order/scrap',
-          { id: orderId, remark: opRemark }
-        );
-        if (!isApiSuccess(result)) {
-          const msg = typeof result === 'object' && result !== null && 'message' in result
-            ? String((result as any).message) || '报废失败'
-            : '报废失败';
-          throw new Error(msg);
-        }
-        message.success('报废成功');
-        fetchProductionList();
-      },
-    });
+    setPendingScrapOrder(order);
   };
+
+  const confirmCloseOrder = async (remark: string) => {
+    if (!pendingCloseOrder) return;
+    setCloseOrderLoading(true);
+    try {
+      const orderId = safeString((pendingCloseOrder.order as any)?.id, '');
+      const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
+        '/production/order/close',
+        { id: orderId, sourceModule: 'myOrders', remark: remark || undefined }
+      );
+      if (!isApiSuccess(result)) {
+        const msg = typeof result === 'object' && result !== null && 'message' in result
+          ? String((result as any).message) || '关单失败' : '关单失败';
+        throw new Error(msg);
+      }
+      message.success('关单成功');
+      setPendingCloseOrder(null);
+      fetchProductionList();
+    } catch (e: any) {
+      message.error(e?.message || '关单失败');
+    } finally {
+      setCloseOrderLoading(false);
+    }
+  };
+  const cancelCloseOrder = () => setPendingCloseOrder(null);
+
+  const confirmScrapOrder = async (reason: string) => {
+    if (!pendingScrapOrder) return;
+    setScrapOrderLoading(true);
+    try {
+      const orderId = safeString((pendingScrapOrder as any)?.id, '');
+      const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
+        '/production/order/scrap',
+        { id: orderId, remark: reason }
+      );
+      if (!isApiSuccess(result)) {
+        const msg = typeof result === 'object' && result !== null && 'message' in result
+          ? String((result as any).message) || '报废失败' : '报废失败';
+        throw new Error(msg);
+      }
+      message.success('报废成功');
+      setPendingScrapOrder(null);
+      fetchProductionList();
+    } catch (e: any) {
+      message.error(e?.message || '报废失败');
+    } finally {
+      setScrapOrderLoading(false);
+    }
+  };
+  const cancelScrapOrder = () => setPendingScrapOrder(null);
 
   /** 导出已选订单为 CSV */
   const exportSelected = (selectedRows: ProductionOrder[]) => {
@@ -245,7 +226,15 @@ export function useProductionActions({
     handleRemarkSave,
     // 订单操作
     handleCloseOrder,
+    pendingCloseOrder,
+    closeOrderLoading,
+    confirmCloseOrder,
+    cancelCloseOrder,
     handleScrapOrder,
+    pendingScrapOrder,
+    scrapOrderLoading,
+    confirmScrapOrder,
+    cancelScrapOrder,
     exportSelected,
   };
 }

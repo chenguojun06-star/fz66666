@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Tag, App, Input, Space, Tooltip } from 'antd';
+import { Tag, App, Space, Tooltip } from 'antd';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -53,53 +54,35 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   isOrderFrozenForRecord,
 }) => {
   const navigate = useNavigate();
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
+  const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
 
   /** 撤回采购领取/到货登记 */
   const handleCancelReceive = useCallback((record: MaterialPurchaseType) => {
-    let reason = '';
-    modal.confirm({
-      title: '撤回采购领取',
-      width: '30vw',
-      content: (
-        <div>
-          <p style={{ marginBottom: 8 }}>
-            确定撤回「{record.materialName || record.materialCode}」的领取记录？
-          </p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 12 }}>
-            领取人：{record.receiverName || '-'}，到货数量：{record.arrivedQuantity || 0} {record.unit || ''}
-          </p>
-          <p style={{ fontSize: 13, marginBottom: 4 }}>撤回原因：</p>
-          <Input.TextArea
-            placeholder="请填写撤回原因（必填）"
-            autoSize={{ minRows: 2, maxRows: 4 }}
-            onChange={e => { reason = e.target.value; }}
-          />
-        </div>
-      ),
-      okText: '确认撤回',
-      cancelText: '取消',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        if (!reason.trim()) {
-          message.error('请填写撤回原因');
-          throw new Error('请填写撤回原因');
-        }
-        setCancelLoading(record.id as string);
-        try {
-          await api.post('/production/purchase/cancel-receive', {
-            purchaseId: record.id,
-            reason: reason.trim(),
-          });
-          message.success('领取已撤回，采购单已恢复为待处理');
-          onRefresh?.();
-        } finally {
-          setCancelLoading(null);
-        }
-      },
-    });
-  }, [modal, message, onRefresh]);
+    setCancelTarget(record);
+  }, []);
+
+  const handleCancelConfirm = async (reason: string) => {
+    if (!cancelTarget) return;
+    setCancelConfirmLoading(true);
+    setCancelLoading(cancelTarget.id as string);
+    try {
+      await api.post('/production/purchase/cancel-receive', {
+        purchaseId: cancelTarget.id,
+        reason,
+      });
+      message.success('领取已撤回，采购单已恢复为待处理');
+      setCancelTarget(null);
+      onRefresh?.();
+    } catch {
+      // error shown by api interceptor
+    } finally {
+      setCancelConfirmLoading(false);
+      setCancelLoading(null);
+    }
+  };
 
   const cleanRemark = (value: unknown) => {
     const raw = String(value || '').trim();
@@ -459,6 +442,25 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   ];
 
   return (
+    <>
+    <RejectReasonModal
+      open={cancelTarget !== null}
+      title="撤回采购领取"
+      description={cancelTarget ? (
+        <div>
+          <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的领取记录？</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{cancelTarget.arrivedQuantity || 0} {cancelTarget.unit || ''}</p>
+        </div>
+      ) : null}
+      fieldLabel="撤回原因"
+      okText="确认撤回"
+      placeholder="请填写撤回原因（必填）"
+      required
+      okDanger
+      loading={cancelConfirmLoading}
+      onOk={handleCancelConfirm}
+      onCancel={() => setCancelTarget(null)}
+    />
     <ResizableTable<MaterialPurchaseType>
       columns={columns}
       dataSource={dataSource}
@@ -477,6 +479,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         size: isMobile ? 'small' : 'default',
       }}
     />
+    </>
   );
 };
 

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Input } from 'antd';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
@@ -8,7 +7,6 @@ import type { Dayjs } from 'dayjs';
 
 interface UseCuttingTasksOptions {
   message: any;
-  modal: any;
   isEntryPage: boolean;
 }
 
@@ -16,7 +14,7 @@ interface UseCuttingTasksOptions {
  * 裁剪任务管理 Hook
  * 管理任务列表、领取、退回、排序、统计筛选
  */
-export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasksOptions) {
+export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions) {
   const { user } = useAuth();
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
@@ -28,6 +26,7 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
   const [taskTotal, setTaskTotal] = useState(0);
   const [receiveTaskLoading, setReceiveTaskLoading] = useState(false);
   const [rollbackTaskLoading, setRollbackTaskLoading] = useState(false);
+  const [pendingRollbackTask, setPendingRollbackTask] = useState<{ task: CuttingTask; onRolledBack?: () => void } | null>(null);
 
   // 排序
   const [cuttingSortField, setCuttingSortField] = useState<string>('receivedTime');
@@ -153,58 +152,39 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
     }
   };
 
-  // 退回任务
+  // 退回任务：进行前置校验，通过状态驱动父组件渲染弹窗
   const handleRollbackTask = async (task: CuttingTask, onRolledBack?: () => void) => {
     if (!task?.id) return;
     if (!(await ensureOrderUnlockedById((task as unknown as any)?.productionOrderNo))) return;
-    let reason = '';
-    modal.confirm({
-      width: '30vw',
-      title: '确认退回该裁剪任务？',
-      content: (
-        <div>
-          <div style={{ marginBottom: 8 }}>退回后会清空领取信息，并删除已生成的裁剪明细，可重新领取并重新生成。</div>
-          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
-          <Input.TextArea
-            placeholder="请输入退回原因"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => { reason = String(e?.target?.value || ''); }}
-          />
-        </div>
-      ),
-      okText: '确认退回',
-      okButtonProps: { danger: true, type: 'default' },
-      cancelText: '取消',
-      onOk: async () => {
-        const remark = String(reason || '').trim();
-        if (!remark) {
-          message.error('请输入退回原因');
-          return Promise.reject(new Error('请输入退回原因'));
-        }
-        setRollbackTaskLoading(true);
-        try {
-          const res = await api.post<{ code: number; message: string }>('/production/cutting-task/rollback', {
-            taskId: task.id,
-            operatorId: user?.id,
-            reason: remark,
-          });
-          if (res.code === 200) {
-            message.success('退回成功');
-            onRolledBack?.();
-            fetchTasks();
-          } else {
-            message.error(res.message || '退回失败');
-          }
-        } catch (err: any) {
-          message.error(`退回失败: ${err?.message || '未知错误'}`);
-        } finally {
-          setRollbackTaskLoading(false);
-        }
-      },
-    });
+    setPendingRollbackTask({ task, onRolledBack });
   };
+
+  const confirmRollback = async (reason: string) => {
+    if (!pendingRollbackTask) return;
+    const { task, onRolledBack } = pendingRollbackTask;
+    setRollbackTaskLoading(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>('/production/cutting-task/rollback', {
+        taskId: task.id,
+        operatorId: user?.id,
+        reason,
+      });
+      if (res.code === 200) {
+        message.success('退回成功');
+        setPendingRollbackTask(null);
+        onRolledBack?.();
+        fetchTasks();
+      } else {
+        message.error(res.message || '退回失败');
+      }
+    } catch (err: any) {
+      message.error(`退回失败: ${err?.message || '未知错误'}`);
+    } finally {
+      setRollbackTaskLoading(false);
+    }
+  };
+
+  const cancelRollback = () => setPendingRollbackTask(null);
 
   // 快速编辑保存
   const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: string }) => {
@@ -283,6 +263,8 @@ export function useCuttingTasks({ message, modal, isEntryPage }: UseCuttingTasks
     // 操作
     fetchTasks, handleReceiveTask, handleRollbackTask,
     receiveTaskLoading, rollbackTaskLoading,
+    // 退回弹窗状态（父组件渲染 RejectReasonModal）
+    pendingRollbackTask, confirmRollback, cancelRollback,
     // 冻结检测
     ensureOrderUnlockedById, isOrderFrozenById,
     // 快速编辑

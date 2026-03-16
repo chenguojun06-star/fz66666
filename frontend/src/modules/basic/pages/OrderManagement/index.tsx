@@ -408,9 +408,23 @@ const OrderManagement: React.FC = () => {
   };
 
   const calcBomBudgetQty = (record: StyleBom) => {
+    const loss = Number((record as Record<string, unknown>).lossRate) || 0;
+    const rawMap = (record as Record<string, unknown>).sizeUsageMap as string | undefined;
+    // 优先使用码数用量配比（来自纸样设置），按每个码分别匹配订单数量
+    if (rawMap) {
+      try {
+        const usageMap = JSON.parse(rawMap) as Record<string, number>;
+        let total = 0;
+        for (const [sz, usage] of Object.entries(usageMap)) {
+          const qty = getMatchedQty((record as Record<string, unknown>).color, sz);
+          total += usage * (1 + loss / 100) * qty;
+        }
+        if (total > 0 && Number.isFinite(total)) return Number(total.toFixed(4));
+      } catch { /* fall through */ }
+    }
+    // 兜底：使用平均单件用量
     const matchedQty = getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size);
     const usage = Number((record as Record<string, unknown>).usageAmount) || 0;
-    const loss = Number((record as Record<string, unknown>).lossRate) || 0;
     const required = usage * (1 + loss / 100) * matchedQty;
     if (!Number.isFinite(required)) return 0;
     return Number(required.toFixed(4));
@@ -511,13 +525,29 @@ const OrderManagement: React.FC = () => {
       const bomColor = String((bom as Record<string, unknown>).color || '').trim();
       const bomSize = String((bom as Record<string, unknown>).size || '').trim();
 
-      const matchedQty = getMatchedQty(bomColor, bomSize);
-
-      if (!matchedQty) continue;
-
-      const usage = Number((bom as Record<string, unknown>).usageAmount) || 0;
       const loss = Number((bom as Record<string, unknown>).lossRate) || 0;
-      const required = usage * (1 + loss / 100) * matchedQty;
+      const rawMap = (bom as Record<string, unknown>).sizeUsageMap as string | undefined;
+      let required = 0;
+
+      // 优先使用码数用量配比（来自纸样设置），按每个码分别匹配订单数量
+      if (rawMap) {
+        try {
+          const usageMap = JSON.parse(rawMap) as Record<string, number>;
+          for (const [sz, usage] of Object.entries(usageMap)) {
+            const qty = getMatchedQty(bomColor, sz);
+            required += usage * (1 + loss / 100) * qty;
+          }
+        } catch { /* fall through */ }
+      }
+
+      if (required <= 0) {
+        // 兜底：使用平均单件用量
+        const matchedQty = getMatchedQty(bomColor, bomSize);
+        if (!matchedQty) continue;
+        const usage = Number((bom as Record<string, unknown>).usageAmount) || 0;
+        required = usage * (1 + loss / 100) * matchedQty;
+      }
+
       if (!Number.isFinite(required) || required <= 0) continue;
 
       const key = [

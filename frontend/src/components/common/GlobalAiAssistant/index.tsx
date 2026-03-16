@@ -787,6 +787,7 @@ const GlobalAiAssistant: React.FC = () => {
     const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '');
     if (!cleanText.trim()) return;
 
+    // eslint-disable-next-line no-undef
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';

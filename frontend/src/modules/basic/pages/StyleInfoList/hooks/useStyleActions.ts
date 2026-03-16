@@ -1,5 +1,5 @@
-import React from 'react';
-import { App, Input } from 'antd';
+import { useState } from 'react';
+import { App } from 'antd';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 
@@ -8,60 +8,38 @@ import { StyleInfo } from '@/types/style';
  * 提供报废、置顶、打印等行操作
  */
 export const useStyleActions = (refreshCallback?: () => void) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
+  const [pendingScrapId, setPendingScrapId] = useState<string | null>(null);
+  const [scrapLoading, setScrapLoading] = useState(false);
 
   /**
-   * 报废款式
+   * 报废款式 - 打开确认弹窗
    */
-  const handleScrap = async (id: string) => {
-    return new Promise((resolve, reject) => {
-      let scrapReason = '';
-      modal.confirm({
-        width: '30vw',
-        title: '确认报废',
-        content: React.createElement(
-          'div',
-          null,
-          React.createElement(
-            'div',
-            { style: { marginBottom: 12 } },
-            '报废后记录会保留在当前页面，进度停止，并显示为开发样报废。'
-          ),
-          React.createElement(Input.TextArea, {
-            rows: 4,
-            placeholder: '请输入报废原因',
-            onChange: (e) => {
-              scrapReason = e.target.value;
-            },
-          })
-        ),
-        okText: '确认报废',
-        cancelText: '取消',
-        onOk: async () => {
-          try {
-            if (!scrapReason.trim()) {
-              reject(new Error('请输入报废原因'));
-              return Promise.reject(new Error('请输入报废原因'));
-            }
-            const res = await api.post(`/style/info/${id}/scrap`, { reason: scrapReason.trim() });
-            if (res.code === 200) {
-              message.success('报废成功');
-              refreshCallback?.();
-              resolve(true);
-            } else {
-              message.error(res.message || '报废失败');
-              reject(new Error(res.message || '报废失败'));
-            }
-          } catch (error: any) {
-            message.error(error?.message || '报废失败');
-            reject(error);
-          }
-        },
-        onCancel: () => {
-          resolve(false);
-        }
-      });
-    });
+  const handleScrap = (id: string) => {
+    setPendingScrapId(id);
+  };
+
+  const confirmScrap = async (reason: string) => {
+    if (!pendingScrapId) return;
+    setScrapLoading(true);
+    try {
+      const res = await api.post(`/style/info/${pendingScrapId}/scrap`, { reason });
+      if (res.code === 200) {
+        message.success('报废成功');
+        setPendingScrapId(null);
+        refreshCallback?.();
+      } else {
+        message.error(res.message || '报废失败');
+      }
+    } catch (error: any) {
+      message.error(error?.message || '报废失败');
+    } finally {
+      setScrapLoading(false);
+    }
+  };
+
+  const cancelScrap = () => {
+    setPendingScrapId(null);
   };
 
   /**
@@ -99,6 +77,10 @@ export const useStyleActions = (refreshCallback?: () => void) => {
 
   return {
     handleScrap,
+    confirmScrap,
+    cancelScrap,
+    pendingScrapId,
+    scrapLoading,
     handleToggleTop,
     handlePrint
   };

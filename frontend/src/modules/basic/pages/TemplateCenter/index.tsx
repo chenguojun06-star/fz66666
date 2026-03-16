@@ -18,6 +18,7 @@ import ApplyToStyleModal from './components/ApplyToStyleModal';
 import EditTemplateModal from './components/EditTemplateModal';
 import StyleProcessKnowledgeTab from './components/StyleProcessKnowledgeTab';
 import type { EditTemplateModalRef } from './components/EditTemplateModal';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
 import type { TemplateLibraryRecord } from './utils/templateUtils';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -81,6 +82,14 @@ const TemplateCenter: React.FC = () => {
 
   // 多码单价相关状态
 
+  // 退回弹窗状态
+  const [rollbackTarget, setRollbackTarget] = useState<TemplateLibrary | null>(null);
+  const [rollbackLoading, setRollbackLoading] = useState(false);
+
+  // 删除弹窗状态
+  const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TemplateLibrary | null>(null);
+  const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);
+
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
@@ -94,42 +103,24 @@ const TemplateCenter: React.FC = () => {
       message.error('仅管理员可退回修改');
       return;
     }
-    let reason = '';
-    modal.confirm({
-      title: '退回该模板为可编辑？',
-      width: '30vw',
-      content: (
-        <div>
-          <div style={{ marginBottom: 8 }}>{String(row.templateName || '')}</div>
-          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
-          <Input.TextArea
-            placeholder="请输入退回原因"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => {
-              reason = String(e?.target?.value || '');
-            }}
-          />
-        </div>
-      ),
-      okText: '确认退回',
-      cancelText: '取消',
-      onOk: async () => {
-        const remark = String(reason || '').trim();
-        if (!remark) {
-          message.error('请输入退回原因');
-          return Promise.reject(new Error('请输入退回原因'));
-        }
-        const res = await api.post<{ code: number; message: string }>(`/template-library/${row.id}/rollback`, { reason: remark });
-        if (res.code !== 200) {
-          message.error(res.message || '退回失败');
-          return;
-        }
-        message.success('已退回，可修改');
-        fetchList({ page: 1 });
-      },
-    });
+    setRollbackTarget(row);
+  };
+
+  const handleRollbackConfirm = async (reason: string) => {
+    if (!rollbackTarget?.id) return;
+    setRollbackLoading(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>(`/template-library/${rollbackTarget.id}/rollback`, { reason });
+      if (res.code !== 200) {
+        message.error(res.message || '退回失败');
+        return;
+      }
+      message.success('已退回，可修改');
+      setRollbackTarget(null);
+      fetchList({ page: 1 });
+    } finally {
+      setRollbackLoading(false);
+    }
   };
 
   const fetchStyleNoOptions = useCallback(async (keyword?: string) => {
@@ -569,56 +560,33 @@ const TemplateCenter: React.FC = () => {
     );
   };
 
-  const handleDelete = async (row: TemplateLibrary) => {
+  const handleDelete = (row: TemplateLibrary) => {
     if (!row?.id) return;
+    setPendingDeleteTemplate(row);
+  };
 
-    let deleteReason = '';
-
-    modal.confirm({
-      width: '30vw',
-      title: '确认删除该模板？',
-      content: (
-        <div>
-          <div style={{ marginBottom: '12px', color: 'var(--color-text-secondary)' }}>{row.templateName || ''}</div>
-          <div style={{ marginBottom: '8px' }}>
-            <span style={{ color: 'red' }}>*</span> 请输入删除原因：
-          </div>
-          <Input.TextArea
-            placeholder="请输入删除原因（必填）"
-            rows={3}
-            maxLength={200}
-            showCount
-            onChange={(e) => { deleteReason = e.target.value.trim(); }}
-            onPressEnter={(e) => e.stopPropagation()}
-          />
-        </div>
-      ),
-      okText: '删除',
-      okButtonProps: { danger: true, type: 'default' },
-      cancelText: '取消',
-      onOk: async () => {
-        if (!deleteReason) {
-          message.warning('请输入删除原因');
-          return Promise.reject();
-        }
-        try {
-          const res = await api.delete<{ code: number; message: string }>(`/template-library/${row.id}`, {
-            params: { reason: deleteReason }
-          });
-          if (res.code !== 200) {
-            message.error(res.message || '删除失败');
-            return;
-          }
-          message.success('已删除');
-          fetchList({ page: 1 });
-        } catch (e: any) {
-          const msg = e instanceof Error
-            ? e.message
-            : (typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
-          message.error(msg || '删除失败');
-        }
-      },
-    });
+  const handleDeleteConfirm = async (reason: string) => {
+    if (!pendingDeleteTemplate?.id) return;
+    setDeleteTemplateLoading(true);
+    try {
+      const res = await api.delete<{ code: number; message: string }>(`/template-library/${pendingDeleteTemplate.id}`, {
+        params: { reason }
+      });
+      if (res.code !== 200) {
+        message.error(res.message || '删除失败');
+        return;
+      }
+      message.success('已删除');
+      setPendingDeleteTemplate(null);
+      fetchList({ page: 1 });
+    } catch (e: any) {
+      const msg = e instanceof Error
+        ? e.message
+        : (typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
+      message.error(msg || '删除失败');
+    } finally {
+      setDeleteTemplateLoading(false);
+    }
   };
 
   const columns: ColumnsType<TemplateLibraryRecord> = [
@@ -931,6 +899,28 @@ const TemplateCenter: React.FC = () => {
       >
         {renderVisualContent()}
       </ResizableModal>
+
+      {/* 退回原因弹窗 */}
+      <RejectReasonModal
+        open={rollbackTarget !== null}
+        title={`退回该模板为可编辑？`}
+        description={String(rollbackTarget?.templateName || '')}
+        loading={rollbackLoading}
+        onOk={handleRollbackConfirm}
+        onCancel={() => setRollbackTarget(null)}
+      />
+
+      {/* 删除原因弹窗 */}
+      <RejectReasonModal
+        open={pendingDeleteTemplate !== null}
+        title="确认删除该模板？"
+        description={String(pendingDeleteTemplate?.templateName || '')}
+        fieldLabel="删除原因"
+        okText="删除"
+        loading={deleteTemplateLoading}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setPendingDeleteTemplate(null)}
+      />
 
       {/* 按款号批量刷新工序进度单价 */}
       <SyncProcessPriceModal

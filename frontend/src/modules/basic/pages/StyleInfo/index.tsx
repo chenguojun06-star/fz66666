@@ -425,6 +425,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StylePatternTab
                     styleId={currentStyle?.id}
+                    sizeColorConfig={sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
                     patternAssignee={(currentStyle as any)?.patternAssignee}
                     patternStartTime={(currentStyle as any)?.patternStartTime}

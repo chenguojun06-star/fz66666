@@ -358,10 +358,11 @@ const _FinishedInventory: React.FC = () => {
           </div>
           {record.factoryName || record.orgPath || record.parentOrgUnitName || record.factoryType ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
-                工厂：{record.factoryName || '-'}
-                {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ marginLeft: 8 }}>内部</Tag> : null}
-                {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ marginLeft: 8 }}>外部</Tag> : null}
+              <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                工厂：
+                {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+                {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+                {record.factoryName || '-'}
               </div>
               {record.orgPath || record.parentOrgUnitName ? (
                 <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>

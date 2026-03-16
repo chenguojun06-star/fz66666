@@ -64,6 +64,11 @@ public class StyleBom {
     private BigDecimal usageAmount;
 
     /**
+     * 码数用量配比（JSON，格式：{"S":1.5,"M":1.6,"L":1.7}，为空则统一用 usageAmount）
+     */
+    private String sizeUsageMap;
+
+    /**
      * 损耗率(%)
      */
     private BigDecimal lossRate;

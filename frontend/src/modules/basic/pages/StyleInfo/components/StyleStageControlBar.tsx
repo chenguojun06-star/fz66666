@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { App, Button, Input, Space, Tag } from 'antd';
+import { App, Button, Space, Tag } from 'antd';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import api from '@/utils/api';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 
 interface Props {
   /** 阶段名称（如：纸样开发、BOM清单等） */
@@ -57,10 +58,12 @@ const StyleStageControlBar: React.FC<Props> = ({
   onBeforeComplete,
   extraInfo,
 }) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const { user } = useAuth();
   const [saving, setSaving] = React.useState(false);
   const [resolvedStyleNo, setResolvedStyleNo] = React.useState('');
+  const [rejectModalOpen, setRejectModalOpen] = React.useState(false);
+  const [rejectLoading, setRejectLoading] = React.useState(false);
 
   const styleIdKey = useMemo(() => String(styleId ?? '').trim(), [styleId]);
 
@@ -167,40 +170,16 @@ const StyleStageControlBar: React.FC<Props> = ({
   };
 
   // 退回修改（维护）
-  const handleRollback = () => {
-    let reason = '';
-    modal.confirm({
-      width: '30vw',
-      title: `退回修改 - ${stageName}`,
-      content: (
-        <div>
-          <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
-            退回后将重新进入开发状态，需要重新完成。
-          </div>
-          <div style={{ marginBottom: 8, fontWeight: 600 }}>退回原因</div>
-          <Input.TextArea
-            placeholder="请输入退回原因（必填）"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => {
-              reason = String(e?.target?.value || '');
-            }}
-          />
-        </div>
-      ),
-      okText: '确认退回',
-      cancelText: '取消',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        const remark = String(reason || '').trim();
-        if (!remark) {
-          message.error('请输入退回原因');
-          return Promise.reject(new Error('请输入退回原因'));
-        }
-        await callApi('reset', remark);
-      },
-    });
+  const handleRollback = () => setRejectModalOpen(true);
+
+  const handleRejectConfirm = async (reason: string) => {
+    setRejectLoading(true);
+    try {
+      await callApi('reset', reason);
+      setRejectModalOpen(false);
+    } finally {
+      setRejectLoading(false);
+    }
   };
 
   return (
@@ -238,6 +217,15 @@ const StyleStageControlBar: React.FC<Props> = ({
         {/* 额外信息 */}
         {extraInfo}
       </div>
+
+      <RejectReasonModal
+        open={rejectModalOpen}
+        title={`退回修改 - ${stageName}`}
+        description="退回后将重新进入开发状态，需要重新完成。"
+        loading={rejectLoading}
+        onOk={handleRejectConfirm}
+        onCancel={() => setRejectModalOpen(false)}
+      />
 
       {/* 右侧：操作按钮 */}
       <Space size={8} wrap>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { StyleBom } from '@/types/style';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 import { useAuth } from '@/utils/AuthContext';
@@ -69,6 +70,10 @@ export function useCuttingBundles({
   const [entryPurchaseLoading, setEntryPurchaseLoading] = useState(false);
   const [entryPurchases, setEntryPurchases] = useState<MaterialPurchase[]>([]);
   const entryPurchaseReqSeq = useRef(0);
+
+  // 纸样用量（来自款式 BOM sizeUsageMap，按码 m/件）
+  const [entrySizeUsageMap, setEntrySizeUsageMap] = useState<Record<string, number>>({});
+  const entryBomReqSeq = useRef(0);
 
   // 订单明细
   const [entryOrderDetailLoading, setEntryOrderDetailLoading] = useState(false);
@@ -325,6 +330,39 @@ export function useCuttingBundles({
     }
   );
 
+  // 加载款式 BOM 纸样用量（sizeUsageMap）
+  useEffect(() => {
+    if (!isEntryPage) return;
+    const styleId = String((activeTask as unknown as any)?.styleId || '').trim();
+    const seq = (entryBomReqSeq.current += 1);
+    if (!styleId) { setEntrySizeUsageMap({}); return; }
+    void api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?styleId=${styleId}`)
+      .then((res) => {
+        if (seq !== entryBomReqSeq.current) return;
+        if (res.code !== 200) { setEntrySizeUsageMap({}); return; }
+        const boms = res.data || [];
+        // 取第一个面料类型中含有 sizeUsageMap 的 BOM 记录
+        const fabricBom = boms.find(
+          (b) => String(b?.materialType || '').startsWith('fabric') && b?.sizeUsageMap
+        );
+        if (!fabricBom?.sizeUsageMap) { setEntrySizeUsageMap({}); return; }
+        try {
+          const raw = typeof fabricBom.sizeUsageMap === 'string'
+            ? JSON.parse(fabricBom.sizeUsageMap as string)
+            : fabricBom.sizeUsageMap;
+          const clean: Record<string, number> = {};
+          for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            const n = Number(v);
+            if (!isNaN(n) && n > 0) clean[k] = n;
+          }
+          setEntrySizeUsageMap(clean);
+        } catch {
+          setEntrySizeUsageMap({});
+        }
+      })
+      .catch(() => { if (seq === entryBomReqSeq.current) setEntrySizeUsageMap({}); });
+  }, [isEntryPage, (activeTask as unknown as any)?.styleId]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   // 加载面辅料采购
   useEffect(() => {
     if (!isEntryPage) return;
@@ -432,6 +470,12 @@ export function useCuttingBundles({
     entryPurchaseLoading, entryPurchases,
     // 订单明细
     entryOrderDetailLoading, entryColorText, entrySizeItems,
+    // 纸样用量
+    entrySizeUsageMap,
+    // 主面料已到货量（m），由采购记录汇总
+    entryMainFabricArrived: entryPurchases
+      .filter((p: any) => String((p as any)?.materialType || '').startsWith('fabric'))
+      .reduce((sum: number, p: any) => sum + (Number((p as any).arrivedQuantity) || 0), 0),
   };
 }
 

@@ -20,6 +20,7 @@ import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 
 import '../../../styles.css';
 
@@ -30,7 +31,7 @@ import {
   useCuttingCreateTask,
 } from './hooks';
 import type { CuttingBundleRow } from './hooks';
-import { CuttingCreateTaskModal, CuttingPrintPreviewModal } from './components';
+import { CuttingCreateTaskModal, CuttingPrintPreviewModal, CuttingRatioPanel } from './components';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -58,7 +59,7 @@ const CuttingManagement: React.FC = () => {
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
 
   // ─── Hooks ───────────────────────────────────────────────
-  const tasks = useCuttingTasks({ message, modal, isEntryPage });
+  const tasks = useCuttingTasks({ message, isEntryPage });
 
   const bundles = useCuttingBundles({
     message, modal, activeTask, orderId, isEntryPage,
@@ -616,65 +617,24 @@ const CuttingManagement: React.FC = () => {
 
                     <Form layout="vertical">
                       {activeTask?.status === 'bundled' ? null : (
-                        <>
-                          {bundles.bundlesInput.map((row, index) => (
-                            <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                              <Input
-                                placeholder="颜色"
-                                style={{ width: 140 }}
-                                value={row.color}
-                                disabled={bundles.importLocked}
-                                onChange={(e) => bundles.handleChangeRow(index, 'color', e.target.value)}
-                              />
-                              <Input
-                                placeholder="尺码"
-                                style={{ width: 120 }}
-                                value={row.size}
-                                disabled={bundles.importLocked}
-                                onChange={(e) => bundles.handleChangeRow(index, 'size', e.target.value)}
-                              />
-                              <Input
-                                placeholder="SKU"
-                                style={{ width: 200 }}
-                                value={row.skuNo}
-                                disabled={bundles.importLocked}
-                                onChange={(e) => bundles.handleChangeRow(index, 'skuNo', e.target.value)}
-                              />
-                              <InputNumber
-                                placeholder="数量"
-                                style={{ width: 120 }}
-                                min={0}
-                                value={row.quantity}
-                                onChange={(value) => bundles.handleChangeRow(index, 'quantity', value || 0)}
-                              />
-                              <Button onClick={() => bundles.handleRemoveRow(index)} disabled={bundles.importLocked || bundles.bundlesInput.length === 1}>
-                                删除
-                              </Button>
-                            </Space>
-                          ))}
-                          <Form.Item>
-                            <Space>
-                              <Button type="dashed" onClick={bundles.handleAddRow} disabled={bundles.importLocked}>
-                                新增一行
-                              </Button>
-                              <Button type="dashed" onClick={bundles.handleAutoImport} disabled={!activeTask}>
-                                一键导入(20件/扎)
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  bundles.setImportLocked(false);
-                                  bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
-                                }}
-                                disabled={!activeTask}
-                              >
-                                清空
-                              </Button>
-                              <Button type="primary" loading={bundles.generateLoading} onClick={bundles.handleGenerate}>
-                                生成菲号
-                              </Button>
-                            </Space>
-                          </Form.Item>
-                        </>
+                        <CuttingRatioPanel
+                          entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
+                          entrySizeItems={bundles.entrySizeItems}
+                          defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
+                          sizeUsageMap={bundles.entrySizeUsageMap}
+                          arrivedFabricM={bundles.entryMainFabricArrived}
+                          generating={bundles.generateLoading}
+                          disabled={bundles.importLocked}
+                          onConfirm={(rows) => {
+                            bundles.setBundlesInput(rows);
+                            // 等 state 落定后触发生成
+                            setTimeout(() => bundles.handleGenerate(), 0);
+                          }}
+                          onClear={() => {
+                            bundles.setImportLocked(false);
+                            bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
+                          }}
+                        />
                       )}
                     </Form>
 
@@ -805,6 +765,16 @@ const CuttingManagement: React.FC = () => {
               creatorName: (activeTask as any).creatorName,
               orderCreatorName: (activeTask as any).orderCreatorName,
             } : undefined}
+          />
+
+          {/* 裁剪任务退回弹窗 */}
+          <RejectReasonModal
+            open={tasks.pendingRollbackTask !== null}
+            title="确认退回该裁剪任务？"
+            description="退回后会清空领取信息，并删除已生成的裁剪明细，可重新领取并重新生成。"
+            loading={tasks.rollbackTaskLoading}
+            onOk={tasks.confirmRollback}
+            onCancel={tasks.cancelRollback}
           />
 
         </Card>

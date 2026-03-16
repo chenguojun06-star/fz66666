@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Popover, Tag, Tooltip } from 'antd';
+import { Badge, Popover, Space, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -71,15 +71,15 @@ const formatCompletionTime = (timeStr: string): string => {
   } catch { return ''; }
 };
 
-/** 根据交期计算水晶球颜色 */
+/** 根据交期计算水晶球颜色（与 LiquidProgressBar 卡片条颜色保持一致） */
 const getNodeColor = (expectedShipDate: any, isColor2 = false): string => {
-  if (!expectedShipDate) return isColor2 ? '#6ee7b7' : '#10b981';
+  if (!expectedShipDate) return isColor2 ? '#95de64' : '#52c41a';
   const now = new Date();
   const delivery = new Date(expectedShipDate as string);
   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return isColor2 ? '#f87171' : '#dc2626';
-  if (diffDays <= 3) return isColor2 ? '#fbbf24' : '#d97706';
-  return isColor2 ? '#6ee7b7' : '#10b981';
+  if (diffDays < 0) return isColor2 ? '#ff7875' : '#ff4d4f';
+  if (diffDays <= 3) return isColor2 ? '#ffc53d' : '#faad14';
+  return isColor2 ? '#95de64' : '#52c41a';
 };
 
 interface UseProgressColumnsParams {
@@ -271,11 +271,11 @@ export const useProgressColumns = ({
       ellipsis: true,
       render: (v: any, record: ProductionOrder) => (
         <div style={{ lineHeight: 1.3 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Space size={4} style={{ flexWrap: 'nowrap' }}>
+            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
             <span>{v || '-'}</span>
-            {record.factoryType === 'INTERNAL' ? <Tag color="orange" style={{ margin: 0 }}>内部</Tag> : null}
-            {record.factoryType === 'EXTERNAL' ? <Tag color="purple" style={{ margin: 0 }}>外部</Tag> : null}
-          </div>
+          </Space>
           {record.orgPath ? (
             <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>{record.orgPath}</div>
           ) : null}
@@ -595,8 +595,8 @@ export const useProgressColumns = ({
                         nodeName={nodeName}
                         text={`${completedQty}/${totalQty}`}
                         paused={frozen}
-                        color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
-                        color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
+                        color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
+                        color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
                       />
                     </DefectTracePopover>
                   ) : (
@@ -606,8 +606,8 @@ export const useProgressColumns = ({
                       nodeName={nodeName}
                       text={`${completedQty}/${totalQty}`}
                       paused={frozen}
-                      color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate)}
-                      color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate, true)}
+                      color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
+                      color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
                     />
                   )}
                 </div>

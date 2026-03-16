@@ -50,6 +50,7 @@ import { useInlineNodeOps } from './hooks/useInlineNodeOps';
 import { useOpenScan } from './hooks/useOpenScan';
 import { useOrderProgress } from './hooks/useOrderProgress';
 import { useCloseOrder } from './hooks/useCloseOrder';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { useScanFeedback } from './hooks/useScanFeedback';
 import { useNodeDetail } from './hooks/useNodeDetail';
 import { usePrintFlow } from './hooks/usePrintFlow';
@@ -422,12 +423,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setOrders(records);
         setTotal(result.data.total || 0);
         if (showSmartErrorNotice) setSmartError(null);
-        // 每次刷新订单列表时清空进度球缓存，确保扫码后能看到最新数据
-        clearAllBoardCache();
-        clearBoardStatsTimestamps();
-        // 同时清空工序节点缓存，确保模板改词汇后刷新能重新加载最新节点配置
-        setProgressNodesByStyleNo({});
-        progressNodesByStyleNoRef.current = {};
+        // 仅非静默刷新（用户手动、换页、换过滤条件）才清空进度球缓存
+        // silent=true（轮询）保留旧缓存，避免进度球瞬间闪白再回来
+        if (!silent) {
+          clearAllBoardCache();
+          clearBoardStatsTimestamps();
+          // 同时清空工序节点缓存，确保模板改词汇后刷新能重新加载最新节点配置
+          setProgressNodesByStyleNo({});
+          progressNodesByStyleNoRef.current = {};
+        }
         const styleNos = Array.from(
           new Set(
             records
@@ -930,10 +934,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
 
 
-  const handleCloseOrder = useCloseOrder({
+  const { handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder } = useCloseOrder({
     isSupervisorOrAbove,
     message,
-    Modal,
     productionOrderApi,
     fetchOrders,
     fetchOrderDetail,
@@ -1238,7 +1241,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           {viewMode === 'list' ? (
             <ResizableTable
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-              loading={loading}
+              loading={loading && orders.length === 0}
               columns={columns}
               dataSource={orders}
               pagination={{
@@ -1255,7 +1258,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           ) : (
             <UniversalCardView
               dataSource={sortedOrders}
-              loading={loading}
+              loading={loading && orders.length === 0}
               columns={6}
               coverField="styleCover"
               titleField="orderNo"
@@ -1567,7 +1570,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           {viewMode === 'list' ? (
             <ResizableTable
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-              loading={loading}
+              loading={loading && orders.length === 0}
               columns={columns}
               dataSource={smartQueueOrders}
               rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
@@ -1585,7 +1588,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           ) : (
             <UniversalCardView
               dataSource={smartQueueFilter === 'all' ? sortedOrders : sortedOrders.filter((o) => smartQueueOrders.some((s) => String(s.id || '') === String(o.id || '')))}
-              loading={loading}
+              loading={loading && orders.length === 0}
               columns={6}
               coverField="styleCover"
               titleField="orderNo"
@@ -1758,6 +1761,27 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         onSaved={() => {
           void fetchOrders();
         }}
+      />
+
+      <RejectReasonModal
+        open={pendingCloseOrder !== null}
+        title={`确认关单：${pendingCloseOrder?.orderNo || ''}`}
+        description={pendingCloseOrder ? (
+          <div>
+            <div>订单数量：{pendingCloseOrder.orderQty}</div>
+            <div>关单阈值（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
+            <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
+            <div>当前合格入库：{pendingCloseOrder.warehousingQualified}</div>
+            <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
+          </div>
+        ) : undefined}
+        fieldLabel="关闭原因（可选，将记录到操作日志）"
+        required={false}
+        okDanger={false}
+        okText="确认关单"
+        loading={closeOrderLoading}
+        onOk={confirmCloseOrder}
+        onCancel={cancelCloseOrder}
       />
 
     </div>
