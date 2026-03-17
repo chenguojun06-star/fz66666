@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Dropdown, Input, Select, Tag, Form, message, Modal } from 'antd';
+import { Button, Card, Dropdown, Select, Tag, Form, message } from 'antd';
 
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -296,7 +296,7 @@ const MaterialReconciliation: React.FC = () => {
     setPendingRejectIds(normalized);
   };
 
-  const handleRejectConfirm = async (remark: string) => {
+  const handleRejectConfirm = async (_remark: string) => {
     if (!pendingRejectIds) return;
     setRejectIdsLoading(true);
     setApprovalSubmitting(true);

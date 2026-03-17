@@ -69,6 +69,8 @@ public interface DashboardQueryService {
 
     long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end);
 
+    long countOutstockBetween(LocalDateTime start, LocalDateTime end);
+
     // 折线图数据查询方法
     /**
      * 获取指定日期范围内每天的订单数量

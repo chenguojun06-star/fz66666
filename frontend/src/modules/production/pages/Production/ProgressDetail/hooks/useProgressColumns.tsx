@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Popover, Space, Tag, Tooltip } from 'antd';
-import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { Popover, Tag, Tooltip } from 'antd';
+import { ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
@@ -394,8 +394,6 @@ export const useProgressColumns = ({
         const styleNameStr = String(record.styleName || '').trim();
         const styleNoStr = String(record.styleNo || '').trim();
         const createTimeStr = formatTime(record.createTime);
-        const deliveryDateStr = formatTime(getOrderShipTime(record));
-        const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate);
         const factory = String(record.factoryName || '').trim();
         const factoryType = (record as any).factoryType as string | undefined;
 

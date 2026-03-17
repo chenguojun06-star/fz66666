@@ -103,7 +103,6 @@ export default function SystemIssueBoard() {
     setError(null);
     try {
       const raw = await systemIssueApi.collect();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const anyRaw = raw as any;
       const resolved: SystemIssueSummary =
         typeof anyRaw?.errorCount === 'number' ? anyRaw :
@@ -128,7 +127,6 @@ export default function SystemIssueBoard() {
     setFeLoading(true);
     setFeError(null);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw = await frontendErrorApi.recent(100) as any;
       const list: FrontendErrorRecord[] = Array.isArray(raw) ? raw
         : Array.isArray(raw?.data) ? raw.data : [];

@@ -507,7 +507,6 @@ const ProductionList: React.FC = () => {
   useEffect(() => {
     if (productionList.length > 0) void fetchAnomalies();
   // productionList.length 变化是触发时机，fetchAnomalies 是稳定回调
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productionList.length]);
 
   // URL 参数解析

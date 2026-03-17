@@ -124,7 +124,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     } else if (e.key === 'Enter' && items[activeIdx]) {
       navigateTo(items[activeIdx]);
     }
-  }, [items, activeIdx, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items, activeIdx, onClose]);
 
   // 滚动当前 item 到视图内
   useEffect(() => {

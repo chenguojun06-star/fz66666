@@ -76,7 +76,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
     if (entrySizeItems.length > 0) {
       setRatioRows(buildInitialRows(entrySizeItems));
     }
-  }, [entrySizeItems.map((x) => x.size).join(',')]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [entrySizeItems.map((x) => x.size).join(',')]);
 
   useEffect(() => {
     if (defaultTotalQty > 0) setTotalQty(defaultTotalQty);

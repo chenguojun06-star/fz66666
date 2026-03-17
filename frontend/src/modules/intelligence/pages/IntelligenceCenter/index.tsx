@@ -8,6 +8,7 @@ import {
   DownOutlined, UpOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
+import api from '@/utils/api';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
@@ -25,6 +26,7 @@ import MonthlyBizSummary from './MonthlyBizSummary';
 import WhatIfSimPanel from './WhatIfSimPanel';
 import AgentGraphPanel from '../../components/AgentGraphPanel';
 import ABTestStatsPanel from '../../components/ABTestStatsPanel';
+import StageCapsulePanel from './components/StageCapsulePanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
 import './styles.css';
@@ -39,6 +41,25 @@ const IntelligenceCenter: React.FC = () => {
   const { isSuperAdmin, isTenantOwner, user } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+
+  /* ── 今日日报（下单数/入库数/出库数） ── */
+  const [todayBrief, setTodayBrief] = useState({ todayOrderCount: 0, todayInboundCount: 0, todayOutboundCount: 0 });
+  useEffect(() => {
+    const ac = new AbortController();
+    (api.get('/dashboard/daily-brief', { signal: ac.signal }) as Promise<any>)
+      .then((res: any) => {
+        const d = res?.data ?? res;
+        if (d) {
+          setTodayBrief({
+            todayOrderCount: Number(d.todayOrderCount ?? 0),
+            todayInboundCount: Number(d.todayInboundCount ?? 0),
+            todayOutboundCount: Number(d.todayOutboundCount ?? 0),
+          });
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
 
   /* ── 主面板折叠/展开（localStorage 持久化） ── */
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>(() => {
@@ -70,7 +91,6 @@ const IntelligenceCenter: React.FC = () => {
       // setInlineQuery(q); // removed AI panel
       setSearchParams({}, { replace: true }); // 消费后清除 URL 参数，避免刷新重复触发
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ⌘K / Ctrl+K：打开全局搜索 */
@@ -142,14 +162,14 @@ const IntelligenceCenter: React.FC = () => {
     }
   }, [reload]);
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
 
   /* ── KPI 指标（委托给 useKpiMetrics） ── */
   const {
-    kpiFlash, kpiDelta, kpiHistory, currentKpiMetrics, factoryCapMap,
+    kpiFlash, kpiDelta, kpiHistory: _kpiHistory, currentKpiMetrics, factoryCapMap,
     formatDeltaText, renderDeltaBadge, getKpiTrend,
     minFactorySilentMinutes, overdueRisk, orderStats, factoryBottleneck,
-    alertCount, healWarnCount, totalWarn, tickerItems, handleTickerClick,
+    alertCount: _alertCount, healWarnCount: _healWarnCount, totalWarn, tickerItems, handleTickerClick,
   } = useKpiMetrics(data);
 
   /* 格式化时钟 */
@@ -254,6 +274,11 @@ const IntelligenceCenter: React.FC = () => {
         {/* ╔══════════════════════════════════════════════╗
             ║   第一行：6 大核心 KPI 闪光数字卡            ║
             ╚══════════════════════════════════════════════╝ */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px 4px', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleCollapse('kpiRow6')}>
+          <span style={{ color: '#5a7a9a', fontSize: 11 }}>核心 KPI 指标</span>
+          <CollapseChevron panelKey="kpiRow6" />
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['kpiRow6'] ? 0 : 420, transition: 'max-height 0.28s ease' }}>
         <div className={`cockpit-grid-6${kpiFlash ? ' kpi-flash' : ''}`}>
 
           {/* 今日生产扫码量 */}
@@ -406,6 +431,7 @@ const IntelligenceCenter: React.FC = () => {
           </Popover>
 
         </div>
+        </div>{/* /kpiRow6-collapsible */}
         {/* ╔══════════════════════════════════════════════╗
             ║   补充 KPI：生产中订单数 + 工厂全景         ║
             ╚══════════════════════════════════════════════╝ */}
@@ -413,8 +439,10 @@ const IntelligenceCenter: React.FC = () => {
 
           {/* 生产中订单数 —— 扩充版 */}
           <div className="c-card" style={{ padding: '12px 14px' }}>
-            <div className="c-kpi-label"><LiveDot size={7} color="#f7a600" />生产中订单</div>
-
+            <div className="c-kpi-label" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('productionOrders')}>
+              <LiveDot size={7} color="#f7a600" />生产中订单<CollapseChevron panelKey="productionOrders" />
+            </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
             {/* 主数字 + 总件数 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
               <span style={{ color: '#f7a600', fontSize: 36, fontWeight: 700, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
@@ -422,27 +450,76 @@ const IntelligenceCenter: React.FC = () => {
               </span>
               <span style={{ color: '#7dacc4', fontSize: 12 }}>单在制</span>
               <span style={{ marginLeft: 'auto', color: '#7dacc4', fontSize: 12 }}>
-                总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 14 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
+                总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 22, fontWeight: 700 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
               </span>
+            </div>
+
+            {/* 今日统计：下单 / 入库 / 出库 */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <div
+                onClick={() => navigate('/production')}
+                style={{ flex: 1, background: 'rgba(247,166,0,0.1)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(247,166,0,0.25)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.22)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.1)')}
+              >
+                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日下单</div>
+                <div style={{ color: '#f7a600', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}</div>
+                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>单</div>
+              </div>
+              <div
+                onClick={() => navigate('/production/warehousing')}
+                style={{ flex: 1, background: 'rgba(57,255,20,0.08)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(57,255,20,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.18)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
+              >
+                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日入库</div>
+                <div style={{ color: '#39ff14', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayInboundCount}</div>
+                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>票</div>
+              </div>
+              <div
+                onClick={() => navigate('/warehouse/finished')}
+                style={{ flex: 1, background: 'rgba(0,229,255,0.08)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(0,229,255,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.18)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
+              >
+                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日出库</div>
+                <div style={{ color: '#00e5ff', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayOutboundCount}</div>
+                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>票</div>
+              </div>
             </div>
 
             {/* 三色统计块：逾期 / 高风险 / 关注 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 10 }}>
-              <div style={{ background: 'rgba(255,65,54,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(255,65,54,0.3)' }}>
+              <div
+                onClick={() => navigate('/production')}
+                style={{ background: 'rgba(255,65,54,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(255,65,54,0.3)', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,65,54,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,65,54,0.12)')}
+              >
                 <div style={{ color: '#ff6b6b', fontSize: 10 }}>已逾期</div>
                 <div style={{ color: '#ff4136', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
                   {overdueRisk.overdue.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
                 </div>
                 <div style={{ color: '#ff8080', fontSize: 11, marginTop: 2 }}>{orderStats.overdueQty.toLocaleString()} 件</div>
               </div>
-              <div style={{ background: 'rgba(247,166,0,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(247,166,0,0.3)' }}>
+              <div
+                onClick={() => navigate('/production')}
+                style={{ background: 'rgba(247,166,0,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(247,166,0,0.3)', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.12)')}
+              >
                 <div style={{ color: '#f7a600', fontSize: 10 }}>高风险</div>
                 <div style={{ color: '#f7a600', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
                   {overdueRisk.highRisk.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
                 </div>
                 <div style={{ color: '#f7a600', fontSize: 11, marginTop: 2 }}>{orderStats.highRiskQty.toLocaleString()} 件</div>
               </div>
-              <div style={{ background: 'rgba(0,180,255,0.08)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(0,180,255,0.2)' }}>
+              <div
+                onClick={() => navigate('/production')}
+                style={{ background: 'rgba(0,180,255,0.08)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(0,180,255,0.2)', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.18)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.08)')}
+              >
                 <div style={{ color: '#7dacc4', fontSize: 10 }}>关注中</div>
                 <div style={{ color: '#7dacc4', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
                   {overdueRisk.watch.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
@@ -476,12 +553,15 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-delta-row" style={{ marginTop: 8 }}>
               {renderDeltaBadge(kpiDelta.productionOrderCount, { flatText: '订单稳定', suffix: '单' })}
             </div>
+            </div>{/* /productionOrders-collapsible */}
           </div>
 
           {/* 工厂全景 —— 扩充版 */}
           <div className="c-card" style={{ padding: '12px 14px' }}>
-            <div className="c-kpi-label"><LiveDot size={7} color="#00b4ff" />工厂全景</div>
-
+            <div className="c-kpi-label" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('factoryOverview')}>
+              <LiveDot size={7} color="#00b4ff" />工厂全景<CollapseChevron panelKey="factoryOverview" />
+            </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['factoryOverview'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             {/* 主数字 + 状态概要 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
               <span style={{ color: '#00e5ff', fontSize: 36, fontWeight: 700, textShadow: '0 0 14px #00b4ff88', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
@@ -560,8 +640,13 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-delta-row" style={{ marginTop: 8 }}>
               {renderDeltaBadge(kpiDelta.totalFactories, { flatText: '工厂稳定', suffix: '家' })}
             </div>
+            </div>{/* /factoryOverview-collapsible */}
           </div>
 
+        </div>
+
+        <div style={{ padding: '0 20px 10px' }}>
+          <StageCapsulePanel orders={orders} />
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
@@ -665,7 +750,11 @@ const IntelligenceCenter: React.FC = () => {
         <div className="cockpit-grid-3">
 
           {/* 活跃订单实时滚动面板（左侧） */}
-          <OrderScrollPanel orders={orders} />
+          <OrderScrollPanel
+            orders={orders}
+            collapsed={collapsedPanels['activeOrders']}
+            onToggle={() => toggleCollapse('activeOrders')}
+          />
 
           {/* 工厂卡点分析 */}
           <div className="c-card c-breathe-cyan">

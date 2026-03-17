@@ -366,7 +366,7 @@ const ReceivableList: React.FC = () => {
             type="warning"
             showIcon
             icon={<WarningOutlined />}
-            title={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${fmt(Number(stats.totalOverdue))}，请及时催款。`}
+            message={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${fmt(Number(stats.totalOverdue))}，请及时催款。`}
             style={{ marginBottom: 16 }}
             closable
           />

@@ -11,7 +11,7 @@ import { EMPTY_KPI_METRICS, EMPTY_KPI_HISTORY, KPI_HISTORY_WINDOW_MS } from '../
 
 export function useKpiMetrics(data: CockpitData) {
   const navigate = useNavigate();
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck, orders, factoryCapacity } = data;
+  const { pulse, health, notify, workers: _workers, heatmap: _heatmap, ranking, shortage, healing, bottleneck, orders, factoryCapacity } = data;
 
   const [kpiFlash, setKpiFlash] = useState(false);
   const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);

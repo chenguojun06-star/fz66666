@@ -126,43 +126,6 @@ export function parseWashLabelPartsMap(value?: string): Record<string, string[]>
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// 向后兼容：旧代码调用 serializeWashLabelSections({ upper, lower, other })
-// 统一转成新格式，二期再彻底移除
-// ---------------------------------------------------------------------------
-/** @deprecated 请改用 serializeWashLabelParts */
-export function serializeWashLabelSections(sections: {
-  upper?: string[];
-  lower?: string[];
-  other?: string[];
-}): string | undefined {
-  const partsMap: Record<string, string[]> = {};
-  const order: string[] = [];
-  const add = (label: string, items?: string[]) => {
-    if (items?.length) { partsMap[label] = items; order.push(label); }
-  };
-  add('上装', sections.upper);
-  add('下装', sections.lower);
-  add('其他', sections.other);
-  return serializeWashLabelParts(partsMap, order);
-}
-
-/** @deprecated 请改用 parseWashLabelPartsMap */
-export function splitWashLabelSections(value?: string): {
-  upper: string[];
-  lower: string[];
-  other: string[];
-} {
-  const map = parseWashLabelPartsMap(value);
-  return {
-    upper: map['上装'] || [],
-    lower: map['下装'] || [],
-    other: map['其他'] || Object.entries(map)
-      .filter(([k]) => k !== '上装' && k !== '下装')
-      .flatMap(([, v]) => v),
-  };
-}
-
 export function hasWashLabelComposition(value?: string, fallbackComposition?: string): boolean {
   return buildWashLabelSections(value, fallbackComposition).length > 0;
 }

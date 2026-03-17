@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
+import com.fashion.supplychain.intelligence.dto.ExecutionDecision;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.orchestration.ExecutionEngineOrchestrator.BusinessException;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -37,6 +38,9 @@ class ExecutionEngineOrchestratorTest {
     private ExecutionEngineOrchestrator engine;
 
     @Mock
+    private CommandExecutorHelper commandExecutor;
+
+    @Mock
     private ProductionOrderService productionOrderService;
     @Mock
     private MaterialStockService materialStockService;
@@ -49,6 +53,8 @@ class ExecutionEngineOrchestratorTest {
     @Mock
     private AuditTrailOrchestrator auditTrail;
     @Mock
+    private PermissionDecisionOrchestrator permissionDecision;
+    @Mock
     private SmartNotificationOrchestrator smartNotification;
     @Mock
     private SmartWorkflowOrchestrator smartWorkflow;
@@ -59,6 +65,12 @@ class ExecutionEngineOrchestratorTest {
     void setUp() {
         // smartWorkflow 默认返回 0 级联
         lenient().when(smartWorkflow.generatePostExecutionWorkflow(any(), any())).thenReturn(0);
+        lenient().when(permissionDecision.decide(any(), any())).thenReturn(
+            ExecutionDecision.builder()
+                .decision(ExecutionDecision.ExecutionDecisionType.AUTO_EXECUTE)
+                .reason("允许自动执行")
+                .build()
+        );
     }
 
     // ─────────────── order:hold ───────────────
@@ -66,20 +78,26 @@ class ExecutionEngineOrchestratorTest {
     @Test
     void orderHold_success_setsStatusToDelayed() {
         ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        doAnswer(invocation -> {
+            order.setStatus("delayed");
+            return null;
+        }).when(commandExecutor).takePreExecutionSnapshot(any(), eq(EXECUTOR_ID));
+        when(commandExecutor.executeOrderHold(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            order.setStatus("delayed");
+            return order;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:hold", "PO001"), EXECUTOR_ID);
 
         assertThat(result.isSuccess()).isTrue();
         assertThat(order.getStatus()).isEqualTo("delayed");
-        verify(productionOrderService).updateById(order);
+        verify(commandExecutor).executeOrderHold(any(), eq(EXECUTOR_ID));
     }
 
     @Test
     void orderHold_completedOrder_fails() {
-        ProductionOrder order = buildOrder("completed");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
+        doThrow(new BusinessException("订单状态 completed 不允许暂停"))
+            .when(commandExecutor).executeOrderHold(any(), eq(EXECUTOR_ID));
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:hold", "PO001"), EXECUTOR_ID);
 
@@ -89,7 +107,8 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void orderHold_orderNotFound_fails() {
-        when(productionOrderService.getByOrderNo("NOPE")).thenReturn(null);
+        doThrow(new BusinessException("订单不存在: NOPE"))
+            .when(commandExecutor).executeOrderHold(any(), eq(EXECUTOR_ID));
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:hold", "NOPE"), EXECUTOR_ID);
 
@@ -102,8 +121,10 @@ class ExecutionEngineOrchestratorTest {
     @Test
     void orderExpedite_success_setsUrgencyLevel() {
         ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderExpedite(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            order.setUrgencyLevel("URGENT");
+            return order;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:expedite", "PO001"), EXECUTOR_ID);
 
@@ -116,8 +137,10 @@ class ExecutionEngineOrchestratorTest {
     @Test
     void orderResume_fromDelayed_success() {
         ProductionOrder order = buildOrder("delayed");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderResume(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            order.setStatus("production");
+            return order;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:resume", "PO001"), EXECUTOR_ID);
 
@@ -127,8 +150,8 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void orderResume_fromProduction_fails() {
-        ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
+        doThrow(new BusinessException("订单当前状态为 production，不支持恢复（仅 delayed 状态可恢复）"))
+            .when(commandExecutor).executeOrderResume(any(), eq(EXECUTOR_ID));
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:resume", "PO001"), EXECUTOR_ID);
 
@@ -141,8 +164,10 @@ class ExecutionEngineOrchestratorTest {
     @Test
     void orderApprove_fromPending_success() {
         ProductionOrder order = buildOrder("pending");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderApprove(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            order.setStatus("production");
+            return order;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("order:approve", "PO001"), EXECUTOR_ID);
 
@@ -156,8 +181,10 @@ class ExecutionEngineOrchestratorTest {
     void styleApprove_success() {
         StyleInfo style = new StyleInfo();
         style.setId(9001L);
-        when(styleInfoService.getById("9001")).thenReturn(style);
-        when(styleInfoService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeStyleApprove(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            style.setSampleReviewStatus("PASS");
+            return style;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("style:approve", "9001"), EXECUTOR_ID);
 
@@ -171,8 +198,10 @@ class ExecutionEngineOrchestratorTest {
     void settlementApprove_success() {
         FinishedProductSettlement s = new FinishedProductSettlement();
         s.setStatus("pending");
-        when(finishedProductSettlementService.getById("ST001")).thenReturn(s);
-        when(finishedProductSettlementService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeSettlementApprove(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            s.setStatus("approved");
+            return s;
+        });
 
         ExecutionResult<?> result = engine.execute(buildCmd("settlement:approve", "ST001"), EXECUTOR_ID);
 
@@ -182,9 +211,8 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void settlementApprove_alreadyApproved_fails() {
-        FinishedProductSettlement s = new FinishedProductSettlement();
-        s.setStatus("approved");
-        when(finishedProductSettlementService.getById("ST001")).thenReturn(s);
+        doThrow(new BusinessException("结算单已审批，无需重复操作"))
+            .when(commandExecutor).executeSettlementApprove(any(), eq(EXECUTOR_ID));
 
         ExecutionResult<?> result = engine.execute(buildCmd("settlement:approve", "ST001"), EXECUTOR_ID);
 
@@ -207,15 +235,18 @@ class ExecutionEngineOrchestratorTest {
     @Test
     void undoLast_afterHold_restoresOriginalStatus() {
         ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderHold(any(), eq(EXECUTOR_ID))).thenAnswer(invocation -> {
+            order.setStatus("delayed");
+            return order;
+        });
+        when(commandExecutor.executeUndoLast(EXECUTOR_ID)).thenAnswer(invocation -> {
+            order.setStatus("production");
+            return Map.of("restored", true);
+        });
 
         // Execute hold
         engine.execute(buildCmd("order:hold", "PO001"), EXECUTOR_ID);
         assertThat(order.getStatus()).isEqualTo("delayed");
-
-        // Reset mock for undo (getByOrderNo returns the modified order)
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
 
         // Execute undo
         ExecutionResult<?> undoResult = engine.execute(buildCmd("undo:last", ""), EXECUTOR_ID);
@@ -227,6 +258,9 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void undoLast_withNoSnapshot_fails() {
+        doThrow(new BusinessException("没有可撤回的操作"))
+            .when(commandExecutor).executeUndoLast(EXECUTOR_ID);
+
         ExecutionResult<?> result = engine.execute(buildCmd("undo:last", ""), EXECUTOR_ID);
 
         assertThat(result.isSuccess()).isFalse();
@@ -235,9 +269,10 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void undoLast_calledTwice_secondFails() {
-        ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderHold(any(), eq(EXECUTOR_ID))).thenReturn(buildOrder("delayed"));
+        when(commandExecutor.executeUndoLast(EXECUTOR_ID))
+            .thenReturn(Map.of("restored", true))
+            .thenThrow(new BusinessException("没有可撤回的操作"));
 
         engine.execute(buildCmd("order:hold", "PO001"), EXECUTOR_ID);
 
@@ -254,9 +289,7 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void execute_callsAuditTrailOnSuccess() {
-        ProductionOrder order = buildOrder("production");
-        when(productionOrderService.getByOrderNo("PO001")).thenReturn(order);
-        when(productionOrderService.updateById(any())).thenReturn(true);
+        when(commandExecutor.executeOrderExpedite(any(), eq(EXECUTOR_ID))).thenReturn(buildOrder("production"));
 
         engine.execute(buildCmd("order:expedite", "PO001"), EXECUTOR_ID);
 
@@ -267,7 +300,8 @@ class ExecutionEngineOrchestratorTest {
 
     @Test
     void execute_callsAuditTrailOnFailure() {
-        when(productionOrderService.getByOrderNo("NOPE")).thenReturn(null);
+        doThrow(new BusinessException("订单不存在: NOPE"))
+            .when(commandExecutor).executeOrderHold(any(), eq(EXECUTOR_ID));
 
         engine.execute(buildCmd("order:hold", "NOPE"), EXECUTOR_ID);
 

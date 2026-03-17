@@ -38,7 +38,6 @@ export default function WashTab() {
     }
   }, [orderNoFilter, styleNoFilter]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void fetchOrders(1); }, []);
 
   const columns = [

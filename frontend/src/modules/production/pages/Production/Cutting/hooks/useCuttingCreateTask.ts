@@ -1,6 +1,23 @@
 import { useState } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
+import { factoryApi, type Factory } from '@/services/system/factoryApi';
+import { organizationApi } from '@/services/system/organizationApi';
+import type { OrganizationUnit } from '@/types/system';
+
+export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
+
+const INTERNAL_UNIT_KEYWORDS = ['组', '车间', '班组', '产线', '裁剪', '车缝', '缝制', '尾部', '后整', '整烫', '包装', '质检', '工艺'];
+
+const isSelectableInternalUnit = (unit: OrganizationUnit) => {
+  if (unit.nodeType !== 'DEPARTMENT') {
+    return false;
+  }
+  const name = String(unit.unitName || unit.nodeName || '').trim();
+  const path = String(unit.pathNames || '').trim();
+  const content = `${name} ${path}`;
+  return INTERNAL_UNIT_KEYWORDS.some((keyword) => content.includes(keyword));
+};
 
 interface StyleOption {
   id: number | string;
@@ -48,6 +65,12 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createStyleLoading, setCreateStyleLoading] = useState(false);
   const [createStyleNo, setCreateStyleNo] = useState<string>('');
   const [createStyleName, setCreateStyleName] = useState<string>('');
+  const [createFactoryMode, setCreateFactoryMode] = useState<CuttingFactoryMode>('INTERNAL');
+  const [createOrgUnitId, setCreateOrgUnitId] = useState<string>('');
+  const [createInternalUnitOptions, setCreateInternalUnitOptions] = useState<OrganizationUnit[]>([]);
+  const [createFactoryId, setCreateFactoryId] = useState<string>('');
+  const [createFactoryOptions, setCreateFactoryOptions] = useState<Factory[]>([]);
+  const [createFactoryLoading, setCreateFactoryLoading] = useState(false);
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
@@ -74,6 +97,39 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     }
   };
 
+  const fetchFactoryOptions = async (keyword?: string, factoryType: CuttingFactoryMode = createFactoryMode) => {
+    setCreateFactoryLoading(true);
+    try {
+      const res = await factoryApi.list({
+        page: 1,
+        pageSize: 200,
+        status: 'active',
+        factoryType,
+        factoryName: String(keyword || '').trim() || undefined,
+      });
+      if (res.code === 200) {
+        const records = Array.isArray(res.data?.records) ? res.data.records : [];
+        setCreateFactoryOptions(records.filter((item) => String(item?.factoryName || '').trim()));
+      }
+    } catch {
+      // Intentionally empty
+    } finally {
+      setCreateFactoryLoading(false);
+    }
+  };
+
+  const fetchInternalUnitOptions = async () => {
+    setCreateFactoryLoading(true);
+    try {
+      const records = await organizationApi.departments();
+      setCreateInternalUnitOptions((Array.isArray(records) ? records : []).filter(isSelectableInternalUnit));
+    } catch {
+      setCreateInternalUnitOptions([]);
+    } finally {
+      setCreateFactoryLoading(false);
+    }
+  };
+
   /** 款号选择/输入变更时同步款名 */
   const handleStyleNoChange = (value: string) => {
     const sn = String(value || '').trim();
@@ -88,8 +144,12 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateOrderLines([createEmptyOrderLine()]);
     setCreateStyleNo('');
     setCreateStyleName('');
+    setCreateFactoryMode('INTERNAL');
+    setCreateOrgUnitId('');
+    setCreateFactoryId('');
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
+    fetchInternalUnitOptions();
   };
 
   const updateCreateOrderLine = (index: number, field: keyof CuttingCreateOrderLine, value: string | number | null) => {
@@ -130,6 +190,14 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       message.error('请至少填写一行颜色、尺码、数量');
       return;
     }
+    if (createFactoryMode === 'INTERNAL' && !String(createOrgUnitId || '').trim()) {
+      message.error('请选择内部生产组/车间');
+      return;
+    }
+    if (createFactoryMode === 'EXTERNAL' && !String(createFactoryId || '').trim()) {
+      message.error('请选择外发工厂');
+      return;
+    }
     const invalidLineIndex = orderLines.findIndex((line) => !line.color || !line.size || !Number.isFinite(line.quantity) || line.quantity <= 0);
     if (invalidLineIndex >= 0) {
       message.error(`第 ${invalidLineIndex + 1} 行请完整填写颜色、尺码、数量`);
@@ -138,8 +206,16 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
 
     setCreateTaskSubmitting(true);
     try {
+      const factory = createFactoryOptions.find((item) => String(item.id || '').trim() === String(createFactoryId || '').trim());
+      const orgUnit = createInternalUnitOptions.find((item) => String(item.id || '').trim() === String(createOrgUnitId || '').trim());
       const res = await api.post<{ code: number; message: string; data?: Record<string, unknown> }>('/production/cutting-task/custom/create', {
         styleNo,
+        factoryType: createFactoryMode,
+        factoryId: createFactoryMode === 'EXTERNAL' ? String(createFactoryId || '').trim() : undefined,
+        factoryName: createFactoryMode === 'EXTERNAL'
+          ? (String(factory?.factoryName || '').trim() || undefined)
+          : (String(orgUnit?.unitName || orgUnit?.nodeName || '').trim() || undefined),
+        orgUnitId: createFactoryMode === 'INTERNAL' ? String(createOrgUnitId || '').trim() : undefined,
         orderDate: String(createOrderDate || '').trim() || undefined,
         deliveryDate: String(createDeliveryDate || '').trim() || undefined,
         orderLines,
@@ -173,7 +249,14 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     removeCreateOrderLine,
     createStyleOptions, createStyleLoading, createStyleNo, setCreateStyleNo,
     createStyleName, setCreateStyleName,
+    createFactoryMode, setCreateFactoryMode,
+    createOrgUnitId, setCreateOrgUnitId,
+    createInternalUnitOptions,
+    createFactoryId, setCreateFactoryId,
+    createFactoryOptions, createFactoryLoading,
     fetchStyleInfoOptions,
+    fetchFactoryOptions,
+    fetchInternalUnitOptions,
     handleStyleNoChange,
     openCreateTask,
     handleSubmitCreateTask,

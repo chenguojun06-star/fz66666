@@ -148,7 +148,6 @@ const WashLabelPage: React.FC = () => {
         dryCleanCode: cached.dryCleanCode,
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchStyleInfoForOrders]);
 
   const openBatchPrint = useCallback(async (targetOrders: ProductionOrder[]) => {

@@ -108,7 +108,6 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
       })
       .catch(() => setStyleData({}))
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, order?.styleNo, styleId]);
 
   const noInfo = !styleData.fabricComposition && !styleData.fabricCompositionParts && !styleData.washInstructions;

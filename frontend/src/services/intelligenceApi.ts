@@ -1,4 +1,5 @@
 import api, { type ApiResult } from '../utils/api';
+import { unwrapApiData } from '../utils/api/core';
 
 /**
  * 智能执行 API 服务层
@@ -353,8 +354,8 @@ export async function getGraphAbStats(days = 30): Promise<ABSceneStat[]> {
 /** ── 推演仿真（What-If）── */
 
 export interface WhatIfParams {
-  orderIds: number[];
-  scenarios: { scenarioKey: string; description: string; tweaks: Record<string, number> }[];
+  orderIds: string;
+  scenarios: { type: string; value: number; factoryId?: string }[];
 }
 export interface ScenarioResult {
   scenarioKey: string;
@@ -364,6 +365,8 @@ export interface ScenarioResult {
   overdueRiskDelta: number;
   score: number;
   action: string;
+  rationale?: string;
+  targetFactoryName?: string;
 }
 export interface WhatIfResult {
   baseline: ScenarioResult;
@@ -376,7 +379,7 @@ export async function simulateWhatIf(params: WhatIfParams): Promise<WhatIfResult
     '/intelligence/whatif/simulate',
     params
   );
-  return response.data as unknown as WhatIfResult;
+    return unwrapApiData<WhatIfResult>(response, '推演仿真请求失败');
 }
 
 /** ── AI 智能预测（ForecastEngine v2.0）── */

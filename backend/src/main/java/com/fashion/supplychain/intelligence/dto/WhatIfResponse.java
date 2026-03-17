@@ -41,5 +41,11 @@ public class WhatIfResponse {
 
         /** 操作建议 */
         private String action;
+
+        /** 推演依据说明 */
+        private String rationale;
+
+        /** 目标工厂名（换工厂场景） */
+        private String targetFactoryName;
     }
 }

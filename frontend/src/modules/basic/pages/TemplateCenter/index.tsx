@@ -32,7 +32,7 @@ type PageResp<T> = {
 
 const { Text } = Typography;
 const TemplateCenter: React.FC = () => {
-  const { modal, message } = App.useApp();
+  const { modal: _modal, message } = App.useApp();
   const { user } = useAuth();
   const { modalWidth } = useViewport();
   const [queryForm] = Form.useForm();

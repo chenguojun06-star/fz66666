@@ -196,12 +196,6 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
 
   const activeDifficulty = localDifficulty ?? profile?.difficulty;
 
-  const stageColors: Record<string, string> = {
-    COMPLETED: 'success',
-    IN_PROGRESS: 'processing',
-    PENDING: 'default',
-  };
-
   const stageTags = useMemo(() => {
     if (profile?.stages?.length) {
       return profile.stages.map((item) => ({

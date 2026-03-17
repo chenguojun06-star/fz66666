@@ -10,7 +10,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
-import api, { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
+import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';

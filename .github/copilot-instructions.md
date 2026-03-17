@@ -2552,7 +2552,7 @@ intelligence:
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
 ```
 
-编译验证：mvn clean compile → [INFO] BUILD SUCCESS ✅
+编译验证：mvn clean compile → BUILD SUCCESS ✅
 全部新增文件均在 intelligence/orchestration/ 包，遵循独立编排器架构原则。
 
 ---

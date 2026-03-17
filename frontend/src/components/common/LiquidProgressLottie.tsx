@@ -53,10 +53,8 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   const C   = D / 2;
   const SW  = Math.max(5, Math.round(D * 0.14));
   const R   = C - SW / 2 - 0.5;
-  const cir = 2 * Math.PI * R;
 
   const pct     = Math.min(100, Math.max(0, progress));
-  const dashOff = cir * (1 - pct / 100);
   const isDone  = pct >= 100;
   const doAnim  = !paused && !isDone && pct > 0;
 
@@ -65,7 +63,16 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   const baseC2 = color2 || color1;
 
   // ── 弧长 & 火花长度 ──
-  const arcLen   = cir * pct / 100;
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (Math.PI * 2 * pct) / 100;
+  const startX = C + R * Math.cos(startAngle);
+  const startY = C + R * Math.sin(startAngle);
+  const endX = C + R * Math.cos(endAngle);
+  const endY = C + R * Math.sin(endAngle);
+  const largeArcFlag = pct > 50 ? 1 : 0;
+  const arcPath = pct > 0 && pct < 100
+    ? `M ${startX} ${startY} A ${R} ${R} 0 ${largeArcFlag} 1 ${endX} ${endY}`
+    : '';
 
   // ── 文字尺寸 ──
   const FS    = Math.max(7, Math.round(D * 0.18));
@@ -88,13 +95,22 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
 
           <mask id={mid}>
             <rect width={D} height={D} fill="black" />
-            <circle cx={C} cy={C} r={R}
-              fill="none" stroke="white"
-              strokeWidth={SW + 4}
-              strokeDasharray={cir}
-              strokeDashoffset={dashOff}
-              transform={`rotate(-90 ${C} ${C})`}
-            />
+            {pct >= 100 ? (
+              <circle cx={C} cy={C} r={R}
+                fill="none" stroke="white"
+                strokeWidth={SW + 4}
+              />
+            ) : (
+              arcPath && (
+                <path
+                  d={arcPath}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={SW + 4}
+                  strokeLinecap="round"
+                />
+              )
+            )}
           </mask>
         </defs>
 
@@ -106,69 +122,64 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
 
         {/* ② 进度弧（静态，仅 dashoffset 平滑过渡） */}
         {pct > 0 && (
-          <circle cx={C} cy={C} r={R}
-            fill="none"
-            stroke={`url(#${gid})`}
-            strokeWidth={SW}
-            strokeLinecap="round"
-            strokeDasharray={cir}
-            strokeDashoffset={dashOff}
-            transform={`rotate(-90 ${C} ${C})`}
-            style={{ transition: paused ? 'none' : 'stroke-dashoffset 0.7s cubic-bezier(0.34,1.56,0.64,1)' }}
-          />
+          pct >= 100 ? (
+            <circle cx={C} cy={C} r={R}
+              fill="none"
+              stroke={`url(#${gid})`}
+              strokeWidth={SW}
+              strokeLinecap="round"
+            />
+          ) : (
+            arcPath && (
+              <path
+                d={arcPath}
+                fill="none"
+                stroke={`url(#${gid})`}
+                strokeWidth={SW}
+                strokeLinecap="round"
+                style={{ transition: paused ? 'none' : 'd 0.7s cubic-bezier(0.34,1.56,0.64,1)' }}
+              />
+            )
+          )
         )}
 
-        {/* ③ 液态流动层——三层错位光带，缓入缓出，模拟液体在管内平滑流动 */}
-        {/* 层一：宽慢流（主液体，45%弧长，4s）
-             from = +W1（光带在弧头前方，完整看不见）
-             to   = -(arcLen+W1)（光带完全滑出末梢，消失后循环） */}
-        {doAnim && arcLen > SW * 2 && (() => { const W1 = arcLen * 0.45; return (
-          <circle cx={C} cy={C} r={R}
-            fill="none"
-            stroke="rgba(255,255,255,0.20)"
-            strokeWidth={SW}
-            strokeLinecap="round"
-            strokeDasharray={`${W1} ${cir}`}
-            transform={`rotate(-90 ${C} ${C})`}
-            mask={`url(#${mid})`}
-            style={{ pointerEvents: 'none' }}
-          >
-            <animate attributeName="stroke-dashoffset" from={`${W1}`} to={`${-(arcLen + W1)}`}
-              dur="4s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.6 1" repeatCount="indefinite" />
-          </circle>
-        ); })()}
-        {/* 层二：中幅涡流（28%弧长，2.6s，错位 -1.3s） */}
-        {doAnim && arcLen > SW * 2 && (() => { const W2 = arcLen * 0.28; return (
-          <circle cx={C} cy={C} r={R}
-            fill="none"
-            stroke="rgba(255,255,255,0.38)"
-            strokeWidth={SW * 0.6}
-            strokeLinecap="round"
-            strokeDasharray={`${W2} ${cir}`}
-            transform={`rotate(-90 ${C} ${C})`}
-            mask={`url(#${mid})`}
-            style={{ pointerEvents: 'none' }}
-          >
-            <animate attributeName="stroke-dashoffset" from={`${W2}`} to={`${-(arcLen + W2)}`}
-              dur="2.6s" begin="-1.3s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.6 1" repeatCount="indefinite" />
-          </circle>
-        ); })()}
-        {/* 层三：窄快高光（液面反射，12%弧长，1.6s，错位 -0.6s） */}
-        {doAnim && arcLen > SW * 2 && (() => { const W3 = arcLen * 0.12; return (
-          <circle cx={C} cy={C} r={R}
-            fill="none"
-            stroke="rgba(255,255,255,0.68)"
-            strokeWidth={SW * 0.32}
-            strokeLinecap="round"
-            strokeDasharray={`${W3} ${cir}`}
-            transform={`rotate(-90 ${C} ${C})`}
-            mask={`url(#${mid})`}
-            style={{ pointerEvents: 'none' }}
-          >
-            <animate attributeName="stroke-dashoffset" from={`${W3}`} to={`${-(arcLen + W3)}`}
-              dur="1.6s" begin="-0.6s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.6 1" repeatCount="indefinite" />
-          </circle>
-        ); })()}
+        {/* ③ 液态流动层——沿真实进度弧路径运动，不再依赖 circle dashoffset，避免 2 点方向提前截断 */}
+        {doAnim && arcPath && (
+          <g mask={`url(#${mid})`} style={{ pointerEvents: 'none' }}>
+            <ellipse cx="0" cy="0" rx={SW * 0.95} ry={SW * 0.52} fill="rgba(255,255,255,0.20)">
+              <animateMotion
+                dur="4s"
+                repeatCount="indefinite"
+                calcMode="spline"
+                keyTimes="0;1"
+                keySplines="0.4 0 0.6 1"
+                path={arcPath}
+              />
+            </ellipse>
+            <ellipse cx="0" cy="0" rx={SW * 0.68} ry={SW * 0.36} fill="rgba(255,255,255,0.38)">
+              <animateMotion
+                dur="2.6s"
+                begin="-1.3s"
+                repeatCount="indefinite"
+                calcMode="spline"
+                keyTimes="0;1"
+                keySplines="0.4 0 0.6 1"
+                path={arcPath}
+              />
+            </ellipse>
+            <ellipse cx="0" cy="0" rx={SW * 0.4} ry={SW * 0.22} fill="rgba(255,255,255,0.72)">
+              <animateMotion
+                dur="1.6s"
+                begin="-0.6s"
+                repeatCount="indefinite"
+                calcMode="spline"
+                keyTimes="0;1"
+                keySplines="0.4 0 0.6 1"
+                path={arcPath}
+              />
+            </ellipse>
+          </g>
+        )}
 
         {/* ⑥ 工序名称 */}
         {nodeName && (

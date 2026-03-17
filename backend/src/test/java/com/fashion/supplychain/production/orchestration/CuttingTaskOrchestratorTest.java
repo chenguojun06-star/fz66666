@@ -17,6 +17,10 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.system.entity.OrganizationUnit;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
+import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.OrganizationUnitService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -63,6 +67,15 @@ class CuttingTaskOrchestratorTest {
     private TemplateLibraryService templateLibraryService;
 
     @Mock
+    private FactoryService factoryService;
+
+    @Mock
+    private OrganizationUnitService organizationUnitService;
+
+    @Mock
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @Mock
@@ -89,6 +102,12 @@ class CuttingTaskOrchestratorTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        OrganizationUnit internalUnit = new OrganizationUnit();
+        internalUnit.setId("org-1");
+        internalUnit.setNodeName("一组车间");
+        internalUnit.setNodeType("DEPARTMENT");
+        internalUnit.setPathNames("生产中心/一组车间");
+        lenient().when(organizationUnitService.getById("org-1")).thenReturn(internalUnit);
     }
 
     @AfterEach
@@ -196,7 +215,7 @@ class CuttingTaskOrchestratorTest {
         assertEquals(0, savedOrder.getCompletedQuantity());
         assertEquals(0, savedOrder.getProductionProgress());
         assertEquals(100, savedOrder.getMaterialArrivalRate());
-        assertEquals("", savedOrder.getFactoryName());
+        assertEquals("一组车间", savedOrder.getFactoryName());
         assertNull(savedOrder.getProgressWorkflowJson());
 
         verify(cuttingTaskService).createTaskIfAbsent(any(ProductionOrder.class));
@@ -347,6 +366,8 @@ class CuttingTaskOrchestratorTest {
         Map<String, Object> body = new HashMap<>();
         body.put("styleNo", styleNo);
         body.put("orderNo", orderNo);
+        body.put("factoryType", "INTERNAL");
+        body.put("orgUnitId", "org-1");
         body.put("orderDate", "2026-03-15");
         body.put("deliveryDate", "2026-03-25");
         body.put("orderLines", List.of(
@@ -359,6 +380,8 @@ class CuttingTaskOrchestratorTest {
         Map<String, Object> body = new HashMap<>();
         body.put("styleNo", styleNo);
         body.put("orderNo", orderNo);
+        body.put("factoryType", "INTERNAL");
+        body.put("orgUnitId", "org-1");
         body.put("orderDate", "2026-03-15");
         body.put("deliveryDate", "2026-03-25");
         body.put("orderLines", List.of(

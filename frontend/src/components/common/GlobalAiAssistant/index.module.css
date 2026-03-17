@@ -240,6 +240,31 @@
   border-color: #ffc53d;
 }
 
+.pendingDismissBtn {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: #874d00;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 1px 5px;
+  border-radius: 4px;
+  transition: opacity 0.2s, background 0.2s;
+  pointer-events: auto;
+  z-index: 1;
+}
+.pendingItem:hover .pendingDismissBtn {
+  opacity: 1;
+}
+.pendingDismissBtn:hover {
+  background: rgba(135, 77, 0, 0.15);
+  opacity: 1;
+}
+
 .chip {
   padding: 5px 10px;
   background: #fff;
@@ -455,10 +480,38 @@
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   animation: floatTrigger 4s ease-in-out infinite;
   user-select: none;
+  position: relative;
 }
 
 .triggerBtn:hover {
   transform: scale(1.15) rotate(5deg);
+}
+
+.triggerBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.55);
+  border: 2px solid #fff;
+  pointer-events: none;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
 }
 
 @keyframes floatTrigger {

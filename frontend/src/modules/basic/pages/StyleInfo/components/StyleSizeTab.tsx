@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, } from 'antd';
-import { message } from '@/utils/antdStatic';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';

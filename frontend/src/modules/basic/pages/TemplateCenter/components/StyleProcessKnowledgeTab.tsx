@@ -133,7 +133,6 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
 
   useEffect(() => {
     void fetchData(keyword || undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData]); // 仅首次挂载执行；带入父层持久关键字
 
   /** 触发搜索：关键字同步到父层，页码归 1 */

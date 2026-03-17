@@ -111,7 +111,7 @@ const SmartAlertBell: React.FC = () => {
   ]);
   const [fetchedToday, setFetchedToday] = useState('');
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
-  const [myUnreadCount, setMyUnreadCount] = useState(0);
+  const [_myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
   const aiChatEndRef = useRef<HTMLDivElement>(null);
@@ -187,7 +187,6 @@ const SmartAlertBell: React.FC = () => {
       clearInterval(noticeTimer);
       abortRef.current?.abort();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // fetchedToday 清空后立即重拉
@@ -374,17 +373,26 @@ const SmartAlertBell: React.FC = () => {
             )}
 
             {/* ── 首要关注订单 ── */}
-            {brief?.topPriorityOrder && (
+            {brief?.topPriorityOrder && !dismissedIds.has('topPriority') && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒</span>
                 </div>
                 <div
                 className="sap-priority-card"
                 onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder.orderNo}`)}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', position: 'relative' }}
                 title="点击查看该订单"
               >
+                  <button
+                    className="sap-event-dismiss-btn"
+                    style={{ position: 'absolute', top: 6, right: 6 }}
+                    onClick={(e) => dismissEvent('topPriority', e)}
+                    title="今日不再提醒（明天会重新检测）"
+                  >
+                    <CloseOutlined style={{ fontSize: 9 }} />
+                  </button>
                   <div className="sap-priority-row">
                     <span className="sap-priority-no">{brief.topPriorityOrder.orderNo}</span>
                     <span className="sap-priority-factory">{brief.topPriorityOrder.factoryName}</span>
@@ -441,38 +449,58 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: '#0284c7' }} /> 智能建议
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {brief.decisionCards.slice(0, 3).map((card, i) => (
-                      <DecisionInsightCard
-                        key={`${card.title}-${i}`}
-                        compact
-                        insight={{
-                          ...card,
-                          source: card.source || '实时数据推演',
-                          confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
-                          summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
-                            '有风险点，先处理影响最大的。',
-                            '先做优先级收口，再展开细项。',
-                            '先压关键风险，后续更顺。',
-                          ]),
-                          labels: {
-                            summary: '现状',
-                            painPoint: '关注点',
-                            execute: '下一步',
-                            evidence: '数据',
-                            note: '补充',
-                            ...card.labels,
-                          },
-                          onAction: card.actionPath ? () => goTo(card.actionPath!) : undefined,
-                        }}
-                      />
+                    {brief.decisionCards.slice(0, 3).map((card, i) => dismissedIds.has(`decisionCard_${i}`) ? null : (
+                      <div key={`${card.title}-${i}`} className="sap-dismissible" style={{ position: 'relative' }}>
+                        <button
+                          className="sap-event-dismiss-btn"
+                          style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}
+                          onClick={(e) => dismissEvent(`decisionCard_${i}`, e)}
+                          title="今日不再提醒（明天会重新检测）"
+                        >
+                          <CloseOutlined style={{ fontSize: 9 }} />
+                        </button>
+                        <DecisionInsightCard
+                          compact
+                          insight={{
+                            ...card,
+                            source: card.source || '实时数据推演',
+                            confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
+                            summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
+                              '有风险点，先处理影响最大的。',
+                              '先做优先级收口，再展开细项。',
+                              '先压关键风险，后续更顺。',
+                            ]),
+                            labels: {
+                              summary: '现状',
+                              painPoint: '关注点',
+                              execute: '下一步',
+                              evidence: '数据',
+                              note: '补充',
+                              ...card.labels,
+                            },
+                            onAction: card.actionPath ? () => goTo(card.actionPath!) : undefined,
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  brief.suggestions.slice(0, 3).map((s, i) => (
-                    <div key={i} className="sap-suggestion">· {s}</div>
+                  brief.suggestions.slice(0, 3).map((s, i) => dismissedIds.has(`suggestion_${i}`) ? null : (
+                    <div key={i} className="sap-suggestion" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>· {s}</span>
+                      <button
+                        className="sap-event-dismiss-btn"
+                        style={{ opacity: 1 }}
+                        onClick={(e) => dismissEvent(`suggestion_${i}`, e)}
+                        title="今日不再提醒（明天会重新检测）"
+                      >
+                        <CloseOutlined style={{ fontSize: 9 }} />
+                      </button>
+                    </div>
                   ))
                 )}
               </div>

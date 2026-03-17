@@ -94,7 +94,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
   const [pendingFocusNode, setPendingFocusNode] = useState<{ orderNo: string; nodeName: string } | null>(null);
+  const [focusedOrderNos, setFocusedOrderNos] = useState<string[]>([]);
   const focusClearTimerRef = useRef<number | null>(null);
+  const focusedOrderNosRef = useRef<string[]>([]);
 
   const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
     return String(record?.id || record?.orderNo || '').trim();
@@ -124,6 +126,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return normalized;
   }, [normalizeFocusNodeName]);
 
+  useEffect(() => {
+    focusedOrderNosRef.current = focusedOrderNos;
+  }, [focusedOrderNos]);
+
   // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
   const {
     queryParams, setQueryParams,
@@ -147,13 +153,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const params = new URLSearchParams(location.search);
     const styleNo = String(params.get('styleNo') || '').trim();
     const orderNo = String(params.get('orderNo') || '').trim();
+    const orderNos = String(params.get('orderNos') || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const mergedOrderNos = Array.from(new Set(orderNo ? [orderNo, ...orderNos] : orderNos));
     const focusNode = normalizeFocusNodeName(String(params.get('focusNode') || '').trim());
-    if (styleNo || orderNo) {
+    setFocusedOrderNos(mergedOrderNos);
+    if (styleNo || orderNo || mergedOrderNos.length > 0) {
       setQueryParams((prev) => ({
         ...prev,
         page: 1,
+        pageSize: mergedOrderNos.length > 0 ? 200 : prev.pageSize,
         styleNo: styleNo || prev.styleNo,
-        keyword: orderNo || prev.keyword,
+        keyword: mergedOrderNos.length > 0 ? undefined : (orderNo || prev.keyword),
       }));
     }
     if (orderNo && focusNode) {
@@ -229,7 +242,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   useEffect(() => {
     if (orders.length > 0) void fetchBottleneck();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders.length]);
 
   /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
@@ -419,9 +431,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       const response = await productionOrderApi.list(params);
       const result = response as { code: number; message?: string; data: { records: ProductionOrder[]; total: number } };
       if (result.code === 200) {
-        const records = result.data.records || [];
-        setOrders(records);
-        setTotal(result.data.total || 0);
+        const rawRecords = result.data.records || [];
+        const filteredRecords = (() => {
+          if (focusedOrderNosRef.current.length === 0) return rawRecords;
+          const orderNoSet = new Set(focusedOrderNosRef.current);
+          const orderIndex = new Map(focusedOrderNosRef.current.map((orderNo, index) => [orderNo, index]));
+          return rawRecords
+            .filter((record) => orderNoSet.has(String(record.orderNo || '').trim()))
+            .sort((a, b) => {
+              const aIndex = orderIndex.get(String(a.orderNo || '').trim()) ?? Number.MAX_SAFE_INTEGER;
+              const bIndex = orderIndex.get(String(b.orderNo || '').trim()) ?? Number.MAX_SAFE_INTEGER;
+              return aIndex - bIndex;
+            });
+        })();
+        setOrders(filteredRecords);
+        setTotal(focusedOrderNosRef.current.length > 0 ? filteredRecords.length : (result.data.total || 0));
         if (showSmartErrorNotice) setSmartError(null);
         // 仅非静默刷新（用户手动、换页、换过滤条件）才清空进度球缓存
         // silent=true（轮询）保留旧缓存，避免进度球瞬间闪白再回来
@@ -434,7 +458,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
         const styleNos = Array.from(
           new Set(
-            records
+            filteredRecords
               .map((r) => String(r.styleNo || '').trim())
               .filter((sn) => sn)
           )

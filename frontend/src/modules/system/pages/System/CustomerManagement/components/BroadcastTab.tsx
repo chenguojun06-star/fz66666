@@ -38,7 +38,7 @@ const BroadcastTab: React.FC = () => {
         <Alert
           type="info"
           showIcon
-          title="发送后所有活跃租户的主账号将在系统通知铃铛中收到该公告"
+          message="发送后所有活跃租户的主账号将在系统通知铃铛中收到该公告"
           description="适用于系统升级、停机维护、功能变更等需要提前告知客户的场景"
         />
         <Card title={<><NotificationOutlined /> 发送全租户通知</>}>
@@ -90,7 +90,7 @@ const BroadcastTab: React.FC = () => {
         {lastResult && (
           <Alert
             type="success"
-            title={`上次发送：${lastResult.time} — 已推送 ${lastResult.sentCount} 个租户`}
+            message={`上次发送：${lastResult.time} — 已推送 ${lastResult.sentCount} 个租户`}
           />
         )}
       </Space>

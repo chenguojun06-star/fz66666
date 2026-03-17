@@ -1,5 +1,5 @@
 import React from 'react';
-import { AutoComplete, Button, Card, Input, InputNumber, Space } from 'antd';
+import { AutoComplete, Button, Card, Input, InputNumber, Select, Segmented, Space } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
 import type { CuttingCreateTaskState } from '../hooks';
@@ -50,6 +50,59 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             style={{ width: 160 }}
             placeholder="请选择订单交期"
             onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
+          />
+          <span>生产方</span>
+          <Segmented
+            value={createTask.createFactoryMode}
+            options={[
+              { label: '内部自产', value: 'INTERNAL' },
+              { label: '外发加工', value: 'EXTERNAL' },
+            ]}
+            style={{ width: 220 }}
+            onChange={(value) => {
+              const nextMode = value as 'INTERNAL' | 'EXTERNAL';
+              createTask.setCreateFactoryMode(nextMode);
+              createTask.setCreateOrgUnitId('');
+              createTask.setCreateFactoryId('');
+              if (nextMode === 'INTERNAL') {
+                createTask.fetchInternalUnitOptions();
+              } else {
+                createTask.fetchFactoryOptions('', nextMode);
+              }
+            }}
+          />
+          <Select
+            value={createTask.createFactoryMode === 'INTERNAL'
+              ? (createTask.createOrgUnitId || undefined)
+              : (createTask.createFactoryId || undefined)}
+            style={{ width: 290 }}
+            placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
+            showSearch
+            allowClear
+            loading={createTask.createFactoryLoading}
+            filterOption={createTask.createFactoryMode === 'INTERNAL'}
+            optionFilterProp="label"
+            onSearch={(value) => {
+              if (createTask.createFactoryMode === 'EXTERNAL') {
+                createTask.fetchFactoryOptions(value, createTask.createFactoryMode);
+              }
+            }}
+            onChange={(value) => {
+              if (createTask.createFactoryMode === 'INTERNAL') {
+                createTask.setCreateOrgUnitId(String(value || ''));
+              } else {
+                createTask.setCreateFactoryId(String(value || ''));
+              }
+            }}
+            options={createTask.createFactoryMode === 'INTERNAL'
+              ? createTask.createInternalUnitOptions.map((unit) => ({
+                  value: String(unit.id || '').trim(),
+                  label: String(unit.pathNames || unit.unitName || unit.nodeName || '').trim(),
+                }))
+              : createTask.createFactoryOptions.map((factory) => ({
+                  value: String(factory.id || '').trim(),
+                  label: `${factory.factoryName}${factory.factoryType === 'INTERNAL' ? '（本厂）' : '（外发）'}`,
+                }))}
           />
         </Space>
         <div style={{ marginTop: 12 }}>

@@ -8,7 +8,7 @@ import StylePrintModal from '@/components/common/StylePrintModal';
 
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
-import api, { parseProductionOrderLines, withQuery } from '@/utils/api';
+import api, { parseProductionOrderLines } from '@/utils/api';
 import { StyleBom, StyleInfo, StyleQueryParams } from '@/types/style';
 import { Factory } from '@/types/system';
 import { ProductionOrder } from '@/types/production';
@@ -675,7 +675,6 @@ const OrderManagement: React.FC = () => {
     } catch { /* 静默失败 */ } finally {
       setSchedulingLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStyle, totalOrderQuantity, form, message]);
 
   // 工厂或数量变化时自动重新计算交货期建议
@@ -685,7 +684,6 @@ const OrderManagement: React.FC = () => {
       return;
     }
     fetchDeliverySuggestion(selectedFactoryStat.factoryName, totalOrderQuantity);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFactoryStat?.factoryName, totalOrderQuantity]);
 
   const confirmPricingReady = () =>

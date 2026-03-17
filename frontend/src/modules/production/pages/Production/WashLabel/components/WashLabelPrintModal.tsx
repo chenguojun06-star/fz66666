@@ -85,7 +85,6 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
         setSelectedKeys([k]);
       })
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, order?.id]);
 
   /* ── 调整每标签件数 ── */

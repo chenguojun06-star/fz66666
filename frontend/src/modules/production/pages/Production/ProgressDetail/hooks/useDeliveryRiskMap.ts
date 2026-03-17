@@ -74,7 +74,6 @@ export const useDeliveryRiskMap = (
       .finally(() => {
         _fetchInFlight = false;
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasActiveOrders]);
 
   return riskMap;

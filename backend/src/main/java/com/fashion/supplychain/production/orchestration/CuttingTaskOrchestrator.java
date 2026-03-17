@@ -16,6 +16,12 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.entity.OrganizationUnit;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
+import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.OrganizationUnitService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -64,6 +70,15 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private FactoryService factoryService;
+
+    @Autowired
+    private OrganizationUnitService organizationUnitService;
+
+    @Autowired
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -158,6 +173,10 @@ public class CuttingTaskOrchestrator {
     public CuttingTask createCustom(Map<String, Object> body) {
         String styleNo = getTrimmedText(body, "styleNo");
         String orderNo = getTrimmedText(body, "orderNo");
+        String factoryType = getTrimmedText(body, "factoryType");
+        String factoryId = getTrimmedText(body, "factoryId");
+        String factoryName = getTrimmedText(body, "factoryName");
+        String orgUnitId = getTrimmedText(body, "orgUnitId");
         LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
         LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
         List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
@@ -167,6 +186,39 @@ public class CuttingTaskOrchestrator {
         }
         if (requestedOrderLines.isEmpty()) {
             throw new IllegalArgumentException("请至少填写一行颜色、尺码和数量");
+        }
+
+        String resolvedFactoryType = StringUtils.hasText(factoryType) ? factoryType.trim().toUpperCase() : null;
+        if (!StringUtils.hasText(resolvedFactoryType)) {
+            resolvedFactoryType = StringUtils.hasText(orgUnitId) ? "INTERNAL" : "EXTERNAL";
+        }
+
+        Factory factory = null;
+        FactoryOrganizationSnapshot factorySnapshot = null;
+        OrganizationUnit internalUnit = null;
+        OrganizationUnit internalParentUnit = null;
+        if ("INTERNAL".equals(resolvedFactoryType)) {
+            if (!StringUtils.hasText(orgUnitId)) {
+                throw new IllegalArgumentException("请选择内部生产组/车间");
+            }
+            internalUnit = organizationUnitService.getById(orgUnitId.trim());
+            if (internalUnit == null
+                    || (internalUnit.getDeleteFlag() != null && internalUnit.getDeleteFlag() == 1)
+                    || !"DEPARTMENT".equalsIgnoreCase(internalUnit.getNodeType())) {
+                throw new IllegalArgumentException("所选生产组/车间不存在");
+            }
+            if (StringUtils.hasText(internalUnit.getParentId())) {
+                internalParentUnit = organizationUnitService.getById(internalUnit.getParentId());
+            }
+        } else {
+            if (!StringUtils.hasText(factoryId)) {
+                throw new IllegalArgumentException("请选择外发工厂");
+            }
+            factory = factoryService.getById(factoryId.trim());
+            if (factory == null || (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1)) {
+                throw new IllegalArgumentException("所选工厂不存在");
+            }
+            factorySnapshot = organizationUnitBindingHelper.getFactorySnapshot(factory);
         }
 
         StyleInfo style = styleInfoService.lambdaQuery()
@@ -226,8 +278,27 @@ public class CuttingTaskOrchestrator {
         order.setProgressWorkflowJson(progressWorkflowJson);
         order.setCreateTime(orderCreateTime);
         order.setUpdateTime(now);
-        // factory_name NOT NULL — 自定义裁剪单无绑定工厂，置为空串避免 SQL STRICT 报错
-        order.setFactoryName("");
+        if ("INTERNAL".equals(resolvedFactoryType)) {
+            order.setFactoryId(null);
+            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
+            order.setFactoryContactPerson(null);
+            order.setFactoryContactPhone(null);
+            order.setFactoryType("INTERNAL");
+            order.setOrgUnitId(internalUnit.getId());
+            order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
+            order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
+            order.setOrgPath(internalUnit.getPathNames());
+        } else {
+            order.setFactoryId(factory.getId());
+            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
+            order.setFactoryContactPerson(factory.getContactPerson());
+            order.setFactoryContactPhone(factory.getContactPhone());
+            order.setFactoryType(factorySnapshot.getFactoryType());
+            order.setOrgUnitId(factorySnapshot.getOrgUnitId());
+            order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
+            order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
+            order.setOrgPath(factorySnapshot.getOrgPath());
+        }
         // 设置租户 ID 及创建人
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
         if (ctx != null && ctx.getTenantId() != null) {

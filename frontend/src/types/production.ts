@@ -78,6 +78,16 @@ export interface ProductionOrder extends Record<string, unknown> {
   sewingEndTime?: string;
   sewingOperatorName?: string;
   sewingCompletionRate?: number;
+  carSewingCompletionRate?: number;
+
+  secondaryProcessStartTime?: string;
+  secondaryProcessEndTime?: string;
+  secondaryProcessOperatorName?: string;
+  secondaryProcessCompletionRate?: number;
+  secondaryProcessRate?: number;
+
+  tailProcessRate?: number;
+  hasSecondaryProcess?: boolean;
 
   qualityStartTime?: string;
   qualityEndTime?: string;

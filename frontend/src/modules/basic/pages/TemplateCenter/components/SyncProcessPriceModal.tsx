@@ -101,7 +101,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
 
   const [styleInputVal, setStyleInputVal] = useState('');
   const [styleNoOptions, setStyleNoOptions] = useState<{ value: string; label: string }[]>([]);
-  const [styleNoLoading, setStyleNoLoading] = useState(false);
+  const [_styleNoLoading, setStyleNoLoading] = useState(false);
   const [selectedStyleNo, setSelectedStyleNo] = useState('');
   const styleNoSeq = useRef(0);
   const styleNoTimer = useRef<number | undefined>(undefined);

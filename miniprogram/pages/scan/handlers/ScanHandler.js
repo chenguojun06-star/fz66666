@@ -347,18 +347,6 @@ class ScanHandler {
   }
 
   /**
-   * 获取订单详情（带缓存）
-   * @private
-   * @param {string} orderNo - 订单号
-   * @param {string} [orderId] - 订单ID（UUID，备用）
-   * @returns {Promise<Object|null>} 订单详情（单条记录）
-   * @deprecated 已迁移到 ScanDataProcessor，保留以兼容内部调用
-   */
-  async _getOrderDetail(orderNo, orderId) {
-    return await this.dataProcessor.getOrderDetail(orderNo, orderId);
-  }
-
-  /**
    * 检测下一个工序（根据扫码模式选择策略）
    * @private
    * @param {string} scanMode - 扫码模式（bundle/order）
@@ -450,41 +438,6 @@ class ScanHandler {
       // 客户端标识
       source: 'miniprogram',
     };
-  }
-
-  /**
-   * 解析手动指定的工序类型
-   * @private
-   * @param {string} scanType - 扫码类型字符串
-   * @returns {Object|null} 工序信息或 null
-   * @deprecated 已迁移到 ScanModeResolver，保留以兼容内部调用
-   */
-  _resolveManualStage(scanType) {
-    return this.modeResolver.resolveManualStage(scanType);
-  }
-
-  /**
-   * 提交扫码记录到服务器
-   * @private
-   * @param {Object} scanData - 扫码数据
-   * @returns {Promise<Object>} 提交结果
-   * @deprecated 已迁移到 ScanSubmitter，保留以兼容内部调用
-   */
-  async _submitScan(scanData) {
-    return await this.submitter.submitScan(scanData);
-  }
-
-  /**
-   * 构建成功提示消息
-   * @private
-   * @param {string} scanMode - 扫码模式
-   * @param {Object} scanData - 扫码数据
-   * @param {Object} stageResult - 工序结果
-   * @returns {string} 提示消息
-   * @deprecated 已迁移到 ScanSubmitter，保留以兼容内部调用
-   */
-  _buildSuccessMessage(scanMode, scanData, stageResult) {
-    return this.submitter.buildSuccessMessage(scanMode, scanData, stageResult);
   }
 
   /**

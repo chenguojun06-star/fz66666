@@ -5,6 +5,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,9 @@ class QualityAiSuggestionOrchestratorTest {
     @Mock
     private ProductWarehousingService productWarehousingService;
 
+    @Mock
+    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
     @InjectMocks
     private QualityAiSuggestionOrchestrator orchestrator;
 
@@ -38,6 +42,7 @@ class QualityAiSuggestionOrchestratorTest {
         order = new ProductionOrder();
         order.setId("ORDER001");
         order.setOrderNo("PO2026001");
+        lenient().when(inferenceOrchestrator.isAnyModelEnabled()).thenReturn(false);
     }
 
     @Test

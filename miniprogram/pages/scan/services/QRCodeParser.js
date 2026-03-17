@@ -208,16 +208,6 @@ class QRCodeParser {
       },
     };
   }
-
-  /**
-   * 兼容方法：解析菲号格式（委托给 BundleCodeParser）
-   * @deprecated 使用 parse() 替代
-   * @param {string} text - 菲号文本
-   * @returns {Object|null} 解析结果
-   */
-  _parseFeiNo(text) {
-    return BundleCodeParser.parse(text);
-  }
 }
 
 // 导出单例

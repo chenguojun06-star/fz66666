@@ -216,7 +216,7 @@ const ZipImportPanel: React.FC = () => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  title={result.message}
+                  message={result.message}
                   description={
                     <Space wrap>
                       <Tag icon={<CheckCircleOutlined />} color="success">成功 {result.successCount} 条</Tag>
@@ -415,7 +415,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  title={result.message}
+                  message={result.message}
                   description={
                     <Space>
                       <Tag icon={<CheckCircleOutlined />} color="success">

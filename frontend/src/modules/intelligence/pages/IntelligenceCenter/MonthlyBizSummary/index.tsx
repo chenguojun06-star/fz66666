@@ -83,7 +83,6 @@ const MonthlyBizSummary: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await api.get<any>(`/intelligence/monthly-biz-summary?year=${year}&month=${month}`);
       setData(res.data as MonthlyData);
     } catch {

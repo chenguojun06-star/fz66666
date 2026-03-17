@@ -47,7 +47,7 @@ const _MaterialInventory: React.FC = () => {
     inboundForm, outboundForm, rollForm, instructionForm,
     txLoading, txList,
     batchDetails, setBatchDetails, generatingRolls,
-    alertLoading, alertList, alertOptions,
+    alertLoading, alertList, alertOptions: _alertOptions,
     dbMaterialOptions, dbSearchLoading, searchMaterialFromDatabase,
     instructionVisible, instructionSubmitting, instructionTarget, receiverOptions,
     safetyStockVisible, setSafetyStockVisible, safetyStockTarget, safetyStockValue, setSafetyStockValue, safetyStockSubmitting,

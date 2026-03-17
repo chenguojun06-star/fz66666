@@ -936,6 +936,8 @@
   padding: 0;
 }
 .sap-event-row:hover .sap-event-dismiss-btn { opacity: 1; }
+.sap-priority-card:hover .sap-event-dismiss-btn,
+.sap-dismissible:hover .sap-event-dismiss-btn { opacity: 1; }
 .sap-event-dismiss-btn:hover { background: #fee2e2; color: #ef4444; }
 
 /* 我的通知行 */

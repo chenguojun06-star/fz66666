@@ -38,7 +38,6 @@ import type {
 } from '../utils/templateUtils';
 
 const EDITOR_FONT_SIZE = 12;
-const EDITOR_CELL_PADDING = '4px 6px';
 
 interface EditTemplateModalProps {
   /** 款号下拉选项 */

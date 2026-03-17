@@ -1007,8 +1007,8 @@ const InspectionDetail: React.FC = () => {
                     children: (
                       <div style={{ padding: '8px 0' }}>
                         <ResizableTable
-                          storageKey="inspection-bom"
                           rowKey="id" size="small" pagination={false} scroll={{ x: 'max-content' }}
+                          resizableColumns={false}
                           dataSource={bom}
                           columns={[
                             { title: '物料编码', dataIndex: 'materialCode', key: 'mc', width: 100 },

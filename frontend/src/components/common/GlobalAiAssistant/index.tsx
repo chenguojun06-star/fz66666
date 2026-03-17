@@ -453,6 +453,20 @@ const ActionCardWidget: React.FC<{
   );
 };
 
+// ── 预警条目每日关闭 localStorage 方案 ──────────────────────────────────────────
+const _aiPendingDismissKey = () => `ai_dismissed_pending_${new Date().toISOString().slice(0, 10)}`;
+const loadDismissedPending = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(_aiPendingDismissKey());
+    if (!raw) return new Set<string>();
+    const arr: unknown = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set<string>(arr as string[]) : new Set<string>();
+  } catch { return new Set<string>(); }
+};
+const saveDismissedPending = (set: Set<string>) => {
+  try { localStorage.setItem(_aiPendingDismissKey(), JSON.stringify([...set])); } catch {}
+};
+
 const GlobalAiAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [_mood, setMood] = useState<CloudMood>('normal');
@@ -467,6 +481,16 @@ const GlobalAiAssistant: React.FC = () => {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+
+  // 每日关闭记忆
+  const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
+  const dismissPendingItem = (orderNo: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDismissedPending(prev => {
+      const next = new Set(prev); next.add(orderNo); saveDismissedPending(next); return next;
+    });
+  };
+  const visiblePendingItems = pendingItems.filter(item => !dismissedPending.has(item.orderNo));
 
   useEffect(() => {
     if (hasFetchedMood) return;
@@ -875,19 +899,24 @@ const GlobalAiAssistant: React.FC = () => {
 
           {/* Chat List */}
           <div className={styles.chatArea} ref={chatAreaRef}>
-            {/* Suggestion Chips - 像原来的智能顾问一样 */}
-            {messages.length === 1 && pendingItems.length > 0 && (
+            {/* 预警待办 - 每日可关闭，下一天重新显示 */}
+            {messages.length === 1 && visiblePendingItems.length > 0 && (
               <div className={styles.pendingItems}>
-                {pendingItems.map((item: any) => {
+                {visiblePendingItems.map((item: any) => {
                   const dl = item.daysLeft;
                   const status = dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`;
                   return (
-                    <div key={item.orderNo} className={styles.pendingItem}
+                    <div key={item.orderNo} className={styles.pendingItem} style={{position:'relative'}}
                       onClick={() => { setIsOpen(false); navigate('/production'); }}
                     >
                       <span>⚠️</span>
                       <span style={{flex:1}}>{item.orderNo}{item.styleNo ? `（${item.styleNo}）` : ''} — {status}，进度{item.progress}%</span>
                       <span style={{color:'#1890ff',fontSize:11}}>查看 →</span>
+                      <button
+                        className={styles.pendingDismissBtn}
+                        onClick={(e) => dismissPendingItem(item.orderNo, e)}
+                        title="今日不再提醒"
+                      >×</button>
                     </div>
                   );
                 })}
@@ -1108,6 +1137,9 @@ const GlobalAiAssistant: React.FC = () => {
           title="召唤小云智能助手"
         >
           <CuteCloudTrigger size={56} />
+          {visiblePendingItems.length > 0 && (
+            <span className={styles.triggerBadge}>{visiblePendingItems.length}</span>
+          )}
         </div>
       )}
     </div>

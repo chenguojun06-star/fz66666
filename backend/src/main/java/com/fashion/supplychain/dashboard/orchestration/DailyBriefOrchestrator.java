@@ -77,7 +77,15 @@ public class DailyBriefOrchestrator {
         long weekWh = dashboardQueryService.countWarehousingBetween(week7Start, tdEnd);
         brief.put("weekWarehousingCount", (int) weekWh);
 
-        // ③ 逾期订单数
+        // ③ 今日下单数 / 今日入库数 / 今日出库数
+        long todayOrders = dashboardQueryService.countProductionOrdersBetween(tdStart, tdEnd);
+        brief.put("todayOrderCount", (int) todayOrders);
+        long todayInbound = dashboardQueryService.countWarehousingBetween(tdStart, tdEnd);
+        brief.put("todayInboundCount", (int) todayInbound);
+        long todayOutbound = dashboardQueryService.countOutstockBetween(tdStart, tdEnd);
+        brief.put("todayOutboundCount", (int) todayOutbound);
+
+        // ④ 逾期订单数
         long overdueCount = dashboardQueryService.countOverdueOrders();
         brief.put("overdueOrderCount", (int) overdueCount);
 

@@ -4,7 +4,6 @@ import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import api from '../../utils/api';
-import LoginLanguageSwitcher from '../../components/common/LoginLanguageSwitcher';
 import { t } from '../../i18n';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
 import './styles.css';

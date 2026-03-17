@@ -243,7 +243,7 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
               type="success"
               showIcon
               style={{ marginBottom: 12 }}
-              title={`最新入库完成${lastInboundResult.inboundNo ? `：${String(lastInboundResult.inboundNo)}` : ''}`}
+              message={`最新入库完成${lastInboundResult.inboundNo ? `：${String(lastInboundResult.inboundNo)}` : ''}`}
               description={`本次到货 ${Number(lastInboundResult.arrivedQuantity || 0)}，累计到货 ${Number(lastInboundResult.totalArrived || 0)} / ${Number(lastInboundResult.purchaseQuantity || 0)}，状态 ${statusLabel[normalizeStatus(String(lastInboundResult.status || ''))] || String(lastInboundResult.status || '-')}${lastInboundResult.message ? `。${String(lastInboundResult.message)}` : ''}`}
             />
           ) : null}

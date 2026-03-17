@@ -9,12 +9,14 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.service.RedisService;
@@ -49,6 +51,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     private final MaterialPurchaseService materialPurchaseService;
     private final ProductWarehousingService productWarehousingService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final ProductOutstockService productOutstockService;
     private final RedisService redisService;
 
     public DashboardQueryServiceImpl(
@@ -61,6 +64,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             MaterialPurchaseService materialPurchaseService,
             ProductWarehousingService productWarehousingService,
             ProductWarehousingMapper productWarehousingMapper,
+            ProductOutstockService productOutstockService,
             RedisService redisService) {
         this.styleInfoService = styleInfoService;
         this.productionOrderService = productionOrderService;
@@ -71,6 +75,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         this.materialPurchaseService = materialPurchaseService;
         this.productWarehousingService = productWarehousingService;
         this.productWarehousingMapper = productWarehousingMapper;
+        this.productOutstockService = productOutstockService;
         this.redisService = redisService;
     }
 
@@ -467,6 +472,17 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return warehousing.stream()
                 .mapToInt(w -> w.getQualifiedQuantity() + w.getUnqualifiedQuantity())
                 .sum();
+    }
+
+    @Override
+    public long countOutstockBetween(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            return 0;
+        }
+        return productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getDeleteFlag, 0)
+                .between(ProductOutstock::getCreateTime, start, end)
+                .count();
     }
 
     @Override

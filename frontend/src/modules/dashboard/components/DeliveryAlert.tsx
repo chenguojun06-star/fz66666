@@ -52,7 +52,7 @@ const DeliveryAlert: React.FC = () => {
         setData(EMPTY_DATA);
         setUseMockData(true);
       }
-    } catch (error) {
+    } catch {
       // 网络错误或后端未启动，显示空数据
       // 交期预警API请求失败
       setData(EMPTY_DATA);

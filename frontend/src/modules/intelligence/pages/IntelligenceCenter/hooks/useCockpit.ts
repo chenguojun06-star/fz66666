@@ -50,7 +50,7 @@ export function useCockpit() {
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
         intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
         intelligenceApi.getFactoryBottleneck(),
-        productionOrderApi.list({ pageSize: 50 } as any),
+        productionOrderApi.list({ pageSize: 200, excludeTerminal: true } as any),
         intelligenceApi.getBrainSnapshot(),
         intelligenceApi.getActionCenter(),
         productionOrderApi.getFactoryCapacity(),
@@ -67,7 +67,7 @@ export function useCockpit() {
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
-      orders: orderResult.filter(o => o.status !== 'completed'),
+      orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       loading: false, ts: Date.now(),
     });

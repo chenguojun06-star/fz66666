@@ -361,7 +361,7 @@ export function useCuttingBundles({
         }
       })
       .catch(() => { if (seq === entryBomReqSeq.current) setEntrySizeUsageMap({}); });
-  }, [isEntryPage, (activeTask as unknown as any)?.styleId]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEntryPage, (activeTask as unknown as any)?.styleId]);
 
   // 加载面辅料采购
   useEffect(() => {

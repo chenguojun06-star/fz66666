@@ -140,7 +140,7 @@ class StyleSizeOrchestratorTest {
 
         when(styleSizeService.getById("sz-1")).thenReturn(existing);
         when(styleInfoService.isPatternLocked(10L)).thenReturn(false);
-        when(styleSizeService.updateById(sz)).thenReturn(true);
+        when(styleSizeService.updateNullableFieldsById(sz)).thenReturn(true);
 
         boolean ok = orchestrator.update(sz);
 
