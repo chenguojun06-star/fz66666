@@ -174,7 +174,7 @@ interface Message {
 const INITIAL_MSG: Message = {
   id: 'init-msg',
   role: 'ai',
-  text: '我是小云，你的运营助理。点快捷入口或直接输入问题 👇',
+  text: '你好呀～我是小云 🌤️ 有什么我可以帮你的吗？',
 };
 
 const SUGGESTIONS = [
@@ -508,25 +508,25 @@ const GlobalAiAssistant: React.FC = () => {
           } else if (todayScanCount > 100) {
             newMood = 'success';
             greeting = choose(seed + 5, [
-              '今天整体节奏比较稳，我可以继续帮你盯效率、风险和成本波动。',
-              '当前运行状态不错，你可以让我再做一轮隐患巡检。',
-              '今天盘面偏稳，接下来可以重点看效率和成本有没有暗点。',
+              '今天节奏挺稳的呢 ✨ 继续帮你盯效率、风险和成本波动好不好～',
+              '今天运行状态不错哦！要不要让我再做一轮隐患巡检看看？',
+              '今天盘面挺好的～ 下一步可以看看效率和成本有没有小伏击！',
             ]);
           } else {
             newMood = 'normal';
             greeting = choose(seed + 7, [
-              '您好，我是小云。你可以直接问我今天先盯哪几单、为什么、先做什么。',
-              '您好，我是小云。你可以让我先把今天的重点风险和处理顺序排出来。',
-              '您好，我是小云。你可以直接让我看风险、瓶颈和交付影响。',
+              '你好呀！我是小云 🌤️ 有什么可以帮你的吗？随时问风险、订单进度都行哦！',
+              '嘉～ 我是小云！想问风险、瓶颈还是交付进度？直接说就好啊！',
+              '你好呀！我是小云 ☁️ 可以让我帮你看风险、瓶颈和交付影响～',
             ]);
             // 时间彩蛋
             const hour = new Date().getHours();
             if (hour >= 0 && hour < 6) {
-               greeting = '当前仍有业务在跑，我可以先把夜间异常和明早优先事项排出来。';
+               greeting = '夜猫子！🌙 还在工作呀～ 让我帮你把夜间异常和明早要做的事整理一下吧！';
             } else if (hour >= 12 && hour <= 14) {
-               greeting = '现在适合快速过一遍半天经营情况，我可以先总结风险和下午动作。';
+               greeting = '午休时间搶个手～ 🍱 要不要先快速过一遍上半天的数据？';
             } else if (hour >= 19) {
-               greeting = '现在适合收口今天的问题，我可以整理今晚要盯的订单和明天动作。';
+               greeting = '辛苦啊！🌸 到收尾阶段了，让我帮你整理今晚要盯的订单和明天计划～';
             }
           }
           setMood(newMood);
@@ -535,7 +535,7 @@ const GlobalAiAssistant: React.FC = () => {
       } catch (err) {
         console.error('Failed to fetch system mood', err);
         setMood('normal');
-        setMessages([{ ...INITIAL_MSG, text: '实时数据暂时没取到，但您仍可以继续提问，我会尽量基于现有上下文协助判断。' }]);
+        setMessages([{ ...INITIAL_MSG, text: '实时数据暂时没取到，但不要紧～随时问我都行哦！' }]);
       }
     };
     fetchStatus();
@@ -789,15 +789,22 @@ const GlobalAiAssistant: React.FC = () => {
 
     // eslint-disable-next-line no-undef
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
+      // 只读前 80 字，避免长文本语音体验差
+      const ttsText = cleanText.slice(0, 80);
+      if (!ttsText.trim()) return;
+      const utterance = new SpeechSynthesisUtterance(ttsText);
       utterance.lang = 'zh-CN';
-      // 固定用 xiaoxiao 呆萌女声，找不到则兜底任意中文声音
-      const voice = voices.find(v => v.lang.includes('zh') && v.name.toLowerCase().includes('xiaoxiao'))
-        ?? voices.find(v => v.lang.includes('zh'));
+      // 优先寻找 Xiaoyi/Xiaoxiao/女声，找不到则兜底任意中文声音
+      const voice = voices.find(v => v.lang.startsWith('zh') && (
+        v.name.toLowerCase().includes('xiaoyi') ||
+        v.name.toLowerCase().includes('xiaoxiao') ||
+        v.name.includes('女') ||
+        v.name.toLowerCase().includes('female')
+      )) ?? voices.find(v => v.lang.includes('zh'));
       if (voice) utterance.voice = voice;
-      utterance.rate = 1.05;
-      utterance.pitch = 1.25;
-      utterance.volume = 0.9;
+      utterance.rate = 0.9;     // 稍慢，更亲切自然
+      utterance.pitch = 1.45;   // 音调高萌
+      utterance.volume = 0.85;
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
     };
@@ -876,7 +883,7 @@ const GlobalAiAssistant: React.FC = () => {
                   const status = dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`;
                   return (
                     <div key={item.orderNo} className={styles.pendingItem}
-                      onClick={() => handleSend(`帮我分析订单 ${item.orderNo} 的详细情况和风险`)}
+                      onClick={() => { setIsOpen(false); navigate('/production'); }}
                     >
                       <span>⚠️</span>
                       <span style={{flex:1}}>{item.orderNo}{item.styleNo ? `（${item.styleNo}）` : ''} — {status}，进度{item.progress}%</span>
@@ -982,7 +989,13 @@ const GlobalAiAssistant: React.FC = () => {
                           card={card}
                           onUrgeOrderSaved={() => void handleSend(`订单 ${card.orderNo ?? card.orderId} 出货信息已更新`)}
                           onAction={(type, path, orderId) => {
-                            if (type === 'navigate' && path) { setIsOpen(false); navigate(path); }
+                            if (type === 'navigate' && path) {
+                              // 路径白名单校验，防止 AI 生成不存在的路由导致页面不存在错误
+                              const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic'];
+                              const safePath = knownPrefixes.some(p => path.startsWith(p)) ? path : '/production';
+                              setIsOpen(false);
+                              navigate(safePath);
+                            }
                             else if (type === 'mark_urgent' && orderId) { void handleSend(`把订单 ${orderId} 标记为紧急`); }
                             else { void handleSend(`执行操作：${card.title}`); }
                           }}
