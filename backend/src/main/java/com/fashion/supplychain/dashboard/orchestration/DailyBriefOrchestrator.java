@@ -62,24 +62,24 @@ public class DailyBriefOrchestrator {
         LocalDateTime ydEnd   = yesterday.atTime(LocalTime.MAX);
         long ydCount = dashboardQueryService.countWarehousingBetween(ydStart, ydEnd);
         long ydQty   = dashboardQueryService.sumWarehousingQuantityBetween(ydStart, ydEnd);
-        brief.put("yesterdayWarehousingCount", ydCount);
-        brief.put("yesterdayWarehousingQuantity", ydQty);
+        brief.put("yesterdayWarehousingCount", (int) ydCount);
+        brief.put("yesterdayWarehousingQuantity", (int) ydQty);
 
         // ② 今日扫码 + 近7天扫码
         LocalDateTime tdStart = today.atStartOfDay();
         LocalDateTime tdEnd   = today.atTime(LocalTime.MAX);
         long todayScan = dashboardQueryService.countScansBetween(tdStart, tdEnd);
-        brief.put("todayScanCount", todayScan);
+        brief.put("todayScanCount", (int) todayScan);
         LocalDateTime week7Start = today.minusDays(7).atStartOfDay();
         long weekScan = dashboardQueryService.countScansBetween(week7Start, tdEnd);
-        brief.put("weekScanCount", weekScan);
+        brief.put("weekScanCount", (int) weekScan);
         // 近7天入库
         long weekWh = dashboardQueryService.countWarehousingBetween(week7Start, tdEnd);
-        brief.put("weekWarehousingCount", weekWh);
+        brief.put("weekWarehousingCount", (int) weekWh);
 
         // ③ 逾期订单数
         long overdueCount = dashboardQueryService.countOverdueOrders();
-        brief.put("overdueOrderCount", overdueCount);
+        brief.put("overdueOrderCount", (int) overdueCount);
 
         // ④ 高风险订单（进行中 + 7天内到期但【尚未逾期】 + 进度 < 50%）
         // 注意：已逾期订单已在 overdueOrderCount 中计数，此处排除避免双重计数
@@ -115,7 +115,7 @@ public class DailyBriefOrchestrator {
             topOrder.put("factoryName", top.getFactoryName());
             topOrder.put("progress", top.getProductionProgress() == null ? 0 : top.getProductionProgress());
             long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
-            topOrder.put("daysLeft", daysLeft);
+            topOrder.put("daysLeft", (int) daysLeft);
             brief.put("topPriorityOrder", topOrder);
         }
 
@@ -128,7 +128,7 @@ public class DailyBriefOrchestrator {
                 item.put("styleNo", o.getStyleNo() != null ? o.getStyleNo() : "");
                 item.put("factoryName", o.getFactoryName() != null ? o.getFactoryName() : "");
                 item.put("progress", o.getProductionProgress() != null ? o.getProductionProgress() : 0);
-                item.put("daysLeft", ChronoUnit.DAYS.between(today, o.getPlannedEndDate().toLocalDate()));
+                item.put("daysLeft", (int) ChronoUnit.DAYS.between(today, o.getPlannedEndDate().toLocalDate()));
                 return item;
             })
             .collect(Collectors.toList());
