@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（155个编排器）| **规模**：251.7k行代码
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（157个编排器）| **规模**：257k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-04-30 | **AI指令版本**：v3.19（知识库确认50条 + Cohere Reranker精排接入 + SOP智能功能附录 + 压测脚本云端修复）
+> **最后更新**：2026-05-03 | **AI指令版本**：v3.20（MaterialPurchase单据识别 + ExpenseReimbursement报销 + 全局Badge精度修复 + 7条Flyway幂等脚本）
 
 ---
 
@@ -1027,10 +1027,15 @@ SKU = styleNo + color + size
 9. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 11. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
-12. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
-13. **git push = 云端自动重新部署**：`.github/workflows/ci.yml` 的 `deploy` job 通过腾讯云 `cloudbase-action` 触发部署，push 到 main 后 3~5 分钟自动生效。**需要** GitHub Actions Secrets（`CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` / `CLOUDBASE_ENV_ID`，已在仓库 Settings 中配置），**无需**手动上传 JAR。
-14. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
-15. **【2026-03-11/12】ViewMigrator 视图 Collation NONE 错误（已通过 Flyway 彻底修复）**：`v_production_order_flow_stage_snapshot` 等视图中 `CONVERT(... USING utf8mb4)` 不加 `COLLATE` 会产生 NONE 可强制性（coercibility 6），`MAX()` 对多行聚合时 MySQL 8.0 抛出 `Illegal mix of collations (utf8mb4_bin,NONE) for operation 'max'`。
+12. **【2026-05-03】JacksonConfig 导致全局 Badge 99+ 精度问题（已修复）**：`JacksonConfig.java` 全局注册 `Long.class + long.class → ToStringSerializer.instance`（防止 18位数字 JS 精度溢出）。**副作用**：所有统计计数（long 类型）也被序列化为 JSON String，导致 Frontend `"91" + "8" = "918"` 字符串拼接而非数值求和。
+    - **表现**：DailyTodoModal/Dashboard 显示「逾期订单99+」实际仅 3 个；Alert Bell 显示「99+」
+    - **永久规律**：统计计数的新 Orchestrator 方法必须在返回前转为 int（如 `map.put("overdueCount", (int) overdueCount)`），规避 JacksonConfig 序列化。不要用 Long 返回计数值
+    - **Frontend 防御**：所有接收统计计数字段的组件用 `Number()` 包裹（如 `Number(brief?.overdueOrderCount ?? 0)`），增强容错性
+    - **Redis 缓存安全**：`DashboardQueryServiceImpl` 缓存模式 `Number cached = getFromCache(key); return cached.longValue()` 因使用 Number 接口完全兼容 int/long 反序列化，无需修改
+13. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
+14. **git push = 云端自动重新部署**：`.github/workflows/ci.yml` 的 `deploy` job 通过腾讯云 `cloudbase-action` 触发部署，push 到 main 后 3~5 分钟自动生效。**需要** GitHub Actions Secrets（`CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` / `CLOUDBASE_ENV_ID`，已在仓库 Settings 中配置），**无需**手动上传 JAR。
+15. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
+16. **【2026-03-11/12】ViewMigrator 视图 Collation NONE 错误（已通过 Flyway 彻底修复）**：`v_production_order_flow_stage_snapshot` 等视图中 `CONVERT(... USING utf8mb4)` 不加 `COLLATE` 会产生 NONE 可强制性（coercibility 6），`MAX()` 对多行聚合时 MySQL 8.0 抛出 `Illegal mix of collations (utf8mb4_bin,NONE) for operation 'max'`。
    - ⚠️ **v3.15 描述有误**：ViewMigrator 在云端从不执行。根因：`cloudbaserc.json` 设置 `FASHION_DB_INITIALIZER_ENABLED=false` + `application-prod.yml` 设置 `initializer-enabled: false`，导致 `DataInitializer` Bean 在云端从未实例化，ViewMigrator.initialize() 从未运行。单独修复 ViewMigrator.java（commit 375c307f）对云端无效。
    - ✅ **正确修复路径（Flyway）**：新增 `V20260312001__fix_view_collation_none.sql`，包含三个视图的完整 `CREATE OR REPLACE VIEW`，所有 CONVERT 表达式均加 `COLLATE utf8mb4_bin`。Flyway（云端 `FLYWAY_ENABLED=true`）在下次部署时自动执行，一次性修复所有租户的视图定义。
    - **永久规律**：凡是修改这三个视图（`v_production_order_flow_stage_snapshot`、`v_production_order_stage_done_agg`、`v_production_order_procurement_snapshot`），必须同时新增 Flyway 迁移脚本，仅更新 ViewMigrator.java 对云端无效。Flyway 脚本内容与 ViewMigrator fallback SQL 保持一致（同步维护）。
@@ -2400,21 +2405,21 @@ commit: 6260b04d
 
 ---
 
-### 编排器分布统计（2026-04-28 更新）
+### 编排器分布统计（2026-05-03 更新）
 
 | 模块 | 编排器数 | 代表成员 |
 |------|---------|---------|
-| intelligence（智能驾驶舱） | 63 | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator、**LiteLLMAdminOrchestrator**、**QdrantAdminOrchestrator**、**LangfuseTraceOrchestrator**等 |
-| production（生产管理） | 23 | ProductionOrderOrchestrator、ScanRecordOrchestrator、PayrollSettlementOrchestrator等 |
+| intelligence（智能驾驶舱） | 63 | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator、LiteLLMAdminOrchestrator、QdrantAdminOrchestrator、LangfuseTraceOrchestrator等 |
+| production（生产管理） | 24 | ProductionOrderOrchestrator、ScanRecordOrchestrator、PayrollSettlementOrchestrator、**MaterialPurchaseDocOrchestrator**等 |
 | system（系统配置） | 15 | UserOrchestrator、PermissionOrchestrator、SysNoticeOrchestrator等 |
-| finance（财务结算） | 17 | FinancialSettlementOrchestrator、ReconciliationOrchestrator等 |
+| finance（财务结算） | 18 | FinancialSettlementOrchestrator、ReconciliationOrchestrator、**ExpenseDocOrchestrator**等 |
 | style（款式管理） | 6 | StyleBomOrchestrator、StyleProcessOrchestrator等 |
 | warehouse（仓库管理） | 2 | MaterialStockOrchestrator、WarehouseScanOrchestrator |
 | dashboard（仪表板） | 2 | DashboardOrchestrator、DailyBriefOrchestrator |
 | crm（客户管理） | 3 | CustomerOrchestrator、FollowupTaskOrchestrator等 |
 | procurement（采购管理） | 2 | ProcurementOrchestrator、SupplierOrchestrator |
 | 其他模块 | 22 | integration、wechat、search、datacenter、template等 |
-| **总计** | **155** | — |
+| **总计** | **157** | — |
 
 ---
 

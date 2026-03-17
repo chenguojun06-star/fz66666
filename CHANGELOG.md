@@ -1,3 +1,56 @@
+## 2026-05-03（晚间更新）
+
+### feat(core): MaterialPurchase单据识别+面料数据库+报销单模块 + 全局Badge精度修复(commit 34df92a7)
+
+#### 新增功能
+
+**后端新增**（8个新文件）:
+- `PurchaseOrderDoc` / `PurchaseOrderDocMapper` / `PurchaseOrderDocService`：采购单证扫描识别实体与数据访问
+- `MaterialPurchaseDocOrchestrator`（新编排器）：单证上传识别编排层，支持 AI 识别采购发票/物料表
+- `ExpenseReimbursementDoc` / `ExpenseReimbursementDocMapper` / `ExpenseReimbursementDocService`：费用报销单据实体
+- `ExpenseDocOrchestrator`（新编排器）：报销单据处理编排层
+- `DictController` / `DictOrchestrator` 扩展：服装部件词条字典管理
+- `SmartNotifyJob` 优化：智能通知定时任务支持 AI 推荐
+
+**前端新增**（7个新文件）:
+- `PurchaseDocRecognizeModal.tsx`：AI 识别采购单证弹窗，支持图片上传 + OCR 提取
+- `useMaterialDatabase.ts`：物料数据库查询 Hook
+- `usePurchaseActions.tsx`：采购操作（创建/删除/审批）Hook
+- `usePurchaseDetail.ts`：采购单详情数据 Hook
+- `usePurchaseDialog.ts`：采购对话框状态 Hook
+- `usePurchaseList.ts`：采购列表数据聚合 Hook
+
+#### 数据库变更（7条Flyway幂等迁移脚本）
+- `V20260503001`：`t_purchase_order_doc` 表（采购单证记录）
+- `V20260503002`：`t_expense_reimbursement_doc` 表（费用报销单据）
+- `V20260504001`：采购凭证图片字段（`evidence_images`）
+- `V20260505001`：服装部件字典种子数据（上衣/下装/连衣裙等 50+ 部件）
+- `V20260506001`：AI Agent 进化日志字段（用于追踪 AI 决策演变）
+- `V20260507002`：采购单面料成分字段（用于物料成本计算）
+- `V48`：物料数据库缺失列补全 — 替代已删除的 V47
+
+#### 🔴 关键Bug修复：全局Badge 99+ 精度问题
+
+**触发问题**：DailyTodoModal、GlobalAiAssistant 显示「逾期订单99+」，实际仅 3-5 个。
+
+**根本原因**（JacksonConfig 全局影响）：
+- `JacksonConfig.java` 全局注册 `Long/long → ToStringSerializer.instance`（防止 JS 18位数精度溢出）
+- **副作用**：所有统计计数（long 类型）也被序列化为 JSON String
+- Frontend 接收 `"91" + "8" = "918"` → String 拼接而非数值求和
+
+**修复内容**（两步）：
+1. `DailyBriefOrchestrator.java`：long 统计量转 int（规避 Jackson 序列化为 String）
+2. `SmartAlertBell.tsx`：Number() 包裹统计字段（容错设计）
+
+**对系统的改进**：
+- ✅ Dashboard/DailyBrief 统计计数显示精确值
+- ✅ DashboardQueryServiceImpl Redis 缓存逻辑 audit complete（`Number.longValue()` 兼容）
+- ✅ 后端 mvn compile ✅，前端 tsc --noEmit ✅
+
+#### 代码统计：149 文件 | +5305 -2635 | 新增编排器 +2（157 total）
+
+---
+
 ## 2026-05-03（下午更新）
 
 ### fix(backend): 面辅料智能一键领取 — 出库日志推送给仓库系统
