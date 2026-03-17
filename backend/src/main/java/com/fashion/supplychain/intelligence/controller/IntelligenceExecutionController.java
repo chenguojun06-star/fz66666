@@ -70,6 +70,9 @@ public class IntelligenceExecutionController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ProductionAgenticCrewOrchestrator crewOrchestrator;
+
     /**
      * 执行命令
      *
@@ -459,6 +462,40 @@ public class IntelligenceExecutionController {
         } catch (Exception e) {
             log.error("[Controller] 查询命令详情异常", e);
             return Result.fail("查询失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 自然语言指令执行（手机端管理员/跟单员专用）
+     *
+     * 请求体: { "text": "把PO20260501001订单暂停" }
+     * 流程: LLM解析自然语言 → 结构化命令 → 执行/生成待审批
+     */
+    @PostMapping("/crew/nl-execute")
+    public Result<?> naturalLanguageExecute(@RequestBody Map<String, Object> body) {
+        try {
+            String text = body != null ? (String) body.get("text") : null;
+            if (text == null || text.isBlank()) {
+                return Result.fail("指令内容不能为空");
+            }
+            Long tenantId = UserContext.tenantId();
+            String userIdStr = UserContext.userId();
+            Long operatorId = userIdStr != null ? Long.parseLong(userIdStr) : null;
+
+            log.info("[NL-Execute] 用户 {} 发起自然语言指令: {}", operatorId, text);
+            ExecutionResult<?> result = crewOrchestrator.executeNaturalLanguageCommand(tenantId, operatorId, text);
+
+            if (result.isSuccess()) {
+                return Result.success(Map.of(
+                    "status", "SUCCESS",
+                    "data", result.getData() != null ? result.getData() : Map.of()
+                ));
+            } else {
+                return Result.fail("执行失败: " + result.getErrorMessage());
+            }
+        } catch (Exception e) {
+            log.error("[NL-Execute] 自然语言指令执行异常", e);
+            return Result.fail("系统异常: " + e.getMessage());
         }
     }
 }

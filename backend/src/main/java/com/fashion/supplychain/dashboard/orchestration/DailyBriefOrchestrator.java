@@ -81,7 +81,9 @@ public class DailyBriefOrchestrator {
         long overdueCount = dashboardQueryService.countOverdueOrders();
         brief.put("overdueOrderCount", overdueCount);
 
-        // ④ 高风险订单（进行中 + 7天内到期 + 进度 < 50%）
+        // ④ 高风险订单（进行中 + 7天内到期但【尚未逾期】 + 进度 < 50%）
+        // 注意：已逾期订单已在 overdueOrderCount 中计数，此处排除避免双重计数
+        LocalDateTime nowTime = today.atStartOfDay();
         LocalDateTime deadline = today.plusDays(7).atTime(LocalTime.MAX);
         List<ProductionOrder> highRisk = productionOrderService.list(
             new LambdaQueryWrapper<ProductionOrder>()
@@ -94,9 +96,10 @@ public class DailyBriefOrchestrator {
                     ProductionOrder::getPlannedEndDate
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(ProductionOrder::getStatus, "IN_PROGRESS")
+                .eq(ProductionOrder::getStatus, "production")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
-                .le(ProductionOrder::getPlannedEndDate, deadline)
+                .ge(ProductionOrder::getPlannedEndDate, nowTime)   // 未逾期（今天之后）
+                .le(ProductionOrder::getPlannedEndDate, deadline)   // 7天内到期
         ).stream()
             .filter(o -> o.getProductionProgress() == null || o.getProductionProgress() < 50)
             .sorted(Comparator.comparing(ProductionOrder::getPlannedEndDate))

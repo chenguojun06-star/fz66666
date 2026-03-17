@@ -309,7 +309,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDateTime now = LocalDateTime.now();
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
@@ -333,7 +333,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getPlannedEndDate)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .orderBy(true, true, ProductionOrder::getPlannedEndDate)

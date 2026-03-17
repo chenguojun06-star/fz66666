@@ -396,6 +396,27 @@ const intelligence = {
     // AI agent loop 最多调用 5 次 LLM，需要较长超时
     return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
+  // ── 管理员/跟单员 AI 指令能力 ──────────────────────────
+  /** 自然语言 → AI 解析 → 执行或生成待审批命令 */
+  naturalLanguageExecute(payload) {
+    return ok('/api/intelligence/crew/nl-execute', 'POST', payload || {}, { timeout: 90000 });
+  },
+  /** 直接执行一条已解析好的 ExecutableCommand */
+  executeCommand(command) {
+    return ok('/api/intelligence/commands/execute', 'POST', command || {});
+  },
+  /** 获取待审批命令列表 */
+  getPendingCommands() {
+    return ok('/api/intelligence/commands/pending', 'GET', {});
+  },
+  /** 审批通过某条命令 */
+  approveCommand(commandId, remark) {
+    return ok(`/api/intelligence/commands/${commandId}/approve`, 'POST', { remark: remark || '用户已批准' });
+  },
+  /** 拒绝某条命令 */
+  rejectCommand(commandId, reason) {
+    return ok(`/api/intelligence/commands/${commandId}/reject`, 'POST', { reason: reason || '用户已拒绝' });
+  },
 };
 
 const common = {
