@@ -119,7 +119,7 @@ const SystemStatusTab: React.FC = () => {
       )}
 
       {!overview && !loading && (
-        <Alert type="warning" message="无法获取系统状态" description="请检查后端服务是否正常运行" />
+        <Alert type="warning" title="无法获取系统状态" description="请检查后端服务是否正常运行" />
       )}
 
       {/* 租户人员统计 */}

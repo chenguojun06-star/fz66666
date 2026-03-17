@@ -125,7 +125,7 @@ const ShareOrderPage: React.FC = () => {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f7fa' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" spinning tip="加载中..."><div /></Spin>
       </div>
     );
   }
@@ -171,7 +171,7 @@ const ShareOrderPage: React.FC = () => {
           style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: '#d8f1ff' }}
           type="info"
           showIcon
-          message="该分享链接1天内有效"
+          title="该分享链接1天内有效"
           description="页面仅展示生产进度信息，不展示单价，不支持下载。"
         />
 

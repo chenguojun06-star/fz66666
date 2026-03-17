@@ -81,7 +81,7 @@ const ShareOrderPage: React.FC = () => {
   if (loading) {
     return (
       <div style={pageStyle}>
-        <Spin size="large" tip="加载中…" />
+        <Spin size="large" spinning tip="加载中…"><div /></Spin>
       </div>
     );
   }

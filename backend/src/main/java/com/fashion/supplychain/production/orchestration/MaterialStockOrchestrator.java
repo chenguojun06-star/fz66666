@@ -129,6 +129,10 @@ public class MaterialStockOrchestrator {
             dto.setPerPieceUsage(perPieceUsage);
             dto.setMinProductionQty(minProductionQty);
             dto.setMaxProductionQty(maxProductionQty);
+            dto.setSupplierName(stock.getSupplierName());
+            dto.setFabricWidth(stock.getFabricWidth());
+            dto.setFabricWeight(stock.getFabricWeight());
+            dto.setFabricComposition(stock.getFabricComposition());
             alerts.add(dto);
         }
 

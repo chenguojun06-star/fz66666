@@ -22,6 +22,17 @@
   color: #5B6AF0;
   white-space: nowrap;
 }
+/* 指令型芯片（需补充订单号） */
+.chip-cmd {
+  border-color: #f7a600;
+  color: #d48806;
+  background: #fffbe6;
+}
+.chip-hint {
+  font-size: 20rpx;
+  color: #aaa;
+  margin-left: 4rpx;
+}
 
 /* ── 消息列表 ── */
 .msg-list {

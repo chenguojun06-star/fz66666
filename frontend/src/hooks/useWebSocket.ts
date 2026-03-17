@@ -86,10 +86,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
   /** 建立连接 */
   const connect = useCallback(() => {
     if (!userId || !enabled) return;
-    // 清理已有连接
+    // 清理已有连接（safeClose：对 CONNECTING socket 不直接 close，避免浏览器原生警告）
     if (wsRef.current) {
-      wsRef.current.onclose = null;
-      wsRef.current.close();
+      const old = wsRef.current;
+      wsRef.current = null;
+      old.onopen = null;
+      old.onclose = null;
+      old.onerror = null;
+      old.onmessage = null;
+      if (old.readyState !== WebSocket.CONNECTING) {
+        old.close();
+      } else {
+        old.addEventListener('open', () => { try { old.close(); } catch { /* ignore */ } });
+      }
     }
 
     try {
@@ -174,13 +183,22 @@ export function useWebSocket(options: UseWebSocketOptions) {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       stopHeartbeat();
       if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
+        const ws = wsRef.current;
         wsRef.current = null;
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          // 等连接建立后再关，避免 "closed before established" 浏览器原生警告（React StrictMode 双执行场景）
+          ws.addEventListener('open', () => { try { ws.close(); } catch { /* ignore */ } });
+        }
       }
       setConnected(false);
     };
-     
+
   }, [userId, enabled]);
 
   return { connected, subscribe };

@@ -39,22 +39,29 @@ const DecisionInsightCard: React.FC<{
 }> = ({ insight, compact = false }) => {
   const tone = paletteMap[insight.level ?? 'info'];
   const evidence = (insight.evidence ?? []).filter(Boolean).slice(0, compact ? 2 : 3);
-  const labelWidth = compact ? 30 : 38;
-  const lineLabels = {
-    summary: insight.labels?.summary ?? '现在',
-    painPoint: insight.labels?.painPoint ?? '重点',
-    execute: insight.labels?.execute ?? '建议',
-    evidence: insight.labels?.evidence ?? '数据',
-    note: insight.labels?.note ?? '补充',
-    action: insight.labels?.action ?? '操作',
-  };
 
-  const renderLine = (label: string, value?: string, color = '#262626') => {
-    if (!value) return null;
+  /** 彩色圆点 */
+  const dot = (color: string) => (
+    <span style={{
+      display: 'inline-block',
+      width: 6, height: 6, borderRadius: '50%',
+      background: color, flexShrink: 0,
+      marginTop: compact ? 5 : 6,
+    }} />
+  );
+
+  /**
+   * 单行：圆点 + 文字，无任何标签文字
+   * dotColor 随字段语义变化，传达紧急程度
+   */
+  const row = (dotColor: string, text?: string, textColor = '#262626') => {
+    if (!text) return null;
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6, alignItems: 'start' }}>
-        <span style={{ color: '#8c8c8c', fontSize: compact ? 10 : 11, lineHeight: 1.6, textAlign: 'left' }}>{label}</span>
-        <span style={{ color, fontSize: compact ? 11 : 12, lineHeight: 1.6, wordBreak: 'break-word' }}>{value}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+        {dot(dotColor)}
+        <span style={{ color: textColor, fontSize: compact ? 11 : 12, lineHeight: 1.6, wordBreak: 'break-word', flex: 1 }}>
+          {text}
+        </span>
       </div>
     );
   };
@@ -70,6 +77,7 @@ const DecisionInsightCard: React.FC<{
         boxSizing: 'border-box',
       }}
     >
+      {/* 标题行 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone.dot, flexShrink: 0 }} />
@@ -81,48 +89,36 @@ const DecisionInsightCard: React.FC<{
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: evidence.length > 0 || insight.note || insight.actionLabel || insight.execute ? 6 : 0 }}>
-        {renderLine(lineLabels.summary, insight.summary)}
-        {renderLine(lineLabels.painPoint, insight.painPoint, tone.title)}
-        {renderLine(lineLabels.execute, insight.execute, '#595959')}
+      {/* 内容行：圆点颜色随紧急程度区分 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* 现状 → 卡片主色调点 */}
+        {row(tone.dot, insight.summary)}
+        {/* 卡点 → 最强调色（danger=红/warning=橙/info=蓝/success=绿） */}
+        {row(tone.title, insight.painPoint, tone.title)}
+        {/* 下一步 → 始终蓝色点（可执行动作） */}
+        {row('#1677ff', insight.execute, '#595959')}
+        {/* 数据 → 灰色点（中性事实） */}
+        {evidence.map((item, i) => (
+          <React.Fragment key={`ev-${i}`}>
+            {row('#8c8c8c', item, '#595959')}
+          </React.Fragment>
+        ))}
+        {/* 补充 → 浅灰点（次要信息） */}
+        {row('#bfbfbf', insight.note, '#8c8c8c')}
       </div>
 
-      {evidence.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6, marginBottom: insight.note || insight.actionLabel ? 6 : 0 }}>
-          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.evidence}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-            {evidence.map((item, index) => (
-              <div key={`${item}-${index}`} style={{ fontSize: compact ? 10 : 11, color: '#595959', lineHeight: 1.5, wordBreak: 'break-word' }}>
-                • {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {insight.note ? (
-        <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6, marginBottom: insight.actionLabel ? 6 : 0 }}>
-          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.note}</div>
-          <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.5, wordBreak: 'break-word' }}>
-            {insight.note}
-          </div>
-        </div>
-      ) : null}
-
+      {/* 操作按钮 */}
       {insight.actionLabel ? (
-        insight.onAction ? (
-          <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6 }}>
-            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.action}</div>
-            <Button type="link" size="small" onClick={insight.onAction} style={{ padding: 0, height: 'auto', fontSize: 12, justifyContent: 'flex-start' }}>
+        <div style={{ marginTop: 6, paddingLeft: 13 }}>
+          {insight.onAction ? (
+            <Button type="link" size="small" onClick={insight.onAction}
+              style={{ padding: 0, height: 'auto', fontSize: 12, justifyContent: 'flex-start' }}>
               {insight.actionLabel}
             </Button>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, columnGap: 6 }}>
-            <div style={{ fontSize: compact ? 10 : 11, color: '#8c8c8c', lineHeight: 1.6 }}>{lineLabels.action}</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: tone.title, lineHeight: 1.6 }}>{insight.actionLabel}</div>
-          </div>
-        )
+          ) : (
+            <span style={{ fontSize: 11, fontWeight: 600, color: tone.title }}>{insight.actionLabel}</span>
+          )}
+        </div>
       ) : null}
     </div>
   );

@@ -1206,6 +1206,8 @@ const OrderManagement: React.FC = () => {
         productCategory: values.productCategory || null, // ✅ 修复: 使用null而非undefined
         patternMaker: values.patternMaker || null, // ✅ 修复: 使用null而非undefined
         urgencyLevel: values.urgencyLevel || 'normal',
+        orderBizType: values.orderBizType || null,
+        skc: selectedStyle?.skc || null,
         orderQuantity: computedQty,
         orderDetails,
         plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : null,

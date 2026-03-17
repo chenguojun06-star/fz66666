@@ -867,7 +867,7 @@ POST /api/style-info/{id}/stage-action?stage=pattern&action=complete
 - ✅ 最多显示 **1个** 行内按钮（其余自动折叠到"更多"）
 - ✅ `primary: true` 优先显示
 - ✅ `key: 'log'` 或 `label: '日志'` 自动折叠
-- ✅ 操作列固定宽度：`width: 120`（单个按钮）或 `width: 160`（2个按钮）
+- ✅ 操作列固定宽度：`width: 60`（紧凑列表，如生产进度）、`width: 120`（单个按钮）或 `width: 160`（2个按钮）
 
 ### 颜色系统（禁止硬编码，但业务风险色除外）
 ```tsx

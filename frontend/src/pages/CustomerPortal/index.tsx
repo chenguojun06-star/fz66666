@@ -73,7 +73,7 @@ const CustomerPortal: React.FC = () => {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
-        <Spin size="large" tip="正在查询订单进度..." />
+        <Spin size="large" spinning tip="正在查询订单进度..."><div /></Spin>
       </div>
     );
   }
@@ -106,7 +106,7 @@ const CustomerPortal: React.FC = () => {
             type={error === 'unknown' ? 'warning' : 'error'}
             showIcon
             icon={<WarningOutlined />}
-            message={error === 'expired' ? '链接已过期' : error === 'invalid' ? '链接无效' : '查询失败'}
+            title={error === 'expired' ? '链接已过期' : error === 'invalid' ? '链接无效' : '查询失败'}
             description={msg}
           />
         </div>

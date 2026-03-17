@@ -257,25 +257,17 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               洗水唛 / 标签信息
             </div>
             <Row gutter={[16, 0]}>
-              <Col xs={24} md={16}>
+              <Col xs={24}>
                 <Form.Item
                   name="fabricCompositionParts"
-                  label="洗水唛成分（上装 / 下装）"
-                  tooltip="支持分别维护上装和下装的多条成分，打印洗水唛时会自动按上装 / 下装分段输出"
+                  label="洗水唛成分 / 洗涤说明"
+                  tooltip="每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出"
                 >
                   <CompositionPartsEditor disabled={editLocked} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="washInstructions"
-                  label="洗涤说明"
-                  tooltip="洗水唛上的洗涤注意事项，如：30°C水洗，不可漂白"
-                >
-                  <Input.TextArea rows={4} placeholder="如：30°C水洗，不可漂白，低温烘干" disabled={editLocked} />
-                </Form.Item>
-              </Col>
             </Row>
+            <Form.Item name="washInstructions" hidden><Input /></Form.Item>
             <div style={{ marginTop: -4, fontSize: 12, color: '#8c8c8c' }}>
               打印洗水唛时会自动带出 5 个标准护理图标；旧款式如果已经维护过专属护理码，打印时仍优先使用旧值。
             </div>

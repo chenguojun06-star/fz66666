@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, Input, Select, Form, InputNumber, Segmented, Tooltip, Tabs } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Card, Input, Select, Form, InputNumber, Segmented, Tooltip, Tabs, Upload, Button, message } from 'antd';
+import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -38,6 +38,7 @@ const MaterialPurchase: React.FC = () => {
     detailFrozen,
     smartReceiveOpen, smartReceiveOrderNo, setSmartReceiveOpen,
     returnConfirmModal, returnConfirmForm, returnConfirmSubmitting,
+    returnEvidenceFiles, setReturnEvidenceFiles, returnEvidenceRecognizing, recognizeReturnEvidence,
     returnResetModal, returnResetForm, returnResetSubmitting,
     quickEditModal, quickEditSaving,
     openDialog, openDialogSafe, closeDialog,
@@ -49,6 +50,9 @@ const MaterialPurchase: React.FC = () => {
     openQuickEditSafe, handleQuickEditSave,
     isSamplePurchaseView,
   } = useMaterialPurchase();
+
+  // 本弹窗用于 AI 识别时传递给 recognizeReturnEvidence 的文件引用
+  const [returnRecognizeFile, setReturnRecognizeFile] = useState<File | null>(null);
 
   return (
     <Layout>
@@ -245,106 +249,172 @@ const MaterialPurchase: React.FC = () => {
           title="回料确认"
           okText="确认回料"
           cancelText="取消"
-          width={isMobile ? '96vw' : 570}
+          width={isMobile ? '96vw' : '60vw'}
           centered
           onCancel={() => {
             returnConfirmModal.close();
             returnConfirmForm.resetFields();
+            setReturnRecognizeFile(null);
           }}
           okButtonProps={{ loading: returnConfirmSubmitting }}
           onOk={submitReturnConfirm}
           destroyOnHidden
           autoFontSize={false}
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+          initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.78) : 700}
           scaleWithViewport
         >
-          <Form form={returnConfirmForm} layout="vertical" preserve={false}>
-            <div style={{ marginBottom: 12, color: 'var(--neutral-text)' }}>
-              确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            {/* 左侧：凭证上传 + AI识别 */}
+            {!isMobile && (
+              <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
+                  确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
+                </div>
+                <Upload.Dragger
+                  accept="image/*"
+                  multiple
+                  maxCount={5}
+                  fileList={returnEvidenceFiles}
+                  onChange={({ fileList }) => setReturnEvidenceFiles(fileList)}
+                  beforeUpload={(f) => {
+                    setReturnRecognizeFile(f);
+                    return false;
+                  }}
+                  listType="picture"
+                  style={{ padding: '8px 4px' }}
+                >
+                  <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
+                    <InboxOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />
+                  </p>
+                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text)', margin: 0 }}>上传回料凭据图片</p>
+                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
+                </Upload.Dragger>
+                <Button
+                  type="dashed"
+                  icon={<FileSearchOutlined />}
+                  block
+                  loading={returnEvidenceRecognizing}
+                  disabled={!returnRecognizeFile}
+                  onClick={async () => {
+                    if (!returnRecognizeFile) return;
+                    const orderNo = String(returnConfirmModal.data?.[0]?.orderNo || '');
+                    const qtys = await recognizeReturnEvidence(returnRecognizeFile, orderNo);
+                    if (!Object.keys(qtys).length) {
+                      message.warning('未识别到匹配物料');
+                      return;
+                    }
+                    const current = returnConfirmForm.getFieldValue('items') || [];
+                    returnConfirmForm.setFieldsValue({
+                      items: (current as Array<any>).map((it) => ({
+                        ...it,
+                        returnQuantity: qtys[String(it.purchaseId)] ?? it.returnQuantity,
+                      })),
+                    });
+                    message.success(`AI已识别并填入 ${Object.keys(qtys).length} 项回料数量`);
+                  }}
+                >
+                  {returnEvidenceRecognizing ? 'AI识别中…' : '上传单据·AI识别回料数'}
+                </Button>
+              </div>
+            )}
+
+            {/* 右侧：物料明细表 */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {isMobile && (
+                <div style={{ marginBottom: 8, color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)' }}>
+                  确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
+                </div>
+              )}
+              <Form form={returnConfirmForm} layout="vertical" preserve={false}>
+                <ResizableTable
+                  storageKey="material-purchase-return"
+                  dataSource={(returnConfirmModal.data || []).map((t, idx) => ({
+                    key: String(t?.id || idx),
+                    id: t?.id,
+                    materialName: t?.materialName,
+                    materialCode: t?.materialCode,
+                    purchaseQuantity: Number(t?.purchaseQuantity || 0) || 0,
+                    arrivedQuantity: Number(t?.arrivedQuantity || 0) || 0,
+                    returnQuantity: t?.returnQuantity,
+                    index: idx,
+                  }))}
+                  columns={[
+                    {
+                      title: '物料',
+                      dataIndex: 'materialName',
+                      key: 'materialName',
+                      render: (_, record) => (
+                        <>
+                          <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
+                          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
+                          <Form.Item name={['items', record.index, 'purchaseId']} initialValue={String(record.id || '')} hidden>
+                            <Input />
+                          </Form.Item>
+                          <Form.Item name={['items', record.index, 'purchaseQuantity']} initialValue={record.purchaseQuantity} hidden>
+                            <Input />
+                          </Form.Item>
+                          <Form.Item name={['items', record.index, 'arrivedQuantity']} initialValue={record.arrivedQuantity} hidden>
+                            <Input />
+                          </Form.Item>
+                        </>
+                      ),
+                    },
+                    {
+                      title: '采购数',
+                      dataIndex: 'purchaseQuantity',
+                      key: 'purchaseQuantity',
+                      width: 90,
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '到货数',
+                      dataIndex: 'arrivedQuantity',
+                      key: 'arrivedQuantity',
+                      width: 90,
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '实际回料数',
+                      key: 'returnQuantity',
+                      width: 180,
+                      align: 'right' as const,
+                      render: (_, record) => {
+                        const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
+                        const minReturn = max <= 100
+                          ? Math.floor(max * 0.5)
+                          : Math.floor(max * 0.8);
+                        return (
+                          <Form.Item
+                            name={['items', record.index, 'returnQuantity']}
+                            initialValue={Number(record.returnQuantity || 0) || (max || 0)}
+                            style={{ margin: 0 }}
+                            rules={[
+                              { required: true, message: '请输入实际回料数量' },
+                              {
+                                validator: async (_, v) => {
+                                  const n = Number(v);
+                                  if (!Number.isFinite(n)) throw new Error('请输入数字');
+                                  if (n < 0) throw new Error('不能小于0');
+                                  if (max > 10 && !Number.isInteger(n)) throw new Error('请输入整数');
+                                  if (max > 10 && n > max) throw new Error(`不能大于${max}`);
+                                  if (n < minReturn) throw new Error(`少货超出允许范围，至少回料 ${minReturn}`);
+                                },
+                              },
+                            ]}
+                          >
+                            <InputNumber min={0} precision={0} step={1} style={{ width: 140 }} />
+                          </Form.Item>
+                        );
+                      },
+                    },
+                  ]}
+                  pagination={false}
+                  size="small"
+                  bordered
+                />
+              </Form>
             </div>
-            <ResizableTable
-              storageKey="material-purchase-return"
-              dataSource={(returnConfirmModal.data || []).map((t, idx) => ({
-                key: String(t?.id || idx),
-                id: t?.id,
-                materialName: t?.materialName,
-                materialCode: t?.materialCode,
-                purchaseQuantity: Number(t?.purchaseQuantity || 0) || 0,
-                arrivedQuantity: Number(t?.arrivedQuantity || 0) || 0,
-                returnQuantity: t?.returnQuantity,
-                index: idx,
-              }))}
-              columns={[
-                {
-                  title: '物料',
-                  dataIndex: 'materialName',
-                  key: 'materialName',
-                  render: (_, record) => (
-                    <>
-                      <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
-                      <Form.Item name={['items', record.index, 'purchaseId']} initialValue={String(record.id || '')} hidden>
-                        <Input />
-                      </Form.Item>
-                      <Form.Item name={['items', record.index, 'purchaseQuantity']} initialValue={record.purchaseQuantity} hidden>
-                        <Input />
-                      </Form.Item>
-                      <Form.Item name={['items', record.index, 'arrivedQuantity']} initialValue={record.arrivedQuantity} hidden>
-                        <Input />
-                      </Form.Item>
-                    </>
-                  ),
-                },
-                {
-                  title: '采购数',
-                  dataIndex: 'purchaseQuantity',
-                  key: 'purchaseQuantity',
-                  width: 100,
-                  align: 'right' as const,
-                },
-                {
-                  title: '到货数',
-                  dataIndex: 'arrivedQuantity',
-                  key: 'arrivedQuantity',
-                  width: 100,
-                  align: 'right' as const,
-                },
-                {
-                  title: '实际回料数',
-                  key: 'returnQuantity',
-                  width: 180,
-                  align: 'right' as const,
-                  render: (_, record) => {
-                    const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
-                    return (
-                      <Form.Item
-                        name={['items', record.index, 'returnQuantity']}
-                        initialValue={Number(record.returnQuantity || 0) || (max || 0)}
-                        style={{ margin: 0 }}
-                        rules={[
-                          { required: true, message: '请输入实际回料数量' },
-                          {
-                            validator: async (_, v) => {
-                              const n = Number(v);
-                              if (!Number.isFinite(n)) throw new Error('请输入数字');
-                              if (n < 0) throw new Error('不能小于0');
-                              if (!Number.isInteger(n)) throw new Error('请输入整数');
-                              if (n > max) throw new Error(`不能大于${max}`);
-                            },
-                          },
-                        ]}
-                      >
-                        <InputNumber min={0} precision={0} step={1} style={{ width: 140 }} />
-                      </Form.Item>
-                    );
-                  },
-                },
-              ]}
-              pagination={false}
-              size="small"
-              bordered
-            />
-          </Form>
+          </div>
         </ResizableModal>
 
         <ResizableModal

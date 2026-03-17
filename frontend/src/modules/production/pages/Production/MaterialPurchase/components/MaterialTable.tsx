@@ -156,7 +156,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 
         return tooltipContent
           ? (
-            <Tooltip title={tooltipContent} placement="right" color="white" overlayInnerStyle={{ color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' }}>
+            <Tooltip title={tooltipContent} placement="right" color="white" styles={{ container: { color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' } }}>
               <span style={{ borderBottom: '1px dotted var(--color-primary)', cursor: 'help' }}>{orderNo}</span>
             </Tooltip>
           )
@@ -170,12 +170,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       render: (_: any, record: MaterialPurchaseType) => {
         const name = record.factoryName as string | undefined;
         const type = record.factoryType as 'INTERNAL' | 'EXTERNAL' | undefined;
+        const bizType = record.orderBizType as string | undefined;
+        const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
         if (!name) return '-';
         return (
           <Space size={4}>
             {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
             {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
             <span style={{ fontSize: 12 }}>{name}</span>
+            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>}
           </Space>
         );
       },
@@ -241,6 +244,27 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'specifications',
       key: 'specifications',
       width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '幅宽',
+      dataIndex: 'fabricWidth',
+      key: 'fabricWidth',
+      width: 90,
+      ellipsis: true,
+    },
+    {
+      title: '克重',
+      dataIndex: 'fabricWeight',
+      key: 'fabricWeight',
+      width: 90,
+      ellipsis: true,
+    },
+    {
+      title: '成分',
+      dataIndex: 'fabricComposition',
+      key: 'fabricComposition',
+      width: 140,
       ellipsis: true,
     },
     {

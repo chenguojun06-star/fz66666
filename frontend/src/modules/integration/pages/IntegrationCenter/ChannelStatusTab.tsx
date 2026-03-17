@@ -83,18 +83,18 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: '#f6ffed', borderRadius: 8 }}>
-              <Statistic title="近7天支付流水" value={stats.paymentCount7d} suffix="笔" valueStyle={{ color: '#52c41a' }} />
+              <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: '#52c41a' } }} />
             </Card>
           </Col>
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: '#e6f4ff', borderRadius: 8 }}>
-              <Statistic title="近7天物流运单" value={stats.logisticsCount7d} suffix="件" valueStyle={{ color: '#1677ff' }} />
+              <Statistic title="迗7天物流运单" value={stats.logisticsCount7d} suffix="件" styles={{ content: { color: '#1677ff' } }} />
             </Card>
           </Col>
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: stats.unprocessedCallbacks > 0 ? '#fff7e6' : '#f9f9f9', borderRadius: 8 }}>
               <Statistic title="待处理回调" value={stats.unprocessedCallbacks} suffix="条"
-                valueStyle={{ color: stats.unprocessedCallbacks > 0 ? '#fa8c16' : '#999' }} />
+                styles={{ content: { color: stats.unprocessedCallbacks > 0 ? '#fa8c16' : '#999' } }} />
             </Card>
           </Col>
         </Row>

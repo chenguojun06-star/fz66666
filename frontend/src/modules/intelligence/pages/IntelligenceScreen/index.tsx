@@ -100,7 +100,7 @@ export default function IntelligenceScreen() {
 
       {data?.loading && !data?.ts ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-          <Spin size="large" tip="加载中..." />
+          <Spin size="large" spinning tip="加载中..."><div /></Spin>
         </div>
       ) : (
         <main className="screen-main">

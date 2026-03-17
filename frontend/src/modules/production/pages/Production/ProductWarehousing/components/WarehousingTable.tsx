@@ -143,7 +143,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         );
 
         return tooltipContent
-          ? <Tooltip title={tooltipContent} placement="right" color="white" overlayInnerStyle={{ color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' }}>{inner}</Tooltip>
+          ? <Tooltip title={tooltipContent} placement="right" color="white" styles={{ container: { color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' } }}>{inner}</Tooltip>
           : inner;
       },
     },

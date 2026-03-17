@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Form, Input, Select, Space, Tag, Modal, DatePicker } from 'antd';
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Select,
+  Space,
+  Tag,
+  message,
+  Modal,
+  DatePicker,
+} from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -14,7 +25,6 @@ import type {
   PatternRevision,
   PatternRevisionQueryParams,
 } from '@/types/patternRevision';
-import { message } from '@/utils/antdStatic';
 import {
   REVISION_TYPE_OPTIONS,
   REVISION_STATUS_OPTIONS,

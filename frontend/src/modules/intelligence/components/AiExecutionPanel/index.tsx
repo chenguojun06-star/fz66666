@@ -276,7 +276,7 @@ export default function AiExecutionPanel() {
       >
         {error && (
           <Alert
-            message={error}
+            title={error}
             type="error"
             closable
             style={{ marginBottom: '16px' }}
@@ -435,14 +435,14 @@ export default function AiExecutionPanel() {
           {executeResult?.success ? (
             <>
               <Alert
-                message={executeResult.message}
+                title={executeResult.message}
                 type="success"
                 style={{ marginBottom: '16px' }}
               />
 
               {executeResult.cascadedTasks > 0 && (
                 <Alert
-                  message={`已触发 ${executeResult.cascadedTasks} 个级联任务`}
+                  title={`已触发 ${executeResult.cascadedTasks} 个级联任务`}
                   type="info"
                   style={{ marginBottom: '16px' }}
                 />
@@ -469,7 +469,7 @@ export default function AiExecutionPanel() {
             </>
           ) : (
             <Alert
-              message={executeResult?.message || '未知错误'}
+              title={executeResult?.message || '未知错误'}
               type="error"
               showIcon
             />

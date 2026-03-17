@@ -123,7 +123,7 @@ const WarehousingAuditBanner: React.FC<WarehousingAuditBannerProps> = ({
       icon={<RobotOutlined />}
       showIcon
       type={insight.type}
-      message={insight.message}
+      title={insight.message}
       style={{ marginBottom: 12, fontSize: 13 }}
       closable
     />

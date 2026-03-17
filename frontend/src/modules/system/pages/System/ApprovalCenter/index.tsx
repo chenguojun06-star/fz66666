@@ -217,6 +217,7 @@ const ApprovalCenter: React.FC = () => {
         title={reviewAction === 'approve' ? '确认通过' : '驳回申请'}
         open={reviewModalVisible}
         onCancel={() => setReviewModalVisible(false)}
+        width="30vw"
         footer={[
           <Button key="cancel" onClick={() => setReviewModalVisible(false)}>取消</Button>,
           <Button

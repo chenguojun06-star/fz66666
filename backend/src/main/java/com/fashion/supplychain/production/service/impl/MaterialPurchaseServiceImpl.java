@@ -701,7 +701,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
         int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
         int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
-        if (max >= 0 && rq > max) {
+        // 数量 ≤ 10 的面料/辅料（按米/克计量），不限制回料数量上限，与 Orchestrator 保持一致
+        if (max > 10 && rq > max) {
             return false;
         }
 

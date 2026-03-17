@@ -1132,14 +1132,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.orgUnitId ? `dept:${queryParams.orgUnitId}` : (queryParams.parentOrgUnitId || '')}
+                    value={queryParams.orgUnitId
+                      ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
+                          ? `dept:${queryParams.orgUnitId}`
+                          : queryParams.orgUnitId)
+                      : ''}
                     onChange={(value) => {
                       if (!value) {
                         setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
                       } else if (value.startsWith('dept:')) {
                         setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
                       } else {
-                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, orgUnitId: undefined, page: 1 }));
+                        setQueryParams((prev) => ({ ...prev, orgUnitId: value, parentOrgUnitId: undefined, page: 1 }));
                       }
                     }}
                     placeholder="归属部门"
@@ -1219,7 +1223,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 showIcon
                 closable
                 onClose={() => setBottleneckBannerVisible(false)}
-                message={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {bottleneckItems.slice(0, 4).map((it, idx) => (
@@ -1459,14 +1463,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.orgUnitId ? `dept:${queryParams.orgUnitId}` : (queryParams.parentOrgUnitId || '')}
+                    value={queryParams.orgUnitId
+                      ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
+                          ? `dept:${queryParams.orgUnitId}`
+                          : queryParams.orgUnitId)
+                      : ''}
                     onChange={(value) => {
                       if (!value) {
                         setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
                       } else if (value.startsWith('dept:')) {
                         setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
                       } else {
-                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, orgUnitId: undefined, page: 1 }));
+                        setQueryParams((prev) => ({ ...prev, orgUnitId: value, parentOrgUnitId: undefined, page: 1 }));
                       }
                     }}
                     placeholder="归属部门"
@@ -1551,7 +1559,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 showIcon
                 closable
                 onClose={() => setBottleneckBannerVisible(false)}
-                message={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {bottleneckItems.slice(0, 4).map((it, idx) => (
@@ -1689,7 +1697,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         cancelText="取消"
         confirmLoading={remarkSaving}
         width="30vw"
-        destroyOnClose
+        destroyOnHidden
       >
         <Input.TextArea
           value={remarkText}

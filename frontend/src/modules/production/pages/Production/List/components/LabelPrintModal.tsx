@@ -13,7 +13,7 @@ import api from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleCoverThumb } from '@/components/StyleAssets';
-import { buildWashLabelSections, getDisplayWashCareCodes } from '@/utils/washLabel';
+import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 
 // ─── 共用类型 ─────────────────────────────────────────────────────────────────
 
@@ -296,11 +296,13 @@ async function printWashLabels(
   styleInfo: LabelStyleInfo | null,
   w: number,
   h: number,
+  suitPart: string = 'all',
 ): Promise<void> {
   const fs = w >= 45 ? 6.5 : 5.5;
 
-  // 面料成分：优先解析多部位 JSON（套装上下装），否则取单行文本
-  const sections = buildWashLabelSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
+  // 面料成分：优先解析多部位 JSON（支持任意套装件数），否则取单行文本
+  const allSections = buildWashLabelSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
+  const sections = suitPart !== 'all' ? allSections.filter(s => s.key === suitPart) : allSections;
   const showPartTitle = sections.length > 1;
   let compositionHtml = sections.map(section => `
     <div class="comp-block">
@@ -312,7 +314,10 @@ async function printWashLabels(
     compositionHtml = '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
   }
 
-  const washText = (styleInfo?.washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
+  const perPartWashNotes = parseWashNotePerPart(styleInfo?.fabricCompositionParts);
+  const perPartNote = suitPart !== 'all' ? perPartWashNotes[suitPart] : undefined;
+  const washRaw = (perPartNote !== undefined && perPartNote.trim()) ? perPartNote : (styleInfo?.washInstructions || '');
+  const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
   const washInstHtml = washText
     ? `<div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
     : '';
@@ -511,6 +516,10 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
   const [washH, setWashH] = useState<number>(80);
   /** U码固定两档：40×70mm 或 50×100mm */
   const [uCodeSize, setUCodeSize] = useState<'40x70' | '50x100'>('40x70');
+  /** 套装部位选择：仅在款式有上下装成分时显示 */
+  const [suitPart, setSuitPart] = useState<string>('all');
+  const _suitSections = buildWashLabelSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
+  const isSuit = _suitSections.length > 1;
 
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
@@ -524,8 +533,8 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
 
   const handleWashPrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) =>
-      printWashLabels(selected, ord, si, washW, washH),
-    [washW, washH]
+      printWashLabels(selected, ord, si, washW, washH, suitPart),
+    [washW, washH, suitPart]
   );
 
   const handleUCodePrint = useCallback(
@@ -567,6 +576,21 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                       onChange={v => setWashH(v ?? 80)}
                       suffix="mm" style={{ width: 110 }} size="small"
                     />
+                    {isSuit && (
+                      <>
+                        <span style={{ color: '#555', fontSize: 13, marginLeft: 4 }}>打印部位</span>
+                        <Radio.Group
+                          value={suitPart}
+                          onChange={e => setSuitPart(e.target.value as string)}
+                          size="small"
+                        >
+                          <Radio.Button value="all">全部</Radio.Button>
+                          {_suitSections.map(s => (
+                            <Radio.Button key={s.key} value={s.key}>{s.label}</Radio.Button>
+                          ))}
+                        </Radio.Group>
+                      </>
+                    )}
                   </Space>
                   <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
                     上下虚线分割，内容距线 1.5cm；不含颜色/尺码，同款通用

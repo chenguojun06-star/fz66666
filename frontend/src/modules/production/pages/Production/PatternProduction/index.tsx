@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { App, Card, Button, Input, Modal, Form, InputNumber, Tag, Select, Switch, Tooltip } from 'antd';
+import { App, Card, Button, Input, Modal, Form, InputNumber, Tag, Select, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -681,36 +681,6 @@ const PatternProduction: React.FC = () => {
         const isCompleted = record.status === 'COMPLETED';
 
         const menuItems: MenuProps['items'] = [
-          {
-            key: 'secondary-toggle',
-            label: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                   onClick={e => e.stopPropagation()}>
-                <span>二次工艺</span>
-                <Switch
-                  size="small"
-                  checked={(record.hasSecondaryProcess ?? 1) === 1}
-                  checkedChildren="有"
-                  unCheckedChildren="无"
-                  onChange={async (checked) => {
-                    try {
-                      await api.post(`/production/pattern/${record.id}/secondary-flag`, null, {
-                        params: { hasSecondaryProcess: checked ? 1 : 0 },
-                      });
-                      message.success(checked ? '已设置有二次工艺' : '已设置无二次工艺');
-                      loadData();
-                    } catch {
-                      message.error('设置失败');
-                    }
-                  }}
-                />
-              </div>
-            ),
-          },
-          {
-            key: 'divider0',
-            type: 'divider',
-          },
           record.status === 'PENDING' && {
             key: 'receive',
             label: '领取',

@@ -305,7 +305,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       </Card>
 
       {error && (
-        <Alert type="warning" message={error} style={{ marginBottom: 12 }} showIcon />
+        <Alert type="warning" title={error} style={{ marginBottom: 12 }} showIcon />
       )}
 
       {/* 主表 — 受控分页 + 行选择 */}

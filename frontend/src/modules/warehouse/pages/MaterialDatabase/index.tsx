@@ -7,6 +7,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { useAuth } from '@/utils/AuthContext';
 import { renderMaskedNumber } from '@/utils/sensitiveDataMask';
@@ -59,6 +60,8 @@ const MaterialDatabasePage: React.FC = () => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [form] = Form.useForm();
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
+  const [returnTarget, setReturnTarget] = useState<MaterialDatabase | null>(null);
+  const [returnLoading, setReturnLoading] = useState(false);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -88,15 +91,15 @@ const MaterialDatabasePage: React.FC = () => {
       );
       const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(
         res as any,
-        '获取面辅料资料列表失败'
+        '获取物料资料库列表失败'
       );
       const records = Array.isArray(data?.records) ? data.records : [];
       setDataList(records as MaterialDatabase[]);
       setTotal(Number(data?.total || 0) || 0);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
-      const errMessage = (error as Error)?.message || '获取面辅料资料列表失败';
-      reportSmartError('面辅料资料加载失败', errMessage, 'MATERIAL_DATABASE_LOAD_FAILED');
+      const errMessage = (error as Error)?.message || '获取物料资料库列表失败';
+      reportSmartError('物料资料库加载失败', errMessage, 'MATERIAL_DATABASE_LOAD_FAILED');
       message.error(errMessage);
     } finally {
       setLoading(false);
@@ -251,7 +254,9 @@ const MaterialDatabasePage: React.FC = () => {
       return;
     }
     modal.confirm({
-      content: '确认将该物料标记为已完成？',
+      width: '30vw',
+      title: '确认完成',
+      content: '确认将该物料标记为已完成？完成后需退回才能再次编辑。',
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -265,29 +270,30 @@ const MaterialDatabasePage: React.FC = () => {
     });
   };
 
-  // 退回编辑
-  const handleReturn = async (record: MaterialDatabase) => {
-    const id = String(record?.id || '').trim();
-    if (!id) {
-      message.error('记录缺少ID');
-      return;
+  // 退回编辑 - 打开 RejectReasonModal
+  const handleReturn = (record: MaterialDatabase) => {
+    setReturnTarget(record);
+  };
+
+  // 退回确认回调
+  const handleReturnConfirm = async (reason: string) => {
+    const id = String(returnTarget?.id || '').trim();
+    if (!id) return;
+    setReturnLoading(true);
+    try {
+      unwrapApiData<boolean>(
+        await api.put<{ code: number; message: string; data: boolean }>(
+          `/material/database/${encodeURIComponent(id)}/return`,
+          reason ? { reason } : {}
+        ),
+        '退回失败'
+      );
+      message.success('退回成功');
+      setReturnTarget(null);
+      fetchList();
+    } finally {
+      setReturnLoading(false);
     }
-    modal.confirm({
-      width: '30vw',
-      title: '确认退回',
-      content: '确认将该物料退回编辑状态？',
-      okText: '确认',
-      cancelText: '取消',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        unwrapApiData<boolean>(
-          await api.put<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}/return`),
-          '退回失败'
-        );
-        message.success('退回成功');
-        fetchList();
-      },
-    });
   };
 
   // 表格列定义
@@ -305,8 +311,8 @@ const MaterialDatabasePage: React.FC = () => {
             alt="物料图片"
             style={{
               width: 40,
-              height: 40,
-              objectFit: 'cover'
+              height: 'auto',
+              display: 'block',
             }}
           />
         );
@@ -356,6 +362,27 @@ const MaterialDatabasePage: React.FC = () => {
       title: '规格',
       dataIndex: 'specifications',
       key: 'specifications',
+      width: 100,
+      ellipsis: true,
+    },
+    {
+      title: '幅宽',
+      dataIndex: 'fabricWidth',
+      key: 'fabricWidth',
+      width: 90,
+      ellipsis: true,
+    },
+    {
+      title: '克重',
+      dataIndex: 'fabricWeight',
+      key: 'fabricWeight',
+      width: 90,
+      ellipsis: true,
+    },
+    {
+      title: '成分',
+      dataIndex: 'fabricComposition',
+      key: 'fabricComposition',
       width: 120,
       ellipsis: true,
     },
@@ -494,7 +521,7 @@ const MaterialDatabasePage: React.FC = () => {
         <Card>
           {/* 页面标题 */}
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 面辅料资料</h2>
+            <h2 style={{ margin: 0 }}>📦 物料资料库</h2>
           </div>
 
           {/* 筛选区 */}
@@ -779,6 +806,20 @@ const MaterialDatabasePage: React.FC = () => {
             </Row>
           </Form>
         </StandardModal>
+
+        {/* 退回原因弹窗 */}
+        <RejectReasonModal
+          open={returnTarget !== null}
+          title="确认退回编辑"
+          description="退回后该物料将恢复为待处理状态，可重新编辑。"
+          fieldLabel="退回原因"
+          placeholder="请填写退回原因（可选）"
+          required={false}
+          okText="确认退回"
+          loading={returnLoading}
+          onOk={handleReturnConfirm}
+          onCancel={() => setReturnTarget(null)}
+        />
     </Layout>
   );
 };

@@ -90,6 +90,21 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             key: 'specifications',
           },
           {
+            title: '幅宽',
+            dataIndex: 'fabricWidth',
+            key: 'fabricWidth',
+          },
+          {
+            title: '克重',
+            dataIndex: 'fabricWeight',
+            key: 'fabricWeight',
+          },
+          {
+            title: '成分',
+            dataIndex: 'fabricComposition',
+            key: 'fabricComposition',
+          },
+          {
             title: '单位',
             dataIndex: 'unit',
             key: 'unit',

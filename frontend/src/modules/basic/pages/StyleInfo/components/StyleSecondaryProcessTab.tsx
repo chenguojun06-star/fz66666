@@ -503,7 +503,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
       {/* 简化视图：无数据提示 */}
       {simpleView && dataSource.length === 0 && (
-        <Alert message="无二次工艺" type="info" showIcon style={{ marginBottom: 16 }} />
+        <Alert title="无二次工艺" type="info" showIcon style={{ marginBottom: 16 }} />
       )}
 
       {/* 数据表格 */}

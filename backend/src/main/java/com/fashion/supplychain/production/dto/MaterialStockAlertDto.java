@@ -24,4 +24,8 @@ public class MaterialStockAlertDto {
     private BigDecimal perPieceUsage;
     private Integer minProductionQty;
     private Integer maxProductionQty;
+    private String supplierName;
+    private String fabricWidth;
+    private String fabricWeight;
+    private String fabricComposition;
 }

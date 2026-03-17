@@ -325,7 +325,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
       <Spin spinning={loading}>
         {!loading && rows.length === 1 && rows[0].color === '-' && (
           <Alert
-            message="未找到裁剪明细，使用订单整体数据打印"
+            title="未找到裁剪明细，使用订单整体数据打印"
             type="info" showIcon style={{ marginBottom: 10 }}
           />
         )}

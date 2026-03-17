@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert } from 'antd';
+import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -301,6 +301,31 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'receiverName',
       width: 100,
       ellipsis: true,
+    },
+    {
+      title: '凭证图片',
+      dataIndex: 'evidenceImageUrls',
+      key: 'evidenceImageUrls',
+      width: 110,
+      render: (v: string) => {
+        if (!v) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+        const urls = v.split(',').filter(Boolean);
+        if (!urls.length) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+        return (
+          <Image.PreviewGroup>
+            {urls.map((url, i) => (
+              <Image
+                key={i}
+                src={url}
+                width={40}
+                height={40}
+                style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+                preview={{ src: url }}
+              />
+            ))}
+          </Image.PreviewGroup>
+        );
+      },
     },
   ];
 

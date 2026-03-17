@@ -86,9 +86,10 @@ public class MaterialPurchaseOrchestratorHelper {
         Map<String, String> patternColorMap = loadPatternColors(patternProductionIds);
         Map<String, String> orderFactoryNameMap = loadOrderFactoryNames(orderIds);
         Map<String, String> orderFactoryTypeMap = loadOrderFactoryTypes(orderIds);
+        Map<String, String> orderBizTypeMap = loadOrderBizTypes(orderIds);
 
         List<Map<String, Object>> enrichedRecords = records.stream()
-            .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap, orderFactoryNameMap, orderFactoryTypeMap))
+            .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap, orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap))
                 .collect(Collectors.toList());
 
         return buildPageResult(enrichedRecords, page);
@@ -190,10 +191,27 @@ public class MaterialPurchaseOrchestratorHelper {
         return map;
     }
 
+    private Map<String, String> loadOrderBizTypes(Set<String> orderIds) {
+        Map<String, String> map = new HashMap<>();
+        if (orderIds.isEmpty()) return map;
+        try {
+            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
+            for (ProductionOrder order : orders) {
+                if (order != null && StringUtils.hasText(order.getId())) {
+                    map.put(order.getId(), order.getOrderBizType());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load order biz types", e);
+        }
+        return map;
+    }
+
     private Map<String, Object> enrichRecord(MaterialPurchase record,
             Map<String, Integer> orderQuantityMap, Map<String, Integer> patternQuantityMap,
             Map<String, String> orderColorMap, Map<String, String> patternColorMap,
-            Map<String, String> orderFactoryNameMap, Map<String, String> orderFactoryTypeMap) {
+            Map<String, String> orderFactoryNameMap, Map<String, String> orderFactoryTypeMap,
+            Map<String, String> orderBizTypeMap) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", record.getId());
         map.put("purchaseNo", record.getPurchaseNo());
@@ -237,12 +255,14 @@ public class MaterialPurchaseOrchestratorHelper {
         String orderColor = null;
         String factoryName = null;
         String factoryType = null;
+        String orderBizType = null;
         String sourceType = record.getSourceType();
         if ("order".equals(sourceType) && StringUtils.hasText(record.getOrderId())) {
             orderQuantity = orderQuantityMap.get(record.getOrderId());
             orderColor = orderColorMap.get(record.getOrderId());
             factoryName = orderFactoryNameMap.get(record.getOrderId());
             factoryType = orderFactoryTypeMap.get(record.getOrderId());
+            orderBizType = orderBizTypeMap.get(record.getOrderId());
         } else if ("sample".equals(sourceType) && StringUtils.hasText(record.getPatternProductionId())) {
             orderQuantity = patternQuantityMap.get(record.getPatternProductionId());
             orderColor = patternColorMap.get(record.getPatternProductionId());
@@ -251,6 +271,7 @@ public class MaterialPurchaseOrchestratorHelper {
         map.put("orderColor", orderColor);
         map.put("factoryName", factoryName);
         map.put("factoryType", factoryType);
+        map.put("orderBizType", orderBizType);
         return map;
     }
 

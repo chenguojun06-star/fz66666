@@ -285,7 +285,7 @@ const MyBillingTab: React.FC = () => {
           icon={<BellOutlined />}
           showIcon
           style={{ marginBottom: 16 }}
-          message={
+          title={
             <Space size={4} wrap>
               <Text strong>续费提醒：</Text>
               {expiringApps.map(app => {
@@ -440,7 +440,7 @@ const MyBillingTab: React.FC = () => {
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
-              message="付款方式"
+              title="付款方式"
               description="请通过银行转账或扫码向管理员付款。付款时请在备注中注明账单编号，付款完成后联系管理员确认，确认后账单状态将更新为「已支付」。"
             />
 

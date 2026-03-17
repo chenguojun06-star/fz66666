@@ -931,3 +931,40 @@ page {
   background: #ede9ff;
 }
 
+/* ── 管理员 AI 指令中心入口 Banner ── */
+.ai-cmd-banner {
+  display: flex;
+  align-items: center;
+  margin: 0 24rpx 20rpx;
+  padding: 22rpx 28rpx;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d6e 100%);
+  border-radius: 20rpx;
+}
+.ai-cmd-banner-hover {
+  opacity: 0.85;
+}
+.ai-cmd-icon {
+  font-size: 44rpx;
+  margin-right: 20rpx;
+}
+.ai-cmd-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.ai-cmd-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #fff;
+}
+.ai-cmd-sub {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.65);
+}
+.ai-cmd-arrow {
+  font-size: 44rpx;
+  color: rgba(255,255,255,0.5);
+  font-weight: 700;
+}
+

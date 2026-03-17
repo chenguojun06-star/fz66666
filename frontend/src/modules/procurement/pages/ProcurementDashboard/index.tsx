@@ -349,7 +349,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
       setMaterialDbLoading(true);
       try {
         const res = await api.get('/material/database/list', {
-          params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+          params: { keyword: keyword, pageSize: 30 },
         });
         const records: Record<string, unknown>[] = (res as any)?.data?.records ?? [];
         setMaterialDbOptions(records.map(m => ({
@@ -368,12 +368,23 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
   const handleMaterialDbSelect = (_value: string, option: { record?: Record<string, unknown> }) => {
     const m = option?.record;
     if (!m) return;
+    // 物料类型映射：DB 可能存 fabric/fabricA/FABRIC 等，统一归到 FABRIC/LINING/ACCESSORY/OTHER
+    const mapMaterialType = (mt: unknown): string | undefined => {
+      const t = String(mt || '').trim().toLowerCase();
+      if (!t) return undefined;
+      if (t.startsWith('fabric')) return 'FABRIC';
+      if (t.startsWith('lining')) return 'LINING';
+      if (t.startsWith('accessory')) return 'ACCESSORY';
+      return 'OTHER';
+    };
     form.setFieldsValue({
       materialName: m.materialName ?? '',
-      materialType: m.materialType ? String(m.materialType).toUpperCase() : undefined,
+      materialType: mapMaterialType(m.materialType),
       specifications: m.specifications ?? '',
       unit: m.unit ?? '',
       unitPrice: m.unitPrice ?? undefined,
+      color: m.color ?? undefined,
+      fabricComposition: m.fabricComposition ?? undefined,
     });
   };
 
@@ -443,7 +454,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
                 onSearch={searchMaterialDb}
                 onSelect={handleMaterialDbSelect}
                 allowClear
-                notFoundContent={materialDbLoading ? '搜索中…' : '输入关键词搜索面辅料资料'}
+                notFoundContent={materialDbLoading ? '搜索中…' : '输入关键词搜索物料资料库'}
               />
             </Form.Item>
           </Col>
@@ -462,6 +473,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
           <Col span={12}>
             <Form.Item name="specifications" label="规格">
               <Input placeholder="如：宽148cm，克重280g" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="color" label="颜色">
+              <Input placeholder="如：蓝色" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="fabricComposition" label="成分">
+              <Input placeholder="如：棉100%" />
             </Form.Item>
           </Col>
         </Row>

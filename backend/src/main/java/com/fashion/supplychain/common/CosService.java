@@ -169,6 +169,17 @@ public class CosService {
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
             throw new IOException("不允许上传此类型文件（" + ext + "）");
         }
+        // ── 本地开发模式（无 COS 配置）降级为本地文件存储 ──
+        if (!isEnabled()) {
+            java.io.File localFile = new java.io.File(uploadPath + "tenants/" + tenantId + "/" + filename);
+            java.io.File localDir = localFile.getParentFile();
+            if (!localDir.exists() && !localDir.mkdirs()) {
+                throw new IOException("本地上传目录创建失败: " + localDir.getAbsolutePath());
+            }
+            file.transferTo(localFile);
+            log.info("[COS-LOCAL] 文件已保存到本地: {}", localFile.getAbsolutePath());
+            return;
+        }
         String key = buildKey(tenantId, filename);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());
@@ -197,6 +208,19 @@ public class CosService {
      * @param contentType MIME 类型
      */
     public void upload(Long tenantId, String filename, byte[] content, String contentType) {
+        // ── 本地开发模式（无 COS 配置）降级为本地文件存储 ──
+        if (!isEnabled()) {
+            java.io.File localFile = new java.io.File(uploadPath + "tenants/" + tenantId + "/" + filename);
+            java.io.File localDir = localFile.getParentFile();
+            if (!localDir.exists()) localDir.mkdirs();
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(localFile)) {
+                fos.write(content);
+            } catch (IOException e) {
+                throw new RuntimeException("本地文件写入失败: " + localFile.getAbsolutePath(), e);
+            }
+            log.info("[COS-LOCAL] 文件(bytes)已保存到本地: {}", localFile.getAbsolutePath());
+            return;
+        }
         String key = buildKey(tenantId, filename);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(content.length);
@@ -238,6 +262,10 @@ public class CosService {
      * @return 带鉴权签名的临时下载 URL
      */
     public String getPresignedUrl(Long tenantId, String filename) {
+        if (!isEnabled()) {
+            // 本地开发模式：返回经认证的本地文件访问 URL
+            return "/api/file/tenant-download/" + tenantId + "/" + filename;
+        }
         String key = buildKey(tenantId, filename);
         try {
             GeneratePresignedUrlRequest req = new GeneratePresignedUrlRequest(bucket, key, HttpMethodName.GET);

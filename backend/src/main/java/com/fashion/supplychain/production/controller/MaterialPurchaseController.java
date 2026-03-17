@@ -1,11 +1,17 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.PurchaseOrderDoc;
+import com.fashion.supplychain.production.orchestration.MaterialPurchaseDocOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
+import com.fashion.supplychain.production.service.PurchaseOrderDocService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +25,22 @@ public class MaterialPurchaseController {
     @Autowired
     private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
 
+    @Autowired
+    private MaterialPurchaseDocOrchestrator purchaseDocOrchestrator;
+
+    @Autowired
+    private PurchaseOrderDocService purchaseOrderDocService;
+
     /**
-     * 【新版统一查询】分页查询物料采购列表
+     * 查询指定订单的历史单据列表（按上传时间倒序）
+     */
+    @GetMapping("/docs")
+    public Result<java.util.List<PurchaseOrderDoc>> listDocs(@RequestParam String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(purchaseOrderDocService.listByOrderNo(tenantId, orderNo));
+    }
+
+    /**
      * 支持参数：
      * - scanCode: 扫码查询（需配合orderNo）
      * - myTasks: true表示查询当前用户的采购任务
@@ -203,5 +223,25 @@ public class MaterialPurchaseController {
     @PostMapping("/cancel-picking")
     public Result<?> cancelPicking(@RequestBody Map<String, Object> body) {
         return Result.success(materialPurchaseOrchestrator.cancelPicking(body));
+    }
+
+    /**
+     * 上传采购单据图片，AI 自动识别物料信息并与采购任务匹配
+     * 支持格式：jpg/png/webp/gif/pdf（≤10MB）
+     * 参数：file（multipart）, orderNo（可选，用于精准匹配）
+     * 返回：items（识别到的物料行，含 matched/purchaseId/quantity 等）
+     */
+    @PostMapping(value = "/recognize-doc", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<?> recognizeDoc(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "orderNo", required = false) String orderNo) {
+        if (file == null || file.isEmpty()) {
+            return Result.fail("请上传有效的图片文件");
+        }
+        long maxBytes = 10L * 1024 * 1024; // 10MB
+        if (file.getSize() > maxBytes) {
+            return Result.fail("文件大小不能超过 10MB");
+        }
+        return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo));
     }
 }

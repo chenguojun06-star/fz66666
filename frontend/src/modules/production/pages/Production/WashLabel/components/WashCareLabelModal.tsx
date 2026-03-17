@@ -194,7 +194,7 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
       <Spin spinning={loading}>
         {noInfo && !loading && (
           <Alert
-            message="面料成分或洗涤说明未填写"
+            title="面料成分或洗涤说明未填写"
             description="请先在款式基本信息中完善面料成分和洗涤说明后再打印洗水唛"
             type="warning" showIcon style={{ marginBottom: 16 }}
           />

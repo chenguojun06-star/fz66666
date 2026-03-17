@@ -120,7 +120,7 @@ const EcSalesRevenue: React.FC = () => {
       width: 180,
       ellipsis: true,
       render: (_: unknown, r: EcRevenueRecord) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text ellipsis style={{ fontSize: 13 }}>{r.productName}</Text>
           <Text type="secondary" style={{ fontSize: 11 }}>{r.skuCode}</Text>
         </Space>
@@ -216,7 +216,7 @@ const EcSalesRevenue: React.FC = () => {
 
   return (
     <Layout>
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={16} style={{ width: '100%' }}>
         {/* 汇总卡片 */}
         <Row gutter={16}>
           <Col span={8}>

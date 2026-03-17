@@ -98,7 +98,7 @@ const MaterialShortageAlert: React.FC = () => {
       icon={icon}
       showIcon
       style={{ marginBottom: 8, borderRadius: 6 }}
-      message={
+      title={
         <span style={{ fontWeight: 600 }}>{messageText}</span>
       }
       description={

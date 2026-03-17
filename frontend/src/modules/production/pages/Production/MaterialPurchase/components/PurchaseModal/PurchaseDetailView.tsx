@@ -1,5 +1,7 @@
-import React from 'react';
-import { Button, Card, Collapse, Space, Tag } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip } from 'antd';
+import { FileImageOutlined } from '@ant-design/icons';
+import api from '@/utils/api';
 
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
@@ -8,6 +10,15 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal } from '../../utils';
+
+interface PurchaseDocRecord {
+  id: string;
+  imageUrl: string;
+  uploaderName: string;
+  createTime: string;
+  matchCount: number;
+  totalRecognized: number;
+}
 
 // 已回料确认行的样式
 const confirmedRowStyle = `
@@ -70,6 +81,27 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   isOrderFrozenForRecord,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+  const [docList, setDocList] = useState<PurchaseDocRecord[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+
+  const loadDocs = useCallback(async () => {
+    if (!currentPurchase?.orderNo) return;
+    setDocsLoading(true);
+    try {
+      const res = await api.get<PurchaseDocRecord[]>(
+        `/production/purchase/docs?orderNo=${encodeURIComponent(currentPurchase.orderNo)}`
+      );
+      setDocList(Array.isArray(res) ? res : []);
+    } catch (_e) {
+      // silent
+    } finally {
+      setDocsLoading(false);
+    }
+  }, [currentPurchase?.orderNo]);
+
+  useEffect(() => {
+    loadDocs();
+  }, [loadDocs]);
 
   return (
     <div className="purchase-detail-view">
@@ -107,9 +139,10 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               size="small"
               disabled={detailFrozen || !detailPurchases.some((p) => {
                 const status = normalizeStatus(p.status);
-                return status === MATERIAL_PURCHASE_STATUS.RECEIVED
+                return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
                   || status === MATERIAL_PURCHASE_STATUS.PARTIAL
-                  || status === MATERIAL_PURCHASE_STATUS.COMPLETED;
+                  || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
+                  && Number(p?.returnConfirmed || 0) !== 1;
               })}
               onClick={onBatchReturn}
             >
@@ -268,6 +301,59 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           );
         })()}
       </Card>
+
+      {(docList.length > 0 || docsLoading) && (
+        <Card
+          size="small"
+          style={{ marginTop: 12 }}
+          title={
+            <Space>
+              <FileImageOutlined />
+              <span>历史上传单据</span>
+              <span style={{ color: '#999', fontWeight: 'normal' }}>（{docList.length}张）</span>
+            </Space>
+          }
+        >
+          <Spin spinning={docsLoading}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+              {docList.map((doc) => (
+                <div
+                  key={doc.id}
+                  style={{
+                    width: 160,
+                    border: '1px solid #f0f0f0',
+                    borderRadius: 6,
+                    padding: 8,
+                    background: '#fafafa',
+                  }}
+                >
+                  <Image
+                    src={doc.imageUrl}
+                    width={144}
+                    height={100}
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                    preview={{ mask: '预览' }}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
+                    <Tooltip title={doc.uploaderName}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {doc.uploaderName || '未知'}
+                      </div>
+                    </Tooltip>
+                    <div style={{ color: '#999', marginTop: 2 }}>
+                      {doc.createTime ? doc.createTime.slice(0, 16).replace('T', ' ') : ''}
+                    </div>
+                    <div style={{ color: '#666', marginTop: 2 }}>
+                      识别{doc.totalRecognized}条 · 匹配{doc.matchCount}条
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Spin>
+        </Card>
+      )}
+
     </div>
   );
 };

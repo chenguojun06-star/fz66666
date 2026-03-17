@@ -163,6 +163,23 @@ public class MaterialPurchase {
     @TableField(exist = false)
     private String factoryType;
 
+    /**
+     * 下单类型（来自关联的生产订单，非数据库字段）: CMT / FOB / ODM / OEM
+     */
+    @TableField(exist = false)
+    private String orderBizType;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /**
+     * 回料确认时上传的凭证图片 URL，多个用逗号分隔
+     */
+    @TableField("evidence_image_urls")
+    private String evidenceImageUrls;
+
+    /**
+     * 面料成分（从物料资料库同步）
+     */
+    private String fabricComposition;
 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { productionOrderApi } from '@/services/production/productionApi';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
@@ -52,7 +51,6 @@ import {
   useProductionStats,
   useProductionColumns,
 } from './hooks';
-import type { PendingCloseOrder } from './hooks/useProductionActions';
 import { safeString, mainStages } from './utils';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -661,7 +659,7 @@ const ProductionList: React.FC = () => {
                 showIcon
                 closable
                 onClose={() => setAnomalyBannerVisible(false)}
-                message={
+                title={
                   <span style={{ fontWeight: 600, fontSize: 13 }}>
                     🔔 智能异常检测：发现 {anomalyItems.length} 条异常
                   </span>
@@ -845,8 +843,8 @@ const ProductionList: React.FC = () => {
                     ]}
                   />
                   <Select
-                    value={queryParams.parentOrgUnitId || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, parentOrgUnitId: value || undefined, page: 1 })}
+                    value={queryParams.orgUnitId || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, orgUnitId: value || undefined, parentOrgUnitId: undefined, page: 1 })}
                     placeholder="归属部门"
                     allowClear
                     showSearch
@@ -1549,7 +1547,7 @@ const ProductionList: React.FC = () => {
               <Alert
                 type="info"
                 showIcon
-                message="链接已生成，1天后自动失效"
+                title="链接已生成，1天后自动失效"
                 description="客户打开链接可查看完整进度与AI预测，不展示单价，不支持下载。"
                 style={{ fontSize: 12 }}
               />

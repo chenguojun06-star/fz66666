@@ -138,7 +138,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message={
+          title={
             <span>
               填写 API 密钥后开启渠道即可使用。
               {helpLink && (

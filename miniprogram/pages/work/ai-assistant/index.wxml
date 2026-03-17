@@ -1,14 +1,18 @@
 <view class="chat-wrapper">
 
-  <!-- 快捷提问芯片（只在无消息时显示，或始终置顶） -->
+  <!-- 快捷提问芯片（查询型直接发送；指令型填入输入框等待补充订单号） -->
   <view class="quick-chips">
     <view
       wx:for="{{quickPrompts}}"
       wx:key="label"
-      class="chip"
+      class="chip {{item.cmd ? 'chip-cmd' : ''}}"
       bindtap="onQuickPrompt"
       data-text="{{item.text}}"
-    >{{item.label}}</view>
+      data-cmd="{{item.cmd}}"
+    >
+      {{item.label}}
+      <text wx:if="{{item.cmd}}" class="chip-hint"> +单号</text>
+    </view>
   </view>
 
   <!-- 对话气泡区 -->
@@ -38,7 +42,7 @@
   <view class="input-bar">
     <input
       class="msg-input"
-      placeholder="输入问题，如：今天做了多少件…"
+      placeholder="{{isManager ? '输入指令，如：加急订单PO2026001…' : '输入问题，如：今天做了多少件…'}}"
       value="{{inputText}}"
       bindinput="onInputChange"
       confirm-type="send"

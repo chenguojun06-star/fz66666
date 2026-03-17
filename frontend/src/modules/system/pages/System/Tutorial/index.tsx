@@ -86,7 +86,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
 
   // 其他链接：直接显示可点击链接
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" style={{ width: '100%' }}>
       <Alert
         type="info"
         showIcon

@@ -94,7 +94,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     orderNo: (overrides?.orderNo ?? searchOrderNo) || undefined,
     styleNo: (overrides?.styleNo ?? searchStyleNo) || undefined,
     status: (overrides?.status ?? searchStatus) || undefined,
-    parentOrgUnitId: (overrides?.parentOrgUnitId ?? selectedParentOrgUnitId) || undefined,
+    parentOrgUnitId: (() => { const raw = overrides?.parentOrgUnitId ?? selectedParentOrgUnitId; return (raw ? (raw.startsWith('dept:') ? raw.slice(5) : raw) : undefined) || undefined; })(),
     factoryType: ((overrides?.factoryType ?? selectedFactoryType) || undefined) as PageParams['factoryType'],
     startDate: overrides?.startDate ?? (dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined),
     endDate: overrides?.endDate ?? (dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined),
@@ -603,7 +603,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 onChange={(value) => {
                   const nextValue = value || '';
                   setSelectedParentOrgUnitId(nextValue);
-                  handleSearch({ parentOrgUnitId: nextValue || undefined });
+                  const cleanId = nextValue.startsWith('dept:') ? nextValue.slice(5) : nextValue;
+                  handleSearch({ parentOrgUnitId: cleanId || undefined });
                 }}
                 placeholder="生产方"
                 allowClear

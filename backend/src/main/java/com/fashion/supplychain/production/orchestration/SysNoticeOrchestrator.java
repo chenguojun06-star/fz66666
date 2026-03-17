@@ -109,6 +109,22 @@ public class SysNoticeOrchestrator {
         String merchandiser = order.getMerchandiser();
         if (merchandiser == null || merchandiser.isBlank()) return;
 
+        // Upsert：已有未读同类通知时，刷新内容和时间而非新增行，防止每天重复堆积
+        SysNotice existing = sysNoticeService.lambdaQuery()
+                .eq(SysNotice::getTenantId, tenantId)
+                .eq(SysNotice::getOrderNo, order.getOrderNo())
+                .eq(SysNotice::getNoticeType, noticeType)
+                .eq(SysNotice::getIsRead, 0)
+                .last("LIMIT 1")
+                .one();
+        if (existing != null) {
+            existing.setContent(buildContent(noticeType, order));
+            existing.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.updateById(existing);
+            log.debug("[SmartNotify] 刷新已有未读通知 orderNo={} type={}", order.getOrderNo(), noticeType);
+            return;
+        }
+
         SysNotice notice = new SysNotice();
         notice.setTenantId(tenantId);
         notice.setToName(merchandiser);
@@ -138,18 +154,38 @@ public class SysNoticeOrchestrator {
 
         int prog = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
 
+        // Upsert：已有未读工人提醒时刷新内容，不重复新建行
+        SysNotice existing = sysNoticeService.lambdaQuery()
+                .eq(SysNotice::getTenantId, tenantId)
+                .eq(SysNotice::getOrderNo, order.getOrderNo())
+                .eq(SysNotice::getNoticeType, "worker_alert")
+                .eq(SysNotice::getToName, workerName)
+                .eq(SysNotice::getIsRead, 0)
+                .last("LIMIT 1")
+                .one();
+
+        String content = String.format(
+                "你参与的订单 %s（%s/%s）已多天无进展，当前进度 %d%%。请确认生产状态或联系跟单员。",
+                order.getOrderNo(),
+                order.getStyleNo() != null ? order.getStyleNo() : "-",
+                order.getStyleName() != null ? order.getStyleName() : "-",
+                prog);
+
+        if (existing != null) {
+            existing.setContent(content);
+            existing.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.updateById(existing);
+            log.debug("[SmartNotify] 刷新已有工人提醒 orderNo={} to={}", order.getOrderNo(), workerName);
+            return;
+        }
+
         SysNotice notice = new SysNotice();
         notice.setTenantId(tenantId);
         notice.setToName(workerName);
         notice.setFromName("系统自动检测");
         notice.setOrderNo(order.getOrderNo());
         notice.setTitle("⚠️ 生产提醒 — 订单 " + order.getOrderNo());
-        notice.setContent(String.format(
-                "你参与的订单 %s（%s/%s）已多天无进展，当前进度 %d%%。请确认生产状态或联系跟单员。",
-                order.getOrderNo(),
-                order.getStyleNo() != null ? order.getStyleNo() : "-",
-                order.getStyleName() != null ? order.getStyleName() : "-",
-                prog));
+        notice.setContent(content);
         notice.setNoticeType("worker_alert");
         notice.setIsRead(0);
         notice.setCreatedAt(LocalDateTime.now());

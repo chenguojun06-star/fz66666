@@ -68,7 +68,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
   const suggestions: string[] = Array.isArray(data?.suggestions) ? data.suggestions : [];
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={10}>
+    <Space orientation="vertical" style={{ width: '100%' }} size={10}>
       {issues.map((issue, idx) => (
         <IssueCard key={issue.code ?? idx} issue={issue} isHigh={isHigh} />
       ))}

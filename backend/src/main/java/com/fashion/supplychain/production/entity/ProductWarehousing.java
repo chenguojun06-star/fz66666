@@ -118,6 +118,10 @@ public class ProductWarehousing {
     @TableField(exist = false)
     private String factoryType;
 
+    /** 下单类型（来自关联的生产订单）: CMT / FOB / ODM / OEM */
+    @TableField(exist = false)
+    private String orderBizType;
+
     @TableField(exist = false)
     private String orgUnitId;
 

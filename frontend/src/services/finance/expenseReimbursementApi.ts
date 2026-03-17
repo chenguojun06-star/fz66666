@@ -29,11 +29,11 @@ export interface ExpenseReimbursement {
 }
 
 export const EXPENSE_TYPES = [
-  { value: 'taxi', label: '打车费' },
-  { value: 'travel', label: '出差费用' },
-  { value: 'material_advance', label: '面辅料垫付' },
-  { value: 'office', label: '办公用品' },
-  { value: 'other', label: '其他' },
+  { value: 'taxi', label: '打车费', color: 'cyan' },
+  { value: 'travel', label: '出差费用', color: 'blue' },
+  { value: 'material_advance', label: '面辅料垫付', color: 'purple' },
+  { value: 'office', label: '办公用品', color: 'geekblue' },
+  { value: 'other', label: '其他', color: 'default' },
 ];
 
 export const EXPENSE_STATUS = [
@@ -48,6 +48,32 @@ export const PAYMENT_METHODS = [
   { value: 'alipay', label: '支付宝' },
   { value: 'wechat', label: '微信' },
 ];
+
+export interface ExpenseReimbursementDoc {
+  id: string;
+  tenantId?: number;
+  reimbursementId?: string;
+  reimbursementNo?: string;
+  imageUrl: string;
+  rawText?: string;
+  recognizedAmount?: number;
+  recognizedDate?: string;
+  recognizedTitle?: string;
+  recognizedType?: string;
+  uploaderId?: string;
+  uploaderName?: string;
+  createTime?: string;
+}
+
+export interface RecognizeDocResult {
+  docId: string;
+  imageUrl: string;
+  rawText?: string;
+  recognizedAmount?: number;
+  recognizedDate?: string;
+  recognizedTitle?: string;
+  recognizedType?: string;
+}
 
 export const expenseReimbursementApi = {
   /** 分页查询报销单列表 */
@@ -88,5 +114,30 @@ export const expenseReimbursementApi = {
     const params = new URLSearchParams();
     if (remark) params.append('remark', remark);
     return await api.post(`/finance/expense-reimbursement/${id}/pay?${params.toString()}`);
+  },
+
+  /** 上传报销凭证并AI识别 */
+  recognizeDoc: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return await api.post('/finance/expense-reimbursement/recognize-doc', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /** 查询报销单已上传的凭证列表 */
+  getDocs: async (reimbursementId: string) => {
+    return await api.get('/finance/expense-reimbursement/docs', {
+      params: { reimbursementId },
+    });
+  },
+
+  /** 将凭证与报销单关联 */
+  linkDocs: async (docIds: string[], reimbursementId: string, reimbursementNo: string) => {
+    return await api.post('/finance/expense-reimbursement/docs/link', {
+      docIds,
+      reimbursementId,
+      reimbursementNo,
+    });
   },
 };

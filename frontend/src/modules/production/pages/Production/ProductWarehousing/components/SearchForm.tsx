@@ -64,9 +64,19 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
               ]}
             />
             <Select
-              value={queryParams.parentOrgUnitId || ''}
+              value={queryParams.orgUnitId
+                ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
+                    ? `dept:${queryParams.orgUnitId}`
+                    : queryParams.orgUnitId)
+                : ''}
               onChange={(value) => {
-                setQueryParams({ ...queryParams, parentOrgUnitId: value || undefined, page: 1 });
+                if (!value) {
+                  setQueryParams({ ...queryParams, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 });
+                } else if (value.startsWith('dept:')) {
+                  setQueryParams({ ...queryParams, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 });
+                } else {
+                  setQueryParams({ ...queryParams, orgUnitId: value, parentOrgUnitId: undefined, page: 1 });
+                }
                 onSearch();
               }}
               placeholder="归属部门"

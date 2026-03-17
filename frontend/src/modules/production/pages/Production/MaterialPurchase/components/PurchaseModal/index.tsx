@@ -102,9 +102,10 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           key="returnAll"
           disabled={!detailPurchases.some((p) => {
             const status = normalizeStatus(p.status);
-            return status === MATERIAL_PURCHASE_STATUS.RECEIVED
+            return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
               || status === MATERIAL_PURCHASE_STATUS.PARTIAL
-              || status === MATERIAL_PURCHASE_STATUS.COMPLETED;
+              || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
+              && Number(p?.returnConfirmed || 0) !== 1;
           })}
           loading={submitLoading}
           onClick={onBatchReturn}

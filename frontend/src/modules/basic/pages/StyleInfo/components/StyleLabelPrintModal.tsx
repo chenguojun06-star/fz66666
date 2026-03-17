@@ -9,7 +9,7 @@ import React, { useState, useRef } from 'react';
 import { Button, Radio, Space, Tag, Divider, Alert } from 'antd';
 import { PrinterOutlined, TagOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
-import { buildWashLabelSections, getDisplayWashCareCodes, hasWashLabelComposition } from '@/utils/washLabel';
+import { buildWashLabelSections, getDisplayWashCareCodes, hasWashLabelComposition, parseWashNotePerPart } from '@/utils/washLabel';
 
 interface StyleLabelInfo {
   styleNo?: string;
@@ -87,24 +87,56 @@ const PAPER_SIZES: Record<PaperSize, { w: number; h: number; label: string }> = 
 
 /**
  * 洗水唛打印内容（纯 HTML，注入 iframe 打印）
+ * suitPart='all' 打印全部部件；传入具体 key（如'上装'）仅打印该部件单页
  */
-function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize): string {
+function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize, suitPart = 'all'): string {
   const { w, h } = PAPER_SIZES[size];
-  const sections = buildWashLabelSections(info.fabricCompositionParts, info.fabricComposition);
-  const showPartTitle = sections.length > 1;
-  const comp = sections.length
-    ? sections.map(section => `
+  const allSections = buildWashLabelSections(info.fabricCompositionParts, info.fabricComposition);
+  const sections = suitPart !== 'all' ? allSections.filter(s => s.key === suitPart) : allSections;
+  const partTitle = suitPart !== 'all' ? allSections.find(s => s.key === suitPart)?.label : undefined;
+
+  const buildComp = (secs: typeof allSections, showTitles: boolean): string =>
+    secs.length
+      ? secs.map(section => `
       <div class="comp-group">
-        ${showPartTitle && section.key !== 'other' ? `<div class="group-title">${section.label}</div>` : ''}
+        ${showTitles && section.key !== 'other' ? `<div class="group-title">${section.label}</div>` : ''}
         ${section.items.map(item => `<div class="comp-line">${item}</div>`).join('')}
       </div>
     `).join('')
-    : '（未填写成分）';
-  const washRaw = info.washInstructions || '（未填写洗涤说明）';
-  const wash = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim() || '（未填写洗涤说明）';
+      : '（未填写成分）';
+
+  const washNotes = parseWashNotePerPart(info.fabricCompositionParts);
+  const getWash = (title?: string): string => {
+    const note = title !== undefined ? washNotes[title] : undefined;
+    const raw = (note !== undefined && note.trim()) ? note : (info.washInstructions || '（未填写洗涤说明）');
+    return raw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim() || '（未填写洗涤说明）';
+  };
   const careIconRow = buildCareIconRow(info);
   const styleNo = info.styleNo || '-';
   const styleName = info.styleName || '-';
+
+  const buildPage = (secs: typeof allSections, partTitle?: string): string => {
+    const wash = getWash(partTitle);
+    return `
+<div class="page">
+  <div class="top-block">
+    <div class="style-no">款号：${styleNo}</div>
+    <div class="style-name">款名：${styleName}</div>
+    ${partTitle ? `<div class="part-tag">${partTitle}</div>` : ''}
+  </div>
+  <div class="content-block">
+    <div class="comp">${buildComp(secs, secs.length > 1 && !partTitle)}</div>
+    <div class="wash-text"><span class="wash-label">洗涤说明</span>${wash}</div>
+  </div>
+  <div class="bottom-block">
+    ${careIconRow || ''}
+    <div class="country">MADE IN CHINA</div>
+    <div class="date-box">202603</div>
+  </div>
+</div>`;
+  };
+
+  const body = buildPage(sections, partTitle);
 
   return `<!DOCTYPE html>
 <html>
@@ -119,11 +151,13 @@ function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize): string {
     width: ${w}mm; height: ${h}mm;
     position: relative;
     padding: 0 2.2mm;
+    break-after: page;
   }
   .top-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 15mm; text-align: center; }
   .style-no { font-size: ${w <= 30 ? 5.8 : 6.2}pt; font-weight: bold; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .style-name { font-size: ${w <= 30 ? 5.1 : 5.5}pt; line-height: 1.35; margin-top: 0.8mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .content-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 24mm; bottom: 24mm; overflow: hidden; }
+  .part-tag { font-size: ${w <= 30 ? 6.2 : 6.8}pt; font-weight: bold; margin-top: 1.2mm; letter-spacing: 0.5mm; }
+  .content-block { position: absolute; left: 2.2mm; right: 2.2mm; top: ${partTitle ? 29 : 24}mm; bottom: 24mm; overflow: hidden; }
   .wash-text  { font-size: ${w <= 30 ? 5.1 : 5.6}pt; text-align: left; line-height: 1.55; word-break: break-word; color: #444; margin-top: 1.6mm; }
   .wash-label { display: block; font-weight: 600; margin-bottom: 0.5mm; }
   .comp  { font-size: ${w <= 30 ? 6.9 : 7.3}pt; text-align: left; line-height: 1.5; }
@@ -138,22 +172,7 @@ function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize): string {
   .date-box { margin-top: 2.2mm; font-size: ${w <= 30 ? 5.1 : 5.5}pt; color: #444; text-align: center; white-space: nowrap; }
 </style>
 </head>
-<body>
-<div class="page">
-  <div class="top-block">
-    <div class="style-no">款号：${styleNo}</div>
-    <div class="style-name">款名：${styleName}</div>
-  </div>
-  <div class="content-block">
-    <div class="comp">${comp}</div>
-    <div class="wash-text"><span class="wash-label">洗涤说明</span>${wash}</div>
-  </div>
-  <div class="bottom-block">
-    ${careIconRow || ''}
-    <div class="country">MADE IN CHINA</div>
-    <div class="date-box">202603</div>
-  </div>
-</div>
+<body>${body}
 </body>
 </html>`;
 }
@@ -212,9 +231,12 @@ function buildHangtagHtml(info: StyleLabelInfo, size: PaperSize, qrDataUrl: stri
 const StyleLabelPrintModal: React.FC<Props> = ({ open, onClose, style }) => {
   const [paperSize, setPaperSize] = useState<PaperSize>('30x80');
   const [labelType, setLabelType] = useState<LabelType>('both');
+  const [suitPart, setSuitPart] = useState<string>('all');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const hasMissingData = !hasWashLabelComposition(style.fabricCompositionParts, style.fabricComposition);
+  const suitSections = buildWashLabelSections(style.fabricCompositionParts, style.fabricComposition);
+  const isSuit = suitSections.length > 1;
 
   const handlePrint = async () => {
     // 生成 U码 QR DataURL（仅吊牌需要）
@@ -230,12 +252,12 @@ const StyleLabelPrintModal: React.FC<Props> = ({ open, onClose, style }) => {
 
     let html = '';
     if (labelType === 'wash') {
-      html = buildWashLabelHtml(style, paperSize);
+      html = buildWashLabelHtml(style, paperSize, suitPart);
     } else if (labelType === 'hangtag') {
       html = buildHangtagHtml(style, paperSize, qrDataUrl);
     } else {
       // both：同一页面分两个标签
-      const washHtml  = buildWashLabelHtml(style, paperSize);
+      const washHtml  = buildWashLabelHtml(style, paperSize, suitPart);
       const tagHtml   = buildHangtagHtml(style, paperSize, qrDataUrl);
       // 把两个 .page 合并到一个文档
       const washBody  = washHtml.replace(/[\s\S]*<body>([\s\S]*)<\/body>[\s\S]*/, '$1').trim();
@@ -285,7 +307,7 @@ ${tagBody}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message="洗水唛成分未填写，请先在基本信息中完善上装 / 下装成分后再打印洗水唛"
+          title="洗水唛成分未填写，请先在基本信息中完善上装 / 下装成分后再打印洗水唛"
           description="打印会自动带出标准护理图标，洗涤说明可按需补充"
         />
       )}
@@ -328,6 +350,17 @@ ${tagBody}
           <Radio value="hangtag">仅吊牌</Radio>
           <Radio value="both">洗水唛 + 吊牌</Radio>
         </Radio.Group>
+        {isSuit && (labelType === 'wash' || labelType === 'both') && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>打印部件</div>
+            <Radio.Group value={suitPart} onChange={e => setSuitPart(e.target.value)}>
+              <Radio.Button value="all">全部</Radio.Button>
+              {suitSections.map(s => (
+                <Radio.Button key={s.key} value={s.key}>{s.label}</Radio.Button>
+              ))}
+            </Radio.Group>
+          </div>
+        )}
       </div>
 
       <div>

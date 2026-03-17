@@ -39,6 +39,7 @@ interface FinishedInventory {
   orderNo: string;
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
+  orderBizType?: string;
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
   orgPath?: string;
@@ -115,7 +116,7 @@ const _FinishedInventory: React.FC = () => {
           pageSize: 500,
           keyword: searchText || undefined,
           orderNo: searchText || undefined,
-          parentOrgUnitId: selectedParentOrgUnitId || undefined,
+          parentOrgUnitId: (selectedParentOrgUnitId.startsWith('dept:') ? selectedParentOrgUnitId.slice(5) : selectedParentOrgUnitId) || undefined,
           factoryType: selectedFactoryType || undefined,
         }
       );
@@ -161,7 +162,8 @@ const _FinishedInventory: React.FC = () => {
     }
 
     if (selectedParentOrgUnitId) {
-      filtered = filtered.filter(item => item.parentOrgUnitId === selectedParentOrgUnitId);
+      const cleanId = selectedParentOrgUnitId.startsWith('dept:') ? selectedParentOrgUnitId.slice(5) : selectedParentOrgUnitId;
+      filtered = filtered.filter(item => item.parentOrgUnitId === cleanId);
     }
 
     if (selectedFactoryType) {
@@ -363,6 +365,10 @@ const _FinishedInventory: React.FC = () => {
                 {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
                 {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
                 {record.factoryName || '-'}
+                {record.orderBizType && (() => {
+                  const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
+                  return <Tag color={colorMap[record.orderBizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{record.orderBizType}</Tag>;
+                })()}
               </div>
               {record.orgPath || record.parentOrgUnitName ? (
                 <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>

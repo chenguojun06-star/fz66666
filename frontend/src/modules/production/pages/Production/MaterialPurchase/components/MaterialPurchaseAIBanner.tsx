@@ -170,7 +170,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       icon={<RobotOutlined />}
       showIcon
       type={insight.type}
-      message={insight.message}
+      title={insight.message}
       style={{ marginBottom: 12, fontSize: 13, whiteSpace: 'pre-line' }}
       closable
     />

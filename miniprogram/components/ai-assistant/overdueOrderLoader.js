@@ -74,17 +74,29 @@ function formatOverdueInfo(overdueDays) {
  * 加载延期订单列表
  * @returns {Promise<Array>} 延期订单列表
  */
+// 终态订单状态（与后端 OrderProgressFillHelper.TERMINAL_STATUSES 保持完全对齐）
+// 说明：比对后加入 SCRAPPED(报废) / ARCHIVED(已归档)，去除 FINISHED/DONE（后端不存在这两个值）
+const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED', 'CLOSED'];
+
 async function loadOverdueOrders() {
   try {
+    // excludeTerminal=true：服务端预过滤掉已完成/已取消订单（减少传输数据量）
+    // 注意：服务端 excludeTerminal 仅过滤 completed/cancelled，
+    // 客户端 TERMINAL_STATUSES 再兜底过滤 scrapped/archived/closed
     const res = await api.production.listOrders({
       page: 1,
-      pageSize: 100, // 加载更多数量以确保获取所有延期订单
+      pageSize: 100,
+      excludeTerminal: 'true',
     });
 
     const list = Array.isArray(res) ? res : res?.records || [];
 
-    // 筛选出延期订单
+    // 筛选出延期订单（排除已完成/已关闭的终态订单，它们不需要再预警）
     const overdueOrders = list
+      .filter(item => {
+        const status = String(item.status || '').toUpperCase();
+        return !TERMINAL_STATUSES.includes(status);
+      })
       .map(item => {
         const overdueDays = calculateOverdueDays(item.deadline || item.deliveryDate);
 

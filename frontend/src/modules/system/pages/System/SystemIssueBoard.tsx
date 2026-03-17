@@ -53,7 +53,7 @@ const columns: ColumnsType<SystemIssueItem> = [
     title: '问题描述',
     key: 'desc',
     render: (_: unknown, record: SystemIssueItem) => (
-      <Space direction="vertical" size={2}>
+      <Space orientation="vertical" size={2}>
         <Text strong>{record.title}</Text>
         <Text type="secondary" style={{ fontSize: 12 }}>{record.description}</Text>
         {record.actionHint && (
@@ -163,7 +163,7 @@ export default function SystemIssueBoard() {
       title: '错误信息',
       key: 'msg',
       render: (_: unknown, r: FrontendErrorRecord) => (
-        <Space direction="vertical" size={2} style={{ maxWidth: 500 }}>
+        <Space orientation="vertical" size={2} style={{ maxWidth: 500 }}>
           <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
           <Text type="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>{r.url}</Text>
           {r.stack && (
@@ -184,7 +184,7 @@ export default function SystemIssueBoard() {
 
   const issueTab = (
     <>
-      {error && <Alert message="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+      {error && <Alert title="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={8}>
           <Card size="small" style={{ borderColor: errCount > 0 ? '#ff4d4f' : '#d9d9d9' }}>
@@ -244,7 +244,7 @@ export default function SystemIssueBoard() {
 
   const feTab = (
     <>
-      {feError && <Alert message="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
+      {feError && <Alert title="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Card size="small" title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
         <Spin spinning={feLoading}>
           {feErrors.length === 0 ? (

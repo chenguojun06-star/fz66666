@@ -181,6 +181,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         open={returnModalVisible}
         onCancel={() => setReturnModalVisible(false)}
         onOk={handleReturnConfirm}
+        width="30vw"
       >
         <p>确认归还样衣吗？</p>
         <Input.TextArea

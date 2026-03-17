@@ -314,6 +314,7 @@ const StyleInfoListPage: React.FC = () => {
         confirmLoading={maintenanceSaving}
         okText="确定"
         cancelText="取消"
+        width="30vw"
       >
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>

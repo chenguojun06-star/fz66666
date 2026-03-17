@@ -176,7 +176,7 @@ const Register: React.FC = () => {
         {/* 扫码注册提示 */}
         {urlTenantCode && (
           <Alert
-            message={`正在注册到工厂：${urlTenantName || urlTenantCode}`}
+            title={`正在注册到工厂：${urlTenantName || urlTenantCode}`}
             type="info"
             showIcon
             style={{ marginBottom: 16, borderRadius: 8 }}
@@ -245,7 +245,7 @@ const Register: React.FC = () => {
           </Form.Item>
           {isApplyMode && (
             <Alert
-              message="以下账号信息用于审批通过后登录系统"
+              title="以下账号信息用于审批通过后登录系统"
               type="info"
               showIcon
               style={{ marginBottom: 16, borderRadius: 8 }}
@@ -253,7 +253,7 @@ const Register: React.FC = () => {
           )}
           {!isApplyMode && urlTenantCode && (
             <Alert
-              message={
+              title={
                 <div>
                   正在注册到：<strong>{urlTenantName || urlTenantCode}</strong>
                   {urlFactoryName && <span style={{ marginLeft: 8 }}>🏭 外发工厂：<strong>{urlFactoryName}</strong></span>}

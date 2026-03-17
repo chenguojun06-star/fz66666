@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Table, Tag, Image, List, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Table, Tag, Image, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
-  ArrowLeftOutlined, CheckCircleOutlined, ExperimentOutlined,
+  ArrowLeftOutlined, CheckCircleOutlined,
   InboxOutlined, OrderedListOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -404,7 +404,7 @@ const InspectionDetail: React.FC = () => {
             type="warning"
             showIcon
             style={{ marginBottom: 12 }}
-            message={`批次质检通过率偏低：当前通过率 ${passRate}%（合格 ${qcStats.qualified} / 总计 ${qcStats.total}），低于警戒线 80%，请复核不合格原因。`}
+            title={`批次质检通过率偏低：当前通过率 ${passRate}%（合格 ${qcStats.qualified} / 总计 ${qcStats.total}），低于警戒线 80%，请复核不合格原因。`}
           />
         );
       })()}
@@ -476,13 +476,13 @@ const InspectionDetail: React.FC = () => {
     const pendingQty = pendingRecords.reduce((s, r) => s + (Number(r.qualifiedQuantity) || 0), 0);
 
     if (!pendingRecords.length) {
-      return <Alert type="success" message="该订单所有合格质检记录均已入库完成！" showIcon />;
+      return <Alert type="success" title="该订单所有合格质检记录均已入库完成！" showIcon />;
     }
 
     return (
       <>
         <Alert type="info" showIcon style={{ marginBottom: 16 }}
-          message={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
+          title={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
 
         <Card size="small" title="待入库记录" style={{ marginBottom: 16 }}>
           <ResizableTable<WarehousingDetailRecord>
@@ -596,7 +596,7 @@ const InspectionDetail: React.FC = () => {
 
           {batchSelectRows.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(0,0,0,0.45)' }}>
-              {bundlesLoading ? <Spin tip="正在加载菲号..." /> : '该订单暂无裁剪菲号'}
+              {bundlesLoading ? <Spin spinning tip="正在加载菲号..."><div /></Spin> : '该订单暂无裁剪菲号'}
             </div>
           ) : (
             <ResizableTable<BatchSelectBundleRow>
@@ -679,18 +679,18 @@ const InspectionDetail: React.FC = () => {
               {/* 已选菲号摘要 */}
               {isSingleSelected && singleSelectedBundle && (
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
-                  message={`菲号: ${singleSelectedBundle.qrCode}  颜色: ${singleSelectedBundle.color || '-'}  码数: ${singleSelectedBundle.size || '-'}  质检数量: ${batchQtyByQr[String(singleSelectedBundle.qrCode || '').trim()] || singleSelectedBundle.quantity || 0}`}
+                  title={`菲号: ${singleSelectedBundle.qrCode}  颜色: ${singleSelectedBundle.color || '-'}  码数: ${singleSelectedBundle.size || '-'}  质检数量: ${batchQtyByQr[String(singleSelectedBundle.qrCode || '').trim()] || singleSelectedBundle.quantity || 0}`}
                 />
               )}
               {isMultiSelected && (
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
-                  message={`已选 ${batchSelectedBundleQrs.length} 个菲号，合计 ${batchSelectedSummary.totalQty} 件`} />
+                  title={`已选 ${batchSelectedBundleQrs.length} 个菲号，合计 ${batchSelectedSummary.totalQty} 件`} />
               )}
 
               {/* 返修统计（单选且次品待返修）→ 提示可重新质检 */}
               {isSingleSelected && isSingleSelectedBundleBlocked && singleSelectedBundleRepairStats && (
                 <Alert type="warning" style={{ marginBottom: 12 }}
-                  message="该菲号为次品待返修 — 可进行返修质检"
+                  title="该菲号为次品待返修 — 可进行返修质检"
                   description={`次品数量: ${singleSelectedBundleRepairStats.repairPool}  已返修: ${singleSelectedBundleRepairStats.repairedOut}  |  设置不合格数量为0即表示返修质检全部合格`}
                 />
               )}
@@ -707,7 +707,7 @@ const InspectionDetail: React.FC = () => {
               )}
               {isMultiSelected && batchSelectedHasBlocked && (
                 <Alert type="warning" showIcon style={{ marginBottom: 12 }}
-                  message="选中包含次品待返修菲号，请逐个处理或取消选择后再批量操作" />
+                  title="选中包含次品待返修菲号，请逐个处理或取消选择后再批量操作" />
               )}
 
               {/* 单选模式：完整质检表单 */}
@@ -808,7 +808,7 @@ const InspectionDetail: React.FC = () => {
 
         {!showQcForm && batchSelectRows.length > 0 && (
           <Alert type="info" showIcon style={{ marginTop: 8 }}
-            message="请勾选上方菲号，开始质检操作" />
+            title="请勾选上方菲号，开始质检操作" />
         )}
       </div>
     );
@@ -819,7 +819,7 @@ const InspectionDetail: React.FC = () => {
     return (
       <Layout>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-          <Spin size="large" tip="加载中..." />
+          <Spin size="large" spinning tip="加载中..."><div /></Spin>
         </div>
       </Layout>
     );
@@ -829,14 +829,14 @@ const InspectionDetail: React.FC = () => {
     return (
       <Layout>
         <Card>
-          <Alert type="error" message="无法加载质检简报数据" showIcon />
+          <Alert type="error" title="无法加载质检简报数据" showIcon />
           <Button type="link" onClick={() => navigate('/production/warehousing')}>返回质检入库列表</Button>
         </Card>
       </Layout>
     );
   }
 
-  const { order, style, bom, qualityTips } = briefing;
+  const { order, style, bom } = briefing;
   const styleId = orderDetail?.styleId || (order as any)?.styleId;
   const plateTypeKey = String((order as any)?.plateType || '').trim().toUpperCase();
   const urgencyKey = String((order as any)?.urgencyLevel || '').trim().toLowerCase();
@@ -896,39 +896,20 @@ const InspectionDetail: React.FC = () => {
               </Descriptions>
             </Card>
 
-            <Card size="small" title={<><ExperimentOutlined style={{ marginRight: 6 }} />质检注意事项</>}>
-              <List
-                size="small" dataSource={qualityTips}
-                renderItem={(tip: string, idx: number) => (
-                  <List.Item style={{
-                    padding: '4px 0',
-                    borderBottom: idx < qualityTips.length - 1 ? '1px dashed #f0f0f0' : 'none',
-                  }}>
-                    {tip.startsWith('\u26a0') ? (
-                      <Text type="warning" strong>{tip}</Text>
-                    ) : (
-                      <Text><span style={{ color: '#999', marginRight: 6 }}>{idx + 1}.</span>{tip}</Text>
-                    )}
-                  </List.Item>
-                )}
-              />
-            </Card>
-
-            {order.remarks && (
-              <Alert type="info" message="订单备注" description={order.remarks} showIcon />
-            )}
-
-            {/* AI质检意见 */}
+            {/* 智能质检助手 */}
             <Card
               size="small"
-              style={{ background: '#fff' }}
+              style={{ background: '#fff', border: '1px solid #d6e4ff' }}
               title={
-                <span>
-                  <span style={{ marginRight: 6 }}>🤖</span>
-                  AI质检意见
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>🤖</span>
+                  <span style={{ fontWeight: 600, color: '#1677ff' }}>智能质检助手</span>
                   {aiSuggestion?.historicalDefectRate !== undefined && (
                     <span style={{
-                      marginLeft: 8, fontSize: 11, fontWeight: 400,
+                      fontSize: 11, fontWeight: 400, padding: '1px 7px',
+                      borderRadius: 10, background:
+                        aiSuggestion.historicalDefectRate > 0.05 ? '#fff1f0'
+                          : aiSuggestion.historicalDefectRate > 0.02 ? '#fff7e6' : '#f6ffed',
                       color: aiSuggestion.historicalDefectRate > 0.05 ? '#ff4d4f'
                         : aiSuggestion.historicalDefectRate > 0.02 ? '#fa8c16' : '#52c41a',
                     }}>
@@ -940,7 +921,10 @@ const InspectionDetail: React.FC = () => {
               loading={aiLoading}
             >
               {!aiSuggestion && !aiLoading && (
-                <div style={{ color: '#bbb', textAlign: 'center', padding: '12px 0', fontSize: 12 }}>暂无AI建议</div>
+                <div style={{ color: '#aaa', textAlign: 'center', padding: '16px 0', fontSize: 12 }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>🔍</div>
+                  AI正在分析订单数据，请稍后…
+                </div>
               )}
               {aiSuggestion && (
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>

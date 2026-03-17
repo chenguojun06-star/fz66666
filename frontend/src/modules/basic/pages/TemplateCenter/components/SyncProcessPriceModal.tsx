@@ -671,7 +671,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Text style={{ whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 500 }}>款号：</Text>
           <AutoComplete

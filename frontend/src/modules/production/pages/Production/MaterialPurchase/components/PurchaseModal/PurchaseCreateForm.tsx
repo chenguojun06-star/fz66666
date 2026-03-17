@@ -56,7 +56,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       setMaterialDbLoading(true);
       try {
         const res = await api.get('/material/database/list', {
-          params: { materialCode: keyword, materialName: keyword, pageSize: 30 },
+          params: { keyword: keyword, pageSize: 30 },
         });
         const records: any[] = res?.data?.records || [];
         setMaterialDbOptions(
@@ -77,11 +77,29 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const handleMaterialDbSelect = (_value: string, option: any) => {
     const m = option?.record;
     if (!m) return;
-    form.setFieldsValue({
+    const patch: Record<string, unknown> = {
       materialCode: m.materialCode || '',
       materialName: m.materialName || '',
       unit: m.unit || '',
-    });
+    };
+    // 物料类型映射：DB 可能存 fabric/FABRIC/fabricA 等，统一归到表单 Select 的有效值
+    if (m.materialType) {
+      const validSet = new Set(['fabricA','fabricB','fabricC','fabricD','fabricE','liningA','liningB','liningC','liningD','liningE','accessoryA','accessoryB','accessoryC','accessoryD','accessoryE']);
+      const raw = String(m.materialType).trim();
+      if (validSet.has(raw)) {
+        patch.materialType = raw;
+      } else {
+        const t = raw.toLowerCase();
+        if (t.startsWith('fabric')) patch.materialType = 'fabricA';
+        else if (t.startsWith('lining')) patch.materialType = 'liningA';
+        else if (t.startsWith('accessory')) patch.materialType = 'accessoryA';
+      }
+    }
+    if (m.specifications) patch.specifications = String(m.specifications);
+    if (m.color) patch.color = String(m.color);
+    if (m.fabricComposition) patch.fabricComposition = String(m.fabricComposition);
+    if (m.unitPrice != null) patch.unitPrice = Number(m.unitPrice);
+    form.setFieldsValue(patch);
   };
 
   // 图片上传前验证
@@ -317,6 +335,11 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         <Col xs={24} md={6}>
           <Form.Item name="specifications" label="规格">
             <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="fabricComposition" label="成分">
+            <Input placeholder="如：棉100%" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>

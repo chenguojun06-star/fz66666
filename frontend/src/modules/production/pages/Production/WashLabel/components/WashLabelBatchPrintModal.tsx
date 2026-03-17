@@ -258,7 +258,7 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
 
         {/* 打印类型 */}
         <div>
@@ -273,7 +273,7 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
           <Alert
             type="warning"
             showIcon
-            message={labelType === 'wash'
+            title={labelType === 'wash'
               ? `${missingDataCount} 个订单的款式未填写面料成分，打印时将显示"成分未填写"`
               : `${missingDataCount} 个订单未填写 U 码，QR 码将留空`}
           />

@@ -141,13 +141,13 @@ export const useProgressColumns = ({
     {
       title: '图片',
       key: 'cover',
-      width: 72,
+      width: 90,
       render: (_: any, record: ProductionOrder) => (
         <StyleCoverThumb
           styleId={record.styleId}
           styleNo={record.styleNo}
           src={(record as any).styleCover || null}
-          size={48}
+          size={68}
           borderRadius={6}
         />
       ),
@@ -194,93 +194,13 @@ export const useProgressColumns = ({
         </Popover>
       ),
     },
-    {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 140,
-      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
+
     {
       title: 'SKC',
       dataIndex: 'skc',
       key: 'skc',
       width: 160,
       render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
-    {
-      title: '跟单员',
-      dataIndex: 'merchandiser',
-      key: 'merchandiser',
-      width: 120,
-      render: (v: any, record: ProductionOrder) => {
-        const name = String(v || '').trim();
-        const remark = String((record as Record<string, unknown>).remarks || '').trim();
-        const orderId = String(record.id || '');
-        const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
-        const remarkTime = tsMatch ? tsMatch[1] : '';
-        const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
-
-        return (
-          <div
-            style={{ position: 'relative', lineHeight: 1.3, cursor: 'pointer' }}
-            onClick={() => { setRemarkPopoverId(orderId); setRemarkText(remarkBody); }}
-          >
-            {remarkTime && (
-              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
-                {remarkTime}
-              </div>
-            )}
-            <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
-                {remark && (
-                  <Badge dot color="#ef4444" offset={[0, -2]}>
-                    <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
-                  </Badge>
-                )}
-              </div>
-            </Tooltip>
-            {remarkBody && (
-              <Tooltip title={remarkBody} placement="bottom">
-                <div style={{
-                  fontSize: 10, color: '#ef4444', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
-                  maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {remarkBody.length > 6 ? remarkBody.substring(0, 6) + '...' : remarkBody}
-                </div>
-              </Tooltip>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '下单人',
-      dataIndex: 'createdByName',
-      key: 'createdByName',
-      width: 100,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
-    {
-      title: '工厂',
-      dataIndex: 'factoryName',
-      key: 'factoryName',
-      width: 220,
-      ellipsis: true,
-      render: (v: any, record: ProductionOrder) => (
-        <div style={{ lineHeight: 1.3 }}>
-          <Space size={4} style={{ flexWrap: 'nowrap' }}>
-            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span>{v || '-'}</span>
-          </Space>
-          {record.orgPath ? (
-            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>{record.orgPath}</div>
-          ) : null}
-        </div>
-      ),
     },
     {
       title: (
@@ -306,19 +226,6 @@ export const useProgressColumns = ({
       width: 110,
       align: 'right' as const,
       render: (_: any, record: ProductionOrder) => Number((record as Record<string, unknown>).warehousingQualifiedQuantity) || 0,
-    },
-    {
-      title: '款名',
-      dataIndex: 'styleName',
-      key: 'styleName',
-      width: 200,
-      ellipsis: true,
-    },
-    {
-      title: '下单时间',
-      key: 'createTime',
-      width: 170,
-      render: (_: any, record: ProductionOrder) => formatTime(record.createTime),
     },
     {
       title: '备注',
@@ -462,6 +369,8 @@ export const useProgressColumns = ({
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
+        // 仅关单/报废才显示灰色球；completed等其他状态保留正常颜色
+        const isClosed = record.status === 'scrapped' || String(record.status || '') === 'closed';
         const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
         const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
@@ -480,6 +389,15 @@ export const useProgressColumns = ({
         const hasProcureNodeInTemplate = ns.some((n: ProgressNode) =>
           /采购|物料|备料|辅料|面料/.test(n.name || '')
         );
+        const merchandiserName = String((record as any).merchandiser || '').trim();
+        const creatorName = String((record as any).createdByName || '').trim();
+        const styleNameStr = String(record.styleName || '').trim();
+        const styleNoStr = String(record.styleNo || '').trim();
+        const createTimeStr = formatTime(record.createTime);
+        const deliveryDateStr = formatTime(getOrderShipTime(record));
+        const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate);
+        const factory = String(record.factoryName || '').trim();
+        const factoryType = (record as any).factoryType as string | undefined;
 
         return (
           <div style={{
@@ -489,22 +407,69 @@ export const useProgressColumns = ({
             alignItems: 'flex-start',
             width: '100%',
           }}>
-            {procurementTime && !hasProcureNodeInTemplate && (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                fontSize: 11,
-                color: '#10b981',
-                background: 'rgba(16,185,129,0.08)',
-                borderRadius: 4,
-                whiteSpace: 'nowrap',
-              }}>
-                <span>📦</span>
-                <span>采购到货 {formatCompletionTime(procurementTime)}</span>
+            <div style={{
+              display: 'flex',
+              width: '100%',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '3px 6px',
+              flexWrap: 'wrap',
+              gap: 4,
+              minHeight: 22,
+              background: '#f8fafc',
+              borderRadius: 5,
+              border: '1px solid #f0f0f0',
+            }}>
+              {/* 左侧：各字段间用 · 分隔 */}
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0 }}>
+                {((): React.ReactNode[] => {
+                  const sep = <span style={{ color: '#c0c4cc', fontSize: 12, padding: '0 5px', userSelect: 'none', fontWeight: 300 }}>|</span>;
+                  const items: React.ReactNode[] = [];
+                  if (procurementTime && !hasProcureNodeInTemplate) items.push(
+                    <span key="procurement" style={{ fontSize: 11, color: '#059669', fontWeight: 600, background: 'rgba(5,150,105,0.08)', padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>
+                      到货 {formatCompletionTime(procurementTime)}
+                    </span>
+                  );
+                  if (styleNameStr || styleNoStr) items.push(
+                    <span key="styleName" style={{ fontSize: 11, color: '#111827', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {styleNameStr}{styleNameStr && styleNoStr ? <span style={{ color: '#374151', fontWeight: 600, marginLeft: 4 }}>({styleNoStr})</span> : styleNoStr}
+                    </span>
+                  );
+                  if (createTimeStr) items.push(
+                    <span key="create" style={{ fontSize: 11, color: '#4b5563', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      下单 {createTimeStr}
+                    </span>
+                  );
+                  if (factory) items.push(
+                    <span key="factory" style={{ fontSize: 11, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 9, padding: '0 3px', lineHeight: '14px', height: 14 }}>内</Tag>}
+                      {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 9, padding: '0 3px', lineHeight: '14px', height: 14 }}>外</Tag>}
+                      {factory}
+                    </span>
+                  );
+                  return items.flatMap((item, i) => i === 0 ? [item] : [<React.Fragment key={`sep-${i}`}>{sep}</React.Fragment>, item]);
+                })()}
               </div>
-            )}
+              {/* 右侧：竖线 + 跟单员 + 下单人 */}
+              {(merchandiserName || creatorName) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div style={{ width: 1, height: 14, background: '#c0c4cc', flexShrink: 0 }} />
+                  {merchandiserName && (
+                    <span style={{ fontSize: 11, color: '#1f2937', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      跟单员：{merchandiserName}
+                    </span>
+                  )}
+                  {merchandiserName && creatorName && (
+                    <span style={{ color: '#c0c4cc', fontSize: 12, userSelect: 'none', fontWeight: 300, padding: '0 2px' }}>|</span>
+                  )}
+                  {creatorName && (
+                    <span style={{ fontSize: 11, color: '#1f2937', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      下单人：{creatorName}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           <div style={{
             display: 'flex',
             gap: 0,
@@ -539,7 +504,7 @@ export const useProgressColumns = ({
                     cursor: frozen ? 'default' : 'pointer',
                     padding: 4,
                     transition: 'background 0.2s',
-                    opacity: frozen ? 0.6 : 1,
+                    opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
                   }}
                   onClick={() => !frozen && openNodeDetail(
                     record,
@@ -564,7 +529,7 @@ export const useProgressColumns = ({
                       currentProgress: percent,
                     });
                   }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   title={completionTime
                     ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
                     : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
@@ -595,8 +560,8 @@ export const useProgressColumns = ({
                         nodeName={nodeName}
                         text={`${completedQty}/${totalQty}`}
                         paused={frozen}
-                        color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
-                        color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
+                        color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
+                        color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
                       />
                     </DefectTracePopover>
                   ) : (
@@ -606,8 +571,8 @@ export const useProgressColumns = ({
                       nodeName={nodeName}
                       text={`${completedQty}/${totalQty}`}
                       paused={frozen}
-                      color1={frozen ? '#9ca3af' : percent >= 100 ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
-                      color2={frozen ? '#d1d5db' : percent >= 100 ? '#e5e7eb' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
+                      color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
+                      color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
                     />
                   )}
                 </div>
@@ -622,7 +587,8 @@ export const useProgressColumns = ({
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 140,
+      width: 60,
+      align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         return (

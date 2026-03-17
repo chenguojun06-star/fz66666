@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.orchestration.DictOrchestrator;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +30,15 @@ public class DictController {
     public Result<?> list(@RequestParam Map<String, Object> params) {
         IPage<Dict> page = dictOrchestrator.list(params);
         return Result.success(page);
+    }
+
+    /**
+     * 按类型查询启用的词典项（无分页，前端下拉专用）
+     * GET /api/system/dict/by-type?type=garment_part
+     */
+    @GetMapping("/by-type")
+    public Result<List<Dict>> getByType(@RequestParam String type) {
+        return Result.success(dictOrchestrator.getByType(type));
     }
 
     @PostMapping

@@ -125,7 +125,7 @@ const TenantListTab: React.FC = () => {
     { key: 'warehouse', title: '仓库管理', paths: [
       { path: '/warehouse/dashboard', label: '数据看板' },
       { path: '/warehouse/material', label: '面辅料进销存' },
-      { path: '/warehouse/material-database', label: '面辅料资料' },
+      { path: '/warehouse/material-database', label: '物料资料库' },
       { path: '/warehouse/finished', label: '成品进销存' },
       { path: '/warehouse/sample', label: '样衣出入库' },
       { path: '/warehouse/ecommerce', label: '电商订单' },
@@ -522,7 +522,7 @@ const TenantListTab: React.FC = () => {
         }
       >
         <Form form={rejectReasonForm} layout="vertical">
-          <Alert message={`申请账号：${rejectModal.data?.applyUsername || '-'}`} type="warning" showIcon style={{ marginBottom: 16 }} />
+          <Alert title={`申请账号：${rejectModal.data?.applyUsername || '-'}`} type="warning" showIcon style={{ marginBottom: 16 }} />
           <Form.Item label="拒绝原因" name="reason" rules={[{ required: true, message: '请填写拒绝原因' }]}>
             <Input.TextArea rows={3} placeholder="请填写拒绝原因（将记录在备注中）" />
           </Form.Item>
@@ -693,7 +693,7 @@ const TenantListTab: React.FC = () => {
         }
       >
         <Alert
-          message="此操作将直接为该租户创建有效订阅，无需租户下单付费，适合人工确认付款后的手动开通场景。"
+          title="此操作将直接为该租户创建有效订阅，无需租户下单付费，适合人工确认付款后的手动开通场景。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -737,7 +737,7 @@ const TenantListTab: React.FC = () => {
         }
       >
         <Alert
-          message={`将为「${approveModal.data?.tenantName || ''}」创建主账号「${approveModal.data?.applyUsername || ''}」并激活工厂账户`}
+          title={`将为「${approveModal.data?.tenantName || ''}」创建主账号「${approveModal.data?.applyUsername || ''}」并激活工厂账户`}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -763,7 +763,7 @@ const TenantListTab: React.FC = () => {
               </Form.Item>
             ) : (
               <Alert
-                message="付费套餐将在审批通过后立即生效，可在「套餐与收费」中随时调整"
+                title="付费套餐将在审批通过后立即生效，可在「套餐与收费」中随时调整"
                 type="warning"
                 showIcon
                 style={{ marginBottom: 16 }}
@@ -789,11 +789,11 @@ const TenantListTab: React.FC = () => {
             </Space>
           </div>
           {approveEnabledModules === null ? (
-            <Alert message="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
+            <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
           ) : approveEnabledModules.length === 0 ? (
-            <Alert message="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
+            <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
           ) : (
-            <Alert message={`已配置 ${approveEnabledModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
+            <Alert title={`已配置 ${approveEnabledModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 340, overflowY: 'auto', padding: 2 }}>
             {MODULE_SECTIONS.map(section => {

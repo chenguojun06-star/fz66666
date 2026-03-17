@@ -697,69 +697,114 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             );
           })()}
 
-          {/* 尺寸表 */}
+          {/* 尺寸表 — 分组+参考图布局（与纸样开发Tab保持一致） */}
           {options.sizeTable && data.sizes.length > 0 && (() => {
-            // 将扁平数据转换为部位×尺码的表格
-            const sizeNames = [...new Set(data.sizes.map((s: any) => s.sizeName).filter(Boolean))];
-            const partNames = [...new Set(data.sizes.map((s: any) => s.partName).filter(Boolean))];
+            // ─── 分组辅助（与 StyleSizeTab 同逻辑）───
+            const _inferGroup = (pn: string): string => {
+              const n = String(pn || '').replace(/\s+/g, '').toLowerCase();
+              if (!n) return '其他区';
+              const upper = ['衣长','胸围','肩宽','袖长','袖口','袖肥','领围','领宽','领深','门襟','胸宽','摆围','下摆','前长','后长','前胸','后背','袖窿'];
+              const lower = ['裤长','腰围','臀围','前浪','后浪','脚口','裤口','腿围','小腿围','大腿围','膝围','坐围','裆','裙长','裙摆'];
+              if (upper.some(k => n.includes(k))) return '上装区';
+              if (lower.some(k => n.includes(k))) return '下装区';
+              return '其他区';
+            };
+            const _resolveGroup = (gName?: string, pName?: string) => {
+              const g = String(gName || '').trim();
+              return g || _inferGroup(String(pName || ''));
+            };
 
-            // 尺码排序（统一使用 size.ts 的算法排序，禁止内联尺码数组）
+            // ─── 收集所有尺码并排序 ───
+            const sizeNames = [...new Set(data.sizes.map((s: any) => s.sizeName).filter(Boolean))];
             const sortedSizeNames = sortSizeNames([...sizeNames]);
 
-            // 构建数据映射 partName -> sizeName -> { standardValue, tolerance }
-            const dataMap: Record<string, Record<string, any>> = {};
-            const methodMap: Record<string, string> = {};
-            data.sizes.forEach((s: any) => {
-              const part = s.partName || '';
-              const size = s.sizeName || '';
-              if (!dataMap[part]) dataMap[part] = {};
-              dataMap[part][size] = {
-                standardValue: s.standardValue,
-                tolerance: s.tolerance
-              };
-              if (!methodMap[part] && s.measureMethod) {
-                methodMap[part] = s.measureMethod;
+            // ─── 按 sort 字段预排序，与 Tab 保持一致 ───
+            const sortedSizes = [...data.sizes].sort((a: any, b: any) => (a.sort || 0) - (b.sort || 0));
+
+            // ─── 构建部位矩阵行 ───
+            type PrintRow = { resolvedGroupName: string; partName: string; measureMethod: string; tolerance: number | null; cells: Record<string, number | null>; };
+            const partMap = new Map<string, PrintRow>();
+            const groupOrder: string[] = [];
+            const partOrderPerGroup = new Map<string, string[]>();
+
+            sortedSizes.forEach((s: any) => {
+              const rg = _resolveGroup(s.groupName, s.partName);
+              const pk = `${rg}::${s.partName}`;
+              if (!partMap.has(pk)) {
+                partMap.set(pk, { resolvedGroupName: rg, partName: s.partName || '', measureMethod: s.measureMethod || '', tolerance: null, cells: {} });
+                if (!groupOrder.includes(rg)) { groupOrder.push(rg); partOrderPerGroup.set(rg, []); }
+                partOrderPerGroup.get(rg)!.push(s.partName || '');
+              }
+              const row = partMap.get(pk)!;
+              row.cells[s.sizeName] = s.standardValue != null ? Number(s.standardValue) : null;
+              if (row.tolerance === null && s.tolerance != null) row.tolerance = Number(s.tolerance);
+            });
+
+            // ─── 每分组取首条有图的记录作参考图（最多2张）───
+            const groupImages = new Map<string, string[]>();
+            sortedSizes.forEach((s: any) => {
+              if (!s.imageUrls) return;
+              const rg = _resolveGroup(s.groupName, s.partName);
+              if (!groupImages.has(rg)) {
+                try { const p: string[] = JSON.parse(s.imageUrls); if (p.length) groupImages.set(rg, p.slice(0, 2)); } catch { /* skip */ }
               }
             });
 
+            // ─── 构建扁平展示行（含 rowspan 元数据）───
+            type FlatRow = PrintRow & { key: string; isGroupStart: boolean; groupSpan: number; chunkImgs: string[]; isImgStart: boolean; imgSpan: number; };
+            const flatRows: FlatRow[] = [];
+            groupOrder.forEach(rg => {
+              const parts = partOrderPerGroup.get(rg) || [];
+              const imgs = groupImages.get(rg) || [];
+              parts.forEach((pn, i) => {
+                flatRows.push({ ...partMap.get(`${rg}::${pn}`)!, key: `${rg}::${pn}`, isGroupStart: i === 0, groupSpan: i === 0 ? parts.length : 0, chunkImgs: i === 0 ? imgs : [], isImgStart: i === 0, imgSpan: i === 0 ? parts.length : 0 });
+              });
+            });
+
+            const thS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: 'var(--color-bg-container)', whiteSpace: 'nowrap' as const };
+            const tdS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', verticalAlign: 'middle', fontSize: 'var(--font-size-xs)' };
+
             return (
               <div className="print-section">
-                <div className="print-section-title">📏 尺寸表</div>                {(() => {
-                  const firstWithImg = data.sizes.find((s: any) => s.imageUrls);
-                  const imgs: string[] = (() => { try { return JSON.parse((firstWithImg as any)?.imageUrls || '[]'); } catch { return []; } })();
-                  if (!imgs.length) return null;
-                  return (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                      <span style={{ color: '#666', fontSize: 12 }}>尺寸参考图：</span>
-                      {imgs.map((url: string) => (
-                        <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }} />
-                      ))}
-                    </div>
-                  );
-                })()}                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
+                <div className="print-section-title">📏 尺寸表</div>
+                {/* table-layout:fixed + 只固定图片/分组列宽，其余列自动均分剩余空间 */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)', tableLayout: 'fixed' }}>
                   <thead>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left' }}>部位(cm)</th>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>度量方式</th>
-                      {sortedSizeNames.map(size => (
-                        <th key={size} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{size}</th>
-                      ))}
+                    <tr>
+                      <th style={{ ...thS, width: 160 }}>参考图</th>
+                      <th style={{ ...thS, width: 60 }}>分组</th>
+                      <th style={{ ...thS, width: 60, textAlign: 'left' }}>部位(cm)</th>
+                      <th style={{ ...thS, width: 100 }}>度量方式</th>
+                      {sortedSizeNames.map((sn: string) => <th key={sn} style={{ ...thS, width: 60 }}>{sn}</th>)}
+                      <th style={{ ...thS, width: 60 }}>公差(+/-)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {partNames.map((part: string) => (
-                      <tr key={part}>
-                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px' }}>{part}</td>
-                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{methodMap[part] || '平量'}</td>
-                        {sortedSizeNames.map(size => {
-                          const cell = dataMap[part]?.[size];
-                          const value = cell?.standardValue != null
-                            ? `${cell.standardValue}${cell.tolerance != null ? ` ±${cell.tolerance}` : ''}`
-                            : '-';
-                          return (
-                            <td key={size} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{value}</td>
-                          );
-                        })}
+                    {flatRows.map(row => (
+                      <tr key={row.key}>
+                        {row.isImgStart && (
+                          <td rowSpan={row.imgSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', padding: 6 }}>
+                            {row.chunkImgs.length > 0
+                              ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+                                  {row.chunkImgs.map((url: string) => (
+                                    <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
+                                  ))}
+                                </div>
+                              : <span style={{ color: '#ccc', fontSize: 11 }}>无图</span>
+                            }
+                          </td>
+                        )}
+                        {row.isGroupStart && (
+                          <td rowSpan={row.groupSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', fontWeight: 600 }}>
+                            {row.resolvedGroupName}
+                          </td>
+                        )}
+                        <td style={tdS}>{row.partName}</td>
+                        <td style={{ ...tdS, textAlign: 'center' }}>{row.measureMethod || '平量'}</td>
+                        {sortedSizeNames.map((sn: string) => (
+                          <td key={sn} style={{ ...tdS, textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
+                        ))}
+                        <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
                       </tr>
                     ))}
                   </tbody>

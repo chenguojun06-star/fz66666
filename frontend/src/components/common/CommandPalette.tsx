@@ -25,11 +25,27 @@ type ResultItem =
 // ─── 常量 ─────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  IN_PROGRESS: '#0ea5e9',
-  COMPLETED:   '#22c55e',
-  CREATED:     '#8b5cf6',
-  PAUSED:      '#f59e0b',
-  CANCELLED:   '#6b7280',
+  pending:    '#8b5cf6',
+  production: '#0ea5e9',
+  completed:  '#22c55e',
+  delayed:    '#f59e0b',
+  scrapped:   '#6b7280',
+  cancelled:  '#6b7280',
+  canceled:   '#6b7280',
+  paused:     '#f59e0b',
+  returned:   '#fa8c16',
+};
+
+const STATUS_LABEL_ZH: Record<string, string> = {
+  pending:    '待生产',
+  production: '生产中',
+  completed:  '已完成',
+  delayed:    '已逾期',
+  scrapped:   '已报废',
+  cancelled:  '已取消',
+  canceled:   '已取消',
+  paused:     '已暂停',
+  returned:   '已退回',
 };
 
 // ─── 主组件 ───────────────────────────────────────────────────
@@ -215,7 +231,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                     </span>
                     <span className="cp-item-meta">
                       <span className="cp-status-dot" style={{ background: STATUS_COLOR[o.status] || '#ccc' }} />
-                      <span className="cp-item-status">{o.statusLabel}</span>
+                      <span className="cp-item-status">{STATUS_LABEL_ZH[o.status] || o.statusLabel}</span>
                       {o.progress != null && <span className="cp-item-pct">{o.progress}%</span>}
                     </span>
                     <RightOutlined className="cp-item-arrow" />

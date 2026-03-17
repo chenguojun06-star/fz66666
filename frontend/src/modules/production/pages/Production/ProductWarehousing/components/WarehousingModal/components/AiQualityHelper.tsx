@@ -82,7 +82,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 加急提示 */}
       {data?.urgentTip && (
         <Alert
-          message={data.urgentTip}
+          title={data.urgentTip}
           type="warning"
           showIcon
           icon={<WarningOutlined />}
@@ -94,7 +94,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 历史严重缺陷告警 */}
       {data?.historicalVerdict === 'critical' && !data.urgentTip && (
         <Alert
-          message="该订单历史次品率偏高，请加强本次质检力度"
+          title="该订单历史次品率偏高，请加强本次质检力度"
           type="error"
           showIcon
           style={{ marginBottom: 8, padding: '4px 10px', fontSize: 12 }}

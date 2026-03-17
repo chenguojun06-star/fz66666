@@ -49,6 +49,7 @@ export interface PurchaseOrder {
   color?: string;
   size?: string;
   expectedShipDate?: string;
+  fabricComposition?: string;
 }
 
 export interface MaterialInboundRecord {

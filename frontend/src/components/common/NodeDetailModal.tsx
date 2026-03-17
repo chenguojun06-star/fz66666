@@ -1136,7 +1136,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             style={{ marginBottom: 8 }}
             type="warning"
             showIcon
-            message="部分数据加载失败"
+            title="部分数据加载失败"
             description={loadWarnings.join('；')}
           />
         )}

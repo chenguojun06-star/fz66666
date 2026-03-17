@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Dropdown, Input, Select, Tag, Form, Modal } from 'antd';
+import { Button, Card, Dropdown, Input, Select, Tag, Form, message, Modal } from 'antd';
 
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -28,7 +28,6 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { FinanceAuditResponse } from '@/services/production/productionApi';
-import { message } from '@/utils/antdStatic';
 
 const { Option } = Select;
 
@@ -452,11 +451,11 @@ const MaterialReconciliation: React.FC = () => {
    */
   const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => {
     return (
-      <div style={{ width: 48, height: 48, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+      <div style={{ width: 48, minHeight: 28, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
         {imageUrl ? (
-          <img src={getFullAuthedFileUrl(imageUrl)} alt="物料" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={getFullAuthedFileUrl(imageUrl)} alt="物料" style={{ width: '100%', height: 'auto', display: 'block' }} />
         ) : (
-          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
+          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>无图</span>
         )}
       </div>
     );

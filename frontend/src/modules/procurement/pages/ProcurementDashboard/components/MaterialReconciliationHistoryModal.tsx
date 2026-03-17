@@ -134,7 +134,7 @@ const MaterialReconciliationHistoryModal: React.FC<MaterialReconciliationHistory
       ) : records.length === 0 ? (
         <Empty description="该采购单还没有生成物料对账记录" style={{ padding: '24px 0' }} />
       ) : (
-        <Space direction="vertical" size={12} style={{ display: 'flex', marginTop: 12 }}>
+        <Space orientation="vertical" size={12} style={{ display: 'flex', marginTop: 12 }}>
           <ModalHeaderCard>
             <div style={{ flex: 1, minWidth: 0 }}>
               <ModalPrimaryField label="关联采购单" value={purchaseNo || '-'} />

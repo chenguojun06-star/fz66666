@@ -2,14 +2,22 @@ package com.fashion.supplychain.finance.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
+import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
+import com.fashion.supplychain.finance.orchestration.ExpenseDocOrchestrator;
 import com.fashion.supplychain.finance.orchestration.ExpenseReimbursementOrchestrator;
+import com.fashion.supplychain.finance.service.ExpenseReimbursementDocService;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 import java.util.Map;
 
@@ -28,6 +36,12 @@ public class ExpenseReimbursementController {
 
     @Autowired
     private ExpenseReimbursementService expenseReimbursementService;
+
+    @Autowired
+    private ExpenseDocOrchestrator expenseDocOrchestrator;
+
+    @Autowired
+    private ExpenseReimbursementDocService expenseReimbursementDocService;
 
     /**
      * 分页查询报销单列表
@@ -126,5 +140,64 @@ public class ExpenseReimbursementController {
             log.error("付款失败", e);
             return Result.fail("付款失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 上传报销凭证图片并调用AI识别
+     * 返回：docId, imageUrl, recognizedAmount, recognizedDate, recognizedTitle, recognizedType
+     */
+    @PostMapping(value = "/recognize-doc", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<java.util.Map<String, Object>> recognizeDoc(
+            @RequestPart("file") MultipartFile file) {
+        try {
+            java.util.Map<String, Object> result = expenseDocOrchestrator.recognizeDoc(file);
+            if (result.containsKey("error")) {
+                return Result.fail(result.get("error").toString());
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("报销凭证识别失败", e);
+            return Result.fail("识别失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询报销单下的所有凭证
+     */
+    @GetMapping("/docs")
+    public Result<List<ExpenseReimbursementDoc>> getDocs(
+            @RequestParam String reimbursementId) {
+        Long tenantId = UserContext.tenantId();
+        List<ExpenseReimbursementDoc> docs =
+                expenseReimbursementDocService.listByReimbursementId(tenantId, reimbursementId);
+        return Result.success(docs);
+    }
+
+    /**
+     * 将上传的凭证绑定到已创建的报销单（提交报销单后调用）
+     */
+    @PostMapping("/docs/link")
+    public Result<Boolean> linkDocs(
+            @RequestBody LinkDocsRequest req) {
+        try {
+            expenseReimbursementDocService.linkDocs(req.getDocIds(), req.getReimbursementId(), req.getReimbursementNo());
+            return Result.success(true);
+        } catch (Exception e) {
+            log.error("绑定凭证失败", e);
+            return Result.fail("绑定失败: " + e.getMessage());
+        }
+    }
+
+    /** 凭证绑定请求体 */
+    public static class LinkDocsRequest {
+        private List<String> docIds;
+        private String reimbursementId;
+        private String reimbursementNo;
+        public List<String> getDocIds() { return docIds; }
+        public void setDocIds(List<String> docIds) { this.docIds = docIds; }
+        public String getReimbursementId() { return reimbursementId; }
+        public void setReimbursementId(String reimbursementId) { this.reimbursementId = reimbursementId; }
+        public String getReimbursementNo() { return reimbursementNo; }
+        public void setReimbursementNo(String reimbursementNo) { this.reimbursementNo = reimbursementNo; }
     }
 }

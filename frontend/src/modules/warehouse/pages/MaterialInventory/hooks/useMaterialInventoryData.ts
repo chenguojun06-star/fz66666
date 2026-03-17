@@ -365,6 +365,9 @@ export function useMaterialInventoryData() {
           materialType: m.materialType || '',
           unit: m.unit || '',
           supplierName: m.supplierName || '',
+          fabricWidth: m.fabricWidth || '',
+          fabricWeight: m.fabricWeight || '',
+          fabricComposition: m.fabricComposition || '',
         });
         // 查询进销存获取真实库存，计算采购缺口
         try {
@@ -466,6 +469,10 @@ export function useMaterialInventoryData() {
       quantity: record.quantity,
       safetyStock: record.safetyStock,
       suggestedSafetyStock: record.safetyStock,
+      supplierName: record.supplierName,
+      fabricWidth: record.fabricWidth,
+      fabricWeight: record.fabricWeight,
+      fabricComposition: record.fabricComposition,
     };
   };
 

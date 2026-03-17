@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  App, Button, Card, DatePicker, Form, Input, InputNumber, Modal,
+  Alert, App, Button, Card, DatePicker, Form, Input, InputNumber,
   Select, Space, Tag, Tooltip, Popconfirm, Row, Col, Statistic,
+  Upload, Image, Spin,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   PlusOutlined, SearchOutlined, CheckCircleOutlined,
   CloseCircleOutlined, DollarOutlined, EditOutlined, DeleteOutlined,
+  UploadOutlined, PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -20,16 +22,24 @@ import {
   EXPENSE_STATUS,
   PAYMENT_METHODS,
   type ExpenseReimbursement,
+  type ExpenseReimbursementDoc,
+  type RecognizeDocResult,
 } from '@/services/finance/expenseReimbursementApi';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 const { TextArea } = Input;
 
-/** 费用类型 label 映射 */
-const typeLabel = (val: string) => EXPENSE_TYPES.find(t => t.value === val)?.label || val;
+interface UploadedDoc { tempId: string; docId?: string; imageUrl?: string; recognizing: boolean; }
+
+/** 费用类型 label 映射（返回带颜色的 Tag） */
+const typeLabel = (val: string): React.ReactNode => {
+  const t = EXPENSE_TYPES.find(e => e.value === val);
+  return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>{val}</Tag>;
+};
 /** 状态 Tag */
 const statusTag = (val: string) => {
   const s = EXPENSE_STATUS.find(t => t.value === val);
@@ -56,14 +66,18 @@ const ExpenseReimbursementPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
-  // ── 审批弹窗 ──
-  const [approveOpen, setApproveOpen] = useState(false);
-  const [approveRecord, setApproveRecord] = useState<ExpenseReimbursement | null>(null);
+  // ── 凭证上传状态（支持多张） ──
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
+  const [docList, setDocList] = useState<ExpenseReimbursementDoc[]>([]);
+  const [detailDocList, setDetailDocList] = useState<ExpenseReimbursementDoc[]>([]);
+
+  // ── 审批备注（复用于详情弹窗内的审批操作）──
   const [approveRemark, setApproveRemark] = useState('');
 
   // ── 详情弹窗 ──
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<ExpenseReimbursement | null>(null);
+  const [selectedDocIndex, setSelectedDocIndex] = useState(0);
 
   // ── 视图切换：my=我的报销  all=全部（审批人视角） ──
   const [viewMode, setViewMode] = useState<'my' | 'all'>('my');
@@ -123,6 +137,28 @@ const ExpenseReimbursementPage: React.FC = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  // 编辑时加载已上传的历史凭证
+  useEffect(() => {
+    if (editingRecord?.id) {
+      expenseReimbursementApi.getDocs(editingRecord.id)
+        .then(res => { if (res.code === 200) setDocList(res.data || []); })
+        .catch(() => {});
+    } else {
+      setDocList([]);
+    }
+  }, [editingRecord]);
+
+  // 详情弹窗加载凭证
+  useEffect(() => {
+    if (detailRecord?.id) {
+      expenseReimbursementApi.getDocs(detailRecord.id)
+        .then(res => { if (res.code === 200) setDetailDocList(res.data || []); })
+        .catch(() => {});
+    } else {
+      setDetailDocList([]);
+    }
+  }, [detailRecord]);
+
   // ── 新建/编辑 ──
   const openForm = (record?: ExpenseReimbursement) => {
     if (record) {
@@ -135,11 +171,55 @@ const ExpenseReimbursementPage: React.FC = () => {
       setEditingRecord(null);
       form.resetFields();
       form.setFieldsValue({ paymentMethod: 'bank_transfer' });
+      setUploadedDocs([]);
     }
     setFormOpen(true);
   };
 
+  // ── 凭证上传并AI识别（支持多张） ──
+  const handleDocUpload = async (file: File) => {
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setUploadedDocs(prev => [...prev, { tempId, recognizing: true }]);
+    try {
+      const res = await expenseReimbursementApi.recognizeDoc(file);
+      if (res.code === 200 && res.data) {
+        const d = res.data as RecognizeDocResult;
+        setUploadedDocs(prev => prev.map(doc =>
+          doc.tempId === tempId
+            ? { tempId, docId: d.docId, imageUrl: d.imageUrl, recognizing: false }
+            : doc,
+        ));
+        const fields: Record<string, unknown> = {};
+        if (d.recognizedAmount && !form.getFieldValue('amount')) fields.amount = d.recognizedAmount;
+        if (d.recognizedDate && !form.getFieldValue('expenseDate')) fields.expenseDate = dayjs(d.recognizedDate);
+        if (d.recognizedTitle && !form.getFieldValue('title')) fields.title = d.recognizedTitle;
+        if (d.recognizedType && !form.getFieldValue('expenseType')) fields.expenseType = d.recognizedType;
+        if (Object.keys(fields).length > 0) {
+          form.setFieldsValue(fields);
+          message.success('AI已自动识别凭证信息，请确认后提交');
+        } else {
+          message.success('凭证上传成功');
+        }
+      } else {
+        setUploadedDocs(prev => prev.filter(doc => doc.tempId !== tempId));
+        message.error(res.message || '识别失败，请重新上传');
+      }
+    } catch (e: any) {
+      setUploadedDocs(prev => prev.filter(doc => doc.tempId !== tempId));
+      message.error(`上传失败：${e?.message || '未知错误'}`);
+    }
+    return false;
+  };
+
   const handleFormSubmit = async () => {
+    if (!editingRecord && !uploadedDocs.some(d => d.docId)) {
+      message.error('请先上传报销凭证图片');
+      return;
+    }
+    if (uploadedDocs.some(d => d.recognizing)) {
+      message.warning('凭证上传中，请稍候...');
+      return;
+    }
     try {
       const values = await form.validateFields();
       setSubmitting(true);
@@ -157,6 +237,17 @@ const ExpenseReimbursementPage: React.FC = () => {
       }
 
       if (res.code === 200) {
+        // 新建成功后将凭证与报销单关联
+        if (!editingRecord && uploadedDocs.length > 0 && res.data?.id) {
+          try {
+            const docIds = uploadedDocs.filter(d => d.docId).map(d => d.docId!);
+            if (docIds.length > 0) {
+              await expenseReimbursementApi.linkDocs(docIds, res.data.id, res.data.reimbursementNo || '');
+            }
+          } catch {
+            // 凭证关联失败不阻断主流程
+          }
+        }
         message.success(editingRecord ? '更新成功' : '提交成功');
         setFormOpen(false);
         fetchList();
@@ -192,24 +283,19 @@ const ExpenseReimbursementPage: React.FC = () => {
     }
   };
 
-  // ── 审批 ──
-  const openApprove = (record: ExpenseReimbursement) => {
-    setApproveRecord(record);
-    setApproveRemark('');
-    setApproveOpen(true);
-  };
-
+  // ── 审批（在详情弹窗内操作，使用 detailRecord）──
   const handleApprove = async (action: 'approve' | 'reject') => {
-    if (!approveRecord?.id) return;
+    if (!detailRecord?.id) return;
     if (action === 'reject' && !approveRemark.trim()) {
       message.warning('驳回时请填写原因');
       return;
     }
     try {
-      const res = await expenseReimbursementApi.approve(approveRecord.id, action, approveRemark);
+      const res = await expenseReimbursementApi.approve(detailRecord.id, action, approveRemark);
       if (res.code === 200) {
         message.success(action === 'approve' ? '已批准' : '已驳回');
-        setApproveOpen(false);
+        setDetailOpen(false);
+        setApproveRemark('');
         fetchList();
       } else {
         reportSmartError('报销单审批失败', res.message || '请稍后重试', 'EXPENSE_APPROVE_FAILED');
@@ -257,10 +343,12 @@ const ExpenseReimbursementPage: React.FC = () => {
     });
   };
 
-  // ── 查看详情 ──
+  // ── 查看详情（同时用于审批入口）──
   const openDetail = (record: ExpenseReimbursement) => {
     setDetailRecord(record);
     setDetailOpen(true);
+    setSelectedDocIndex(0);
+    setApproveRemark('');
   };
 
   // ── 表格列 ──
@@ -288,11 +376,12 @@ const ExpenseReimbursementPage: React.FC = () => {
       title: '状态', dataIndex: 'status', width: 90,
       render: (val: string) => statusTag(val),
     },
-    ...(viewMode === 'all' ? [{
-      title: '申请人' as const,
-      dataIndex: 'applicantName' as const,
+    {
+      title: '报销人',
+      dataIndex: 'applicantName',
       width: 90,
-    }] : []),
+      render: (val: string) => val || '-',
+    },
     {
       title: '审批人', dataIndex: 'approverName', width: 90,
       render: (val: string) => val || '-',
@@ -305,9 +394,13 @@ const ExpenseReimbursementPage: React.FC = () => {
       title: '操作', key: 'actions', width: 180, fixed: 'right' as const,
       render: (_: unknown, record: ExpenseReimbursement) => {
         const actions: React.ReactNode[] = [];
+        const isAllView = viewMode === 'all';
+        const isOwnRecord = record.applicantId === Number(user?.id);
+        const isPendingRecord = record.status === 'pending';
+        const canApproveRecord = isAllView && isPendingRecord && !isOwnRecord;
 
         // 自己的待审批/已驳回单据可以编辑、删除
-        if (record.applicantId === Number(user?.id) && (record.status === 'pending' || record.status === 'rejected')) {
+        if (isOwnRecord && (record.status === 'pending' || record.status === 'rejected')) {
           actions.push(
             <Tooltip title="编辑" key="edit">
               <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openForm(record)} />
@@ -320,17 +413,38 @@ const ExpenseReimbursementPage: React.FC = () => {
           );
         }
 
-        // 全部视图下，审批人可审批待审批的（非自己的）单据
-        if (viewMode === 'all' && record.status === 'pending' && record.applicantId !== Number(user?.id)) {
+        // 审批入口：仅待审批且非本人可点击；其他状态统一灰色禁用
+        if (isAllView) {
           actions.push(
-            <Tooltip title="审批" key="approve">
-              <Button type="link" size="small" icon={<CheckCircleOutlined />} onClick={() => openApprove(record)}>审批</Button>
+            <Tooltip
+              title={
+                canApproveRecord
+                  ? '审批'
+                  : isOwnRecord && isPendingRecord
+                    ? '本人提交的单据不能自审'
+                    : '当前状态不可审批'
+              }
+              key="approve"
+            >
+              <Button
+                type="link"
+                size="small"
+                icon={<CheckCircleOutlined />}
+                disabled={!canApproveRecord}
+                onClick={() => {
+                  if (canApproveRecord) {
+                    openDetail(record);
+                  }
+                }}
+              >
+                审批
+              </Button>
             </Tooltip>,
           );
         }
 
         // 全部视图下，已批准可确认付款
-        if (viewMode === 'all' && record.status === 'approved') {
+        if (isAllView && record.status === 'approved') {
           actions.push(
             <Tooltip title="确认付款" key="pay">
               <Button type="link" size="small" style={{ color: 'var(--color-success)' }} icon={<DollarOutlined />} onClick={() => handlePay(record)}>付款</Button>
@@ -338,11 +452,13 @@ const ExpenseReimbursementPage: React.FC = () => {
           );
         }
 
-        actions.push(
-          <Tooltip title="详情" key="detail">
-            <Button type="link" size="small" onClick={() => openDetail(record)}>详情</Button>
-          </Tooltip>,
-        );
+        if (!isAllView) {
+          actions.push(
+            <Tooltip title="审批" key="detail">
+              <Button type="link" size="small" onClick={() => openDetail(record)}>审批</Button>
+            </Tooltip>,
+          );
+        }
 
         return <Space size={0}>{actions}</Space>;
       },
@@ -461,15 +577,74 @@ const ExpenseReimbursementPage: React.FC = () => {
           </Space>
         }
       >
-        <div style={{ padding: '0 8px' }}>
+        <div style={{ padding: '0 8px', maxHeight: '68vh', overflowY: 'auto', overflowX: 'hidden' }}>
           <Form form={form} layout="vertical" requiredMark="optional">
-            <Form.Item name="expenseType" label="费用类型" rules={[{ required: true, message: '请选择费用类型' }]}>
-              <Select options={EXPENSE_TYPES} placeholder="请选择" />
+
+            {/* 报销凭证上传（支持多张，点击图片可放大预览）*/}
+            <Form.Item
+              label="报销凭证"
+              required={!editingRecord}
+              validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
+              help={
+                uploadedDocs.some(d => d.docId)
+                  ? `✓ 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览`
+                  : editingRecord
+                    ? undefined
+                    : '请上传发票/收据图片，系统将自动识别金额和日期'
+              }
+            >
+              <Space orientation="vertical" style={{ width: '100%' }} size={8}>
+                <Upload
+                  accept="image/*"
+                  multiple
+                  showUploadList={false}
+                  beforeUpload={(file) => { void handleDocUpload(file); return false; }}
+                >
+                  <Button
+                    icon={uploadedDocs.some(d => d.recognizing) ? <Spin size="small" /> : <UploadOutlined />}
+                    disabled={uploadedDocs.some(d => d.recognizing)}
+                  >
+                    {uploadedDocs.some(d => d.recognizing) ? 'AI识别中...' : '上传凭证图片（可多张）'}
+                  </Button>
+                </Upload>
+                {uploadedDocs.length > 0 && (
+                  <Image.PreviewGroup>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {uploadedDocs.map((doc, idx) => (
+                        <div key={doc.tempId} style={{ position: 'relative', flexShrink: 0 }}>
+                          {doc.recognizing ? (
+                            <div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}>
+                              <Spin size="small" />
+                            </div>
+                          ) : doc.imageUrl ? (
+                            <Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />
+                          ) : null}
+                          <Button
+                            size="small" type="text" danger
+                            icon={<CloseCircleOutlined />}
+                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: '#fff', borderRadius: '50%', border: '1px solid #ff4d4f' }}
+                            onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </Image.PreviewGroup>
+                )}
+              </Space>
             </Form.Item>
 
-            <Form.Item name="title" label="报销事由" rules={[{ required: true, message: '请填写报销事由' }]}>
-              <Input placeholder="如：出差往返打车费" />
-            </Form.Item>
+            <Row gutter={16}>
+              <Col span={10}>
+                <Form.Item name="expenseType" label="费用类型" rules={[{ required: true, message: '请选择费用类型' }]}>
+                  <Select options={EXPENSE_TYPES} placeholder="请选择" />
+                </Form.Item>
+              </Col>
+              <Col span={14}>
+                <Form.Item name="title" label="报销事由" rules={[{ required: true, message: '请填写报销事由' }]}>
+                  <Input placeholder="如：出差往返打车费" />
+                </Form.Item>
+              </Col>
+            </Row>
 
             <Row gutter={16}>
               <Col span={12}>
@@ -541,143 +716,242 @@ const ExpenseReimbursementPage: React.FC = () => {
               </Col>
             </Row>
 
-            <Form.Item name="paymentAccount" label="收款账号" rules={[{ required: true, message: '请填写收款账号' }]}>
-              <Input placeholder="银行卡号/支付宝/微信账号" />
-            </Form.Item>
+            <Row gutter={16}>
+              <Col span={14}>
+                <Form.Item name="paymentAccount" label="收款账号" rules={[{ required: true, message: '请填写收款账号' }]}>
+                  <Input placeholder="银行卡号/支付宝/微信账号" />
+                </Form.Item>
+              </Col>
+              <Col span={10}>
+                <Form.Item name="bankName" label="开户银行（选填）">
+                  <Input placeholder="转账时填写开户行" />
+                </Form.Item>
+              </Col>
+            </Row>
 
-            <Form.Item name="bankName" label="开户银行">
-              <Input placeholder="银行转账时填写开户行（选填）" />
-            </Form.Item>
+            {/* 编辑时显示已上传的历史凭证（点击可放大预览） */}
+            {editingRecord && docList.length > 0 && (
+              <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+                <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>已上传凭证（点击预览）</div>
+                <Image.PreviewGroup>
+                  <Space wrap>
+                    {docList.map(doc => (
+                      <Image
+                        key={doc.id}
+                        src={getFullAuthedFileUrl(doc.imageUrl)}
+                        width={80}
+                        height={80}
+                        style={{ objectFit: 'cover', borderRadius: 6 }}
+                      />
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
+              </div>
+            )}
           </Form>
         </div>
       </ResizableModal>
 
-      {/* ────── 审批弹窗 ────── */}
-      <Modal
-        open={approveOpen}
-        title="审批报销单"
-        onCancel={() => setApproveOpen(false)}
-        footer={
-          <Space>
-            <Button onClick={() => setApproveOpen(false)}>取消</Button>
-            <Button danger icon={<CloseCircleOutlined />} onClick={() => handleApprove('reject')}>驳回</Button>
-            <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleApprove('approve')}>批准</Button>
-          </Space>
-        }
-      >
-        {approveRecord && (
-          <div>
-            <p><strong>报销单号：</strong>{approveRecord.reimbursementNo}</p>
-            <p><strong>申请人：</strong>{approveRecord.applicantName}</p>
-            <p><strong>事由：</strong>{approveRecord.title}</p>
-            <p><strong>类型：</strong>{typeLabel(approveRecord.expenseType)}</p>
-            <p>
-              <strong>金额：</strong>
-              <span style={{ color: 'var(--color-danger)', fontSize: 18, fontWeight: 600 }}>
-                ¥{approveRecord.amount?.toFixed(2)}
-              </span>
-            </p>
-            <p><strong>费用日期：</strong>{approveRecord.expenseDate}</p>
-            {approveRecord.description && <p><strong>说明：</strong>{approveRecord.description}</p>}
-            <div style={{ marginTop: 16 }}>
-              <p style={{ fontWeight: 500 }}>审批备注：</p>
-              <TextArea
-                rows={3} value={approveRemark}
-                onChange={(e) => setApproveRemark(e.target.value)}
-                placeholder="填写审批意见（驳回时必填）"
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ────── 详情弹窗 ────── */}
+      {/* ────── 详情弹窗（含凭证预览 + 审批操作）────── */}
       <ResizableModal
         open={detailOpen}
-        title="报销单详情"
-        onCancel={() => setDetailOpen(false)}
-        width="40vw"
+        title={viewMode === 'all' && detailRecord?.status === 'pending' ? '报销单审批' : '报销单审批'}
+        onCancel={() => { setDetailOpen(false); setApproveRemark(''); }}
+        width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         centered
-        footer={<Button onClick={() => setDetailOpen(false)}>关闭</Button>}
+        footer={<Button onClick={() => { setDetailOpen(false); setApproveRemark(''); }}>关闭</Button>}
       >
         {detailRecord && (
-          <div style={{ padding: '0 8px' }}>
-            <ModalFieldRow>
-              <ModalField label="报销单号" value={detailRecord.reimbursementNo || '-'} />
-              <ModalField label="状态" value={statusTag(detailRecord.status || 'pending')} />
-            </ModalFieldRow>
-            <ModalFieldRow>
-              <ModalField label="申请人" value={detailRecord.applicantName || '-'} />
-              <ModalField label="费用类型" value={typeLabel(detailRecord.expenseType)} />
-            </ModalFieldRow>
-            <ModalFieldRow>
-              <ModalField label="事由" value={detailRecord.title || '-'} />
-            </ModalFieldRow>
-            <ModalFieldRow>
-              <ModalField label="金额" value={
-                <span style={{ color: 'var(--color-danger)', fontSize: 18, fontWeight: 600 }}>¥{detailRecord.amount?.toFixed(2)}</span>
-              } />
-              <ModalField label="费用日期" value={detailRecord.expenseDate || '-'} />
-            </ModalFieldRow>
-            {detailRecord.description && (
-              <ModalFieldRow>
-                <ModalField label="详细说明" value={detailRecord.description} />
-              </ModalFieldRow>
-            )}
-            {detailRecord.orderNo && (
-              <ModalFieldRow>
-                <ModalField label="关联订单" value={detailRecord.orderNo} />
-                {detailRecord.supplierName && <ModalField label="供应商" value={detailRecord.supplierName} />}
-              </ModalFieldRow>
-            )}
-
-            <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
-              <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span>
+          <div style={{ display: 'flex', gap: 0, height: 540 }}>
+            {/* ── 左：凭证图片，固定框完整显示 ── */}
+            <div style={{
+              width: '42%',
+              background: '#f7f8fa',
+              borderRight: '1px solid #f0f0f0',
+              borderRadius: '6px 0 0 6px',
+              padding: 12,
+              height: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}>
+              {detailDocList.length === 0 ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>
+                  <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
+                  <div>暂无凭证图片</div>
+                </div>
+              ) : (
+                <>
+                  {/* 图片区域：占满剩余高度，图片 contain 完整缩放显示 */}
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
+                    <Image.PreviewGroup>
+                      <Image
+                        src={getFullAuthedFileUrl(detailDocList[selectedDocIndex]?.imageUrl)}
+                          wrapperStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
+                        preview={{ mask: '点击查看原图' }}
+                      />
+                    </Image.PreviewGroup>
+                  </div>
+                  {/* 页码指示 */}
+                  <div style={{ flexShrink: 0, fontSize: 12, color: '#aaa', textAlign: 'center', padding: '6px 0 4px' }}>
+                    第 {selectedDocIndex + 1} 张 / 共 {detailDocList.length} 张
+                  </div>
+                  {/* 横向滚动缩略图条 */}
+                  {detailDocList.length > 1 && (
+                    <div style={{
+                      flexShrink: 0,
+                      display: 'flex',
+                      gap: 8,
+                      overflowX: 'auto',
+                      padding: '2px 0 2px',
+                      scrollbarWidth: 'thin' as const,
+                    }}>
+                      {detailDocList.map((doc, idx) => (
+                        <img
+                          key={doc.id}
+                          src={getFullAuthedFileUrl(doc.imageUrl)}
+                          width={60} height={60}
+                          style={{
+                            objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0,
+                            border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid #e0e0e0',
+                            opacity: selectedDocIndex === idx ? 1 : 0.6,
+                            transition: 'all 0.15s',
+                          }}
+                          onClick={() => setSelectedDocIndex(idx)}
+                          title={`第 ${idx + 1} 张凭证`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            <ModalFieldRow>
-              <ModalField label="收款方式" value={PAYMENT_METHODS.find(m => m.value === detailRecord.paymentMethod)?.label || detailRecord.paymentMethod || '-'} />
-              <ModalField label="收款户名" value={detailRecord.accountName || '-'} />
-            </ModalFieldRow>
-            <ModalFieldRow>
-              <ModalField label="收款账号" value={detailRecord.paymentAccount || '-'} />
-              {detailRecord.bankName && <ModalField label="开户银行" value={detailRecord.bankName} />}
-            </ModalFieldRow>
 
-            {detailRecord.approverName && (
-              <>
-                <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
-                  <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>审批信息</span>
-                </div>
+            {/* ── 右：报销信息，固定高度+珬立滚动 ── */}
+            <div style={{ flex: 1, padding: '4px 4px 4px 20px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+              <ModalFieldRow>
+                <ModalField label="报销单号" value={detailRecord.reimbursementNo || '-'} />
+                <ModalField label="状态" value={statusTag(detailRecord.status || 'pending')} />
+              </ModalFieldRow>
+              <ModalFieldRow>
+                <ModalField label="申请人" value={detailRecord.applicantName || '-'} />
+                <ModalField label="费用类型" value={typeLabel(detailRecord.expenseType)} />
+              </ModalFieldRow>
+              <ModalFieldRow>
+                <ModalField label="事由" value={detailRecord.title || '-'} />
+              </ModalFieldRow>
+              <ModalFieldRow>
+                <ModalField label="金额" value={
+                  <span style={{ color: 'var(--color-danger)', fontSize: 18, fontWeight: 600 }}>¥{detailRecord.amount?.toFixed(2)}</span>
+                } />
+                <ModalField label="费用日期" value={detailRecord.expenseDate || '-'} />
+              </ModalFieldRow>
+              {detailRecord.description && (
                 <ModalFieldRow>
-                  <ModalField label="审批人" value={detailRecord.approverName} />
-                  <ModalField label="审批时间" value={detailRecord.approvalTime ? dayjs(detailRecord.approvalTime).format('YYYY-MM-DD HH:mm') : '-'} />
+                  <ModalField label="详细说明" value={detailRecord.description} />
                 </ModalFieldRow>
-                {detailRecord.approvalRemark && (
+              )}
+              {detailRecord.orderNo && (
+                <ModalFieldRow>
+                  <ModalField label="关联订单" value={detailRecord.orderNo} />
+                  {detailRecord.supplierName && <ModalField label="供应商" value={detailRecord.supplierName} />}
+                </ModalFieldRow>
+              )}
+
+              <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
+                <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span>
+              </div>
+              <ModalFieldRow>
+                <ModalField label="收款方式" value={PAYMENT_METHODS.find(m => m.value === detailRecord.paymentMethod)?.label || detailRecord.paymentMethod || '-'} />
+                <ModalField label="收款户名" value={detailRecord.accountName || '-'} />
+              </ModalFieldRow>
+              <ModalFieldRow>
+                <ModalField label="收款账号" value={detailRecord.paymentAccount || '-'} />
+                {detailRecord.bankName && <ModalField label="开户银行" value={detailRecord.bankName} />}
+              </ModalFieldRow>
+
+              {detailRecord.approverName && (
+                <>
+                  <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>审批信息</span>
+                  </div>
                   <ModalFieldRow>
-                    <ModalField label="审批备注" value={detailRecord.approvalRemark} />
+                    <ModalField label="审批人" value={detailRecord.approverName} />
+                    <ModalField label="审批时间" value={detailRecord.approvalTime ? dayjs(detailRecord.approvalTime).format('YYYY-MM-DD HH:mm') : '-'} />
                   </ModalFieldRow>
-                )}
-              </>
-            )}
+                  {detailRecord.approvalRemark && (
+                    <ModalFieldRow>
+                      <ModalField label="审批备注" value={detailRecord.approvalRemark} />
+                    </ModalFieldRow>
+                  )}
+                </>
+              )}
 
-            {detailRecord.paymentTime && (
-              <>
-                <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
-                  <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span>
-                </div>
-                <ModalFieldRow>
-                  <ModalField label="付款时间" value={dayjs(detailRecord.paymentTime).format('YYYY-MM-DD HH:mm')} />
-                  <ModalField label="付款人" value={detailRecord.paymentBy || '-'} />
-                </ModalFieldRow>
-              </>
-            )}
+              {detailRecord.paymentTime && (
+                <>
+                  <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span>
+                  </div>
+                  <ModalFieldRow>
+                    <ModalField label="付款时间" value={dayjs(detailRecord.paymentTime).format('YYYY-MM-DD HH:mm')} />
+                    <ModalField label="付款人" value={detailRecord.paymentBy || '-'} />
+                  </ModalFieldRow>
+                </>
+              )}
 
-            <ModalFieldRow>
-              <ModalField label="提交时间" value={detailRecord.createTime ? dayjs(detailRecord.createTime).format('YYYY-MM-DD HH:mm') : '-'} />
-            </ModalFieldRow>
+              <ModalFieldRow>
+                <ModalField label="提交时间" value={detailRecord.createTime ? dayjs(detailRecord.createTime).format('YYYY-MM-DD HH:mm') : '-'} />
+              </ModalFieldRow>
+
+              {/* 审批操作区 */}
+              {detailRecord.status === 'pending' && (
+                <>
+                  {/* 审批人视角：全部标签 + 非本人 */}
+                  {viewMode === 'all' && detailRecord.applicantId !== Number(user?.id) && (
+                    <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
+                      <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
+                      <TextArea
+                        rows={3}
+                        value={approveRemark}
+                        onChange={(e) => setApproveRemark(e.target.value)}
+                        placeholder="请填写审批备注，驳回时必须填写原因"
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                        <Button danger icon={<CloseCircleOutlined />} onClick={() => handleApprove('reject')}>驳回</Button>
+                        <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleApprove('approve')}>批准</Button>
+                      </div>
+                    </div>
+                  )}
+                  {/* 本人提交的单子——提示而不是空白 */}
+                  {detailRecord.applicantId === Number(user?.id) && (
+                    <div style={{ margin: '16px 0 8px' }}>
+                      <Alert
+                        type="info"
+                        showIcon
+                        title="等待审批"
+                        description={(
+                          <>
+                            您提交的报销单需由其他人审批。
+                            <br />
+                            <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                              审批人请切换至「全部报销」标签页查看并操作。
+                            </span>
+                          </>
+                        )}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
       </ResizableModal>
+
+
     </Layout>
   );
 };

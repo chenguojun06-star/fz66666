@@ -601,8 +601,7 @@ const TemplateCenter: React.FC = () => {
           <Image
             src={getFullAuthedFileUrl(url)}
             width={48}
-            height={48}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
+            style={{ height: 'auto', display: 'block', borderRadius: 4 }}
             preview={false}
           />
         ) : (

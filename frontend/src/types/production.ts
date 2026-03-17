@@ -255,6 +255,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   returnConfirmerId?: string;
   returnConfirmerName?: string;
   returnConfirmTime?: string;
+  evidenceImageUrls?: string;  // 回料确认凭证图片，多个URL逗号分隔
   status: 'pending' | 'received' | 'partial' | 'completed' | 'cancelled';
   createTime?: string;
   updateTime?: string;
@@ -268,6 +269,11 @@ export interface MaterialPurchase extends Record<string, unknown> {
   // 生产方信息（从关联生产订单富化）
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
+  orderBizType?: string;  // 下单类型: CMT / FOB / ODM / OEM
+  // 颜色/尺码/成分（从物料资料库或样衣同步）
+  color?: string;
+  size?: string;
+  fabricComposition?: string;
 }
 
 export interface ProductWarehousing extends Record<string, unknown> {

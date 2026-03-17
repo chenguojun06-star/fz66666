@@ -1,10 +1,17 @@
 export interface WashLabelPartEntry {
   part: string;
   materials: string;
+  /** 每部位洗涤说明（存在 materials='' 的特殊条目中） */
+  washNote?: string;
 }
 
+/**
+ * 动态部位区块 — key 直接使用部位名称字符串（如"上装"/"马甲"/"下装"）
+ * 不再硬编码 'upper' | 'lower' | 'other'，支持任意数量的服装部位
+ */
 export interface WashLabelSection {
-  key: 'upper' | 'lower' | 'other';
+  /** 部位名称，对应词典 garment_part 的 dictLabel */
+  key: string;
   label: string;
   items: string[];
 }
@@ -17,41 +24,6 @@ export interface WashCareCodeSet {
   dryCleanCode?: string;
 }
 
-const SECTION_LABELS: Record<WashLabelSection['key'], string> = {
-  upper: '上装',
-  lower: '下装',
-  other: '其他部位',
-};
-
-function resolveSectionKey(part?: string): WashLabelSection['key'] {
-  const normalized = String(part || '').trim().toLowerCase();
-  if (!normalized) return 'other';
-  if (
-    normalized.includes('上装')
-    || normalized.includes('上衣')
-    || normalized.includes('top')
-    || normalized.includes('upper')
-    || normalized.includes('shirt')
-    || normalized.includes('jacket')
-    || normalized.includes('coat')
-  ) {
-    return 'upper';
-  }
-  if (
-    normalized.includes('下装')
-    || normalized.includes('裤')
-    || normalized.includes('裙')
-    || normalized.includes('lower')
-    || normalized.includes('bottom')
-    || normalized.includes('pants')
-    || normalized.includes('skirt')
-    || normalized.includes('shorts')
-  ) {
-    return 'lower';
-  }
-  return 'other';
-}
-
 export function parseWashLabelParts(value?: string): WashLabelPartEntry[] {
   if (!value) return [];
   try {
@@ -60,7 +32,8 @@ export function parseWashLabelParts(value?: string): WashLabelPartEntry[] {
     return parsed
       .map((item) => ({
         part: String(item?.part || '').trim(),
-        materials: String(item?.materials || '').trim(),
+        materials: String(item?.materials ?? '').trim(),
+        ...(item?.washNote !== undefined ? { washNote: String(item.washNote) } : {}),
       }))
       .filter(item => item.part || item.materials);
   } catch {
@@ -68,21 +41,30 @@ export function parseWashLabelParts(value?: string): WashLabelPartEntry[] {
   }
 }
 
+/**
+ * 从 JSON 字符串（fabricCompositionParts）解析为动态区块列表。
+ * 按照 JSON 中出现的顺序展示部位，保证用户填写顺序即展示顺序。
+ */
 export function buildWashLabelSections(
   value?: string,
   fallbackComposition?: string,
 ): WashLabelSection[] {
-  const grouped = new Map<WashLabelSection['key'], string[]>();
+  const orderedKeys: string[] = [];
+  const grouped = new Map<string, string[]>();
+
   parseWashLabelParts(value).forEach((entry) => {
-    const key = resolveSectionKey(entry.part);
+    const key = entry.part.trim() || '其他';
     const materials = entry.materials.trim();
     if (!materials) return;
-    grouped.set(key, [...(grouped.get(key) || []), materials]);
+    if (!grouped.has(key)) {
+      orderedKeys.push(key);
+      grouped.set(key, []);
+    }
+    grouped.get(key)!.push(materials);
   });
 
-  const sections: WashLabelSection[] = (['upper', 'lower', 'other'] as const)
-    .map(key => ({ key, label: SECTION_LABELS[key], items: grouped.get(key) || [] }))
-    .filter(section => section.items.length > 0);
+  const sections: WashLabelSection[] = orderedKeys
+    .map(key => ({ key, label: key, items: grouped.get(key)! }));
 
   if (sections.length > 0) {
     return sections;
@@ -90,47 +72,95 @@ export function buildWashLabelSections(
 
   const fallback = String(fallbackComposition || '').trim();
   if (!fallback) return [];
-  return [{ key: 'other', label: SECTION_LABELS.other, items: [fallback] }];
+  return [{ key: '整件', label: '整件', items: [fallback] }];
 }
 
+/**
+ * 将动态部位 Map 序列化回 JSON 字符串。
+ * partOrder 控制部位显示顺序（来自词典排序）。
+ * 传入 washNoteMap 时，每个部位的洗涤说明嵌入为 materials='' 的特殊条目。
+ */
+export function serializeWashLabelParts(
+  partsMap: Record<string, string[]>,
+  partOrder: string[],
+  washNoteMap?: Record<string, string>,
+): string | undefined {
+  const entries: WashLabelPartEntry[] = [];
+  partOrder.forEach((partLabel) => {
+    (partsMap[partLabel] || []).forEach((materials) => {
+      const trimmed = materials.trim();
+      if (trimmed) entries.push({ part: partLabel, materials: trimmed });
+    });
+    // 嵌入洗涤说明（即使为空也记录，保留用户清空意图）
+    if (washNoteMap) {
+      entries.push({ part: partLabel, materials: '', washNote: (washNoteMap[partLabel] || '').trim() });
+    }
+  });
+  return entries.length ? JSON.stringify(entries) : undefined;
+}
+
+/**
+ * 从 fabricCompositionParts JSON 解析每部位的洗涤说明。
+ * 只读取 materials='' 且有 washNote 字段的条目。
+ */
+export function parseWashNotePerPart(value?: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  parseWashLabelParts(value).forEach(({ part, materials, washNote }) => {
+    if (!materials && washNote !== undefined) {
+      result[part.trim()] = washNote;
+    }
+  });
+  return result;
+}
+
+/**
+ * 从 JSON 字符串解析成 Record<partLabel, materials[]>（给编辑器用）
+ */
+export function parseWashLabelPartsMap(value?: string): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  parseWashLabelParts(value).forEach(({ part, materials }) => {
+    const key = part.trim() || '其他';
+    if (!result[key]) result[key] = [];
+    if (materials.trim()) result[key].push(materials.trim());
+  });
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// 向后兼容：旧代码调用 serializeWashLabelSections({ upper, lower, other })
+// 统一转成新格式，二期再彻底移除
+// ---------------------------------------------------------------------------
+/** @deprecated 请改用 serializeWashLabelParts */
 export function serializeWashLabelSections(sections: {
   upper?: string[];
   lower?: string[];
   other?: string[];
 }): string | undefined {
-  const entries: WashLabelPartEntry[] = [];
-
-  (sections.upper || []).forEach((materials) => {
-    const trimmed = String(materials || '').trim();
-    if (trimmed) entries.push({ part: SECTION_LABELS.upper, materials: trimmed });
-  });
-
-  (sections.lower || []).forEach((materials) => {
-    const trimmed = String(materials || '').trim();
-    if (trimmed) entries.push({ part: SECTION_LABELS.lower, materials: trimmed });
-  });
-
-  (sections.other || []).forEach((materials) => {
-    const trimmed = String(materials || '').trim();
-    if (trimmed) entries.push({ part: SECTION_LABELS.other, materials: trimmed });
-  });
-
-  return entries.length ? JSON.stringify(entries) : undefined;
+  const partsMap: Record<string, string[]> = {};
+  const order: string[] = [];
+  const add = (label: string, items?: string[]) => {
+    if (items?.length) { partsMap[label] = items; order.push(label); }
+  };
+  add('上装', sections.upper);
+  add('下装', sections.lower);
+  add('其他', sections.other);
+  return serializeWashLabelParts(partsMap, order);
 }
 
+/** @deprecated 请改用 parseWashLabelPartsMap */
 export function splitWashLabelSections(value?: string): {
   upper: string[];
   lower: string[];
   other: string[];
 } {
-  const state = { upper: [] as string[], lower: [] as string[], other: [] as string[] };
-  parseWashLabelParts(value).forEach((entry) => {
-    const key = resolveSectionKey(entry.part);
-    if (entry.materials) {
-      state[key].push(entry.materials);
-    }
-  });
-  return state;
+  const map = parseWashLabelPartsMap(value);
+  return {
+    upper: map['上装'] || [],
+    lower: map['下装'] || [],
+    other: map['其他'] || Object.entries(map)
+      .filter(([k]) => k !== '上装' && k !== '下装')
+      .flatMap(([, v]) => v),
+  };
 }
 
 export function hasWashLabelComposition(value?: string, fallbackComposition?: string): boolean {

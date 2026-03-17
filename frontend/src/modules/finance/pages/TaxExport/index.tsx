@@ -205,7 +205,7 @@ const InvoiceTab: React.FC = () => {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="发票台账已接真实发票表与税额计算"
+        title="发票台账已接真实发票表与税额计算"
         description="当前为业务台账管理，不是税控盘/电子发票平台直连。适合先把开票信息、业务来源、税额和状态管起来；若要直连税盘或第三方开票平台，需要后续再接外部接口。"
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -494,7 +494,7 @@ const PayableTab: React.FC = () => {
         </Row>
       </Card>
       <Alert type="info" showIcon icon={<DollarOutlined />} style={{ marginBottom: 12 }}
-        message="应付账款与业务系统深度联动"
+        title="应付账款与业务系统深度联动"
         description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
       />
       <ResizableTable
@@ -546,6 +546,7 @@ const PayableTab: React.FC = () => {
           handleMarkPaid(payRecord.id, payAmount);
         }}
         okText="确认付款"
+        width="30vw"
       >
         <div style={{ padding: '12px 0' }}>
           <p style={{ marginBottom: 4 }}>应付金额：<strong>{payRecord?.amount?.toFixed(2)}</strong> 元</p>
@@ -657,7 +658,7 @@ const TaxConfigTab: React.FC = () => {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="税率配置会参与真实税额计算"
+        title="税率配置会参与真实税额计算"
         description="发票台账默认 VAT 税额来自这里的默认税率；建议至少维护默认 VAT、附加税等常用税码，并标清生效时间。"
       />
       <div style={{ marginBottom: 12 }}>
@@ -803,7 +804,7 @@ const TaxExport: React.FC = () => {
     <div style={{ width: '100%' }}>
       {!subscribed && (
         <Alert type="info" showIcon icon={<UnlockOutlined />} style={{ marginBottom: 16 }}
-          message="通用标准格式永久免费"
+          title="通用标准格式永久免费"
           description={<span>适合手工导入任意财务软件。如需金蝶/用友专用格式，可开通
             <Button type="link" size="small" style={{ padding: '0 4px' }} onClick={() => navigate(paths.appStore)}>财税对接模块（¥499/月）</Button>
           </span>} />
@@ -812,14 +813,14 @@ const TaxExport: React.FC = () => {
         <Alert type="success" showIcon
           icon={subscriptionType === 'FREE' ? <span style={{ fontSize: 16 }}>🎁</span> : <RocketOutlined />}
           style={{ marginBottom: 16 }}
-          message={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
+          title={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
           description={subscriptionType === 'FREE' ? '恭喜！金蝶 KIS / 用友 T3 专用格式均已为您解锁，有效期1年。' : '金蝶 KIS / 用友 T3 专用格式均已解锁。'} />
       )}
       <Alert
         type="warning"
         showIcon
         style={{ marginBottom: 16 }}
-        message="当前导出能力说明"
+        title="当前导出能力说明"
         description="这里导出的是真实业务数据，不是展示假按钮；但现阶段属于 Excel 凭证导入模板，不是税控盘、电子发票平台、金蝶/用友开放平台 API 直连。已接数据源：工资结算、物料对账。"
       />
       <Card title="第一步：选择导出格式" style={{ marginBottom: 16 }}>

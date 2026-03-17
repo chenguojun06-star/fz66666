@@ -236,7 +236,7 @@ const AgentGraphPanel: React.FC = () => {
           {error && (
             <Alert
               type="error"
-              message={error}
+              title={error}
               style={{ marginBottom: 8 }}
               action={<Button size="small" onClick={reset}>清除</Button>}
             />

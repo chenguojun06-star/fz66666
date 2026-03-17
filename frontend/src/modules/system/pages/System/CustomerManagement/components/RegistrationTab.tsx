@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
+import { Button, Tag, Space, message, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -10,7 +10,6 @@ import { useAuth } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
-import { message } from '@/utils/antdStatic';
 
 // ========== 注册审批 Tab ==========
 const RegistrationTab: React.FC = () => {
@@ -130,7 +129,7 @@ const RegistrationTab: React.FC = () => {
   return (
     <div>
       <Alert
-        message="功能说明"
+        title="功能说明"
         description={'此页面用于审批新工厂的入驻申请。审批通过后工厂主账号将自动创建，工厂即可登录使用。员工注册审批由各工厂在「人员管理」中自行处理。'}
         type="info"
         showIcon
@@ -172,7 +171,7 @@ const RegistrationTab: React.FC = () => {
         }
       >
         <Alert
-          message="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
+          title="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}

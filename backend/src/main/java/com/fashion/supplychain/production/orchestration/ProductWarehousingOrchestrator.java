@@ -153,6 +153,7 @@ public class ProductWarehousingOrchestrator {
                         w.setFactoryName(order.getFactoryName());
                     }
                     w.setFactoryType(order.getFactoryType());
+                    w.setOrderBizType(order.getOrderBizType());
                     w.setOrgUnitId(order.getOrgUnitId());
                     w.setParentOrgUnitId(order.getParentOrgUnitId());
                     w.setParentOrgUnitName(order.getParentOrgUnitName());

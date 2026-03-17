@@ -86,18 +86,17 @@ const SampleInventory: React.FC = () => {
       width: 72,
       align: 'center' as const,
       render: (text) => (
-        <div style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 48, minHeight: 28, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {text ? (
             <Image
               src={getFullAuthedFileUrl(text)}
               alt="样衣"
               width={48}
-              height={48}
-              style={{ objectFit: 'cover' }}
+              style={{ height: 'auto', display: 'block' }}
               preview={false}
             />
           ) : (
-            <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+            <span style={{ color: '#ccc', fontSize: 12, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
           )}
         </div>
       ),

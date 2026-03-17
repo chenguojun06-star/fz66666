@@ -9,7 +9,7 @@ interface SmartErrorNoticeProps {
 
 const SmartErrorNotice: React.FC<SmartErrorNoticeProps> = ({ error, onFix }) => {
   const description = (
-    <Space direction="vertical" size={4}>
+    <Space orientation="vertical" size={4}>
       {error.reason ? <span>原因：{error.reason}</span> : null}
       {error.code ? <span>错误码：{error.code}</span> : null}
       {error.actionText && onFix ? (
@@ -20,7 +20,7 @@ const SmartErrorNotice: React.FC<SmartErrorNoticeProps> = ({ error, onFix }) => 
     </Space>
   );
 
-  return <Alert type="warning" showIcon message={error.title} description={description} />;
+  return <Alert type="warning" showIcon title={error.title} description={description} />;
 };
 
 export default SmartErrorNotice;

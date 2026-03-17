@@ -77,14 +77,14 @@ export const StyleCoverThumb: React.FC<{
   }, [styleId, styleNo, src, srcFailed]);
 
   return (
-    <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: size, minHeight: Math.round(size * 0.55), borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>...</span>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', height: `${size}px`, display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
         <img
           src={getFullAuthedFileUrl(url)}
           alt="cover"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: '100%', height: 'auto', display: 'block' }}
           onError={() => {
             // 判断当前是 src prop 直接给的URL，还是 fallback 附件 API 查出的URL
             if (url === (src || null) && src && !srcFailed) {
@@ -98,7 +98,7 @@ export const StyleCoverThumb: React.FC<{
           }}
         />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)', height: `${size}px`, display: 'flex', alignItems: 'center' }}>无图</span>
       )}
     </div>
   );

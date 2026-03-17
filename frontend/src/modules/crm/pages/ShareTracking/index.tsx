@@ -41,7 +41,7 @@ export default function ShareTracking() {
   if (loading) {
     return (
       <div className="share-tracking-loading">
-        <Spin size="large" tip="正在加载订单进度..." />
+        <Spin size="large" spinning tip="正在加载订单进度..."><div /></Spin>
       </div>
     );
   }

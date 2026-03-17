@@ -393,7 +393,7 @@ const AppStore: React.FC = () => {
       >
         <div style={{ padding: '8px 0' }}>
           <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }}
-            message={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
+            title={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>}
           />
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>应用简介</div>
@@ -476,7 +476,7 @@ const AppStore: React.FC = () => {
             {wizardData.appKey && wizardData.appSecret ? (
               <>
                 <Alert type="success" showIcon icon={<CheckCircleOutlined />}
-                  message="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。"
+                  title="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。"
                   style={{ marginBottom: 16 }} />
                 <div style={{ background: '#f6f8fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
                   <div style={{ marginBottom: 8 }}>
@@ -488,7 +488,7 @@ const AppStore: React.FC = () => {
                   </div>
                   <div>
                     <Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text>
-                    <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} message="⚠️ 密钥仅显示一次，请立即保存！" />
+                    <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} title="⚠️ 密镂仅显示一次，请立即保存！" />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text>
                       <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} />
@@ -498,7 +498,7 @@ const AppStore: React.FC = () => {
               </>
             ) : (
               <Alert type="error" showIcon
-                message="API凭证生成失败"
+                title="API凭证生成失败"
                 description="试用已开通但API凭证创建失败，请前往「API对接管理」手动创建凭证，或联系管理员处理。"
                 style={{ marginBottom: 16 }} />
             )}
@@ -528,7 +528,7 @@ const AppStore: React.FC = () => {
 
         {wizardStep === 1 && (
           <div>
-            <Alert type="info" showIcon message="只需填写您的接口地址，内部API已全部自动配置好"
+            <Alert type="info" showIcon title="只需填写您的接口地址，内部API已全部自动配置好"
               description="我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。"
               style={{ marginBottom: 16 }} />
             <Form form={setupForm} layout="vertical" size="small">
@@ -601,7 +601,7 @@ const AppStore: React.FC = () => {
         open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width="40vw" okText="提交意向" cancelText="取消"
       >
         <div style={{ padding: '8px 0' }}>
-          <Alert type="info" showIcon style={{ marginBottom: 12, fontSize: 12 }} message="提交后，商务团队将在1-3个工作日内联系您确认并完成开通。" />
+          <Alert type="info" showIcon style={{ marginBottom: 12, fontSize: 12 }} title="提交后，商务团队将在1-3个工作日内联系您确认并完成开通。" />
           <Form form={form} layout="vertical" size="small" initialValues={{ subscriptionType: 'MONTHLY', userCount: 1, invoiceRequired: false }}>
             <Form.Item name="subscriptionType" label="订阅类型">
               <Select>

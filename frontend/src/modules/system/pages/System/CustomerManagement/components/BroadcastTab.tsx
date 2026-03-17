@@ -34,11 +34,11 @@ const BroadcastTab: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 720, padding: '24px 0' }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         <Alert
           type="info"
           showIcon
-          message="发送后所有活跃租户的主账号将在系统通知铃铛中收到该公告"
+          title="发送后所有活跃租户的主账号将在系统通知铃铛中收到该公告"
           description="适用于系统升级、停机维护、功能变更等需要提前告知客户的场景"
         />
         <Card title={<><NotificationOutlined /> 发送全租户通知</>}>
@@ -90,7 +90,7 @@ const BroadcastTab: React.FC = () => {
         {lastResult && (
           <Alert
             type="success"
-            message={`上次发送：${lastResult.time} — 已推送 ${lastResult.sentCount} 个租户`}
+            title={`上次发送：${lastResult.time} — 已推送 ${lastResult.sentCount} 个租户`}
           />
         )}
       </Space>

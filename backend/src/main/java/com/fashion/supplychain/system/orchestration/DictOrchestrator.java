@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.service.DictService;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,23 @@ public class DictOrchestrator {
 
     public IPage<Dict> list(Map<String, Object> params) {
         return dictService.queryPage(params);
+    }
+
+    /**
+     * 按词典类型查询所有启用项，按 sort 升序排列。
+     * 用于前端下拉/动态面板，如服装部位选择（garment_part）。
+     */
+    public List<Dict> getByType(String dictType) {
+        if (!StringUtils.hasText(dictType)) {
+            return List.of();
+        }
+        return dictService.list(
+            new LambdaQueryWrapper<Dict>()
+                .eq(Dict::getDictType, dictType.trim().toLowerCase())
+                .eq(Dict::getStatus, "ENABLED")
+                .orderByAsc(Dict::getSort)
+                .orderByAsc(Dict::getId)
+        );
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -59,12 +77,12 @@ public class DictOrchestrator {
         }
         String normalizedType = dictType.trim().toLowerCase();
         String normalizedLabel = label.trim();
-        
+
         // 检查是否存在
         long count = dictService.count(new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, normalizedType)
                 .eq(Dict::getDictLabel, normalizedLabel));
-        
+
         if (count == 0) {
             Dict dict = new Dict();
             dict.setDictType(normalizedType);

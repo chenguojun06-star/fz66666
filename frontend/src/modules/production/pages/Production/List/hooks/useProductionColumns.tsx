@@ -172,16 +172,14 @@ export function useProductionColumns({
         const factoryType = record.factoryType as string | undefined;
         const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Space size={4} style={{ flexWrap: 'nowrap' }}>
-              {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-              {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-              <span>{v || '-'}</span>
-            </Space>
+          <Space size={4} style={{ flexWrap: 'nowrap' }}>
+            {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+            <span>{v || '-'}</span>
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16, width: 'fit-content' }}>{bizType}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
             )}
-          </div>
+          </Space>
         );
       },
     },

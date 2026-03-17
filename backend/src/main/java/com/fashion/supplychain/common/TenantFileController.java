@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -59,16 +60,24 @@ public class TenantFileController {
     /**
      * 租户隔离文件下载/预览
      *
+     * URL 格式：/api/file/tenant-download/{tenantId}/{fileName}
+     * 支持含斜杠的子目录文件名（如 expense-docs/uuid.jpg）
+     *
      * @param tenantId 文件所属租户ID（URL 路径参数）
-     * @param fileName 文件名（UUID 格式）
      * @param download 是否强制下载（0=内联预览，1=下载）
+     * @param request  用于提取完整文件路径（含子目录）
      */
-    @GetMapping("/tenant-download/{tenantId}/{fileName:.+}")
+    @GetMapping("/tenant-download/{tenantId}/**")
     @SuppressWarnings("null")
     public ResponseEntity<Resource> tenantDownload(
             @PathVariable Long tenantId,
-            @PathVariable String fileName,
-            @RequestParam(value = "download", required = false, defaultValue = "0") String download) {
+            @RequestParam(value = "download", required = false, defaultValue = "0") String download,
+            HttpServletRequest request) {
+        // 从完整 URI 中提取文件名（含子目录，如 expense-docs/uuid.jpg）
+        String requestUri = request.getRequestURI();
+        String prefix = "/api/file/tenant-download/" + tenantId + "/";
+        String fileName = requestUri.contains(prefix)
+                ? requestUri.substring(requestUri.indexOf(prefix) + prefix.length()) : "";
         try {
             // 强制校验租户归属（超级管理员可访问所有租户文件）
             Long currentTenantId = UserContext.tenantId();

@@ -12,6 +12,39 @@ html {
   font-size: 14px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+/* ===== 文字选中 - 品牌蓝 ===== */
+::selection {
+  background: rgba(45, 127, 249, 0.16);
+  color: inherit;
+}
+
+/* ===== 自定义滚动条 - 细、圆角、专业 ===== */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 /* 优化所有文本元素的渲染 */
@@ -64,6 +97,7 @@ body {
 .ant-picker {
   height: 32px !important;
   border-radius: 0 !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
 /* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
@@ -145,9 +179,9 @@ body {
   --neutral-text-light: #4a4a4a;
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #FAFAFA;
-  --table-header-bg: #f7f8fa;
-  --table-row-stripe-bg: #fbfbfc;
-  --table-row-hover-bg: #f2f6ff;
+  --table-header-bg: #eef1f6;
+  --table-row-stripe-bg: #f5f7fb;
+  --table-row-hover-bg: #ebf2ff;
   /* 侧边栏 - 纯色深蓝背景（禁止渐变） */
   --sidebar-bg: #0b2d5c; /* @design-system: 纯色深蓝 */
   --sidebar-text: rgba(255, 255, 255, 0.95);
@@ -194,8 +228,8 @@ body {
   --font-weight-bold: 700;
 
   /* 表格专用颜色 */
-  --table-border-color: rgba(0, 0, 0, 0.06);
-  --table-border-light: rgba(0, 0, 0, 0.04);
+  --table-border-color: rgba(0, 0, 0, 0.11);
+  --table-border-light: rgba(0, 0, 0, 0.07);
 
   /* 边框 */
   --border-width: 1px;
@@ -215,9 +249,9 @@ body {
   --neutral-text-light: #4a4a4a;
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #eaf1ff;
-  --table-header-bg: rgba(45, 127, 249, 0.06);
-  --table-row-stripe-bg: rgba(45, 127, 249, 0.03);
-  --table-row-hover-bg: rgba(45, 127, 249, 0.08);
+  --table-header-bg: rgba(45, 127, 249, 0.10);
+  --table-row-stripe-bg: rgba(45, 127, 249, 0.05);
+  --table-row-hover-bg: rgba(45, 127, 249, 0.12);
   /* 侧边栏 - 纯色深蓝 */
   --sidebar-bg: #0b2d5c;
   --sidebar-text: rgba(255, 255, 255, 0.95);
@@ -255,10 +289,10 @@ body {
   --color-bg-light: #f9fafb;
 
   /* 表格 */
-  --table-header-bg: rgba(224, 242, 254, 0.5);
-  --table-row-stripe-bg: rgba(224, 242, 254, 0.1);
-  --table-row-hover-bg: rgba(224, 242, 254, 0.3);
-  --table-border-color: rgba(147, 197, 253, 0.3);
+  --table-header-bg: rgba(186, 219, 248, 0.60);
+  --table-row-stripe-bg: rgba(224, 242, 254, 0.18);
+  --table-row-hover-bg: rgba(186, 219, 248, 0.35);
+  --table-border-color: rgba(147, 197, 253, 0.45);
 
   /* 边框 */
   --color-border: rgba(147, 197, 253, 0.5);
@@ -316,9 +350,9 @@ body {
   --neutral-text-light: #4a4a4a;
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #ffffff;
-  --table-header-bg: #fafafa;
-  --table-row-stripe-bg: #ffffff;
-  --table-row-hover-bg: #f5f7ff;
+  --table-header-bg: #eff1f5;
+  --table-row-stripe-bg: #f8f9fc;
+  --table-row-hover-bg: #eef3ff;
   /* 侧边栏 - 纯白色 */
   --sidebar-bg: #ffffff;
   --sidebar-text: #1a1a1a;
@@ -587,7 +621,7 @@ body {
   border: var(--border-width) solid var(--neutral-dark);
   font-size: var(--font-size-base);
   color: var(--neutral-text);
-  transition: border-color 0.3s ease;
+  transition: border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .form-input:focus {
@@ -680,11 +714,18 @@ body {
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
+  letter-spacing: -0.014em;
 }
 
 .page-card.ant-card {
   border: 1px solid var(--neutral-medium);
   box-shadow: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.page-card.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+  border-color: var(--neutral-dark);
 }
 
 .page-card > .ant-card-body {
@@ -711,6 +752,7 @@ body {
   font-weight: 700;
   line-height: 1.35;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .filter-card .ant-form,
@@ -737,7 +779,7 @@ body {
   gap: 8px;
 }
 
-.ant-modal-title { font-size: var(--font-size-lg); font-weight: 600; line-height: 1.4; }
+.ant-modal-title { font-size: var(--font-size-lg); font-weight: 600; line-height: 1.4; letter-spacing: -0.01em; }
 .ant-modal-body { font-size: var(--font-size-base); line-height: 1.5; }
 
 .ant-modal-wrap {
@@ -763,6 +805,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
 }
 
 .ant-modal-header,
@@ -838,7 +881,8 @@ body {
   text-align: center !important;
   height: 48px;
   padding: 12px 8px;
-  border-bottom: 1px solid var(--table-border-color);
+  border-bottom: 2px solid var(--table-border-color) !important;
+  letter-spacing: 0.04em;
   overflow: hidden;
 }
 
@@ -924,6 +968,8 @@ body {
 
 .ant-table-wrapper .ant-table-container {
   border: 1px solid var(--table-border-color);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 /* 表格边框 - 使用淡淡的颜色 */
@@ -931,7 +977,9 @@ body {
   border-bottom: 1px solid var(--table-border-light);
 }
 
-.ant-table-wrapper .ant-table-thead > tr > th:not(:last-child),
+.ant-table-wrapper .ant-table-thead > tr > th:not(:last-child) {
+  border-inline-end: 1px solid var(--table-border-color) !important;
+}
 .ant-table-wrapper .ant-table-tbody > tr > td:not(:last-child) {
   border-inline-end: 1px solid var(--table-border-light) !important;
 }
@@ -946,6 +994,10 @@ body {
 
 .ant-table-wrapper .ant-table-tbody > tr:nth-child(even) > td {
   background: var(--table-row-stripe-bg);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  transition: background 0.14s ease;
 }
 
 .ant-table-wrapper .ant-table-tbody > tr:hover > td {
@@ -982,6 +1034,14 @@ body {
 
 .clickable-row td {
   cursor: pointer;
+}
+
+/* 数字/金额/编号列等宽对齐 - 在数量、金额、编号列的 td 上加 className="num" 即可 */
+.num,
+.ant-table-cell .num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* ========================================
@@ -1152,6 +1212,7 @@ body {
 .ant-card .ant-card-head-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
 }
 
 .ant-tabs-tab {
@@ -1466,4 +1527,241 @@ body {
   background: #ff4d4f;
   flex-shrink: 0;
   animation: stagnant-dot-blink 1.8s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Professional Polish Layer — 专业感 & 流畅度全局增强
+   仅视觉/动画优化，零功能/交互改动
+   ========================================================================== */
+
+/* Ant Design 标签过渡 */
+.ant-tag {
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+/* Badge 数字更自然 */
+.ant-scroll-number {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tooltip 更快出现 */
+.ant-tooltip {
+  animation-duration: 0.12s !important;
+}
+
+/* Dropdown 菜单出现更流畅 */
+.ant-dropdown {
+  animation-duration: 0.14s !important;
+}
+
+/* Select 下拉面板出现更流畅 */
+.ant-select-dropdown {
+  animation-duration: 0.14s !important;
+}
+
+/* 弹窗/抽屉内滚动条细腻化 */
+.ant-modal-body,
+.ant-drawer-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* Switch 更丝滑 */
+.ant-switch {
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 表格列头 hover 微高亮 */
+.ant-table-thead > tr > th {
+  transition: background 0.14s ease;
+}
+
+/* Tabs 切换指示条平滑 */
+.ant-tabs-ink-bar {
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.24s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Menu 选中/hover 过渡 */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  transition: color 0.18s ease, background 0.18s ease !important;
+}
+
+/* Spin 加载遮罩淡入 */
+.ant-spin-container::after {
+  transition: opacity 0.2s ease !important;
+}
+
+/* Checkbox / Radio 选中动画更精致 */
+.ant-checkbox-inner,
+.ant-radio-inner {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Pagination 按钮过渡 */
+.ant-pagination-item,
+.ant-pagination-prev,
+.ant-pagination-next {
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+/* 统计卡片 hover 微升效果 */
+.stat-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.stat-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Visual Comfort Layer — 视觉舒适度全局提升
+   仅视觉/排版优化，零功能/交互/布局改动
+   ========================================================================== */
+
+/* ── 1. 表单标签层次感（500 weight + 稍暗） ── */
+.ant-form-item-label > label {
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.70) !important;
+  letter-spacing: 0.004em;
+}
+[data-theme="dark"] .ant-form-item-label > label {
+  color: rgba(240, 242, 245, 0.80) !important;
+}
+
+/* ── 2. 统计数字等宽对齐 & 渲染清晰 ── */
+.ant-statistic-content-value,
+.ant-statistic-content-value-int,
+.ant-statistic-content-value-decimal,
+.ant-statistic-content {
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: 'tnum' 1 !important;
+}
+
+/* ── 3. Descriptions 标签/值视觉分级 ── */
+.ant-descriptions-item-label {
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.52) !important;
+  letter-spacing: 0.004em;
+}
+.ant-descriptions-item-content {
+  color: var(--neutral-text) !important;
+  font-weight: 400;
+}
+[data-theme="dark"] .ant-descriptions-item-label {
+  color: rgba(240, 242, 245, 0.55) !important;
+}
+
+/* ── 4. 占位符颜色更柔和（减少认知负荷） ── */
+.ant-input::placeholder,
+.ant-input-number-input::placeholder {
+  color: rgba(0, 0, 0, 0.26) !important;
+}
+.ant-select-selection-placeholder {
+  color: rgba(0, 0, 0, 0.26) !important;
+}
+.ant-picker-input > input::placeholder {
+  color: rgba(0, 0, 0, 0.26) !important;
+}
+[data-theme="dark"] .ant-input::placeholder,
+[data-theme="dark"] .ant-input-number-input::placeholder,
+[data-theme="dark"] .ant-select-selection-placeholder,
+[data-theme="dark"] .ant-picker-input > input::placeholder {
+  color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* ── 5. 弹窗/卡片内正文行高更舒展 ── */
+.ant-modal-body p,
+.ant-card-body p,
+.ant-descriptions-item-content {
+  line-height: 1.65;
+}
+
+/* ── 6. 空表格提示更低调 ── */
+.ant-table-placeholder .ant-empty-description {
+  color: rgba(0, 0, 0, 0.32) !important;
+  font-size: 13px;
+}
+[data-theme="dark"] .ant-table-placeholder .ant-empty-description {
+  color: rgba(255, 255, 255, 0.30) !important;
+}
+
+/* ── 7. 卡片头部分隔线更细腻 ── */
+.ant-card-head {
+  border-bottom-color: var(--neutral-medium) !important;
+  min-height: 44px !important;
+}
+
+/* ── 8. 弹窗标题区底部分隔线更轻 ── */
+.ant-modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+}
+[data-theme="dark"] .ant-modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 9. Alert 组件更贴合内容区 ── */
+.ant-alert {
+  border-radius: 6px !important;
+}
+
+/* ── 10. 详情弹窗的 label 颜色统一 ── */
+.modal-detail-label {
+  color: rgba(0, 0, 0, 0.50) !important;
+  font-weight: 500;
+}
+[data-theme="dark"] .modal-detail-label {
+  color: rgba(240, 242, 245, 0.52) !important;
+}
+
+/* ── 11. Result / 成功/失败 结果页排版优化 ── */
+.ant-result-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ant-result-subtitle {
+  color: rgba(0, 0, 0, 0.52);
+  line-height: 1.6;
+}
+
+/* ── 12. 面包屑字号微调 ── */
+.ant-breadcrumb {
+  font-size: 13px;
+  opacity: 0.80;
+}
+
+/* ── 13. Popconfirm/Popover 标题 ── */
+.ant-popover-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── 14. 数字/金额列强制等宽（未加 .num 时的兜底） ── */
+.ant-table-tbody > tr > td:has(> .ant-typography),
+.ant-table-tbody > tr > td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 15. 底部 Drawer 标题层次感 ── */
+.ant-drawer-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── 16. 表格图片列 — 全站兜底：自适应自然显示（禁止裁剪） ── */
+.ant-table-tbody > tr > td img {
+  height: auto !important;
+  object-fit: initial !important;
+  display: block !important;
+  max-width: 100%;
+}
+.ant-table-tbody > tr > td .ant-image {
+  height: auto !important;
+  display: block !important;
+}
+.ant-table-tbody > tr > td .ant-image-img {
+  height: auto !important;
+  object-fit: initial !important;
+  max-width: 100%;
 }

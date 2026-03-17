@@ -268,7 +268,7 @@ const DailyTodoModal: React.FC = () => {
     >
       {loading ? (
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <Spin tip="正在加载今日数据..." />
+          <Spin spinning tip="正在加载今日数据..."><div /></Spin>
         </div>
       ) : (
         <div>

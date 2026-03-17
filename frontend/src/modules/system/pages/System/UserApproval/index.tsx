@@ -295,6 +295,7 @@ const UserApproval: React.FC = () => {
           }}
           okText="批准并分配角色"
           cancelText="取消"
+          width="40vw"
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -345,6 +346,7 @@ const UserApproval: React.FC = () => {
           okText="确定拒绝"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default' }}
+          width="30vw"
         >
           <div style={{ marginBottom: 16 }}>
             <p>

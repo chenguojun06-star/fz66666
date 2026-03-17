@@ -319,7 +319,7 @@ const ReceivableList: React.FC = () => {
                 value={Number(stats.totalPending)}
                 precision={2}
                 prefix={<DollarOutlined />}
-                valueStyle={{ color: '#1677ff' }}
+                styles={{ content: { color: '#1677ff' } }}
                 formatter={v => `¥ ${fmt(Number(v))}`}
               />
             </Card>
@@ -331,7 +331,7 @@ const ReceivableList: React.FC = () => {
                 value={Number(stats.totalOverdue)}
                 precision={2}
                 prefix={<WarningOutlined />}
-                valueStyle={{ color: '#ff4d4f' }}
+                styles={{ content: { color: '#ff4d4f' } }}
                 formatter={v => `¥ ${fmt(Number(v))}`}
               />
             </Card>
@@ -342,7 +342,7 @@ const ReceivableList: React.FC = () => {
                 title="逾期笔数"
                 value={stats.overdueCount}
                 prefix={<ExclamationCircleOutlined />}
-                valueStyle={{ color: '#fa8c16' }}
+                styles={{ content: { color: '#fa8c16' } }}
                 suffix="笔"
               />
             </Card>
@@ -353,7 +353,7 @@ const ReceivableList: React.FC = () => {
                 title="本月新增应收"
                 value={stats.newThisMonth}
                 prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: '#52c41a' }}
+                styles={{ content: { color: '#52c41a' } }}
                 suffix="笔"
               />
             </Card>
@@ -366,7 +366,7 @@ const ReceivableList: React.FC = () => {
             type="warning"
             showIcon
             icon={<WarningOutlined />}
-            message={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${fmt(Number(stats.totalOverdue))}，请及时催款。`}
+            title={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${fmt(Number(stats.totalOverdue))}，请及时催款。`}
             style={{ marginBottom: 16 }}
             closable
           />

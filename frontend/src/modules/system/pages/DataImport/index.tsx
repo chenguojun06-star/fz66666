@@ -141,7 +141,7 @@ const ZipImportPanel: React.FC = () => {
             { title: '上传导入', description: '系统自动解析并关联' },
           ]}
         />
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Text type="secondary">• 图片命名规则：<Text code>款号.jpg</Text>（或 .png .webp），图片文件名 = 款号，系统自动关联为封面图</Text>
           <Text type="secondary">• Excel 格式与"款式资料"Tab 完全相同，可下载同一份模板</Text>
           <Text type="secondary">• 支持格式：<Text code>jpg / jpeg / png / gif / webp</Text>；ZIP 包最大 <Text strong>500MB</Text></Text>
@@ -149,7 +149,7 @@ const ZipImportPanel: React.FC = () => {
         </Space>
       </Card>
 
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {/* 下载模板 */}
         <Card size="small" title="第一步：下载款式 Excel 模板">
           <Button icon={<DownloadOutlined />} onClick={() => {
@@ -162,7 +162,7 @@ const ZipImportPanel: React.FC = () => {
 
         {/* 上传 ZIP */}
         <Card size="small" title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Upload
               fileList={fileList}
               beforeUpload={(file) => {
@@ -216,7 +216,7 @@ const ZipImportPanel: React.FC = () => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  message={result.message}
+                  title={result.message}
                   description={
                     <Space wrap>
                       <Tag icon={<CheckCircleOutlined />} color="success">成功 {result.successCount} 条</Tag>
@@ -334,7 +334,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
       </Card>
 
       {/* 操作区域 */}
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {/* 步骤1：下载模板 */}
         <Card size="small" title="第一步：下载模板">
           <Button
@@ -351,7 +351,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
 
         {/* 步骤2：上传文件 */}
         <Card size="small" title="第二步：上传数据">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Upload
               fileList={fileList}
               beforeUpload={(file) => {
@@ -415,7 +415,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  message={result.message}
+                  title={result.message}
                   description={
                     <Space>
                       <Tag icon={<CheckCircleOutlined />} color="success">

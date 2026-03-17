@@ -165,7 +165,7 @@ const WhatIfSimPanel: React.FC = () => {
             onChange={v => setSelectedOrderIds(v.slice(0, 5))}
             options={orders.map(o => ({ value: o.id, label: o.label }))}
             maxTagCount={2}
-            popupClassName="whatif-select-popup"
+            classNames={{ popup: { root: 'whatif-select-popup' } }}
             popupStyle={{ background: '#1a2236', border: '1px solid #334155', borderRadius: 6 }}
           />
         </Col>
@@ -220,7 +220,7 @@ const WhatIfSimPanel: React.FC = () => {
       )}
 
       {/* 错误 */}
-      {error && <Alert message={error} type="error" showIcon banner style={{ marginBottom: 8 }} />}
+      {error && <Alert title={error} type="error" showIcon banner style={{ marginBottom: 8 }} />}
 
       {/* 结果表格 */}
       {result && !loading && (

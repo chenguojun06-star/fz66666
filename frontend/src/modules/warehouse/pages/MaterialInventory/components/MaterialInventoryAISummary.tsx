@@ -67,7 +67,7 @@ const MaterialInventoryAISummary: React.FC<MaterialInventoryAISummaryProps> = ({
       icon={<RobotOutlined />}
       showIcon
       type={insight.type}
-      message={insight.message}
+      title={insight.message}
       style={{ marginBottom: 8, fontSize: 13 }}
       closable
     />

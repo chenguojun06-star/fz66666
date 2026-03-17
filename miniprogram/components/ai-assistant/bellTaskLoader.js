@@ -215,13 +215,21 @@ async function loadRepairTasks() {
  */
 function loadTimeoutReminders() {
   try {
+    // 主动清理过期数据：addReminder() 在当前代码中未被调用，
+    // localStorage 里可能有旧版本遗留的历史积累数据，先清掉再读
+    reminderManager.cleanupExpiredReminders();
+
     const allReminders = reminderManager.getReminders();
     const now = Date.now();
     const REMINDER_INTERVAL = 10 * 60 * 60 * 1000; // 10小时
+    const MAX_REMINDER_AGE = 7 * 24 * 60 * 60 * 1000; // 7天：与 cleanupExpiredReminders 阈值对齐
 
     const pendingReminders = allReminders.filter(r => {
       const baseTime = Number(r.lastRemindAt || r.createdAt || 0);
-      return baseTime > 0 && now - baseTime >= REMINDER_INTERVAL;
+      if (baseTime <= 0) return false;
+      // 超过7天的旧提醒不再显示（与 cleanupExpiredReminders 阈值对齐）
+      if (now - Number(r.createdAt || baseTime) > MAX_REMINDER_AGE) return false;
+      return now - baseTime >= REMINDER_INTERVAL;
     });
 
     return pendingReminders.map(r => {

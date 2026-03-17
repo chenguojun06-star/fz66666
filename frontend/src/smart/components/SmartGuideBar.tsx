@@ -25,7 +25,7 @@ const SmartGuideBar: React.FC<SmartGuideBarProps> = ({
 }) => {
   const title = `${stage} · 下一步：${nextStep || '继续当前流程'}`;
   const description = (
-    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+    <Space orientation="vertical" size={8} style={{ width: '100%' }}>
       <div>待处理项：{pendingCount}</div>
       {hints.map((item) => (
         <Space key={item.key} size={8} wrap>
@@ -41,7 +41,7 @@ const SmartGuideBar: React.FC<SmartGuideBarProps> = ({
     </Space>
   );
 
-  return <Alert type="info" showIcon message={title} description={description} />;
+  return <Alert type="info" showIcon title={title} description={description} />;
 };
 
 export default SmartGuideBar;

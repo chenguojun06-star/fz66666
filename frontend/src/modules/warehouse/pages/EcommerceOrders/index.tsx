@@ -284,7 +284,7 @@ const OrdersTab: React.FC = () => {
             <Card size="small" styles={{ body: { padding: '8px 12px' } }}>
               <Statistic title={<span style={{ fontSize: 11 }}>{s.title}</span>}
                 value={s.value} suffix={s.suffix}
-                valueStyle={{ fontSize: 22, color: s.color }} />
+                styles={{ content: { fontSize: 22, color: s.color } }} />
             </Card>
           </Col>
         ))}
@@ -323,7 +323,7 @@ const OrdersTab: React.FC = () => {
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
       />
 
-      <Drawer open={!!detail} onClose={() => setDetail(null)} title="订单详情" width={480}>
+      <Drawer open={!!detail} onClose={() => setDetail(null)} title="订单详情" styles={{ wrapper: { width: 480 } }}>
         {detail && (
           <>
             <Descriptions size="small" column={2} bordered>

@@ -94,11 +94,11 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
               precision={stat.precision}
               prefix={stat.prefix}
               suffix={stat.suffix}
-              valueStyle={{
+              styles={{ content: {
                 fontSize: '18px',
                 lineHeight: '24px',
                 color: stat.valueColor,
-              }}
+              } }}
             />
           </Card>
         </Col>

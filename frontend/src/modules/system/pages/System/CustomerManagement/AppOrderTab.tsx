@@ -250,7 +250,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         </Tooltip>
         {pendingCount > 0 && (
           <Alert
-            message={`有 ${pendingCount} 个待处理订单`}
+            title={`有 ${pendingCount} 个待处理订单`}
             type="warning"
             showIcon
             banner
@@ -287,7 +287,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         {activateModal.data && (
           <>
             <Alert
-              message="激活后将自动为客户创建订阅和API凭证，请确认已收到付款。"
+              title="激活后将自动为客户创建订阅和API凭证，请确认已收到付款。"
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
@@ -338,7 +338,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
       >
         {resultModal.data && (
           <>
-            <Alert message="订单已激活成功，客户可以开始使用应用了。" type="success" showIcon style={{ marginBottom: 16 }} />
+            <Alert title="订单已激活成功，客户可以开始使用应用了。" type="success" showIcon style={{ marginBottom: 16 }} />
             <Descriptions column={1} bordered size="small">
               <Descriptions.Item label="订单号">{resultModal.data.orderNo}</Descriptions.Item>
               <Descriptions.Item label="激活时间">{resultModal.data.activatedAt}</Descriptions.Item>
@@ -385,7 +385,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         }
       >
         <Alert
-          message="配置后，每当客户在应用商店提交购买订单，系统自动推送微信通知到您的手机。"
+          title="配置后，每当客户在应用商店提交购买订单，系统自动推送微信通知到您的手机。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -400,7 +400,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         </div>
         {notifyConfigured && (
           <Alert
-            message={`当前已配置：${notifyMaskedKey}`}
+            title={`当前已配置：${notifyMaskedKey}`}
             type="success"
             showIcon
             style={{ marginBottom: 12 }}

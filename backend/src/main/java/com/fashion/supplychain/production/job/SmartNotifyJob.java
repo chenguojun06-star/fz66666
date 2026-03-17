@@ -73,6 +73,25 @@ public class SmartNotifyJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
+    /** 每天凌晨3点清理30天以上的旧通知，防止无限堆积 */
+    @Scheduled(cron = "0 0 3 * * ?")
+    public void cleanupOldNotices() {
+        try {
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
+            long deleted = sysNoticeService.lambdaQuery()
+                    .le(com.fashion.supplychain.production.entity.SysNotice::getCreatedAt, cutoff)
+                    .count();
+            if (deleted > 0) {
+                sysNoticeService.lambdaUpdate()
+                        .le(com.fashion.supplychain.production.entity.SysNotice::getCreatedAt, cutoff)
+                        .remove();
+                log.info("[SmartNotify] 清理 {} 条30天以上旧通知", deleted);
+            }
+        } catch (Exception e) {
+            log.warn("[SmartNotify] 旧通知清理失败: {}", e.getMessage());
+        }
+    }
+
     @Scheduled(cron = "0 0 * * * ?")
     public void autoDetectAndNotify() {
         if (distributedLockService != null) {

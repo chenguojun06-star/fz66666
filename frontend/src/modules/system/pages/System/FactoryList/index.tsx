@@ -424,7 +424,7 @@ const FactoryList: React.FC = () => {
             title={tooltipContent}
             onOpenChange={(open) => { if (open) void loadScorecardOnce(); }}
             mouseEnterDelay={0.3}
-            overlayInnerStyle={{ minWidth: 180 }}
+            styles={{ container: { minWidth: 180 } }}
           >
             <span style={{ cursor: 'default', borderBottom: '1px dashed rgba(0,0,0,0.25)', paddingBottom: 1 }}>
               {name}
