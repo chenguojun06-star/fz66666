@@ -226,6 +226,11 @@
   text-align: left !important;
   background: transparent !important;
   color-scheme: light !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper-focused {
@@ -250,6 +255,12 @@
   height: 46px !important;
   line-height: 46px !important;
   text-align: center !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
 }
 
 .login-card .ant-input-affix-wrapper:hover {
@@ -267,17 +278,24 @@
   background: transparent !important;
   color: rgba(17, 24, 39, 0.92) !important;
   color-scheme: light !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
 }
 
 .login-card .ant-input::placeholder {
   color: rgba(17, 24, 39, 0.50) !important;
 }
 
-/* 防止浏览器深色模式 autofill 注入黑色背景 */
+/* 输入框只保留外层 wrapper 背景，避免 autofill 重新画出内层白块 */
 .login-card .ant-input:-webkit-autofill,
 .login-card .ant-input:-webkit-autofill:hover,
-.login-card .ant-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #f6f8ff inset !important;
+.login-card .ant-input:-webkit-autofill:focus,
+.login-card .ant-input-affix-wrapper input:-webkit-autofill,
+.login-card .ant-input-affix-wrapper input:-webkit-autofill:hover,
+.login-card .ant-input-affix-wrapper input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-text-fill-color: rgba(17, 24, 39, 0.92) !important;
   caret-color: rgba(17, 24, 39, 0.92) !important;
 }
