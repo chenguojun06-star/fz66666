@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PurchaseOrderDoc;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseDocOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PurchaseOrderDocService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -30,6 +31,9 @@ public class MaterialPurchaseController {
 
     @Autowired
     private PurchaseOrderDocService purchaseOrderDocService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     /**
      * 查询指定订单的历史单据列表（按上传时间倒序）
@@ -243,5 +247,23 @@ public class MaterialPurchaseController {
             return Result.fail("文件大小不能超过 10MB");
         }
         return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo));
+    }
+
+    /**
+     * 更新采购记录发票/单据图片URL列表（财务留底）
+     * 参数：{ purchaseId, invoiceUrls（JSON字符串） }
+     */
+    @PostMapping("/update-invoice-urls")
+    public Result<?> updateInvoiceUrls(@RequestBody Map<String, Object> body) {
+        String purchaseId = (String) body.get("purchaseId");
+        String invoiceUrls = (String) body.get("invoiceUrls");
+        if (purchaseId == null || purchaseId.isBlank()) {
+            return Result.fail("purchaseId 不能为空");
+        }
+        MaterialPurchase record = new MaterialPurchase();
+        record.setId(purchaseId);
+        record.setInvoiceUrls(invoiceUrls);
+        materialPurchaseService.updateById(record);
+        return Result.success(null);
     }
 }

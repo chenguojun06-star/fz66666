@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip } from 'antd';
-import { FileImageOutlined } from '@ant-design/icons';
+import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip, Upload } from 'antd';
+import { FileImageOutlined, PlusOutlined, LoadingOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { RcFile } from 'antd/es/upload/interface';
 import api from '@/utils/api';
 
 import ResizableTable from '@/components/common/ResizableTable';
@@ -83,6 +84,70 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
   const [docList, setDocList] = useState<PurchaseDocRecord[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+
+  // ── 发票/单据上传（复用 PurchaseCreateForm 同款上传逻辑） ──
+  // invoiceUrls 从 currentPurchase.invoiceUrls（JSON字符串）解析，本地维护可编辑副本
+  const parseInvoiceUrls = (raw?: string | null): string[] => {
+    if (!raw) return [];
+    try { return JSON.parse(raw) as string[]; }
+    catch { return raw.split(',').map((s) => s.trim()).filter(Boolean); }
+  };
+
+  const [invoiceUrls, setInvoiceUrls] = useState<string[]>(() =>
+    parseInvoiceUrls((currentPurchase as any)?.invoiceUrls)
+  );
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+
+  // currentPurchase 切换时同步解析
+  useEffect(() => {
+    setInvoiceUrls(parseInvoiceUrls((currentPurchase as any)?.invoiceUrls));
+  }, [currentPurchase?.id]);
+
+  const beforeInvoiceUpload = (file: RcFile) => {
+    const ok = ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type);
+    if (!ok) { void import('@/utils/antdStatic').then(({ message }) => message.error('只能上传 JPG/PNG 图片')); return false; }
+    const lt5m = file.size / 1024 / 1024 < 5;
+    if (!lt5m) { void import('@/utils/antdStatic').then(({ message }) => message.error('图片不能超过 5MB')); return false; }
+    return true;
+  };
+
+  const handleInvoiceUpload = async (options: any) => {
+    const { file, onSuccess, onError } = options;
+    setInvoiceUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await api.post('/common/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }) as any;
+      if (res?.code === 200 && res?.data) {
+        const url: string = typeof res.data === 'string' ? res.data : (res.data?.url ?? '');
+        const next = [...invoiceUrls, url];
+        setInvoiceUrls(next);
+        // 持久化保存到后端
+        await api.post('/production/purchase/update-invoice-urls', {
+          purchaseId: currentPurchase?.id,
+          invoiceUrls: JSON.stringify(next),
+        }).catch(() => { /* 非致命，本地已更新 */ });
+        onSuccess(res);
+      } else {
+        onError(new Error(res?.message || '上传失败'));
+      }
+    } catch (err) {
+      onError(err);
+    } finally {
+      setInvoiceUploading(false);
+    }
+  };
+
+  const handleInvoiceDelete = async (url: string) => {
+    const next = invoiceUrls.filter((u) => u !== url);
+    setInvoiceUrls(next);
+    await api.post('/production/purchase/update-invoice-urls', {
+      purchaseId: currentPurchase?.id,
+      invoiceUrls: JSON.stringify(next),
+    }).catch(() => { /* 非致命 */ });
+  };
 
   const loadDocs = useCallback(async () => {
     if (!currentPurchase?.orderNo) return;
@@ -353,6 +418,77 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           </Spin>
         </Card>
       )}
+
+      {/* ── 发票/单据上传（财务留底） ── */}
+      <Card
+        size="small"
+        style={{ marginTop: 12 }}
+        title={
+          <Space>
+            <FileImageOutlined />
+            <span>发票/单据</span>
+            <span style={{ color: '#999', fontWeight: 'normal' }}>（{invoiceUrls.length}张，点击可预览放大）</span>
+          </Space>
+        }
+        extra={
+          <Upload
+            accept="image/jpeg,image/jpg,image/png"
+            showUploadList={false}
+            beforeUpload={beforeInvoiceUpload}
+            customRequest={handleInvoiceUpload}
+            disabled={!currentPurchase?.id}
+          >
+            <Button size="small" icon={invoiceUploading ? <LoadingOutlined /> : <PlusOutlined />} disabled={invoiceUploading || !currentPurchase?.id}>
+              上传图片
+            </Button>
+          </Upload>
+        }
+      >
+        {invoiceUrls.length === 0 && !invoiceUploading ? (
+          <div style={{ color: '#bbb', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
+            暂无发票/单据，点击右上角「上传图片」添加
+          </div>
+        ) : (
+          <Image.PreviewGroup>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {invoiceUrls.map((url, idx) => (
+                <div
+                  key={url + idx}
+                  style={{ position: 'relative', width: 120, height: 90 }}
+                >
+                  <Image
+                    src={url}
+                    width={120}
+                    height={90}
+                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
+                    preview={{ mask: '预览' }}
+                  />
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      background: 'rgba(255,255,255,0.85)',
+                      padding: '0 4px',
+                      minWidth: 0,
+                    }}
+                    onClick={() => void handleInvoiceDelete(url)}
+                  />
+                </div>
+              ))}
+              {invoiceUploading && (
+                <div style={{ width: 120, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 4 }}>
+                  <LoadingOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+                </div>
+              )}
+            </div>
+          </Image.PreviewGroup>
+        )}
+      </Card>
 
     </div>
   );

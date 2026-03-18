@@ -284,6 +284,8 @@ export interface MaterialPurchase extends Record<string, unknown> {
   color?: string;
   size?: string;
   fabricComposition?: string;
+  // 发票/单据图片URL列表（JSON数组字符串），用于财务留底
+  invoiceUrls?: string;
 }
 
 export interface ProductWarehousing extends Record<string, unknown> {
