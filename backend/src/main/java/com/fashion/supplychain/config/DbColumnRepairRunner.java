@@ -95,6 +95,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
                     "VARCHAR(100) DEFAULT NULL COMMENT '物料成分，优先从面辅料资料带入' ");
+                repaired += ensureColumn(conn, schema, "t_style_bom", "size_usage_map",
+                    "TEXT DEFAULT NULL COMMENT '码数用量配比(JSON，格式：{\"S\":1.5,\"M\":1.6,\"L\":1.7}，为空则统一用usageAmount)'");
                 repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
