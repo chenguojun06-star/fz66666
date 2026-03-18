@@ -1,4 +1,28 @@
-## 2026-05-03（最新）
+## 2026-05-04（最新）
+
+### fix(production): "我的订单/生产进度"—下单人列显示 SYSTEM_TASK:进度一致性检查（全量污染修复）
+
+- **问题现象**：「我的订单」与「生产进度」列表的"下单人"列，对**所有订单**均显示 `SYSTEM_TASK:进度一致性检查`，而非实际下单者姓名。
+- **根本原因（7 层因果链，完整追踪）**：
+  1. `ProductionDataConsistencyJob`（每 30 分钟执行）调用 `TenantAssert.bindTenantForTask(tenantId, "进度一致性检查")`，将调度器线程的 `UserContext.username` 设置为 `"SYSTEM_TASK:进度一致性检查"`
+  2. 调用 `productionOrderService.recomputeProgressAsync(orderId)` → 内部委托给带 `@Async` 注解的 `ProductionOrderProgressRecomputeService`，运行在线程池异步线程
+  3. **`AsyncConfig.contextCopyingDecorator()`** 在任务提交时 **快照整个 `UserContext`** 并在异步线程恢复，导致异步线程也持有 `username = "SYSTEM_TASK:进度一致性检查"`（`ThreadLocal` 本身不继承，但 TaskDecorator 完成了传递）
+  4. 异步线程中：`recomputeProgressFromRecords(orderId)` → `ensureBaseStageRecordsIfAbsent(order)`
+  5. `ensureBaseStageRecordsIfAbsent` 对"下单"阶段扫码记录调用 `upsertStageScanRecord(..., operatorName="system")`
+  6. `resolveOperatorName("system", null, null)` 检测到 `"system"` 为保留词 → 跳过 → 读 `UserContext.username()` = `"SYSTEM_TASK:进度一致性检查"` → **不是 "system" → 直接返回它**
+  7. `t_scan_record` 的 `progress_stage='下单'` 记录 `operator_name` 被批量覆写为系统任务标识 → 视图 `v_production_order_flow_stage_snapshot` 聚合 `order_operator_name` → 前端"下单人"列全部显示该值
+- **修复方案（双重防护）**：
+  - **Fix #1 — `resolveOperatorName` 防漏网**（`ProductionOrderScanRecordDomainService.java`）：在 UserContext 用户名校验分支中新增 `!ctxName.startsWith("SYSTEM_TASK:")` 条件，统一屏蔽所有系统任务标识回落到 UserContext 的情况——保底防御，未来所有定时任务均受保护
+  - **Fix #2 — `ensureBaseStageRecordsIfAbsent` 语义修正**（`ProductionOrderProgressRecomputeService.java`）：对"下单"阶段扫码记录，改为直接传入 `order.getCreatedByName()` / `order.getCreatedById()` 作为操作人，彻底不依赖 UserContext。对 INSERT 路径（新建记录）正确写入创建人；对 UPDATE 路径（更新已有记录）不再覆盖已有的真实姓名
+- **涉及文件**：
+  - `backend/.../production/service/ProductionOrderScanRecordDomainService.java`（resolveOperatorName 防漏网）
+  - `backend/.../production/service/ProductionOrderProgressRecomputeService.java`（ensureBaseStageRecordsIfAbsent 传真实创建人）
+- **DB 影响**：无结构变更，下次定时任务（最迟 30 分钟）自动修复存量污染记录；或重启后立即触发一次修复
+- **对系统的帮助**：所有订单"下单人"列恢复显示真实操作者姓名，历史被污染的记录会在后台自动一轮修复即回正，无需手工 SQL 干预。两层防护确保未来定时任务扩展（增加新的系统任务或新模块）不会再污染任何 operator_name 字段
+
+---
+
+## 2026-05-03（次新）
 
 ### feat(intelligence): 补齐4个AI Agent工具 + ExecutionEngine双通道注册
 

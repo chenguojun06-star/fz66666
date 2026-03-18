@@ -122,8 +122,11 @@ public class ProductionOrderScanRecordDomainService {
         UserContext ctx = UserContext.get();
         if (ctx != null) {
             String ctxName = trimToNull(ctx.getUsername());
-            // 同样跳过超管 JWT 里的 "system" username
-            if (ctxName != null && !"system".equalsIgnoreCase(ctxName)) {
+            // 同样跳过超管 JWT 里的 "system" username 以及定时任务注入的 "SYSTEM_TASK:*" 标识
+            // 防止 ProductionDataConsistencyJob 等定时任务通过 AsyncConfig.contextCopyingDecorator
+            // 将系统任务标识污染到扫码记录的 operator_name 字段
+            if (ctxName != null && !"system".equalsIgnoreCase(ctxName)
+                    && !ctxName.startsWith("SYSTEM_TASK:")) {
                 return ctxName;
             }
         }

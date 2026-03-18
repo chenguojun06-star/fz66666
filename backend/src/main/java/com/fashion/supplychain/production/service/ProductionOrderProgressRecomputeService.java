@@ -493,6 +493,14 @@ public class ProductionOrderProgressRecomputeService {
             createdTime = LocalDateTime.now();
         }
 
+        // 【下单人修复】必须使用订单存储的创建人，而非回落到 UserContext
+        // ProductionDataConsistencyJob 通过 AsyncConfig.contextCopyingDecorator 把
+        // "SYSTEM_TASK:进度一致性检查" 注入到异步线程的 UserContext，若此处传 "system"，
+        // resolveOperatorName 会把 "system" 视为保留词并继续读 UserContext，
+        // 导致 t_scan_record.operator_name 被污染为系统任务标识，进而通过视图
+        // v_production_order_flow_stage_snapshot 把 order_operator_name 传给前端"下单人"列。
+        String creatorId   = order.getCreatedById()   != null ? String.valueOf(order.getCreatedById()) : null;
+        String creatorName = StringUtils.hasText(order.getCreatedByName()) ? order.getCreatedByName().trim() : null;
         scanRecordDomainService.upsertStageScanRecord(
                 ProductionOrderScanRecordDomainService.REQUEST_PREFIX_ORDER_CREATED + oid,
                 oid,
@@ -504,8 +512,8 @@ public class ProductionOrderProgressRecomputeService {
                 orderQty,
                 ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED,
                 createdTime,
-                null,
-                "system");
+                creatorId,
+                creatorName);
 
         int r = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
         r = scanRecordDomainService.clampPercent(r);
