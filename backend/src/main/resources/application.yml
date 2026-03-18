@@ -189,6 +189,12 @@ app:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app,https://*.trycloudflare.com}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
+  performance-monitor:
+    default-warn-threshold-ms: ${APP_PERF_DEFAULT_WARN_THRESHOLD_MS:1000}
+    ai-chat-warn-threshold-ms: ${APP_PERF_AI_CHAT_WARN_THRESHOLD_MS:5000}
+    ai-daily-advice-warn-threshold-ms: ${APP_PERF_AI_DAILY_ADVICE_WARN_THRESHOLD_MS:5000}
+    redis-delete-pattern-warn-threshold-ms: ${APP_PERF_REDIS_DELETE_PATTERN_WARN_THRESHOLD_MS:2000}
+    production-order-query-warn-threshold-ms: ${APP_PERF_PRODUCTION_ORDER_QUERY_WARN_THRESHOLD_MS:2500}
 
 springdoc:
   api-docs:

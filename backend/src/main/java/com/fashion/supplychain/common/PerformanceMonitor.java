@@ -5,6 +5,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +19,21 @@ import java.util.concurrent.atomic.AtomicLong;
 @Aspect
 @Component
 public class PerformanceMonitor {
+
+    @Value("${app.performance-monitor.default-warn-threshold-ms:1000}")
+    private long defaultWarnThresholdMs;
+
+    @Value("${app.performance-monitor.ai-chat-warn-threshold-ms:5000}")
+    private long aiChatWarnThresholdMs;
+
+    @Value("${app.performance-monitor.ai-daily-advice-warn-threshold-ms:5000}")
+    private long aiDailyAdviceWarnThresholdMs;
+
+    @Value("${app.performance-monitor.redis-delete-pattern-warn-threshold-ms:2000}")
+    private long redisDeletePatternWarnThresholdMs;
+
+    @Value("${app.performance-monitor.production-order-query-warn-threshold-ms:2500}")
+    private long productionOrderQueryWarnThresholdMs;
 
     /**
      * 方法执行统计信息
@@ -86,8 +102,9 @@ public class PerformanceMonitor {
             stats.record(executionTime);
 
             // 如果执行时间超过阈值，记录警告日志
-            if (executionTime > 1000) {
-                log.warn("慢方法警告: {} 执行耗时 {}ms", methodName, executionTime);
+            long warnThreshold = resolveWarnThreshold(methodName);
+            if (executionTime > warnThreshold) {
+                log.warn("慢方法警告: {} 执行耗时 {}ms (阈值={}ms)", methodName, executionTime, warnThreshold);
             }
 
             // 记录调试日志
@@ -95,6 +112,22 @@ public class PerformanceMonitor {
                 log.debug("方法执行: {} 耗时 {}ms", methodName, executionTime);
             }
         }
+    }
+
+    private long resolveWarnThreshold(String methodName) {
+        if ("AiAdvisorService.chat(..)".equals(methodName)) {
+            return aiChatWarnThresholdMs;
+        }
+        if ("AiAdvisorService.getDailyAdvice(..)".equals(methodName)) {
+            return aiDailyAdviceWarnThresholdMs;
+        }
+        if ("RedisService.deleteByPattern(..)".equals(methodName)) {
+            return redisDeletePatternWarnThresholdMs;
+        }
+        if ("ProductionOrderQueryService.queryPage(..)".equals(methodName)) {
+            return productionOrderQueryWarnThresholdMs;
+        }
+        return defaultWarnThresholdMs;
     }
 
     /**

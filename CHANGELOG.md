@@ -1,5 +1,12 @@
 ## 2026-05-03（最新）
 
+### chore(observability): 性能监控按方法分级阈值，减少 AI 与重查询误报噪音
+
+- **问题现象**：云端日志持续出现 `AiAdvisorService.chat(..)`、`AiAdvisorService.getDailyAdvice(..)`、`RedisService.deleteByPattern(..)`、`ProductionOrderQueryService.queryPage(..)` 的大量 `慢方法警告`。这些调用并非异常，主要是外部 AI 网络调用、批量 Redis SCAN 删除和订单列表多段填充逻辑被统一的 1000ms 阈值打成 WARN，导致日志信噪比过低。
+- **根本原因**：`PerformanceMonitor` 之前对所有 Service 方法使用同一 1000ms 告警线，没有区分“本地计算慢”与“网络调用/批量查询本来就可能超过 1 秒”的方法类型。
+- **修复方案**：为 `PerformanceMonitor` 增加按方法分类阈值：`AiAdvisorService.chat(..)` / `getDailyAdvice(..)` 提升到 5000ms，`RedisService.deleteByPattern(..)` 提升到 2000ms，`ProductionOrderQueryService.queryPage(..)` 提升到 2500ms，其余方法仍保持 1000ms；同时把这些阈值开放为 `application.yml` / 环境变量配置，后续可按云端表现继续微调。
+- **对系统的帮助**：不会再因为 AI 正常 3~4 秒响应或 Redis 模式清理 1.2 秒而持续刷 WARN，值班排障时能更容易看见真正异常；但真正超出合理上限的慢调用仍会被保留下来。
+
 ### fix(runtime): 整点智能通知与 WebSocket 断线噪音进一步收口
 
 - **问题现象**：云端仍偶发出现 `TaskUtils$LoggingErrorHandler - Unexpected error occurred in scheduled task`，时间点集中在整点；同时 `RealTimeWebSocketHandler - [WebSocket] 传输错误` 仍有少量残留，容易被误判为服务端通信故障。
