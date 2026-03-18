@@ -477,6 +477,59 @@ public class PayrollSettlementOrchestrator {
     }
 
     /**
+     * 审核通过工资结算单
+     * 只允许审核 pending 状态的结算单，标记已扫码记录 payrollSettled=true
+     *
+     * @param settlementId 结算单ID
+     * @param remark       审核备注（可选）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void approve(String settlementId, String remark) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        if (!"pending".equalsIgnoreCase(settlement.getStatus())) {
+            throw new IllegalStateException("当前状态不允许审核，只有待审核(pending)状态可以审核通过");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String confirmerId = null;
+        String confirmerName = null;
+        UserContext ctx = UserContext.get();
+        if (ctx != null) {
+            confirmerId = StringUtils.hasText(ctx.getUserId()) ? ctx.getUserId().trim() : null;
+            confirmerName = ctx.getUsername();
+        }
+
+        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
+                .set(PayrollSettlement::getStatus, "approved")
+                .set(PayrollSettlement::getConfirmerId, confirmerId)
+                .set(PayrollSettlement::getConfirmerName, confirmerName)
+                .set(PayrollSettlement::getConfirmTime, now)
+                .set(PayrollSettlement::getUpdateTime, now)
+                .eq(PayrollSettlement::getId, settlementId.trim());
+        if (StringUtils.hasText(remark)) {
+            uw.set(PayrollSettlement::getRemark, remark.trim());
+        }
+        payrollSettlementService.update(uw);
+
+        // 确认关联扫码记录的结算状态（payrollSettlementId 已在 generate() 时绑定）
+        // 审核通过后 payrollSettlementId 保持不变，undo 操作会据此阻止撤回
+        LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
+                .set(ScanRecord::getSettlementStatus, "payroll_approved")
+                .set(ScanRecord::getUpdateTime, now)
+                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim());
+        scanRecordMapper.update(new ScanRecord(), scanUw);
+
+        log.info("[PayrollApprove] 工资结算单审核通过: id={}, confirmerId={}", settlementId, confirmerId);
+    }
+
+    /**
      * 取消工资结算单
      * 只允许取消 pending 状态的结算单，取消后释放已关联的扫码记录
      *

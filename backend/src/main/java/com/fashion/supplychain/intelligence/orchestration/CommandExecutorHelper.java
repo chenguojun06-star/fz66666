@@ -6,6 +6,9 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
+import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
+import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -36,6 +39,9 @@ public class CommandExecutorHelper {
     @Autowired private FinishedProductSettlementService finishedProductSettlementService;
     @Autowired private MaterialPurchaseService materialPurchaseService;
     @Autowired private SmartNotificationOrchestrator smartNotification;
+    @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;
+    @Autowired private CuttingTaskOrchestrator cuttingTaskOrchestrator;
+    @Autowired private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
 
     private static final int MAX_UNDO_ENTRIES = 500;
     private final ConcurrentHashMap<Long, UndoSnapshot> undoSnapshots = new ConcurrentHashMap<>();
@@ -299,6 +305,51 @@ public class CommandExecutorHelper {
         materialPurchaseService.save(purchase);
         log.info("[ProcurementOrderGoods] AI订货单已创建: material={}, qty={}, supplier={}", materialName, quantity, supplier);
         return purchase;
+    }
+
+    // ── 4 种新增命令执行（2026-05 AI工具补齐） ──
+
+    public Map<String, Object> executeScanUndo(ExecutableCommand command, Long executorId) {
+        Map<String, Object> params = command.getParams();
+        scanRecordOrchestrator.undo(params);
+        log.info("[ScanUndo] AI撤回扫码记录: targetId={}, executor={}", command.getTargetId(), executorId);
+        return Map.of("success", true, "message", "扫码记录已撤回");
+    }
+
+    public Map<String, Object> executeCuttingCreate(ExecutableCommand command, Long executorId) {
+        Map<String, Object> params = command.getParams();
+        Object result = cuttingTaskOrchestrator.createCustom(params);
+        log.info("[CuttingCreate] AI创建裁剪单: executor={}", executorId);
+        return Map.of("success", true, "message", "裁剪单已创建", "data", result);
+    }
+
+    public ProductionOrder executeOrderEdit(ExecutableCommand command, Long executorId) {
+        ProductionOrder order = requireOrder(command.getTargetId());
+        Map<String, Object> params = command.getParams();
+        if (params.containsKey("remarks")) order.setRemarks((String) params.get("remarks"));
+        if (params.containsKey("urgencyLevel")) order.setUrgencyLevel((String) params.get("urgencyLevel"));
+        if (params.containsKey("factoryName")) order.setFactoryName((String) params.get("factoryName"));
+        if (params.containsKey("company")) order.setCompany((String) params.get("company"));
+        if (params.containsKey("expectedShipDate")) {
+            order.setExpectedShipDate(LocalDate.parse((String) params.get("expectedShipDate")));
+        }
+        productionOrderService.updateById(order);
+        log.info("[OrderEdit] AI编辑订单字段: orderId={}, executor={}", command.getTargetId(), executorId);
+        return order;
+    }
+
+    public Map<String, Object> executePayrollApprove(ExecutableCommand command, Long executorId) {
+        String action = (String) command.getParams().getOrDefault("action", "approve");
+        String settlementId = command.getTargetId();
+        String remark = (String) command.getParams().getOrDefault("remark", "");
+        if ("cancel".equalsIgnoreCase(action)) {
+            payrollSettlementOrchestrator.cancel(settlementId, remark);
+            log.info("[PayrollApprove] AI取消工资结算: settlementId={}, executor={}", settlementId, executorId);
+            return Map.of("success", true, "message", "工资结算单已取消");
+        }
+        payrollSettlementOrchestrator.approve(settlementId, remark);
+        log.info("[PayrollApprove] AI审批工资结算: settlementId={}, executor={}", settlementId, executorId);
+        return Map.of("success", true, "message", "工资结算单已审批通过");
     }
 
     // ── 快照 & 撤回 ──
