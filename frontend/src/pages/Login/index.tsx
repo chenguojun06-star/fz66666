@@ -133,11 +133,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-page">
-      {/* 语言切换（暂隐藏，后续上线）
-      <div className="login-lang-corner">
-        <LoginLanguageSwitcher />
-      </div>
-      */}
       <div className="login-bg" aria-hidden="true" />
       <div className="login-constellation" aria-hidden="true">
         <div className="constellation-line" />
