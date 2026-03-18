@@ -94,7 +94,15 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        log.error("[WebSocket] 传输错误: sessionId={}", session.getId(), exception);
+        String exMsg = exception.getMessage();
+        // 常见的客户端主动断开（网络切换/关闭标签页），降为 WARN 避免日志噪音
+        if (exMsg != null && (exMsg.contains("Connection reset") || exMsg.contains("Broken pipe")
+                || exMsg.contains("closed") || exMsg.contains("EOF")
+                || exception instanceof java.io.EOFException)) {
+            log.warn("[WebSocket] 客户端断开连接: sessionId={}, reason={}", session.getId(), exMsg);
+        } else {
+            log.error("[WebSocket] 传输错误: sessionId={}", session.getId(), exception);
+        }
         sessionManager.removeSession(session.getId());
         lastPingTime.remove(session.getId());
     }
