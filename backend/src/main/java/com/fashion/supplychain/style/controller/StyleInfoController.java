@@ -76,6 +76,12 @@ public class StyleInfoController {
         return Result.success(styleInfoOrchestrator.rollbackProductionRequirements(id, body));
     }
 
+    @PostMapping("/{id}/pattern-revision/rollback")
+    public Result<?> rollbackPatternRevision(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.rollbackPatternRevision(id, body));
+    }
+
     /**
      * 统一的阶段操作端点（替代14个分散端点）
      *

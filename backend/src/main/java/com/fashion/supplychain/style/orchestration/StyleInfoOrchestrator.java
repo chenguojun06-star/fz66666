@@ -241,6 +241,11 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.rollbackProductionRequirements(id, body);
     }
 
+    public boolean rollbackPatternRevision(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
+        return styleStageHelper.rollbackPatternRevision(id, body);
+    }
+
     private boolean isNumericKey(String key) {
         for (int i = 0; i < key.length(); i++) {
             if (!Character.isDigit(key.charAt(i))) {

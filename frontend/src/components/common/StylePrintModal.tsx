@@ -920,14 +920,14 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                   <thead>
                     <tr style={{ background: 'var(--color-bg-container)' }}>
                       <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', width: 60, textAlign: 'center' }}>序号</th>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>内容</th>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left' }}>内容</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fixedLines.map((line: string, idx: number) => (
                       <tr key={idx}>
                         <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
-                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{line}</td>
+                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', whiteSpace: 'pre-wrap', textAlign: 'left' }}>{line}</td>
                       </tr>
                     ))}
                   </tbody>

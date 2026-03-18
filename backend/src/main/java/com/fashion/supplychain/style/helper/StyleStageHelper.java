@@ -57,16 +57,19 @@ public class StyleStageHelper {
             throw new NoSuchElementException("款号不存在");
         }
 
-        // 取消锁定检查，允许随时修改
-        // if (isProductionRequirementsLocked(id)) {
-        // throw new IllegalStateException("生产要求已保存，无法修改，请联系管理员退回");
-        // }
+        // 锁定检查：必须被管理员退回（descriptionLocked=0）才允许编辑
+        Integer locked = current.getDescriptionLocked();
+        if (locked == null || locked == 1) {
+            throw new IllegalStateException("生产制单已锁定，请联系管理员退回后编辑");
+        }
 
         String desc = body == null ? null
                 : (body.get("description") == null ? null : String.valueOf(body.get("description")));
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getDescription, desc)
+                .set(StyleInfo::getDescriptionLocked, 1)           // 保存后自动重新锁定
+                .set(StyleInfo::getDescriptionReturnComment, null) // 清除退回备注
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
 
@@ -92,15 +95,67 @@ public class StyleStageHelper {
 
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
-        String remark = StringUtils.hasText(reason) ? reason : "";
-        if (!StringUtils.hasText(remark)) {
+        if (!StringUtils.hasText(reason)) {
             throw new IllegalArgumentException("退回原因不能为空");
         }
-        styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", remark);
+
+        // 写入解锁状态和退回信息
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getDescriptionLocked, 0)
+                .set(StyleInfo::getDescriptionReturnComment, reason)
+                .set(StyleInfo::getDescriptionReturnBy, UserContext.username())
+                .set(StyleInfo::getDescriptionReturnTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!ok) {
+            throw new IllegalStateException("退回操作失败");
+        }
+
+        styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
         return true;
     }
 
     // ==================== Production Stage ====================
+
+    /** 管理员退回纸样修改，允许用户提交新记录 */
+    public boolean rollbackPatternRevision(Long id, Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("退回原因不能为空");
+        }
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getPatternRevLocked, 0)
+                .set(StyleInfo::getPatternRevReturnComment, reason)
+                .set(StyleInfo::getPatternRevReturnBy, UserContext.username())
+                .set(StyleInfo::getPatternRevReturnTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!ok) {
+            throw new IllegalStateException("退回操作失败");
+        }
+        styleLogHelper.saveMaintenanceLog(id, "PATTERN_REVISION_ROLLBACK", reason);
+        return true;
+    }
+
+    /** 纸样修改提交后自动锁定，防止重复提交 */
+    public void lockPatternRevision(Long id) {
+        styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getPatternRevLocked, 1)
+                .set(StyleInfo::getPatternRevReturnComment, null)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+    }
 
     public boolean startProductionStage(Long id) {
         StyleInfo current = styleInfoService.getById(id);

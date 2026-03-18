@@ -425,7 +425,7 @@ export const useProgressColumns = ({
                   const items: React.ReactNode[] = [];
                   if (procurementTime && !hasProcureNodeInTemplate) items.push(
                     <span key="procurement" style={{ fontSize: 11, color: '#059669', fontWeight: 600, background: 'rgba(5,150,105,0.08)', padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>
-                      到货 {formatCompletionTime(procurementTime)}
+                      面料到货 {formatCompletionTime(procurementTime)}
                     </span>
                   );
                   if (styleNameStr || styleNoStr) items.push(

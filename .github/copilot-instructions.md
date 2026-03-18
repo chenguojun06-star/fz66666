@@ -7,12 +7,13 @@
 
 ---
 
-## 🚨 铁血规律速查（8大致命错误 - 优先避免）
+## 🚨 铁血规律速查（9大致命错误 - 优先避免）
 
 | 优先级 | 规律 | 触发条件 | 后果 | 详见 |
 |--------|------|---------|------|------|
 | 🔴 P0 | **本地测试未通过直接 push** | 代码修改后直接 push 云端 | CI 失败、系统崩溃 | 见「推送前强制三步验证」 |
 | 🔴 P0 | **git add 漏掉** | push 前未 `git status` 核查 | 本地过 CI 报错 | 见「推送前强制三步验证」 |
+| 🔴 P0 | **未确认数据库即 push** | 涉及 Entity/Flyway/表结构改动，但未先核对本地与云端 schema | 线上 Unknown column / Flyway 启动失败 / 全链路 500 | 见「推送前强制三步验证」 |
 | 🔴 P0 | **跨 Service 直调** | 多 Service 无 Orchestrator + @Transactional | 无法回滚，数据脏污 | 见「第三步：编排层规划」 |
 | 🔴 P0 | **权限码虚构** | t_permission 表不存在的权限码 | **全员 403** | 见「权限控制模式」 |
 | 🔴 P0 | **Java 类型混淆** | `String tenantId = UserContext.tenantId()` | CI 编译错误 | 见「第三步：编排层规划」 |
@@ -21,12 +22,14 @@
 | 🔴 P0 | **代码行数失控** | 文件>目标值还乱加功能 | 难维护、易 bug、拖累审查 | 见「文件大小限制」 |
 | 🟠 P1 | **Orchestrator 不建** | 多表写操作无编排层 | 事务分散，同 P0-2 | 见「快速判断：什么时候新建 Orchestrator」 |
 
-> **工作流**：每次开始前，先默念这 8 条。核心是 ✅ **本地测试验证通过** → ✅ **git add 完整** → ✅ **代码与DB一致** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。
+> **工作流**：每次开始前，先默念这 9 条。核心是 ✅ **本地测试验证通过** → ✅ **数据库/Schema 先确认** → ✅ **git add 完整** → ✅ **代码与DB一致** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。
+> **AI/代理责任（强制）**：以上检查默认应由 AI/代理主动执行并给出结果，不能把编译、schema 核对、git 检查这些前置动作甩给用户手工兜底。只有遇到必须在云端控制台人工执行的 SQL 或无权限动作时，才允许要求用户介入。
 > **废弃代码清理（强制）**：所有代码修改、变更前必须检查：是否有同步修改的旧逻辑、注释代码、兼容逻辑需要删除？废除代码清查确认完毕才能 push。禁止有 TODO/FIXME 标记或未处理的兼容代码直接推送仓库。
 > **数据库一致性检查（强制，P0规律第6条）**：
 >   - ✅ **新增 Entity 字段**：必须同时在 `db/migration/V*.sql` 新增或修改表列（使用 INFORMATION_SCHEMA 幂等写法）
 >   - ✅ **新增 Flyway 脚本**：检查是否对应新的 Entity 字段（扫码后向下游检查）
 >   - ✅ **修改现有表结构**：优先使用幂等 INFORMATION_SCHEMA 判断 + SET @s IF()，不要直接 ALTER TABLE
+>   - ✅ **push 前必须确认 schema**：凡是涉及 Entity / Flyway / SQL / 表结构的改动，必须先跑核心表缺列检查；结果不为空，禁止 push
 >   - ❌ **禁止**：Entity 字段用 `@TableField(exist=false)` transient 字段，然后在代码里通过关联查询填充（脆弱、易 null、难维护）
 
 > **AI 生产观测补充（2026-04-26 新增）**：
@@ -1045,6 +1048,8 @@ SKU = styleNo + color + size
 ## 🚀 推送前强制三步验证（每次必做）
 
 > ⚠️ **AI 开发必读**：每次 push 前必须完成以下三步，缺一不可。历史上最常见的 CI 失败原因是「本地改了但忘记 git add」，即本地编译通过但 CI 报错。
+> ⚠️ **新增 P0 铁律（2026-03-18）**：凡是涉及 Entity / Flyway / SQL / 表结构的改动，必须先确认数据库，再允许 push。禁止“线下未确认 schema，先推到仓库看看线上炸不炸”。
+> ⚠️ **执行责任**：默认由 AI/代理主动跑完编译、类型检查、git 状态核对、schema preflight；除非必须由用户在云端控制台执行 SQL，否则不能只给用户一串命令让用户自己做。
 
 ### 第一步：本地编译验证
 ```bash
@@ -1077,6 +1082,9 @@ git diff --cached --stat
 ### 第三步：数据库检查（新增数据库字段/表时）
 **关键规律**：代码与数据库必须同时变更！每次修改前都要确认：
 ```bash
+# ✅ 推荐：统一执行推送前检查脚本（会识别 DB 敏感改动并要求显式确认 schema）
+./scripts/pre-push-checklist.sh --schema-confirmed
+
 # ✅ 新增 Entity 字段 → 必须有对应 Flyway 脚本
 grep -r "@TableField\|private.*\s" backend/src/main/java/.../entity/*.java \
   | grep -v "@TableField(exist=false)"  # 排除 transient 字段
@@ -1084,11 +1092,22 @@ grep -r "@TableField\|private.*\s" backend/src/main/java/.../entity/*.java \
 # ✅ 新增 Flyway 脚本 → 必须有对应 Entity 字段定义
 ls -ltr backend/src/main/resources/db/migration/V*.sql | tail -3
 
+# ✅ push 前必须跑核心 schema 体检（结果为空才允许继续）
+# 云端/发版前：执行 deployment/cloud-db-core-schema-preflight-20260318.sql
+# 本地/改库前：至少核对当前功能涉及的核心表缺列为 0
+
 # ✅ 检查脚本幂等性（云端 FLYWAY_ENABLED=true，脚本必须幂等）
 grep "ADD COLUMN\|CREATE TABLE\|ALTER TABLE" \
   backend/src/main/resources/db/migration/V*.sql \
   | grep -v "INFORMATION_SCHEMA\|IF NOT EXISTS"  # 非幂等的会被标出来
 ```
+
+**P0 零容忍规则**：
+- 只要本次提交触碰了 Entity、Flyway、Mapper SQL、手写 SQL、DbRepair/Preflight 之一，就必须先确认数据库，再提交再 push。
+- 体检结果只要还有 `MISSING`，禁止 push，先补库或补迁移。
+- 不允许把“数据库是否缺列”留给线上页面点击后再发现。
+- 推荐把 `./scripts/pre-push-checklist.sh --schema-confirmed` 当作 push 前固定动作；脚本未通过时，禁止继续 push。
+- AI/代理在具备本地执行能力时，必须自行运行上述脚本或等价检查并汇报结果；不能把这一步默认转嫁给用户。
 
 ### 第四步：提交前类型检查（新增 Java 类时）
 **必须核对的高频类型陷阱**：

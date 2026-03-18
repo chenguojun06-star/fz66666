@@ -60,6 +60,16 @@ export interface StyleInfo extends Record<string, unknown> {
   tumbleDryCode?: string;
   ironCode?: string;
   dryCleanCode?: string;
+
+  // 退回编辑锁定字段
+  descriptionLocked?: number;
+  descriptionReturnComment?: string;
+  descriptionReturnBy?: string;
+  descriptionReturnTime?: string;
+  patternRevLocked?: number;
+  patternRevReturnComment?: string;
+  patternRevReturnBy?: string;
+  patternRevReturnTime?: string;
 }
 
 export interface StyleBom extends Record<string, unknown> {

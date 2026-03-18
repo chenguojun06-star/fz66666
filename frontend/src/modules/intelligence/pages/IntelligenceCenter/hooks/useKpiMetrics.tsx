@@ -11,7 +11,7 @@ import { EMPTY_KPI_METRICS, EMPTY_KPI_HISTORY, KPI_HISTORY_WINDOW_MS } from '../
 
 export function useKpiMetrics(data: CockpitData) {
   const navigate = useNavigate();
-  const { pulse, health, notify, workers: _workers, heatmap: _heatmap, ranking, shortage, healing, bottleneck, orders, factoryCapacity } = data;
+  const { pulse, health, notify, workers: _workers, heatmap: _heatmap, ranking, shortage, healing, bottleneck, orders, factoryCapacity, productionStats } = data;
 
   const [kpiFlash, setKpiFlash] = useState(false);
   const [kpiDelta, setKpiDelta] = useState<KpiMetricSnapshot>(EMPTY_KPI_METRICS);
@@ -45,11 +45,11 @@ export function useKpiMetrics(data: CockpitData) {
     pendingNotify: Number(notify?.pendingCount) || 0,
     sentToday: Number(notify?.sentToday) || 0,
     totalFactories: Math.max(Number(pulse?.factoryActivity?.length) || 0, Number(ranking?.rankings?.length) || 0),
-    productionOrderCount: (orders ?? []).filter(o => {
+    productionOrderCount: Number(productionStats?.activeOrders ?? (orders ?? []).filter(o => {
       const s = String(o.status || '').toUpperCase();
       return s !== 'COMPLETED' && s !== 'CANCELLED' && s !== 'DRAFT';
-    }).length,
-  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, orders, pulse?.activeFactories, pulse?.activeWorkers, pulse?.factoryActivity?.length, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, ranking?.rankings?.length, shortage?.shortageItems]);
+    }).length),
+  }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, orders, productionStats?.activeOrders, pulse?.activeFactories, pulse?.activeWorkers, pulse?.factoryActivity?.length, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, ranking?.rankings?.length, shortage?.shortageItems]);
 
   /* delta & history 更新 */
   useEffect(() => {
@@ -140,11 +140,11 @@ export function useKpiMetrics(data: CockpitData) {
 
   /* 订单量汇总 */
   const orderStats = useMemo(() => ({
-    totalQty: orders.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
+    totalQty: Number(productionStats?.activeQuantity ?? orders.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0)),
     overdueQty: overdueRisk.overdue.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
     highRiskQty: overdueRisk.highRisk.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
     watchQty: overdueRisk.watch.reduce((s, o) => s + (Number(o.orderQuantity) || 0), 0),
-  }), [orders, overdueRisk]);
+  }), [orders, overdueRisk, productionStats?.activeQuantity]);
 
   /* 工厂卡点 */
   const factoryBottleneck = bottleneck ?? [];

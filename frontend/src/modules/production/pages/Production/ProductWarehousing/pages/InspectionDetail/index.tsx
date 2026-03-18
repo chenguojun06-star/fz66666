@@ -1093,6 +1093,7 @@ const InspectionDetail: React.FC = () => {
                               <ResizableTable
                                 storageKey="inspection-requirements-v2"
                                 size="small" rowKey="key" pagination={false}
+                                resizableColumns={false}
                                 dataSource={fixedRows}
                                 columns={[
                                   { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
@@ -1103,6 +1104,9 @@ const InspectionDetail: React.FC = () => {
                                     align: 'left' as const,
                                     onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
                                     onCell: () => ({ style: { textAlign: 'left' as const } }),
+                                    render: (text: string) => (
+                                      <span style={{ whiteSpace: 'pre-wrap', display: 'block', textAlign: 'left' }}>{text}</span>
+                                    ),
                                   },
                                 ]}
                               />

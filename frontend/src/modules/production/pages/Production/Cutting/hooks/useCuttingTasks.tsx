@@ -19,7 +19,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // 任务查询状态
-  const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: 10, status: '' as string, orderNo: '', styleNo: '' });
+  const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: 10, status: '' as string, orderNo: '', styleNo: '', orgUnitId: '' });
   const [taskDateRange, setTaskDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskList, setTaskList] = useState<CuttingTask[]>([]);

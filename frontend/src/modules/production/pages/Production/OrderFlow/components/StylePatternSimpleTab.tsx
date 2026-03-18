@@ -179,6 +179,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                           storageKey="style-pattern-requirements"
                           size="small"
                           pagination={false}
+                          resizableColumns={false}
                           dataSource={lines.map((line, idx) => ({
                             key: idx,
                             index: idx + 1,
@@ -194,8 +195,11 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                             {
                               title: '生产要求',
                               dataIndex: 'content',
+                              align: 'left' as const,
+                              onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
+                              onCell: () => ({ style: { textAlign: 'left' as const } }),
                               render: (text: string) => (
-                                <span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>
+                                <span style={{ whiteSpace: 'pre-wrap', display: 'block', textAlign: 'left' }}>{text}</span>
                               )
                             }
                           ]}

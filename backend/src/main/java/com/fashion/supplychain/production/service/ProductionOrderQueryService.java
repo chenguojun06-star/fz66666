@@ -37,6 +37,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class ProductionOrderQueryService {
 
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Autowired
     private ProductionOrderMapper productionOrderMapper;
 
@@ -119,16 +121,16 @@ public class ProductionOrderQueryService {
                 // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤
                 .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
-        // 小程序生产页传 excludeTerminal=true 时，过滤掉已完成/已取消订单，减少数据量提升性能
+        // 统一终态过滤：默认生产页只看在制单，不混入已完成/已取消/已报废/已归档/已关单
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
-            wrapper.notIn("status", java.util.List.of("completed", "cancelled"));
+            wrapper.notIn("status", TERMINAL_STATUSES);
         }
 
         // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
         if ("true".equalsIgnoreCase(delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
                    .lt("planned_end_date", java.time.LocalDateTime.now())
-                   .notIn("status", java.util.List.of("completed", "cancelled"));
+                   .notIn("status", TERMINAL_STATUSES);
         }
 
         // 当天下单筛选：createTime 在今天 00:00:00 ~ 23:59:59
@@ -404,6 +406,10 @@ public class ProductionOrderQueryService {
         String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
         String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
         String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
+        String includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
+        String excludeTerminal = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "excludeTerminal"));
+        String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
+        String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
 
         // 构建基础查询条件
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
@@ -420,14 +426,29 @@ public class ProductionOrderQueryService {
             .eq(StringUtils.hasText(status), "status", status)
             .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
             .eq(StringUtils.hasText(plateType), "plate_type", plateType)
-            .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser);
+            .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
+            .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
-        // 外发工厂账号：factory_id 有值时按工厂隔离（优先），不再叠加 created_by_id 过滤
+        if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
+            wrapper.notIn("status", TERMINAL_STATUSES);
+        }
+
+        if ("true".equalsIgnoreCase(delayedOnly)) {
+            wrapper.isNotNull("planned_end_date")
+                    .lt("planned_end_date", LocalDateTime.now())
+                    .notIn("status", TERMINAL_STATUSES);
+        }
+
+        if ("true".equalsIgnoreCase(todayOnly)) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            wrapper.ge("create_time", today.atStartOfDay())
+                    .le("create_time", today.atTime(23, 59, 59));
+        }
+
+        // 与 queryPage 保持一致：生产订单默认是租户共享资源，仅外发工厂账号按 factory_id 隔离
         String ctxFactoryId2 = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId2)) {
             wrapper.eq("factory_id", ctxFactoryId2);
-        } else {
-            DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
         }
 
         // 查询所有订单（只查询需要的字段以提高性能，含 status 字段用于延期判断）
@@ -435,6 +456,12 @@ public class ProductionOrderQueryService {
         List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
 
         if (allOrders == null || allOrders.isEmpty()) {
+            stats.setActiveOrders(0);
+            stats.setActiveQuantity(0);
+            stats.setCompletedOrders(0);
+            stats.setCompletedQuantity(0);
+            stats.setScrappedOrders(0);
+            stats.setScrappedQuantity(0);
             stats.setTotalOrders(0);
             stats.setTotalQuantity(0);
             stats.setDelayedOrders(0);
@@ -444,28 +471,42 @@ public class ProductionOrderQueryService {
             return stats;
         }
 
-        // 计算总订单数与总数量（未指定状态时排除已完成/已取消，仅统计生产中订单，避免历史订单虚高显示）
-        boolean noStatusFilter = !StringUtils.hasText(status);
-        List<ProductionOrder> statsOrders = noStatusFilter
-            ? allOrders.stream()
-                .filter(o -> !"completed".equals(o.getStatus()) && !"cancelled".equals(o.getStatus()))
-                .collect(Collectors.toList())
-            : allOrders;
-        stats.setTotalOrders(statsOrders.size());
+        List<ProductionOrder> activeOrders = allOrders.stream()
+            .filter(o -> !isTerminalStatus(o.getStatus()))
+            .collect(Collectors.toList());
+        List<ProductionOrder> completedOrders = allOrders.stream()
+            .filter(o -> "completed".equalsIgnoreCase(normalizeStatus(o.getStatus())))
+            .collect(Collectors.toList());
+        List<ProductionOrder> scrappedOrders = allOrders.stream()
+            .filter(o -> "scrapped".equalsIgnoreCase(normalizeStatus(o.getStatus())))
+            .collect(Collectors.toList());
 
-        // 计算总数量
-        long totalQty = statsOrders.stream()
+        long activeQty = activeOrders.stream()
             .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
             .sum();
-        stats.setTotalQuantity(totalQty);
+        long completedQty = completedOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+            .sum();
+        long scrappedQty = scrappedOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+            .sum();
+
+        stats.setActiveOrders(activeOrders.size());
+        stats.setActiveQuantity(activeQty);
+        stats.setCompletedOrders(completedOrders.size());
+        stats.setCompletedQuantity(completedQty);
+        stats.setScrappedOrders(scrappedOrders.size());
+        stats.setScrappedQuantity(scrappedQty);
+
+        // 兼容旧字段：继续返回在制口径
+        stats.setTotalOrders(activeOrders.size());
+        stats.setTotalQuantity(activeQty);
 
         // 计算延期订单（plannedEndDate < 当前时间，排除终态订单）
         LocalDateTime now = LocalDateTime.now();
-        List<ProductionOrder> delayedOrders = allOrders.stream()
+        List<ProductionOrder> delayedOrders = activeOrders.stream()
             .filter(o -> o.getPlannedEndDate() != null
-                && o.getPlannedEndDate().isBefore(now)
-                && !"completed".equals(o.getStatus())
-                && !"cancelled".equals(o.getStatus()))
+                && o.getPlannedEndDate().isBefore(now))
             .collect(Collectors.toList());
 
         stats.setDelayedOrders(delayedOrders.size());
@@ -492,6 +533,14 @@ public class ProductionOrderQueryService {
         stats.setTodayQuantity(todayQty);
 
         return stats;
+    }
+
+    private boolean isTerminalStatus(String status) {
+        return TERMINAL_STATUSES.contains(normalizeStatus(status));
+    }
+
+    private String normalizeStatus(String status) {
+        return status == null ? "" : status.trim().toLowerCase();
     }
 
     /**

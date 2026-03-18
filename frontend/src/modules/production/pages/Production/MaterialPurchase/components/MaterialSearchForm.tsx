@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Card, Space } from 'antd';
+import { Button, Card, Select, Space } from 'antd';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import type { Dayjs } from 'dayjs';
 
 interface MaterialSearchFormProps {
@@ -28,6 +29,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   hasData = false,
 }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const { departmentOptions } = useOrganizationFilterOptions();
 
   const handleSearchChange = (value: string) => {
     setQueryParams(prev => ({ ...prev, orderNo: value, page: 1 }));
@@ -46,7 +48,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   return (
     <Card size="small" className="filter-card mb-sm">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
           <StandardSearchBar
             searchValue={queryParams.orderNo || ''}
             onSearchChange={handleSearchChange}
@@ -63,6 +65,17 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
               { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
               { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
             ]}
+          />
+          <Select
+            value={queryParams.orgUnitId || ''}
+            onChange={(value) => {
+              setQueryParams(prev => ({ ...prev, orgUnitId: value || undefined, page: 1 }));
+              onSearch();
+            }}
+            placeholder="全部生产方"
+            allowClear
+            style={{ minWidth: 130 }}
+            options={departmentOptions}
           />
         </div>
         <Space wrap>

@@ -196,8 +196,8 @@ export const buildProductionSheetHtml = (payload: any) => {
     table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
     th, td { border: 1px solid #d1d5db; padding: 6px 8px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
     th { background: rgba(0,0,0,0.03); text-align: center; }
-    .no { width: 56px; text-align: center; }
-    .req { white-space: pre-wrap; }
+    .no { width: 60px; text-align: center; }
+    .req { white-space: pre-wrap; text-align: left; }
     @media print {
       .no-print { display: none; }
       .page { padding: 0; max-width: none; }
@@ -335,6 +335,18 @@ const DataCenter: React.FC = () => {
   const [patternRevisionForm] = Form.useForm();
   const [patternRevisionSaving, setPatternRevisionSaving] = useState(false);
 
+  // 退回生产制单状态
+  const [returnDescModalVisible, setReturnDescModalVisible] = useState(false);
+  const [returnDescRecord, setReturnDescRecord] = useState<StyleInfo | null>(null);
+  const [returnDescSaving, setReturnDescSaving] = useState(false);
+  const [returnDescForm] = Form.useForm();
+
+  // 退回纸样修改状态
+  const [returnPatternModalVisible, setReturnPatternModalVisible] = useState(false);
+  const [returnPatternRecord, setReturnPatternRecord] = useState<StyleInfo | null>(null);
+  const [returnPatternSaving, setReturnPatternSaving] = useState(false);
+  const [returnPatternForm] = Form.useForm();
+
   const fetchStats = async () => {
     try {
       const response = await api.get<{ code: number; message: string; data: unknown }>('/data-center/stats');
@@ -417,7 +429,7 @@ const DataCenter: React.FC = () => {
     try {
       setEditSaving(true);
       const values = await editForm.validateFields();
-      const res = await api.put<{ code: number; message: string }>(`/style/info/${editingRecord.id}`, {
+      const res = await api.put<{ code: number; message: string }>(`/style/info/${editingRecord.id}/production-requirements`, {
         description: values.description,
       });
       if (res.code === 200) {
@@ -431,6 +443,56 @@ const DataCenter: React.FC = () => {
       message.error((e as any)?.message || '保存失败');
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  // 退回生产制单（管理员解锁）
+  const handleReturnDescSave = async () => {
+    if (!returnDescRecord) return;
+    try {
+      setReturnDescSaving(true);
+      const values = await returnDescForm.validateFields();
+      const res = await api.post<{ code: number; message: string }>(
+        `/style/info/${returnDescRecord.id}/production-requirements/rollback`,
+        { reason: values.reason }
+      );
+      if (res.code === 200) {
+        message.success('已退回，用户可重新编辑生产制单');
+        setReturnDescModalVisible(false);
+        returnDescForm.resetFields();
+        fetchStyles();
+      } else {
+        message.error(res.message || '退回失败');
+      }
+    } catch (e: unknown) {
+      message.error((e as any)?.message || '退回失败');
+    } finally {
+      setReturnDescSaving(false);
+    }
+  };
+
+  // 退回纸样修改（管理员解锁）
+  const handleReturnPatternSave = async () => {
+    if (!returnPatternRecord) return;
+    try {
+      setReturnPatternSaving(true);
+      const values = await returnPatternForm.validateFields();
+      const res = await api.post<{ code: number; message: string }>(
+        `/style/info/${returnPatternRecord.id}/pattern-revision/rollback`,
+        { reason: values.reason }
+      );
+      if (res.code === 200) {
+        message.success('已退回，用户可重新提交纸样修改');
+        setReturnPatternModalVisible(false);
+        returnPatternForm.resetFields();
+        fetchStyles();
+      } else {
+        message.error(res.message || '退回失败');
+      }
+    } catch (e: unknown) {
+      message.error((e as any)?.message || '退回失败');
+    } finally {
+      setReturnPatternSaving(false);
     }
   };
 
@@ -592,14 +654,28 @@ const DataCenter: React.FC = () => {
               {
                 key: 'edit',
                 label: '编辑',
-                title: '编辑生产制单内容',
+                title: record.descriptionLocked === 0 ? '编辑生产制单内容' : '生产制单已锁定，请管理员退回后编辑',
+                disabled: record.descriptionLocked !== 0,
                 onClick: () => openEditModal(record),
+              },
+              {
+                key: 'returnDesc',
+                label: '退回制单',
+                title: '管理员退回生产制单，允许重新编辑',
+                onClick: () => { setReturnDescRecord(record); setReturnDescModalVisible(true); },
               },
               {
                 key: 'patternRevision',
                 label: '纸样修改',
-                title: '记录纸样修改',
+                title: record.patternRevLocked === 0 ? '记录纸样修改' : '纸样修改已锁定，请管理员退回后操作',
+                disabled: record.patternRevLocked !== 0,
                 onClick: () => openPatternRevisionModal(record),
+              },
+              {
+                key: 'returnPattern',
+                label: '退回纸样',
+                title: '管理员退回纸样修改，允许重新提交',
+                onClick: () => { setReturnPatternRecord(record); setReturnPatternModalVisible(true); },
               },
               {
                 key: 'print',
@@ -729,6 +805,64 @@ const DataCenter: React.FC = () => {
               rows={15}
               placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
             />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 退回生产制单弹窗 */}
+      <ResizableModal
+        open={returnDescModalVisible}
+        title={`退回生产制单 - ${returnDescRecord?.styleNo || ''}`}
+        width="30vw"
+        onCancel={() => { setReturnDescModalVisible(false); returnDescForm.resetFields(); }}
+        footer={
+          <Space>
+            <Button onClick={() => { setReturnDescModalVisible(false); returnDescForm.resetFields(); }}>取消</Button>
+            <Button type="primary" danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button>
+          </Space>
+        }
+      >
+        {returnDescRecord?.descriptionReturnComment && (
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+            上次退回：{returnDescRecord.descriptionReturnComment}（{returnDescRecord.descriptionReturnBy}）
+          </div>
+        )}
+        <Form form={returnDescForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="退回原因"
+            rules={[{ required: true, message: '请填写退回原因' }]}
+          >
+            <Input.TextArea rows={4} placeholder="请说明退回原因，将记录到操作日志" />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 退回纸样修改弹窗 */}
+      <ResizableModal
+        open={returnPatternModalVisible}
+        title={`退回纸样修改 - ${returnPatternRecord?.styleNo || ''}`}
+        width="30vw"
+        onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
+        footer={
+          <Space>
+            <Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button>
+            <Button type="primary" danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button>
+          </Space>
+        }
+      >
+        {returnPatternRecord?.patternRevReturnComment && (
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+            上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
+          </div>
+        )}
+        <Form form={returnPatternForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="退回原因"
+            rules={[{ required: true, message: '请填写退回原因' }]}
+          >
+            <Input.TextArea rows={4} placeholder="请说明退回原因，将记录到操作日志" />
           </Form.Item>
         </Form>
       </ResizableModal>

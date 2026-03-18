@@ -9,7 +9,7 @@ import { ProductionQueryParams } from '@/types/production';
 export const useProgressFilters = () => {
   const location = useLocation();
 
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '', excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>(
     () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'card'
@@ -18,7 +18,7 @@ export const useProgressFilters = () => {
     localStorage.setItem('production_view_mode', mode);
     setViewMode(mode);
   };
-  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
+  const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -27,6 +27,7 @@ export const useProgressFilters = () => {
     { label: '待生产', value: 'pending' },
     { label: '生产中', value: 'production' },
     { label: '已完成', value: 'completed' },
+    { label: '已报废', value: 'scrapped' },
     { label: '已逾期', value: 'delayed' },
     { label: '已取消', value: 'cancelled' },
   ]), []);
@@ -36,14 +37,14 @@ export const useProgressFilters = () => {
     setOrderSortOrder(order);
   };
 
-  const handleStatClick = (type: 'all' | 'delayed' | 'today') => {
+  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
     setActiveStatFilter(type);
-    if (type === 'all') {
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 } as any));
+    if (type === 'production') {
+      setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 }));
     } else if (type === 'delayed') {
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 } as any));
+      setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 }));
     } else if (type === 'today') {
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 } as any));
+      setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: undefined, todayOnly: 'true', excludeTerminal: true, page: 1 }));
     }
   };
 

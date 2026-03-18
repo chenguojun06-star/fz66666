@@ -5,7 +5,7 @@ import type {
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
   IntelligenceBrainSnapshotResponse, ActionCenterResponse,
-  FactoryCapacityItem,
+  FactoryCapacityItem, ProductionOrderStats,
 } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
@@ -26,6 +26,7 @@ export interface CockpitData {
   actionCenter: ActionCenterResponse | null;
   orders:       ProductionOrder[];
   factoryCapacity: FactoryCapacityItem[];
+  productionStats: ProductionOrderStats | null;
   loading:      boolean;
   ts:           number;
 }
@@ -34,7 +35,7 @@ const INITIAL: CockpitData = {
   pulse: null, health: null, notify: null, workers: null,
   heatmap: null, ranking: null, shortage: null, healing: null,
   bottleneck: null, brain: null, actionCenter: null,
-  orders: [], factoryCapacity: [], loading: true, ts: 0,
+  orders: [], factoryCapacity: [], productionStats: null, loading: true, ts: 0,
 };
 
 export function useCockpit() {
@@ -43,7 +44,7 @@ export function useCockpit() {
 
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
@@ -54,6 +55,7 @@ export function useCockpit() {
         intelligenceApi.getBrainSnapshot(),
         intelligenceApi.getActionCenter(),
         productionOrderApi.getFactoryCapacity(),
+        productionOrderApi.stats(),
       ]);
     const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
       r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
@@ -63,12 +65,16 @@ export function useCockpit() {
     const factoryCapResult: FactoryCapacityItem[] = rFactoryCap.status === 'fulfilled'
       ? ((rFactoryCap.value as any)?.data ?? [])
       : [];
+    const productionStatsResult: ProductionOrderStats | null = rProductionStats.status === 'fulfilled'
+      ? (((rProductionStats.value as any)?.data ?? null) as ProductionOrderStats | null)
+      : null;
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
+      productionStats: productionStatsResult,
       loading: false, ts: Date.now(),
     });
   }, []);

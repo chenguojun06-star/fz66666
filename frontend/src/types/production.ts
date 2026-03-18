@@ -363,6 +363,12 @@ export interface ProductionQueryParams {
   keyword?: string;
   /** 我的订单页传 true，显示报废订单；其他页面不传，默认过滤掉报废订单 */
   includeScrapped?: boolean;
+  /** 仅显示延期订单 */
+  delayedOnly?: string | boolean;
+  /** 仅显示今日订单 */
+  todayOnly?: string | boolean;
+  /** 排除终态订单（completed/cancelled/scrapped/archived/closed） */
+  excludeTerminal?: string | boolean;
   page: number;
   pageSize: number;
 }
@@ -387,6 +393,7 @@ export interface MaterialQueryParams {
   materialType?: string;
   status?: string;
   sourceType?: 'order' | 'sample' | 'batch' | '';  // 采购来源: order=生产订单, sample=样衣开发, batch=批量采购
+  orgUnitId?: string;
   page: number;
   pageSize: number;
 }

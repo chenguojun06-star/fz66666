@@ -1,36 +1,3 @@
-## 2026-05-08
-
-### feat(intelligence): 知识库扩充 50 → 70 条 + SafeAdvisor RAG 增强问答端点
-
-**知识库扩充（V20260508001，20 条新记录）**
-
-- 新增 `backend/src/main/resources/db/migration/V20260508001__knowledge_base_expansion_50_to_70.sql`，共插入 20 条公共知识（`tenant_id = NULL`），使用 `INSERT IGNORE` 保证幂等。
-- 新增记录分类：
-  - **FAQ（5条）**：工人工资结算规则（公式/查询/不可撤回）、财务对账单审批流程、多工厂协作订单管理（产能雷达）、高效使用 AI 技巧、账号/权限管理SOP
-  - **SOP（2条）**：新款开发全流程（D-60到完工6阶段）、供应商评估与准入管理（打样/评分/淘汰）
-  - **系统指南（4条）**：财务月度经营汇总报表、CRM客户管理功能（新建/跟单/信用）、系统通知与提醒配置、AI日志监控与配额管理
-  - **月末流程（1条）**：月末库存盘点（盘亏/盘盈/系统操作）
-  - **专业术语（8条）**：CMT代工、OEM vs ODM、MOQ最小起订量、T&A时间行动计划、L/C信用证、PP陪样/尾样区别、尾货处理、QC检验标准（IQC/IPQC/FQC/OQC/AQL）
-- 对系统帮助：AI 问答的知识覆盖从 50 条扩展到 70 条，补齐工资、财务、供应商管理、国际贸易等高频误答领域，提升 AI 顾问在复杂业务场景的准确率。
-
-**SafeAdvisor RAG 增强问答（新端点，不影响原有 /ai-advisor/chat）**
-
-- 新增 `SafeAdvisorOrchestrator.java`（intelligence/orchestration 包），实现"先检索知识库再调用LLM"的 RAG 增强问答模式：
-  1. **配额校验**：`AiAdvisorService.checkAndConsumeQuota()` 检查当日 AI 调用次数
-  2. **知识库检索**：`KnowledgeSearchTool.execute()` 向量+关键词混合召回（支持 Cohere 精排），召回失败静默降级
-  3. **提示词增强**：将知识库摘要注入用户问题，指引 LLM 优先引用规范描述
-  4. **Agent 执行**：`AiAgentOrchestrator.executeAgent()` 生成最终回答
-- 新增控制器端点 `POST /api/intelligence/safe-advisor/analyze`（`IntelligenceController.java`），与 `/ai-advisor/chat` 并列运行，原有端点代码零修改。
-- 新增前端 API 方法 `intelligenceApi.safeAdvisorAnalyze(question)（intelligenceApi.ts`）。
-- 对系统帮助：
-  - ✅ 回答准确率显著提升：LLM 生成前注入领域知识，减少"凭空编造"的幻觉风险
-  - ✅ 零破坏性：原 `/ai-advisor/chat`、SSE 流式端点、所有现有调用均完全不变
-  - ✅ 故障降级：知识库检索异常时自动回退到纯 LLM 模式，保证可用性
-
-**编译验证**：`mvn clean compile -q` → BUILD SUCCESS；`npx tsc --noEmit` → 0 errors
-
----
-
 ## 2026-03-18
 
 ### docs(process): 推送前数据库确认升级为 P0 铁律

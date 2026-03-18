@@ -423,4 +423,42 @@ public class StyleInfo {
      */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    // ==================== 生产制单编辑锁定字段 ====================
+
+    /** 生产制单内容是否锁定：1=锁定（默认），0=已退回可编辑 */
+    @TableField("description_locked")
+    private Integer descriptionLocked;
+
+    /** 生产制单退回备注 */
+    @TableField("description_return_comment")
+    private String descriptionReturnComment;
+
+    /** 生产制单退回人 */
+    @TableField("description_return_by")
+    private String descriptionReturnBy;
+
+    /** 生产制单退回时间 */
+    @TableField("description_return_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime descriptionReturnTime;
+
+    // ==================== 纸样修改编辑锁定字段 ====================
+
+    /** 纸样修改是否锁定：1=锁定（默认），0=已退回可编辑 */
+    @TableField("pattern_rev_locked")
+    private Integer patternRevLocked;
+
+    /** 纸样修改退回备注 */
+    @TableField("pattern_rev_return_comment")
+    private String patternRevReturnComment;
+
+    /** 纸样修改退回人 */
+    @TableField("pattern_rev_return_by")
+    private String patternRevReturnBy;
+
+    /** 纸样修改退回时间 */
+    @TableField("pattern_rev_return_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime patternRevReturnTime;
 }

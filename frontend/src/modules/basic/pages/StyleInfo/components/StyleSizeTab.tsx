@@ -1028,7 +1028,9 @@ const StyleSizeTab: React.FC<Props> = ({
       },
     ];
 
-    return [...left, ...sizeCols, ...right];
+    // readOnly/只读模式下隐藏操作列（无任何可操作按钮，空列无意义）
+    const filteredRight = editableMode ? right : right.filter(col => col.key !== 'operation');
+    return [...left, ...sizeCols, ...filteredRight];
   }, [editMode, readOnly, sizeColumns, displayRows, groupNameOptions]);
 
   return (

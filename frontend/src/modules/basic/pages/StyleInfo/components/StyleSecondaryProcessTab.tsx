@@ -8,7 +8,7 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StyleStageControlBar from './StyleStageControlBar';
 import api, { toNumberSafe } from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
 import { useModal } from '@/hooks';
@@ -148,8 +148,10 @@ const ProcessAttachmentCell: React.FC<{ record: SecondaryProcess; readOnly?: boo
       {files.map((f, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
           <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
-          <a href={f.url} target="_blank" rel="noreferrer"
-            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>
+          <a
+            onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
+            href="#"
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, cursor: 'pointer' }}>
             {f.name}
           </a>
         </div>

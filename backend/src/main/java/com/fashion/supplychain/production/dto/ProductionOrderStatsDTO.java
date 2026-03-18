@@ -10,12 +10,44 @@ import lombok.Data;
 public class ProductionOrderStatsDTO {
 
     /**
-     * 总订单数（全部订单）
+     * 生产中订单数（非终态订单）
+     */
+    private long activeOrders;
+
+    /**
+     * 生产中数量（非终态订单的orderQuantity之和）
+     */
+    private long activeQuantity;
+
+    /**
+     * 已完成订单数
+     */
+    private long completedOrders;
+
+    /**
+     * 已完成数量（已完成订单的orderQuantity之和）
+     */
+    private long completedQuantity;
+
+    /**
+     * 已报废订单数
+     */
+    private long scrappedOrders;
+
+    /**
+     * 已报废数量（已报废订单的orderQuantity之和）
+     */
+    private long scrappedQuantity;
+
+    /**
+     * 总订单数
+     * 兼容旧前端，等同于 activeOrders
      */
     private long totalOrders;
 
     /**
-     * 总数量（全部订单的orderQuantity之和）
+     * 总数量
+     * 兼容旧前端，等同于 activeQuantity
      */
     private long totalQuantity;
 

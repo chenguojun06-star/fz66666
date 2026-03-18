@@ -151,6 +151,7 @@ fashion:
   upload-path: ${user.dir}/../.run/uploads/
   db:
     initializer-enabled: ${FASHION_DB_INITIALIZER_ENABLED:true}
+    schema-preflight-enabled: ${FASHION_DB_SCHEMA_PREFLIGHT_ENABLED:true}
   template:
     # 模板价格自动同步配置（2026-02-08 新增）
     auto-sync-price-enabled: ${FASHION_TEMPLATE_AUTO_SYNC_PRICE_ENABLED:true}  # 是否启用自动同步（默认：true）

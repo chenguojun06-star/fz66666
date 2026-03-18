@@ -24,6 +24,21 @@ export interface FactoryCapacityItem {
   estimatedCompletionDays: number;
 }
 
+export interface ProductionOrderStats {
+  activeOrders: number;
+  activeQuantity: number;
+  completedOrders: number;
+  completedQuantity: number;
+  scrappedOrders: number;
+  scrappedQuantity: number;
+  totalOrders: number;
+  totalQuantity: number;
+  delayedOrders: number;
+  delayedQuantity: number;
+  todayOrders: number;
+  todayQuantity: number;
+}
+
 export const productionOrderApi = {
     exportExcel: (params: Record<string, unknown>) => {
     // 将过滤中的数组参数进行逗号拼接
@@ -43,6 +58,7 @@ export const productionOrderApi = {
   // 节点操作记录 API
   getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
   saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
+  stats: (params?: Partial<ProductionOrderListParams>) => api.get<{ code: number; data: ProductionOrderStats }>('/production/order/stats', { params }),
   // 工厂产能雷达
   getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
   // 客户分享链接：生成分享令牌（30天有效）
