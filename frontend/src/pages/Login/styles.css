@@ -211,6 +211,15 @@
   border-radius: 14px;
 }
 
+.login-page .login-card .ant-input-affix-wrapper,
+.login-page .login-card .ant-input-password,
+.login-page .login-card .ant-auto-complete .ant-input-affix-wrapper {
+  height: 48px !important;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+  padding: 0 12px !important;
+}
+
 .login-card .ant-auto-complete .ant-input-affix-wrapper {
   border-radius: 14px !important;
   height: 48px !important;
@@ -222,7 +231,7 @@
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper input {
-  height: 46px !important;
+  height: 100% !important;
   text-align: left !important;
   background: transparent !important;
   color-scheme: light !important;
@@ -231,6 +240,11 @@
   outline: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper-focused {
@@ -252,8 +266,8 @@
 }
 
 .login-card .ant-input-affix-wrapper input {
-  height: 46px !important;
-  line-height: 46px !important;
+  height: 100% !important;
+  line-height: normal !important;
   text-align: center !important;
   background: transparent !important;
   border: none !important;
@@ -261,6 +275,11 @@
   outline: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 .login-card .ant-input-affix-wrapper:hover {
@@ -282,6 +301,12 @@
   box-shadow: none !important;
   outline: none !important;
   border-radius: 0 !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 .login-card .ant-input::placeholder {
