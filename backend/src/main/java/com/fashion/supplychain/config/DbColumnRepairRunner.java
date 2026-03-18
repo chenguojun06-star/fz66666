@@ -73,6 +73,24 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码：YES/NO'");
                             repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition_parts",
                                 "TEXT DEFAULT NULL COMMENT '多部位面料成分JSON:[{part,materials}]'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "update_by",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '最后维护人'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "description_locked",
+                    "INT NOT NULL DEFAULT 1 COMMENT '制单锁定:1=已锁定,0=退回可编辑'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_comment",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '制单退回备注'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_by",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '制单退回人'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_time",
+                    "DATETIME DEFAULT NULL COMMENT '制单退回时间'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_locked",
+                    "INT NOT NULL DEFAULT 0 COMMENT '纸样修改锁定:1=已提交,0=可提交'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_comment",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '纸样退回备注'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_by",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '纸样退回人'");
+                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_time",
+                    "DATETIME DEFAULT NULL COMMENT '纸样退回时间'");
                 repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
                 repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",

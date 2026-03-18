@@ -71,6 +71,7 @@ public class StyleStageHelper {
                 .set(StyleInfo::getDescriptionLocked, 1)           // 保存后自动重新锁定
                 .set(StyleInfo::getDescriptionReturnComment, null) // 清除退回备注
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateBy, UserContext.username())
                 .update();
 
         if (ok) {
@@ -107,6 +108,7 @@ public class StyleStageHelper {
                 .set(StyleInfo::getDescriptionReturnBy, UserContext.username())
                 .set(StyleInfo::getDescriptionReturnTime, LocalDateTime.now())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateBy, UserContext.username())
                 .update();
         if (!ok) {
             throw new IllegalStateException("退回操作失败");
@@ -139,6 +141,7 @@ public class StyleStageHelper {
                 .set(StyleInfo::getPatternRevReturnBy, UserContext.username())
                 .set(StyleInfo::getPatternRevReturnTime, LocalDateTime.now())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateBy, UserContext.username())
                 .update();
         if (!ok) {
             throw new IllegalStateException("退回操作失败");

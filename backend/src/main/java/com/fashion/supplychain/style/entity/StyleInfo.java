@@ -127,6 +127,12 @@ public class StyleInfo {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
+    /**
+     * 最后维护人
+     */
+    @TableField("update_by")
+    private String updateBy;
+
     private String patternStatus;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
