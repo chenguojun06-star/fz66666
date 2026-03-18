@@ -1035,7 +1035,7 @@ SKU = styleNo + color + size
     - **永久规律**：统计计数的新 Orchestrator 方法必须在返回前转为 int（如 `map.put("overdueCount", (int) overdueCount)`），规避 JacksonConfig 序列化。不要用 Long 返回计数值
     - **Frontend 防御**：所有接收统计计数字段的组件用 `Number()` 包裹（如 `Number(brief?.overdueOrderCount ?? 0)`），增强容错性
     - **Redis 缓存安全**：`DashboardQueryServiceImpl` 缓存模式 `Number cached = getFromCache(key); return cached.longValue()` 因使用 Number 接口完全兼容 int/long 反序列化，无需修改
-13. **云端 Flyway 已关闭**：`FLYWAY_ENABLED=false`（微信云托管环境变量），所有 `V*.sql` Flyway 脚本**不会自动执行**。数据库结构变更（添加列、索引等）**必须手动**在微信云托管控制台数据库面板执行 SQL。本地开发环境 Flyway 正常运行，仅云端需要手动执行。
+13. **云端 Flyway 自动运行**：`FLYWAY_ENABLED=true`（cloudbaserc.json 已配置），所有 `V*.sql` Flyway 脚本**每次容器重启时自动执行**。push 到 main → CI/CD 部署 → Flyway 自动完成数据库迁移，**无需手动在控制台执行 SQL**。本地开发环境默认 `FLYWAY_ENABLED=false`（application.yml 默认值），由 `DbColumnRepairRunner` 启动自愈保障本地字段完整。⚠️ **铁则：禁止修改已执行过的 V*.sql 文件内容**（checksum 校验失败 → Spring Boot 不启动 → 全部 API 500），发现问题只能新建补偿脚本。
 14. **git push = 云端自动重新部署**：`.github/workflows/ci.yml` 的 `deploy` job 通过腾讯云 `cloudbase-action` 触发部署，push 到 main 后 3~5 分钟自动生效。**需要** GitHub Actions Secrets（`CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` / `CLOUDBASE_ENV_ID`，已在仓库 Settings 中配置），**无需**手动上传 JAR。
 15. **Java 类型安全**：使用 `UserContext.tenantId()` 等工具方法前必须确认返回类型（返回 `Long`，不是 `String`）。编写新 Orchestrator 时，查阅同模块已有编排器的实际调用方式，不要凭记忆猜测类型。
 16. **【2026-03-11/12】ViewMigrator 视图 Collation NONE 错误（已通过 Flyway 彻底修复）**：`v_production_order_flow_stage_snapshot` 等视图中 `CONVERT(... USING utf8mb4)` 不加 `COLLATE` 会产生 NONE 可强制性（coercibility 6），`MAX()` 对多行聚合时 MySQL 8.0 抛出 `Illegal mix of collations (utf8mb4_bin,NONE) for operation 'max'`。
