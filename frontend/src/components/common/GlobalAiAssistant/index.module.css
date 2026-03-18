@@ -671,42 +671,6 @@
   border-top: 1px solid #f0f0f0;
 }
 
-/* ── 迷你图表 ─────────────────────────────────────────────────────────────── */
-.chartsWrapper { margin-top: 6px; }
-.miniEChart {
-  background: #f9fbff;
-  border: 1px solid #e6f0ff;
-  border-radius: 10px;
-  padding: 8px;
-  margin: 6px 0;
-  overflow: hidden;
-}
-.miniChartTitle { font-size: 12px; font-weight: 600; color: #003a8c; margin-bottom: 4px; }
-.chartLoading { text-align: center; padding: 20px; color: #bfbfbf; font-size: 12px; }
-
-/* 进度条图表 */
-.miniProgressChart {
-  background: #f9fbff;
-  border: 1px solid #e6f0ff;
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 6px 0;
-}
-.progressBarWrap {
-  height: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 6px 0;
-}
-.progressBarFill {
-  height: 100%;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  border-radius: 4px;
-  transition: width 0.6s ease;
-}
-.progressLabel { font-size: 13px; font-weight: 600; color: #1890ff; text-align: right; }
-
 /* ===== 催单内联编辑卡片 ===== */
 .urgeOrderCard {
   background: #fff7e6;

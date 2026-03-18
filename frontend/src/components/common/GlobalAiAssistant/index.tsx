@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense, lazy, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
@@ -17,6 +17,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import styles from './index.module.css';
+import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
 
 /** 生成简短唯一 sessionId */
 function genSessionId(): string {
@@ -97,17 +98,6 @@ function sanitizeHtml(html: string): string {
   });
 }
 
-// ── 富媒体结构类型 ─────────────────────────────────────────────────────────
-
-interface ChartSpec {
-  type: 'bar' | 'line' | 'pie' | 'progress';
-  title: string;
-  xAxis?: string[];
-  series?: Array<{ name: string; data?: number[]; value?: number }>;
-  value?: number;
-  colors?: string[];
-}
-
 interface ActionCard {
   title: string;
   desc?: string;
@@ -164,8 +154,6 @@ function parseAiResponse(rawText: string): { displayText: string; charts: ChartS
   return { displayText, charts, actionCards, quickActions };
 }
 
-// ── 模块级 ECharts 懒加载（必须在组件外定义，不能在 render 函数中调用 lazy）
-const ReactEChartsLazy = lazy(() => import('echarts-for-react'));
 
 interface Message {
   id: string;
@@ -322,45 +310,6 @@ const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading 
         </g>
       </g>
     </svg>
-  );
-};
-
-// ── 迷你图表组件 ─────────────────────────────────────────────────────────────
-const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
-  if (chart.type === 'progress') {
-    return (
-      <div className={styles.miniProgressChart}>
-        <div className={styles.miniChartTitle}>{chart.title}</div>
-        <div className={styles.progressBarWrap}>
-          <div className={styles.progressBarFill} style={{ width: `${Math.min(chart.value ?? 0, 100)}%` }} />
-        </div>
-        <div className={styles.progressLabel}>{chart.value ?? 0}%</div>
-      </div>
-    );
-  }
-  let option: Record<string, unknown>;
-  if (chart.type === 'pie') {
-    option = {
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      series: [{ type: 'pie', radius: ['40%', '70%'], data: chart.series, label: { show: false } }],
-    };
-  } else {
-    option = {
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 10 } },
-      yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
-      grid: { top: 30, right: 10, bottom: 30, left: 40 },
-      color: chart.colors ?? ['#1890ff', '#52c41a', '#fa8c16'],
-      series: chart.series?.map(s => ({ name: s.name, type: chart.type === 'line' ? 'line' : 'bar', data: s.data })),
-    };
-  }
-  return (
-    <div className={styles.miniEChart}>
-      <div className={styles.miniChartTitle}>{chart.title}</div>
-      <Suspense fallback={<div className={styles.chartLoading}>图表加载中…</div>}>
-        <ReactEChartsLazy option={option} style={{ height: '140px' }} opts={{ renderer: 'svg' }} />
-      </Suspense>
-    </div>
   );
 };
 
