@@ -1,5 +1,12 @@
 ## 2026-05-03（最新）
 
+### fix(async): 异步线程透传 UserContext，避免 fashion-async 线程丢租户上下文
+
+- **问题现象**：云端日志在 `fashion-async-*` 线程上大量出现 `TenantInterceptor - UserContext is NULL - no tenant filtering`，说明异步任务执行 SQL 时没有继承请求线程中的租户上下文。
+- **根本原因**：项目异步线程池 `AsyncConfig` 只有线程数和队列配置，没有 `TaskDecorator`；`@Async` 方法切到 `fashion-async-*` 线程后，`ThreadLocal` 中的 `UserContext` 与 `MDC` 都会丢失。
+- **修复方案**：为 `taskExecutor` 增加 `TaskDecorator`，在任务提交时复制 `UserContext` 与 `MDC`，在异步线程中执行前恢复，执行后再还原原上下文。
+- **对系统的帮助**：异步任务访问租户业务表时也能拿到正确的 tenantId，请求链路日志也能保留 requestId；这批 `fashion-async-*` 的租户上下文 WARN 将从根上消失，而不只是压日志级别。
+
 ### chore(runtime): 清理启动与任务线程噪音日志
 
 - **问题现象**：云端启动时仍会出现两类非业务故障噪音：其一是 `TenantInterceptor` 在启动任务/定时任务场景下输出 `UserContext is NULL` 警告；其二是 Spring Security 输出 `Using generated security password` 与 `UserDetailsServiceAutoConfiguration` 提示，容易被误判为安全配置故障。
