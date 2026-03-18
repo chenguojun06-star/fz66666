@@ -486,6 +486,21 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     }
 
     @Override
+    public long sumOutstockQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            return 0;
+        }
+        List<ProductOutstock> list = productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getDeleteFlag, 0)
+                .between(ProductOutstock::getCreateTime, start, end)
+                .select(ProductOutstock::getOutstockQuantity)
+                .list();
+        return list.stream()
+                .mapToInt(o -> o.getOutstockQuantity() != null ? o.getOutstockQuantity() : 0)
+                .sum();
+    }
+
+    @Override
     public List<Integer> getDailyOrderQuantities(LocalDateTime start, LocalDateTime end) {
         // 获取每天的订单总数量
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()

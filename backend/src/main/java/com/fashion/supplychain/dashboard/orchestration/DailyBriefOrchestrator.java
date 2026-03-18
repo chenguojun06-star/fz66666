@@ -80,10 +80,16 @@ public class DailyBriefOrchestrator {
         // ③ 今日下单数 / 今日入库数 / 今日出库数
         long todayOrders = dashboardQueryService.countProductionOrdersBetween(tdStart, tdEnd);
         brief.put("todayOrderCount", (int) todayOrders);
+        long todayOrderQty = dashboardQueryService.sumOrderQuantityBetween(tdStart, tdEnd);
+        brief.put("todayOrderQuantity", (int) todayOrderQty);
         long todayInbound = dashboardQueryService.countWarehousingBetween(tdStart, tdEnd);
         brief.put("todayInboundCount", (int) todayInbound);
+        long todayInboundQty = dashboardQueryService.sumWarehousingQuantityBetween(tdStart, tdEnd);
+        brief.put("todayInboundQuantity", (int) todayInboundQty);
         long todayOutbound = dashboardQueryService.countOutstockBetween(tdStart, tdEnd);
         brief.put("todayOutboundCount", (int) todayOutbound);
+        long todayOutboundQty = dashboardQueryService.sumOutstockQuantityBetween(tdStart, tdEnd);
+        brief.put("todayOutboundQuantity", (int) todayOutboundQty);
 
         // ④ 逾期订单数
         long overdueCount = dashboardQueryService.countOverdueOrders();

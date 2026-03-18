@@ -43,7 +43,7 @@ const IntelligenceCenter: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
 
   /* ── 今日日报（下单数/入库数/出库数） ── */
-  const [todayBrief, setTodayBrief] = useState({ todayOrderCount: 0, todayInboundCount: 0, todayOutboundCount: 0 });
+  const [todayBrief, setTodayBrief] = useState({ todayOrderCount: 0, todayOrderQuantity: 0, todayInboundCount: 0, todayInboundQuantity: 0, todayOutboundCount: 0, todayOutboundQuantity: 0 });
   useEffect(() => {
     const ac = new AbortController();
     (api.get('/dashboard/daily-brief', { signal: ac.signal }) as Promise<any>)
@@ -52,8 +52,11 @@ const IntelligenceCenter: React.FC = () => {
         if (d) {
           setTodayBrief({
             todayOrderCount: Number(d.todayOrderCount ?? 0),
+            todayOrderQuantity: Number(d.todayOrderQuantity ?? 0),
             todayInboundCount: Number(d.todayInboundCount ?? 0),
+            todayInboundQuantity: Number(d.todayInboundQuantity ?? 0),
             todayOutboundCount: Number(d.todayOutboundCount ?? 0),
+            todayOutboundQuantity: Number(d.todayOutboundQuantity ?? 0),
           });
         }
       })
@@ -458,33 +461,33 @@ const IntelligenceCenter: React.FC = () => {
             <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
               <div
                 onClick={() => navigate('/production')}
-                style={{ flex: 1, background: 'rgba(247,166,0,0.1)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(247,166,0,0.25)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ flex: 1, background: 'rgba(247,166,0,0.1)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(247,166,0,0.25)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.22)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.1)')}
               >
-                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日下单</div>
-                <div style={{ color: '#f7a600', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}</div>
-                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>单</div>
+                <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日下单</div>
+                <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span style={{ color: '#f7c44a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span></div>
+                <div style={{ color: '#f7c44a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOrderQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
               <div
                 onClick={() => navigate('/production/warehousing')}
-                style={{ flex: 1, background: 'rgba(57,255,20,0.08)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(57,255,20,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ flex: 1, background: 'rgba(57,255,20,0.08)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(57,255,20,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.18)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
               >
-                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日入库</div>
-                <div style={{ color: '#39ff14', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayInboundCount}</div>
-                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>票</div>
+                <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
+                <div style={{ color: '#39ff14', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundCount}<span style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>票</span></div>
+                <div style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
               <div
                 onClick={() => navigate('/warehouse/finished')}
-                style={{ flex: 1, background: 'rgba(0,229,255,0.08)', borderRadius: 6, padding: '7px 8px', border: '1px solid rgba(0,229,255,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ flex: 1, background: 'rgba(0,229,255,0.08)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(0,229,255,0.22)', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.18)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
               >
-                <div style={{ color: '#7dacc4', fontSize: 11, marginBottom: 2 }}>今日出库</div>
-                <div style={{ color: '#00e5ff', fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{todayBrief.todayOutboundCount}</div>
-                <div style={{ color: '#7dacc4', fontSize: 11, marginTop: 2 }}>票</div>
+                <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
+                <div style={{ color: '#00e5ff', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundCount}<span style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>票</span></div>
+                <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
             </div>
 
