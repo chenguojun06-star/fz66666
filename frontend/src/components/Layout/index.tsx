@@ -1,13 +1,12 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu, Tag } from 'antd';
-import { CloseOutlined, DownOutlined, GlobalOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
+import { CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
-import { APP_LANGUAGE_OPTIONS, type AppLanguage } from '../../i18n/languagePreference';
 import { t } from '../../i18n';
 import SmartGuideBar from '@/smart/components/SmartGuideBar';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -33,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { language, setLanguage } = useAppLanguage();
+  const { language } = useAppLanguage();
   const { message } = App.useApp();
   const recentPagesStorageKey = 'layout.header.recentPages';
   const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
@@ -519,23 +518,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 🏭 外发工厂端
               </Tag>
             )}
-            <Dropdown
-              placement="bottomRight"
-              trigger={['click']}
-              menu={{
-                selectable: true,
-                selectedKeys: [language],
-                items: APP_LANGUAGE_OPTIONS.map((item) => ({
-                  key: item.value,
-                  label: t(`language.names.${item.value}`, language),
-                })),
-                onClick: ({ key }) => setLanguage(key as AppLanguage),
-              }}
-            >
-              <Button type="text" icon={<GlobalOutlined />} style={{ marginRight: 8 }}>
-                {t(`language.names.${language}`, language)}
-              </Button>
-            </Dropdown>
 
             <Dropdown
               placement="bottomRight"
