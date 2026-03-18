@@ -19,8 +19,8 @@
 
 /* 面板主体 */
 .chatPanel {
-  width: 360px;
-  height: 520px;
+  width: 420px;
+  height: 620px;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -816,4 +816,145 @@
   color: #389e0d;
   font-size: 13px;
   margin: 6px 0;
+}
+
+/* ── 超级顾问 — 风险指标卡片 ── */
+.riskIndicatorsWrapper {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.riskCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.riskCard.riskHigh {
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+}
+.riskCard.riskMedium {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+.riskCard.riskLow {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+.riskProb {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 42px;
+  text-align: center;
+}
+.riskProb.riskHigh { color: #cf1322; }
+.riskProb.riskMedium { color: #d48806; }
+.riskProb.riskLow { color: #389e0d; }
+.riskInfo {
+  flex: 1;
+}
+.riskName {
+  font-weight: 600;
+  color: #333;
+}
+.riskDesc {
+  color: #666;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* ── 超级顾问 — 模拟结果表 ── */
+.simulationWrapper {
+  margin-top: 10px;
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.simulationTitle {
+  font-weight: 600;
+  color: #1d39c4;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.simulationTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.simulationTable th,
+.simulationTable td {
+  padding: 4px 6px;
+  text-align: left;
+  border-bottom: 1px solid #d6e4ff;
+}
+.simulationTable th {
+  color: #2f54eb;
+  font-weight: 600;
+  background: #e8ecff;
+}
+.simulationRec {
+  margin-top: 6px;
+  color: #531dab;
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* ── 超级顾问 — 追问卡片 ── */
+.clarificationCard {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  border: 1px solid #d3adf7;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #531dab;
+}
+.clarificationLabel {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+/* ── 超级顾问 — 反馈评分 ── */
+.feedbackRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f0;
+}
+.feedbackBtn {
+  background: none;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.feedbackBtn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+.feedbackBtn.feedbackActive {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  color: #1890ff;
+}
+.feedbackLabel {
+  font-size: 11px;
+  color: #999;
+  margin-left: auto;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
@@ -9,11 +9,19 @@ import {
   LoadingOutlined,
   AudioMutedOutlined,
   ClearOutlined,
-  PaperClipOutlined
+  PaperClipOutlined,
+  LikeOutlined,
+  DislikeOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import styles from './index.module.css';
+
+/** 生成简短唯一 sessionId */
+function genSessionId(): string {
+  return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 /** 轻量 Markdown → HTML（仅处理 AI 常用的格式） */
 function renderSimpleMarkdown(text: string): string {
@@ -169,6 +177,13 @@ interface Message {
   charts?: ChartSpec[];
   actionCards?: ActionCard[];
   quickActions?: QuickAction[];
+  /* ── hyper-advisor 扩展字段 ── */
+  riskIndicators?: RiskIndicator[];
+  simulation?: SimulationResultData;
+  needsClarification?: boolean;
+  traceId?: string;
+  advisorSessionId?: string;
+  userQuery?: string;             // 保存原始用户问题，用于反馈
 }
 
 const INITIAL_MSG: Message = {
@@ -453,6 +468,73 @@ const ActionCardWidget: React.FC<{
   );
 };
 
+/* ── hyper-advisor 内嵌子组件 ─────────────────────────────────── */
+
+/** 风险量化指标卡 */
+const RiskIndicatorWidget: React.FC<{ items: RiskIndicator[] }> = ({ items }) => {
+  if (!items?.length) return null;
+  return (
+    <div className={styles.riskIndicatorsWrapper}>
+      {items.map((r, i) => {
+        const lvl = (r.level || 'low').toLowerCase();
+        const cls = lvl === 'high' ? styles.riskHigh : lvl === 'medium' ? styles.riskMedium : styles.riskLow;
+        return (
+          <div key={i} className={`${styles.riskCard} ${cls}`}>
+            <span className={`${styles.riskProb} ${cls}`}>{Math.round(r.probability * 100)}%</span>
+            <div className={styles.riskInfo}>
+              <span className={styles.riskName}>{r.name}</span>
+              {r.description && <span className={styles.riskDesc}>{r.description}</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** 数字孪生模拟结果 */
+const SimulationWidget: React.FC<{ data: SimulationResultData }> = ({ data }) => {
+  if (!data?.scenarioDescription) return null;
+  const rows = data.scenarioRows || [];
+  const cols = rows.length ? Object.keys(rows[0]) : [];
+  return (
+    <div className={styles.simulationWrapper}>
+      <div className={styles.simulationTitle}>📐 模拟：{data.scenarioDescription}</div>
+      {rows.length > 0 && (
+        <table className={styles.simulationTable}>
+          <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+          <tbody>{rows.map((row, i) => <tr key={i}>{cols.map(c => <td key={c}>{String(row[c] ?? '')}</td>)}</tr>)}</tbody>
+        </table>
+      )}
+      {data.recommendation && <div className={styles.simulationRec}>💡 {data.recommendation}</div>}
+    </div>
+  );
+};
+
+/** 澄清追问卡片 */
+const ClarificationCard: React.FC = () => (
+  <div className={styles.clarificationCard}>
+    <span className={styles.clarificationLabel}>🤔 我需要更多信息才能给出准确分析，请补充上方问题～</span>
+  </div>
+);
+
+/** 反馈评分组件 */
+const FeedbackWidget: React.FC<{
+  msg: Message;
+  onFeedback: (msg: Message, score: number) => void;
+}> = ({ msg, onFeedback }) => {
+  const [sent, setSent] = useState(false);
+  if (!msg.traceId || sent) return null;
+  const handleClick = (score: number) => { setSent(true); onFeedback(msg, score); };
+  return (
+    <div className={styles.feedbackRow}>
+      <span className={styles.feedbackLabel}>这个回答有帮助吗？</span>
+      <button className={styles.feedbackBtn} onClick={() => handleClick(5)} title="有用"><LikeOutlined /></button>
+      <button className={styles.feedbackBtn} onClick={() => handleClick(1)} title="不太好"><DislikeOutlined /></button>
+    </div>
+  );
+};
+
 // ── 预警条目每日关闭 localStorage 方案 ──────────────────────────────────────────
 const _aiPendingDismissKey = () => `ai_dismissed_pending_${new Date().toISOString().slice(0, 10)}`;
 const loadDismissedPending = (): Set<string> => {
@@ -481,6 +563,9 @@ const GlobalAiAssistant: React.FC = () => {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+
+  // ── hyper-advisor 会话 ──
+  const [advisorSessionId, setAdvisorSessionId] = useState(genSessionId);
 
   // 每日关闭记忆
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
@@ -610,6 +695,19 @@ const GlobalAiAssistant: React.FC = () => {
 
   const streamAbortRef = useRef<AbortController | null>(null);
 
+  /** hyper-advisor 反馈 */
+  const handleAdvisorFeedback = useCallback((msg: Message, score: number) => {
+    if (!msg.traceId) return;
+    intelligenceApi.hyperAdvisorFeedback({
+      sessionId: msg.advisorSessionId || advisorSessionId,
+      traceId: msg.traceId,
+      query: msg.userQuery || '',
+      advice: msg.text,
+      score,
+      feedbackText: score >= 4 ? '有帮助' : '待改进',
+    }).catch(() => { /* 静默 */ });
+  }, [advisorSessionId]);
+
   const handleSend = async (manualText?: string) => {
     const text = (manualText || inputValue).trim();
     if (!text || isTyping) return;
@@ -671,9 +769,24 @@ const GlobalAiAssistant: React.FC = () => {
           }
         },
         () => {
-          // done
+          // done — SSE 流结束后，异步调用 hyper-advisor 做风险/模拟/澄清增强
           setIsTyping(false);
           if (accumulatedText) speak(accumulatedText);
+          // 异步增强：不阻塞主答复显示
+          intelligenceApi.hyperAdvisorAsk(advisorSessionId, text).then(resp => {
+            const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
+              ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
+            if (!ha) return;
+            setMessages(prev => prev.map(m => m.id === aiMsgId ? {
+              ...m,
+              riskIndicators: ha.riskIndicators,
+              simulation: ha.simulation,
+              needsClarification: ha.needsClarification,
+              traceId: ha.traceId,
+              advisorSessionId: ha.sessionId,
+              userQuery: text,
+            } : m));
+          }).catch(() => { /* 增强失败静默降级 */ });
         },
         async (err) => {
           // SSE 失败，fallback 到同步接口
@@ -886,6 +999,7 @@ const GlobalAiAssistant: React.FC = () => {
                   setPendingItems([]);
                   setInputValue('');
                   setHasFetchedMood(false);
+                  setAdvisorSessionId(genSessionId());
                 }}
                 title="清空对话"
               />
@@ -1046,6 +1160,11 @@ const GlobalAiAssistant: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {/* ── hyper-advisor 增强区域 ── */}
+                  {msg.role === 'ai' && msg.needsClarification && <ClarificationCard />}
+                  {msg.role === 'ai' && !!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}
+                  {msg.role === 'ai' && msg.simulation && <SimulationWidget data={msg.simulation} />}
+                  {msg.role === 'ai' && msg.traceId && <FeedbackWidget msg={msg} onFeedback={handleAdvisorFeedback} />}
                 </div>
 
                 {/* 语音播报小按钮(仅AI部分) */}

@@ -1361,4 +1361,43 @@ export const intelligenceApi = {
     const json = await res.json() as { code: number; message?: string };
     if (json.code !== 200) throw new Error(json.message ?? '更新失败');
   },
+
+  /** 超级顾问：主对话 */
+  hyperAdvisorAsk: async (sessionId: string, userMessage: string): Promise<HyperAdvisorResponse> => {
+    const resp = await api.post('/hyper-advisor/ask', { sessionId, userMessage });
+    const d = (resp as any)?.data ?? resp;
+    return (d?.data ?? d) as HyperAdvisorResponse;
+  },
+
+  /** 超级顾问：评分反馈 */
+  hyperAdvisorFeedback: async (params: {
+    sessionId: string; traceId: string; query: string; advice: string; score: number; feedbackText?: string;
+  }): Promise<void> => {
+    await api.post('/hyper-advisor/feedback', params);
+  },
 };
+
+/* ── 超级顾问 TS 类型 ── */
+
+export interface RiskIndicator {
+  name: string;
+  probability: number;
+  level: string;
+  description: string;
+}
+
+export interface SimulationResultData {
+  scenarioDescription: string;
+  scenarioRows: Record<string, unknown>[];
+  recommendation: string;
+}
+
+export interface HyperAdvisorResponse {
+  analysis: string;
+  needsClarification: boolean;
+  riskIndicators?: RiskIndicator[];
+  simulation?: SimulationResultData;
+  profileHint?: string;
+  traceId?: string;
+  sessionId?: string;
+}
