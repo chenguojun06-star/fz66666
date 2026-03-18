@@ -81,7 +81,15 @@ function getBaseUrl() {
             try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
             return isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
           }
-          // 2. Storage 里存的是任意内网 IP（包括 FALLBACK_BASE_URL 本身）→ 替换为云地址
+          // 2. Storage 里存的是前端域名（会造成循环请求）→ 强制回退到正确后端地址
+          // 原因：webyszl.cn / frontend-226678-* 是前端容器入口，不是后端，
+          // 小程序调用这些地址时会被 nginx 转发到自身，导致接口全部失败。
+          const isFrontendDomain = v.includes('frontend-226678') || v.includes('webyszl.cn');
+          if (isFrontendDomain) {
+            try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
+            return DEFAULT_BASE_URL;
+          }
+          // 3. Storage 里存的是任意内网 IP（包括 FALLBACK_BASE_URL 本身）→ 替换为云地址
           // 注意：不能用 v !== FALLBACK_BASE_URL 排除，否则旧 FALLBACK 被跳过、导致 ERR_ADDRESS_UNREACHABLE
           const isAnyLanIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(:\d+)?(\/|$)/i.test(v);
 
