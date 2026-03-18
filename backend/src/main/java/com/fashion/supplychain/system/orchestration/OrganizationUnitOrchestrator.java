@@ -47,7 +47,6 @@ public class OrganizationUnitOrchestrator {
     private DictOrchestrator dictOrchestrator;
 
     public List<OrganizationUnit> tree() {
-        ensureFactoryNodes();
         List<OrganizationUnit> nodes = bindingHelper.listTenantNodes(UserContext.tenantId());
         Map<String, OrganizationUnit> byId = nodes.stream()
                 .filter(item -> StringUtils.hasText(item.getId()))
@@ -69,7 +68,6 @@ public class OrganizationUnitOrchestrator {
     }
 
     public List<OrganizationUnit> departmentOptions() {
-        ensureFactoryNodes();
         LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getDeleteFlag, 0)
                 .in(OrganizationUnit::getNodeType, "DEPARTMENT", "FACTORY")

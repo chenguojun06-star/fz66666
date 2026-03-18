@@ -188,6 +188,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   }, [orders]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [globalStats, setGlobalStats] = useState({
+    activeOrders: 0, activeQuantity: 0,
+    completedOrders: 0, completedQuantity: 0,
+    scrappedOrders: 0, scrappedQuantity: 0,
     totalOrders: 0, totalQuantity: 0,
     delayedOrders: 0, delayedQuantity: 0,
     todayOrders: 0, todayQuantity: 0,
@@ -520,11 +523,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         keyword: params.keyword,
         factoryName: params.factoryName,
         status: params.status,
+        excludeTerminal: params.excludeTerminal,
         orderNo: params.orderNo,
         styleNo: params.styleNo,
       } : {};
 
       const response = await api.get<{
+        activeOrders: number;
+        activeQuantity: number;
+        completedOrders: number;
+        completedQuantity: number;
+        scrappedOrders: number;
+        scrappedQuantity: number;
         totalOrders: number;
         totalQuantity: number;
         delayedOrders: number;
@@ -533,7 +543,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         todayQuantity: number;
       }>('/production/order/stats', { params: filterParams });
       if (isApiSuccess(response)) {
-        setGlobalStats(response.data);
+        const data = (response.data || {}) as Record<string, unknown>;
+        setGlobalStats({
+          activeOrders: Number(data.activeOrders ?? data.totalOrders ?? 0),
+          activeQuantity: Number(data.activeQuantity ?? data.totalQuantity ?? 0),
+          completedOrders: Number(data.completedOrders ?? 0),
+          completedQuantity: Number(data.completedQuantity ?? 0),
+          scrappedOrders: Number(data.scrappedOrders ?? 0),
+          scrappedQuantity: Number(data.scrappedQuantity ?? 0),
+          totalOrders: Number(data.totalOrders ?? data.activeOrders ?? 0),
+          totalQuantity: Number(data.totalQuantity ?? data.activeQuantity ?? 0),
+          delayedOrders: Number(data.delayedOrders ?? 0),
+          delayedQuantity: Number(data.delayedQuantity ?? 0),
+          todayOrders: Number(data.todayOrders ?? 0),
+          todayQuantity: Number(data.todayQuantity ?? 0),
+        });
       }
     } catch (error) {
       console.error('获取全局统计数据失败', error);
@@ -672,6 +696,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     queryParams.pageSize,
     queryParams.keyword,
     queryParams.status,
+    queryParams.orgUnitId,
+    queryParams.parentOrgUnitId,
+    (queryParams as any).factoryType,
+    (queryParams as any).factoryName,
+    (queryParams as any).merchandiser,
     (queryParams as any).delayedOnly,
     (queryParams as any).todayOnly,
     // 使用稳定的值，null 转换为固定字符串
@@ -1152,7 +1181,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     dateValue={dateRange}
                     onDateChange={(value) => setDateRange(value)}
                     statusValue={String(queryParams.status || '')}
-                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined, includeScrapped: value === 'scrapped' ? true : undefined, excludeTerminal: value ? undefined : true }))}
                     statusOptions={statusOptions}
                   />
                   <Select
@@ -1219,7 +1248,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               right={(
                 <Button
                   onClick={() => {
-                    setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '' });
+                    setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '', includeScrapped: undefined, excludeTerminal: true });
                     setDateRange(null);
                   }}
                 >
@@ -1365,12 +1394,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             activeKey={activeStatFilter}
             cards={[
               {
-                key: 'all',
+                key: 'production',
                 items: [
-                  { label: '订单个数', value: globalStats.totalOrders, unit: '个', color: 'var(--color-primary)' },
-                  { label: '总数量', value: globalStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
+                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                  { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
                 ],
-                onClick: () => handleStatClick('all'),
+                onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
                 activeBg: 'rgba(45, 127, 249, 0.1)',
               },
@@ -1483,7 +1512,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     dateValue={dateRange}
                     onDateChange={(value) => setDateRange(value)}
                     statusValue={String(queryParams.status || '')}
-                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                    onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined, includeScrapped: value === 'scrapped' ? true : undefined, excludeTerminal: value ? undefined : true }))}
                     statusOptions={statusOptions}
                   />
                   <Select
