@@ -65,6 +65,9 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
         tableColumns.put("t_style_info", List.of(
                 "fabric_composition", "wash_instructions", "u_code", "fabric_composition_parts"
         ));
+        tableColumns.put("t_mind_push_rule", List.of(
+            "notify_time_start", "notify_time_end"
+        ));
         REQUIRED_COLUMNS = Collections.unmodifiableMap(tableColumns);
     }
 

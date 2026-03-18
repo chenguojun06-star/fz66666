@@ -1018,8 +1018,6 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .resizable-table-shell .ant-table-wrapper {

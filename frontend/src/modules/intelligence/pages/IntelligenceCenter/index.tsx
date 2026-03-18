@@ -42,6 +42,45 @@ const IntelligenceCenter: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
+  /* ── 自愈一键修复 ── */
+  const [repairing, setRepairing] = useState(false);
+  const [repairResult, setRepairResult] = useState<{ autoFixed: number; needManual: number } | null>(null);
+  const handleRepair = useCallback(async () => {
+    setRepairing(true);
+    setRepairResult(null);
+    try {
+      const res = await execApi.runSelfHealingRepair() as any;
+      const d = res?.data ?? res;
+      setRepairResult({ autoFixed: Number(d?.autoFixed ?? 0), needManual: Number(d?.needManual ?? 0) });
+      reload();
+    } catch { setRepairResult({ autoFixed: 0, needManual: -1 }); }
+    finally { setRepairing(false); }
+  }, [reload]);
+
+  /* ── Agent 例会 ── */
+  const [meetingTopic, setMeetingTopic] = useState('');
+  const [holdingMeeting, setHoldingMeeting] = useState(false);
+  const [meetingResult, setMeetingResult] = useState<any>(null);
+  const [meetingHistory, setMeetingHistory] = useState<any[]>([]);
+  const holdMeeting = useCallback(async () => {
+    if (!meetingTopic.trim()) return;
+    setHoldingMeeting(true);
+    setMeetingResult(null);
+    try {
+      const res = await execApi.holdAgentMeeting(meetingTopic.trim()) as any;
+      const d = res?.data ?? res;
+      setMeetingResult(d);
+      setMeetingTopic('');
+      // refresh history
+      const hRes = await execApi.listAgentMeetings(5) as any;
+      setMeetingHistory((hRes?.data ?? hRes) || []);
+    } catch { setMeetingResult({ error: true }); }
+    finally { setHoldingMeeting(false); }
+  }, [meetingTopic]);
+  useEffect(() => {
+    (execApi.listAgentMeetings(5) as any).then((r: any) => setMeetingHistory((r?.data ?? r) || [])).catch(() => {});
+  }, []);
+
   /* ── 今日日报（下单数/入库数/出库数） ── */
   const [todayBrief, setTodayBrief] = useState({ todayOrderCount: 0, todayOrderQuantity: 0, todayInboundCount: 0, todayInboundQuantity: 0, todayOutboundCount: 0, todayOutboundQuantity: 0 });
   useEffect(() => {
@@ -968,6 +1007,27 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无诊断数据</div>}
+            {/* 一键修复按钮 */}
+            {healing && healing.needManual > 0 && (
+              <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  onClick={handleRepair}
+                  disabled={repairing}
+                  style={{
+                    background: 'linear-gradient(135deg, #1677ff, #4096ff)', color: '#fff',
+                    border: 'none', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
+                    fontSize: 12, fontWeight: 600, opacity: repairing ? 0.6 : 1,
+                  }}
+                >
+                  {repairing ? '修复中…' : '⚡ 一键修复'}
+                </button>
+                {repairResult && (
+                  <span style={{ fontSize: 11, color: repairResult.needManual < 0 ? '#ff4d4f' : '#73d13d' }}>
+                    {repairResult.needManual < 0 ? '修复失败' : `已修复 ${repairResult.autoFixed} 项，${repairResult.needManual} 项需人工`}
+                  </span>
+                )}
+              </div>
+            )}
             </div>
           </div>
 
@@ -997,6 +1057,76 @@ const IntelligenceCenter: React.FC = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* ╔══════════════════════════════════════════════╗
+            ║   Agent 例会（多 Agent 结构化辩论）           ║
+            ╚══════════════════════════════════════════════╝ */}
+        <div className="c-card" style={{ marginBottom: 16 }}>
+          <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('meeting')}>
+            <RobotOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
+            Agent 智能例会
+            <span className="c-card-badge purple-badge">多Agent辩论</span>
+            <CollapseChevron panelKey="meeting" />
+          </div>
+          <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['meeting'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
+            <div style={{ display: 'flex', gap: 8, padding: '10px 14px', alignItems: 'center' }}>
+              <input
+                value={meetingTopic}
+                onChange={e => setMeetingTopic(e.target.value)}
+                placeholder="输入议题，如：Q3产能分配方案"
+                onKeyDown={e => e.key === 'Enter' && holdMeeting()}
+                style={{
+                  flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 6, padding: '6px 12px', color: '#e0e0e0', fontSize: 13, outline: 'none',
+                }}
+              />
+              <button
+                onClick={holdMeeting}
+                disabled={holdingMeeting || !meetingTopic.trim()}
+                style={{
+                  background: 'linear-gradient(135deg, #a78bfa, #7c3aed)', color: '#fff',
+                  border: 'none', borderRadius: 6, padding: '6px 16px', cursor: holdingMeeting ? 'wait' : 'pointer',
+                  fontSize: 12, fontWeight: 600, opacity: (holdingMeeting || !meetingTopic.trim()) ? 0.5 : 1, whiteSpace: 'nowrap',
+                }}
+              >
+                {holdingMeeting ? '讨论中…' : '🧠 召开例会'}
+              </button>
+            </div>
+            {/* 最新结果 */}
+            {meetingResult && !meetingResult.error && (
+              <div style={{ padding: '8px 14px', margin: '0 14px 10px', background: 'rgba(167,139,250,0.06)', borderRadius: 8, border: '1px solid rgba(167,139,250,0.15)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>📋 共识结论</div>
+                <div style={{ fontSize: 12, color: '#c0c8d0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{meetingResult.consensus || '无共识'}</div>
+                {meetingResult.dissent && (
+                  <>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#d48806', marginTop: 8, marginBottom: 4 }}>⚠️ 分歧意见</div>
+                    <div style={{ fontSize: 12, color: '#a0a8b0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{meetingResult.dissent}</div>
+                  </>
+                )}
+                {meetingResult.confidenceScore != null && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: '#7aaec8' }}>
+                    共识置信度：<span style={{ color: meetingResult.confidenceScore >= 70 ? '#73d13d' : '#d48806', fontWeight: 600 }}>{meetingResult.confidenceScore}%</span>
+                    {meetingResult.durationMs > 0 && <span> · 耗时 {(meetingResult.durationMs / 1000).toFixed(1)}s</span>}
+                  </div>
+                )}
+              </div>
+            )}
+            {meetingResult?.error && <div style={{ padding: '6px 14px', fontSize: 12, color: '#ff4d4f' }}>例会调用失败，请稍后重试</div>}
+            {/* 历史记录 */}
+            {meetingHistory.length > 0 && (
+              <div style={{ padding: '0 14px 10px' }}>
+                <div style={{ fontSize: 11, color: '#7aaec8', marginBottom: 6 }}>近期例会</div>
+                {meetingHistory.slice(0, 5).map((m: any, idx: number) => (
+                  <div key={m.id ?? idx} style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                    <Tag style={{ fontSize: 10, background: '#a78bfa22', color: '#a78bfa', borderColor: '#a78bfa55' }}>{m.meetingType ?? '辩论'}</Tag>
+                    <span style={{ fontSize: 12, color: '#d0d8e0', flex: 1 }}>{m.topic}</span>
+                    <span style={{ fontSize: 10, color: '#5a6a7a' }}>{m.createTime?.slice(5, 16)?.replace('T', ' ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ╔══════════════════════════════════════════════╗

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 智能异常自愈编排器 — 数据一致性诊断 + 自动修复
@@ -208,6 +209,129 @@ public class SelfHealingOrchestrator {
             item.setDescription(String.format("%d 个订单已完成件数超出订单件数 5%% 以上", overflow));
         }
         item.setAffectedOrders(overflow);
+        return item;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //   一键修复 — 诊断 + 自动修复可修复项，返回修复结果
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * 诊断 + 一键修复所有可自动修复的问题。
+     * <p>当前可自动修复：进度不一致（重算 productionProgress）、完工状态遗漏（标记 COMPLETED）。
+     * 幽灵扫码和数量溢出需人工介入，仅标记。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SelfHealingResponse repair() {
+        Long tenantId = UserContext.tenantId();
+        List<DiagnosisItem> items = new ArrayList<>();
+        int autoFixed = 0;
+
+        // ── 修复1: 进度不一致 → 重算 productionProgress ──
+        DiagnosisItem progressFix = repairProgressConsistency(tenantId);
+        items.add(progressFix);
+        if ("fixed".equals(progressFix.getResult())) autoFixed++;
+
+        // ── 修复2: 完工但状态未标记 → 标记 COMPLETED ──
+        DiagnosisItem statusFix = repairStatusConsistency(tenantId);
+        items.add(statusFix);
+        if ("fixed".equals(statusFix.getResult())) autoFixed++;
+
+        // ── 检查3: 幽灵扫码（仅诊断，需人工） ──
+        DiagnosisItem ghostCheck = checkGhostScans(tenantId);
+        items.add(ghostCheck);
+
+        // ── 检查4: 数量溢出（仅诊断，需人工） ──
+        DiagnosisItem overflowCheck = checkQuantityOverflow(tenantId);
+        items.add(overflowCheck);
+
+        long issues = items.stream().filter(i -> !"ok".equals(i.getResult()) && !"fixed".equals(i.getResult())).count();
+        SelfHealingResponse resp = new SelfHealingResponse();
+        resp.setItems(items);
+        resp.setTotalChecks(items.size());
+        resp.setIssuesFound((int) items.stream().filter(i -> !"ok".equals(i.getResult())).count());
+        resp.setAutoFixed(autoFixed);
+        resp.setNeedManual((int) issues);
+        resp.setHealthScore(Math.max(0, 100 - (int) issues * 25));
+        resp.setStatus(issues == 0 ? "healthy" : issues <= 2 ? "warning" : "critical");
+
+        log.info("[自愈修复] tenant={} 自动修复={} 需人工={}", tenantId, autoFixed, issues);
+        return resp;
+    }
+
+    private DiagnosisItem repairProgressConsistency(Long tenantId) {
+        DiagnosisItem item = new DiagnosisItem();
+        item.setCheckName("生产进度一致性修复");
+        item.setCheckType("progress");
+
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+        qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq("delete_flag", 0)
+          .eq("status", "production");
+        List<ProductionOrder> orders = productionOrderService.list(qw);
+
+        int fixed = 0;
+        for (ProductionOrder o : orders) {
+            int total = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
+            int completed = o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0;
+            int currentProgress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
+            if (total > 0) {
+                int expected = Math.min(100, (int) ((completed * 100.0) / total));
+                if (Math.abs(expected - currentProgress) > 10) {
+                    o.setProductionProgress(expected);
+                    productionOrderService.updateById(o);
+                    fixed++;
+                    log.info("[自愈修复] 订单 {} 进度 {}% → {}%", o.getOrderNo(), currentProgress, expected);
+                }
+            }
+        }
+
+        if (fixed == 0) {
+            item.setResult("ok");
+            item.setDescription("所有进行中订单进度数据一致");
+        } else {
+            item.setResult("fixed");
+            item.setDescription(String.format("已修复 %d 个订单的进度偏差", fixed));
+            item.setFixedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
+        item.setAffectedOrders(fixed);
+        return item;
+    }
+
+    private DiagnosisItem repairStatusConsistency(Long tenantId) {
+        DiagnosisItem item = new DiagnosisItem();
+        item.setCheckName("完工状态自动标记");
+        item.setCheckType("progress");
+
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+        qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq("delete_flag", 0)
+          .ne("status", "completed")
+          .ne("status", "cancelled");
+        List<ProductionOrder> orders = productionOrderService.list(qw);
+
+        int fixed = 0;
+        for (ProductionOrder o : orders) {
+            int total = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
+            int completed = o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0;
+            if (total > 0 && completed >= total) {
+                o.setStatus("completed");
+                o.setProductionProgress(100);
+                productionOrderService.updateById(o);
+                fixed++;
+                log.info("[自愈修复] 订单 {} 完工件数 {}/{} 状态→COMPLETED", o.getOrderNo(), completed, total);
+            }
+        }
+
+        if (fixed == 0) {
+            item.setResult("ok");
+            item.setDescription("无异常状态订单");
+        } else {
+            item.setResult("fixed");
+            item.setDescription(String.format("已将 %d 个已完工订单标记为 COMPLETED", fixed));
+            item.setFixedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
+        item.setAffectedOrders(fixed);
         return item;
     }
 }

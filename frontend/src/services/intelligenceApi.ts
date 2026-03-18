@@ -270,6 +270,29 @@ export async function updateExecutionConfig(
   return response.data;
 }
 
+/** 自愈一键修复 */
+export async function runSelfHealingRepair(): Promise<any> {
+  const response = await api.post<ApiResult<any>>('/intelligence/self-healing/repair', {});
+  return response.data;
+}
+
+/** 召开 Agent 例会 */
+export async function holdAgentMeeting(topic: string, meetingType?: string): Promise<any> {
+  const response = await api.post<ApiResult<any>>('/intelligence/meeting/hold', {
+    topic,
+    meetingType: meetingType ?? 'decision_debate',
+  });
+  return response.data;
+}
+
+/** 获取 Agent 例会历史 */
+export async function listAgentMeetings(limit = 10): Promise<any[]> {
+  const response = await api.get<ApiResult<any[]>>('/intelligence/meeting/list', {
+    params: { limit },
+  });
+  return response.data;
+}
+
 // 导出所有方法
 export const intelligenceApi = {
   executeCommand,
@@ -288,6 +311,9 @@ export const intelligenceApi = {
   getGraphHistory,
   submitGraphFeedback,
   getGraphAbStats,
+  runSelfHealingRepair,
+  holdAgentMeeting,
+  listAgentMeetings,
 };
 
 export interface MetricsSceneStat {

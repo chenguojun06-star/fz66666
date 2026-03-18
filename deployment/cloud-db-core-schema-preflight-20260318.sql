@@ -70,6 +70,8 @@ FROM (
     UNION ALL SELECT 't_style_info', 'wash_instructions'
     UNION ALL SELECT 't_style_info', 'u_code'
     UNION ALL SELECT 't_style_info', 'fabric_composition_parts'
+    UNION ALL SELECT 't_mind_push_rule', 'notify_time_start'
+    UNION ALL SELECT 't_mind_push_rule', 'notify_time_end'
 ) expected
 LEFT JOIN INFORMATION_SCHEMA.COLUMNS actual
   ON actual.TABLE_SCHEMA = DATABASE()

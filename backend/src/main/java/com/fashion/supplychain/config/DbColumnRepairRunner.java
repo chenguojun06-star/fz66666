@@ -56,6 +56,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_material_purchase", "invoice_urls",
                     "TEXT DEFAULT NULL COMMENT '发票/单据图片URL列表(JSON数组)，用于财务留底'");
 
+                repaired += ensureColumn(conn, schema, "t_mind_push_rule", "notify_time_start",
+                    "VARCHAR(5) NOT NULL DEFAULT '08:00' COMMENT '推送开始时间 HH:mm'");
+                repaired += ensureColumn(conn, schema, "t_mind_push_rule", "notify_time_end",
+                    "VARCHAR(5) NOT NULL DEFAULT '22:00' COMMENT '推送结束时间 HH:mm'");
+
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_type",
                     "VARCHAR(32) DEFAULT NULL COMMENT '开发来源类型：SELF_DEVELOPED / SELECTION_CENTER'");
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_detail",

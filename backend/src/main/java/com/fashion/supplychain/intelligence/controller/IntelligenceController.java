@@ -169,6 +169,9 @@ public class IntelligenceController {
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
 
     @Autowired
+    private AgentMeetingOrchestrator agentMeetingOrchestrator;
+
+    @Autowired
     private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
 
     @Autowired
@@ -800,5 +803,37 @@ public class IntelligenceController {
                 "answer", result.getData(),
                 "source", "safe-advisor"
         ));
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //   自愈一键修复 + Agent例会 — v3.24 闭环补全
+    // ══════════════════════════════════════════════════════════════════
+
+    /** 自愈一键修复 — 诊断并自动修复可修复项 */
+    @PostMapping("/self-healing/repair")
+    public Result<SelfHealingResponse> selfHealingRepair() {
+        return Result.success(selfHealingOrchestrator.repair());
+    }
+
+    /** 召开Agent例会 — 多Agent结构化辩论 → 共识 + 行动项 */
+    @PostMapping("/meeting/hold")
+    public Result<com.fashion.supplychain.intelligence.entity.AgentMeeting> holdMeeting(
+            @RequestBody java.util.Map<String, String> body) {
+        String topic = body.getOrDefault("topic", "");
+        if (topic.isBlank()) {
+            return Result.fail("议题不能为空");
+        }
+        String meetingType = body.getOrDefault("meetingType", "decision_debate");
+        com.fashion.supplychain.intelligence.dto.AgentState state = new com.fashion.supplychain.intelligence.dto.AgentState();
+        state.setTenantId(UserContext.tenantId());
+        state.setScene("meeting");
+        return Result.success(agentMeetingOrchestrator.holdMeeting(meetingType, topic, state));
+    }
+
+    /** 查询历史例会记录 */
+    @GetMapping("/meeting/list")
+    public Result<java.util.List<com.fashion.supplychain.intelligence.entity.AgentMeeting>> listMeetings(
+            @RequestParam(defaultValue = "10") int limit) {
+        return Result.success(agentMeetingOrchestrator.listByTenant(UserContext.tenantId(), limit));
     }
 }

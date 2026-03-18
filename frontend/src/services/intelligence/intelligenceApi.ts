@@ -199,6 +199,20 @@ export interface SelfHealingResponse {
   items: DiagnosisItem[];
 }
 
+export interface AgentMeetingRecord {
+  id: number;
+  meetingType: string;
+  topic: string;
+  participants: string;
+  consensus: string;
+  dissent: string;
+  actionItems: string;
+  confidenceScore: number;
+  status: string;
+  durationMs: number;
+  createTime: string;
+}
+
 export interface NotificationItem {
   type: string;
   priority: string;
@@ -1089,9 +1103,21 @@ export const intelligenceApi = {
   getRhythmDna: () =>
     api.post<{ code: number; data: RhythmDnaResponse }>('/intelligence/rhythm-dna', {}),
 
-  /** ⑦ 智能异常自愈 */
+  /** ⑦ 智能异常自愈（诊断） */
   runSelfHealing: () =>
     api.post<{ code: number; data: SelfHealingResponse }>('/intelligence/self-healing', {}),
+
+  /** ⑦b 智能异常自愈 — 一键修复 */
+  runSelfHealingRepair: () =>
+    api.post<{ code: number; data: SelfHealingResponse }>('/intelligence/self-healing/repair', {}),
+
+  /** Agent例会 — 召开 */
+  holdAgentMeeting: (topic: string, meetingType?: string) =>
+    api.post<{ code: number; data: AgentMeetingRecord }>('/intelligence/meeting/hold', { topic, meetingType: meetingType ?? 'decision_debate' }),
+
+  /** Agent例会 — 历史列表 */
+  listAgentMeetings: (limit = 10) =>
+    api.get<{ code: number; data: AgentMeetingRecord[] }>(`/intelligence/meeting/list?limit=${limit}`),
 
   /** ⑧ 小程序智能提醒 */
   getSmartNotifications: () =>
