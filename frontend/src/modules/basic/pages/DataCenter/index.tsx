@@ -818,7 +818,7 @@ const DataCenter: React.FC = () => {
         footer={
           <Space>
             <Button onClick={() => { setReturnDescModalVisible(false); returnDescForm.resetFields(); }}>取消</Button>
-            <Button type="primary" danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button>
+            <Button danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button>
           </Space>
         }
       >
@@ -847,7 +847,7 @@ const DataCenter: React.FC = () => {
         footer={
           <Space>
             <Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button>
-            <Button type="primary" danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button>
+            <Button danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button>
           </Space>
         }
       >
