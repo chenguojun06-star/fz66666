@@ -1,5 +1,12 @@
 ## 2026-05-03（最新）
 
+### chore(runtime): 清理启动与任务线程噪音日志
+
+- **问题现象**：云端启动时仍会出现两类非业务故障噪音：其一是 `TenantInterceptor` 在启动任务/定时任务场景下输出 `UserContext is NULL` 警告；其二是 Spring Security 输出 `Using generated security password` 与 `UserDetailsServiceAutoConfiguration` 提示，容易被误判为安全配置故障。
+- **根本原因**：启动任务和定时任务本来就不一定运行在 HTTP 请求上下文中，`UserContext` 为空属于预期；同时项目使用的是自定义 JWT 认证链路，但没有显式提供 `UserDetailsService` Bean，导致 Spring Boot 仍触发默认用户自动配置提示。
+- **修复方案**：将 `TenantInterceptor` 的无上下文日志从 WARN 降为 DEBUG；在 `SecurityConfig` 中显式声明一个占位 `UserDetailsService` Bean，阻断 Spring Boot 默认用户与随机密码提示。
+- **对系统的帮助**：线上日志更聚焦真实故障，启动阶段不再出现误导性的安全密码提示和租户上下文告警，减少值班排障噪音。
+
 ### fix(websocket): 心跳与发送链路容错，避免断线把定时任务打成 ERROR
 
 - **问题现象**：云端日志周期性出现 `RealTimeWebSocketHandler - [WebSocket] 传输错误`，并伴随 `TaskUtils$LoggingErrorHandler - Unexpected error occurred in scheduled task`。从线程名看，后者落在定时任务线程，不是业务接口线程。

@@ -291,7 +291,7 @@ public class TenantInterceptor implements InnerInterceptor {
     private Long getCurrentTenantId() {
         UserContext ctx = UserContext.get();
         if (ctx == null) {
-            log.warn("[TenantInterceptor] UserContext is NULL - no tenant filtering");
+            log.debug("[TenantInterceptor] UserContext is NULL - skip tenant filtering for non-request context");
             return null;
         }
         Long tenantId = ctx.getTenantId();
