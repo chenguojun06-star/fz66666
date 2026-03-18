@@ -11,7 +11,7 @@ const { Title } = Typography;
 declare const __BUILD_COMMIT__: string;
 declare const __BUILD_TIME__: string;
 
-type RegisterMode = '工厂员工注册' | '工厂入驻申请';
+type RegisterMode = '工厂员工注册' | '工厂注册申请';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ const Register: React.FC = () => {
   const urlFactoryName = searchParams.get('factoryName') || '';
 
   const [mode, setMode] = useState<RegisterMode>('工厂员工注册');
-  const isApplyMode = mode === '工厂入驻申请';
+  const isApplyMode = mode === '工厂注册申请';
   // 工厂列表（用于员工注册时搜索）
   const [tenantOptions, setTenantOptions] = useState<{ value: string; label: string; tenantCode: string }[]>([]);
   const [filteredOptions, setFilteredOptions] = useState<{ value: string; label: string }[]>([]);
@@ -153,7 +153,7 @@ const Register: React.FC = () => {
             云裳智链
           </Title>
           <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
-            {isApplyMode ? '工厂入驻申请' : '工厂员工注册'}
+            {isApplyMode ? '工厂注册申请' : '工厂员工注册'}
           </p>
         </div>
 
@@ -164,7 +164,7 @@ const Register: React.FC = () => {
               className="register-mode-segmented"
               options={[
                 { label: <span className="register-mode-option-label">工厂员工注册</span>, value: '工厂员工注册' },
-                { label: <span className="register-mode-option-label">工厂入驻申请</span>, value: '工厂入驻申请' },
+                { label: <span className="register-mode-option-label">工厂注册申请</span>, value: '工厂注册申请' },
               ]}
               value={mode}
               onChange={(v) => { setMode(v as RegisterMode); form.resetFields(); }}
