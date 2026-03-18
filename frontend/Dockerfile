@@ -46,6 +46,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 # 环境变量默认值（可在微信云托管控制台覆盖）
-ENV BACKEND_URL=https://backend-226678-6-1405390085.sh.run.tcloudbase.com
+# www.webyszl.cn 已绑定后端服务（自定义域名，HTTPS 正常）
+ENV BACKEND_URL=https://www.webyszl.cn
 
 CMD ["/docker-entrypoint.sh"]

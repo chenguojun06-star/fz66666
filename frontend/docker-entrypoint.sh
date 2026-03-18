@@ -17,13 +17,14 @@ if [ -z "$BACKEND_URL" ]; then
 fi
 
 # ⚠️ 防循环代理保护：BACKEND_URL 绝对不能指向前端自身
-# 若控制台误将 BACKEND_URL 填成前端域名（如 webyszl.cn 或 frontend-226678-*），
+# 正确架构：www.webyszl.cn → 后端服务（自定义域名）
+# 若控制台误将 BACKEND_URL 填成前端容器域名（frontend-226678-*），
 # 会造成 /api/ → 自己 → /api/ → … 的死循环，全站 502。
 # 检测到后自动修正为正确的后端地址，无需人工介入。
-CORRECT_BACKEND="https://backend-226678-6-1405390085.sh.run.tcloudbase.com"
+CORRECT_BACKEND="https://www.webyszl.cn"
 case "$BACKEND_URL" in
-  *webyszl.cn*|*frontend-226678*)
-    echo "[WARNING] BACKEND_URL='${BACKEND_URL}' 指向前端域名，检测到循环代理风险！"
+  *frontend-226678*)
+    echo "[WARNING] BACKEND_URL='${BACKEND_URL}' 指向前端容器域名，检测到循环代理风险！"
     echo "[WARNING] 已自动修正为正确后端地址: ${CORRECT_BACKEND}"
     BACKEND_URL="$CORRECT_BACKEND"
     ;;

@@ -13,8 +13,8 @@
  * - 在「微信开发者工具→详情→本地设置」中勾选「不校验合法域名」
  * - 在登录页手动输入本机地址（如 http://192.168.x.x:8088）
  */
-// 生产后端地址（微信云托管，已配置）
-const DEFAULT_BASE_URL = 'https://backend-226678-6-1405390085.sh.run.tcloudbase.com';
+// 生产后端地址（自定义域名 www.webyszl.cn → 后端服务，HTTPS 已开启）
+const DEFAULT_BASE_URL = 'https://www.webyszl.cn';
 const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备用（内网 IP）
 
 /**
@@ -81,11 +81,11 @@ function getBaseUrl() {
             try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
             return isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
           }
-          // 2. Storage 里存的是前端域名（会造成循环请求）→ 强制回退到正确后端地址
-          // 原因：webyszl.cn / frontend-226678-* 是前端容器入口，不是后端，
-          // 小程序调用这些地址时会被 nginx 转发到自身，导致接口全部失败。
-          const isFrontendDomain = v.includes('frontend-226678') || v.includes('webyszl.cn');
-          if (isFrontendDomain) {
+          // 2. Storage 里存的是旧的腾讯云托管默认域名（已迁移到自定义域名）→ 更新为新地址
+          // 原因：旧地址 backend-226678-*.sh.run.tcloudbase.com 仍可用但已废弃，
+          // 直接替换为自定义域名 www.webyszl.cn，避免将来旧地址失效导致小程序崩溃。
+          const isOldCloudDomain = v.includes('backend-226678') || v.includes('frontend-226678');
+          if (isOldCloudDomain) {
             try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
             return DEFAULT_BASE_URL;
           }
