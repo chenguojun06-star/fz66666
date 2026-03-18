@@ -1,3 +1,15 @@
+## 2026-05-03（最新）
+
+### fix(db): DbColumnRepairRunner 补充 t_style_bom.size_usage_map 自愈修复（commit 8ce9c5a9）
+
+- **问题现象**：云端日志持续出现 WARN `OrderPriceFillHelper - Failed to compute BOM cost for fillQuotationUnitPrice`，每次 `/api/production/materialPurchase/list` 请求触发 3-4 次。
+- **根本原因**：`t_style_bom.size_usage_map` 列在云端 DB 缺失。Flyway 脚本 `V20260502001__add_bom_size_usage_map.sql` 采用 `PREPARE/EXECUTE` 模式，在部分云端环境未执行成功。`OrderPriceFillHelper.fillQuotationUnitPrice()` 中 `styleBomService.lambdaQuery()...list()` 会生成含全实体字段的 SELECT，触发 MySQL `Unknown column 'size_usage_map'` 异常，被 `catch` 打印 WARN 日志。
+- **排查过程**：完整调查了 `TenantInterceptor`（不抛异常）、`DataPermissionInterceptor`（context 为 null 直接 return）、`StyleBomServiceImpl`（unguarded `getSizeUsageMap()` 调用），最终定位到 `DbColumnRepairRunner` 漏掉 `size_usage_map` 列的幂等修复入口。
+- **修复方案**：在 `DbColumnRepairRunner` 已有 `image_urls`/`fabric_composition` 修复项之后，追加 `size_usage_map TEXT` 的 `ensureColumn` 调用。Spring 启动时自动幂等检测，不存在则执行 `ALTER TABLE t_style_bom ADD COLUMN size_usage_map TEXT`。
+- **对系统的帮助**：下次 pod 重启（CI/CD 部署）后，云端 DB 自动补齐 `size_usage_map` 列，BOM 成本计算 WARN 彻底消除。零业务中断，无需人工干预数据库。
+
+---
+
 ## 2026-03-18
 
 ### docs(process): 推送前数据库确认升级为 P0 铁律
