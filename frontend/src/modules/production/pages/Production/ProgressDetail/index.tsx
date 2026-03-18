@@ -14,7 +14,7 @@ import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import api, { generateRequestId, hasProcurementStage, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
-import { getWorkspaceRole, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
@@ -84,12 +84,9 @@ type ProgressDetailProps = {
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const location = useLocation();
-  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
-  const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
-  const currentUserName = useMemo(() => String(user?.name || user?.username || '').trim(), [user]);
-  const isMerchandiserWorkspace = workspaceRole === 'merchandiser';
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
@@ -140,14 +137,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     statusOptions,
     handleOrderSort, handleStatClick,
   } = useProgressFilters();
-
-  useEffect(() => {
-    if (!isMerchandiserWorkspace || !currentUserName) return;
-    setQueryParams((prev) => {
-      if (prev.merchandiser === currentUserName) return prev;
-      return { ...prev, merchandiser: currentUserName, page: 1 };
-    });
-  }, [currentUserName, isMerchandiserWorkspace, setQueryParams]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -305,25 +294,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return Math.min(100, Math.max(dbProgress, boardProgress));
   }, [boardStatsByOrder]);
 
-  // ── 用户列表（跟单员筛选）────────────────────────────────────────
-  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
-  useEffect(() => {
-    api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>(
-      '/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } }
-    ).then(r => {
-      if (r?.code === 200) setUsers(r.data.records || []);
-    }).catch(() => {});
-  }, []);
-
-  const merchandiserOptions = useMemo(() => {
-    if (isMerchandiserWorkspace && currentUserName) {
-      return [{ label: `我的订单：${currentUserName}`, value: currentUserName }];
-    }
-    return [
-      { label: '全部跟单员', value: '' },
-      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
-    ];
-  }, [currentUserName, isMerchandiserWorkspace, users]);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -696,11 +666,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     queryParams.pageSize,
     queryParams.keyword,
     queryParams.status,
-    queryParams.orgUnitId,
-    queryParams.parentOrgUnitId,
     (queryParams as any).factoryType,
     (queryParams as any).factoryName,
-    (queryParams as any).merchandiser,
     (queryParams as any).delayedOnly,
     (queryParams as any).todayOnly,
     // 使用稳定的值，null 转换为固定字符串
@@ -1185,28 +1152,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.orgUnitId
-                      ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
-                          ? `dept:${queryParams.orgUnitId}`
-                          : queryParams.orgUnitId)
-                      : ''}
-                    onChange={(value) => {
-                      if (!value) {
-                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
-                      } else if (value.startsWith('dept:')) {
-                        setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
-                      } else {
-                        setQueryParams((prev) => ({ ...prev, orgUnitId: value, parentOrgUnitId: undefined, page: 1 }));
-                      }
-                    }}
-                    placeholder="归属部门"
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 130 }}
-                    options={departmentOptions}
-                  />
-                  <Select
                     value={queryParams.factoryType || ''}
                     onChange={(value) =>
                       setQueryParams((prev) => ({
@@ -1231,17 +1176,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                       { label: '🔴 急单', value: 'urgent' },
                       { label: '普通', value: 'normal' },
                     ]}
-                  />
-                  <Select
-                    value={queryParams.merchandiser || ''}
-                    onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
-                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
-                    allowClear={!isMerchandiserWorkspace}
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 100 }}
-                    disabled={isMerchandiserWorkspace}
-                    options={merchandiserOptions}
                   />
                 </>
               )}
@@ -1516,28 +1450,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     statusOptions={statusOptions}
                   />
                   <Select
-                    value={queryParams.orgUnitId
-                      ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
-                          ? `dept:${queryParams.orgUnitId}`
-                          : queryParams.orgUnitId)
-                      : ''}
-                    onChange={(value) => {
-                      if (!value) {
-                        setQueryParams((prev) => ({ ...prev, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 }));
-                      } else if (value.startsWith('dept:')) {
-                        setQueryParams((prev) => ({ ...prev, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 }));
-                      } else {
-                        setQueryParams((prev) => ({ ...prev, orgUnitId: value, parentOrgUnitId: undefined, page: 1 }));
-                      }
-                    }}
-                    placeholder="归属部门"
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 130 }}
-                    options={departmentOptions}
-                  />
-                  <Select
                     value={queryParams.factoryType || ''}
                     onChange={(value) =>
                       setQueryParams((prev) => ({
@@ -1562,17 +1474,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                       { label: '🔴 急单', value: 'urgent' },
                       { label: '普通', value: 'normal' },
                     ]}
-                  />
-                  <Select
-                    value={queryParams.merchandiser || ''}
-                    onChange={(value) => setQueryParams((prev) => ({ ...prev, merchandiser: value || undefined, page: 1 }))}
-                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
-                    allowClear={!isMerchandiserWorkspace}
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 100 }}
-                    disabled={isMerchandiserWorkspace}
-                    options={merchandiserOptions}
                   />
                 </>
               )}

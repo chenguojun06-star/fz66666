@@ -73,9 +73,8 @@ const _FinishedInventory: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [selectedParentOrgUnitId, setSelectedParentOrgUnitId] = useState('');
   const [selectedFactoryType, setSelectedFactoryType] = useState('');
-  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
@@ -116,7 +115,6 @@ const _FinishedInventory: React.FC = () => {
           pageSize: 500,
           keyword: searchText || undefined,
           orderNo: searchText || undefined,
-          parentOrgUnitId: (selectedParentOrgUnitId.startsWith('dept:') ? selectedParentOrgUnitId.slice(5) : selectedParentOrgUnitId) || undefined,
           factoryType: selectedFactoryType || undefined,
         }
       );
@@ -134,7 +132,7 @@ const _FinishedInventory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchText, selectedParentOrgUnitId, selectedFactoryType, showSmartErrorNotice, reportSmartError]);
+  }, [searchText, selectedFactoryType, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => {
     loadData();
@@ -159,11 +157,6 @@ const _FinishedInventory: React.FC = () => {
       filtered = filtered.filter(item => item.availableQty > 0);
     } else if (statusValue === 'defect') {
       filtered = filtered.filter(item => item.defectQty > 0);
-    }
-
-    if (selectedParentOrgUnitId) {
-      const cleanId = selectedParentOrgUnitId.startsWith('dept:') ? selectedParentOrgUnitId.slice(5) : selectedParentOrgUnitId;
-      filtered = filtered.filter(item => item.parentOrgUnitId === cleanId);
     }
 
     if (selectedFactoryType) {
@@ -201,7 +194,7 @@ const _FinishedInventory: React.FC = () => {
     }
 
     return Array.from(groupMap.values());
-  }, [rawDataSource, searchText, selectedFactoryType, selectedParentOrgUnitId, statusValue]);
+  }, [rawDataSource, searchText, selectedFactoryType, statusValue]);
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -709,16 +702,6 @@ const _FinishedInventory: React.FC = () => {
                     { label: '可用库存', value: 'available' },
                     { label: '次品库存', value: 'defect' },
                   ]}
-                />
-                <Select
-                  value={selectedParentOrgUnitId}
-                  onChange={(value) => setSelectedParentOrgUnitId(value || '')}
-                  placeholder="归属部门"
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  style={{ minWidth: 130 }}
-                  options={departmentOptions}
                 />
                 <Select
                   value={selectedFactoryType}

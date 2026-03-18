@@ -80,10 +80,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [selectedParentOrgUnitId, setSelectedParentOrgUnitId] = useState('');
   const [selectedFactoryType, setSelectedFactoryType] = useState('');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: 20,
@@ -94,11 +93,10 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     orderNo: (overrides?.orderNo ?? searchOrderNo) || undefined,
     styleNo: (overrides?.styleNo ?? searchStyleNo) || undefined,
     status: (overrides?.status ?? searchStatus) || undefined,
-    parentOrgUnitId: (() => { const raw = overrides?.parentOrgUnitId ?? selectedParentOrgUnitId; return (raw ? (raw.startsWith('dept:') ? raw.slice(5) : raw) : undefined) || undefined; })(),
     factoryType: ((overrides?.factoryType ?? selectedFactoryType) || undefined) as PageParams['factoryType'],
     startDate: overrides?.startDate ?? (dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined),
     endDate: overrides?.endDate ?? (dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined),
-  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo, selectedFactoryType, selectedParentOrgUnitId]);
+  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo, selectedFactoryType]);
 
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -415,7 +413,6 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     setSearchOrderNo('');
     setSearchStyleNo('');
     setSearchStatus('');
-    setSelectedParentOrgUnitId('');
     setSelectedFactoryType('');
     setDateRange(null);
     const params: PageParams = { page: 1, pageSize: 20 };
@@ -597,21 +594,6 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   { label: '生产中', value: 'IN_PRODUCTION' },
                   { label: '已完成', value: 'COMPLETED' },
                 ]}
-              />
-              <Select
-                value={selectedParentOrgUnitId}
-                onChange={(value) => {
-                  const nextValue = value || '';
-                  setSelectedParentOrgUnitId(nextValue);
-                  const cleanId = nextValue.startsWith('dept:') ? nextValue.slice(5) : nextValue;
-                  handleSearch({ parentOrgUnitId: cleanId || undefined });
-                }}
-                placeholder="生产方"
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                style={{ minWidth: 130 }}
-                options={departmentOptions}
               />
               <Select
                 value={selectedFactoryType}

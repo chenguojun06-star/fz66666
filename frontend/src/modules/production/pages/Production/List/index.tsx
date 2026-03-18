@@ -20,7 +20,7 @@ import api, {
   isOrderFrozenByStatus,
   isOrderTerminal,
 } from '@/utils/api';
-import { getWorkspaceRole, isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { Dayjs } from 'dayjs';
 import '../../../styles.css';
 import dayjs from 'dayjs';
@@ -75,12 +75,9 @@ const ProductionList: React.FC = () => {
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
-  const workspaceRole = useMemo(() => getWorkspaceRole(user), [user]);
-  const currentUserName = useMemo(() => String(user?.name || user?.username || '').trim(), [user]);
-  const isMerchandiserWorkspace = workspaceRole === 'merchandiser';
   const navigate = useNavigate();
   const location = useLocation();
-  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -159,7 +156,7 @@ const ProductionList: React.FC = () => {
   }, [shareModal.record, message]);
 
   // ===== 查询参数 =====
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, includeScrapped: true });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, includeScrapped: true, excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [sortField, setSortField] = useState<string>('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -167,34 +164,6 @@ const ProductionList: React.FC = () => {
     setSortField(field);
     setSortOrder(order);
   };
-  // ===== 用户列表（跟单员筛选用）=====
-  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
-  useEffect(() => {
-    api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>(
-      '/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } }
-    ).then(r => {
-      if (r?.code === 200) setUsers(r.data.records || []);
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!isMerchandiserWorkspace || !currentUserName) return;
-    setQueryParams((prev) => {
-      if (prev.merchandiser === currentUserName) return prev;
-      return { ...prev, merchandiser: currentUserName, page: 1 };
-    });
-  }, [currentUserName, isMerchandiserWorkspace]);
-
-  const merchandiserOptions = useMemo(() => {
-    if (isMerchandiserWorkspace && currentUserName) {
-      return [{ label: `我的订单：${currentUserName}`, value: currentUserName }];
-    }
-    return [
-      { label: '全部跟单员', value: '' },
-      ...users.filter(u => u.name || u.username).map(u => ({ label: u.name || u.username, value: u.name || u.username })),
-    ];
-  }, [currentUserName, isMerchandiserWorkspace, users]);
-
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -209,7 +178,7 @@ const ProductionList: React.FC = () => {
     setViewModeState(mode);
   };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
-  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all');
+  const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
@@ -375,7 +344,7 @@ const ProductionList: React.FC = () => {
       return;
     }
 
-    setActiveStatFilter('all');
+    setActiveStatFilter('production');
     setShowDelayedOnly(false);
     setSmartQueueFilter('all');
     setQueryParams((prev) => ({
@@ -384,8 +353,9 @@ const ProductionList: React.FC = () => {
       status: '',
       delayedOnly: undefined,
       todayOnly: undefined,
+      excludeTerminal: true,
       keyword: targetOrderNo || prev.keyword,
-    } as any));
+    }));
     triggerOrderFocus(targetOrder);
   }, [message, navigate, resolveAnomalyTargetOrder, triggerOrderFocus]);
 
@@ -624,17 +594,17 @@ const ProductionList: React.FC = () => {
   });
 
   // 点击统计卡片筛选
-  const handleStatClick = (type: 'all' | 'delayed' | 'today') => {
+  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
     setActiveStatFilter(type);
-    if (type === 'all') {
+    if (type === 'production') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 } as any);
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 });
     } else if (type === 'delayed') {
       setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 } as any);
+      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 });
     } else if (type === 'today') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 } as any);
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', excludeTerminal: true, page: 1 });
     }
   };
 
@@ -720,12 +690,12 @@ const ProductionList: React.FC = () => {
             activeKey={activeStatFilter}
             cards={[
               {
-                key: 'all',
+                key: 'production',
                 items: [
-                  { label: '订单个数', value: globalStats.totalOrders, unit: '个', color: 'var(--color-primary)' },
-                  { label: '总数量', value: globalStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
+                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                  { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
                 ],
-                onClick: () => handleStatClick('all'),
+                onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
                 activeBg: 'rgba(45, 127, 249, 0.1)',
               },
@@ -831,25 +801,16 @@ const ProductionList: React.FC = () => {
                     dateValue={dateRange}
                     onDateChange={setDateRange}
                     statusValue={queryParams.status || ''}
-                    onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                    onStatusChange={(value) => setQueryParams({ ...queryParams, status: value || undefined, includeScrapped: value === 'scrapped' ? true : queryParams.includeScrapped, excludeTerminal: value ? undefined : true, page: 1 })}
                     statusOptions={[
                       { label: '全部', value: '' },
                       { label: '待生产', value: 'pending' },
                       { label: '生产中', value: 'production' },
                       { label: '已完成', value: 'completed' },
+                      { label: '已报废', value: 'scrapped' },
                       { label: '已逾期', value: 'delayed' },
                       { label: '已取消', value: 'cancelled' },
                     ]}
-                  />
-                  <Select
-                    value={queryParams.orgUnitId || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, orgUnitId: value || undefined, parentOrgUnitId: undefined, page: 1 })}
-                    placeholder="归属部门"
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 130 }}
-                    options={departmentOptions}
                   />
                   <Select
                     value={queryParams.factoryType || ''}
@@ -888,17 +849,6 @@ const ProductionList: React.FC = () => {
                       { label: '首单', value: 'FIRST' },
                       { label: '翻单', value: 'REORDER' },
                     ]}
-                  />
-                  <Select
-                    value={queryParams.merchandiser || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, merchandiser: value || undefined, page: 1 })}
-                    placeholder={isMerchandiserWorkspace ? '当前跟单员' : '跟单员'}
-                    allowClear={!isMerchandiserWorkspace}
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ minWidth: 100 }}
-                    disabled={isMerchandiserWorkspace}
-                    options={merchandiserOptions}
                   />
                 </>
               )}

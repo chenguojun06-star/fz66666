@@ -17,7 +17,7 @@ interface SearchFormProps {
 
 const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, onSearch, extra }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const { departmentOptions, factoryTypeOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
   const [warehouseOptions, setWarehouseOptions] = useState<{ label: string; value: string }[]>([
     { label: 'A仓', value: 'A仓' }, { label: 'B仓', value: 'B仓' },
   ]);
@@ -62,29 +62,6 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
                 { label: '全部', value: '' },
                 ...warehouseOptions,
               ]}
-            />
-            <Select
-              value={queryParams.orgUnitId
-                ? (departmentOptions.some(o => o.value === `dept:${queryParams.orgUnitId}`)
-                    ? `dept:${queryParams.orgUnitId}`
-                    : queryParams.orgUnitId)
-                : ''}
-              onChange={(value) => {
-                if (!value) {
-                  setQueryParams({ ...queryParams, parentOrgUnitId: undefined, orgUnitId: undefined, page: 1 });
-                } else if (value.startsWith('dept:')) {
-                  setQueryParams({ ...queryParams, orgUnitId: value.slice(5), parentOrgUnitId: undefined, page: 1 });
-                } else {
-                  setQueryParams({ ...queryParams, orgUnitId: value, parentOrgUnitId: undefined, page: 1 });
-                }
-                onSearch();
-              }}
-              placeholder="归属部门"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              style={{ minWidth: 130 }}
-              options={departmentOptions}
             />
             <Select
               value={queryParams.factoryType || ''}
