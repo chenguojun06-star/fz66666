@@ -80,13 +80,18 @@ public class MaterialPurchaseOrchestratorHelper {
             }
         }
 
-        Map<String, Integer> orderQuantityMap = loadOrderQuantities(orderIds);
-        Map<String, Integer> patternQuantityMap = loadPatternQuantities(patternProductionIds);
-        Map<String, String> orderColorMap = loadOrderColors(orderIds);
-        Map<String, String> patternColorMap = loadPatternColors(patternProductionIds);
-        Map<String, String> orderFactoryNameMap = loadOrderFactoryNames(orderIds);
-        Map<String, String> orderFactoryTypeMap = loadOrderFactoryTypes(orderIds);
-        Map<String, String> orderBizTypeMap = loadOrderBizTypes(orderIds);
+        // 一次查询获取所有订单字段（原来是 5 次独立 listByIds 调用，现合并为 1 次）
+        Map<String, Integer> orderQuantityMap = new HashMap<>();
+        Map<String, String> orderColorMap = new HashMap<>();
+        Map<String, String> orderFactoryNameMap = new HashMap<>();
+        Map<String, String> orderFactoryTypeMap = new HashMap<>();
+        Map<String, String> orderBizTypeMap = new HashMap<>();
+        loadOrderFields(orderIds, orderQuantityMap, orderColorMap, orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap);
+
+        // 一次查询获取所有样版字段（原来是 2 次独立调用，现合并为 1 次）
+        Map<String, Integer> patternQuantityMap = new HashMap<>();
+        Map<String, String> patternColorMap = new HashMap<>();
+        loadPatternFields(patternProductionIds, patternQuantityMap, patternColorMap);
 
         List<Map<String, Object>> enrichedRecords = records.stream()
             .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap, orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap))
@@ -95,118 +100,49 @@ public class MaterialPurchaseOrchestratorHelper {
         return buildPageResult(enrichedRecords, page);
     }
 
-    private Map<String, Integer> loadOrderQuantities(Set<String> orderIds) {
-        Map<String, Integer> map = new HashMap<>();
-        if (orderIds.isEmpty()) return map;
+    /**
+     * 一次查询获取所有需要的订单字段，替代原来 5 次独立 listByIds 调用。
+     * 云端 DB 每次 RTT ~50ms，合并后节省约 200ms/请求。
+     */
+    private void loadOrderFields(Set<String> orderIds,
+            Map<String, Integer> quantityMap, Map<String, String> colorMap,
+            Map<String, String> factoryNameMap, Map<String, String> factoryTypeMap,
+            Map<String, String> bizTypeMap) {
+        if (orderIds.isEmpty()) return;
         try {
             List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
             for (ProductionOrder order : orders) {
-                if (order != null && StringUtils.hasText(order.getId())) {
-                    map.put(order.getId(), order.getOrderQuantity());
-                }
+                if (order == null || !StringUtils.hasText(order.getId())) continue;
+                String id = order.getId();
+                quantityMap.put(id, order.getOrderQuantity());
+                colorMap.put(id, order.getColor());
+                factoryNameMap.put(id, order.getFactoryName());
+                factoryTypeMap.put(id, order.getFactoryType());
+                bizTypeMap.put(id, order.getOrderBizType());
             }
         } catch (Exception e) {
-            log.warn("Failed to load order quantities", e);
+            log.warn("Failed to load order fields for purchase enrichment", e);
         }
-        return map;
     }
 
-    private Map<String, Integer> loadPatternQuantities(Set<String> patternProductionIds) {
-        Map<String, Integer> map = new HashMap<>();
-        if (patternProductionIds.isEmpty()) return map;
+    /**
+     * 一次查询获取所有需要的样版字段，替代原来 2 次独立 listByIds 调用。
+     */
+    private void loadPatternFields(Set<String> patternProductionIds,
+            Map<String, Integer> quantityMap, Map<String, String> colorMap) {
+        if (patternProductionIds.isEmpty()) return;
         try {
             List<PatternProduction> patterns = patternProductionService.listByIds(patternProductionIds);
             for (PatternProduction pattern : patterns) {
-                if (pattern != null && StringUtils.hasText(pattern.getId())) {
-                    map.put(pattern.getId(), pattern.getQuantity());
-                }
+                if (pattern == null || !StringUtils.hasText(pattern.getId())) continue;
+                String id = pattern.getId();
+                quantityMap.put(id, pattern.getQuantity());
+                colorMap.put(id, pattern.getColor());
             }
         } catch (Exception e) {
-            log.warn("Failed to load pattern production quantities", e);
+            log.warn("Failed to load pattern production fields for purchase enrichment", e);
         }
-        return map;
     }
-
-    private Map<String, String> loadOrderColors(Set<String> orderIds) {
-        Map<String, String> map = new HashMap<>();
-        if (orderIds.isEmpty()) return map;
-        try {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
-            for (ProductionOrder order : orders) {
-                if (order != null && StringUtils.hasText(order.getId())) {
-                    map.put(order.getId(), order.getColor());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to load order colors", e);
-        }
-        return map;
-    }
-
-    private Map<String, String> loadPatternColors(Set<String> patternProductionIds) {
-        Map<String, String> map = new HashMap<>();
-        if (patternProductionIds.isEmpty()) return map;
-        try {
-            List<PatternProduction> patterns = patternProductionService.listByIds(patternProductionIds);
-            for (PatternProduction pattern : patterns) {
-                if (pattern != null && StringUtils.hasText(pattern.getId())) {
-                    map.put(pattern.getId(), pattern.getColor());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to load pattern production colors", e);
-        }
-        return map;
-    }
-
-    private Map<String, String> loadOrderFactoryNames(Set<String> orderIds) {
-        Map<String, String> map = new HashMap<>();
-        if (orderIds.isEmpty()) return map;
-        try {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
-            for (ProductionOrder order : orders) {
-                if (order != null && StringUtils.hasText(order.getId())) {
-                    map.put(order.getId(), order.getFactoryName());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to load order factory names", e);
-        }
-        return map;
-    }
-
-    private Map<String, String> loadOrderFactoryTypes(Set<String> orderIds) {
-        Map<String, String> map = new HashMap<>();
-        if (orderIds.isEmpty()) return map;
-        try {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
-            for (ProductionOrder order : orders) {
-                if (order != null && StringUtils.hasText(order.getId())) {
-                    map.put(order.getId(), order.getFactoryType());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to load order factory types", e);
-        }
-        return map;
-    }
-
-    private Map<String, String> loadOrderBizTypes(Set<String> orderIds) {
-        Map<String, String> map = new HashMap<>();
-        if (orderIds.isEmpty()) return map;
-        try {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
-            for (ProductionOrder order : orders) {
-                if (order != null && StringUtils.hasText(order.getId())) {
-                    map.put(order.getId(), order.getOrderBizType());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to load order biz types", e);
-        }
-        return map;
-    }
-
     private Map<String, Object> enrichRecord(MaterialPurchase record,
             Map<String, Integer> orderQuantityMap, Map<String, Integer> patternQuantityMap,
             Map<String, String> orderColorMap, Map<String, String> patternColorMap,
