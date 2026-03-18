@@ -114,7 +114,6 @@ get_endpoints = [
     ("/api/production/cutting-task/list", "裁剪任务列表"),
     ("/api/production/cutting-task/stats", "裁剪任务统计"),
     ("/api/production/cutting/list", "裁剪菲号列表"),
-    ("/api/production/cutting/summary", "裁剪汇总"),
     ("/api/production/scan/list", "扫码记录列表"),
     ("/api/dashboard", "Dashboard首页"),
     ("/api/dashboard/top-stats", "TopStats"),
@@ -133,6 +132,16 @@ for path, name in get_endpoints:
         log("PASS", f"GET {name}", "HTTP 200")
     else:
         log("FAIL", f"GET {name}", f"HTTP {code}")
+
+summary_order_no = mysql_query(
+    "SELECT COALESCE((SELECT order_no FROM t_production_order WHERE order_no IS NOT NULL AND order_no<>'' ORDER BY COALESCE(update_time, create_time) DESC LIMIT 1),'SMOKE-INT-20260318')"
+)
+summary_order_no = (summary_order_no or "SMOKE-INT-20260318").strip()
+code, _ = http_get(f"/api/production/cutting/summary?orderNo={summary_order_no}", TOKEN)
+if code == 200:
+    log("PASS", "GET 裁剪汇总", f"HTTP 200 (orderNo={summary_order_no})")
+else:
+    log("FAIL", "GET 裁剪汇总", f"HTTP {code} (orderNo={summary_order_no})")
 
 # ===== 4. Bug Regression =====
 print("\n--- 4. 已修复BUG回归验证 ---")

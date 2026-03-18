@@ -283,6 +283,30 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--stage-accent) 45%, transparent), 0 0 18px var(--stage-glow);
 }
 
+/* 停滞节点 — 红色告警 */
+.c-stage-card.stagnant {
+  border-color: rgba(255,65,54,0.5);
+  background: color-mix(in srgb, #ff4136 7%, rgba(9,19,36,0.97));
+}
+.c-stage-card.stagnant:hover,
+.c-stage-card.stagnant.active {
+  border-color: rgba(255,65,54,0.75);
+  box-shadow: 0 0 0 1px rgba(255,65,54,0.4), 0 0 18px rgba(255,65,54,0.22);
+}
+.c-stage-card.stagnant .c-stage-card-main {
+  color: #ff6b5a;
+  text-shadow: 0 0 14px rgba(255,65,54,0.42);
+}
+.c-stage-stagnant-bar {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ff5a4e;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  position: relative;
+  z-index: 1;
+}
+
 .c-stage-card::after {
   content: '';
   position: absolute;
@@ -406,9 +430,9 @@
   border: 1px solid rgba(255,255,255,0.05);
   background: rgba(14,28,48,0.92);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   display: grid;
-  grid-template-columns: 1.2fr 1fr auto auto;
+  grid-template-columns: 1.4fr 0.8fr 0.9fr auto auto auto auto auto;
   gap: 10px;
   align-items: center;
   text-align: left;
@@ -422,16 +446,71 @@
   background: color-mix(in srgb, var(--stage-accent) 9%, rgba(255,255,255,0.02));
 }
 
+.c-stage-order-row.stagnant {
+  border-color: rgba(255,65,54,0.3);
+  background: rgba(255,65,54,0.06);
+}
+
+.c-stage-order-no {
+  font-size: 13px;
+  font-weight: 700;
+  color: #a9c4da;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-stage-order-style {
+  font-size: 12px;
+  color: #8ab0c8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-stage-order-date {
+  font-size: 11px;
+  color: #6a8fa8;
+  white-space: nowrap;
+}
+
+.c-stage-order-factory {
+  font-size: 12px;
+  color: #7f9db4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-stage-order-qty {
+  font-size: 12px;
+  color: #6fb3a0;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.c-stage-order-progress {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--stage-accent);
+  white-space: nowrap;
+}
+
+.c-stagnant-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff4d40;
+  border: 1px solid rgba(255,65,54,0.4);
+  border-radius: 4px;
+  padding: 0 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .c-stage-order-no {
   font-size: 14px;
   font-weight: 700;
   color: #a9c4da;
-}
-
-.c-stage-order-factory,
-.c-stage-order-qty {
-  font-size: 13px;
-  color: #7f9db4;
 }
 
 .c-stage-order-progress {

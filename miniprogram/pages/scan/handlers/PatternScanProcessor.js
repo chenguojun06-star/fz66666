@@ -130,7 +130,7 @@ function normalizeManualType(manualScanType) {
   return typeMap[manualScanType] || String(manualScanType || '').toUpperCase();
 }
 
-function buildPatternOperationOptions({ patternDetail, processConfig, scanRecords, manualScanType }) {
+function buildPatternOperationOptions({ patternDetail, processConfig: _processConfig, scanRecords, manualScanType }) {
   const status = String(patternDetail?.status || '').toUpperCase();
   const reviewStatus = String(patternDetail?.reviewStatus || '').toUpperCase();
   const reviewResult = String(patternDetail?.reviewResult || '').toUpperCase();

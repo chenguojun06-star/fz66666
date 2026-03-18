@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { UpOutlined, DownOutlined } from '@ant-design/icons';
 import { Empty } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 import type { ProductionOrder } from '@/types/production';
 import { stageAliasMap, tailProcessKeywords } from '@/utils/productionStage';
+import { useProductionBoardStore } from '@/stores/productionBoardStore';
 
 type StageKey = 'procurement' | 'cutting' | 'secondaryProcess' | 'sewing' | 'tailProcess' | 'warehousing';
 
@@ -39,6 +41,16 @@ const STAGE_INDEX: Record<StageKey, number> = {
   sewing: 3,
   tailProcess: 4,
   warehousing: 5,
+};
+
+const STAGNANT_HOURS = 48; // 超过48小时视为停滞
+const fmtDate = (d?: string) => (d ? d.slice(5, 10) : '--');
+const fmtStagnant = (hours: number) => {
+  const d = Math.floor(hours / 24);
+  const h = Math.floor(hours % 24);
+  if (d === 0) return `${h}小时`;
+  if (h === 0) return `${d}天`;
+  return `${d}天${h}小时`;
 };
 
 const toNumber = (value: unknown) => Number(value) || 0;
@@ -149,6 +161,7 @@ interface StageCapsulePanelProps {
 
 const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
   const navigate = useNavigate();
+  const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem('stage_capsule_collapsed') === 'true'; } catch { return false; }
   });
@@ -183,6 +196,47 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
       };
     });
   }, [orders]);
+
+  const bucketStagnantMap = useMemo<Map<StageKey, number>>(() => {
+    const now = dayjs();
+    const result = new Map<StageKey, number>();
+    for (const bucket of buckets) {
+      let maxTime = '';
+      let hasTimes = false;
+      for (const order of bucket.orders) {
+        const timeMap = boardTimesByOrder[String(order.id ?? '')] ?? {};
+        const times = Object.values(timeMap).filter(Boolean);
+        if (times.length > 0) {
+          hasTimes = true;
+          const latest = times.reduce((a, b) => (a > b ? a : b));
+          if (latest > maxTime) maxTime = latest;
+        }
+      }
+      if (hasTimes && maxTime) {
+        const hours = now.diff(dayjs(maxTime), 'hour');
+        if (hours >= STAGNANT_HOURS) result.set(bucket.key, hours);
+      }
+    }
+    return result;
+  }, [buckets, boardTimesByOrder]);
+
+  const orderStagnantMap = useMemo<Map<string, number>>(() => {
+    const now = dayjs();
+    const result = new Map<string, number>();
+    for (const bucket of buckets) {
+      for (const order of bucket.orders) {
+        const key = String(order.id ?? '');
+        if (!key) continue;
+        const timeMap = boardTimesByOrder[key] ?? {};
+        const times = Object.values(timeMap).filter(Boolean);
+        if (times.length === 0) continue;
+        const latest = times.reduce((a, b) => (a > b ? a : b));
+        const hours = now.diff(dayjs(latest), 'hour');
+        if (hours >= STAGNANT_HOURS) result.set(key, hours);
+      }
+    }
+    return result;
+  }, [buckets, boardTimesByOrder]);
 
   const [activeStage, setActiveStage] = useState<StageKey | null>('procurement');
 
@@ -230,7 +284,7 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
               <button
                 key={item.key}
                 type="button"
-                className={`c-stage-card${isActive ? ' active' : ''}`}
+                className={`c-stage-card${isActive ? ' active' : ''}${bucketStagnantMap.has(item.key) ? ' stagnant' : ''}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   setActiveStage((prev) => prev === item.key ? null : item.key);
@@ -254,6 +308,9 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
                     <span className="c-stage-empty">暂无订单</span>
                   )}
                 </div>
+                {bucketStagnantMap.has(item.key) && (
+                  <div className="c-stage-stagnant-bar">⏸ 停滞 {fmtStagnant(bucketStagnantMap.get(item.key)!)}</div>
+                )}
               </button>
             );
           })}
@@ -283,13 +340,19 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
                 <button
                   key={String(order.id || order.orderNo)}
                   type="button"
-                  className="c-stage-order-row"
+                  className={`c-stage-order-row${orderStagnantMap.has(String(order.id ?? '')) ? ' stagnant' : ''}`}
                   onClick={() => openOrders(selectedBucket.orders, selectedBucket.focusNode, order)}
                 >
                   <span className="c-stage-order-no">{order.orderNo}</span>
-                  <span className="c-stage-order-factory">{order.factoryName || '未分配工厂'}</span>
-                  <span className="c-stage-order-qty">{toNumber(order.orderQuantity).toLocaleString()}件</span>
+                  <span className="c-stage-order-style">{order.styleNo || '--'}</span>
+                  <span className="c-stage-order-factory">{order.factoryName || '--'}</span>
+                  <span className="c-stage-order-qty">{order.orderQuantity ?? order.cuttingQuantity ?? '--'}件</span>
+                  <span className="c-stage-order-date">下单 {fmtDate(order.createTime)}</span>
+                  <span className="c-stage-order-date">交期 {fmtDate(order.plannedEndDate)}</span>
                   <span className="c-stage-order-progress">{toNumber(order.productionProgress)}%</span>
+                  {orderStagnantMap.has(String(order.id ?? '')) && (
+                    <span className="c-stagnant-badge">⏸{fmtStagnant(orderStagnantMap.get(String(order.id ?? ''))!)}</span>
+                  )}
                 </button>
               ))}
             </div>
