@@ -1,5 +1,28 @@
 ## 2026-05-03（最新）
 
+### feat(intelligence): 补齐4个AI Agent工具 + ExecutionEngine双通道注册
+
+- **问题现象**：系统审计发现4个高价值操作未接入小云AI面板——撤回扫码记录、创建裁剪单、修改订单核心业务字段、工资结算审批。用户必须切到PC端手动操作，AI"小云"无法执行。
+- **修复方案**：新增4个独立AgentTool（`@Component`自动发现，无需修改AiAgentOrchestrator），同时在ExecutionEngine注册4条新命令，实现Chat路径（PC端）和通知路径（手机端）双通道对齐。
+- **新增文件**：
+  - `ScanUndoTool.java`（tool_scan_undo）— 撤回扫码记录，支持recordId/scanCode两种定位
+  - `CuttingTaskTool.java`（tool_cutting_task_create）— AI创建裁剪单
+  - `OrderEditTool.java`（tool_order_edit）— 修改订单交期/客户/工厂/紧急度/备注
+  - `PayrollApproveTool.java`（tool_payroll_approve）— 工资结算审批/作废
+- **修改文件**：PayrollSettlementOrchestrator（新增approve方法）、ExecutionEngineOrchestrator（+4 case）、CommandExecutorHelper（+4方法）
+- **对系统的帮助**：AI全局工具总数 17→21，小云AI面板现在可以执行系统所有核心操作，手机端与PC端能力完全对齐。
+
+---
+
+## 2026-05-03
+
+### fix(schema): 补齐 mind-push 推送时段缺列防线，避免 notify_time_start 缺失再触发 500
+
+- **问题现象**：云端日志出现 `Unknown column 'notify_time_start' in 'field list'`，说明应用代码已经开始读取 `MindPushRule.notifyTimeStart/notifyTimeEnd`，但生产库 `t_mind_push_rule` 仍有旧环境缺少这两列。
+- **根本原因**：`t_mind_push_rule` 的 `notify_time_start` / `notify_time_end` 属于历史补丁列，部分云端库未完整吃到相关 Flyway，导致一旦查询/保存智能推送时段配置就直接报 SQLSyntaxErrorException。
+- **修复方案**：将 `t_mind_push_rule.notify_time_start` / `notify_time_end` 纳入 `CoreSchemaPreflightChecker` 和 `deployment/cloud-db-core-schema-preflight-20260318.sql`；同时在 `DbColumnRepairRunner` 中增加这两列的幂等自愈，确保本地或缺迁移环境启动时也能自动补齐。
+- **对系统的帮助**：后续不再需要等到线上接口命中才发现缺列，启动阶段和发版前体检就能直接暴露并补齐 mind-push 推送时段列。
+
 ### chore(observability): 性能监控按方法分级阈值，减少 AI 与重查询误报噪音
 
 - **问题现象**：云端日志持续出现 `AiAdvisorService.chat(..)`、`AiAdvisorService.getDailyAdvice(..)`、`RedisService.deleteByPattern(..)`、`ProductionOrderQueryService.queryPage(..)` 的大量 `慢方法警告`。这些调用并非异常，主要是外部 AI 网络调用、批量 Redis SCAN 删除和订单列表多段填充逻辑被统一的 1000ms 阈值打成 WARN，导致日志信噪比过低。
