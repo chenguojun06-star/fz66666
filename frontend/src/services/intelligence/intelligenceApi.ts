@@ -1173,6 +1173,14 @@ export const intelligenceApi = {
       { timeout: 90000 },
     ),
 
+  /** SafeAdvisor — RAG 增强问答（知识库召回 + DeepSeek 推理，精度更高） */
+  safeAdvisorAnalyze: (question: string) =>
+    api.post<{ answer: string; source: string }>(
+      '/intelligence/safe-advisor/analyze',
+      { question },
+      { timeout: 90000 },
+    ),
+
   /** AI顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
   aiAdvisorChatStream: (
     question: string,

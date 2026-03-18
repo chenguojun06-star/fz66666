@@ -207,6 +207,9 @@ public class IntelligenceController {
     @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
+    @Autowired
+    private SafeAdvisorOrchestrator safeAdvisorOrchestrator;
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {
@@ -777,5 +780,25 @@ public class IntelligenceController {
     @PostMapping("/voice/command")
     public Result<VoiceCommandResponse> voiceCommand(@RequestBody VoiceCommandRequest req) {
         return Result.success(voiceCommandOrchestrator.processVoice(req));
+    }
+
+    /** SafeAdvisor — RAG 增强问答（知识库召回 + DeepSeek 推理） */
+    @PostMapping("/safe-advisor/analyze")
+    public Result<?> safeAdvisorAnalyze(@RequestBody java.util.Map<String, String> body) {
+        String question = body.getOrDefault("question", "");
+        if (question == null || question.isBlank()) {
+            return Result.fail("问题不能为空");
+        }
+        Result<String> result = safeAdvisorOrchestrator.analyzeAndSuggest(question);
+        if (!Integer.valueOf(200).equals(result.getCode())) {
+            return Result.success(java.util.Map.of(
+                    "answer", result.getMessage(),
+                    "source", "error"
+            ));
+        }
+        return Result.success(java.util.Map.of(
+                "answer", result.getData(),
+                "source", "safe-advisor"
+        ));
     }
 }

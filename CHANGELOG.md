@@ -1,4 +1,74 @@
+## 2026-05-08
+
+### feat(intelligence): 知识库扩充 50 → 70 条 + SafeAdvisor RAG 增强问答端点
+
+**知识库扩充（V20260508001，20 条新记录）**
+
+- 新增 `backend/src/main/resources/db/migration/V20260508001__knowledge_base_expansion_50_to_70.sql`，共插入 20 条公共知识（`tenant_id = NULL`），使用 `INSERT IGNORE` 保证幂等。
+- 新增记录分类：
+  - **FAQ（5条）**：工人工资结算规则（公式/查询/不可撤回）、财务对账单审批流程、多工厂协作订单管理（产能雷达）、高效使用 AI 技巧、账号/权限管理SOP
+  - **SOP（2条）**：新款开发全流程（D-60到完工6阶段）、供应商评估与准入管理（打样/评分/淘汰）
+  - **系统指南（4条）**：财务月度经营汇总报表、CRM客户管理功能（新建/跟单/信用）、系统通知与提醒配置、AI日志监控与配额管理
+  - **月末流程（1条）**：月末库存盘点（盘亏/盘盈/系统操作）
+  - **专业术语（8条）**：CMT代工、OEM vs ODM、MOQ最小起订量、T&A时间行动计划、L/C信用证、PP陪样/尾样区别、尾货处理、QC检验标准（IQC/IPQC/FQC/OQC/AQL）
+- 对系统帮助：AI 问答的知识覆盖从 50 条扩展到 70 条，补齐工资、财务、供应商管理、国际贸易等高频误答领域，提升 AI 顾问在复杂业务场景的准确率。
+
+**SafeAdvisor RAG 增强问答（新端点，不影响原有 /ai-advisor/chat）**
+
+- 新增 `SafeAdvisorOrchestrator.java`（intelligence/orchestration 包），实现"先检索知识库再调用LLM"的 RAG 增强问答模式：
+  1. **配额校验**：`AiAdvisorService.checkAndConsumeQuota()` 检查当日 AI 调用次数
+  2. **知识库检索**：`KnowledgeSearchTool.execute()` 向量+关键词混合召回（支持 Cohere 精排），召回失败静默降级
+  3. **提示词增强**：将知识库摘要注入用户问题，指引 LLM 优先引用规范描述
+  4. **Agent 执行**：`AiAgentOrchestrator.executeAgent()` 生成最终回答
+- 新增控制器端点 `POST /api/intelligence/safe-advisor/analyze`（`IntelligenceController.java`），与 `/ai-advisor/chat` 并列运行，原有端点代码零修改。
+- 新增前端 API 方法 `intelligenceApi.safeAdvisorAnalyze(question)（intelligenceApi.ts`）。
+- 对系统帮助：
+  - ✅ 回答准确率显著提升：LLM 生成前注入领域知识，减少"凭空编造"的幻觉风险
+  - ✅ 零破坏性：原 `/ai-advisor/chat`、SSE 流式端点、所有现有调用均完全不变
+  - ✅ 故障降级：知识库检索异常时自动回退到纯 LLM 模式，保证可用性
+
+**编译验证**：`mvn clean compile -q` → BUILD SUCCESS；`npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-03-18
+
+### docs(process): 推送前数据库确认升级为 P0 铁律
+
+- 已将“未确认数据库即 push”正式写入手册 P0 规则：凡是涉及 Entity、Flyway、SQL、表结构的改动，必须先确认本地与云端 schema，再允许 push。
+- 已同步强化 [ .github/copilot-instructions.md ](.github/copilot-instructions.md) 中的“推送前强制三步验证”：第三步数据库检查现明确要求 push 前先跑核心 schema 体检，结果不为空禁止继续推送。
+- 新增 `scripts/pre-push-checklist.sh`：统一串联 `git status`、`git diff --stat`、后端编译、前端类型检查，并在检测到 DB 敏感改动时强制要求显式确认 schema 已核对。
+- 已进一步明确执行责任：上述编译、类型检查、git 状态核对、schema preflight 默认由 AI/代理主动完成；只有必须在云端控制台执行的 SQL 才要求用户介入。
+- 对系统的帮助：把“线下没确认 schema 就先推仓库，等线上炸了再补库”的错误顺序改成“先确认数据库，再提交再推送”的硬约束。
+
+### feat(ops): 云端核心表一键体检 + 启动只读 schema 预检
+
+- 新增 [deployment/cloud-db-core-schema-preflight-20260318.sql](deployment/cloud-db-core-schema-preflight-20260318.sql)，覆盖 `t_material_purchase`、`t_production_order`、`t_pattern_production`、`t_factory`、`t_style_info` 五张高风险核心表；执行结果为空即表示当前核心缺列为 0。
+- 新增只读启动预检器 `CoreSchemaPreflightChecker`：应用启动时会检查生产/采购/打版/款式核心缺列，并在日志中输出缺列摘要；该检查只读 `INFORMATION_SCHEMA`，不自动改库、不把服务判定为 down。
+- 新增配置项 `fashion.db.schema-preflight-enabled`，默认开启；如特殊场景需要可通过环境变量 `FASHION_DB_SCHEMA_PREFLIGHT_ENABLED=false` 临时关闭。
+- 对系统的帮助：把“页面 500 后才发现少列”的被动排障，前移为“启动即告警 + 发布前一键体检”的主动检查，显著降低同类 schema drift 反复救火成本。
+
+### feat(intelligence): AI 建单升级为正式完整下单链路
+
+- 将 AI 建单工具从“轻量草稿单”升级为“正式完整建单”：AI 现在不再直接绕过编排层写一个待补全订单，而是走生产订单正式创建链路。
+- AI 建单现支持完整订单关键字段：款号/款名匹配、加工厂或内部生产组解析、颜色/尺码/数量明细、多行订单明细、计划开始时间、计划完成时间、急单等级、单型、下单类型、跟单员、纸样师、公司/客户、备注。
+- AI 建单会自动补齐正式订单必需内容：订单号、订单明细中的物料价格来源元数据、工序工作流 `progressWorkflowJson`。有模板时优先使用真实工序模板，无模板时兜底默认节点，避免再创建“只有总数量没有生产工作流”的残缺订单。
+- AI 建单缺参时不再创建残缺订单：若缺少款式、加工厂、颜色尺码数量明细、计划开始时间、计划完成时间，工具会直接返回缺失项，要求继续补充，保证“人员给指令就去干活”不是伪执行。
+- AI 建单的工厂解析已支持内外两套链路：外发工厂按 `Factory` 正式解析，内部自产按 `OrganizationUnit` 生产组解析；若匹配到多个候选，会要求进一步澄清，而不是盲目下单。
+- 对系统的帮助：
+  - ✅ AI 从“只能建草稿单”升级为“可以创建可直接进入生产链路的正式订单”
+  - ✅ 智能化能力与 PC 端正式下单口径对齐，减少人工二次补录
+  - ✅ AI 遇到信息不完整时会先追问再执行，避免错误建单和脏数据
+
+## 2026-03-18
+
+### fix(cloud-db): 云端采购相关接口 500 紧急补库脚本
+
+- 新增 [deployment/cloud-db-procurement-patch-20260318.sql](deployment/cloud-db-procurement-patch-20260318.sql)，用于云端控制台一次性核对并补齐 `t_material_purchase` 与 `t_factory` 的采购相关缺失列。
+- 解决的故障面包括：`GET /api/production/purchase/list`、`GET /api/production/purchase/stats`、`POST /api/procurement/purchase-orders/list`、`POST /api/procurement/stats` 因云端库结构落后于当前实体映射而触发的数据库 500。
+- 脚本覆盖 `return_confirmed`、`source_type`、`pattern_production_id`、`supplier_contact_person`、`supplier_contact_phone`、`supplier_type`、`fabric_composition` 等高频缺列，并附带执行前后核对查询，便于快速止血与回归验证。
+- 二次排查已定位本轮采购 500 的最终直接缺口为 `t_material_purchase.evidence_image_urls`；云端控制台若已确认仅缺此列，直接执行单条 `ALTER TABLE ... ADD COLUMN evidence_image_urls TEXT` 即可，不要继续使用多段 `PREPARE/EXECUTE` 动态脚本。
+- 对系统的帮助：将“看起来很多采购接口同时坏掉”的现象收敛为一类云端库漂移问题，避免继续误判为前端或业务逻辑多点故障。
 
 ### fix(frontend): 智能驾驶舱 What-If 推演仿真面板恢复真实订单关联
 
@@ -224,6 +294,21 @@ curl -X POST https://backend-226678-6-1405390085.sh.run.tcloudbase.com/api/syste
 ---
 
 ## 2026-03-16
+
+### fix(production): 我的订单/生产进度拆分“生产订单”和“已完成订单”，驾驶舱统计口径统一
+
+- 已为“我的订单”和“生产进度”页面顶部统计新增“已完成订单 / 完成数量”卡片，并把原本含糊的“订单个数 / 总数量”改为明确的“生产订单 / 生产数量”。
+- 已继续补充“报废订单 / 报废数量”卡片，明确把 `scrapped` 从生产中口径独立拆出，避免业务侧把报废单误认为仍在生产中的订单。
+- 两个页面默认进入时现在只看生产中的订单，不再把已完成、已取消、已报废、已归档、已关单等终态订单混在默认视图中；点击“已完成订单”卡片后才切换到完成单视图。
+- “生产订单”的正式口径已固定为：`status` 不属于 `completed / cancelled / scrapped / archived / closed` 的订单；报废订单只进入“报废订单”卡片，不再进入“生产订单”。
+- 后端 `ProductionOrderStatsDTO` 与 `ProductionOrderQueryService.getGlobalStats(...)` 已补充 `activeOrders / activeQuantity / completedOrders / completedQuantity` 四个口径字段，并统一终态定义，避免不同页面各自排除一部分状态导致统计对不上。
+- 后端统计现已额外补充 `scrappedOrders / scrappedQuantity`，两个页面点击“报废订单”卡片后会直接筛到报废订单列表，顶部卡片与列表口径保持一致。
+- `queryPage()` 的 `excludeTerminal=true` 过滤范围已扩为完整终态集合，不再只排除 `completed/cancelled` 两种状态，默认生产列表与统计卡片口径一致。
+- 智能驾驶舱顶部“生产中订单 / 总件数”不再依赖第一页订单列表前端求和，已改为直接读取统一的 `/api/production/order/stats` 统计结果，避免订单分页、终态过滤差异造成“太空舱 326 件、生产页 369 件”这类口径漂移。
+- 对系统的帮助：
+  - ✅ 生产中订单与已完成订单彻底分层展示，业务查看不再混淆
+  - ✅ 驾驶舱、我的订单、生产进度三处顶部统计改为同源口径，后续更容易核对
+  - ✅ 默认列表聚焦在制单，跟单和排产人员打开页面即可直接处理当前生产任务
 
 ### fix(dashboard): 仪表盘日报与紧急事件避免被订单表无关缺列拖垮
 
