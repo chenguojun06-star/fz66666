@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -51,23 +52,30 @@ public class AppStoreService extends ServiceImpl<AppStoreMapper, AppStore> {
         try {
             // 解析features JSON
             if (app.getFeatures() != null && !app.getFeatures().isEmpty()) {
-                List<String> featureList = objectMapper.readValue(
-                    app.getFeatures(),
-                    new TypeReference<List<String>>() {}
-                );
+                String featuresStr = app.getFeatures().trim();
+                List<String> featureList;
+                if (featuresStr.startsWith("[")) {
+                    featureList = objectMapper.readValue(featuresStr, new TypeReference<List<String>>() {});
+                } else {
+                    // 兜底：逗号分隔文本格式（历史脏数据）
+                    featureList = Arrays.asList(featuresStr.split(","));
+                }
                 app.setFeatureList(featureList);
             }
 
             // 解析screenshots JSON
             if (app.getScreenshots() != null && !app.getScreenshots().isEmpty()) {
-                List<String> screenshotList = objectMapper.readValue(
-                    app.getScreenshots(),
-                    new TypeReference<List<String>>() {}
-                );
+                String screenshotsStr = app.getScreenshots().trim();
+                List<String> screenshotList;
+                if (screenshotsStr.startsWith("[")) {
+                    screenshotList = objectMapper.readValue(screenshotsStr, new TypeReference<List<String>>() {});
+                } else {
+                    screenshotList = Arrays.asList(screenshotsStr.split(","));
+                }
                 app.setScreenshotList(screenshotList);
             }
         } catch (Exception e) {
-            log.error("解析应用JSON字段失败", e);
+            log.warn("解析应用JSON字段失败，app_code={}: {}", app.getAppCode(), e.getMessage());
             app.setFeatureList(new ArrayList<>());
             app.setScreenshotList(new ArrayList<>());
         }
