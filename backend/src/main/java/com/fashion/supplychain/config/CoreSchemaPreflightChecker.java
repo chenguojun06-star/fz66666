@@ -75,6 +75,10 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
 
     private volatile Map<String, List<String>> lastMissingColumns = Collections.emptyMap();
 
+    private volatile long lastNullTenantScanCount;
+
+    private volatile long lastZeroTenantScanCount;
+
     private volatile LocalDateTime lastCheckedAt;
 
     public CoreSchemaPreflightChecker(DataSource dataSource) {
@@ -104,12 +108,16 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
                 .withDetail("schemaPreflight", status)
                 .withDetail("checkedAt", lastCheckedAt == null ? "never" : lastCheckedAt.toString())
                 .withDetail("missingSummary", formatSummary(snapshot))
+                .withDetail("scanRecordNullTenantCount", lastNullTenantScanCount)
+                .withDetail("scanRecordZeroTenantCount", lastZeroTenantScanCount)
                 .build();
     }
 
     private void checkAndLog() {
         Map<String, List<String>> missing = new LinkedHashMap<>();
         LocalDateTime checkedAt = LocalDateTime.now();
+        long nullTenantScanCount = 0L;
+        long zeroTenantScanCount = 0L;
         try (Connection conn = dataSource.getConnection()) {
             String schema = conn.getCatalog();
             for (Map.Entry<String, List<String>> entry : REQUIRED_COLUMNS.entrySet()) {
@@ -118,20 +126,29 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
                     missing.put(entry.getKey(), tableMissing);
                 }
             }
+            nullTenantScanCount = countScanRecordTenantAnomalies(conn, "tenant_id IS NULL");
+            zeroTenantScanCount = countScanRecordTenantAnomalies(conn, "tenant_id = 0");
         } catch (Exception e) {
             log.error("[SchemaPreflight] 核心表结构预检失败: {}", e.getMessage());
             missing.put("__preflight_error__", List.of(e.getMessage()));
         }
         lastMissingColumns = Collections.unmodifiableMap(new LinkedHashMap<>(missing));
+        lastNullTenantScanCount = nullTenantScanCount;
+        lastZeroTenantScanCount = zeroTenantScanCount;
         lastCheckedAt = checkedAt;
 
         if (missing.isEmpty()) {
             log.info("[SchemaPreflight] 核心表结构预检通过：生产/采购/单据/打版/款式核心缺列为 0");
-            return;
+        } else {
+            log.warn("[SchemaPreflight] 检测到核心表结构缺口：{}", formatSummary(missing));
+            log.warn("[SchemaPreflight] 建议优先运行 deployment/cloud-db-core-schema-preflight-20260318.sql 做云端体检，再按缺列结果补库");
         }
 
-        log.warn("[SchemaPreflight] 检测到核心表结构缺口：{}", formatSummary(missing));
-        log.warn("[SchemaPreflight] 建议优先运行 deployment/cloud-db-core-schema-preflight-20260318.sql 做云端体检，再按缺列结果补库");
+        if (nullTenantScanCount > 0 || zeroTenantScanCount > 0) {
+            log.warn("[SchemaPreflight] 检测到扫码记录租户归属异常：tenant_id IS NULL = {}, tenant_id = 0 = {}",
+                    nullTenantScanCount, zeroTenantScanCount);
+            log.warn("[SchemaPreflight] 建议立即运行 deployment/cloud-db-scan-record-tenant-repair-20260318.sql 排查并回填历史脏数据");
+        }
     }
 
     private List<String> findMissingColumns(Connection conn, String schema, String table, List<String> expectedColumns)
@@ -162,6 +179,17 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
             }
         }
         return columns;
+    }
+
+    private long countScanRecordTenantAnomalies(Connection conn, String condition) throws Exception {
+        String sql = "SELECT COUNT(*) FROM t_scan_record WHERE " + condition;
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        }
+        return 0L;
     }
 
     private String formatSummary(Map<String, List<String>> missing) {

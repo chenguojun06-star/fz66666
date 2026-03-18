@@ -365,6 +365,7 @@ public class WarehouseScanExecutor {
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(order.getTenantId());
         sr.setColor(colorResolver.apply(null));
         sr.setSize(sizeResolver.apply(null));
         sr.setQuantity(qty);

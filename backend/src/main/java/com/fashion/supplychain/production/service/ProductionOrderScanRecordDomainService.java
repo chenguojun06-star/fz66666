@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -34,6 +35,9 @@ public class ProductionOrderScanRecordDomainService {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired(required = false)
+    private ProductionOrderService productionOrderService;
 
     private String trimToNull(String value) {
         if (!StringUtils.hasText(value)) {
@@ -66,6 +70,40 @@ public class ProductionOrderScanRecordDomainService {
 
     private String buildCompactRequestId(String prefix, String scopeId) {
         return prefix + compactRequestScope(scopeId) + ":" + shortNonce();
+    }
+
+    private Long resolveTenantId(ProductionOrder order) {
+        if (order != null && order.getTenantId() != null) {
+            return order.getTenantId();
+        }
+        return UserContext.tenantId();
+    }
+
+    private Long resolveTenantId(String orderId, String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            return tenantId;
+        }
+        if (productionOrderService == null) {
+            return null;
+        }
+        try {
+            if (StringUtils.hasText(orderId)) {
+                ProductionOrder order = productionOrderService.getById(orderId.trim());
+                if (order != null && order.getTenantId() != null) {
+                    return order.getTenantId();
+                }
+            }
+            if (StringUtils.hasText(orderNo)) {
+                ProductionOrder order = productionOrderService.getByOrderNo(orderNo.trim());
+                if (order != null && order.getTenantId() != null) {
+                    return order.getTenantId();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to resolve tenantId for stage scan record: orderId={}, orderNo={}", orderId, orderNo, e);
+        }
+        return null;
     }
 
     /**
@@ -180,11 +218,23 @@ public class ProductionOrderScanRecordDomainService {
         }
     }
 
-    public void insertOrchestrationFailure(
+        public void insertOrchestrationFailure(
             String orderId,
             String orderNo,
             String styleId,
             String styleNo,
+                String action,
+                String message,
+                LocalDateTime now) {
+            insertOrchestrationFailure(orderId, orderNo, styleId, styleNo, null, action, message, now);
+            }
+
+            public void insertOrchestrationFailure(
+                String orderId,
+                String orderNo,
+                String styleId,
+                String styleNo,
+            Long tenantId,
             String action,
             String message,
             LocalDateTime now) {
@@ -214,6 +264,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setOrderNo(StringUtils.hasText(orderNo) ? orderNo.trim() : null);
         sr.setStyleId(StringUtils.hasText(styleId) ? styleId.trim() : null);
         sr.setStyleNo(StringUtils.hasText(styleNo) ? styleNo.trim() : null);
+        sr.setTenantId(tenantId != null ? tenantId : UserContext.tenantId());
         sr.setQuantity(0);
         sr.setProgressStage(act);
         sr.setProcessName(act);
@@ -242,6 +293,7 @@ public class ProductionOrderScanRecordDomainService {
                 order.getOrderNo(),
                 order.getStyleId(),
                 order.getStyleNo(),
+                resolveTenantId(order),
                 action,
                 message,
                 now);
@@ -363,11 +415,11 @@ public class ProductionOrderScanRecordDomainService {
             sr.setScanResult("success");
             sr.setRemark(processName);
             sr.setScanTime(scanTime == null ? now : scanTime);
-            // 补充租户ID，防止系统自动生成记录出现 tenant_id=NULL
-            Long tidCtx = UserContext.tenantId();
-            if (tidCtx != null) {
-                sr.setTenantId(tidCtx);
+            Long tenantId = resolveTenantId(orderId, orderNo);
+            if (tenantId == null) {
+                throw new IllegalStateException("阶段扫码记录缺少 tenantId，已拒绝写入: orderId=" + orderId);
             }
+            sr.setTenantId(tenantId);
             sr.setCreateTime(now);
             sr.setUpdateTime(now);
             scanRecordMapper.insert(sr);
@@ -457,6 +509,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(resolveTenantId(order));
         sr.setColor(order.getColor());
         sr.setSize(order.getSize());
         sr.setQuantity(0);
@@ -504,6 +557,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(resolveTenantId(order));
         sr.setColor(order.getColor());
         sr.setSize(order.getSize());
         sr.setQuantity(0);
@@ -547,6 +601,7 @@ public class ProductionOrderScanRecordDomainService {
         sr.setOrderNo(order.getOrderNo());
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(resolveTenantId(order));
         sr.setColor(order.getColor());
         sr.setSize(order.getSize());
         sr.setQuantity(0);

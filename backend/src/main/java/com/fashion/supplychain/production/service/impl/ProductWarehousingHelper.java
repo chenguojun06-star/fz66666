@@ -695,6 +695,7 @@ public class ProductWarehousingHelper {
             sr.setOrderNo(order.getOrderNo());
             sr.setStyleId(order.getStyleId());
             sr.setStyleNo(order.getStyleNo());
+            sr.setTenantId(order.getTenantId());
             sr.setColor(color);
             sr.setSize(size);
             sr.setQuantity(Math.max(0, qualifiedQty));

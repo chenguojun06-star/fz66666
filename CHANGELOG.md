@@ -1,5 +1,23 @@
 ## 2026-05-03（最新）
 
+### fix(runtime): 整点智能通知与 WebSocket 断线噪音进一步收口
+
+- **问题现象**：云端仍偶发出现 `TaskUtils$LoggingErrorHandler - Unexpected error occurred in scheduled task`，时间点集中在整点；同时 `RealTimeWebSocketHandler - [WebSocket] 传输错误` 仍有少量残留，容易被误判为服务端通信故障。
+- **根本原因**：`SmartNotifyJob` 是当前唯一每小时整点触发的任务，但原实现缺少方法级总兜底；更重要的是，租户循环里先 `bindTenantForTask()` 再进入 `try/catch`，一旦活跃租户列表中出现空租户或绑定阶段抛错，会直接冒成调度器通用 ERROR，且任务结束后也未显式 `clearTenantContext()`。另一方面，WebSocket transport error 对部分 Tomcat/Spring 异步写回断线异常识别还不够宽，客户端已断线仍会被打成 ERROR。
+- **修复方案**：为 `SmartNotifyJob.autoDetectAndNotify()` 增加方法级总兜底；租户循环新增空 `tenantId` 跳过；将 `bindTenantForTask()` 放入 `try/finally`，并在每轮结束后执行 `TenantAssert.clearTenantContext()`。同时扩展 `RealTimeWebSocketHandler.isClientDisconnect()`，补充 `SocketException`、`AsyncRequestNotUsableException`、`ServletOutputStream failed to write`、`The client aborted` 等常见客户端断线特征。
+- **对系统的帮助**：整点智能通知即使碰到脏租户数据或上下文绑定异常，也只会记录明确业务日志，不再冒成 Spring 通用定时任务 ERROR；WebSocket 断线日志会更准确地归类为客户端断开，减少值班排障噪音。
+
+### fix(multitenancy): 扫码记录写库补 tenantId 硬约束，严防多租户数据混乱
+
+- **问题现象**：`t_scan_record` 的部分写库路径依赖 MyBatis-Plus `MetaObjectHandler` 从 `UserContext` 隐式填充 `tenantId`；正常请求线程通常没问题，但系统任务、编排日志、无请求上下文线程如果直接写库，就可能把 `tenant_id` 漏成空值，形成跨租户治理隐患。
+- **现网确认**：云端 SQL 核查已确认 `t_scan_record` 存在 `tenant_id IS NULL = 10` 条历史脏记录，`tenant_id = 0 = 0`；说明风险已落地，不是理论问题。
+- **根本原因**：统一保存入口 `saveScanRecord()` 之前只补时间，不校验 `tenantId`；同时生产扫码、质检扫码、入库扫码以及部分直接 `scanRecordMapper.insert(...)` 的内部日志链路，没有统一显式写入 `order.getTenantId()`。进一步追查云端明细后确认，`ProductionOrderScanRecordDomainService.upsertStageScanRecord()` 这个公共方法在历史版本里只会从 `UserContext` 取租户，像订单进度重算、系统补记录这类无请求上下文批处理一旦调用，就会把 `ORDER_CREATED:` / `ORDER_PROCUREMENT:` 这类系统阶段记录写成 `tenant_id = NULL`。
+- **修复方案**：为 `ScanRecordServiceImpl.saveScanRecord()` 增加租户硬校验：缺失 `tenantId` 时先尝试 `UserContext`，再按 `orderId/orderNo` 反查订单归属，仍拿不到则直接拒绝写库；同时为生产扫码、质检扫码、入库扫码、裁剪任务、入库辅助写库和订单流程日志等已定位路径显式补充 `tenantId`。
+- **补充修复**：`ProductionOrderScanRecordDomainService.upsertStageScanRecord()` 现已改为先取 `UserContext`，拿不到就按 `orderId/orderNo` 回查订单租户，仍拿不到直接拒绝写库，从根上堵住系统批量补“下单/采购”阶段记录时继续落出空租户数据。
+- **配套排障**：新增 `deployment/cloud-db-scan-record-tenant-repair-20260318.sql`，可直接在云端定位异常扫码记录并按 `t_production_order` 归属回填；`CoreSchemaPreflightChecker` 与 `deployment/cloud-db-core-schema-preflight-20260318.sql` 也已补充扫码表租户完整性计数，后续启动和发版前都会显式暴露该类脏数据。
+- **云端修复结果**：已在生产库执行修复 SQL，`UPDATE ... JOIN t_production_order po ON po.id = sr.order_id` 成功回填 `10` 行；随后 `remaining_null_tenant_count = 0`，异常明细查询返回空集，说明这批历史空租户扫码记录已全部清零。
+- **对系统的帮助**：扫码表从“依赖上下文隐式补租户”升级为“写库前必须确认租户归属”，即使将来新增系统内写库路径或异步线程路径，也更难落出 `tenant_id = NULL` 的脏记录，显著降低多租户数据混乱风险。
+
 ### fix(async): 异步线程透传 UserContext，避免 fashion-async 线程丢租户上下文
 
 - **问题现象**：云端日志在 `fashion-async-*` 线程上大量出现 `TenantInterceptor - UserContext is NULL - no tenant filtering`，说明异步任务执行 SQL 时没有继承请求线程中的租户上下文。

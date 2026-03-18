@@ -265,10 +265,15 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
         return exMsg != null && (exMsg.contains("Connection reset")
                 || exMsg.contains("Broken pipe")
                 || exMsg.contains("closed")
+                || exMsg.contains("closing")
                 || exMsg.contains("CloseStatus")
                 || exMsg.contains("EOF")
+                || exMsg.contains("AsyncRequestNotUsableException")
+                || exMsg.contains("ServletOutputStream failed to write")
+                || exMsg.contains("The client aborted")
                 || exMsg.contains("forcibly closed")
                 || exception instanceof java.io.EOFException
+                || exception instanceof java.net.SocketException
                 || exception instanceof IllegalStateException);
     }
 }

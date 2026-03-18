@@ -94,19 +94,23 @@ public class SmartNotifyJob {
 
     @Scheduled(cron = "0 0 * * * ?")
     public void autoDetectAndNotify() {
-        if (distributedLockService != null) {
-            String lockValue = distributedLockService.tryLock("job:smart-notify", 50, TimeUnit.MINUTES);
-            if (lockValue == null) {
-                log.info("[SmartNotify] 其他实例正在执行，跳过");
-                return;
-            }
-            try {
+        try {
+            if (distributedLockService != null) {
+                String lockValue = distributedLockService.tryLock("job:smart-notify", 50, TimeUnit.MINUTES);
+                if (lockValue == null) {
+                    log.info("[SmartNotify] 其他实例正在执行，跳过");
+                    return;
+                }
+                try {
+                    doAutoDetect();
+                } finally {
+                    distributedLockService.unlock("job:smart-notify", lockValue);
+                }
+            } else {
                 doAutoDetect();
-            } finally {
-                distributedLockService.unlock("job:smart-notify", lockValue);
             }
-        } else {
-            doAutoDetect();
+        } catch (Exception e) {
+            log.error("[SmartNotify] 定时任务执行失败", e);
         }
     }
 
@@ -124,16 +128,22 @@ public class SmartNotifyJob {
 
         int totalSent = 0;
         for (Long tenantId : tenantIds) {
+            if (tenantId == null) {
+                log.warn("[SmartNotify] 活跃租户列表出现空 tenantId，已跳过");
+                continue;
+            }
             // ── 推送时段检查：不在用户设定的推送时段内则跳过 ──
             if (!mindPushOrchestrator.isWithinPushWindow(tenantId)) {
                 log.debug("[SmartNotify] 租户 {} 当前不在推送时段内，跳过", tenantId);
                 continue;
             }
-            TenantAssert.bindTenantForTask(tenantId, "智能通知");
             try {
+                TenantAssert.bindTenantForTask(tenantId, "智能通知");
                 totalSent += processOneTenant(tenantId);
             } catch (Exception e) {
                 log.warn("[SmartNotify] 租户 {} 处理失败: {}", tenantId, e.getMessage());
+            } finally {
+                TenantAssert.clearTenantContext();
             }
         }
 

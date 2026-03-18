@@ -447,6 +447,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 sr.setOrderNo(task.getProductionOrderNo());
                 sr.setStyleId(task.getStyleId());
                 sr.setStyleNo(task.getStyleNo());
+                sr.setTenantId(task.getTenantId());
                 sr.setColor(task.getColor());
                 sr.setSize(task.getSize());
                 sr.setQuantity(finalQty);
@@ -651,6 +652,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         sr.setOrderNo(task.getProductionOrderNo());
         sr.setStyleId(task.getStyleId());
         sr.setStyleNo(task.getStyleNo());
+        sr.setTenantId(task.getTenantId());
         sr.setColor(task.getColor());
         sr.setSize(task.getSize());
         sr.setQuantity(0);

@@ -77,3 +77,12 @@ LEFT JOIN INFORMATION_SCHEMA.COLUMNS actual
  AND actual.COLUMN_NAME = expected.column_name
 WHERE actual.COLUMN_NAME IS NULL
 ORDER BY expected.table_name, expected.column_name;
+
+-- 扫码表租户归属完整性体检：任一结果非 0 都属于严重数据异常
+SELECT COUNT(*) AS scan_record_null_tenant_count
+FROM t_scan_record
+WHERE tenant_id IS NULL;
+
+SELECT COUNT(*) AS scan_record_zero_tenant_count
+FROM t_scan_record
+WHERE tenant_id = 0;

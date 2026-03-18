@@ -7,12 +7,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRecord> implements ScanRecordService {
+
+        @Autowired(required = false)
+        private ProductionOrderService productionOrderService;
 
         @Override
         public IPage<ScanRecord> queryPage(Map<String, Object> params) {
@@ -135,10 +141,59 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
 
         @Override
         public boolean saveScanRecord(ScanRecord scanRecord) {
+                ensureTenantIdForSave(scanRecord);
                 LocalDateTime now = LocalDateTime.now();
                 scanRecord.setCreateTime(now);
                 scanRecord.setUpdateTime(now);
                 return this.save(scanRecord);
+        }
+
+        private void ensureTenantIdForSave(ScanRecord scanRecord) {
+                if (scanRecord == null || scanRecord.getTenantId() != null) {
+                        return;
+                }
+
+                Long tenantId = UserContext.tenantId();
+                if (tenantId == null) {
+                        tenantId = resolveTenantIdFromOrder(scanRecord);
+                }
+
+                if (tenantId == null) {
+                        throw new IllegalStateException("扫码记录缺少 tenantId，已拒绝写入");
+                }
+
+                scanRecord.setTenantId(tenantId);
+        }
+
+        private Long resolveTenantIdFromOrder(ScanRecord scanRecord) {
+                if (productionOrderService == null || scanRecord == null) {
+                        return null;
+                }
+
+                String orderId = scanRecord.getOrderId();
+                if (StringUtils.hasText(orderId)) {
+                        try {
+                                ProductionOrder order = productionOrderService.getById(orderId.trim());
+                                if (order != null) {
+                                        return order.getTenantId();
+                                }
+                        } catch (Exception e) {
+                                log.warn("根据 orderId 反查租户失败: orderId={}", orderId, e);
+                        }
+                }
+
+                String orderNo = scanRecord.getOrderNo();
+                if (StringUtils.hasText(orderNo)) {
+                        try {
+                                ProductionOrder order = productionOrderService.getByOrderNo(orderNo.trim());
+                                if (order != null) {
+                                        return order.getTenantId();
+                                }
+                        } catch (Exception e) {
+                                log.warn("根据 orderNo 反查租户失败: orderNo={}", orderNo, e);
+                        }
+                }
+                return null;
         }
 
         @Override
