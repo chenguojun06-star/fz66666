@@ -206,11 +206,14 @@
   background: #f6f8ff !important;
   display: flex !important;
   align-items: center !important;
+  color-scheme: light !important;
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper input {
   height: 46px !important;
   text-align: left !important;
+  background: transparent !important;
+  color-scheme: light !important;
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper-focused {
@@ -223,43 +226,48 @@
 }
 
 .login-card .ant-input-affix-wrapper {
-  height: 48px;
-  border-color: rgba(255, 255, 255, 0.14);
-  background: #f6f8ff;
-  display: flex;
-  align-items: center;
+  height: 48px !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: #f6f8ff !important;
+  display: flex !important;
+  align-items: center !important;
+  color-scheme: light !important;
 }
 
 .login-card .ant-input-affix-wrapper input {
-  height: 46px;
-  line-height: 46px;
-  text-align: center;
-}
-
-@supports ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {
-  .login-card .ant-input-affix-wrapper {
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    backdrop-filter: blur(12px) saturate(160%);
-  }
+  height: 46px !important;
+  line-height: 46px !important;
+  text-align: center !important;
 }
 
 .login-card .ant-input-affix-wrapper:hover {
-  border-color: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.24) !important;
 }
 
 .login-card .ant-input-affix-wrapper-focused,
 .login-card .ant-input-affix-wrapper:focus,
 .login-card .ant-input-affix-wrapper:focus-within {
-  border-color: rgba(45, 127, 249, 0.55);
-  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.22);
+  border-color: rgba(45, 127, 249, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.22) !important;
 }
 
 .login-card .ant-input {
-  color: rgba(17, 24, 39, 0.92);
+  background: transparent !important;
+  color: rgba(17, 24, 39, 0.92) !important;
+  color-scheme: light !important;
 }
 
 .login-card .ant-input::placeholder {
-  color: rgba(17, 24, 39, 0.50);
+  color: rgba(17, 24, 39, 0.50) !important;
+}
+
+/* 防止浏览器深色模式 autofill 注入黑色背景 */
+.login-card .ant-input:-webkit-autofill,
+.login-card .ant-input:-webkit-autofill:hover,
+.login-card .ant-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #f6f8ff inset !important;
+  -webkit-text-fill-color: rgba(17, 24, 39, 0.92) !important;
+  caret-color: rgba(17, 24, 39, 0.92) !important;
 }
 
 .login-button {
