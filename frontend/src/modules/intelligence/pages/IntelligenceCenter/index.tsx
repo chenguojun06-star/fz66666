@@ -495,39 +495,39 @@ const IntelligenceCenter: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 10 }}>
               <div
                 onClick={() => navigate('/production')}
-                style={{ background: 'rgba(255,65,54,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(255,65,54,0.3)', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ background: 'rgba(255,65,54,0.12)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(255,65,54,0.3)', cursor: 'pointer', transition: 'background 0.15s', textAlign: 'center' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,65,54,0.25)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,65,54,0.12)')}
               >
-                <div style={{ color: '#ff6b6b', fontSize: 10 }}>已逾期</div>
-                <div style={{ color: '#ff4136', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
-                  {overdueRisk.overdue.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                <div style={{ color: '#ff6b6b', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>已逾期</div>
+                <div style={{ color: '#ff4136', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+                  {overdueRisk.overdue.length}<span style={{ color: '#ff8080', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
                 </div>
-                <div style={{ color: '#ff8080', fontSize: 11, marginTop: 2 }}>{orderStats.overdueQty.toLocaleString()} 件</div>
+                <div style={{ color: '#ff8080', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.overdueQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
               <div
                 onClick={() => navigate('/production')}
-                style={{ background: 'rgba(247,166,0,0.12)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(247,166,0,0.3)', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ background: 'rgba(247,166,0,0.12)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(247,166,0,0.3)', cursor: 'pointer', transition: 'background 0.15s', textAlign: 'center' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.25)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.12)')}
               >
-                <div style={{ color: '#f7a600', fontSize: 10 }}>高风险</div>
-                <div style={{ color: '#f7a600', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
-                  {overdueRisk.highRisk.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                <div style={{ color: '#f7a600', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>高风险</div>
+                <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+                  {overdueRisk.highRisk.length}<span style={{ color: '#f7c44a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
                 </div>
-                <div style={{ color: '#f7a600', fontSize: 11, marginTop: 2 }}>{orderStats.highRiskQty.toLocaleString()} 件</div>
+                <div style={{ color: '#f7c44a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.highRiskQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
               <div
                 onClick={() => navigate('/production')}
-                style={{ background: 'rgba(0,180,255,0.08)', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(0,180,255,0.2)', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ background: 'rgba(0,180,255,0.08)', borderRadius: 6, padding: '8px 6px', border: '1px solid rgba(0,180,255,0.2)', cursor: 'pointer', transition: 'background 0.15s', textAlign: 'center' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.18)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.08)')}
               >
-                <div style={{ color: '#7dacc4', fontSize: 10 }}>关注中</div>
-                <div style={{ color: '#7dacc4', fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
-                  {overdueRisk.watch.length}<span style={{ color: '#7dacc4', fontSize: 10, marginLeft: 2 }}>单</span>
+                <div style={{ color: '#7dacc4', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>关注中</div>
+                <div style={{ color: '#00b4ff', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+                  {overdueRisk.watch.length}<span style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
                 </div>
-                <div style={{ color: '#5c9ab8', fontSize: 11, marginTop: 2 }}>{orderStats.watchQty.toLocaleString()} 件</div>
+                <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.watchQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
               </div>
             </div>
 
