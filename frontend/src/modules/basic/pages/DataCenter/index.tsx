@@ -651,32 +651,32 @@ const DataCenter: React.FC = () => {
                 title: '查看详情',
                 onClick: () => openDetailModal(record),
               },
-              {
-                key: 'edit',
-                label: '编辑',
-                title: record.descriptionLocked === 0 ? '编辑生产制单内容' : '生产制单已锁定，请管理员退回后编辑',
-                disabled: record.descriptionLocked !== 0,
-                onClick: () => openEditModal(record),
-              },
-              {
-                key: 'returnDesc',
-                label: '退回制单',
-                title: '管理员退回生产制单，允许重新编辑',
-                onClick: () => { setReturnDescRecord(record); setReturnDescModalVisible(true); },
-              },
-              {
-                key: 'patternRevision',
-                label: '纸样修改',
-                title: record.patternRevLocked === 0 ? '记录纸样修改' : '纸样修改已锁定，请管理员退回后操作',
-                disabled: record.patternRevLocked !== 0,
-                onClick: () => openPatternRevisionModal(record),
-              },
-              {
-                key: 'returnPattern',
-                label: '退回纸样',
-                title: '管理员退回纸样修改，允许重新提交',
-                onClick: () => { setReturnPatternRecord(record); setReturnPatternModalVisible(true); },
-              },
+              record.descriptionLocked === 0
+                ? {
+                    key: 'edit',
+                    label: '编辑',
+                    title: '编辑生产制单内容',
+                    onClick: () => openEditModal(record),
+                  }
+                : {
+                    key: 'returnDesc',
+                    label: '退回制单',
+                    title: '退回后可重新编辑生产制单',
+                    onClick: () => { setReturnDescRecord(record); setReturnDescModalVisible(true); },
+                  },
+              record.patternRevLocked === 0
+                ? {
+                    key: 'patternRevision',
+                    label: '纸样修改',
+                    title: '记录纸样修改',
+                    onClick: () => openPatternRevisionModal(record),
+                  }
+                : {
+                    key: 'returnPattern',
+                    label: '退回纸样',
+                    title: '退回后可重新提交纸样修改',
+                    onClick: () => { setReturnPatternRecord(record); setReturnPatternModalVisible(true); },
+                  },
               {
                 key: 'print',
                 label: '打印',
