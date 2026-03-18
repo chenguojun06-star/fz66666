@@ -1,5 +1,18 @@
 ## 2026-05-03（最新）
 
+### perf(api): purchase/list 重复 SQL 合并优化（commit 3ff20340）
+
+- **问题现象**：云端日志 `backend-846` 中 `GET /api/production/purchase/list`（或 `/material/list`）稳定耗时 200-600ms，同时段 `queryPage` 偶发 1287ms 超时警告。
+- **根本原因**：`MaterialPurchaseOrchestratorHelper.listWithEnrichment()` 对同一组 `orderIds` 重复调用 `productionOrderService.listByIds()` 5 次（分别取 quantity / color / factoryName / factoryType / bizType），对 `patternProductionIds` 再重复调用 2 次，共 7 次独立 DB 往返；云端单次 RTT ≈ 50ms → 7 × 50ms = 350ms 纯等待。7 个并发请求同时占用 HikariCP 连接，致 `queryPage` 需等待连接释放，出现偶发 1287ms 慢查询。
+- **修复方案**：
+  - 新增 `loadOrderFields(orderIds, quantityMap, colorMap, factoryNameMap, factoryTypeMap, bizTypeMap)`：仅 1 次 `listByIds(orderIds)` 同时填充 5 个 Map。
+  - 新增 `loadPatternFields(patternProductionIds, quantityMap, colorMap)`：仅 1 次 `listByIds(patternProductionIds)` 同时填充 2 个 Map。
+  - 删除旧的 7 个独立方法（`loadOrderQuantities`、`loadOrderColors`、`loadOrderFactoryNames`、`loadOrderFactoryTypes`、`loadOrderBizTypes`、`loadPatternQuantities`、`loadPatternColors`）。
+- **变更规模**：`1 file changed, 40 insertions(+), 104 deletions(-)`（净减 64 行）
+- **对系统的帮助**：`purchase/list` 响应时间预期从 200-600ms 降至 50-150ms；连接池压力消除，`order/list` 偶发 1287ms 等待连接超时问题应同步自愈；整体代码结构更直观。
+
+---
+
 ### fix(db): DbColumnRepairRunner 补充 t_style_bom.size_usage_map 自愈修复（commit 8ce9c5a9）
 
 - **问题现象**：云端日志持续出现 WARN `OrderPriceFillHelper - Failed to compute BOM cost for fillQuotationUnitPrice`，每次 `/api/production/materialPurchase/list` 请求触发 3-4 次。
