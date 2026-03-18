@@ -448,12 +448,12 @@ const IntelligenceCenter: React.FC = () => {
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
             {/* 主数字 + 总件数 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-              <span style={{ color: '#f7a600', fontSize: 36, fontWeight: 700, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+              <span style={{ color: '#f7a600', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                 <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
               </span>
-              <span style={{ color: '#7dacc4', fontSize: 12 }}>单在制</span>
-              <span style={{ marginLeft: 'auto', color: '#7dacc4', fontSize: 12 }}>
-                总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 22, fontWeight: 700 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
+              <span style={{ color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>单在制</span>
+              <span style={{ marginLeft: 'auto', color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>
+                总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 28, fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
               </span>
             </div>
 
@@ -476,8 +476,8 @@ const IntelligenceCenter: React.FC = () => {
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
               >
                 <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
-                <div style={{ color: '#39ff14', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundCount}<span style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>票</span></div>
-                <div style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
+                <div style={{ color: '#39ff14', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
+                <div style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>单</span></div>
               </div>
               <div
                 onClick={() => navigate('/warehouse/finished')}
@@ -486,8 +486,8 @@ const IntelligenceCenter: React.FC = () => {
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
               >
                 <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
-                <div style={{ color: '#00e5ff', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundCount}<span style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>票</span></div>
-                <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
+                <div style={{ color: '#00e5ff', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
+                <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>单</span></div>
               </div>
             </div>
 
