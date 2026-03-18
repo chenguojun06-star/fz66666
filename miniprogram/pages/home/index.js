@@ -30,10 +30,8 @@ function normalizeRangeStats(raw) {
 function normalizeTopStats(payload) {
   const data = payload && typeof payload === 'object' ? payload : {};
   return {
-    sampleDevelopment: normalizeRangeStats(data.sampleDevelopment),
     bulkOrder: normalizeRangeStats(data.bulkOrder),
     cutting: normalizeRangeStats(data.cutting),
-    warehousing: normalizeRangeStats(data.warehousing),
   };
 }
 
@@ -58,8 +56,6 @@ Page({
       paymentApprovalCount: 0,
       todayScanCount: 0,
       totalScanCount: 0,
-      warehousingOrderCount: 0,
-      warehousingToday: 0,
       totalWarehousingCount: 0,
       unqualifiedQuantity: 0,
       defectCount: 0,
@@ -67,10 +63,8 @@ Page({
       urgentEventCount: 0,
     },
     topStats: {
-      sampleDevelopment: { day: 0, week: 0, month: 0, year: 0, total: 0 },
       bulkOrder: { day: 0, week: 0, month: 0, year: 0, total: 0 },
       cutting: { day: 0, week: 0, month: 0, year: 0, total: 0 },
-      warehousing: { day: 0, week: 0, month: 0, year: 0, total: 0 },
     },
     activities: [],
     isFactory: false,       // 是否为外发工厂账号（隐藏全公司统计数据）

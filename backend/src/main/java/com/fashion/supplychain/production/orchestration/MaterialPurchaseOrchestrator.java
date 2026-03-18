@@ -819,23 +819,23 @@ public class MaterialPurchaseOrchestrator {
     }
 
     public List<MaterialPurchase> getMyTasks() {
+        Long tenantId = UserContext.tenantId();
         UserContext ctx = UserContext.get();
         String userId = ctx == null ? null : ctx.getUserId();
-        if (!StringUtils.hasText(userId)) {
+        if (!StringUtils.hasText(userId) || tenantId == null) {
             return new ArrayList<>();
         }
 
-        List<MaterialPurchase> myPurchases = materialPurchaseService.list()
+        // 在 DB 层完成核心过滤（租户隔离 + 状态 + 领取人），避免跨租户全表加载
+        List<MaterialPurchase> myPurchases = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getReceiverId, userId)
+                .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_RECEIVED)
+                .and(w -> w.isNull(MaterialPurchase::getReturnConfirmed)
+                           .or().eq(MaterialPurchase::getReturnConfirmed, 0))
+                .list()
                 .stream()
-                .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
-                .filter(p -> {
-                    String status = p.getStatus();
-                    if (status == null) return false;
-                    String normalizedStatus = status.toLowerCase();
-                    return MaterialConstants.STATUS_RECEIVED.equals(normalizedStatus);
-                })
-                .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
-                .filter(p -> Objects.equals(p.getReceiverId(), userId))
                 // 排除已完成的任务（已入库数量 >= 采购数量）
                 .filter(p -> {
                     if (p.getArrivedQuantity() == null) return true;

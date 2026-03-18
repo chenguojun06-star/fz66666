@@ -428,11 +428,11 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     @Override
     public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
         // 统计订单数量总和：时间范围内所有订单的orderQuantity之和（包括已完成订单）
+        // 注意：不使用 .select() 限制列，避免 MyBatis-Plus 单列选择时字段映射返回null的问题
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
-                .select(ProductionOrder::getOrderQuantity)
                 .list();
         return orders.stream()
                 .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0L)

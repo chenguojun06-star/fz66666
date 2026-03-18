@@ -390,20 +390,12 @@ page {
   color: var(--color-text-primary);
 }
 
-.stat-sample {
-  border-color: var(--color-border);
-}
-
 .stat-bulk {
   border-color: var(--color-primary);
 }
 
 .stat-cutting {
   border-color: var(--color-warning, #f59e0b);
-}
-
-.stat-warehousing {
-  border-color: var(--color-success, #10b981);
 }
 
 /* 保留旧胶囊行样式以兼容 */
