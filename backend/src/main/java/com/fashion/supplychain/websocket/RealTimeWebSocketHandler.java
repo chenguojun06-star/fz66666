@@ -96,9 +96,7 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         String exMsg = exception.getMessage();
         // 常见的客户端主动断开（网络切换/关闭标签页），降为 WARN 避免日志噪音
-        if (exMsg != null && (exMsg.contains("Connection reset") || exMsg.contains("Broken pipe")
-                || exMsg.contains("closed") || exMsg.contains("EOF")
-                || exception instanceof java.io.EOFException)) {
+        if (isClientDisconnect(exception, exMsg)) {
             log.warn("[WebSocket] 客户端断开连接: sessionId={}, reason={}", session.getId(), exMsg);
         } else {
             log.error("[WebSocket] 传输错误: sessionId={}", session.getId(), exception);
@@ -177,8 +175,13 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
         try {
             String payload = objectMapper.writeValueAsString(message);
             session.sendMessage(new TextMessage(payload));
-        } catch (IOException e) {
-            log.error("[WebSocket] 发送消息失败: sessionId={}", session.getId(), e);
+        } catch (Exception e) {
+            if (isClientDisconnect(e, e.getMessage())) {
+                log.warn("[WebSocket] 发送消息时客户端已断开: sessionId={}, reason={}", session.getId(), e.getMessage());
+            } else {
+                log.error("[WebSocket] 发送消息失败: sessionId={}", session.getId(), e);
+            }
+            sessionManager.removeSession(session.getId());
         }
     }
 
@@ -256,5 +259,16 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
         log.info("[WebSocket] 发送给用户指定类型: userId={}, type={}, clientType={}, sessions={}",
                 userId, message.getType(), clientType, userSessions.size());
+    }
+
+    private boolean isClientDisconnect(Throwable exception, String exMsg) {
+        return exMsg != null && (exMsg.contains("Connection reset")
+                || exMsg.contains("Broken pipe")
+                || exMsg.contains("closed")
+                || exMsg.contains("CloseStatus")
+                || exMsg.contains("EOF")
+                || exMsg.contains("forcibly closed")
+                || exception instanceof java.io.EOFException
+                || exception instanceof IllegalStateException);
     }
 }

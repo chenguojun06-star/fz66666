@@ -1,6 +1,7 @@
 package com.fashion.supplychain.dashboard.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.dashboard.dto.BriefDecisionCard;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -22,6 +23,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +38,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class DailyBriefOrchestrator {
+
+    private static final long DAILY_BRIEF_AI_TIMEOUT_MS = 1200L;
+
+    private static final ExecutorService DAILY_BRIEF_AI_EXECUTOR = Executors.newFixedThreadPool(2, runnable -> {
+        Thread thread = new Thread(runnable);
+        thread.setName("daily-brief-ai");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private final DashboardQueryService dashboardQueryService;
     private final ProductionOrderService productionOrderService;
@@ -188,7 +203,7 @@ public class DailyBriefOrchestrator {
                 }
                 ctx.append("，今日扫码").append(todayScan).append("次")
                    .append("，昨日入库").append(ydCount).append("单/").append(ydQty).append("件");
-                String aiText = aiAdvisorService.getDailyAdvice(ctx.toString());
+                     String aiText = getTimedDailyAdvice(ctx.toString());
                 if (aiText != null && !aiText.isBlank()) {
                     List<String> aiList = Arrays.stream(aiText.split("\n"))
                             .map(String::trim)
@@ -208,5 +223,53 @@ public class DailyBriefOrchestrator {
         brief.put("suggestions", suggestions);
 
         return brief;
+    }
+
+    private String getTimedDailyAdvice(String contextSummary) {
+        UserContext snapshot = copyUserContext(UserContext.get());
+        return CompletableFuture
+                .supplyAsync(() -> withUserContext(snapshot,
+                        () -> aiAdvisorService.getDailyAdvice(contextSummary)), DAILY_BRIEF_AI_EXECUTOR)
+                .completeOnTimeout(null, DAILY_BRIEF_AI_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .exceptionally(ex -> {
+                    log.warn("[DailyBrief] AI建议异步调用失败，降级规则建议: {}", ex.getMessage());
+                    return null;
+                })
+                .join();
+    }
+
+    private <T> T withUserContext(UserContext snapshot, Supplier<T> supplier) {
+        UserContext previous = UserContext.get();
+        try {
+            if (snapshot != null) {
+                UserContext.set(snapshot);
+            } else {
+                UserContext.clear();
+            }
+            return supplier.get();
+        } finally {
+            if (previous != null) {
+                UserContext.set(previous);
+            } else {
+                UserContext.clear();
+            }
+        }
+    }
+
+    private UserContext copyUserContext(UserContext source) {
+        if (source == null) {
+            return null;
+        }
+        UserContext copy = new UserContext();
+        copy.setUserId(source.getUserId());
+        copy.setUsername(source.getUsername());
+        copy.setRole(source.getRole());
+        copy.setPermissionRange(source.getPermissionRange());
+        copy.setTeamId(source.getTeamId());
+        copy.setTenantId(source.getTenantId());
+        copy.setTenantOwner(source.getTenantOwner());
+        copy.setSuperAdmin(source.getSuperAdmin());
+        copy.setFactoryId(source.getFactoryId());
+        return copy;
     }
 }

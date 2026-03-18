@@ -1,5 +1,33 @@
 ## 2026-05-03（最新）
 
+### fix(websocket): 心跳与发送链路容错，避免断线把定时任务打成 ERROR
+
+- **问题现象**：云端日志周期性出现 `RealTimeWebSocketHandler - [WebSocket] 传输错误`，并伴随 `TaskUtils$LoggingErrorHandler - Unexpected error occurred in scheduled task`。从线程名看，后者落在定时任务线程，不是业务接口线程。
+- **根本原因**：`WebSocketHeartbeatScheduler` 每 20 秒遍历所有在线连接推送服务端 ping；当连接在 `session.isOpen()` 检查之后瞬间断开时，`sendMessage()` 内部可能抛出异常。旧实现只捕获 `IOException`，且心跳循环未做单连接级别隔离，导致单个断线会把整个定时任务打成 ERROR。
+- **修复方案**：`RealTimeWebSocketHandler.sendMessage()` 改为捕获更广泛的发送异常，并对已断开连接直接清理 session；`handleTransportError()` 统一识别客户端主动断开类异常并降为 WARN；`WebSocketHeartbeatScheduler` 对每个 session 单独 try/catch，单连接失败只清理该连接，不再外抛到调度器。
+- **对系统的帮助**：WebSocket 断线不再污染定时任务日志，也不会造成“看起来像服务器定时任务崩了”的误判；服务端仍持续向存活连接推送心跳，但单个客户端异常不会拖累整批连接。
+
+### perf(dashboard): daily-brief 限时 AI 降级，避免日报接口被智能建议拖慢
+
+- **问题现象**：云端 `GET /api/dashboard/daily-brief` 偶发耗时 4 秒以上，慢日志落在 `AiAdvisorService.getDailyAdvice(..)`，而同一时段采购列表、通知等接口都正常，说明瓶颈不在数据库主查询。
+- **根本原因**：`DailyBriefOrchestrator.getBrief()` 在请求线程里同步调用 AI 建议；底层 `IntelligenceInferenceOrchestrator` 允许较长超时和重试，导致日报接口被外部模型响应时间直接放大。
+- **修复方案**：将日报 AI 建议改为独立线程池异步获取，并设置 1.2 秒硬超时；超时或异常时立即回退到本地规则建议，不再阻塞日报主接口。同时显式复制 `UserContext` 到异步线程，保证租户缓存键和 AI 可观测记录不串租户。
+- **对系统的帮助**：`/api/dashboard/daily-brief` 不再因为 AI 建议偶发变慢而拖到 4 秒，页面优先稳定返回；AI 快时继续增强，AI 慢时无缝降级。
+
+### fix(schema): 采购单据表缺失防线补齐，避免 purchase/docs 再次因缺表 500
+
+- **问题现象**：云端 `GET /api/production/purchase/docs` 直接返回 500，日志明确报错 `Table 'fashion_supplychain.t_purchase_order_doc' doesn't exist`；同时启动阶段 `cleanupOrphanData` 偶发因采购表扩展字段未同步而报 schema 错误。
+- **根本原因**：采购单据表依赖 Flyway `V20260503001__create_purchase_order_doc_table.sql`，但老云库或漏跑迁移环境没有这张表；另外 `ProductionCleanupOrchestrator.cleanupDuplicatePurchases()` 使用采购实体全字段查询，维护任务也会被非关键扩展列缺失拖死。
+- **修复方案**：将 `t_purchase_order_doc` 纳入 `CoreSchemaPreflightChecker` 与 `deployment/cloud-db-core-schema-preflight-20260318.sql`；在 `DbColumnRepairRunner` 中新增 `t_purchase_order_doc` 幂等建表自愈；并将 `cleanupDuplicatePurchases()` 改为只查询去重所需字段，避免启动清理被无关扩展列阻断。
+- **对系统的帮助**：后续即使云端采购单据表缺失，服务重启也会自动补表；发布前和启动时都能提前暴露风险；采购清理任务不再因为采购表新增扩展列缺失而误报“数据库又炸了”。
+
+### fix(schema): 采购表缺列防线补齐，避免 purchase/list 再次因缺列 500
+
+- **问题现象**：云端 `GET /api/production/purchase/list`、`GET /api/production/purchase/stats` 周期性返回 500，前端统一看到“数据库操作异常，请联系管理员”。
+- **根本原因**：`MaterialPurchase` 实体持续增加扩展列，但采购表缺列防线不完整。`CoreSchemaPreflightChecker` 与云端体检脚本虽已纳入 `invoice_urls`，但 `DbColumnRepairRunner` 未同步补齐 `t_material_purchase.evidence_image_urls`、`fabric_composition`、`invoice_urls` 的启动自愈，导致老云库或漏跑 Flyway 的环境依然要靠人工补库才能恢复。
+- **修复方案**：在 `DbColumnRepairRunner` 中把上述 3 个采购表关键列纳入幂等 `ensureColumn()` 自愈；同时保留 `CoreSchemaPreflightChecker` 和 `deployment/cloud-db-core-schema-preflight-20260318.sql` 的预警/体检能力，形成“启动预警 + 启动自愈 + 云端体检”三层防线。
+- **对系统的帮助**：后续即使云端采购表再次出现这类扩展列漂移，服务重启时也会自动补列，不必再等采购列表先 500 再手工排障。
+
 ### perf(api): purchase/list 重复 SQL 合并优化（commit 3ff20340）
 
 - **问题现象**：云端日志 `backend-846` 中 `GET /api/production/purchase/list`（或 `/material/list`）稳定耗时 200-600ms，同时段 `queryPage` 偶发 1287ms 超时警告。

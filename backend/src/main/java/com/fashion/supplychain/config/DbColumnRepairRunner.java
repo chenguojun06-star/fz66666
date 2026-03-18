@@ -49,63 +49,88 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_user", "avatar_url",
                     "VARCHAR(255) DEFAULT NULL COMMENT '用户头像URL'");
 
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "evidence_image_urls",
+                    "TEXT DEFAULT NULL COMMENT '回料确认凭证图片URLs（逗号分隔）'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "fabric_composition",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '面料成分（从物料资料库同步）'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "invoice_urls",
+                    "TEXT DEFAULT NULL COMMENT '发票/单据图片URL列表(JSON数组)，用于财务留底'");
+
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_type",
                     "VARCHAR(32) DEFAULT NULL COMMENT '开发来源类型：SELF_DEVELOPED / SELECTION_CENTER'");
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_detail",
                     "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
             repaired += ensureColumn(conn, schema, "t_style_info", "image_insight",
                     "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition",
+            repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition",
                     "VARCHAR(500) DEFAULT NULL COMMENT '面料成分，如：70%棉 30%涤纶'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "wash_instructions",
+            repaired += ensureColumn(conn, schema, "t_style_info", "wash_instructions",
                     "VARCHAR(500) DEFAULT NULL COMMENT '洗涤说明，如：30°C水洗，不可漂白'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "u_code",
+            repaired += ensureColumn(conn, schema, "t_style_info", "u_code",
                     "VARCHAR(100) DEFAULT NULL COMMENT 'U编码/品质追溯码，用于吊牌打印'");
-                    repaired += ensureColumn(conn, schema, "t_style_info", "wash_temp_code",
-                        "VARCHAR(20) DEFAULT NULL COMMENT '洗涤温度代码：W30/W40/W60/W95/HAND/NO'");
-                    repaired += ensureColumn(conn, schema, "t_style_info", "bleach_code",
-                        "VARCHAR(20) DEFAULT NULL COMMENT '漂白代码：ANY/NON_CHL/NO'");
-                    repaired += ensureColumn(conn, schema, "t_style_info", "tumble_dry_code",
-                        "VARCHAR(20) DEFAULT NULL COMMENT '烘干代码：NORMAL/LOW/NO'");
-                    repaired += ensureColumn(conn, schema, "t_style_info", "iron_code",
-                        "VARCHAR(20) DEFAULT NULL COMMENT '熨烫代码：LOW/MED/HIGH/NO'");
-                    repaired += ensureColumn(conn, schema, "t_style_info", "dry_clean_code",
-                        "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码：YES/NO'");
-                            repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition_parts",
-                                "TEXT DEFAULT NULL COMMENT '多部位面料成分JSON:[{part,materials}]'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "update_by",
+            repaired += ensureColumn(conn, schema, "t_style_info", "wash_temp_code",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '洗涤温度代码：W30/W40/W60/W95/HAND/NO'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "bleach_code",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '漂白代码：ANY/NON_CHL/NO'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "tumble_dry_code",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '烘干代码：NORMAL/LOW/NO'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "iron_code",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '熨烫代码：LOW/MED/HIGH/NO'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "dry_clean_code",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码：YES/NO'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition_parts",
+                    "TEXT DEFAULT NULL COMMENT '多部位面料成分JSON:[{part,materials}]'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "update_by",
                     "VARCHAR(100) DEFAULT NULL COMMENT '最后维护人'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "description_locked",
+            repaired += ensureColumn(conn, schema, "t_style_info", "description_locked",
                     "INT NOT NULL DEFAULT 1 COMMENT '制单锁定:1=已锁定,0=退回可编辑'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_comment",
+            repaired += ensureColumn(conn, schema, "t_style_info", "description_return_comment",
                     "VARCHAR(500) DEFAULT NULL COMMENT '制单退回备注'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_by",
+            repaired += ensureColumn(conn, schema, "t_style_info", "description_return_by",
                     "VARCHAR(100) DEFAULT NULL COMMENT '制单退回人'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "description_return_time",
+            repaired += ensureColumn(conn, schema, "t_style_info", "description_return_time",
                     "DATETIME DEFAULT NULL COMMENT '制单退回时间'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_locked",
+            repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_locked",
                     "INT NOT NULL DEFAULT 0 COMMENT '纸样修改锁定:1=已提交,0=可提交'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_comment",
+            repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_comment",
                     "VARCHAR(500) DEFAULT NULL COMMENT '纸样退回备注'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_by",
+            repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_by",
                     "VARCHAR(100) DEFAULT NULL COMMENT '纸样退回人'");
-                repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_time",
+            repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_time",
                     "DATETIME DEFAULT NULL COMMENT '纸样退回时间'");
-                repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
+            repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
-                repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
+            repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
                     "VARCHAR(100) DEFAULT NULL COMMENT '物料成分，优先从面辅料资料带入' ");
-                repaired += ensureColumn(conn, schema, "t_style_bom", "size_usage_map",
+            repaired += ensureColumn(conn, schema, "t_style_bom", "size_usage_map",
                     "TEXT DEFAULT NULL COMMENT '码数用量配比(JSON，格式：{\"S\":1.5,\"M\":1.6,\"L\":1.7}，为空则统一用usageAmount)'");
-                repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
+            repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
-                repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
+            repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
                     "VARCHAR(50) DEFAULT NULL COMMENT '尺寸分组名，如上装区/下装区' ");
-                    repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
-                        "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
+            repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
+                    "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
 
             int repairedTables = 0;
-                repairedTables += ensureTable(conn, schema,
+            repairedTables += ensureTable(conn, schema,
+                    "t_purchase_order_doc",
+                    "CREATE TABLE IF NOT EXISTS `t_purchase_order_doc` ("
+                        + "`id` VARCHAR(36) NOT NULL,"
+                        + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+                        + "`order_no` VARCHAR(100) NOT NULL COMMENT '关联订单编号',"
+                        + "`image_url` VARCHAR(1000) NOT NULL COMMENT '单据图片COS访问URL',"
+                        + "`raw_text` TEXT DEFAULT NULL COMMENT 'AI识别原始文字',"
+                        + "`match_count` INT NOT NULL DEFAULT 0 COMMENT '已匹配条目数',"
+                        + "`total_recognized` INT NOT NULL DEFAULT 0 COMMENT 'AI识别出的条目总数',"
+                        + "`uploader_id` VARCHAR(36) DEFAULT NULL COMMENT '上传人ID',"
+                        + "`uploader_name` VARCHAR(100) DEFAULT NULL COMMENT '上传人姓名',"
+                        + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',"
+                        + "`delete_flag` INT NOT NULL DEFAULT 0 COMMENT '0=正常 1=删除',"
+                        + "PRIMARY KEY (`id`),"
+                        + "KEY `idx_pod_order_no` (`order_no`),"
+                        + "KEY `idx_pod_tenant_id` (`tenant_id`)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='采购单据上传记录表'");
+            repairedTables += ensureTable(conn, schema,
                     "t_material_database",
                     "CREATE TABLE IF NOT EXISTS `t_material_database` ("
                         + "`id` VARCHAR(36) NOT NULL,"

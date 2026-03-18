@@ -129,7 +129,16 @@ public class ProductionCleanupOrchestrator {
 
     private void cleanupDuplicatePurchases() {
         List<MaterialPurchase> allPurchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getDeleteFlag, 0));
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .select(MaterialPurchase::getId,
+                        MaterialPurchase::getOrderId,
+                        MaterialPurchase::getMaterialType,
+                        MaterialPurchase::getMaterialCode,
+                        MaterialPurchase::getMaterialName,
+                        MaterialPurchase::getSpecifications,
+                        MaterialPurchase::getUnit,
+                        MaterialPurchase::getSupplierName,
+                        MaterialPurchase::getCreateTime));
 
         if (allPurchases == null || allPurchases.isEmpty()) {
             return;

@@ -44,7 +44,11 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
                 "return_confirmer_name", "return_confirm_time", "creator_id", "creator_name",
                 "updater_id", "updater_name", "expected_arrival_date", "actual_arrival_date",
                 "expected_ship_date", "source_type", "pattern_production_id", "evidence_image_urls",
-                "fabric_composition"
+                "fabric_composition", "invoice_urls"
+        ));
+        tableColumns.put("t_purchase_order_doc", List.of(
+            "tenant_id", "order_no", "image_url", "raw_text", "match_count",
+            "total_recognized", "uploader_id", "uploader_name", "create_time", "delete_flag"
         ));
         tableColumns.put("t_production_order", List.of(
                 "progress_workflow_json", "progress_workflow_locked", "progress_workflow_locked_at",
@@ -122,7 +126,7 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
         lastCheckedAt = checkedAt;
 
         if (missing.isEmpty()) {
-            log.info("[SchemaPreflight] 核心表结构预检通过：生产/采购/打版/款式核心缺列为 0");
+            log.info("[SchemaPreflight] 核心表结构预检通过：生产/采购/单据/打版/款式核心缺列为 0");
             return;
         }
 

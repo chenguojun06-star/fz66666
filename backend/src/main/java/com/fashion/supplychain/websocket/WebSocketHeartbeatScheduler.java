@@ -45,8 +45,15 @@ public class WebSocketHeartbeatScheduler {
         int removed = 0;
         for (WebSocketSession session : allSessions) {
             if (session.isOpen()) {
-                webSocketHandler.sendMessage(session, pingMsg);
-                sent++;
+                try {
+                    webSocketHandler.sendMessage(session, pingMsg);
+                    sent++;
+                } catch (Exception e) {
+                    log.warn("[WebSocket心跳] 推送失败并清理连接: sessionId={}, reason={}",
+                            session.getId(), e.getMessage());
+                    sessionManager.removeSession(session.getId());
+                    removed++;
+                }
             } else {
                 // 顺便清理已失效的 session
                 sessionManager.removeSession(session.getId());
