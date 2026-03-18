@@ -155,20 +155,19 @@
 }
 
 .login-card .ant-form-item-label > label {
-  color: rgba(255, 255, 255, 0.92) !important;
+  color: rgba(255, 255, 255, 0.82) !important;
   font-weight: 700;
 }
 
 .login-card .ant-form-item-label > label,
 .login-card .ant-form-item-label > label > span,
-.login-card .ant-form-item-required,
-.login-card .ant-form-item-required::before {
-  color: rgba(255, 255, 255, 0.92) !important;
+.login-card .ant-form-item-required {
+  color: rgba(255, 255, 255, 0.82) !important;
 }
 
 .login-card .ant-form-item .ant-form-item-explain,
 .login-card .ant-form-item .ant-form-item-extra {
-  color: rgba(255, 255, 255, 0.82) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
 }
 
 .login-card .register-mode-segmented {
