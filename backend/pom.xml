@@ -22,7 +22,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- 依赖版本管理 -->
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
-        <mysql-connector.version>9.0.0</mysql-connector.version>
+        <mysql-connector.version>8.0.33</mysql-connector.version>
         <springdoc-openapi.version>1.7.0</springdoc-openapi.version>
         <flyway.version>9.22.3</flyway.version>
         <snakeyaml.version>2.2</snakeyaml.version>
