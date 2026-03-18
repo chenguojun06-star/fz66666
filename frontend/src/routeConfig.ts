@@ -214,6 +214,21 @@ export const menuConfig: MenuSection[] = [
       { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },    ],
   },
   {
+    title: '供应商采购',
+    key: 'procurement',
+    icon: React.createElement(ShoppingCartOutlined),
+    path: paths.procurement,
+  },
+  {
+    title: 'CRM客户管理',
+    key: 'crm',
+    icon: React.createElement(TeamOutlined),
+    items: [
+      { label: '客户档案', path: paths.crm, icon: React.createElement(TeamOutlined) },
+      { label: '应收账款', path: paths.crmReceivables, icon: React.createElement(DollarOutlined) },
+    ],
+  },
+  {
     title: '财务管理',
     key: 'finance',
     icon: React.createElement(AccountBookOutlined),
@@ -226,21 +241,6 @@ export const menuConfig: MenuSection[] = [
       { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
-  },
-  {
-    title: 'CRM客户管理',
-    key: 'crm',
-    icon: React.createElement(TeamOutlined),
-    items: [
-      { label: '客户档案', path: paths.crm, icon: React.createElement(TeamOutlined) },
-      { label: '应收账款', path: paths.crmReceivables, icon: React.createElement(DollarOutlined) },
-    ],
-  },
-  {
-    title: '供应商采购',
-    key: 'procurement',
-    icon: React.createElement(ShoppingCartOutlined),
-    path: paths.procurement,
   },
   {
     title: '系统设置',
