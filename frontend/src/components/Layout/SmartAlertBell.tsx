@@ -5,12 +5,9 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  InboxOutlined,
   RobotOutlined,
-  ScanOutlined,
   SendOutlined,
   ThunderboltOutlined,
-  WarningOutlined,
 } from '@ant-design/icons';
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
@@ -340,37 +337,7 @@ const SmartAlertBell: React.FC = () => {
 
         {!loading && (
           <>
-            {/* ── 数字统计行 ── */}
-            {brief && (
-              <div className="sap-stats">
-                <StatCell
-                  icon={<ExclamationCircleOutlined />}
-                  label="逾期订单"
-                  value={brief.overdueOrderCount}
-                  color="#ef4444"
-                  alert={brief.overdueOrderCount > 0}
-                />
-                <StatCell
-                  icon={<WarningOutlined />}
-                  label="高风险"
-                  value={brief.highRiskOrderCount}
-                  color="#f59e0b"
-                  alert={brief.highRiskOrderCount > 0}
-                />
-                <StatCell
-                  icon={<InboxOutlined />}
-                  label="昨日入库"
-                  value={`${brief.yesterdayWarehousingCount}单`}
-                  color="#6d28d9"
-                />
-                <StatCell
-                  icon={<ScanOutlined />}
-                  label="今日扫码"
-                  value={`${brief.todayScanCount}次`}
-                  color="#0284c7"
-                />
-              </div>
-            )}
+
 
             {/* ── 首要关注订单 ── */}
             {brief?.topPriorityOrder && !dismissedIds.has('topPriority') && (
@@ -644,24 +611,5 @@ const SmartAlertBell: React.FC = () => {
 };
 
 // ─── 小统计格子 ───────────────────────────────────────────
-const StatCell: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color: string;
-  alert?: boolean;
-  onClick?: () => void;
-}> = ({ icon, label, value, color, alert, onClick }) => (
-  <div
-    className={`sap-stat-cell${alert ? ' alert' : ''}${onClick ? ' clickable' : ''}`}
-    style={{ '--sap-cell-color': color, cursor: onClick ? 'pointer' : 'default' } as React.CSSProperties}
-    onClick={onClick}
-    title={onClick ? '点击查看详情' : undefined}
-  >
-    <span className="sap-stat-icon" style={{ color }}>{icon}</span>
-    <span className="sap-stat-val" style={{ color: alert ? color : '#111' }}>{value}</span>
-    <span className="sap-stat-label">{label}</span>
-  </div>
-);
 
 export default SmartAlertBell;
