@@ -931,9 +931,9 @@ const GlobalAiAssistant: React.FC = () => {
         v.name.toLowerCase().includes('female')
       )) ?? voices.find(v => v.lang.includes('zh'));
       if (voice) utterance.voice = voice;
-      utterance.rate = 0.9;     // 稍慢，更亲切自然
-      utterance.pitch = 1.45;   // 音调高萌
-      utterance.volume = 0.85;
+      utterance.rate = 0.82;    // 慢萌语速，停顿感更可爱
+      utterance.pitch = 1.65;   // 高音调，超呆萌小云风
+      utterance.volume = 0.9;
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
     };
