@@ -97,6 +97,27 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       render: (v?: string) => v || '-',
     },
     {
+      title: '幅宽',
+      dataIndex: 'fabricWidth',
+      width: 90,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
+      title: '克重',
+      dataIndex: 'fabricWeight',
+      width: 90,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
+      title: '成分',
+      dataIndex: 'fabricComposition',
+      width: 120,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
       title: '数量',
       dataIndex: 'quantity',
       width: 100,

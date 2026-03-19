@@ -93,6 +93,9 @@ public class MaterialPickupOrchestrator {
         record.setMaterialType(strOf(body.get("materialType")));
         record.setColor(strOf(body.get("color")));
         record.setSpecification(strOf(body.get("specification")));
+        record.setFabricWidth(strOf(body.get("fabricWidth")));
+        record.setFabricWeight(strOf(body.get("fabricWeight")));
+        record.setFabricComposition(strOf(body.get("fabricComposition")));
         record.setUnit(strOf(body.get("unit")));
         record.setRemark(strOf(body.get("remark")));
 

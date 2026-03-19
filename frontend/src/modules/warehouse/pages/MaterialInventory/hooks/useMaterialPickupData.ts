@@ -16,6 +16,9 @@ export interface MaterialPickupRecord {
   materialType?: string;
   color?: string;
   specification?: string;
+  fabricWidth?: string;
+  fabricWeight?: string;
+  fabricComposition?: string;
   quantity?: number;
   unit?: string;
   unitPrice?: number;

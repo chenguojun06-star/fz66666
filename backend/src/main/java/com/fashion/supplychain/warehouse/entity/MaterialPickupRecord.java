@@ -51,6 +51,15 @@ public class MaterialPickupRecord {
     /** 规格 */
     private String specification;
 
+    /** 幅宽（面料专属） */
+    private String fabricWidth;
+
+    /** 克重（面料专属） */
+    private String fabricWeight;
+
+    /** 成分（面料专属） */
+    private String fabricComposition;
+
     /** 领取数量 */
     private BigDecimal quantity;
 
