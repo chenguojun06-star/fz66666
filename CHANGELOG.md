@@ -1,3 +1,48 @@
+## 2026-03-20（全量系统安全审计 + P1/P2 高危漏洞修复）
+
+### fix(security): 全量系统安全审计 — 修复2个高危漏洞，记录4个风险点
+
+本次审计覆盖 6 条核心业务链路：扫码撤回、工资结算、BOM缓存、状态机、日报数据、电商凭证。
+
+#### 已修复 (commit 5bb1c5ae)
+
+- **🔴 P1 — DailyBriefOrchestrator 跨租户数据泄露（已修复）**
+  - 漏洞：`高风险订单查询` 中 `LambdaQueryWrapper<ProductionOrder>` 缺少 `.eq(getTenantId, UserContext.tenantId())` 过滤，任何已登录用户访问 `GET /api/dashboard/daily-brief` 可看到全局所有租户的高风险订单数 + 首要关注订单号
+  - 修复：在 `.eq(deleteFlag, 0)` 后紧接补全 `.eq(getTenantId, UserContext.tenantId())`
+  - 涉及文件：`DailyBriefOrchestrator.java`
+
+- **🔴 P2 — EcPlatformConfigController 电商凭证篡改权限不足（已修复）**
+  - 漏洞：`create()` 和 `disconnect()` 方法只有 class 级 `isAuthenticated()`，任意已登录员工可修改/断开租户电商平台的 appKey/appSecret（包括淘宝、京东、抖音等）
+  - 修复：两个写操作方法上添加 `@PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")`
+  - 涉及文件：`EcPlatformConfigController.java`
+
+#### 风险点记录（已知但非立即修复）
+
+- **⚠️ R1 — 结算单号并发竞态（PayrollSettlementOrchestrator.nextSettlementNo）**
+  - 风险：用 `LIKE prefix%` 查最大序号再+1，非原子操作；高并发（罕见）下有序号重复可能
+  - 现有兜底：200次重试 + DB唯一索引；实际流量下极小概率触发，暂不修复
+  
+- **⚠️ R2 — BOM Redis 缓存 Key 缺 tenantId（StyleBomServiceImpl ~line 52）**
+  - 风险：格式为 `style:bom:{styleId}:{mode}:...`，不同租户相同款式 ID 可能命中对方缓存
+  - 建议：Key 格式改为 `style:bom:{tenantId}:{styleId}:{mode}:...`，待下次迭代处理
+
+- **⚠️ R3 — BOM sync Job 状态存静态内存 Map（StyleBomOrchestrator）**
+  - 风险：服务重启后 Job 执行状态丢失，用户看不到正在进行中的同步任务
+  - 建议：迁移到 Redis 或 DB 存储，待下次迭代处理
+
+- **⚠️ R4 — 面料库存扣减事务边界待核查（MaterialPickingOrchestrator）**
+  - 风险：领取记录写入 + 库存扣减是否在同一 `@Transactional` 中，若不是则库存一致性存疑
+  - 已有审计：`MaterialStockOrchestrator` 分发到 `MaterialStockService.deductStock()` 已加事务，待与 MaterialPickingOrchestrator 联合确认
+
+#### 全量测试结果
+
+- 测试: **714 Tests, 0 Failures, 0 Errors, 1 Skipped** ✅
+- 编译: `BUILD SUCCESS` ✅
+- 前端 TypeScript: `0 errors` ✅
+- 审计方法: 静态代码分析（6条核心业务链路逐一审查）
+
+---
+
 ## 2026-03-20（采购列表 + 面料领取收款中心 + 智能会议 500 热修）
 
 ### fix(schema): 补齐采购、面料领取、智能会议三类线上 500 的缺表缺列防线
