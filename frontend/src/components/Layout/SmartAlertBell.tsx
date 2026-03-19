@@ -120,14 +120,12 @@ const SmartAlertBell: React.FC = () => {
   // 过滤掉已消除的我的通知（内存状态，刷新页面后重新检测）
   const visibleNotices = myNotices.filter(n => !dismissedNoticeIds.has(n.id));
 
-  // 总预警数 = 逾期 + 高风险 + 非逾期紧急事件（物料预警等）
-  // 注意：visibleEvents 中 type='overdue' 的事件已计入 overdueOrderCount，排除避免双重计数
+  // 徽章数 = 面板里还没被 × 关掉的可交互事件总数
+  // 只统计 visibleEvents（已过 dismissedIds 过滤），关一条减一，全关归零
+  // 不再加 overdueOrderCount / highRiskOrderCount：这两个是后端原始数字，
+  // 面板里无对应删除按钮，会导致 badge 永远不归零（"关了信息但数字不消"的问题）
   // 通知不计入徽章（避免 30 条未读把计数顶到 99+）
-  // Number() 防御：JacksonConfig 将 long 序列化为 JSON string，此处强制转数字避免字符串拼接
-  const alertCount =
-    Number(brief?.overdueOrderCount ?? 0) +
-    Number(brief?.highRiskOrderCount ?? 0) +
-    visibleEvents.filter(ev => ev.type !== 'overdue').length;
+  const alertCount = visibleEvents.length;
 
   // 拉取「我的通知」
   const fetchMyNotices = useCallback(async () => {
