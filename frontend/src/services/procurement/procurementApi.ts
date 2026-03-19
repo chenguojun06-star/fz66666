@@ -50,6 +50,7 @@ export interface PurchaseOrder {
   size?: string;
   expectedShipDate?: string;
   fabricComposition?: string;
+  invoiceUrls?: string;
 }
 
 export interface MaterialInboundRecord {
@@ -138,6 +139,10 @@ export const procurementApi = {
   /** 撤回领取 */
   cancelReceive: (payload: { purchaseId: string; reason: string }) =>
     api.post<ApiResult<Record<string, unknown>>>('/procurement/purchase-orders/cancel-receive', payload),
+
+  /** 更新发票/单据图片URL列表 */
+  updateInvoiceUrls: (payload: { purchaseId: string; invoiceUrls: string }) =>
+    api.post<ApiResult<null>>('/procurement/purchase-orders/update-invoice-urls', payload),
 
   /** 入库记录列表 */
   listMaterialInboundRecords: (params: { pageNum?: number; pageSize?: number; materialCode?: string; purchaseId?: string }) =>

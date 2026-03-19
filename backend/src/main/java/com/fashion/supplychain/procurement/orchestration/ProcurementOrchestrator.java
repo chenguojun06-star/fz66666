@@ -202,6 +202,16 @@ public class ProcurementOrchestrator {
         return materialPurchaseOrchestrator.cancelReceive(params);
     }
 
+    /**
+     * 更新发票/单据图片URL列表（财务留底）
+     */
+    public void updateInvoiceUrls(String purchaseId, String invoiceUrls) {
+        MaterialPurchase record = new MaterialPurchase();
+        record.setId(purchaseId);
+        record.setInvoiceUrls(invoiceUrls);
+        materialPurchaseOrchestrator.update(record);
+    }
+
     // ──────────────────────────────────────────────
     // 工具方法
     // ──────────────────────────────────────────────

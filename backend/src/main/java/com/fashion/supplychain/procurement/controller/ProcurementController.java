@@ -98,4 +98,16 @@ public class ProcurementController {
     public Result<?> cancelReceive(@RequestBody Map<String, Object> params) {
         return Result.success(procurementOrchestrator.cancelReceive(params));
     }
+
+    /** 更新发票/单据图片URL列表（财务留底） */
+    @PostMapping("/purchase-orders/update-invoice-urls")
+    public Result<?> updateInvoiceUrls(@RequestBody Map<String, Object> body) {
+        String purchaseId = (String) body.get("purchaseId");
+        String invoiceUrls = (String) body.get("invoiceUrls");
+        if (purchaseId == null || purchaseId.isBlank()) {
+            return Result.fail("订单ID不能为空");
+        }
+        procurementOrchestrator.updateInvoiceUrls(purchaseId, invoiceUrls);
+        return Result.success(null);
+    }
 }

@@ -182,7 +182,9 @@ const PurchaseOrderTab: React.FC = () => {
     },
     {
       title: '款号', dataIndex: 'styleNo', width: 120,
-      render: (v: string) => v ? <Tag color="purple">{v}</Tag> : <Text type="secondary">-</Text>,
+      render: (v: string, record: PurchaseOrder) => v
+        ? <a style={{ color: '#1677ff', cursor: 'pointer' }} onClick={() => setSelectedOrder(record)}>{v}</a>
+        : <Text type="secondary">-</Text>,
     },
     { title: '供应商', dataIndex: 'supplierName', width: 160 },
     { title: '物料名称', dataIndex: 'materialName', width: 160 },

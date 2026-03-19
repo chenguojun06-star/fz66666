@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Divider, Form, Input, InputNumber, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, DatePicker, Divider, Form, Image, Input, InputNumber, Space, Spin, Tag, Typography, Upload } from 'antd';
+import { DeleteOutlined, FileImageOutlined, LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
@@ -14,6 +15,7 @@ import MaterialInboundHistoryModal from './MaterialInboundHistoryModal';
 import MaterialReconciliationHistoryModal from './MaterialReconciliationHistoryModal';
 import { useAuth } from '@/utils/AuthContext';
 import { message } from '@/utils/antdStatic';
+import api from '@/utils/api';
 
 const { Paragraph, Text } = Typography;
 
@@ -69,12 +71,23 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
   const [inboundSaving, setInboundSaving] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [cancelSaving, setCancelSaving] = useState(false);
+  const [invoiceUrls, setInvoiceUrls] = useState<string[]>([]);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [inboundOpen, setInboundOpen] = useState(false);
   const [reconciliationOpen, setReconciliationOpen] = useState(false);
   const [lastInboundResult, setLastInboundResult] = useState<Record<string, unknown> | null>(null);
   const [arriveForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [cancelForm] = Form.useForm();
+
+  const parseInvoiceUrls = (raw?: string | null): string[] => {
+    if (!raw) return [];
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try { return JSON.parse(trimmed) as string[]; } catch { /* fallback */ }
+    }
+    return trimmed.split(',').map(s => s.trim()).filter(Boolean);
+  };
 
   const reloadDetail = async () => {
     if (!orderId) {
@@ -112,6 +125,11 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
   }, [open, orderId, initialOrder]);
 
   const order = detail;
+
+  useEffect(() => {
+    setInvoiceUrls(parseInvoiceUrls(order?.invoiceUrls));
+  }, [order?.id]);
+
   const normalizedStatus = normalizeStatus(order?.status);
   const canRegisterArrival = useMemo(() => (
     Boolean(order?.id) && normalizedStatus !== 'cancelled' && normalizedStatus !== 'completed'
@@ -197,6 +215,47 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
       message.error(error?.response?.data?.message || '保存失败');
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const beforeInvoiceUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) { message.error('只能上传图片文件'); return false; }
+    if (file.size / 1024 / 1024 > 10) { message.error('图片不能超过 10MB'); return false; }
+    return true;
+  };
+
+  const handleInvoiceUpload = async ({ file, onSuccess, onError }: any) => {
+    if (!order?.id) return;
+    setInvoiceUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post<any>('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const url: string = (res as any)?.data?.url ?? (res as any)?.url;
+      if (!url) throw new Error('上传失败：未返回URL');
+      const next = [...invoiceUrls, url];
+      setInvoiceUrls(next);
+      await procurementApi.updateInvoiceUrls({ purchaseId: order.id, invoiceUrls: JSON.stringify(next) });
+      onSuccess?.(res);
+      message.success('图片上传成功');
+    } catch (e: any) {
+      onError?.(e);
+      message.error(e?.message || '图片上传失败');
+    } finally {
+      setInvoiceUploading(false);
+    }
+  };
+
+  const handleInvoiceDelete = async (url: string) => {
+    if (!order?.id) return;
+    const next = invoiceUrls.filter(u => u !== url);
+    setInvoiceUrls(next);
+    try {
+      await procurementApi.updateInvoiceUrls({ purchaseId: order.id, invoiceUrls: JSON.stringify(next) });
+      message.success('图片已删除');
+    } catch {
+      message.error('删除失败，请重试');
+      setInvoiceUrls(invoiceUrls);
     }
   };
 
@@ -289,7 +348,7 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
               <ModalField label="已到货数量" value={order.arrivedQuantity ?? '-'} />
               <ModalField label="单价" value={formatAmount(order.unitPrice)} />
               <ModalField label="总金额" value={formatAmount(order.totalAmount)} />
-              <ModalField label="款号" value={order.styleNo || '-'} />
+              <ModalField label="款号" value={order.styleNo ? <Text style={{ color: '#1677ff' }}>{order.styleNo}</Text> : '-'} />
               <ModalField label="颜色/尺码" value={[order.color, order.size].filter(Boolean).join(' / ') || '-'} />
             </ModalFieldGrid>
           </ModalInfoCard>
@@ -381,6 +440,46 @@ const PurchaseOrderDetailModal: React.FC<PurchaseOrderDetailModalProps> = ({ ope
               </Paragraph>
             </div>
           </ModalInfoCard>
+          <Divider style={{ margin: '14px 0' }} />
+
+          <ModalInfoCard>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>
+                <FileImageOutlined style={{ marginRight: 6, color: '#8c8c8c' }} />单据/发票图片
+              </div>
+              <Upload
+                showUploadList={false}
+                beforeUpload={beforeInvoiceUpload}
+                customRequest={handleInvoiceUpload}
+                accept="image/*"
+              >
+                <Button size="small" icon={invoiceUploading ? <LoadingOutlined /> : <PlusOutlined />} disabled={invoiceUploading}>
+                  上传图片
+                </Button>
+              </Upload>
+            </div>
+            <Image.PreviewGroup>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {invoiceUrls.map((url, idx) => (
+                  <div key={idx} style={{ position: 'relative' }}>
+                    <Image src={url} width={100} height={100} style={{ objectFit: 'cover', borderRadius: 4 }} />
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleInvoiceDelete(url)}
+                      style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(0,0,0,0.45)', color: '#fff', borderRadius: '0 4px 0 4px', padding: '0 4px', height: 22 }}
+                    />
+                  </div>
+                ))}
+                {invoiceUrls.length === 0 && (
+                  <Text type="secondary" style={{ fontSize: 13 }}>暂无单据图片</Text>
+                )}
+              </div>
+            </Image.PreviewGroup>
+          </ModalInfoCard>
+
           <MaterialInboundHistoryModal
             open={inboundOpen}
             purchaseId={order.id}
