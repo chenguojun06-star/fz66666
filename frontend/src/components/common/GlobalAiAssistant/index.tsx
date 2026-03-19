@@ -907,7 +907,9 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  // 语音播报方法（固定使用 xiaoxiao 呆萌中文女声）
+  // 语音播报方法 — 动画片呆萌分段变调合成
+  // 原理：把句子按标点拆成片段，每段根据情绪赋予不同 pitch/rate，
+  //       模拟动画角色那种有起伏、有层次的活泼萌声
   const speak = (text: string) => {
     if (isMuted) return;
     if (!('speechSynthesis' in window)) return;
@@ -918,24 +920,69 @@ const GlobalAiAssistant: React.FC = () => {
 
     // eslint-disable-next-line no-undef
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
-      // 只读前 80 字，避免长文本语音体验差
-      const ttsText = cleanText.slice(0, 80);
+      // 取前 120 字，保留足够完整句子
+      const ttsText = cleanText.slice(0, 120);
       if (!ttsText.trim()) return;
-      const utterance = new SpeechSynthesisUtterance(ttsText);
-      utterance.lang = 'zh-CN';
-      // 优先寻找 Xiaoyi/Xiaoxiao/女声，找不到则兜底任意中文声音
+
+      // 优先 Xiaoyi/Xiaoxiao/女声，兜底任意中文
       const voice = voices.find(v => v.lang.startsWith('zh') && (
         v.name.toLowerCase().includes('xiaoyi') ||
         v.name.toLowerCase().includes('xiaoxiao') ||
         v.name.includes('女') ||
         v.name.toLowerCase().includes('female')
       )) ?? voices.find(v => v.lang.includes('zh'));
-      if (voice) utterance.voice = voice;
-      utterance.rate = 0.82;    // 慢萌语速，停顿感更可爱
-      utterance.pitch = 1.65;   // 高音调，超呆萌小云风
-      utterance.volume = 0.9;
+
+      // 按句子终止符分割，保留标点归入对应片段，短于 2 字的片段合并到下一段
+      const rawSegments = ttsText.split(/(?<=[。！？…～~]+)/);
+      const segments: string[] = [];
+      let buf = '';
+      for (const s of rawSegments) {
+        buf += s;
+        if (buf.replace(/\s/g, '').length >= 2) { segments.push(buf); buf = ''; }
+      }
+      if (buf.trim()) segments.push(buf);
+
+      // 逐段播放，onend 链式触发，形成自然停顿节奏
+      const speakSegment = (i: number) => {
+        if (i >= segments.length) return;
+        const seg = segments[i].trim();
+        if (!seg) { speakSegment(i + 1); return; }
+
+        const u = new SpeechSynthesisUtterance(seg);
+        u.lang = 'zh-CN';
+        if (voice) u.voice = voice;
+        u.volume = 0.92;
+
+        // 动画片感分层策略：
+        // 感叹号 → 蹦跶音（超高调 + 微快，像突然叫出来）
+        // 问号   → 上扬尾调（高调 + 稍慢，带一丝疑惑软萌）
+        // 首句   → 引入调（偏高，像卡通角色开场白）
+        // 中间段 → 平稳萌（标准呆萌基调）
+        // 末句   → 轻收尾调（略低于平均，余韵感）
+        const isLast = i === segments.length - 1;
+        if (/[！!]/.test(seg)) {
+          u.pitch = 1.95;  // 兴奋蹦高音
+          u.rate  = 0.95;  // 蹦跶一下，稍快
+        } else if (/[？?]/.test(seg)) {
+          u.pitch = 1.78;  // 上扬疑惑音
+          u.rate  = 0.80;  // 略慢，带着软萌不确定感
+        } else if (i === 0) {
+          u.pitch = 1.85;  // 开场偏高，抓注意
+          u.rate  = 0.82;
+        } else if (isLast) {
+          u.pitch = 1.65;  // 收尾柔和
+          u.rate  = 0.78;  // 最慢，余韵悠悠
+        } else {
+          u.pitch = 1.75;  // 中段标准呆萌基调
+          u.rate  = 0.85;
+        }
+
+        u.onend = () => speakSegment(i + 1);
+        window.speechSynthesis.speak(u);
+      };
+
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-      window.speechSynthesis.speak(utterance);
+      speakSegment(0);
     };
 
     const voices = window.speechSynthesis.getVoices();
