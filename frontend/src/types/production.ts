@@ -395,6 +395,7 @@ export interface MaterialQueryParams {
   materialType?: string;
   status?: string;
   sourceType?: 'order' | 'sample' | 'batch' | '';  // 采购来源: order=生产订单, sample=样衣开发, batch=批量采购
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
   orgUnitId?: string;
   page: number;
   pageSize: number;

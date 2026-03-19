@@ -594,10 +594,9 @@ public class MaterialPurchaseOrchestrator {
         // 如果单价为0或null，尝试从BOM填充单价
         helper.fillUnitPriceFromBom(materialPurchase);
 
-        // 自动设置来源类型：无订单关联且未指定来源时，标记为批量采购
+        // 自动设置来源类型：无实际订单关联（orderId）且未指定来源时标记为批量采购；orderNo 仅为引用字段不影响
         if (!StringUtils.hasText(materialPurchase.getSourceType())
-                && !StringUtils.hasText(materialPurchase.getOrderId())
-                && !StringUtils.hasText(materialPurchase.getOrderNo())) {
+                && !StringUtils.hasText(materialPurchase.getOrderId())) {
             materialPurchase.setSourceType("batch");
         }
 
@@ -696,8 +695,8 @@ public class MaterialPurchaseOrchestrator {
             return;
         }
 
-        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId())
-                && !StringUtils.hasText(purchase.getOrderNo());
+        // 供应商采购有 orderNo 引用字段但无 orderId，应允许直接对账同步；仅 orderId 存在时走入库路径
+        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId());
         if (allowReconciliation && StringUtils.hasText(purchase.getId())) {
             try {
                 materialReconciliationOrchestrator.upsertFromPurchaseId(purchase.getId().trim());
@@ -915,6 +914,7 @@ public class MaterialPurchaseOrchestrator {
         String orderNo = params == null ? "" : String.valueOf(params.getOrDefault("orderNo", "")).trim();
         String materialType = params == null ? "" : String.valueOf(params.getOrDefault("materialType", "")).trim();
         String sourceType = params == null ? "" : String.valueOf(params.getOrDefault("sourceType", "")).trim();
+        String factoryType = params == null ? "" : String.valueOf(params.getOrDefault("factoryType", "")).trim();
 
         if (StringUtils.hasText(orderNo)) {
             wrapper.and(w -> w
@@ -948,6 +948,13 @@ public class MaterialPurchaseOrchestrator {
             } else {
                 wrapper.eq(MaterialPurchase::getMaterialType, mt);
             }
+        }
+
+        // factoryType 过滤：通过子查询匹配关联订单工厂类型
+        if (StringUtils.hasText(factoryType)) {
+            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
+                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
+                    factoryType.toUpperCase());
         }
 
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);

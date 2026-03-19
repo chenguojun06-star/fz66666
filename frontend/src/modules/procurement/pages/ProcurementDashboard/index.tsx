@@ -1,16 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
+import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
-  ArrowRightOutlined, CheckCircleOutlined, LockOutlined, PlusOutlined, RocketOutlined, SearchOutlined,
+  CheckCircleOutlined, PlusOutlined, SearchOutlined,
   ShoppingCartOutlined, ShopOutlined, WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { paths } from '@/routeConfig';
-import { appStoreService } from '@/services/system/appStore';
-import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
@@ -19,95 +15,9 @@ import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
 import SupplierPurchaseHistoryModal from './components/SupplierPurchaseHistoryModal';
 import { message } from '@/utils/antdStatic';
 
-const { Title, Text, Paragraph } = Typography;
-
-// ─── 订阅检测 ─────────────────────────────────────────────────────
-const PROCUREMENT_APP_CODE_ALIASES = ['PROCUREMENT', 'SUPPLIER_PROCUREMENT'];
-
-const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
-  const code = String(item?.appCode || '').trim().toUpperCase();
-  if (!appCodeAliases.includes(code)) return false;
-  const status = String(item?.status || '').trim().toUpperCase();
-  const isStatusActive = status === '' || status === 'ACTIVE' || status === 'TRIAL';
-  if (item?.isExpired === true) return false;
-  const endTime = item?.endTime ? new Date(item.endTime).getTime() : null;
-  const notExpired = endTime == null || Number.isNaN(endTime) || endTime > Date.now();
-  return isStatusActive && notExpired;
-};
+const { Title, Text } = Typography;
 
 const normalizePurchaseStatus = (value?: string) => String(value || '').trim().toLowerCase();
-
-// ─── 锁定页（未订阅时展示）─────────────────────────────────────────
-const FEATURES = [
-  { icon: '📦', title: '采购订单管理', desc: '对面辅料供应商下单，支持多家比价与历史报价' },
-  { icon: '✅', title: '收货确认', desc: '供应商发货后小程序扫码收货，自动入库并更新应付' },
-  { icon: '💰', title: '应付账款', desc: '按供应商汇总欠款，到期自动提醒，一键付款确认' },
-  { icon: '⚠️', title: '缺料预警', desc: '生产订单用料计划与库存对比，提前7天发出缺料警报' },
-  { icon: '🏭', title: '供应商评级', desc: '按交期准时率、质量合格率自动生成黑黄绿供应商评级' },
-  { icon: '🔗', title: '仓库联动', desc: '收货入库、退货出库全程自动联动仓库模块，消除手写台账' },
-];
-
-const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
-  <>
-    <Card
-      style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', border: 'none', marginBottom: 24 }}
-      styles={{ body: { padding: '32px 40px' } }}
-    >
-      <Row align="middle" gutter={24}>
-        <Col flex="auto">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
-            <Tag color="gold" style={{ fontWeight: 600 }}>付费模块 · ¥599/月</Tag>
-          </div>
-          <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>供应商采购管理</Title>
-          <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
-            将面辅料采购流程完全数字化：下单→收货→入库→付款，打通仓库模块，替代手写台账与微信截图催货。
-          </Paragraph>
-        </Col>
-        <Col>
-          <Button type="primary" size="large" icon={<RocketOutlined />}
-            style={{ background: '#fff', color: '#11998e', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
-            onClick={onGoStore}
-          >
-            立即开通 <ArrowRightOutlined />
-          </Button>
-        </Col>
-      </Row>
-    </Card>
-    <Title level={5} style={{ marginBottom: 16 }}>开通后解锁以下功能</Title>
-    <Row gutter={[16, 16]}>
-      {FEATURES.map(f => (
-        <Col span={8} key={f.title}>
-          <Card size="small" style={{ height: '100%', opacity: 0.85 }} hoverable={false}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
-              <div>
-                <Text strong>{f.title}</Text>
-                <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>{f.desc}</Paragraph>
-              </div>
-            </div>
-          </Card>
-        </Col>
-      ))}
-    </Row>
-    <Card style={{ marginTop: 24, background: '#f8f9fa' }} bordered={false}>
-      <Row gutter={24} align="middle">
-        <Col span={16}>
-          <Text strong>采购管理模块与工厂目录有什么区别？</Text>
-          <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
-            现有"供应商目录"（系统设置 → 工厂列表）仅保存联系方式。本模块在此基础上增加完整采购业务流：
-            下采购单 → 跟进供应商发货 → 扫码入库确认 → 应付账款核销，形成完整的采购财务闭环。
-          </Paragraph>
-        </Col>
-        <Col span={8} style={{ textAlign: 'center' }}>
-          <Button type="primary" size="large" onClick={onGoStore} style={{ width: '100%' }}>
-            前往应用商店开通
-          </Button>
-        </Col>
-      </Row>
-    </Card>
-  </>
-);
 
 // ─── 供应商列表 Tab ────────────────────────────────────────────────
 const SupplierTab: React.FC = () => {
@@ -219,13 +129,23 @@ const PurchaseOrderTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const [orderNoFilter, setOrderNoFilter] = useState('');
+  const [styleNoFilter, setStyleNoFilter] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
 
-  const fetchList = useCallback(async (page = pagination.current, st = statusFilter) => {
+  const fetchList = useCallback(async (
+    page = pagination.current,
+    st = statusFilter,
+    orderNo = orderNoFilter,
+    styleNo = styleNoFilter,
+  ) => {
     setLoading(true);
     try {
-      const res = await procurementApi.listPurchaseOrders({ page, pageSize: pagination.pageSize, status: st });
+      const res = await procurementApi.listPurchaseOrders({
+        page, pageSize: pagination.pageSize, status: st || undefined,
+        orderNo: orderNo || undefined, styleNo: styleNo || undefined,
+      });
       const data = (res as any)?.data ?? res;
       setOrders(data?.records ?? []);
       setTotal(data?.total ?? 0);
@@ -234,7 +154,7 @@ const PurchaseOrderTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, statusFilter]);
+  }, [pagination.pageSize, statusFilter, orderNoFilter, styleNoFilter]);
 
   useEffect(() => { fetchList(1); }, []);
 
@@ -256,6 +176,14 @@ const PurchaseOrderTab: React.FC = () => {
 
   const columns: ColumnsType<PurchaseOrder> = [
     { title: '采购单号', dataIndex: 'purchaseNo', width: 160, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    {
+      title: '订单号', dataIndex: 'orderNo', width: 150,
+      render: (v: string) => v ? <Text code style={{ fontSize: 12, color: '#1677ff' }}>{v}</Text> : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '款号', dataIndex: 'styleNo', width: 120,
+      render: (v: string) => v ? <Tag color="purple">{v}</Tag> : <Text type="secondary">-</Text>,
+    },
     { title: '供应商', dataIndex: 'supplierName', width: 160 },
     { title: '物料名称', dataIndex: 'materialName', width: 160 },
     { title: '规格', dataIndex: 'specifications', width: 120 },
@@ -280,19 +208,40 @@ const PurchaseOrderTab: React.FC = () => {
   return (
     <>
       <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '12px 16px' } }}>
-        <Select
-          value={statusFilter}
-          onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v); }}
-          style={{ width: 140 }}
-          options={[
-            { value: '', label: '全部状态' },
-            { value: 'pending', label: '待处理' },
-            { value: 'partial_arrival', label: '部分到货' },
-            { value: 'received', label: '已收货' },
-            { value: 'completed', label: '已完成' },
-            { value: 'cancelled', label: '已取消' },
-          ]}
-        />
+        <Space wrap>
+          <Select
+            value={statusFilter}
+            onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v, orderNoFilter, styleNoFilter); }}
+            style={{ width: 140 }}
+            options={[
+              { value: '', label: '全部状态' },
+              { value: 'pending', label: '待处理' },
+              { value: 'partial_arrival', label: '部分到货' },
+              { value: 'received', label: '已收货' },
+              { value: 'completed', label: '已完成' },
+              { value: 'cancelled', label: '已取消' },
+            ]}
+          />
+          <Input
+            placeholder="订单号筛选"
+            value={orderNoFilter}
+            onChange={e => setOrderNoFilter(e.target.value)}
+            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}
+            style={{ width: 180 }}
+            allowClear
+            onClear={() => { setOrderNoFilter(''); fetchList(1, statusFilter, '', styleNoFilter); }}
+          />
+          <Input
+            placeholder="款号筛选"
+            value={styleNoFilter}
+            onChange={e => setStyleNoFilter(e.target.value)}
+            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}
+            style={{ width: 160 }}
+            allowClear
+            onClear={() => { setStyleNoFilter(''); fetchList(1, statusFilter, orderNoFilter, ''); }}
+          />
+          <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}>搜索</Button>
+        </Space>
       </Card>
       <Card styles={{ body: { padding: 0 } }}>
         <ResizableTable
@@ -313,7 +262,7 @@ const PurchaseOrderTab: React.FC = () => {
             setPagination({ current: page, pageSize: p.pageSize ?? 20 });
             fetchList(page);
           }}
-          scroll={{ x: 980 }}
+          scroll={{ x: 1220 }}
         />
       </Card>
       <PurchaseOrderDetailModal
@@ -431,6 +380,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ ope
       destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="orderNo" label="关联订单号">
+              <Input placeholder="关联大货订单号（选填）" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="styleNo" label="款号">
+              <Input placeholder="款号（选填）" />
+            </Form.Item>
+          </Col>
+        </Row>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
@@ -599,51 +560,12 @@ const ProcurementManagement: React.FC = () => {
   );
 };
 
-// ─── 页面主入口（订阅检测 + 分支渲染）──────────────────────────────
+// ─── 页面主入口（直接展示功能，无需订阅）───────────────────────────
 const ProcurementDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const isSuperAdmin = user?.isSuperAdmin === true;
-  const [subscribed, setSubscribed] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    if (isSuperAdmin) { setSubscribed(true); setChecking(false); return; }
-    const checkSubscribed = async () => {
-      try {
-        const apps = await appStoreService.getMyApps();
-        const appList = Array.isArray(apps) ? apps : ((apps as any)?.data ?? []);
-        const activeFromApps = appList.some((a: any) =>
-          hasActiveSubscription(a, PROCUREMENT_APP_CODE_ALIASES)
-        );
-        if (activeFromApps) { setSubscribed(true); return; }
-        const subscriptions = await appStoreService.getMySubscriptions();
-        const subList = Array.isArray(subscriptions) ? subscriptions : ((subscriptions as any)?.data ?? []);
-        const activeFromSubs = subList.some((s: any) =>
-          hasActiveSubscription(s, PROCUREMENT_APP_CODE_ALIASES)
-        );
-        setSubscribed(activeFromSubs);
-      } catch {
-        setSubscribed(false);
-      } finally {
-        setChecking(false);
-      }
-    };
-    checkSubscribed();
-  }, [isSuperAdmin]);
-
   return (
     <Layout>
       <div style={{ padding: '24px' }}>
-        {checking ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
-        ) : subscribed ? (
-          <ProcurementManagement />
-        ) : (
-          <div style={{ maxWidth: 960 }}>
-            <LockedView onGoStore={() => navigate(paths.appStore)} />
-          </div>
-        )}
+        <ProcurementManagement />
       </div>
     </Layout>
   );

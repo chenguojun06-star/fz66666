@@ -77,6 +77,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String styleNo = (String) safeParams.getOrDefault("styleNo", "");
         String materialType = (String) safeParams.getOrDefault("materialType", "");
         String sourceType = (String) safeParams.getOrDefault("sourceType", "");
+        String factoryType = (String) safeParams.getOrDefault("factoryType", "");
 
         Page<MaterialPurchase> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
@@ -137,6 +138,14 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         // 排除已报废订单（delete_flag=1）关联的采购记录，报废后不应再显示
         wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1))");
+
+        // factoryType 过滤：通过子查询匹配关联订单工厂类型（INTERNAL/EXTERNAL）
+        // 无 order_id 的记录（batch/stock/manual）不受此过滤影响
+        if (StringUtils.hasText(factoryType)) {
+            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
+                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
+                    factoryType.trim().toUpperCase());
+        }
 
         // 工厂账号隔离（由 MaterialPurchaseOrchestratorHelper 注入 _factoryOrderIds）
         @SuppressWarnings("unchecked")

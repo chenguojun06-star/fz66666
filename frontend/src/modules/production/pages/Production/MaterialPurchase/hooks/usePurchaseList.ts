@@ -45,7 +45,7 @@ export function usePurchaseList({
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue'>('all');
 
   const [queryParams, setQueryParams] = useState<MaterialQueryParams>(() => {
-    const base: MaterialQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
+    const base: MaterialQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE, factoryType: 'EXTERNAL' };
     if (typeof window === 'undefined') return base;
     try {
       const raw = sessionStorage.getItem(PURCHASE_QUERY_STORAGE_KEY);
@@ -56,6 +56,7 @@ export function usePurchaseList({
       const pageSize = Number((parsed as any).pageSize);
       return {
         ...base, ...(parsed as any),
+        factoryType: 'EXTERNAL',  // 物料采购模块仅显示外发工厂记录
         page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
         pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
       };
@@ -103,6 +104,7 @@ export function usePurchaseList({
       if (queryParams.materialType) fp.materialType = queryParams.materialType;
       if (queryParams.sourceType) fp.sourceType = queryParams.sourceType;
       if (queryParams.orderNo) fp.orderNo = queryParams.orderNo;
+      fp.factoryType = 'EXTERNAL';  // 仅统计外发工厂采购
       const res = await api.get<{ code: number; data: PurchaseStats }>('/production/purchase/stats', { params: fp });
       if (res.code === 200 && res.data) setPurchaseStats(res.data);
     } catch (err) { console.error('获取采购统计失败', err); }

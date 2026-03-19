@@ -93,6 +93,8 @@ export interface PurchaseOrderListParams {
   keyword?: string;
   status?: string;
   supplierId?: string;
+  orderNo?: string;
+  styleNo?: string;
 }
 
 interface ApiResult<T> { code: number; data: T; message?: string; }

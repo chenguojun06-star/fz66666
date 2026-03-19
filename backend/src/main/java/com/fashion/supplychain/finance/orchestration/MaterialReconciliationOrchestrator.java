@@ -338,7 +338,8 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(purchase.getId())) {
             return true;
         }
-        if (StringUtils.hasText(purchase.getOrderId()) || StringUtils.hasText(purchase.getOrderNo())) {
+        // 仅 orderId（生产订单系统关联）才走入库对账路径；orderNo 为引用字段不影响对账
+        if (StringUtils.hasText(purchase.getOrderId())) {
             return true;
         }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {
@@ -410,7 +411,8 @@ public class MaterialReconciliationOrchestrator {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
             return false;
         }
-        if (StringUtils.hasText(purchase.getOrderId()) || StringUtils.hasText(purchase.getOrderNo())) {
+        // 供应商采购有 orderNo 引用但无 orderId 的，应正常进入对账；仅 orderId 存在时走入库路径
+        if (StringUtils.hasText(purchase.getOrderId())) {
             cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
             return false;
         }
@@ -584,6 +586,9 @@ public class MaterialReconciliationOrchestrator {
         mr.setStyleId(purchase.getStyleId());
         mr.setStyleNo(purchase.getStyleNo());
         mr.setStyleName(purchase.getStyleName());
+        if (StringUtils.hasText(purchase.getSourceType())) {
+            mr.setSourceType(purchase.getSourceType().trim());
+        }
 
         mr.setQuantity(qty);
         mr.setUnitPrice(unitPrice);
