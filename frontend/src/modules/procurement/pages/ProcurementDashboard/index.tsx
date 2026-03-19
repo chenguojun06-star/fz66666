@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
-  CheckCircleOutlined, PlusOutlined, SearchOutlined,
+  CheckCircleOutlined, DownloadOutlined, PlusOutlined, SearchOutlined,
   ShoppingCartOutlined, ShopOutlined, WalletOutlined,
 } from '@ant-design/icons';
+import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -133,18 +134,24 @@ const PurchaseOrderTab: React.FC = () => {
   const [styleNoFilter, setStyleNoFilter] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [sortField, setSortField] = useState('createTime');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [exportLoading, setExportLoading] = useState(false);
 
   const fetchList = useCallback(async (
     page = pagination.current,
     st = statusFilter,
     orderNo = orderNoFilter,
     styleNo = styleNoFilter,
+    sf = sortField,
+    so: 'asc' | 'desc' = sortOrder,
   ) => {
     setLoading(true);
     try {
       const res = await procurementApi.listPurchaseOrders({
         page, pageSize: pagination.pageSize, status: st || undefined,
         orderNo: orderNo || undefined, styleNo: styleNo || undefined,
+        sortField: sf || undefined, sortOrder: so || undefined,
       });
       const data = (res as any)?.data ?? res;
       setOrders(data?.records ?? []);
@@ -154,9 +161,87 @@ const PurchaseOrderTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, statusFilter, orderNoFilter, styleNoFilter]);
+  }, [pagination.pageSize, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder]);
 
   useEffect(() => { fetchList(1); }, []);
+
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortField(field);
+    setSortOrder(order);
+    setPagination(p => ({ ...p, current: 1 }));
+    fetchList(1, statusFilter, orderNoFilter, styleNoFilter, field, order);
+  };
+
+  const handleExport = async () => {
+    if (!orders.length) { message.warning('当前没有数据可导出'); return; }
+    setExportLoading(true);
+    try {
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.default.Workbook();
+      const worksheet = workbook.addWorksheet('供应商采购');
+      worksheet.columns = [
+        { header: '序号', key: 'idx', width: 6 },
+        { header: '采购单号', key: 'purchaseNo', width: 20 },
+        { header: '订单号', key: 'orderNo', width: 18 },
+        { header: '款号', key: 'styleNo', width: 14 },
+        { header: '供应商', key: 'supplierName', width: 18 },
+        { header: '物料名称', key: 'materialName', width: 18 },
+        { header: '物料类别', key: 'materialType', width: 12 },
+        { header: '规格', key: 'specifications', width: 16 },
+        { header: '采购数量', key: 'purchaseQuantity', width: 10 },
+        { header: '到货数量', key: 'arrivedQuantity', width: 10 },
+        { header: '待到数量', key: 'pendingQuantity', width: 10 },
+        { header: '单价', key: 'unitPrice', width: 10 },
+        { header: '总金额', key: 'totalAmount', width: 12 },
+        { header: '状态', key: 'status', width: 10 },
+        { header: '预计到货', key: 'expectedDate', width: 14 },
+        { header: '创建时间', key: 'createTime', width: 14 },
+      ];
+      const exportData = orders.map((item, index) => {
+        const purchaseQty = Number(item.purchaseQuantity ?? item.quantity ?? 0);
+        const arrivedQty = Number(item.arrivedQuantity ?? 0);
+        return {
+          idx: index + 1,
+          purchaseNo: item.purchaseNo,
+          orderNo: item.orderNo || '-',
+          styleNo: item.styleNo || '-',
+          supplierName: item.supplierName || '-',
+          materialName: item.materialName || '-',
+          materialType: item.materialType || '-',
+          specifications: item.specifications || '-',
+          purchaseQuantity: purchaseQty,
+          arrivedQuantity: arrivedQty,
+          pendingQuantity: purchaseQty - arrivedQty,
+          unitPrice: item.unitPrice != null ? Number(item.unitPrice) : '-',
+          totalAmount: item.totalAmount != null ? Number(item.totalAmount) : '-',
+          status: statusLabel[normalizePurchaseStatus(item.status)] ?? item.status ?? '-',
+          expectedDate: item.expectedDate?.substring(0, 10) ?? '-',
+          createTime: item.createTime?.substring(0, 10) ?? '-',
+        };
+      });
+      worksheet.addRows(exportData);
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F0FE' } };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const date = new Date();
+      const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+      const timeStr = `${String(date.getHours()).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `供应商采购_${dateStr}_${timeStr}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      message.success('导出成功');
+    } catch {
+      message.error('导出失败，请重试');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const statusTagColor: Record<string, string> = {
     pending: 'default',
@@ -190,12 +275,21 @@ const PurchaseOrderTab: React.FC = () => {
     { title: '物料名称', dataIndex: 'materialName', width: 160 },
     { title: '规格', dataIndex: 'specifications', width: 120 },
     { title: '数量', dataIndex: 'purchaseQuantity', width: 80, render: (v: unknown, r: PurchaseOrder) => `${v ?? r.quantity ?? '-'} ${r.unit ?? ''}` },
-    { title: '总金额', dataIndex: 'totalAmount', width: 100, render: (v: unknown) => v != null ? `￥${Number(v).toLocaleString()}` : '-' },
+    {
+      title: <SortableColumnTitle title="总金额" fieldName="totalAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+      dataIndex: 'totalAmount', width: 110, render: (v: unknown) => v != null ? `･${Number(v).toLocaleString()}` : '-',
+    },
     { title: '状态', dataIndex: 'status', width: 100, render: (v: string) =>
       <Tag color={statusTagColor[normalizePurchaseStatus(v)] ?? 'default'}>{statusLabel[normalizePurchaseStatus(v)] ?? v}</Tag>
     },
-    { title: '预计到货', dataIndex: 'expectedDate', width: 110, render: (v: string) => v?.substring(0, 10) ?? '-' },
-    { title: '创建时间', dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-' },
+    {
+      title: <SortableColumnTitle title="预计到货" fieldName="expectedDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
+      dataIndex: 'expectedDate', width: 120, render: (v: string) => v?.substring(0, 10) ?? '-',
+    },
+    {
+      title: <SortableColumnTitle title="创建时间" fieldName="createTime" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
+      dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-',
+    },
     {
       title: '操作', width: 80, fixed: 'right' as const,
       render: (_: unknown, record: PurchaseOrder) => {
@@ -243,6 +337,14 @@ const PurchaseOrderTab: React.FC = () => {
             onClear={() => { setStyleNoFilter(''); fetchList(1, statusFilter, orderNoFilter, ''); }}
           />
           <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}>搜索</Button>
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exportLoading}
+            disabled={!orders.length || loading}
+            onClick={handleExport}
+          >
+            导出
+          </Button>
         </Space>
       </Card>
       <Card styles={{ body: { padding: 0 } }}>
