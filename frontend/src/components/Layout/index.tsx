@@ -577,6 +577,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             triggerSubMenuAction={sidebarIsCollapsed ? (isMobile ? 'click' : 'hover') : 'click'}
             className="sidebar-menu"
           />
+          {!sidebarIsCollapsed && !isMobile && (
+            <div className="sidebar-icp">
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+                粤ICP备2026026776号-1
+              </a>
+            </div>
+          )}
         </AntLayout.Sider>
 
         <main className="layout-content">
@@ -592,10 +599,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             ) : null}
             {children}
-          </div>
-          <div style={{ textAlign: 'center', padding: '6px 0 8px', fontSize: 11, color: '#bbb' }}>
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-               style={{ color: '#bbb' }}>粤ICP备2026026776号-1</a>
           </div>
         </main>
       </div>
