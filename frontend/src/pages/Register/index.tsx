@@ -436,6 +436,10 @@ const Register: React.FC = () => {
         <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
           部署版本：{buildCommit} · 构建时间：{buildTimeText}
         </div>
+        <div className="login-footer" style={{ marginTop: 4 }}>
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
+             style={{ color: 'rgba(255,255,255,0.45)' }}>粤ICP备2026026776号-1</a>
+        </div>
       </Card>
     </div>
   );

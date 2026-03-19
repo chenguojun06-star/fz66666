@@ -593,6 +593,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             ) : null}
             {children}
           </div>
+          <div style={{ textAlign: 'center', padding: '6px 0 8px', fontSize: 11, color: '#bbb' }}>
+            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
+               style={{ color: '#bbb' }}>粤ICP备2026026776号-1</a>
+          </div>
         </main>
       </div>
 
