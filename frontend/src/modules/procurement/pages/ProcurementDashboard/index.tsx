@@ -11,6 +11,10 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
+import { StyleCoverThumb } from '@/components/StyleAssets';
+import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatDateTime } from '@/utils/datetime';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
 import api from '@/utils/api';
 import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
@@ -145,9 +149,34 @@ const PurchaseOrderTab: React.FC = () => {
   const [quickEditSaving, setQuickEditSaving] = useState(false);
   const [quickEditForm] = Form.useForm();
   const [cancelTarget, setCancelTarget] = useState<PurchaseOrder | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelVisible, setCancelVisible] = useState(false);
   const [cancelSaving, setCancelSaving] = useState(false);
+
+  const getProcStatusConfig = (status: string) => {
+    const map: Record<string, { color: string; text: string }> = {
+      pending: { color: 'default', text: '待处理' },
+      approved: { color: 'blue', text: '已审批' },
+      in_transit: { color: 'processing', text: '运输中' },
+      received: { color: 'green', text: '已收货' },
+      settled: { color: 'success', text: '已结算' },
+      cancelled: { color: 'red', text: '已取消' },
+      completed: { color: 'success', text: '已完成' },
+      partial: { color: 'orange', text: '部分到货' },
+      partial_arrival: { color: 'orange', text: '部分到货' },
+    };
+    return map[status] ?? { color: 'default', text: status || '-' };
+  };
+
+  const cleanRemark = (value: unknown) =>
+    String(value ?? '').trim()
+      .replace(/(^|[；;]\s*)回料确认:[^；;]*/g, '')
+      .replace(/^[；;\s]+|[；;\s]+$/g, '')
+      .trim();
+
+  const resolveCompletedTime = (record: PurchaseOrder) =>
+    record.returnConfirmTime || record.actualArrivalDate || '';
+
+  const resolveOperatorName = (record: PurchaseOrder) =>
+    String(record.returnConfirmerName || '').trim() || String(record.receiverName || '').trim();
 
   const fetchList = useCallback(async (
     page = pagination.current,
@@ -279,15 +308,13 @@ const PurchaseOrderTab: React.FC = () => {
     }
   };
 
-  const handleCancelReceive = async () => {
+  const handleCancelReceive = async (reason: string) => {
     if (!cancelTarget?.id) return;
-    if (!cancelReason.trim()) { message.warning('请填写撤回原因'); return; }
     setCancelSaving(true);
     try {
-      await procurementApi.cancelReceive({ purchaseId: cancelTarget.id, reason: cancelReason.trim() });
+      await procurementApi.cancelReceive({ purchaseId: cancelTarget.id, reason: reason.trim() });
       message.success('采购单已恢复为待处理');
-      setCancelVisible(false);
-      setCancelReason('');
+      setCancelTarget(null);
       fetchList();
     } catch (e: any) {
       message.error(e?.response?.data?.message || '撤回失败');
@@ -313,62 +340,182 @@ const PurchaseOrderTab: React.FC = () => {
   };
 
   const columns: ColumnsType<PurchaseOrder> = [
-    { title: '采购单号', dataIndex: 'purchaseNo', width: 160, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
     {
-      title: '订单号', dataIndex: 'orderNo', width: 150,
-      render: (v: string) => v ? <Text code style={{ fontSize: 12, color: '#1677ff' }}>{v}</Text> : <Text type="secondary">-</Text>,
+      title: '图片', key: 'thumb', width: 72, align: 'center' as const,
+      render: (_: any, record: PurchaseOrder) => (
+        <StyleCoverThumb
+          styleNo={record.styleNo}
+          src={record.styleImageUrl}
+          styleId={record.styleImageId}
+          size={44}
+          borderRadius={4}
+        />
+      ),
     },
     {
       title: '款号', dataIndex: 'styleNo', width: 120,
       render: (v: string, record: PurchaseOrder) => v
-        ? <a style={{ color: '#1677ff', cursor: 'pointer' }} onClick={() => setSelectedOrder(record)}>{v}</a>
+        ? <a style={{ color: '#1677ff', cursor: 'pointer', fontWeight: 500 }} onClick={() => setSelectedOrder(record)}>{v}</a>
         : <Text type="secondary">-</Text>,
     },
-    { title: '供应商', dataIndex: 'supplierName', width: 160 },
-    { title: '物料名称', dataIndex: 'materialName', width: 160 },
-    { title: '规格', dataIndex: 'specifications', width: 120 },
-    { title: '数量', dataIndex: 'purchaseQuantity', width: 80, render: (v: unknown, r: PurchaseOrder) => `${v ?? r.quantity ?? '-'} ${r.unit ?? ''}` },
     {
-      title: <SortableColumnTitle title="总金额" fieldName="totalAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
-      dataIndex: 'totalAmount', width: 110, render: (v: unknown) => v != null ? `･${Number(v).toLocaleString()}` : '-',
-    },
-    { title: '状态', dataIndex: 'status', width: 100, render: (v: string) =>
-      <Tag color={statusTagColor[normalizePurchaseStatus(v)] ?? 'default'}>{statusLabel[normalizePurchaseStatus(v)] ?? v}</Tag>
+      title: '订单号', dataIndex: 'orderNo', width: 140,
+      render: (v: string) => v ? <Text code style={{ fontSize: 12, color: '#1677ff' }}>{v}</Text> : <Text type="secondary">-</Text>,
     },
     {
-      title: <SortableColumnTitle title="预计到货" fieldName="expectedDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
-      dataIndex: 'expectedDate', width: 120, render: (v: string) => v?.substring(0, 10) ?? '-',
+      title: '生产方', dataIndex: 'factoryName', width: 120,
+      render: (v: string, record: PurchaseOrder) => {
+        if (!v && !record.factoryType) return <Text type="secondary">-</Text>;
+        const isInternal = String(record.factoryType || '').toUpperCase() === 'INTERNAL';
+        const isSample = String(record.orderBizType || '').toLowerCase().includes('sample');
+        return (
+          <Space direction="vertical" size={2}>
+            <span style={{ fontSize: 12 }}>{v || '-'}</span>
+            <Space size={2}>
+              {record.factoryType && <Tag color={isInternal ? 'cyan' : 'default'} style={{ fontSize: 10, padding: '0 4px', margin: 0, lineHeight: '18px' }}>{isInternal ? '内部' : '外部'}</Tag>}
+              {record.orderBizType && <Tag color={isSample ? 'purple' : 'geekblue'} style={{ fontSize: 10, padding: '0 4px', margin: 0, lineHeight: '18px' }}>{isSample ? '样衣' : '批量'}</Tag>}
+            </Space>
+          </Space>
+        );
+      },
     },
     {
-      title: <SortableColumnTitle title="创建时间" fieldName="createTime" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
-      dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-',
+      title: '下单数量', dataIndex: 'orderQuantity', width: 100,
+      render: (v: any, record: PurchaseOrder) => {
+        const no = String(record.purchaseNo || '');
+        const qty = no.startsWith('MP-') ? (record.purchaseQuantity ?? record.quantity) : (v ?? record.orderQuantity);
+        return qty != null ? `${qty} 件` : '-';
+      },
     },
     {
-      title: '操作', width: 160, fixed: 'right' as const,
-      render: (_: unknown, record: PurchaseOrder) => {
+      title: '采购单号', dataIndex: 'purchaseNo', width: 140,
+      render: (v: string) => v ? <Text code style={{ fontSize: 12 }}>{v}</Text> : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '物料类型', dataIndex: 'materialType', width: 100,
+      render: (v: any) => {
+        const cat = getMaterialTypeCategory(v);
+        const label = getMaterialTypeLabel(v);
+        const catColor: Record<string, string> = { FABRIC: 'blue', LINING: 'cyan', ACCESSORY: 'orange', OTHER: 'default' };
+        return v ? <Tag color={catColor[cat] ?? 'default'}>{label}</Tag> : <Text type="secondary">-</Text>;
+      },
+    },
+    { title: '物料名称', dataIndex: 'materialName', width: 140 },
+    { title: '物料编码', dataIndex: 'materialCode', width: 120 },
+    { title: '颜色', dataIndex: 'color', width: 90, render: (v: string) => v || <Text type="secondary">-</Text> },
+    { title: '规格', dataIndex: 'specifications', width: 120, render: (v: string) => v || <Text type="secondary">-</Text> },
+    {
+      title: '幅宽', dataIndex: 'fabricWidth', width: 90,
+      render: (v: any) => v ? `${v}cm` : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '克重', dataIndex: 'fabricWeight', width: 90,
+      render: (v: any) => v ? `${v}g/m²` : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '成分', dataIndex: 'fabricComposition', width: 140,
+      render: (v: string) => v || <Text type="secondary">-</Text>,
+    },
+    { title: '供应商', dataIndex: 'supplierName', width: 140 },
+    {
+      title: '采购数量', dataIndex: 'purchaseQuantity', width: 100,
+      render: (v: any, r: PurchaseOrder) => v != null ? `${v} ${r.unit ?? ''}` : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '到货数量', dataIndex: 'arrivedQuantity', width: 100,
+      render: (v: any, r: PurchaseOrder) => v != null ? `${v} ${r.unit ?? ''}` : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '待到数量', key: 'pending', width: 100,
+      render: (_: any, r: PurchaseOrder) => {
+        const p = Math.max(0, Number(r.purchaseQuantity ?? r.quantity ?? 0) - Number(r.arrivedQuantity ?? 0));
+        return `${p} ${r.unit ?? ''}`;
+      },
+    },
+    {
+      title: '单价', dataIndex: 'unitPrice', width: 100,
+      render: (v: any) => v != null ? `¥${Number(v).toFixed(2)}` : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '状态', dataIndex: 'status', width: 110,
+      render: (v: string) => {
+        const cfg = getProcStatusConfig(normalizePurchaseStatus(v));
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: '来源', dataIndex: 'sourceType', width: 80,
+      render: (v: string) => {
+        const map: Record<string, { color: string; text: string }> = {
+          sample: { color: 'orange', text: '样衣' },
+          order: { color: 'green', text: '订单' },
+          bulk: { color: 'blue', text: '批量' },
+          batch: { color: 'blue', text: '批量' },
+          stock: { color: 'green', text: '库存' },
+          manual: { color: 'blue', text: '手动' },
+        };
+        const cfg = map[String(v || '').toLowerCase()];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : (v ? <Tag>{v}</Tag> : <Text type="secondary">-</Text>);
+      },
+    },
+    {
+      title: <SortableColumnTitle title="下单时间" fieldName="createTime" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
+      dataIndex: 'createTime', width: 160,
+      render: (v: string) => formatDateTime(v) || <Text type="secondary">-</Text>,
+    },
+    {
+      title: <SortableColumnTitle title="预计出货" fieldName="expectedShipDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
+      dataIndex: 'expectedShipDate', width: 140,
+      render: (v: string) => {
+        if (!v) return <Text type="secondary">-</Text>;
+        const days = dayjs(v).diff(dayjs(), 'day');
+        const dateStr = v.substring(0, 10);
+        if (days < 0) return <><span>{dateStr}</span><Tag color="red" style={{ marginLeft: 4 }}>已延误</Tag></>;
+        if (days <= 3) return <><span>{dateStr}</span><Tag color="orange" style={{ marginLeft: 4 }}>仅剩{days}天</Tag></>;
+        if (days <= 7) return <><span>{dateStr}</span><Tag color="gold" style={{ marginLeft: 4 }}>需关注</Tag></>;
+        return <span>{dateStr}</span>;
+      },
+    },
+    {
+      title: '采购时间', dataIndex: 'receivedTime', width: 160,
+      render: (v: string) => formatDateTime(v) || <Text type="secondary">-</Text>,
+    },
+    {
+      title: '采购完成', key: 'completedTime', width: 160,
+      render: (_: any, record: PurchaseOrder) => {
+        const t = resolveCompletedTime(record);
+        return formatDateTime(t) || <Text type="secondary">-</Text>;
+      },
+    },
+    {
+      title: '采购员', key: 'operator', width: 100,
+      render: (_: any, record: PurchaseOrder) => resolveOperatorName(record) || <Text type="secondary">-</Text>,
+    },
+    {
+      title: '备注', dataIndex: 'remark', width: 150,
+      render: (v: unknown) => {
+        const clean = cleanRemark(v);
+        return clean || <Text type="secondary">-</Text>;
+      },
+    },
+    {
+      title: '操作', width: 120, fixed: 'right' as const,
+      render: (_: any, record: PurchaseOrder) => {
         const ns = normalizePurchaseStatus(record.status);
         const canCancel = ns !== 'pending' && ns !== 'cancelled';
         const actions: RowAction[] = [
-          { key: 'view', label: '详情', primary: true, onClick: () => setSelectedOrder(record) },
+          { key: 'view', label: '查看', primary: true, onClick: () => setSelectedOrder(record) },
           {
-            key: 'edit',
-            label: '编辑',
-            onClick: () => {
+            key: 'edit', label: '编辑', onClick: () => {
               setQuickEditTarget(record);
               quickEditForm.setFieldsValue({
                 remark: record.remark ?? '',
-                expectedShipDate: (record as any).expectedShipDate ? dayjs((record as any).expectedShipDate) : undefined,
+                expectedShipDate: record.expectedShipDate ? dayjs(record.expectedShipDate) : undefined,
               });
               setQuickEditVisible(true);
             },
           },
-          {
-            key: 'cancel',
-            label: '撤回领取',
-            danger: true,
-            disabled: !canCancel,
-            onClick: () => { setCancelTarget(record); setCancelReason(''); setCancelVisible(true); },
-          },
+          { key: 'cancel', label: '撤回领取', danger: true, disabled: !canCancel, onClick: () => setCancelTarget(record) },
         ];
         return <RowActions actions={actions} />;
       },
@@ -461,7 +608,7 @@ const PurchaseOrderTab: React.FC = () => {
             setPagination({ current: page, pageSize: p.pageSize ?? 20 });
             fetchList(page);
           }}
-          scroll={{ x: 1400 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
       <PurchaseOrderDetailModal
@@ -492,28 +639,16 @@ const PurchaseOrderTab: React.FC = () => {
         </Form>
       </ResizableModal>
 
-      {/* 撤回领取确认弹窗 */}
-      <ResizableModal
-        title="撤回领取"
-        open={cancelVisible}
-        onCancel={() => setCancelVisible(false)}
-        onOk={handleCancelReceive}
-        confirmLoading={cancelSaving}
-        okButtonProps={{ danger: true }}
+      <RejectReasonModal
+        open={Boolean(cancelTarget)}
+        title={`撤回领取 · ${cancelTarget?.purchaseNo ?? ''}`}
         okText="确认撤回"
-        width="30vw"
-        destroyOnHidden
-      >
-        <div style={{ marginBottom: 12, color: '#595959' }}>
-          撤回后，采购单「{cancelTarget?.purchaseNo}」将恢复为『待处理』状态。请填写撤回原因：
-        </div>
-        <Input.TextArea
-          value={cancelReason}
-          onChange={e => setCancelReason(e.target.value)}
-          rows={3}
-          placeholder="撤回原因（必填）"
-        />
-      </ResizableModal>
+        fieldLabel="撤回原因"
+        placeholder="请输入撤回原因（必填）"
+        onOk={handleCancelReceive}
+        onCancel={() => setCancelTarget(null)}
+        loading={cancelSaving}
+      />
     </>
   );
 };

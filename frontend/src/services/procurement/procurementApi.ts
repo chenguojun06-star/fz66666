@@ -50,7 +50,17 @@ export interface PurchaseOrder {
   size?: string;
   expectedShipDate?: string;
   fabricComposition?: string;
+  fabricWidth?: string;
+  fabricWeight?: string;
   invoiceUrls?: string;
+  factoryName?: string;
+  factoryType?: string;
+  orderBizType?: string;
+  orderQuantity?: number;
+  returnConfirmTime?: string;
+  returnConfirmerName?: string;
+  styleImageId?: string;
+  styleImageUrl?: string;
 }
 
 export interface MaterialInboundRecord {
