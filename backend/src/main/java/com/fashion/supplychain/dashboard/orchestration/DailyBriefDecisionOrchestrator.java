@@ -61,7 +61,7 @@ public class DailyBriefDecisionOrchestrator {
             evidence,
             "逐单确认卡点，决定补产或升级",
             "查看逾期清单",
-            "/production/progress-detail");
+            "/production/progress-detail?filter=overdue");
     }
 
     private BriefDecisionCard buildHighRiskCard(LocalDate today, ProductionOrder top, int highRiskCount) {
@@ -82,7 +82,7 @@ public class DailyBriefDecisionOrchestrator {
             evidence,
             "确认卡点，加人/加班/拆单",
             "打开订单跟进",
-            "/production?orderNo=" + safe(top.getOrderNo()));
+            "/production/progress-detail?orderNo=" + safe(top.getOrderNo()));
     }
 
     private BriefDecisionCard buildScanGapCard(long yesterdayWarehousingCount, long yesterdayWarehousingQuantity) {

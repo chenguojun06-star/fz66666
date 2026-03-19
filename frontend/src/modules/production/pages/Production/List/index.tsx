@@ -492,6 +492,11 @@ const ProductionList: React.FC = () => {
         keyword: orderNo || prev.keyword,
       }));
     }
+    // URL filter 参数 → 激活对应智能队列筛选（如 ?filter=overdue 触发逾期筛选）
+    const filterParam = (params.get('filter') || '').trim();
+    if (['overdue', 'urgent', 'behind', 'stagnant'].includes(filterParam)) {
+      setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
+    }
   }, [location.search]);
 
   // 实时同步：30秒自动轮询更新数据

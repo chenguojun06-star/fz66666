@@ -149,6 +149,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const mergedOrderNos = Array.from(new Set(orderNo ? [orderNo, ...orderNos] : orderNos));
     const focusNode = normalizeFocusNodeName(String(params.get('focusNode') || '').trim());
     setFocusedOrderNos(mergedOrderNos);
+    // URL filter 参数 → 激活对应智能队列筛选（如 ?filter=overdue 触发逾期筛选）
+    const filterParam = String(params.get('filter') || '').trim();
+    if (['overdue', 'urgent', 'behind', 'stagnant'].includes(filterParam)) {
+      setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
+    }
     if (styleNo || orderNo || mergedOrderNos.length > 0) {
       setQueryParams((prev) => ({
         ...prev,
