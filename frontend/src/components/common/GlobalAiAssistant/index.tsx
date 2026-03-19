@@ -907,9 +907,9 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  // 语音播报方法 — 动画片呆萌分段变调合成
-  // 原理：把句子按标点拆成片段，每段根据情绪赋予不同 pitch/rate，
-  //       模拟动画角色那种有起伏、有层次的活泼萌声
+  // 语音播报 — 两层调制：业务场景识别 × 分段变调
+  // 第一层：识别文本的业务情绪（逾期紧张/好消息欢快/数据报告沉稳/日常呆萌）定基调
+  // 第二层：每个片段按标点（！蹦跶 / ？上扬 / 首句引入 / 末句收尾）在基调上叠加微调
   const speak = (text: string) => {
     if (isMuted) return;
     if (!('speechSynthesis' in window)) return;
@@ -920,11 +920,9 @@ const GlobalAiAssistant: React.FC = () => {
 
     // eslint-disable-next-line no-undef
     const doSpeak = (voices: SpeechSynthesisVoice[]) => {
-      // 取前 120 字，保留足够完整句子
       const ttsText = cleanText.slice(0, 120);
       if (!ttsText.trim()) return;
 
-      // 优先 Xiaoyi/Xiaoxiao/女声，兜底任意中文
       const voice = voices.find(v => v.lang.startsWith('zh') && (
         v.name.toLowerCase().includes('xiaoyi') ||
         v.name.toLowerCase().includes('xiaoxiao') ||
@@ -932,7 +930,31 @@ const GlobalAiAssistant: React.FC = () => {
         v.name.toLowerCase().includes('female')
       )) ?? voices.find(v => v.lang.includes('zh'));
 
-      // 按句子终止符分割，保留标点归入对应片段，短于 2 字的片段合并到下一段
+      // ① 第一层：业务情绪识别，根据关键词判断说话场景
+      type Mood = 'urgent' | 'good' | 'report' | 'casual';
+      const mood: Mood = (() => {
+        // 逾期/延期/紧急/货期风险 → 焦急紧张调（音调偏低、语速偏快，像在汇报紧急事件）
+        if (/逾期|延期|超期|紧急|风险|危|警告|超时|未完成|拖期|差\d+天|快来不及|来不及/.test(ttsText)) return 'urgent';
+        // 完成/达成/入库/好消息 → 欢快庆祝调（音调高亢活泼）
+        if (/完成|入库|达成|顺利|好消息|超额|已完成|搞定|漂亮|太棒/.test(ttsText)) return 'good';
+        // 数据/统计/日报 → 沉稳播报调（音调中档、节奏稳，但还是萌萌的）
+        if (/今日|共计|统计|合计|分析|扫码|共\d|总计|汇总|件数|订单数/.test(ttsText)) return 'report';
+        return 'casual';
+      })();
+
+      // ② 情绪基准值
+      //   urgent: pitch偏低+rate快 = 急促说话感
+      //   good:   pitch超高+rate稍快 = 兴奋欢呼感
+      //   report: pitch中档+rate稳 = 沉着播报感
+      //   casual: 标准呆萌基调
+      const base = ({
+        urgent: { pitch: 1.50, rate: 1.00 },
+        good:   { pitch: 1.90, rate: 0.88 },
+        report: { pitch: 1.62, rate: 0.84 },
+        casual: { pitch: 1.72, rate: 0.83 },
+      } as Record<Mood, { pitch: number; rate: number }>)[mood];
+
+      // ③ 按标点拆段，短于2字的合并
       const rawSegments = ttsText.split(/(?<=[。！？…～~]+)/);
       const segments: string[] = [];
       let buf = '';
@@ -942,7 +964,7 @@ const GlobalAiAssistant: React.FC = () => {
       }
       if (buf.trim()) segments.push(buf);
 
-      // 逐段播放，onend 链式触发，形成自然停顿节奏
+      // ④ 第二层逐段叠加：在基调上按标点微调
       const speakSegment = (i: number) => {
         if (i >= segments.length) return;
         const seg = segments[i].trim();
@@ -953,30 +975,16 @@ const GlobalAiAssistant: React.FC = () => {
         if (voice) u.voice = voice;
         u.volume = 0.92;
 
-        // 动画片感分层策略：
-        // 感叹号 → 蹦跶音（超高调 + 微快，像突然叫出来）
-        // 问号   → 上扬尾调（高调 + 稍慢，带一丝疑惑软萌）
-        // 首句   → 引入调（偏高，像卡通角色开场白）
-        // 中间段 → 平稳萌（标准呆萌基调）
-        // 末句   → 轻收尾调（略低于平均，余韵感）
-        const isLast = i === segments.length - 1;
-        if (/[！!]/.test(seg)) {
-          u.pitch = 1.95;  // 兴奋蹦高音
-          u.rate  = 0.95;  // 蹦跶一下，稍快
-        } else if (/[？?]/.test(seg)) {
-          u.pitch = 1.78;  // 上扬疑惑音
-          u.rate  = 0.80;  // 略慢，带着软萌不确定感
-        } else if (i === 0) {
-          u.pitch = 1.85;  // 开场偏高，抓注意
-          u.rate  = 0.82;
-        } else if (isLast) {
-          u.pitch = 1.65;  // 收尾柔和
-          u.rate  = 0.78;  // 最慢，余韵悠悠
-        } else {
-          u.pitch = 1.75;  // 中段标准呆萌基调
-          u.rate  = 0.85;
-        }
+        let p = base.pitch;
+        let r = base.rate;
 
+        if (/[！!]/.test(seg))              { p += 0.20; r += 0.07; }  // 蹦跶高音
+        else if (/[？?]/.test(seg))         { p += 0.10; r -= 0.08; }  // 上扬疑惑
+        else if (i === 0)                   { p += 0.12; }              // 开场引入
+        else if (i === segments.length - 1) { p -= 0.07; r -= 0.05; }  // 收尾余韵
+
+        u.pitch = Math.max(0.5, Math.min(2.0, p));
+        u.rate  = Math.max(0.5, Math.min(1.5, r));
         u.onend = () => speakSegment(i + 1);
         window.speechSynthesis.speak(u);
       };
