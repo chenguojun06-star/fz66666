@@ -14,7 +14,7 @@ import {
   DislikeOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse } from '@/services/intelligence/intelligenceApi';
+import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import styles from './index.module.css';
 import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
@@ -22,6 +22,28 @@ import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
 /** 生成简短唯一 sessionId */
 function genSessionId(): string {
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ── 聊天会话 localStorage 持久化（7天过期）──
+const SESSION_LS_KEY = 'ai_chat_session_v1';
+const SESSION_MAX_DAYS = 7;
+
+function saveSession(sessionId: string): void {
+  try { localStorage.setItem(SESSION_LS_KEY, JSON.stringify({ sessionId, createdAt: Date.now() })); } catch {}
+}
+
+function loadSession(): string {
+  try {
+    const raw = localStorage.getItem(SESSION_LS_KEY);
+    if (raw) {
+      const { sessionId, createdAt } = JSON.parse(raw) as { sessionId: string; createdAt: number };
+      const ageDays = (Date.now() - createdAt) / 86400000;
+      if (ageDays < SESSION_MAX_DAYS && sessionId) return sessionId;
+    }
+  } catch {}
+  const newId = genSessionId();
+  saveSession(newId);
+  return newId;
 }
 
 /** 轻量 Markdown → HTML（仅处理 AI 常用的格式） */
@@ -98,6 +120,8 @@ function sanitizeHtml(html: string): string {
   });
 }
 
+
+
 interface ActionCard {
   title: string;
   desc?: string;
@@ -153,7 +177,6 @@ function parseAiResponse(rawText: string): { displayText: string; charts: ChartS
     .trim();
   return { displayText, charts, actionCards, quickActions };
 }
-
 
 interface Message {
   id: string;
@@ -312,6 +335,7 @@ const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading 
     </svg>
   );
 };
+
 
 // ── 任务流操作卡片组件 ─────────────────────────────────────────────────────────
 /** 催单内联编辑卡片 — 跟单员/老板直接在 AI 对话中填写出货日期和备注 */
@@ -513,8 +537,8 @@ const GlobalAiAssistant: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  // ── hyper-advisor 会话 ──
-  const [advisorSessionId, setAdvisorSessionId] = useState(genSessionId);
+  // ── hyper-advisor 会话（localStorage 持久化，7天过期）──
+  const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
 
   // 每日关闭记忆
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
@@ -603,6 +627,25 @@ const GlobalAiAssistant: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // ── 历史记录恢复（mount时从后端加载，刷新后继续对话）──
+  const historyFetchedRef = useRef(false);
+  useEffect(() => {
+    if (historyFetchedRef.current) return;
+    historyFetchedRef.current = true;
+    intelligenceApi.hyperAdvisorHistory(advisorSessionId)
+      .then((list: ChatHistoryMessage[]) => {
+        if (!Array.isArray(list) || list.length === 0) return;
+        const restored = list.map((m, i) => ({
+          id: `hist-${i}-${m.id}`,
+          role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+          text: m.content ?? '',
+        }));
+        setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
+      })
+      .catch(() => { /* 静默降级，不影响正常使用 */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 监听回车和滚到底部
   useEffect(() => {
@@ -944,11 +987,14 @@ const GlobalAiAssistant: React.FC = () => {
               <ClearOutlined
                 className={styles.headerActionBtn}
                 onClick={() => {
+                  const newId = genSessionId();
+                  saveSession(newId);
+                  setAdvisorSessionId(newId);
                   setMessages([INITIAL_MSG]);
                   setPendingItems([]);
                   setInputValue('');
                   setHasFetchedMood(false);
-                  setAdvisorSessionId(genSessionId());
+                  historyFetchedRef.current = true; // 防止重新加载旧历史
                 }}
                 title="清空对话"
               />

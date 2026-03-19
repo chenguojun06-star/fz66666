@@ -1401,6 +1401,14 @@ export const intelligenceApi = {
   }): Promise<void> => {
     await api.post('/hyper-advisor/feedback', params);
   },
+
+  /** 超级顾问：加载历史聊天记录（按 createTime 升序） */
+  hyperAdvisorHistory: async (sessionId: string): Promise<ChatHistoryMessage[]> => {
+    const resp = await api.get(`/hyper-advisor/history/${sessionId}`);
+    const d = (resp as any)?.data ?? resp;
+    const list = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [];
+    return list as ChatHistoryMessage[];
+  },
 };
 
 /* ── 超级顾问 TS 类型 ── */
@@ -1426,4 +1434,11 @@ export interface HyperAdvisorResponse {
   profileHint?: string;
   traceId?: string;
   sessionId?: string;
+}
+
+export interface ChatHistoryMessage {
+  id: number;
+  role: string;       // 'user' | 'assistant'
+  content: string;
+  createTime: string;
 }
