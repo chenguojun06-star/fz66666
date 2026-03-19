@@ -4,12 +4,28 @@ import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 
+export interface PaymentCenterItem {
+  factoryName: string;
+  factoryType?: string;
+  orderBizType?: string;
+  totalAmount: number;
+  pendingAmount: number;
+  settledAmount: number;
+  totalCount: number;
+  pendingCount: number;
+  settledCount: number;
+  records: MaterialPickupRecord[];
+}
+
 export interface MaterialPickupRecord {
   id: string;
   pickupNo: string;
   pickupType: 'INTERNAL' | 'EXTERNAL';
   orderNo?: string;
   styleNo?: string;
+  factoryName?: string;
+  factoryType?: string;
+  orderBizType?: string;
   materialId?: string;
   materialCode?: string;
   materialName?: string;
@@ -65,6 +81,17 @@ export function useMaterialPickupData() {
   const [auditing, setAuditing]   = useState(false);
   const [settling, setSettling]   = useState(false);
 
+  // ===== 批量审核 =====
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const batchAuditModal = useModal<null>();
+  const [batchAuditForm] = Form.useForm();
+  const [batchAuditing, setBatchAuditing] = useState(false);
+
+  // ===== 收款中心 =====
+  const [paymentCenterData, setPaymentCenterData] = useState<PaymentCenterItem[]>([]);
+  const [paymentCenterLoading, setPaymentCenterLoading] = useState(false);
+  const [paymentSettling, setPaymentSettling] = useState(false);
+
   // ===== 查询 =====
   const fetchData = useCallback(async (opt?: { silent?: boolean; page?: number }) => {
     if (!opt?.silent) setLoading(true);
@@ -106,7 +133,7 @@ export function useMaterialPickupData() {
     }
   };
 
-  // ===== 审核 =====
+  // ===== 审核（单条）=====
   const handleAudit = async () => {
     const values = await auditForm.validateFields();
     if (!auditModal.data) return;
@@ -121,6 +148,32 @@ export function useMaterialPickupData() {
       message.error('审核操作失败');
     } finally {
       setAuditing(false);
+    }
+  };
+
+  // ===== 批量审核 =====
+  const handleBatchAudit = async () => {
+    const values = await batchAuditForm.validateFields();
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先勾选要审核的记录');
+      return;
+    }
+    setBatchAuditing(true);
+    try {
+      await api.post('/warehouse/material-pickup/batch-audit', {
+        ids: selectedRowKeys,
+        action: values.action,
+        remark: values.remark,
+      });
+      message.success(`已批量${values.action === 'approve' ? '通过' : '拒绝'} ${selectedRowKeys.length} 条记录`);
+      batchAuditModal.close();
+      batchAuditForm.resetFields();
+      setSelectedRowKeys([]);
+      void fetchData();
+    } catch {
+      message.error('批量审核失败，请重试');
+    } finally {
+      setBatchAuditing(false);
     }
   };
 
@@ -153,6 +206,33 @@ export function useMaterialPickupData() {
     }
   };
 
+  // ===== 收款中心 =====
+  const fetchPaymentCenter = useCallback(async (params?: object) => {
+    setPaymentCenterLoading(true);
+    try {
+      const res = await api.post('/warehouse/material-pickup/payment-center/list', params ?? {});
+      const data = res?.data ?? res;
+      setPaymentCenterData(Array.isArray(data) ? data : []);
+    } catch {
+      message.error('加载收款中心失败');
+    } finally {
+      setPaymentCenterLoading(false);
+    }
+  }, []);
+
+  const handlePaymentSettle = async (ids: string[], remark?: string) => {
+    setPaymentSettling(true);
+    try {
+      await api.post('/warehouse/material-pickup/payment-center/settle', { ids, remark });
+      message.success(`已标记 ${ids.length} 条记录为已收款`);
+      void fetchPaymentCenter();
+    } catch {
+      message.error('标记收款失败，请重试');
+    } finally {
+      setPaymentSettling(false);
+    }
+  };
+
   return {
     // 数据
     loading, dataSource,
@@ -166,13 +246,19 @@ export function useMaterialPickupData() {
     // 分页
     pagination,
     // 弹窗
-    createModal, auditModal, financeModal,
+    createModal, auditModal, financeModal, batchAuditModal,
     // 表单
-    createForm, auditForm, financeForm,
+    createForm, auditForm, financeForm, batchAuditForm,
     // 加载状态
-    creating, auditing, settling,
+    creating, auditing, settling, batchAuditing, paymentSettling,
+    // 批量选择
+    selectedRowKeys, setSelectedRowKeys,
     // 操作
-    handleCreate, handleAudit, handleFinanceSettle, handleCancel,
+    handleCreate, handleAudit, handleBatchAudit,
+    handleFinanceSettle, handleCancel,
     fetchData,
+    // 收款中心
+    paymentCenterData, paymentCenterLoading,
+    fetchPaymentCenter, handlePaymentSettle,
   };
 }

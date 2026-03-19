@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,6 +55,35 @@ public class MaterialPickupController {
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id) {
         pickupOrchestrator.cancel(id);
+        return Result.success(null);
+    }
+
+    /** 批量审核 */
+    @PostMapping("/batch-audit")
+    public Result<Void> batchAudit(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        pickupOrchestrator.batchAudit(ids, body);
+        return Result.success(null);
+    }
+
+    /** 收款中心聚合列表（工厂付钱给租户的应收账款） */
+    @PostMapping("/payment-center/list")
+    public Result<List<Map<String, Object>>> paymentCenterList(@RequestBody Map<String, Object> params) {
+        return Result.success(pickupOrchestrator.paymentCenterList(params));
+    }
+
+    /** 标记收款（将待核算的记录标记为已核算） */
+    @PostMapping("/payment-center/settle")
+    public Result<Void> paymentCenterSettle(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        String remark = body.get("remark") != null ? String.valueOf(body.get("remark")) : null;
+        Map<String, Object> settleBody = Map.of("remark", remark != null ? remark : "");
+        if (ids == null || ids.isEmpty()) throw new IllegalArgumentException("请传入要结算的记录ID");
+        for (String id : ids) {
+            pickupOrchestrator.financeSettle(id, settleBody);
+        }
         return Result.success(null);
     }
 }

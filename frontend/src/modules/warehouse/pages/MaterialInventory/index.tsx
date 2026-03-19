@@ -36,6 +36,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import { useMaterialPickupData } from './hooks/useMaterialPickupData';
+import type { PaymentCenterItem } from './hooks/useMaterialPickupData';
 import { useMaterialPickupColumns } from './hooks/useMaterialPickupColumns';
 import type { MaterialBatchDetail } from './hooks/useMaterialInventoryData';
 
@@ -350,12 +351,21 @@ const _MaterialInventory: React.FC = () => {
                       </Space>
                     )}
                     right={(
-                      <Button
-                        type="primary"
-                        onClick={() => pickupData.createModal.open(null)}
-                      >
-                        新建领取记录
-                      </Button>
+                      <Space>
+                        {pickupData.selectedRowKeys.length > 0 && (
+                          <Button
+                            onClick={() => pickupData.batchAuditModal.open(null)}
+                          >
+                            批量审核（{pickupData.selectedRowKeys.length}）
+                          </Button>
+                        )}
+                        <Button
+                          type="primary"
+                          onClick={() => pickupData.createModal.open(null)}
+                        >
+                          新建领取记录
+                        </Button>
+                      </Space>
                     )}
                   />
                   <ResizableTable
@@ -366,11 +376,93 @@ const _MaterialInventory: React.FC = () => {
                     rowKey="id"
                     scroll={{ x: 1600 }}
                     pagination={pickupData.pagination.pagination}
+                    rowSelection={{
+                      type: 'checkbox',
+                      selectedRowKeys: pickupData.selectedRowKeys,
+                      onChange: (keys) => pickupData.setSelectedRowKeys(keys as string[]),
+                      getCheckboxProps: (record) => ({
+                        disabled: record.auditStatus !== 'PENDING',
+                      }),
+                    }}
+                  />
+                </Card>
+              ),
+            },
+            {
+              key: 'payment',
+              label: '收款中心',
+              children: (
+                <Card>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 4 }}>💰 工厂应付款汇总</div>
+                    <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+                      以下为已审核通过的领取记录，按工厂汇总待收款金额（工厂欠租户的货款）
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <Button onClick={() => void pickupData.fetchPaymentCenter()}>刷新</Button>
+                  </div>
+                  <ResizableTable
+                    storageKey="material-payment-center"
+                    rowKey="factoryName"
+                    loading={pickupData.paymentCenterLoading}
+                    dataSource={pickupData.paymentCenterData}
+                    columns={[
+                      { title: '工厂名称', dataIndex: 'factoryName', width: 200 },
+                      {
+                        title: '工厂类型', dataIndex: 'factoryType', width: 100,
+                        render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-',
+                      },
+                      {
+                        title: '待收款金额', dataIndex: 'pendingAmount', width: 140,
+                        render: (v: number) => (
+                          <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{Number(v || 0).toLocaleString()}</span>
+                        ),
+                      },
+                      {
+                        title: '已收款金额', dataIndex: 'settledAmount', width: 140,
+                        render: (v: number) => (
+                          <span style={{ color: '#52c41a' }}>¥{Number(v || 0).toLocaleString()}</span>
+                        ),
+                      },
+                      {
+                        title: '总金额', dataIndex: 'totalAmount', width: 120,
+                        render: (v: number) => `¥${Number(v || 0).toLocaleString()}`,
+                      },
+                      {
+                        title: '待收/已收/总笔数', key: 'counts', width: 160,
+                        render: (_: unknown, r: PaymentCenterItem) =>
+                          `${r.pendingCount} / ${r.settledCount} / ${r.totalCount}`,
+                      },
+                      {
+                        title: '操作', key: 'actions', width: 130,
+                        render: (_: unknown, record: PaymentCenterItem) => {
+                          if (record.pendingCount === 0) return <Tag color="green">已全部收款</Tag>;
+                          const pendingIds = (record.records || [])
+                            .filter((r) => r.financeStatus === 'PENDING')
+                            .map((r) => r.id);
+                          return (
+                            <Button
+                              type="primary"
+                              size="small"
+                              loading={pickupData.paymentSettling}
+                              onClick={() => void pickupData.handlePaymentSettle(pendingIds)}
+                            >
+                              标记已收款
+                            </Button>
+                          );
+                        },
+                      },
+                    ]}
+                    pagination={false}
                   />
                 </Card>
               ),
             },
           ]}
+          onChange={(key) => {
+            if (key === 'payment') void pickupData.fetchPaymentCenter();
+          }}
         />
 
       <StandardModal
@@ -1179,6 +1271,33 @@ const _MaterialInventory: React.FC = () => {
           </Form.Item>
           <Form.Item name="remark" label="财务备注">
             <Input.TextArea rows={3} placeholder="选填" />
+          </Form.Item>
+        </Form>
+      </StandardModal>
+
+      {/* ===== 领取记录：批量审核弹窗 ===== */}
+      <StandardModal
+        title={`批量审核（已选 ${pickupData.selectedRowKeys.length} 条）`}
+        open={pickupData.batchAuditModal.visible}
+        onCancel={() => {
+          pickupData.batchAuditModal.close();
+          pickupData.batchAuditForm.resetFields();
+        }}
+        onOk={() => pickupData.handleBatchAudit()}
+        confirmLoading={pickupData.batchAuditing}
+        okText="确认审核"
+        centered
+        size="sm"
+      >
+        <Form form={pickupData.batchAuditForm} layout="vertical">
+          <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
+            <Select placeholder="请选择">
+              <Option value="approve">✅ 通过</Option>
+              <Option value="reject">❌ 拒绝</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="remark" label="审核备注">
+            <Input.TextArea rows={3} placeholder="可选，拒绝时建议填写原因" />
           </Form.Item>
         </Form>
       </StandardModal>

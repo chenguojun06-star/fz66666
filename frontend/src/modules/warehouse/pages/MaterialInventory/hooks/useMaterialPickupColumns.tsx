@@ -55,6 +55,25 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       render: (v?: string) => v || '-',
     },
     {
+      title: '生产方',
+      key: 'factoryName',
+      width: 150,
+      ellipsis: true,
+      render: (_: unknown, record: MaterialPickupRecord) => {
+        const { factoryName, factoryType, orderBizType } = record;
+        if (!factoryName) return '-';
+        const bizColorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
+        return (
+          <Space size={4}>
+            {factoryType === 'INTERNAL' && <Tag color="blue" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>内</Tag>}
+            {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>外</Tag>}
+            <span style={{ fontSize: 12 }}>{factoryName}</span>
+            {orderBizType && <Tag color={bizColorMap[orderBizType] ?? 'default'} style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>{orderBizType}</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
       title: '款号',
       dataIndex: 'styleNo',
       width: 120,

@@ -105,6 +105,20 @@ public class MaterialPickupRecord {
     /** 领取备注 */
     private String remark;
 
+    // =================== 关联生产订单（非数据库字段，查询时从生产订单富化） ===================
+
+    /** 生产方名称（来自关联生产订单，非数据库字段） */
+    @TableField(exist = false)
+    private String factoryName;
+
+    /** 生产方类型：INTERNAL=内部工厂  EXTERNAL=外部工厂（非数据库字段） */
+    @TableField(exist = false)
+    private String factoryType;
+
+    /** 生产方式：CMT / FOB / ODM / OEM（非数据库字段） */
+    @TableField(exist = false)
+    private String orderBizType;
+
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

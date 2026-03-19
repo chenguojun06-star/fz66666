@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
 import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +17,13 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 面辅料领取记录编排层
@@ -29,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MaterialPickupOrchestrator {
 
     private final MaterialPickupRecordMapper pickupMapper;
+    private final ProductionOrderService productionOrderService;
 
     /** 简易序号（进程级，重启归零，仅用于单号生成去重） */
     private final AtomicInteger seqCounter = new AtomicInteger(0);
@@ -69,7 +76,39 @@ public class MaterialPickupOrchestrator {
                         .or().like(MaterialPickupRecord::getPickerName,   keyword))
                 .orderByDesc(MaterialPickupRecord::getCreateTime);
 
-        return pickupMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        IPage<MaterialPickupRecord> result = pickupMapper.selectPage(new Page<>(page, pageSize), wrapper);
+
+        // 富化生产方信息：按 orderNo 批量查生产订单
+        List<MaterialPickupRecord> records = result.getRecords();
+        Set<String> orderNos = records.stream()
+                .map(MaterialPickupRecord::getOrderNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (!orderNos.isEmpty()) {
+            List<ProductionOrder> orders = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .in(ProductionOrder::getOrderNo, orderNos)
+                            .select(ProductionOrder::getOrderNo,
+                                    ProductionOrder::getFactoryName,
+                                    ProductionOrder::getFactoryType,
+                                    ProductionOrder::getOrderBizType));
+            Map<String, String> nameMap    = new HashMap<>();
+            Map<String, String> typeMap    = new HashMap<>();
+            Map<String, String> bizTypeMap = new HashMap<>();
+            for (ProductionOrder o : orders) {
+                nameMap.put(o.getOrderNo(), o.getFactoryName());
+                typeMap.put(o.getOrderNo(), o.getFactoryType());
+                bizTypeMap.put(o.getOrderNo(), o.getOrderBizType());
+            }
+            for (MaterialPickupRecord r : records) {
+                if (StringUtils.hasText(r.getOrderNo())) {
+                    r.setFactoryName(nameMap.get(r.getOrderNo()));
+                    r.setFactoryType(typeMap.get(r.getOrderNo()));
+                    r.setOrderBizType(bizTypeMap.get(r.getOrderNo()));
+                }
+            }
+        }
+        return result;
     }
 
     // =================== 创建 ===================
@@ -183,6 +222,115 @@ public class MaterialPickupOrchestrator {
 
         pickupMapper.updateById(record);
         log.info("[MaterialPickup] 财务核算完成: {}, 金额: {}", record.getPickupNo(), record.getAmount());
+    }
+
+    /**
+     * 批量审核领取记录（通过 / 拒绝）
+     *
+     * @param ids  记录ID列表
+     * @param body action(approve/reject), remark
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void batchAudit(List<String> ids, Map<String, Object> body) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("请选择要审核的记录");
+        }
+        for (String id : ids) {
+            audit(id, body);
+        }
+        log.info("[MaterialPickup] 批量审核完成，共 {} 条", ids.size());
+    }
+
+    // =================== 收款中心 ===================
+
+    /**
+     * 收款中心聚合查询：按工厂聚合已通过审核但未结算的记录
+     * 业务含义：工厂从租户仓库领取物料，租户对工厂有应收账款
+     *
+     * @param params 查询参数（可选 factoryName 过滤）
+     * @return 按工厂聚合的待收款数据
+     */
+    public List<Map<String, Object>> paymentCenterList(Map<String, Object> params) {
+        Long tenantId = currentTenantId();
+        String factoryNameFilter = strOf(params != null ? params.get("factoryName") : null);
+
+        // 查询已通过审核的记录（不限财务状态，收款中心同时展示待收和已收）
+        LambdaQueryWrapper<MaterialPickupRecord> wrapper = new LambdaQueryWrapper<MaterialPickupRecord>()
+                .eq(MaterialPickupRecord::getDeleteFlag, 0)
+                .eq(tenantId != null, MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(MaterialPickupRecord::getAuditStatus, "APPROVED")
+                .orderByDesc(MaterialPickupRecord::getCreateTime);
+
+        List<MaterialPickupRecord> records = pickupMapper.selectList(wrapper);
+
+        // 富化工厂信息
+        Set<String> orderNos = records.stream()
+                .map(MaterialPickupRecord::getOrderNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (!orderNos.isEmpty()) {
+            List<ProductionOrder> orders = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .in(ProductionOrder::getOrderNo, orderNos)
+                            .select(ProductionOrder::getOrderNo,
+                                    ProductionOrder::getFactoryName,
+                                    ProductionOrder::getFactoryType,
+                                    ProductionOrder::getOrderBizType));
+            Map<String, String> nameMap    = new HashMap<>();
+            Map<String, String> typeMap    = new HashMap<>();
+            Map<String, String> bizTypeMap = new HashMap<>();
+            for (ProductionOrder o : orders) {
+                nameMap.put(o.getOrderNo(), o.getFactoryName());
+                typeMap.put(o.getOrderNo(), o.getFactoryType());
+                bizTypeMap.put(o.getOrderNo(), o.getOrderBizType());
+            }
+            for (MaterialPickupRecord r : records) {
+                if (StringUtils.hasText(r.getOrderNo())) {
+                    r.setFactoryName(nameMap.get(r.getOrderNo()));
+                    r.setFactoryType(typeMap.get(r.getOrderNo()));
+                    r.setOrderBizType(bizTypeMap.get(r.getOrderNo()));
+                }
+            }
+        }
+
+        // 按工厂名称聚合（无工厂名的使用领取人或记录类型作为分组键）
+        Map<String, List<MaterialPickupRecord>> grouped = records.stream()
+                .collect(Collectors.groupingBy(r -> {
+                    if (StringUtils.hasText(r.getFactoryName())) return r.getFactoryName();
+                    // 无关联订单的领取记录归入「其他/散单」
+                    return "散单（无关联订单）";
+                }, LinkedHashMap::new, Collectors.toList()));
+
+        return grouped.entrySet().stream()
+                .filter(e -> !StringUtils.hasText(factoryNameFilter)
+                        || e.getKey().contains(factoryNameFilter))
+                .map(e -> {
+                    List<MaterialPickupRecord> grp = e.getValue();
+                    BigDecimal totalPending  = grp.stream()
+                            .filter(r -> "PENDING".equals(r.getFinanceStatus()))
+                            .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal totalSettled  = grp.stream()
+                            .filter(r -> "SETTLED".equals(r.getFinanceStatus()))
+                            .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    long pendingCount  = grp.stream().filter(r -> "PENDING".equals(r.getFinanceStatus())).count();
+                    long settledCount  = grp.stream().filter(r -> "SETTLED".equals(r.getFinanceStatus())).count();
+
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("factoryName",   e.getKey());
+                    item.put("factoryType",   grp.get(0).getFactoryType());
+                    item.put("orderBizType",  grp.get(0).getOrderBizType());
+                    item.put("totalAmount",   totalPending.add(totalSettled));
+                    item.put("pendingAmount", totalPending);
+                    item.put("settledAmount", totalSettled);
+                    item.put("totalCount",    (int) grp.size());
+                    item.put("pendingCount",  (int) pendingCount);
+                    item.put("settledCount",  (int) settledCount);
+                    item.put("records",       grp);
+                    return item;
+                })
+                .collect(Collectors.toList());
     }
 
     // =================== 删除 ===================
