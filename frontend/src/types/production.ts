@@ -286,6 +286,12 @@ export interface MaterialPurchase extends Record<string, unknown> {
   fabricComposition?: string;
   // 发票/单据图片URL列表（JSON数组字符串），用于财务留底
   invoiceUrls?: string;
+  // 初审工作流（内部采购专属）
+  auditStatus?: 'pending_audit' | 'passed' | 'rejected';
+  auditReason?: string;
+  auditTime?: string;
+  auditOperatorId?: string;
+  auditOperatorName?: string;
 }
 
 export interface ProductWarehousing extends Record<string, unknown> {

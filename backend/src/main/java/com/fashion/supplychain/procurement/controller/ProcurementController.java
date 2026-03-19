@@ -110,4 +110,28 @@ public class ProcurementController {
         procurementOrchestrator.updateInvoiceUrls(purchaseId, invoiceUrls);
         return Result.success(null);
     }
+
+    /**
+     * 初审操作（内部采购专属）
+     * action=initiate 发起初审，action=pass 初审通过，action=reject 初审驳回
+     */
+    @PostMapping("/purchase-orders/{id}/audit")
+    public Result<?> auditPurchaseOrder(
+            @PathVariable("id") String id,
+            @RequestParam("action") String action,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body != null ? (String) body.get("reason") : null;
+        switch (action) {
+            case "initiate" -> procurementOrchestrator.initiateAudit(id);
+            case "pass"     -> procurementOrchestrator.passAudit(id);
+            case "reject"   -> {
+                if (reason == null || reason.isBlank()) {
+                    return Result.fail("驳回时必须填写原因");
+                }
+                procurementOrchestrator.rejectAudit(id, reason);
+            }
+            default -> { return Result.fail("不支持的操作: " + action); }
+        }
+        return Result.success(null);
+    }
 }

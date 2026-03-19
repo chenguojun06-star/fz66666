@@ -9,7 +9,8 @@
  */
 export const getMaterialReconStatusConfig = (status: any) => {
   const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审批', color: 'default' },
+    pending: { text: '待核实', color: 'default' },
+    verified: { text: '已核实', color: 'processing' },
     approved: { text: '已审批', color: 'success' },
     paid: { text: '已付款', color: 'success' },
     rejected: { text: '已驳回', color: 'error' },
@@ -23,8 +24,9 @@ export const getMaterialReconStatusConfig = (status: any) => {
  * 定义每个状态允许转换的目标状态
  */
 export const materialReconStatusTransitions: Record<string, string[]> = {
-  pending: ['approved', 'rejected'],      // 待审批 → 已审批/已驳回
-  approved: ['paid', 'rejected'],         // 已审批 → 已付款/已驳回
-  rejected: ['pending'],                  // 已驳回 → 待审批
+  pending: ['verified', 'rejected'],      // 待核实 → 已核实/已驳回
+  verified: ['approved', 'rejected'],     // 已核实 → 已审批/已驳回
+  approved: ['paid'],                     // 已审批 → 已付款
+  rejected: ['pending'],                  // 已驳回 → 待核实
   paid: []                                // 已付款 → 无（已完成）
 };

@@ -147,24 +147,11 @@ const IntelligenceCenter: React.FC = () => {
     return () => window.removeEventListener('keydown', handleSearchKey);
   }, []);
 
-  /* 全屏：F 键切换 */
+  /* 全屏：监听 Esc 等原生退出事件，同步状态 */
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'f' || e.key === 'F') {
-        if (!document.fullscreenElement) {
-          rootRef.current?.requestFullscreen?.();
-          setIsFullscreen(true);
-        } else {
-          document.exitFullscreen?.();
-          setIsFullscreen(false);
-        }
-      }
-    };
     const fsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    window.addEventListener('keydown', handler);
     document.addEventListener('fullscreenchange', fsChange);
     return () => {
-      window.removeEventListener('keydown', handler);
       document.removeEventListener('fullscreenchange', fsChange);
     };
   }, []);

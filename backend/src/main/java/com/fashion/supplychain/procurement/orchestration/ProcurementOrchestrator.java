@@ -213,6 +213,85 @@ public class ProcurementOrchestrator {
     }
 
     // ──────────────────────────────────────────────
+    // 初审工作流（内部采购专属）
+    // ──────────────────────────────────────────────
+
+    /**
+     * 发起初审：仅允许 status=completed 且 auditStatus 为空的记录发起
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void initiateAudit(String purchaseId) {
+        MaterialPurchase purchase = materialPurchaseOrchestrator.getById(purchaseId);
+        if (purchase == null) {
+            throw new IllegalArgumentException("采购单不存在: " + purchaseId);
+        }
+        if (!"completed".equals(purchase.getStatus())) {
+            throw new IllegalStateException("仅已完成的采购单可以发起初审，当前状态: " + purchase.getStatus());
+        }
+        if (purchase.getAuditStatus() != null) {
+            throw new IllegalStateException("该采购单已在初审流程中，当前初审状态: " + purchase.getAuditStatus());
+        }
+        MaterialPurchase update = new MaterialPurchase();
+        update.setId(purchaseId);
+        update.setAuditStatus("pending_audit");
+        materialPurchaseOrchestrator.update(update);
+        log.info("[初审] 发起初审 purchaseId={}", purchaseId);
+    }
+
+    /**
+     * 初审通过：设置 auditStatus=passed，并自动生成/更新物料对账单
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void passAudit(String purchaseId) {
+        MaterialPurchase purchase = materialPurchaseOrchestrator.getById(purchaseId);
+        if (purchase == null) {
+            throw new IllegalArgumentException("采购单不存在: " + purchaseId);
+        }
+        if (!"pending_audit".equals(purchase.getAuditStatus())) {
+            throw new IllegalStateException("仅待初审状态可以通过，当前初审状态: " + purchase.getAuditStatus());
+        }
+        UserContext ctx = UserContext.get();
+        MaterialPurchase update = new MaterialPurchase();
+        update.setId(purchaseId);
+        update.setAuditStatus("passed");
+        update.setAuditTime(java.time.LocalDateTime.now());
+        if (ctx != null) {
+            update.setAuditOperatorId(ctx.getUserId());
+            update.setAuditOperatorName(ctx.getUsername());
+        }
+        materialPurchaseOrchestrator.update(update);
+        // 自动生成/更新物料对账单，进入对账审核流程
+        materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+        log.info("[初审] 初审通过并生成对账单 purchaseId={}", purchaseId);
+    }
+
+    /**
+     * 初审驳回：设置 auditStatus=rejected，记录驳回原因，可重新发起初审
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void rejectAudit(String purchaseId, String reason) {
+        MaterialPurchase purchase = materialPurchaseOrchestrator.getById(purchaseId);
+        if (purchase == null) {
+            throw new IllegalArgumentException("采购单不存在: " + purchaseId);
+        }
+        if (!"pending_audit".equals(purchase.getAuditStatus())) {
+            throw new IllegalStateException("仅待初审状态可以驳回，当前初审状态: " + purchase.getAuditStatus());
+        }
+        UserContext ctx = UserContext.get();
+        MaterialPurchase update = new MaterialPurchase();
+        update.setId(purchaseId);
+        update.setAuditStatus("rejected");
+        update.setAuditReason(reason);
+        update.setAuditTime(java.time.LocalDateTime.now());
+        if (ctx != null) {
+            update.setAuditOperatorId(ctx.getUserId());
+            update.setAuditOperatorName(ctx.getUsername());
+        }
+        materialPurchaseOrchestrator.update(update);
+        log.info("[初审] 初审驳回 purchaseId={}, reason={}", purchaseId, reason);
+    }
+
+    // ──────────────────────────────────────────────
     // 工具方法
     // ──────────────────────────────────────────────
     private int parseIntOrDefault(Map<String, Object> params, String key, int def) {

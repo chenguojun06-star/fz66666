@@ -189,4 +189,37 @@ public class MaterialPurchase {
      */
     @TableField("invoice_urls")
     private String invoiceUrls;
+
+    // ==================== 初审工作流字段 ====================
+
+    /**
+     * 初审状态：pending_audit=待初审，passed=初审通过，rejected=初审驳回
+     * 仅内部采购（factoryType=INTERNAL）使用，completed 之后须经过初审才能生成对账单
+     */
+    @TableField("audit_status")
+    private String auditStatus;
+
+    /**
+     * 初审驳回原因（rejected 时必填）
+     */
+    @TableField("audit_reason")
+    private String auditReason;
+
+    /**
+     * 初审操作时间
+     */
+    @TableField("audit_time")
+    private java.time.LocalDateTime auditTime;
+
+    /**
+     * 初审操作人ID
+     */
+    @TableField("audit_operator_id")
+    private String auditOperatorId;
+
+    /**
+     * 初审操作人姓名
+     */
+    @TableField("audit_operator_name")
+    private String auditOperatorName;
 }

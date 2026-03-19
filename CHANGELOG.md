@@ -1,3 +1,15 @@
+## 2026-03-19（hyper-advisor 缺表热修）
+
+### fix(schema): 补齐超级顾问核心表防线，修复 t_hyper_advisor_session 缺失导致的 500
+
+- **问题现象**：云端日志出现 `java.sql.SQLSyntaxErrorException: Table 'fashion_supplychain.t_hyper_advisor_session' doesn't exist`，`/api/hyper-advisor/history/{sessionId}` 及顾问会话持久化链路会直接报 500。
+- **根本原因**：`HyperAdvisorSession` 实体和读写逻辑已经上线，但线上库存在漏跑迁移环境；虽然仓库里已有早期建表脚本，云端当前实例并未实际落到 `t_hyper_advisor_session`，属于典型 schema drift。
+- **修复方案**：新增 `V202603191000__repair_hyper_advisor_tables_hotfix.sql`，按当前时间线幂等补齐 `t_hyper_advisor_session`、`t_advisor_feedback`、`t_ai_user_profile` 三张超级顾问核心表；同时在 `DbColumnRepairRunner` 中加入同名表的启动自愈，确保 Flyway 漏跑或本地缺迁移环境重启后也能自动补齐。
+- **涉及文件**：
+  - `backend/src/main/resources/db/migration/V202603191000__repair_hyper_advisor_tables_hotfix.sql`
+  - `backend/src/main/java/com/fashion/supplychain/config/DbColumnRepairRunner.java`
+- **对系统的帮助**：后续即使遇到旧云库、漏跑 Flyway 或半升级环境，超级顾问不再因为缺 `t_hyper_advisor_session` 直接瘫痪；部署和重启两条路径都能补表，降低智能模块再出现同类 500 的概率。
+
 ## 2026-05-04（最新）
 
 ### fix(production): "我的订单/生产进度"—下单人列显示 SYSTEM_TASK:进度一致性检查（全量污染修复）
