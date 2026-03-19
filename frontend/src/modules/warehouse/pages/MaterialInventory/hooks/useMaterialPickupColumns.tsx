@@ -76,6 +76,27 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       render: (v?: string) => v || '-',
     },
     {
+      title: '物料类型',
+      dataIndex: 'materialType',
+      width: 90,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
+      title: '颜色',
+      dataIndex: 'color',
+      width: 90,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
+      title: '规格',
+      dataIndex: 'specification',
+      width: 120,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
       title: '数量',
       dataIndex: 'quantity',
       width: 100,

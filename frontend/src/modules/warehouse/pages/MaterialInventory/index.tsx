@@ -1073,6 +1073,23 @@ const _MaterialInventory: React.FC = () => {
           </Row>
           <Row gutter={16}>
             <Col span={8}>
+              <Form.Item name="materialType" label="物料类型">
+                <Input placeholder="如：面料/辅料/里料" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="color" label="颜色">
+                <Input placeholder="选填" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="specification" label="规格">
+                <Input placeholder="如：150cm/200g" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
               <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
                 <InputNumber min={0.01} style={{ width: '100%' }} placeholder="如 100" />
               </Form.Item>
