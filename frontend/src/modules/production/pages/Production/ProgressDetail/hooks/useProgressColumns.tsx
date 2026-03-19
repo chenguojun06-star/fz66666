@@ -585,7 +585,7 @@ export const useProgressColumns = ({
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 60,
+      width: 100,
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);

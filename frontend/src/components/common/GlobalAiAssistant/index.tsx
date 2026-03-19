@@ -970,7 +970,7 @@ const GlobalAiAssistant: React.FC = () => {
                   const status = dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`;
                   return (
                     <div key={item.orderNo} className={styles.pendingItem} style={{position:'relative'}}
-                      onClick={() => { setIsOpen(false); navigate('/production'); }}
+                      onClick={() => { setIsOpen(false); navigate(`/production?orderNo=${encodeURIComponent(item.orderNo)}`); }}
                     >
                       <span>⚠️</span>
                       <span style={{flex:1}}>{item.orderNo}{item.styleNo ? `（${item.styleNo}）` : ''} — {status}，进度{item.progress}%</span>
