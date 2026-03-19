@@ -156,7 +156,15 @@ const ProductionList: React.FC = () => {
   }, [shareModal.record, message]);
 
   // ===== 查询参数 =====
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, includeScrapped: true, excludeTerminal: true });
+  // 跨页跳转精准定位：组件 mount 时就从 URL 读取 orderNo，避免初始 fetch 与 URL params effect 之间的竞态条件
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
+    const initSearch = new URLSearchParams(window.location.search);
+    const initOrderNo = initSearch.get('orderNo') || '';
+    return {
+      page: 1, pageSize: 10, includeScrapped: true, excludeTerminal: true,
+      ...(initOrderNo ? { keyword: initOrderNo } : {}),
+    };
+  });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [sortField, setSortField] = useState<string>('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -485,12 +493,15 @@ const ProductionList: React.FC = () => {
     const styleNo = (params.get('styleNo') || '').trim();
     const orderNo = (params.get('orderNo') || '').trim();
     if (styleNo || orderNo) {
-      setQueryParams((prev) => ({
-        ...prev,
-        page: 1,
-        styleNo: styleNo || prev.styleNo,
-        keyword: orderNo || prev.keyword,
-      }));
+      setQueryParams((prev) => {
+        const newKeyword = orderNo || (prev.keyword || '');
+        const newStyleNo = styleNo || (prev.styleNo || '');
+        // 值与当前完全一致时返回同一引用，避免触发多余的 fetch（常见于跨页 mount 时 URL 已预读场景）
+        if (newKeyword === (prev.keyword || '') && newStyleNo === (prev.styleNo || '')) {
+          return prev;
+        }
+        return { ...prev, page: 1, styleNo: newStyleNo || undefined, keyword: newKeyword };
+      });
     }
     // URL filter 参数 → 激活对应智能队列筛选（如 ?filter=overdue 触发逾期筛选）
     const filterParam = (params.get('filter') || '').trim();
@@ -498,6 +509,20 @@ const ProductionList: React.FC = () => {
       setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
     }
   }, [location.search]);
+
+  // 跨页跳转精准聚焦：URL 含 orderNo 且列表首次加载完成后，自动滚动高亮目标订单
+  // 仅触发一次（urlFocusApplied ref 保护），避免后续定时刷新反复高亮
+  const urlFocusApplied = useRef(false);
+  useEffect(() => {
+    if (urlFocusApplied.current || productionList.length === 0) return;
+    const orderNo = (new URLSearchParams(window.location.search).get('orderNo') || '').trim();
+    if (!orderNo) return;
+    const targetOrder = productionList.find((o) => String(o.orderNo || '').trim() === orderNo);
+    if (targetOrder) {
+      urlFocusApplied.current = true;
+      triggerOrderFocus(targetOrder);
+    }
+  }, [productionList, triggerOrderFocus]);
 
   // 实时同步：30秒自动轮询更新数据
   useSync(
