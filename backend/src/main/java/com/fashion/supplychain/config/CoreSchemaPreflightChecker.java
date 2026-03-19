@@ -44,7 +44,22 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
                 "return_confirmer_name", "return_confirm_time", "creator_id", "creator_name",
                 "updater_id", "updater_name", "expected_arrival_date", "actual_arrival_date",
                 "expected_ship_date", "source_type", "pattern_production_id", "evidence_image_urls",
-                "fabric_composition", "invoice_urls"
+            "fabric_composition", "invoice_urls", "audit_status", "audit_reason",
+            "audit_time", "audit_operator_id", "audit_operator_name"
+        ));
+        tableColumns.put("t_material_pickup_record", List.of(
+            "tenant_id", "pickup_no", "pickup_type", "order_no", "style_no", "material_id",
+            "material_code", "material_name", "material_type", "color", "specification",
+            "fabric_width", "fabric_weight", "fabric_composition", "quantity", "unit",
+            "unit_price", "amount", "picker_id", "picker_name", "pickup_time",
+            "audit_status", "auditor_id", "auditor_name", "audit_time", "audit_remark",
+            "finance_status", "finance_remark", "remark", "create_time", "update_time",
+            "delete_flag"
+        ));
+        tableColumns.put("t_agent_meeting", List.of(
+            "tenant_id", "meeting_type", "topic", "participants", "agenda", "debate_rounds",
+            "consensus", "dissent", "action_items", "confidence_score", "linked_decision_ids",
+            "linked_rca_ids", "duration_ms", "status", "delete_flag", "create_time"
         ));
         tableColumns.put("t_purchase_order_doc", List.of(
             "tenant_id", "order_no", "image_url", "raw_text", "match_count",
@@ -141,7 +156,7 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
         lastCheckedAt = checkedAt;
 
         if (missing.isEmpty()) {
-            log.info("[SchemaPreflight] 核心表结构预检通过：生产/采购/单据/打版/款式核心缺列为 0");
+            log.info("[SchemaPreflight] 核心表结构预检通过：生产/采购/领取/智能会议核心缺列为 0");
         } else {
             log.warn("[SchemaPreflight] 检测到核心表结构缺口：{}", formatSummary(missing));
             log.warn("[SchemaPreflight] 建议优先运行 deployment/cloud-db-core-schema-preflight-20260318.sql 做云端体检，再按缺列结果补库");

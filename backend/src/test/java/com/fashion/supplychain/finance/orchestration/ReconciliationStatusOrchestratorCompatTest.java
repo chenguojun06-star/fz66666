@@ -47,12 +47,12 @@ class ReconciliationStatusOrchestratorCompatTest {
         when(materialReconciliationService.getById("1")).thenReturn(mr);
         when(materialReconciliationService.updateById(any(MaterialReconciliation.class))).thenReturn(true);
 
-        String msg = orchestrator.updateStatusCompat("1", "approved");
+        String msg = orchestrator.updateStatusCompat("1", "verified");
         assertEquals("状态更新成功", msg);
 
         ArgumentCaptor<MaterialReconciliation> captor = ArgumentCaptor.forClass(MaterialReconciliation.class);
         verify(materialReconciliationService).updateById(captor.capture());
-        assertEquals("approved", captor.getValue().getStatus());
+        assertEquals("verified", captor.getValue().getStatus());
         verify(shipmentReconciliationService, never()).updateById(any());
     }
 

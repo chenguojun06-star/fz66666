@@ -1,3 +1,25 @@
+## 2026-03-20（采购列表 + 面料领取收款中心 + 智能会议 500 热修）
+
+### fix(schema): 补齐采购、面料领取、智能会议三类线上 500 的缺表缺列防线
+
+- **问题现象**：刚上线后连续出现三组接口 500：
+  - `/api/production/purchase/list` 按订单查看采购记录时报错
+  - `/api/warehouse/material-pickup/payment-center/list` 收款中心列表报错
+  - `/api/intelligence/meeting/list` 智能会议最近记录报错
+- **根本原因**：这三组接口都走 MyBatis-Plus 实体查询，云端库一旦少了新表或新列，请求阶段就会直接抛 `SQLSyntaxErrorException`。已有启动自愈和 schema 体检之前只覆盖了部分采购字段，没有把 `t_agent_meeting`、`t_material_pickup_record` 以及 `t_material_purchase.audit_*` 纳入保护范围，导致上线后才暴露 500。
+- **修复方案**：
+  - `DbColumnRepairRunner`：新增 `t_agent_meeting`、`t_material_pickup_record` 两张表的启动自愈；补齐 `t_material_pickup_record.fabric_*` 三列，以及 `t_material_purchase.audit_*` 五列
+  - `CoreSchemaPreflightChecker`：将采购审核字段、面料领取记录表、智能会议表全部纳入启动预检
+  - `deployment/cloud-db-core-schema-preflight-20260318.sql`：补充上述表和列的云端体检项，发版前就能看出缺口
+  - 新增 `deployment/cloud-db-hotfix-purchase-pickup-meeting-20260320.sql`：提供一份可直接在云端控制台执行的幂等止血 SQL
+  - 补充 `deployment/cloud-db-hotfix-material-purchase-audit-direct-20260320.sql`：用于云端 SQL 控制台不兼容 `PREPARE/EXECUTE` 时，按 preflight 结果对剩余 `audit_*` 缺列直接补库
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/config/DbColumnRepairRunner.java`
+  - `backend/src/main/java/com/fashion/supplychain/config/CoreSchemaPreflightChecker.java`
+  - `deployment/cloud-db-core-schema-preflight-20260318.sql`
+  - `deployment/cloud-db-hotfix-purchase-pickup-meeting-20260320.sql`
+- **对系统的帮助**：以后这三类 schema drift 不会再等到页面请求才爆 500，启动时就会自动补或直接预警；线上止血路径也从“靠猜是哪张表缺了”变成“一份 SQL 直接补齐”。
+
 ## 2026-03-19（采购+面料+AI表四项改动）
 
 ### feat(procurement): 采购单据智能识别 + Orchestrator 补完

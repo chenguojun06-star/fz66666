@@ -354,17 +354,6 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         }
     }
 
-    /**
-     * @deprecated 已迁移到 StyleBomOrchestrator.saveBomWithStockCheck()
-     * 消除 Service 层对 MaterialStockService（production模块）的跨模块依赖
-     */
-    @Deprecated
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<StyleBom> saveBomWithStockCheck(List<StyleBom> bomList, Integer productionQty) {
-        throw new UnsupportedOperationException("已迁移到 StyleBomOrchestrator.saveBomWithStockCheck()");
-    }
-
     @Override
     public void clearBomCache(Long styleId) {
         if (styleId == null) {
@@ -408,15 +397,4 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         return result;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @deprecated 已迁移到 StyleBomOrchestrator.getBomStockSummary()
-     * 消除 Service 层对 MaterialStockService（production模块）的跨模块依赖
-     */
-    @Deprecated
-    @Override
-    public Map<String, Object> getBomStockSummary(Long styleId, Integer productionQty) {
-        throw new UnsupportedOperationException("已迁移到 StyleBomOrchestrator.getBomStockSummary()");
-    }
 }

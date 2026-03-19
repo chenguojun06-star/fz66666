@@ -97,14 +97,14 @@ class ReconciliationStatusOrchestratorTest {
         when(shipmentReconciliationService.getById("1")).thenReturn(sr);
         when(shipmentReconciliationService.updateById(any(ShipmentReconciliation.class))).thenReturn(true);
 
-        String msg = orchestrator.updateShipmentStatus("1", "approved");
+        String msg = orchestrator.updateShipmentStatus("1", "verified");
         assertEquals("状态更新成功", msg);
 
         ArgumentCaptor<ShipmentReconciliation> captor = ArgumentCaptor.forClass(ShipmentReconciliation.class);
         verify(shipmentReconciliationService).updateById(captor.capture());
         ShipmentReconciliation saved = captor.getValue();
-        assertEquals("approved", saved.getStatus());
-        assertNotNull(saved.getApprovedAt());
+        assertEquals("verified", saved.getStatus());
+        assertNotNull(saved.getVerifiedAt());
         assertTrue(saved.getRemark().contains("[STATUS]"));
     }
 
@@ -177,7 +177,7 @@ class ReconciliationStatusOrchestratorTest {
         assertEquals("退回成功", msg);
 
         // 直接验证 mr 对象被修改（与 LambdaUpdateWrapper 里的 set 对应）
-        assertEquals("pending", mr.getStatus());
+        assertEquals("verified", mr.getStatus());  // approved → previousStatus = verified（状态机一步退回）
         assertNotNull(mr.getUpdateTime());
         assertTrue(mr.getRemark().startsWith("old\n"));
         assertTrue(mr.getRemark().contains("[tom]"));

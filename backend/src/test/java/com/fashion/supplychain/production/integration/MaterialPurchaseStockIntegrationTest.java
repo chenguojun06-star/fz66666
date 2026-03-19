@@ -197,7 +197,13 @@ public class MaterialPurchaseStockIntegrationTest {
                 + "pattern_production_id VARCHAR(64),"
                 + "tenant_id BIGINT,"
                 + "evidence_image_urls VARCHAR(1000),"
-                + "fabric_composition VARCHAR(255)"
+                + "fabric_composition VARCHAR(255),"
+                + "invoice_urls VARCHAR(1000),"
+                + "audit_status VARCHAR(50) DEFAULT 'none',"
+                + "audit_reason VARCHAR(500),"
+                + "audit_time TIMESTAMP,"
+                + "audit_operator_id VARCHAR(50),"
+                + "audit_operator_name VARCHAR(100)"
                 + ")");
 
         jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS t_material_stock ("

@@ -62,17 +62,6 @@ public class WagePaymentController {
     @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
     @PostMapping("/payment-accounts")
     public Result<PaymentAccount> createAccount(@RequestBody PaymentAccount account) {
-        return saveAccount(account);
-    }
-
-    /**
-     * 添加/更新收款账户
-     * @deprecated 请使用 POST /api/finance/payment-accounts（无 /save 后缀）
-     */
-    @Deprecated
-    @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
-    @PostMapping("/payment-accounts/save")
-    public Result<PaymentAccount> saveAccount(@RequestBody PaymentAccount account) {
         if (account.getOwnerType() == null || account.getOwnerId() == null) {
             return Result.fail("所有者类型和ID不能为空");
         }

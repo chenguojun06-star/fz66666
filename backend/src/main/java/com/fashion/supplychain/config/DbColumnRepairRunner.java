@@ -55,6 +55,16 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(500) DEFAULT NULL COMMENT '面料成分（从物料资料库同步）'");
             repaired += ensureColumn(conn, schema, "t_material_purchase", "invoice_urls",
                     "TEXT DEFAULT NULL COMMENT '发票/单据图片URL列表(JSON数组)，用于财务留底'");
+                repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_status",
+                    "VARCHAR(32) DEFAULT NULL COMMENT '初审状态: pending_audit=待初审 passed=初审通过 rejected=初审驳回'");
+                repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_reason",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '初审驳回原因'");
+                repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_time",
+                    "DATETIME DEFAULT NULL COMMENT '初审操作时间'");
+                repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_operator_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '初审操作人ID'");
+                repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_operator_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '初审操作人姓名'");
 
                 repaired += ensureColumn(conn, schema, "t_mind_push_rule", "notify_time_start",
                     "VARCHAR(5) NOT NULL DEFAULT '08:00' COMMENT '推送开始时间 HH:mm'");
@@ -118,6 +128,78 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,
+                        "t_agent_meeting",
+                        "CREATE TABLE IF NOT EXISTS `t_agent_meeting` ("
+                        + "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',"
+                        + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+                        + "`meeting_type` VARCHAR(50) NOT NULL COMMENT '例会类型',"
+                        + "`topic` VARCHAR(300) NOT NULL COMMENT '会议主题',"
+                        + "`participants` VARCHAR(500) DEFAULT NULL COMMENT '参与Agent列表(JSON数组)',"
+                        + "`agenda` TEXT DEFAULT NULL COMMENT '议程(JSON数组)',"
+                        + "`debate_rounds` TEXT DEFAULT NULL COMMENT '辩论轮次(JSON)',"
+                        + "`consensus` TEXT DEFAULT NULL COMMENT '最终共识',"
+                        + "`dissent` TEXT DEFAULT NULL COMMENT '保留意见',"
+                        + "`action_items` TEXT DEFAULT NULL COMMENT '行动项(JSON数组)',"
+                        + "`confidence_score` INT DEFAULT NULL COMMENT '共识置信度0-100',"
+                        + "`linked_decision_ids` VARCHAR(500) DEFAULT NULL COMMENT '关联决策记忆ID',"
+                        + "`linked_rca_ids` VARCHAR(500) DEFAULT NULL COMMENT '关联根因分析ID',"
+                        + "`duration_ms` BIGINT DEFAULT NULL COMMENT '会议耗时(毫秒)',"
+                        + "`status` VARCHAR(20) DEFAULT 'concluded' COMMENT 'in_progress|concluded|actions_pending|all_done',"
+                        + "`delete_flag` INT DEFAULT 0 COMMENT '删除标记',"
+                        + "`create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                        + "PRIMARY KEY (`id`),"
+                        + "KEY `idx_am_tenant_type` (`tenant_id`, `meeting_type`),"
+                        + "KEY `idx_am_create_time` (`create_time`)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='Agent例会-辩论+共识'");
+                    repairedTables += ensureTable(conn, schema,
+                        "t_material_pickup_record",
+                        "CREATE TABLE IF NOT EXISTS `t_material_pickup_record` ("
+                        + "`id` VARCHAR(64) NOT NULL COMMENT '主键UUID',"
+                        + "`tenant_id` VARCHAR(64) DEFAULT NULL COMMENT '租户ID',"
+                        + "`pickup_no` VARCHAR(64) NOT NULL COMMENT '领取单号（自动生成）',"
+                        + "`pickup_type` VARCHAR(20) NOT NULL DEFAULT 'INTERNAL' COMMENT '领取类型：INTERNAL=内部 EXTERNAL=外部',"
+                        + "`order_no` VARCHAR(100) DEFAULT NULL COMMENT '关联生产订单号',"
+                        + "`style_no` VARCHAR(100) DEFAULT NULL COMMENT '关联款号',"
+                        + "`material_id` VARCHAR(64) DEFAULT NULL COMMENT '物料ID',"
+                        + "`material_code` VARCHAR(100) DEFAULT NULL COMMENT '物料编号',"
+                        + "`material_name` VARCHAR(200) DEFAULT NULL COMMENT '物料名称',"
+                        + "`material_type` VARCHAR(50) DEFAULT NULL COMMENT '物料类型',"
+                        + "`color` VARCHAR(100) DEFAULT NULL COMMENT '颜色',"
+                        + "`specification` VARCHAR(200) DEFAULT NULL COMMENT '规格',"
+                        + "`fabric_width` VARCHAR(50) DEFAULT NULL COMMENT '幅宽',"
+                        + "`fabric_weight` VARCHAR(50) DEFAULT NULL COMMENT '克重',"
+                        + "`fabric_composition` VARCHAR(200) DEFAULT NULL COMMENT '成分',"
+                        + "`quantity` DECIMAL(14,3) DEFAULT NULL COMMENT '领取数量',"
+                        + "`unit` VARCHAR(20) DEFAULT NULL COMMENT '单位',"
+                        + "`unit_price` DECIMAL(14,4) DEFAULT NULL COMMENT '单价',"
+                        + "`amount` DECIMAL(14,2) DEFAULT NULL COMMENT '金额小计（数量×单价）',"
+                        + "`picker_id` VARCHAR(64) DEFAULT NULL COMMENT '领取人ID',"
+                        + "`picker_name` VARCHAR(100) DEFAULT NULL COMMENT '领取人姓名',"
+                        + "`pickup_time` DATETIME DEFAULT NULL COMMENT '领取时间',"
+                        + "`audit_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '审核状态',"
+                        + "`auditor_id` VARCHAR(64) DEFAULT NULL COMMENT '审核人ID',"
+                        + "`auditor_name` VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名',"
+                        + "`audit_time` DATETIME DEFAULT NULL COMMENT '审核时间',"
+                        + "`audit_remark` VARCHAR(500) DEFAULT NULL COMMENT '审核备注',"
+                        + "`finance_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '财务状态',"
+                        + "`finance_remark` VARCHAR(500) DEFAULT NULL COMMENT '财务核算备注',"
+                        + "`remark` VARCHAR(500) DEFAULT NULL COMMENT '领取备注',"
+                        + "`create_time` DATETIME DEFAULT NULL COMMENT '创建时间',"
+                        + "`update_time` DATETIME DEFAULT NULL COMMENT '更新时间',"
+                        + "`delete_flag` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '删除标记：0=正常 1=已删除',"
+                        + "PRIMARY KEY (`id`),"
+                        + "KEY `idx_mpick_tenant_audit` (`tenant_id`, `audit_status`),"
+                        + "KEY `idx_mpick_order_style` (`order_no`, `style_no`),"
+                        + "KEY `idx_mpick_finance` (`tenant_id`, `finance_status`),"
+                        + "KEY `idx_mpick_create_time` (`create_time`)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='面辅料领取记录'");
+                    repaired += ensureColumn(conn, schema, "t_material_pickup_record", "fabric_width",
+                        "VARCHAR(50) DEFAULT NULL COMMENT '幅宽'");
+                    repaired += ensureColumn(conn, schema, "t_material_pickup_record", "fabric_weight",
+                        "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
+                    repaired += ensureColumn(conn, schema, "t_material_pickup_record", "fabric_composition",
+                        "VARCHAR(200) DEFAULT NULL COMMENT '成分'");
+                    repairedTables += ensureTable(conn, schema,
                     "t_hyper_advisor_session",
                     "CREATE TABLE IF NOT EXISTS `t_hyper_advisor_session` ("
                     + "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',"
