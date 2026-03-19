@@ -296,6 +296,7 @@ public class PayrollSettlementOrchestrator {
         String prefix = "PS" + day;
         PayrollSettlement latest = payrollSettlementService
                 .lambdaQuery()
+                .eq(PayrollSettlement::getTenantId, UserContext.tenantId())
                 .likeRight(PayrollSettlement::getSettlementNo, prefix)
                 .orderByDesc(PayrollSettlement::getSettlementNo)
                 .last("limit 1")
@@ -305,7 +306,8 @@ public class PayrollSettlementOrchestrator {
             String candidate = prefix + "%03d".formatted(seq);
             Long cnt = payrollSettlementService.count(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PayrollSettlement>()
-                            .eq(PayrollSettlement::getSettlementNo, candidate));
+                            .eq(PayrollSettlement::getSettlementNo, candidate)
+                            .eq(PayrollSettlement::getTenantId, UserContext.tenantId()));
             if (cnt == null || cnt == 0) {
                 return candidate;
             }

@@ -50,7 +50,7 @@ public class StyleBomOrchestrator {
     });
 
     private static final ConcurrentHashMap<String, Map<String, Object>> SYNC_JOBS = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Long, String> RUNNING_JOB_BY_STYLE_ID = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> RUNNING_JOB_BY_STYLE_ID = new ConcurrentHashMap<>();
 
     @Autowired
     private StyleBomService styleBomService;
@@ -380,7 +380,18 @@ public class StyleBomOrchestrator {
             throw new IllegalArgumentException("styleId不能为空");
         }
 
-        String existed = RUNNING_JOB_BY_STYLE_ID.get(styleId);
+        // 清理已完成/失败 10 分钟以上的旧任务，防止 SYNC_JOBS 无限增长（内存泄漏）
+        LocalDateTime pruneThreshold = LocalDateTime.now().minusMinutes(10);
+        SYNC_JOBS.entrySet().removeIf(e -> {
+            Object st = e.getValue().get("status");
+            Object ut = e.getValue().get("updateTime");
+            if (!"done".equals(st) && !"failed".equals(st)) return false;
+            try { return ut == null || LocalDateTime.parse((String) ut).isBefore(pruneThreshold); }
+            catch (Exception ex) { return false; }
+        });
+        // 租户隔离：同一款式在不同租户下拥有独立的任务状态
+        String tenantKey = UserContext.tenantId() + ":" + styleId;
+        String existed = RUNNING_JOB_BY_STYLE_ID.get(tenantKey);
         if (StringUtils.hasText(existed)) {
             Map<String, Object> job = SYNC_JOBS.get(existed);
             if (job != null) {
@@ -399,7 +410,7 @@ public class StyleBomOrchestrator {
         job.put("result", null);
         job.put("error", null);
         SYNC_JOBS.put(jobId, job);
-        RUNNING_JOB_BY_STYLE_ID.put(styleId, jobId);
+        RUNNING_JOB_BY_STYLE_ID.put(tenantKey, jobId);
 
         MATERIAL_SYNC_EXECUTOR.submit(() -> {
             try {
@@ -415,7 +426,8 @@ public class StyleBomOrchestrator {
                 job.put("updateTime", LocalDateTime.now().toString());
                 log.warn("Material database sync job failed: jobId={}, styleId={}", jobId, styleId, e);
             } finally {
-                RUNNING_JOB_BY_STYLE_ID.remove(styleId, jobId);
+                // tenantKey 为 lambda 捕获的本地变量，后台线程无需 UserContext
+                RUNNING_JOB_BY_STYLE_ID.remove(tenantKey, jobId);
             }
         });
 

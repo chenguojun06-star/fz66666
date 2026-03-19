@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fashion.supplychain.common.UserContext;
 
 import java.util.Collection;
 import java.util.List;
@@ -40,7 +41,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         boolean includeImageUrls = hasImageUrlsColumn();
         boolean includeFabricComposition = hasFabricCompositionColumn();
         // 尝试从Redis缓存获取
-        String cacheKey = BOM_CACHE_PREFIX + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp");
+        String cacheKey = BOM_CACHE_PREFIX + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp");
         try {
             List<StyleBom> cached = redisService.get(cacheKey);
             if (cached != null) {
@@ -360,7 +361,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             return;
         }
         try {
-            redisService.deleteByPattern(BOM_CACHE_PREFIX + styleId + ":*");
+            redisService.deleteByPattern(BOM_CACHE_PREFIX + UserContext.tenantId() + ":" + styleId + ":*");
         } catch (Exception e) {
             log.debug("清除BOM缓存失败: styleId={}", styleId);
         }

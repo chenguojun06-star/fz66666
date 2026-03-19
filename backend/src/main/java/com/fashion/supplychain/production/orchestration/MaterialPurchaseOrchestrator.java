@@ -276,6 +276,7 @@ public class MaterialPurchaseOrchestrator {
         return helper.generateBatchDemand(targetOrderIds, overwriteFlag);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -662,7 +663,6 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
     private boolean receiveAndSync(String purchaseId, String receiverId, String receiverName) {
         boolean ok = materialPurchaseService.receivePurchase(purchaseId, receiverId, receiverName);
         if (!ok) {
@@ -675,7 +675,6 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
     private boolean returnConfirmAndSync(String purchaseId, String confirmerId, String confirmerName,
             Integer returnQuantity) {
         boolean ok = materialPurchaseService.confirmReturnPurchase(purchaseId, confirmerId, confirmerName,
