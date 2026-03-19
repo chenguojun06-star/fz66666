@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Card,
   Table,
+  Tabs,
   Button,
   Space,
   Input,
@@ -34,6 +35,8 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
+import { useMaterialPickupData } from './hooks/useMaterialPickupData';
+import { useMaterialPickupColumns } from './hooks/useMaterialPickupColumns';
 import type { MaterialBatchDetail } from './hooks/useMaterialInventoryData';
 
 const { Option } = Select;
@@ -62,6 +65,13 @@ const _MaterialInventory: React.FC = () => {
     handleOutbound, handleBatchQtyChange, handleOutboundConfirm,
     handlePrintOutbound,
   } = useMaterialInventoryData();
+
+  const pickupData = useMaterialPickupData();
+  const pickupColumns = useMaterialPickupColumns({
+    onAudit:   pickupData.auditModal.open,
+    onFinance: pickupData.financeModal.open,
+    onCancel:  pickupData.handleCancel,
+  });
 
   const columns = useMaterialInventoryColumns({
     user,
@@ -109,6 +119,15 @@ const _MaterialInventory: React.FC = () => {
           </div>
         </Card>
 
+        <Tabs
+          defaultActiveKey="overview"
+          style={{ marginTop: 8 }}
+          items={[
+            {
+              key: 'overview',
+              label: '库存总览',
+              children: (
+                <>
         <div className="material-alerts-section">
           {showMaterialAI && <MaterialInventoryAISummary stats={stats} alertList={alertList} />}
           <MaterialAlertRanking
@@ -261,6 +280,98 @@ const _MaterialInventory: React.FC = () => {
             />
           )}
         </Card>
+                </>
+              ),
+            },
+            {
+              key: 'pickup',
+              label: '领取记录',
+              children: (
+                <Card>
+                  <div style={{ marginBottom: 16 }}>
+                    <h2 style={{ margin: 0 }}>📋 面辅料领取记录</h2>
+                  </div>
+                  <StandardToolbar
+                    left={(
+                      <Space wrap>
+                        <Input.Search
+                          placeholder="搜索领取单号/物料"
+                          allowClear
+                          style={{ width: 200 }}
+                          value={pickupData.keyword}
+                          onChange={(e) => pickupData.setKeyword(e.target.value)}
+                          onSearch={() => pickupData.fetchData()}
+                        />
+                        <Select
+                          placeholder="类型"
+                          allowClear
+                          style={{ width: 100 }}
+                          value={pickupData.pickupType}
+                          onChange={pickupData.setPickupType}
+                        >
+                          <Option value="INTERNAL">内部</Option>
+                          <Option value="EXTERNAL">外部</Option>
+                        </Select>
+                        <Select
+                          placeholder="审核状态"
+                          allowClear
+                          style={{ width: 110 }}
+                          value={pickupData.auditStatus}
+                          onChange={pickupData.setAuditStatus}
+                        >
+                          <Option value="PENDING">待审核</Option>
+                          <Option value="APPROVED">已通过</Option>
+                          <Option value="REJECTED">已拒绝</Option>
+                        </Select>
+                        <Select
+                          placeholder="财务状态"
+                          allowClear
+                          style={{ width: 110 }}
+                          value={pickupData.financeStatus}
+                          onChange={pickupData.setFinanceStatus}
+                        >
+                          <Option value="PENDING">待核算</Option>
+                          <Option value="SETTLED">已核算</Option>
+                        </Select>
+                        <Input
+                          placeholder="订单号"
+                          allowClear
+                          style={{ width: 140 }}
+                          value={pickupData.orderNo}
+                          onChange={(e) => pickupData.setOrderNo(e.target.value)}
+                        />
+                        <Input
+                          placeholder="款号"
+                          allowClear
+                          style={{ width: 120 }}
+                          value={pickupData.styleNo}
+                          onChange={(e) => pickupData.setStyleNo(e.target.value)}
+                        />
+                      </Space>
+                    )}
+                    right={(
+                      <Button
+                        type="primary"
+                        onClick={() => pickupData.createModal.open(null)}
+                      >
+                        新建领取记录
+                      </Button>
+                    )}
+                  />
+                  <ResizableTable
+                    storageKey="material-pickup-records"
+                    columns={pickupColumns}
+                    dataSource={pickupData.dataSource}
+                    loading={pickupData.loading}
+                    rowKey="id"
+                    scroll={{ x: 1600 }}
+                    pagination={pickupData.pagination.pagination}
+                  />
+                </Card>
+              ),
+            },
+          ]}
+        />
 
       <StandardModal
         title="下发采购指令"
@@ -907,6 +1018,135 @@ const _MaterialInventory: React.FC = () => {
             </p>
           </div>
         )}
+      </StandardModal>
+
+      {/* ===== 领取记录：新建弹窗 ===== */}
+      <StandardModal
+        title="新建面辅料领取记录"
+        open={pickupData.createModal.visible}
+        onCancel={pickupData.createModal.close}
+        onOk={() => pickupData.handleCreate()}
+        confirmLoading={pickupData.creating}
+        okText="提交"
+        centered
+        size="md"
+      >
+        <Form form={pickupData.createForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="pickupType" label="领取类型" rules={[{ required: true }]}>
+                <Select placeholder="请选择">
+                  <Option value="INTERNAL">内部领取</Option>
+                  <Option value="EXTERNAL">外部领取</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="pickupTime" label="领取时间">
+                <Input type="datetime-local" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="orderNo" label="关联订单号">
+                <Input placeholder="选填" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="styleNo" label="款号">
+                <Input placeholder="选填" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="materialCode" label="物料编号" rules={[{ required: true, message: '请填写物料编号' }]}>
+                <Input placeholder="如 FA-0001" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请填写物料名称' }]}>
+                <Input placeholder="如 纯棉布料" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
+                <InputNumber min={0.01} style={{ width: '100%' }} placeholder="如 100" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="unit" label="单位" initialValue="件">
+                <Select>
+                  <Option value="件">件</Option>
+                  <Option value="米">米</Option>
+                  <Option value="kg">kg</Option>
+                  <Option value="码">码</Option>
+                  <Option value="卷">卷</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="unitPrice" label="单价(元)">
+                <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="选填" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="选填" />
+          </Form.Item>
+        </Form>
+      </StandardModal>
+
+      {/* ===== 领取记录：审核弹窗 ===== */}
+      <StandardModal
+        title={`审核领取单 ${pickupData.auditModal.data?.pickupNo ?? ''}`}
+        open={pickupData.auditModal.visible}
+        onCancel={pickupData.auditModal.close}
+        onOk={() => pickupData.handleAudit()}
+        confirmLoading={pickupData.auditing}
+        okText="提交审核"
+        centered
+        size="sm"
+      >
+        <Form form={pickupData.auditForm} layout="vertical">
+          <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
+            <Select placeholder="请选择">
+              <Option value="approve">通过</Option>
+              <Option value="reject">拒绝</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="remark" label="审核备注">
+            <Input.TextArea rows={3} placeholder="选填，拒绝时建议填写原因" />
+          </Form.Item>
+        </Form>
+      </StandardModal>
+
+      {/* ===== 领取记录：财务核算弹窗 ===== */}
+      <StandardModal
+        title={`财务核算 — ${pickupData.financeModal.data?.pickupNo ?? ''}`}
+        open={pickupData.financeModal.visible}
+        onCancel={pickupData.financeModal.close}
+        onOk={() => pickupData.handleFinanceSettle()}
+        confirmLoading={pickupData.settling}
+        okText="确认核算"
+        centered
+        size="sm"
+      >
+        <Form form={pickupData.financeForm} layout="vertical">
+          <Form.Item
+            label="核实单价(元)"
+            name="unitPrice"
+            extra="如单价有变动可在此修正，金额将自动重算"
+          >
+            <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="不填则保持原单价" />
+          </Form.Item>
+          <Form.Item name="remark" label="财务备注">
+            <Input.TextArea rows={3} placeholder="选填" />
+          </Form.Item>
+        </Form>
       </StandardModal>
     </Layout>
   );
