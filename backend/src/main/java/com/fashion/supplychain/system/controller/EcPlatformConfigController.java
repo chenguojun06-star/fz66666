@@ -68,6 +68,7 @@ public class EcPlatformConfigController {
     // ——————————————————————————————————————————
 
     /** RESTful 风格入口（POST /api/ec-config） */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping
     public Result<ConfigVO> create(@RequestBody SaveRequest req) {
         Long tenantId = UserContext.tenantId();
@@ -120,6 +121,7 @@ public class EcPlatformConfigController {
     // 断开平台连接
     // ——————————————————————————————————————————
 
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/{platformCode}/disconnect")
     public Result<Void> disconnect(@PathVariable String platformCode) {
         Long tenantId = UserContext.tenantId();

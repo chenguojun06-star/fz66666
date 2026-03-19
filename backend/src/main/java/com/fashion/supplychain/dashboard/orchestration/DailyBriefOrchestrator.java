@@ -125,6 +125,7 @@ public class DailyBriefOrchestrator {
                     ProductionOrder::getPlannedEndDate
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, UserContext.tenantId())  // 🔒 租户隔离
                 .eq(ProductionOrder::getStatus, "production")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .ge(ProductionOrder::getPlannedEndDate, nowTime)   // 未逾期（今天之后）
