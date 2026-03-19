@@ -96,6 +96,8 @@ export interface PurchaseOrderListParams {
   supplierId?: string;
   orderNo?: string;
   styleNo?: string;
+  sourceType?: string;
+  materialType?: string;
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
 }

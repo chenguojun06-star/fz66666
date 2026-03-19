@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Typography } from 'antd';
+import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Segmented, Select, Space, Tabs, Tag, Typography } from 'antd';
+import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   CheckCircleOutlined, DownloadOutlined, PlusOutlined, SearchOutlined,
@@ -137,6 +138,16 @@ const PurchaseOrderTab: React.FC = () => {
   const [sortField, setSortField] = useState('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [exportLoading, setExportLoading] = useState(false);
+  const [sourceTypeFilter, setSourceTypeFilter] = useState('');
+  const [materialTypeFilter, setMaterialTypeFilter] = useState('');
+  const [quickEditTarget, setQuickEditTarget] = useState<PurchaseOrder | null>(null);
+  const [quickEditVisible, setQuickEditVisible] = useState(false);
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
+  const [quickEditForm] = Form.useForm();
+  const [cancelTarget, setCancelTarget] = useState<PurchaseOrder | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelVisible, setCancelVisible] = useState(false);
+  const [cancelSaving, setCancelSaving] = useState(false);
 
   const fetchList = useCallback(async (
     page = pagination.current,
@@ -145,6 +156,8 @@ const PurchaseOrderTab: React.FC = () => {
     styleNo = styleNoFilter,
     sf = sortField,
     so: 'asc' | 'desc' = sortOrder,
+    srcType = sourceTypeFilter,
+    matType = materialTypeFilter,
   ) => {
     setLoading(true);
     try {
@@ -152,6 +165,7 @@ const PurchaseOrderTab: React.FC = () => {
         page, pageSize: pagination.pageSize, status: st || undefined,
         orderNo: orderNo || undefined, styleNo: styleNo || undefined,
         sortField: sf || undefined, sortOrder: so || undefined,
+        sourceType: srcType || undefined, materialType: matType || undefined,
       });
       const data = (res as any)?.data ?? res;
       setOrders(data?.records ?? []);
@@ -161,7 +175,7 @@ const PurchaseOrderTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder]);
+  }, [pagination.pageSize, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter]);
 
   useEffect(() => { fetchList(1); }, []);
 
@@ -169,7 +183,7 @@ const PurchaseOrderTab: React.FC = () => {
     setSortField(field);
     setSortOrder(order);
     setPagination(p => ({ ...p, current: 1 }));
-    fetchList(1, statusFilter, orderNoFilter, styleNoFilter, field, order);
+    fetchList(1, statusFilter, orderNoFilter, styleNoFilter, field, order, sourceTypeFilter, materialTypeFilter);
   };
 
   const handleExport = async () => {
@@ -243,6 +257,45 @@ const PurchaseOrderTab: React.FC = () => {
     }
   };
 
+  const handleQuickEdit = async () => {
+    if (!quickEditTarget?.id) return;
+    try {
+      const values = await quickEditForm.validateFields();
+      setQuickEditSaving(true);
+      await procurementApi.quickEditPurchaseOrder({
+        id: quickEditTarget.id,
+        remark: values.remark ?? '',
+        expectedShipDate: values.expectedShipDate ? values.expectedShipDate.format('YYYY-MM-DD') : null,
+      });
+      message.success('采购单信息已更新');
+      setQuickEditVisible(false);
+      quickEditForm.resetFields();
+      fetchList();
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.response?.data?.message || '保存失败');
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
+
+  const handleCancelReceive = async () => {
+    if (!cancelTarget?.id) return;
+    if (!cancelReason.trim()) { message.warning('请填写撤回原因'); return; }
+    setCancelSaving(true);
+    try {
+      await procurementApi.cancelReceive({ purchaseId: cancelTarget.id, reason: cancelReason.trim() });
+      message.success('采购单已恢复为待处理');
+      setCancelVisible(false);
+      setCancelReason('');
+      fetchList();
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || '撤回失败');
+    } finally {
+      setCancelSaving(false);
+    }
+  };
+
   const statusTagColor: Record<string, string> = {
     pending: 'default',
     approved: 'blue',
@@ -291,10 +344,31 @@ const PurchaseOrderTab: React.FC = () => {
       dataIndex: 'createTime', render: (v: string) => v?.substring(0, 10) ?? '-',
     },
     {
-      title: '操作', width: 80, fixed: 'right' as const,
+      title: '操作', width: 160, fixed: 'right' as const,
       render: (_: unknown, record: PurchaseOrder) => {
+        const ns = normalizePurchaseStatus(record.status);
+        const canCancel = ns !== 'pending' && ns !== 'cancelled';
         const actions: RowAction[] = [
           { key: 'view', label: '详情', primary: true, onClick: () => setSelectedOrder(record) },
+          {
+            key: 'edit',
+            label: '编辑',
+            onClick: () => {
+              setQuickEditTarget(record);
+              quickEditForm.setFieldsValue({
+                remark: record.remark ?? '',
+                expectedShipDate: (record as any).expectedShipDate ? dayjs((record as any).expectedShipDate) : undefined,
+              });
+              setQuickEditVisible(true);
+            },
+          },
+          {
+            key: 'cancel',
+            label: '撤回领取',
+            danger: true,
+            disabled: !canCancel,
+            onClick: () => { setCancelTarget(record); setCancelReason(''); setCancelVisible(true); },
+          },
         ];
         return <RowActions actions={actions} />;
       },
@@ -307,7 +381,7 @@ const PurchaseOrderTab: React.FC = () => {
         <Space wrap>
           <Select
             value={statusFilter}
-            onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v, orderNoFilter, styleNoFilter); }}
+            onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}
             style={{ width: 140 }}
             options={[
               { value: '', label: '全部状态' },
@@ -322,21 +396,42 @@ const PurchaseOrderTab: React.FC = () => {
             placeholder="订单号筛选"
             value={orderNoFilter}
             onChange={e => setOrderNoFilter(e.target.value)}
-            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}
+            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}
             style={{ width: 180 }}
             allowClear
-            onClear={() => { setOrderNoFilter(''); fetchList(1, statusFilter, '', styleNoFilter); }}
+            onClear={() => { setOrderNoFilter(''); fetchList(1, statusFilter, '', styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}
           />
           <Input
             placeholder="款号筛选"
             value={styleNoFilter}
             onChange={e => setStyleNoFilter(e.target.value)}
-            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}
+            onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}
             style={{ width: 160 }}
             allowClear
-            onClear={() => { setStyleNoFilter(''); fetchList(1, statusFilter, orderNoFilter, ''); }}
+            onClear={() => { setStyleNoFilter(''); fetchList(1, statusFilter, orderNoFilter, '', sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}
           />
-          <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter); }}>搜索</Button>
+          <Select
+            value={sourceTypeFilter}
+            onChange={v => { setSourceTypeFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, v, materialTypeFilter); }}
+            style={{ width: 130 }}
+            options={[
+              { value: '', label: '全部来源' },
+              { value: 'order', label: '订单采购' },
+              { value: 'sample', label: '样衣采购' },
+              { value: 'bulk', label: '批量采购' },
+            ]}
+          />
+          <Segmented
+            value={materialTypeFilter}
+            onChange={v => { setMaterialTypeFilter(String(v)); setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, String(v)); }}
+            options={[
+              { label: '全部', value: '' },
+              { label: '面料', value: 'FABRIC' },
+              { label: '里料', value: 'LINING' },
+              { label: '辅料', value: 'ACCESSORY' },
+            ]}
+          />
+          <Button icon={<SearchOutlined />} onClick={() => { setPagination(p => ({ ...p, current: 1 })); fetchList(1, statusFilter, orderNoFilter, styleNoFilter, sortField, sortOrder, sourceTypeFilter, materialTypeFilter); }}>搜索</Button>
           <Button
             icon={<DownloadOutlined />}
             loading={exportLoading}
@@ -366,7 +461,7 @@ const PurchaseOrderTab: React.FC = () => {
             setPagination({ current: page, pageSize: p.pageSize ?? 20 });
             fetchList(page);
           }}
-          scroll={{ x: 1220 }}
+          scroll={{ x: 1400 }}
         />
       </Card>
       <PurchaseOrderDetailModal
@@ -376,6 +471,49 @@ const PurchaseOrderTab: React.FC = () => {
         onClose={() => setSelectedOrder(null)}
         onUpdated={() => fetchList()}
       />
+
+      {/* 快速编辑弹窗 */}
+      <ResizableModal
+        title={`编辑采购单：${quickEditTarget?.purchaseNo ?? ''}`}
+        open={quickEditVisible}
+        onCancel={() => { setQuickEditVisible(false); quickEditForm.resetFields(); }}
+        onOk={handleQuickEdit}
+        confirmLoading={quickEditSaving}
+        width="30vw"
+        destroyOnHidden
+      >
+        <Form form={quickEditForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item name="expectedShipDate" label="预计到货日期">
+            <DatePicker placeholder="请选择预计到货日期" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="remark" label="采购备注">
+            <Input.TextArea placeholder="采购备注（可不填）" rows={3} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 撤回领取确认弹窗 */}
+      <ResizableModal
+        title="撤回领取"
+        open={cancelVisible}
+        onCancel={() => setCancelVisible(false)}
+        onOk={handleCancelReceive}
+        confirmLoading={cancelSaving}
+        okButtonProps={{ danger: true }}
+        okText="确认撤回"
+        width="30vw"
+        destroyOnHidden
+      >
+        <div style={{ marginBottom: 12, color: '#595959' }}>
+          撤回后，采购单「{cancelTarget?.purchaseNo}」将恢复为『待处理』状态。请填写撤回原因：
+        </div>
+        <Input.TextArea
+          value={cancelReason}
+          onChange={e => setCancelReason(e.target.value)}
+          rows={3}
+          placeholder="撤回原因（必填）"
+        />
+      </ResizableModal>
     </>
   );
 };
