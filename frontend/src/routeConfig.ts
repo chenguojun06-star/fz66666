@@ -92,6 +92,7 @@ export const paths = {
   crm: '/crm',
   crmReceivables: '/crm/receivables',
   procurement: '/procurement',
+  procurementDetail: '/procurement/detail/:id',
   selectionBatch: '/selection',
 } as const;
 

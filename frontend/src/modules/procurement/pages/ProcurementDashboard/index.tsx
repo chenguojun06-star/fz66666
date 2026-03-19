@@ -16,8 +16,8 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
 import { procurementApi, type Supplier, type PurchaseOrder } from '@/services/procurement/procurementApi';
+import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
-import PurchaseOrderDetailModal from './components/PurchaseOrderDetailModal';
 import SupplierPurchaseHistoryModal from './components/SupplierPurchaseHistoryModal';
 import { message } from '@/utils/antdStatic';
 
@@ -32,8 +32,8 @@ const SupplierTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const navigate = useNavigate();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [historyRefreshSeed, setHistoryRefreshSeed] = useState(0);
 
   const fetchList = useCallback(async (page = pagination.current, kw = keyword) => {
@@ -115,16 +115,10 @@ const SupplierTab: React.FC = () => {
         open={Boolean(selectedSupplier)}
         supplier={selectedSupplier}
         onClose={() => setSelectedSupplier(null)}
-        onViewOrder={(order) => setSelectedOrder(order)}
+        onViewOrder={(order) => navigate(`/procurement/detail/${order.id}`)}
         key={`${selectedSupplier?.id || 'empty'}-${historyRefreshSeed}`}
       />
-      <PurchaseOrderDetailModal
-        open={Boolean(selectedOrder)}
-        orderId={selectedOrder?.id}
-        initialOrder={selectedOrder}
-        onClose={() => setSelectedOrder(null)}
-        onUpdated={() => setHistoryRefreshSeed(seed => seed + 1)}
-      />
+
     </>
   );
 };
@@ -138,7 +132,7 @@ const PurchaseOrderTab: React.FC = () => {
   const [orderNoFilter, setOrderNoFilter] = useState('');
   const [styleNoFilter, setStyleNoFilter] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const navigate = useNavigate();
   const [sortField, setSortField] = useState('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [exportLoading, setExportLoading] = useState(false);
@@ -355,7 +349,7 @@ const PurchaseOrderTab: React.FC = () => {
     {
       title: '款号', dataIndex: 'styleNo', width: 120,
       render: (v: string, record: PurchaseOrder) => v
-        ? <a style={{ color: '#1677ff', cursor: 'pointer', fontWeight: 500 }} onClick={() => setSelectedOrder(record)}>{v}</a>
+        ? <a style={{ color: '#1677ff', cursor: 'pointer', fontWeight: 500 }} onClick={() => navigate(`/procurement/detail/${record.id}`)}>{v}</a>
         : <Text type="secondary">-</Text>,
     },
     {
@@ -504,7 +498,7 @@ const PurchaseOrderTab: React.FC = () => {
         const ns = normalizePurchaseStatus(record.status);
         const canCancel = ns !== 'pending' && ns !== 'cancelled';
         const actions: RowAction[] = [
-          { key: 'view', label: '查看', primary: true, onClick: () => setSelectedOrder(record) },
+          { key: 'view', label: '查看', primary: true, onClick: () => navigate(`/procurement/detail/${record.id}`) },
           {
             key: 'edit', label: '编辑', onClick: () => {
               setQuickEditTarget(record);
@@ -611,14 +605,6 @@ const PurchaseOrderTab: React.FC = () => {
           scroll={{ x: 'max-content' }}
         />
       </Card>
-      <PurchaseOrderDetailModal
-        open={Boolean(selectedOrder)}
-        orderId={selectedOrder?.id}
-        initialOrder={selectedOrder}
-        onClose={() => setSelectedOrder(null)}
-        onUpdated={() => fetchList()}
-      />
-
       {/* 快速编辑弹窗 */}
       <ResizableModal
         title={`编辑采购单：${quickEditTarget?.purchaseNo ?? ''}`}

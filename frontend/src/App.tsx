@@ -25,7 +25,7 @@ import {
 import { CrmDashboard, ReceivableList } from './modules/crm';
 // 客户门户（公开页，无需登录）
 const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
-import { ProcurementDashboard } from './modules/procurement';
+import { ProcurementDashboard, PurchaseOrderDetailPage } from './modules/procurement';
 import { SelectionCenter } from './modules/selection';
 import {
   WarehouseDashboard,
@@ -252,6 +252,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
           <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.procurement} element={<Suspense fallback={<Spin />}><ProcurementDashboard /></Suspense>} />
+          <Route path={paths.procurementDetail} element={<Suspense fallback={<Spin />}><PurchaseOrderDetailPage /></Suspense>} />
           <Route path={paths.selectionBatch} element={<SelectionCenter />} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
