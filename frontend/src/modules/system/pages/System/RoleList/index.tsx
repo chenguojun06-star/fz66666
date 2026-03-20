@@ -20,6 +20,10 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import './styles.css';
 import { readPageSize } from '@/utils/pageSizeStore';
 
+// 平台超管专属权限码，不在租户角色授权弹窗中展示
+const EXCLUDED_TOP_MODULE_CODES = new Set(['MENU_TENANT_APP_VIEW']);
+const EXCLUDED_SUBGROUP_CODES = new Set(['MENU_TENANT', 'MENU_TENANT_APP']);
+
 const RoleList: React.FC = () => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
@@ -79,6 +83,7 @@ const RoleList: React.FC = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<OperationLog[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
+  const [showOnlyChecked, setShowOnlyChecked] = useState(false);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -344,6 +349,7 @@ const RoleList: React.FC = () => {
   };
 
   const openPermDialog = async (role: Role) => {
+    setShowOnlyChecked(false);
     roleModal.setModalData(role);
     try {
       const treeRes = await requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree');
@@ -378,10 +384,14 @@ const RoleList: React.FC = () => {
   // 按模块分组所有权限（菜单+按钮）
   const permissionsByModule = useMemo(() => {
     const kw = String(permKeyword || '').trim().toLowerCase();
-    const allModules = (permTree || []).map((topNode: PermissionNode) => {
+    const allModules = (permTree || [])
+      .filter((topNode: PermissionNode) => !EXCLUDED_TOP_MODULE_CODES.has(String(topNode.permissionCode || '').trim()))
+      .map((topNode: PermissionNode) => {
       const groups: Array<{ groupId: number; groupName: string; buttons: PermissionItem[] }> = [];
       const directButtons: PermissionItem[] = [];
       for (const child of (topNode.children || [])) {
+        const childCode = String(child.permissionCode || '').trim();
+        if (EXCLUDED_SUBGROUP_CODES.has(childCode)) continue;
         const cType = String(child.permissionType || '').toLowerCase();
         const childId = Number(child.id);
         if (cType === 'menu') {
@@ -743,6 +753,11 @@ const RoleList: React.FC = () => {
           <Space wrap>
             <Button onClick={() => applyTemplate(allPermissionIds)} disabled={!allPermissionIds.size}>全选</Button>
             <Button onClick={() => applyTemplate(new Set())} disabled={!checkedPermIds.size}>清空</Button>
+            <Button
+              type={showOnlyChecked ? 'primary' : 'default'}
+              onClick={() => setShowOnlyChecked(v => !v)}
+              disabled={!checkedPermIds.size}
+            >只看已选</Button>
             {templatePresets.map((t) => (
               <Button
                 key={t.key}
@@ -762,11 +777,27 @@ const RoleList: React.FC = () => {
             flexWrap: 'wrap',
             alignItems: 'flex-start'
           }}>
-            {permissionsByModule.map((module) => {
+            {permissionsByModule
+              .filter((module) => {
+                if (!showOnlyChecked) return true;
+                const allIds = [
+                  module.moduleId,
+                  ...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]),
+                  ...module.directButtons.map(b => b.id),
+                ];
+                return allIds.some(id => checkedPermIds.has(id));
+              })
+              .map((module) => {
               const allBtnIds = [
                 ...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]),
                 ...module.directButtons.map(b => b.id),
               ];
+              const visibleGroups = showOnlyChecked
+                ? module.groups.filter(g => checkedPermIds.has(g.groupId) || g.buttons.some(b => checkedPermIds.has(b.id)))
+                : module.groups;
+              const visibleDirectBtns = showOnlyChecked
+                ? module.directButtons.filter(b => checkedPermIds.has(b.id))
+                : module.directButtons;
               return (
                 <div key={module.moduleId} style={{ minWidth: 130, maxWidth: 200, border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden', fontSize: 12, flexShrink: 0 }}>
                   {/* 模块头 - 主色背景 */}
@@ -783,9 +814,9 @@ const RoleList: React.FC = () => {
                     >{module.moduleName}</Checkbox>
                   </div>
                   {/* 子模块分组 */}
-                  {module.groups.map(group => (
+                  {visibleGroups.map(group => (
                     <div key={group.groupId} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <div style={{ background: '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
+                      <div style={{ background: checkedPermIds.has(group.groupId) ? '#dbeafe' : '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
                         <Checkbox
                           checked={checkedPermIds.has(group.groupId)}
                           onChange={(e) => {
@@ -799,8 +830,8 @@ const RoleList: React.FC = () => {
                         >{group.groupName}</Checkbox>
                       </div>
                       <div style={{ padding: '2px 4px 4px 16px' }}>
-                        {group.buttons.map(btn => (
-                          <div key={btn.id}>
+                        {(showOnlyChecked ? group.buttons.filter(b => checkedPermIds.has(b.id)) : group.buttons).map(btn => (
+                          <div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}>
                             <Checkbox
                               checked={checkedPermIds.has(btn.id)}
                               onChange={(e) => {
@@ -808,7 +839,7 @@ const RoleList: React.FC = () => {
                                 if (e.target.checked) next.add(btn.id); else next.delete(btn.id);
                                 setCheckedPermIds(next);
                               }}
-                              style={{ fontSize: 10 }}
+                              style={{ fontSize: 10, width: '100%' }}
                             >{btn.name}</Checkbox>
                           </div>
                         ))}
@@ -817,10 +848,10 @@ const RoleList: React.FC = () => {
                     </div>
                   ))}
                   {/* 直属功能按钮 */}
-                  {module.directButtons.length > 0 && (
+                  {visibleDirectBtns.length > 0 && (
                     <div style={{ padding: '4px 6px' }}>
-                      {module.directButtons.map(btn => (
-                        <div key={btn.id}>
+                      {visibleDirectBtns.map(btn => (
+                        <div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}>
                           <Checkbox
                             checked={checkedPermIds.has(btn.id)}
                             onChange={(e) => {
@@ -828,7 +859,7 @@ const RoleList: React.FC = () => {
                               if (e.target.checked) next.add(btn.id); else next.delete(btn.id);
                               setCheckedPermIds(next);
                             }}
-                            style={{ fontSize: 10 }}
+                            style={{ fontSize: 10, width: '100%' }}
                           >{btn.name}</Checkbox>
                         </div>
                       ))}
