@@ -154,7 +154,7 @@ export const createApiClient = (): ApiClient => {
       };
 
       try {
-        const token = String(localStorage.getItem('authToken') || '').trim();
+        const token = String(sessionStorage.getItem('authToken') || '').trim();
         if (token) {
           setHeader('Authorization', `Bearer ${token}`);
         }
@@ -225,7 +225,7 @@ export const createApiClient = (): ApiClient => {
           case 401:
             errorMessage = '登录已过期，请重新登录';
             try {
-              localStorage.removeItem('authToken');
+              sessionStorage.removeItem('authToken');
               localStorage.removeItem('userId');
             } catch {
               // Ignore
@@ -243,7 +243,7 @@ export const createApiClient = (): ApiClient => {
             if (isExpired) {
               errorMessage = '登录已过期，请重新登录';
               try {
-                localStorage.removeItem('authToken');
+                sessionStorage.removeItem('authToken');
                 localStorage.removeItem('userId');
               } catch {
                 // Ignore

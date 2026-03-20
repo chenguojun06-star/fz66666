@@ -1214,7 +1214,7 @@ export const intelligenceApi = {
     onDone: () => void,
     onError: (err: string) => void,
   ) => {
-    const token = localStorage.getItem('authToken') || '';
+    const token = sessionStorage.getItem('authToken') || '';
     const url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}`;
     const ctrl = new AbortController();
     fetch(url, {
@@ -1322,7 +1322,7 @@ export const intelligenceApi = {
     const params = new URLSearchParams({ type });
     if (date) params.append('date', date);
 
-    const token = localStorage.getItem('authToken') || '';
+    const token = sessionStorage.getItem('authToken') || '';
     if (token) params.append('token', token);
 
     downloadFile(`/api/intelligence/professional-report/download?${params.toString()}`);
@@ -1357,7 +1357,7 @@ export const intelligenceApi = {
   uploadAnalyze: async (file: File): Promise<{ filename: string; parsedContent: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    const token = localStorage.getItem('authToken') || '';
+    const token = sessionStorage.getItem('authToken') || '';
     const res = await fetch('/api/intelligence/ai-advisor/upload-analyze', {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -1375,7 +1375,7 @@ export const intelligenceApi = {
     remarks?: string;
     urgencyLevel?: string;
   }): Promise<void> => {
-    const token = localStorage.getItem('authToken') || '';
+    const token = sessionStorage.getItem('authToken') || '';
     const res = await fetch('/api/production/orders/quick-edit', {
       method: 'PUT',
       headers: {

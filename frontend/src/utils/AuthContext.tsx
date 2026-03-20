@@ -143,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const boot = async () => {
       try {
-        const token = String(localStorage.getItem(tokenStorageKey) || '').trim();
+        const token = String(sessionStorage.getItem(tokenStorageKey) || '').trim();
         if (!token) {
           resetSmartFeatureFlags();
           setUser(null);
@@ -176,7 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setIsAuthenticated(true);
 
-        const storedUser = localStorage.getItem(userStorageKey);
+        const storedUser = sessionStorage.getItem(userStorageKey);
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
@@ -218,7 +218,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } catch { return undefined; }
               })(),
             };
-            localStorage.setItem(userStorageKey, JSON.stringify(next));
+            sessionStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
 
             await loadTenantSmartFlags();
@@ -228,8 +228,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // 触发用户登录事件
             window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: next.id } }));
           } else {
-            localStorage.removeItem(tokenStorageKey);
-            localStorage.removeItem(userStorageKey);
+            sessionStorage.removeItem(tokenStorageKey);
+            sessionStorage.removeItem(userStorageKey);
             resetSmartFeatureFlags();
             setUser(null);
             setIsAuthenticated(false);
@@ -237,8 +237,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch {
           // Intentionally empty
           // 忽略错误
-          localStorage.removeItem(tokenStorageKey);
-          localStorage.removeItem(userStorageKey);
+          sessionStorage.removeItem(tokenStorageKey);
+          sessionStorage.removeItem(userStorageKey);
           resetSmartFeatureFlags();
           setUser(null);
           setIsAuthenticated(false);
@@ -256,24 +256,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     boot();
   }, []);
 
-  // 🔐 跨标签页 token 变更检测：当其他标签页登录/登出时，自动同步状态
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === tokenStorageKey) {
-        if (!e.newValue) {
-          // 其他标签页登出了 → 本标签页也登出
-          setUser(null);
-          setIsAuthenticated(false);
-        } else if (e.newValue !== e.oldValue) {
-          // 其他标签页切换了用户 → 刷新页面以加载新用户数据
-          window.location.reload();
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
   // 登录函数
   const login = async (username: string, password: string, tenantId?: number): Promise<boolean> => {
     try {
@@ -285,10 +267,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const u = response?.data?.user || response?.data || null;
       if (response?.code === 200 && token && u) {
         // 🔐 登录成功：先清除所有旧账号数据，防止跨账号数据残留
-        const keysToRemove = [tokenStorageKey, userStorageKey, 'user-storage', 'userId'];
-        keysToRemove.forEach(k => {
-          try { localStorage.removeItem(k); } catch { /* ignore */ }
-        });
+        try { sessionStorage.removeItem(tokenStorageKey); } catch { /* ignore */ }
+        try { sessionStorage.removeItem(userStorageKey); } catch { /* ignore */ }
+        try { localStorage.removeItem('user-storage'); } catch { /* ignore */ }
+        try { localStorage.removeItem('userId'); } catch { /* ignore */ }
         // 通知业务组件清理旧数据
         window.dispatchEvent(new Event('user-logout'));
 
@@ -320,8 +302,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           })(),
         };
 
-        localStorage.setItem(tokenStorageKey, token);
-        localStorage.setItem(userStorageKey, JSON.stringify(baseUser));
+        sessionStorage.setItem(tokenStorageKey, token);
+        sessionStorage.setItem(userStorageKey, JSON.stringify(baseUser));
         setUser(baseUser);
         setIsAuthenticated(true);
 
@@ -381,7 +363,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!prev) return prev;
       const next: UserInfo = { ...prev, ...patch };
       try {
-        localStorage.setItem(userStorageKey, JSON.stringify(next));
+        sessionStorage.setItem(userStorageKey, JSON.stringify(next));
       } catch {
         // Intentionally empty
         // 忽略错误
@@ -393,15 +375,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 登出函数
   const logout = () => {
     // 清除所有与登录态相关的 localStorage key
-    const keysToRemove = [
-      tokenStorageKey,   // 'authToken'
-      userStorageKey,    // 'userInfo'
-      'user-storage',    // Zustand persist (userStore)
-      'userId',          // api core.ts 用于 X-User-Id header
-    ];
-    keysToRemove.forEach(k => {
-      try { localStorage.removeItem(k); } catch { /* ignore */ }
-    });
+    try { sessionStorage.removeItem(tokenStorageKey); } catch { /* ignore */ }
+    try { sessionStorage.removeItem(userStorageKey); } catch { /* ignore */ }
+    try { localStorage.removeItem('user-storage'); } catch { /* ignore */ }
+    try { localStorage.removeItem('userId'); } catch { /* ignore */ }
     resetSmartFeatureFlags();
 
     // 更新状态
