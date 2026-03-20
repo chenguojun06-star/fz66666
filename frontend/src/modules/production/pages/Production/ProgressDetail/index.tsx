@@ -59,6 +59,7 @@ import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useDeliveryRiskMap } from './hooks/useDeliveryRiskMap';
 import MaterialShortageAlert from './components/MaterialShortageAlert';
 import { useProductionBoardStore } from '@/stores';
@@ -1127,6 +1128,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     deliveryRiskMap,
     onShareOrder: handleShareOrder,
   });
+  const { columns: cardColumns } = useCardGridLayout(10);
 
 
   const pageContent = (
@@ -1256,7 +1258,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <UniversalCardView
               dataSource={sortedOrders}
               loading={loading && orders.length === 0}
-              columns={6}
+              columns={cardColumns}
               coverField="styleCover"
               titleField="orderNo"
               subtitleField="styleNo"
@@ -1558,7 +1560,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <UniversalCardView
               dataSource={smartQueueFilter === 'all' ? sortedOrders : sortedOrders.filter((o) => smartQueueOrders.some((s) => String(s.id || '') === String(o.id || '')))}
               loading={loading && orders.length === 0}
-              columns={6}
+              columns={cardColumns}
               coverField="styleCover"
               titleField="orderNo"
               subtitleField="styleNo"

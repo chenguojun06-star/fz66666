@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Button, Space, Popover } from 'antd';
+import { Card, Button, Space, Popover } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -75,22 +75,6 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   getCardId,
   getCardStyle,
 }) => {
-  // 计算响应式列配置
-  const getColSpan = () => {
-    switch (columns) {
-      case 6:
-        return { xs: 24, sm: 12, md: 8, lg: 4 };
-      case 4:
-        return { xs: 24, sm: 12, md: 6, lg: 6 };
-      case 3:
-        return { xs: 24, sm: 12, md: 8, lg: 8 };
-      case 2:
-        return { xs: 24, sm: 12, md: 12, lg: 12 };
-      default:
-        return { xs: 24, sm: 12, md: 6, lg: 6 };
-    }
-  };
-
   // 渲染字段值
   const renderFieldValue = (field: CardField, record: any) => {
     const value = record[field.key];
@@ -137,7 +121,13 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   });
 
   return (
-    <Row gutter={[16, 16]}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${Math.max(1, columns)}, 1fr)`,
+        gap: 16,
+      }}
+    >
       {sortedData.map((record, index) => {
         // 计算是否已完成 - 添加防护检查
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
@@ -280,7 +270,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
             </Card>
           );
         return (
-          <Col {...getColSpan()} key={record.id || index}>
+          <div key={record.id || index}>
             {hoverRender ? (() => {
               const hoverContent = hoverRender(record);
               return hoverContent ? (
@@ -294,10 +284,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 </Popover>
               ) : cardNode;
             })() : cardNode}
-          </Col>
+          </div>
         );
       })}
-    </Row>
+    </div>
   );
 };
 

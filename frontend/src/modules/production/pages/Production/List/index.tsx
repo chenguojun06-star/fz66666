@@ -38,6 +38,7 @@ import type { ProgressNode } from '../ProgressDetail/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
@@ -72,6 +73,7 @@ const DEFAULT_HOVER_NODES: ProgressNode[] = [
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
   const { isMobile } = useViewport();
+  const { columns: cardColumns, pageSize: cardPageSize } = useCardGridLayout(10);
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -184,7 +186,18 @@ const ProductionList: React.FC = () => {
   const setViewMode = (mode: 'list' | 'card') => {
     localStorage.setItem('production_view_mode', mode);
     setViewModeState(mode);
+    if (mode === 'card') {
+      setQueryParams(prev => ({ ...prev, pageSize: cardPageSize, page: 1 }));
+    }
   };
+  // 卡片模式下视口 resize 时同步 pageSize
+  useEffect(() => {
+    if (viewMode === 'card') {
+      setQueryParams(prev =>
+        prev.pageSize === cardPageSize ? prev : { ...prev, pageSize: cardPageSize, page: 1 }
+      );
+    }
+  }, [cardPageSize, viewMode]);
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
@@ -973,7 +986,7 @@ const ProductionList: React.FC = () => {
           ) : (
             <UniversalCardView
               dataSource={sortedProductionList}
-              columns={isMobile ? 2 : 6}
+              columns={cardColumns}
               coverField="styleCover"
               titleField="orderNo"
               subtitleField="styleNo"

@@ -11,6 +11,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -136,6 +137,7 @@ const calculateProgress = (record: PatternProductionRecord): number => {
 
 const PatternProduction: React.FC = () => {
   const { message } = App.useApp();
+  const { columns: cardColumns } = useCardGridLayout(10);
   const [dataSource, setDataSource] = useState<PatternProductionRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -821,7 +823,7 @@ const PatternProduction: React.FC = () => {
             <UniversalCardView
               dataSource={dataSource}
               loading={loading}
-              columns={6}
+              columns={cardColumns}
               coverField="coverImage"
               titleField="styleNo"
               subtitleField="color"
