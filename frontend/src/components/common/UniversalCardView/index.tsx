@@ -125,7 +125,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${Math.max(1, columns)}, 1fr)`,
+        gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))`,
         gap: 16,
       }}
     >

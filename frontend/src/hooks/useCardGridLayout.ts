@@ -21,21 +21,17 @@ export function useCardGridLayout(maxCards = 10): CardGridLayout {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // 列数分档（视口宽度 → 每行列数）
-    const columns =
-      w < 768  ? 2 :
-      w < 1024 ? 3 :
-      w < 1280 ? 4 :
-      w < 1440 ? 5 :
-      w < 1600 ? 6 :
-      w < 1920 ? 7 : 8;
+    // 实际可用宽度扣掉左侧导航（约240px）和内边距（约32px）
+    const availW = Math.max(300, w - 272);
+
+    // 每张卡片最小宽度 200px，计算能塞下几列（上限 6）
+    const columns = Math.min(6, Math.max(1, Math.floor(availW / 200)));
 
     // 可用高度 = 总高 - UI 固定区（导航 + 筛选栏 + 操作栏 + 分页 + 内边距，约 280px）
     const availH = Math.max(200, h - 280);
 
     // 估算单张卡片高度：正方形封面宽度 + 内容区(110px) + 行间距(16px)
-    // 卡片宽度 = (可用宽度 - 左侧导航约240px) / 列数
-    const cardW = Math.max(80, (w - 240) / columns);
+    const cardW = Math.max(200, availW / columns);
     const cardH = cardW + 110 + 16;
 
     const rows = Math.max(1, Math.floor(availH / cardH));
