@@ -539,6 +539,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 label: '附件文件',
                 disabled: !currentStyle?.id,
                 children: <StyleAttachmentTab styleId={currentStyle?.id} />
+
               }
             ]}
           />

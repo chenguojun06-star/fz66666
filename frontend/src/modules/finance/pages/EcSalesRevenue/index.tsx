@@ -225,7 +225,7 @@ const EcSalesRevenue: React.FC = () => {
                 title={<><ClockCircleOutlined style={{ color: 'orange', marginRight: 4 }} />待核账</>}
                 value={fmtAmt(summary?.pendingAmount)}
                 suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.pendingCount ?? 0} 笔）</Text>}
-                valueStyle={{ color: 'orange', fontSize: 18 }}
+                styles={{ content: { color: 'orange', fontSize: 18 } }}
               />
             </Card>
           </Col>
@@ -235,7 +235,7 @@ const EcSalesRevenue: React.FC = () => {
                 title={<><CheckCircleOutlined style={{ color: '#1677ff', marginRight: 4 }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
                 suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.confirmedCount ?? 0} 笔）</Text>}
-                valueStyle={{ color: '#1677ff', fontSize: 18 }}
+                styles={{ content: { color: '#1677ff', fontSize: 18 } }}
               />
             </Card>
           </Col>
@@ -245,7 +245,7 @@ const EcSalesRevenue: React.FC = () => {
                 title={<><DollarOutlined style={{ color: '#52c41a', marginRight: 4 }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
                 suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.reconciledCount ?? 0} 笔）</Text>}
-                valueStyle={{ color: '#52c41a', fontSize: 18 }}
+                styles={{ content: { color: '#52c41a', fontSize: 18 } }}
               />
             </Card>
           </Col>

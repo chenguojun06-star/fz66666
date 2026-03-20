@@ -21,7 +21,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { message } from '@/utils/antdStatic';
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
 // ==================== 类型定义 ====================
 
@@ -462,35 +461,32 @@ const DataImport: React.FC = () => {
       </div>
 
       <Card>
-        <Tabs defaultActiveKey="zip-style" size="large">
-          {/* ZIP 图片包导入 */}
-          <TabPane
-            key="zip-style"
-            tab={
-              <span>
-                <FileZipOutlined />
-                <span style={{ marginLeft: 6 }}>款式 + 图片批量导入</span>
-              </span>
-            }
-          >
-            <ZipImportPanel />
-          </TabPane>
-
-          {/* 普通 Excel 导入 */}
-          {TAB_CONFIGS.map((config) => (
-            <TabPane
-              key={config.key}
-              tab={
+        <Tabs
+          defaultActiveKey="zip-style"
+          size="large"
+          items={[
+            {
+              key: 'zip-style',
+              label: (
+                <span>
+                  <FileZipOutlined />
+                  <span style={{ marginLeft: 6 }}>款式 + 图片批量导入</span>
+                </span>
+              ),
+              children: <ZipImportPanel />,
+            },
+            ...TAB_CONFIGS.map((config) => ({
+              key: config.key,
+              label: (
                 <span>
                   {config.icon}
                   <span style={{ marginLeft: 6 }}>{config.label}</span>
                 </span>
-              }
-            >
-              <ImportPanel config={config} />
-            </TabPane>
-          ))}
-        </Tabs>
+              ),
+              children: <ImportPanel config={config} />,
+            })),
+          ]}
+        />
       </Card>
     </Layout>
   );

@@ -106,7 +106,7 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} bordered={false}>
+      <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
           <Select placeholder="物流公司" allowClear style={{ width: 120 }}
             value={filters.companyCode} onChange={v => setFilters(f => ({ ...f, companyCode: v }))}>

@@ -335,53 +335,31 @@ const UserList: React.FC = () => {
   }, [roleOptions, selectedRoleId]);
 
   const permissionsByModule = useMemo(() => {
-    // 收集所有顶级模块及其子权限
-    const modules: Array<{
-      moduleId: number;
-      moduleName: string;
-      permissions: any[];
-    }> = [];
-
-    const collectPermissions = (node: any) => {
-      const allPerms: any[] = [];
-
-      // 递归收集所有子权限
-      const collectChildren = (n: any) => {
-        if (!n) return;
-
-        // 添加当前节点（如果不是顶级模块）
-        if (n.parentId && n.parentId !== 0) {
-          allPerms.push({
-            id: n.id,
-            name: n.permissionName,
-            type: n.permissionType,
+    return (permTree || []).map((topNode: any) => {
+      const groups: Array<{ groupId: number; groupName: string; buttons: any[] }> = [];
+      const directButtons: any[] = [];
+      for (const child of (topNode.children || [])) {
+        const cType = String(child.permissionType || '').toLowerCase();
+        if (cType === 'menu') {
+          groups.push({
+            groupId: Number(child.id),
+            groupName: String(child.permissionName || ''),
+            buttons: (child.children || []).map((btn: any) => ({
+              id: Number(btn.id),
+              name: String(btn.permissionName || ''),
+            })),
           });
+        } else {
+          directButtons.push({ id: Number(child.id), name: String(child.permissionName || '') });
         }
-
-        // 递归处理子节点
-        if (Array.isArray(n.children)) {
-          for (const child of n.children) {
-            collectChildren(child);
-          }
-        }
+      }
+      return {
+        moduleId: Number(topNode.id),
+        moduleName: String(topNode.permissionName || ''),
+        groups,
+        directButtons,
       };
-
-      collectChildren(node);
-      return allPerms;
-    };
-
-    // 遍历顶级节点
-    for (const topNode of permTree || []) {
-      const perms = collectPermissions(topNode);
-
-      modules.push({
-        moduleId: topNode.id,
-        moduleName: topNode.permissionName,
-        permissions: perms,
-      });
-    }
-
-    return modules;
+    });
   }, [permTree]);
 
   const loadPermTreeAndChecked = async (roleId: string) => {
@@ -992,58 +970,84 @@ const UserList: React.FC = () => {
                             flexWrap: 'wrap',
                             alignItems: 'flex-start'
                           }}>
-                            {permissionsByModule.map((module) => (
-                              <div
-                                key={module.moduleId}
-                                style={{
-                                  minWidth: 120,
-                                  maxWidth: 160,
-                                  border: '1px solid var(--table-border-color)',
-                                  padding: '2px 6px'
-                                }}
-                              >
-                                {/* 模块复选框 */}
-                                <div style={{ lineHeight: '20px' }}>
-                                  <Checkbox
-                                    checked={permCheckedIds.has(module.moduleId)}
-                                    onChange={(e) => {
-                                      const next = new Set(permCheckedIds);
-                                      if (e.target.checked) {
-                                        next.add(module.moduleId);
-                                        module.permissions.forEach((p: any) => next.add(p.id));
-                                      } else {
-                                        next.delete(module.moduleId);
-                                        module.permissions.forEach((p: any) => next.delete(p.id));
-                                      }
-                                      setPermCheckedIds(next);
-                                    }}
-                                    style={{ fontSize: "var(--font-size-xs)" }}
-                                  >
-                                    {module.moduleName}
-                                  </Checkbox>
-                                </div>
-                                {/* 子权限列表 */}
-                                {module.permissions.map((perm: any) => (
-                                  <div key={perm.id} style={{ lineHeight: '20px' }}>
+                            {permissionsByModule.map((module) => {
+                              const allBtnIds = [
+                                ...module.groups.flatMap((g: any) => [g.groupId, ...g.buttons.map((b: any) => b.id)]),
+                                ...module.directButtons.map((b: any) => b.id),
+                              ];
+                              return (
+                                <div key={module.moduleId} style={{ minWidth: 130, maxWidth: 200, border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden', fontSize: 12, flexShrink: 0 }}>
+                                  {/* 模块头 - 主色背景 */}
+                                  <div style={{ background: 'var(--primary-color, #1677ff)', padding: '4px 8px' }}>
                                     <Checkbox
-                                      checked={permCheckedIds.has(perm.id)}
+                                      checked={permCheckedIds.has(module.moduleId)}
                                       onChange={(e) => {
                                         const next = new Set(permCheckedIds);
-                                        if (e.target.checked) {
-                                          next.add(perm.id);
-                                        } else {
-                                          next.delete(perm.id);
-                                        }
+                                        if (e.target.checked) { next.add(module.moduleId); allBtnIds.forEach((id: number) => next.add(id)); }
+                                        else { next.delete(module.moduleId); allBtnIds.forEach((id: number) => next.delete(id)); }
                                         setPermCheckedIds(next);
                                       }}
-                                      style={{ fontSize: "var(--font-size-xs)" }}
-                                    >
-                                      {perm.name}
-                                    </Checkbox>
+                                      style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}
+                                    >{module.moduleName}</Checkbox>
                                   </div>
-                                ))}
-                              </div>
-                            ))}
+                                  {/* 子模块分组 */}
+                                  {module.groups.map((group: any) => (
+                                    <div key={group.groupId} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                      <div style={{ background: '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
+                                        <Checkbox
+                                          checked={permCheckedIds.has(group.groupId)}
+                                          onChange={(e) => {
+                                            const next = new Set(permCheckedIds);
+                                            const ids = [group.groupId, ...group.buttons.map((b: any) => b.id)];
+                                            if (e.target.checked) ids.forEach((id: number) => next.add(id));
+                                            else ids.forEach((id: number) => next.delete(id));
+                                            setPermCheckedIds(next);
+                                          }}
+                                          style={{ fontSize: 11, fontWeight: 500 }}
+                                        >{group.groupName}</Checkbox>
+                                      </div>
+                                      <div style={{ padding: '2px 4px 4px 16px' }}>
+                                        {group.buttons.map((btn: any) => (
+                                          <div key={btn.id}>
+                                            <Checkbox
+                                              checked={permCheckedIds.has(btn.id)}
+                                              onChange={(e) => {
+                                                const next = new Set(permCheckedIds);
+                                                if (e.target.checked) next.add(btn.id); else next.delete(btn.id);
+                                                setPermCheckedIds(next);
+                                              }}
+                                              style={{ fontSize: 10 }}
+                                            >{btn.name}</Checkbox>
+                                          </div>
+                                        ))}
+                                        {group.buttons.length === 0 && <span style={{ color: '#bbb', fontSize: 10 }}>仅菜单权限</span>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {/* 直属功能按钮 */}
+                                  {module.directButtons.length > 0 && (
+                                    <div style={{ padding: '4px 6px' }}>
+                                      {module.directButtons.map((btn: any) => (
+                                        <div key={btn.id}>
+                                          <Checkbox
+                                            checked={permCheckedIds.has(btn.id)}
+                                            onChange={(e) => {
+                                              const next = new Set(permCheckedIds);
+                                              if (e.target.checked) next.add(btn.id); else next.delete(btn.id);
+                                              setPermCheckedIds(next);
+                                            }}
+                                            style={{ fontSize: 10 }}
+                                          >{btn.name}</Checkbox>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {module.groups.length === 0 && module.directButtons.length === 0 && (
+                                    <div style={{ padding: '4px 8px', color: '#aaa', fontSize: 10 }}>仅页面入口</div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         ) : (
                           <Empty description={String(selectedRoleId || '').trim() ? '暂无可配置权限' : '请先选择角色'} />

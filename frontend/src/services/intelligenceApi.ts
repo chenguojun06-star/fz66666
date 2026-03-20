@@ -428,10 +428,48 @@ export interface ForecastResult {
 
 export async function runForecast(params: ForecastRequest): Promise<ForecastResult> {
   const response = await api.post<ApiResult<ForecastResult>>(
-    '/intelligence/forecast/run',
+    '/intelligence/forecast',
     params
   );
   return response.data as unknown as ForecastResult;
+}
+
+/** ── 视觉 AI（VisualAI v1.0）── */
+
+export interface VisualAIRequest {
+  imageUrl: string;
+  taskType: 'DEFECT_DETECT' | 'STYLE_IDENTIFY' | 'COLOR_CHECK';
+  styleNo?: string;
+  colorCode?: string;
+}
+
+export interface VisualDefect {
+  type: string;
+  description: string;
+  level: 'LOW' | 'MEDIUM' | 'HIGH';
+  location?: string;
+}
+
+export interface VisualAIResponse {
+  taskType: string;
+  success: boolean;
+  severity?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  confidence: number;
+  defects?: VisualDefect[];
+  styleFeatures?: Record<string, string>;
+  colorAssessment?: string;
+  summary: string;
+  suggestion?: string;
+  logId?: number;
+  errorMessage?: string;
+}
+
+export async function visualAnalyze(params: VisualAIRequest): Promise<VisualAIResponse> {
+  const response = await api.post<ApiResult<VisualAIResponse>>(
+    '/intelligence/visual/analyze',
+    params
+  );
+  return response.data as unknown as VisualAIResponse;
 }
 
 export default intelligenceApi;

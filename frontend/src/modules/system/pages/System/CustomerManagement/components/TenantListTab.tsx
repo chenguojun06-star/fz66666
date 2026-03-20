@@ -149,7 +149,7 @@ const TenantListTab: React.FC = () => {
     { key: 'system', title: '系统设置', paths: [
       { path: '/system/profile', label: '个人中心' },
       { path: '/system/user', label: '人员管理' },
-      { path: '/system/role', label: '角色管理' },
+      { path: '/system/role', label: '岗位管理' },
       { path: '/system/organization', label: '组织架构' },
       { path: '/system/approval-center', label: '审批中心' },
       { path: '/system/factory', label: '供应商管理' },

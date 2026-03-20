@@ -72,6 +72,7 @@ import './styles/global.css';
 import './styles/design-system.css'; // 设计系统
 import './styles/dark-theme-global.css'; // 深色主题全局覆盖
 import './styles/button-override.css'; // 按钮统一样式
+import './styles/animations.css'; // 全局动效：Chrome 146 scroll-driven + View Transitions
 
 const themeStorageKey = 'app.theme';
 

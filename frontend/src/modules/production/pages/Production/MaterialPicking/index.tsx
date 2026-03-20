@@ -119,7 +119,7 @@ const MaterialPickingList: React.FC = () => {
 
   return (
     <Layout>
-      <Card bordered={false}>
+      <Card variant="borderless">
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />

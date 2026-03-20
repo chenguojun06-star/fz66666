@@ -122,9 +122,9 @@ const FeedbackTab: React.FC = () => {
       {stats && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={6}><Card size="small"><Statistic title="总反馈" value={stats.total} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="待处理" value={stats.pending} valueStyle={{ color: stats.pending > 0 ? '#ff4d4f' : undefined }} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="处理中" value={stats.processing} valueStyle={{ color: '#1890ff' }} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="已解决" value={stats.resolved} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? '#ff4d4f' : undefined } }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="已解决" value={stats.resolved} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         </Row>
       )}
 

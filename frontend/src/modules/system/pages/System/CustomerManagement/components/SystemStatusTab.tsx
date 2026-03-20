@@ -67,7 +67,7 @@ const SystemStatusTab: React.FC = () => {
             <Col span={6}>
               <Card size="small">
                 <Statistic title="JVM 堆内存" value={overview.heapUsedMb} suffix={`/ ${overview.heapMaxMb > 0 ? overview.heapMaxMb : '∞'} MB`}
-                  valueStyle={{ color: heapColor, fontSize: 20 }}
+                  styles={{ content: { color: heapColor, fontSize: 20 } }}
                 />
                 <Progress percent={heapPercent} size="small" strokeColor={heapColor} showInfo={false} style={{ marginTop: 8 }} />
               </Card>
@@ -75,7 +75,7 @@ const SystemStatusTab: React.FC = () => {
             <Col span={6}>
               <Card size="small">
                 <Statistic title="线程数" value={overview.threadCount} suffix={`/ 峰值 ${overview.peakThreadCount}`}
-                  valueStyle={{ fontSize: 20 }}
+                  styles={{ content: { fontSize: 20 } }}
                 />
               </Card>
             </Col>
@@ -83,7 +83,7 @@ const SystemStatusTab: React.FC = () => {
               <Card size="small">
                 <Statistic title="CPU 负载" value={overview.systemLoadAverage} precision={2}
                   suffix={`/ ${overview.availableProcessors} 核`}
-                  valueStyle={{ fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? '#ff4d4f' : undefined }}
+                  styles={{ content: { fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? '#ff4d4f' : undefined } }}
                 />
               </Card>
             </Col>
@@ -91,7 +91,7 @@ const SystemStatusTab: React.FC = () => {
               <Card size="small">
                 <Statistic title="数据库"
                   value={dbUp ? '正常' : '异常'}
-                  valueStyle={{ color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 }}
+                  styles={{ content: { color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 } }}
                 />
                 {dbUp && <Text type="secondary" style={{ fontSize: 11 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
               </Card>

@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.service.QdrantService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -209,7 +210,15 @@ public class IntelligenceMemoryOrchestrator {
         double keywordScore = computeKeywordScore(memory, queryText);
         double adoptionScore = computeAdoptionScore(memory);
         double semantic = Math.max(0d, semanticScore);
-        double hybridScore = semantic * 0.58d + keywordScore * 0.32d + adoptionScore * 0.10d;
+        double rawScore = semantic * 0.58d + keywordScore * 0.32d + adoptionScore * 0.10d;
+
+        // 记忆时间衰减：半衰期90天，越旧的记忆权重越低，避免过时建议误导决策
+        double decayFactor = 1.0d;
+        if (memory.getCreateTime() != null) {
+            long daysSinceCreated = ChronoUnit.DAYS.between(memory.getCreateTime(), LocalDateTime.now());
+            decayFactor = Math.exp(-0.0077d * Math.max(daysSinceCreated, 0));  // ln(2)/90 ≈ 0.0077
+        }
+        double hybridScore = rawScore * decayFactor;
 
         MemoryHit hit = new MemoryHit();
         hit.setMemory(memory);

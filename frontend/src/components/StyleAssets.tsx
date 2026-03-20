@@ -77,7 +77,7 @@ export const StyleCoverThumb: React.FC<{
   }, [styleId, styleNo, src, srcFailed]);
 
   return (
-    <div style={{ width: size, minHeight: Math.round(size * 0.55), borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: size ?? 48, minHeight: Math.round((size ?? 48) * 0.55), borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
         <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', height: `${size}px`, display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (

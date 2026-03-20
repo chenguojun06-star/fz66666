@@ -103,7 +103,7 @@ export const LOCALES = {
         "wagePayment": "付款中心",
         "profile": "个人中心",
         "user": "人员管理",
-        "role": "角色管理",
+        "role": "岗位管理",
         "factory": "供应商管理",
         "dict": "字典管理",
         "systemLogs": "系统日志",

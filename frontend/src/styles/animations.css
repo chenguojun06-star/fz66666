@@ -1,0 +1,255 @@
+/* ============================================================
+   全局动画库 — Chrome 146+ Scroll-Triggered & View Transitions
+   ─────────────────────────────────────────────────────────────
+   Chrome 146 正式版：animation-timeline: view() (scroll-driven)
+   Chrome 111+：View Transitions API (document.startViewTransition)
+   本文件集中管理全系统动效，不散落在各组件文件中
+   ============================================================ */
+
+/* ─── 1. 基础 Keyframes（全局复用）─── */
+
+@keyframes fadeInUp-global {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn-global {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn-global {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+@keyframes scaleOut-global {
+  from { opacity: 1; transform: scale(1)    translateY(0); }
+  to   { opacity: 0; transform: scale(0.94) translateY(8px); }
+}
+
+@keyframes slideInRight-global {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+
+/* ─── 2. 滚动触发工具类（Chrome 146+ scroll-driven animations）─── */
+
+@supports (animation-timeline: view()) {
+  /* 通用：淡入上移（最常用） */
+  .scroll-fade-in {
+    animation: fadeInUp-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 45%;
+  }
+
+  /* 快速版：更短滚动距离触发 */
+  .scroll-fade-in-fast {
+    animation: fadeInUp-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 28%;
+  }
+
+  /* 缩放淡入（适合卡片） */
+  .scroll-scale-in {
+    animation: scaleIn-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+
+  /* 从右侧滑入（适合侧边面板） */
+  .scroll-slide-right {
+    animation: slideInRight-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+
+  /* stagger 组合器：配合 nth-child 使用 */
+  .scroll-stagger-1 { animation-delay: 0ms; }
+  .scroll-stagger-2 { animation-delay: 55ms; }
+  .scroll-stagger-3 { animation-delay: 110ms; }
+  .scroll-stagger-4 { animation-delay: 165ms; }
+  .scroll-stagger-5 { animation-delay: 220ms; }
+  .scroll-stagger-6 { animation-delay: 275ms; }
+}
+
+
+/* ─── 3. Modal 开启动效（自动作用于所有 ResizableModal / Ant Design Modal）─── */
+
+/* Ant Design v6 + antd reset: .ant-modal-content 是内容区根节点 */
+@keyframes modalBounceIn {
+  0%   { opacity: 0; transform: scale(0.86) translateY(-18px); }
+  65%  { opacity: 1; transform: scale(1.03) translateY(3px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.ant-modal .ant-modal-content {
+  animation: modalBounceIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 覆盖 antd 自带的淡入（避免双重动画闪烁） */
+.ant-modal-root .ant-modal-wrap {
+  /* antd 自带的 zoom/fade 动画置为零时长，由我们的 CSS 接管 */
+}
+
+
+/* ─── 4. View Transitions CSS（路由切换，Chrome 111+）─── */
+
+@supports (view-transition-name: none) {
+  /* 旧页面：快速淡出，稍带向上飘离 */
+  ::view-transition-old(root) {
+    animation: 160ms ease-in fadeIn-global reverse both;
+  }
+
+  /* 新页面：弹簧缓入 + 上移进场，与项目现有 cubic-bezier 保持一致 */
+  ::view-transition-new(root) {
+    animation: 280ms cubic-bezier(0.16, 1, 0.3, 1) fadeInUp-global both;
+  }
+
+  /* 支持减少动效偏好（无障碍） */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 0ms;
+    }
+  }
+}
+
+
+/* ─── 5. 仪表盘 TopStats 统计卡片 — 滚动触发交错进场 ─── */
+/* 注意：.top-stat-item:hover 有 transform: translateY(-1px)
+   若改用 fadeInUp-global（含 transform），animation fill-mode: both 会锁住 transform
+   导致 hover 无响应。因此只用 fadeIn-global（纯 opacity） */
+
+@supports (animation-timeline: view()) {
+  .top-stat-item {
+    animation: fadeIn-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 55%;
+  }
+  .top-stat-item:nth-child(1) { animation-delay: 0ms;   }
+  .top-stat-item:nth-child(2) { animation-delay: 65ms;  }
+  .top-stat-item:nth-child(3) { animation-delay: 130ms; }
+  .top-stat-item:nth-child(4) { animation-delay: 195ms; }
+}
+
+
+/* ─── 6. 通用仪表盘卡片 DashboardCard — 滚动触发 ─── */
+
+@supports (animation-timeline: view()) {
+  .dashboard-card {
+    animation: fadeInUp-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 42%;
+  }
+}
+
+
+/* ─── 7. 智能驾驶舱 .c-card / .c-stage-card — 滚动触发交错 ─── */
+
+@supports (animation-timeline: view()) {
+  /* 通用驾驶舱卡片 */
+  .c-card {
+    animation: fadeInUp-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 45%;
+  }
+
+  /* 6列网格内各列延迟递增 */
+  .cockpit-grid-6 > .c-card:nth-child(1) { animation-delay: 0ms;   }
+  .cockpit-grid-6 > .c-card:nth-child(2) { animation-delay: 38ms;  }
+  .cockpit-grid-6 > .c-card:nth-child(3) { animation-delay: 76ms;  }
+  .cockpit-grid-6 > .c-card:nth-child(4) { animation-delay: 114ms; }
+  .cockpit-grid-6 > .c-card:nth-child(5) { animation-delay: 152ms; }
+  .cockpit-grid-6 > .c-card:nth-child(6) { animation-delay: 190ms; }
+
+  /* 3列网格 */
+  .cockpit-grid-3 > .c-card:nth-child(1) { animation-delay: 0ms;   }
+  .cockpit-grid-3 > .c-card:nth-child(2) { animation-delay: 65ms;  }
+  .cockpit-grid-3 > .c-card:nth-child(3) { animation-delay: 130ms; }
+
+  /* 2列网格 */
+  .cockpit-grid-2 > .c-card:nth-child(1) { animation-delay: 0ms;  }
+  .cockpit-grid-2 > .c-card:nth-child(2) { animation-delay: 70ms; }
+
+  /* 5:7 宽比网格 */
+  .cockpit-grid-5-7 > .c-card:nth-child(1) { animation-delay: 0ms;  }
+  .cockpit-grid-5-7 > .c-card:nth-child(2) { animation-delay: 70ms; }
+
+  /* 工序阶段卡片 — 纯淡入（不含 transform）
+     原因：.c-stage-card:hover 有 transform: translateY(-2px)，
+     若 scaleIn-global 占据 animation 层级，fill-mode:both 会锁住 transform，
+     导致 hover 变换失效。改用 fadeIn-global 安全兼容。 */
+  .c-stage-card {
+    animation: fadeIn-global linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 38%;
+  }
+  .c-stage-grid > .c-stage-card:nth-child(1) { animation-delay: 0ms;   }
+  .c-stage-grid > .c-stage-card:nth-child(2) { animation-delay: 35ms;  }
+  .c-stage-grid > .c-stage-card:nth-child(3) { animation-delay: 70ms;  }
+  .c-stage-grid > .c-stage-card:nth-child(4) { animation-delay: 105ms; }
+  .c-stage-grid > .c-stage-card:nth-child(5) { animation-delay: 140ms; }
+  .c-stage-grid > .c-stage-card:nth-child(6) { animation-delay: 175ms; }
+}
+
+
+/* ─── 8. 全局减少动效偏好兜底 ─── */
+
+/* ─── 9. 表格行逐条进场（无需滚动，数据加载即触发）─── */
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.ant-table-tbody .ant-table-row {
+  animation: rowSlideIn 0.22s ease-out both;
+}
+.ant-table-tbody .ant-table-row:nth-child(1)  { animation-delay: 0ms;   }
+.ant-table-tbody .ant-table-row:nth-child(2)  { animation-delay: 45ms;  }
+.ant-table-tbody .ant-table-row:nth-child(3)  { animation-delay: 90ms;  }
+.ant-table-tbody .ant-table-row:nth-child(4)  { animation-delay: 135ms; }
+.ant-table-tbody .ant-table-row:nth-child(5)  { animation-delay: 180ms; }
+.ant-table-tbody .ant-table-row:nth-child(6)  { animation-delay: 225ms; }
+.ant-table-tbody .ant-table-row:nth-child(7)  { animation-delay: 270ms; }
+.ant-table-tbody .ant-table-row:nth-child(8)  { animation-delay: 315ms; }
+.ant-table-tbody .ant-table-row:nth-child(9)  { animation-delay: 360ms; }
+.ant-table-tbody .ant-table-row:nth-child(10) { animation-delay: 405ms; }
+
+
+@media (prefers-reduced-motion: reduce) {
+  /* scroll-driven 工具类 */
+  .scroll-fade-in,
+  .scroll-fade-in-fast,
+  .scroll-scale-in,
+  .scroll-slide-right {
+    animation: none;
+  }
+
+  /* 表格行进场 */
+  .ant-table-tbody .ant-table-row {
+    animation: none;
+  }
+
+  /* Modal 开启动效 */
+  .ant-modal .ant-modal-content {
+    animation: none;
+  }
+
+  /* 统计卡片 */
+  .top-stat-item {
+    animation: none;
+  }
+
+  /* 仪表盘通用卡片 */
+  .dashboard-card {
+    animation: none;
+  }
+
+  /* 驾驶舱卡片 */
+  .c-card,
+  .c-stage-card {
+    animation: none;
+  }
+}

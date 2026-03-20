@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
+import { visualAnalyze } from '@/services/intelligenceApi';
+import type { VisualAIResponse } from '@/services/intelligenceApi';
 
 interface Props {
   style: StyleInfo | null;
@@ -128,6 +130,14 @@ const difficultyColor = (level?: string) => {
   return 'default';
 };
 
+const SEVERITY_COLOR: Record<string, string> = {
+  CRITICAL: '#ff4d4f',
+  HIGH: '#ff7a45',
+  MEDIUM: '#faad14',
+  LOW: '#52c41a',
+  NONE: '#d9d9d9',
+};
+
 const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -135,6 +145,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const [profile, setProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
   const [difficultyLoading, setDifficultyLoading] = useState(false);
   const [localDifficulty, setLocalDifficulty] = useState<DifficultyAssessment | null>(null);
+  const [visualResult, setVisualResult] = useState<VisualAIResponse | null>(null);
 
   const styleNo = String(style?.styleNo || '').trim();
   const styleId = style?.id;
@@ -179,20 +190,30 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const handleAiImageAnalysis = useCallback(async () => {
     if (!styleId) return;
     setDifficultyLoading(true);
+    setVisualResult(null);
+    const coverUrl = style?.cover || undefined;
     try {
-      // coverUrl 传 cover（可为空）；后端 assessWithAiById 会自动回退到款式附件中的第一张图
-      const res = await intelligenceApi.analyzeStyleDifficulty({
-        styleId,
-        coverUrl: style?.cover || undefined,
-      });
-      const data = (res as any)?.data || null;
-      if (data) setLocalDifficulty(data);
+      const [diffRes, visualRes] = await Promise.allSettled([
+        // 后端 assessWithAiById 会自动回退到款式附件中的第一张图
+        intelligenceApi.analyzeStyleDifficulty({ styleId, coverUrl }),
+        // 仅当封面图存在时才调用视觉AI
+        coverUrl
+          ? visualAnalyze({ imageUrl: coverUrl, taskType: 'DEFECT_DETECT', styleNo: style?.styleNo || undefined })
+          : Promise.reject('无封面图'),
+      ]);
+      if (diffRes.status === 'fulfilled') {
+        const data = (diffRes.value as any)?.data || null;
+        if (data) setLocalDifficulty(data);
+      }
+      if (visualRes.status === 'fulfilled') {
+        setVisualResult(visualRes.value as VisualAIResponse);
+      }
     } catch {
       // 失败时保留原结构化结果
     } finally {
       setDifficultyLoading(false);
     }
-  }, [styleId, style?.cover]);
+  }, [styleId, style?.cover, style?.styleNo]);
 
   const activeDifficulty = localDifficulty ?? profile?.difficulty;
 
@@ -431,6 +452,35 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                       </div>
                     );
                   })()}
+                  {visualResult && (
+                    <div style={{ marginTop: 4, padding: '4px 6px', borderRadius: 4, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.15)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: '#00bcd4', fontWeight: 600 }}>🔍 视觉AI</span>
+                        {visualResult.severity && visualResult.severity !== 'NONE' && (
+                          <Tag style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
+                        )}
+                        <span style={{ fontSize: 10, color: '#8c8c8c', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#595959', lineHeight: 1.5 }}>{visualResult.summary}</div>
+                      {visualResult.defects && visualResult.defects.length > 0 && (
+                        <div style={{ marginTop: 3 }}>
+                          {visualResult.defects.slice(0, 3).map((d, i) => (
+                            <div key={i} style={{ fontSize: 10, color: '#8c8c8c', lineHeight: 1.4 }}>• [{d.level}] {d.type} — {d.description}{d.location ? ` @ ${d.location}` : ''}</div>
+                          ))}
+                        </div>
+                      )}
+                      {visualResult.styleFeatures && Object.keys(visualResult.styleFeatures).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
+                          {Object.entries(visualResult.styleFeatures).slice(0, 4).map(([k, v]) => (
+                            <Tag key={k} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
+                          ))}
+                        </div>
+                      )}
+                      {visualResult.suggestion && (
+                        <div style={{ fontSize: 10, color: '#722ed1', marginTop: 3 }}>💡 {visualResult.suggestion}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11 }}>AI 难度分析</Button>

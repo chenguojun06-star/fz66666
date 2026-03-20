@@ -12,3 +12,4 @@ export { useTablePagination } from './useTablePagination';
 
 export type { RequestOptions, RequestResult } from './useRequest';
 export type { PaginationConfig } from './useTablePagination';
+export { useViewTransition, withViewTransition } from './useViewTransition';

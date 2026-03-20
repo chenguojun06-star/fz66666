@@ -312,7 +312,7 @@ const MyBillingTab: React.FC = () => {
               <Statistic
                 title="当前套餐"
                 value={PLAN_LABELS[overview.planType] || overview.planType}
-                valueStyle={{ color: 'var(--color-primary)', fontSize: 20 }}
+                styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
               />
               <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
                 {overview.paidStatus === 'TRIAL' ? '免费试用中' : `¥${overview.monthlyFee}/月`}
@@ -345,7 +345,7 @@ const MyBillingTab: React.FC = () => {
           </Col>
           <Col span={6}>
             <Card size="small">
-              <Statistic title="租户编码" value={overview.tenantCode || '—'} valueStyle={{ fontSize: 18 }} />
+              <Statistic title="租户编码" value={overview.tenantCode || '—'} styles={{ content: { fontSize: 18 } }} />
               <div style={{ marginTop: 8 }}>
                 <Button type="link" size="small" onClick={handleOpenInvoiceInfo}>
                   维护开票信息

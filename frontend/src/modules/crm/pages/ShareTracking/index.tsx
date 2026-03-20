@@ -61,7 +61,7 @@ export default function ShareTracking() {
 
   return (
     <div className="share-tracking-container">
-      <Card title={<><ShareAltOutlined /> 客户专属追踪视图 - 订单进度</>} bordered={false} className="share-tracking-card">
+      <Card title={<><ShareAltOutlined /> 客户专属追踪视图 - 订单进度</>} variant="borderless" className="share-tracking-card">
         <Row gutter={[16, 16]}>
           <Col span={24}>
             <Descriptions column={1} bordered size="small">

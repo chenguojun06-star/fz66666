@@ -241,7 +241,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '个人中心', path: paths.profile, icon: React.createElement(SettingOutlined) },
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
-      { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
+      { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
       { label: '审批中心', path: paths.approvalCenter, icon: React.createElement(AuditOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },

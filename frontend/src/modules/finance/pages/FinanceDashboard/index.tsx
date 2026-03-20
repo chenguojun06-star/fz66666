@@ -290,7 +290,7 @@ const FinanceDashboard: React.FC = () => {
                 value={statData.totalAmount}
                 precision={0}
                 prefix="¥"
-                valueStyle={{ fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' }}
+                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
               />
               <div className={styles.cardFooter}>
                 <span className={styles.subLabel}>周同比</span>
@@ -316,7 +316,7 @@ const FinanceDashboard: React.FC = () => {
               </div>
               <Statistic
                 value={statData.warehousedCount}
-                valueStyle={{ fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' }}
+                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
               />
               <div className={styles.tinyChart}>
                 {/* 迷你面积图占位 */}
@@ -340,7 +340,7 @@ const FinanceDashboard: React.FC = () => {
               </div>
               <Statistic
                 value={statData.orderCount}
-                valueStyle={{ fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' }}
+                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
               />
               <div className={styles.tinyChart}>
                 {/* 迷你柱状图占位 */}
@@ -365,7 +365,7 @@ const FinanceDashboard: React.FC = () => {
               <Statistic
                 value={statData.profitRate}
                 suffix="%"
-                valueStyle={{ fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' }}
+                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
               />
               <div className={styles.progressBar}>
                 <div className={styles.progressFill} style={{ width: `${statData.profitRate}%` }} />

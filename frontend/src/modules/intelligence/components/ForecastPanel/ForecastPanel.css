@@ -1,0 +1,271 @@
+/* ─── ForecastPanel — 预测引擎面板 ─── */
+
+.fp-panel {
+  background: rgba(167, 139, 250, 0.03);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 280px;
+}
+
+/* 标题 */
+.fp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.08);
+}
+
+.fp-header-icon {
+  color: #a78bfa;
+  font-size: 15px;
+}
+
+.fp-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a78bfa;
+  flex: 1;
+}
+
+.fp-badge {
+  font-size: 10px;
+  background: rgba(167, 139, 250, 0.1);
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.3);
+  border-radius: 4px;
+  line-height: 16px;
+}
+
+/* 描述行 */
+.fp-desc {
+  font-size: 11px;
+  color: rgba(200, 216, 234, 0.4);
+  line-height: 1.4;
+}
+
+/* 表单 */
+.fp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fp-select .ant-select-selector {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(167, 139, 250, 0.25) !important;
+  color: #c8d8ea !important;
+  font-size: 12px !important;
+}
+
+.fp-select .ant-select-arrow {
+  color: rgba(167, 139, 250, 0.5);
+}
+
+.fp-form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.fp-input {
+  flex: 1;
+}
+
+.fp-input .ant-input {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(167, 139, 250, 0.2);
+  color: #c8d8ea;
+  font-size: 12px;
+}
+
+.fp-input .ant-input:focus,
+.fp-input .ant-input:hover {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.fp-input-icon {
+  color: rgba(167, 139, 250, 0.5);
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.fp-horizon {
+  min-width: 100px;
+}
+
+.fp-horizon .ant-select-selector {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(167, 139, 250, 0.2) !important;
+  color: #c8d8ea !important;
+  font-size: 12px !important;
+}
+
+.fp-btn {
+  background: rgba(167, 139, 250, 0.15) !important;
+  border-color: rgba(167, 139, 250, 0.4) !important;
+  color: #a78bfa !important;
+  font-size: 12px !important;
+  height: 32px !important;
+  transition: all 0.2s;
+}
+
+.fp-btn:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.25) !important;
+  border-color: #a78bfa !important;
+}
+
+/* 加载 */
+.fp-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(167, 139, 250, 0.5);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+/* 错误 */
+.fp-error {
+  font-size: 12px;
+  color: #ff7a45;
+  background: rgba(255, 122, 69, 0.06);
+  border: 1px solid rgba(255, 122, 69, 0.15);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+
+/* 结果区 */
+.fp-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(167, 139, 250, 0.08);
+  padding-top: 12px;
+  animation: fp-fade-in 0.25s ease;
+}
+
+@keyframes fp-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 核心预测值 */
+.fp-value-block {
+  text-align: center;
+  padding: 14px;
+  background: rgba(167, 139, 250, 0.05);
+  border: 1px solid rgba(167, 139, 250, 0.1);
+  border-radius: 7px;
+}
+
+.fp-value-label {
+  font-size: 11px;
+  color: rgba(200, 216, 234, 0.4);
+  margin-bottom: 6px;
+}
+
+.fp-value-main {
+  font-size: 22px;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.fp-value-range {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.fp-range-low {
+  color: #52c41a;
+}
+
+.fp-range-sep {
+  color: rgba(200, 216, 234, 0.3);
+}
+
+.fp-range-high {
+  color: #ff7a45;
+}
+
+.fp-range-hint {
+  font-size: 10px;
+  color: rgba(200, 216, 234, 0.25);
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+/* 置信度行 */
+.fp-confidence-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-conf-label {
+  font-size: 11px;
+  color: rgba(200, 216, 234, 0.4);
+  white-space: nowrap;
+}
+
+.fp-conf-val {
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* 算法行 */
+.fp-algorithm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.fp-algo-label {
+  color: rgba(200, 216, 234, 0.4);
+  white-space: nowrap;
+}
+
+.fp-algo-tag {
+  font-size: 10px;
+  background: rgba(167, 139, 250, 0.1);
+  color: #c8d8ea;
+  border-color: rgba(167, 139, 250, 0.2);
+  border-radius: 3px;
+  line-height: 18px;
+}
+
+/* AI 分析依据 */
+.fp-rationale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fp-section-label {
+  font-size: 10px;
+  color: rgba(200, 216, 234, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fp-rationale-text {
+  font-size: 11px;
+  color: rgba(200, 216, 234, 0.65);
+  line-height: 1.6;
+  background: rgba(167, 139, 250, 0.04);
+  border-left: 2px solid rgba(167, 139, 250, 0.25);
+  padding: 6px 8px;
+  border-radius: 0 4px 4px 0;
+}

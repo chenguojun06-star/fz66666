@@ -210,7 +210,7 @@ const InvoiceTab: React.FC = () => {
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={6}><Card size="small"><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
-        <Col xs={24} md={6}><Card size="small"><Statistic title="已开票" value={stats.issuedCount} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col xs={24} md={6}><Card size="small"><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         <Col xs={24} md={6}><Card size="small"><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
         <Col xs={24} md={6}><Card size="small"><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
@@ -459,9 +459,9 @@ const PayableTab: React.FC = () => {
         .ap-row-warning td { background: #fffbe6 !important; }
       `}</style>
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} valueStyle={{ color: '#f5222d' }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: '#fa8c16' } }} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
+        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         <Col xs={24} sm={6}><Card size="small"><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>
       <Card size="small" style={{ marginBottom: 12 }}>
