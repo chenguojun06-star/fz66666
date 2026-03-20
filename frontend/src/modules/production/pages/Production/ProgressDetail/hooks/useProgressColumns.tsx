@@ -264,7 +264,7 @@ export const useProgressColumns = ({
       width: 170,
       render: (_: any, record: ProductionOrder) => {
         const dateStr = formatTime(getOrderShipTime(record));
-        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate);
+        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
         // 进度风险标签：综合 daysLeft + productionProgress 给出预警
         const s = record.status;
         const prog = Number(record.productionProgress) || 0;
@@ -479,9 +479,13 @@ export const useProgressColumns = ({
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
               const completedQty = nodeDoneMap?.[nodeName] || 0;
-              const percent = totalQty > 0
-                ? Math.min(100, Math.round((completedQty / totalQty) * 100))
-                : 0;
+              // ★ 采购/物料节点：到货即完成(100%)，显示 ✓；不按件数比率（避免裁剪>下单时卡死）
+              const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
+              const percent = isProcureNode
+                ? (completedQty > 0 ? 100 : 0)
+                : totalQty > 0
+                  ? Math.min(100, Math.round((completedQty / totalQty) * 100))
+                  : 0;
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
               // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
@@ -556,7 +560,7 @@ export const useProgressColumns = ({
                         progress={percent}
                         size={60}
                         nodeName={nodeName}
-                        text={`${completedQty}/${totalQty}`}
+                        text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                         paused={frozen}
                         color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
                         color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
@@ -567,7 +571,7 @@ export const useProgressColumns = ({
                       progress={percent}
                       size={60}
                       nodeName={nodeName}
-                      text={`${completedQty}/${totalQty}`}
+                      text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                       paused={frozen}
                       color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
                       color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
