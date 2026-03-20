@@ -14,6 +14,21 @@
   - `backend/src/test/java/com/fashion/supplychain/system/orchestration/PermissionCalculationEngineTest.java`
 - **对系统的帮助**：权限缓存从“依赖 Jackson 多态类型包装”改为“稳定字符串 JSON”，后续即使经历版本切换、旧容器残留或历史缓存混杂，也不会再因为 `role:perms:*` 这种数组缓存触发持续告警。
 
+### fix(ai): IntelligenceInference 超时封顶 + 快速失败，阻断 AI 聊天长时间卡死
+
+- **问题现象**：`AiAdvisorService.chat(..)` 出现 5 秒以上慢调用，极端情况下达到 10 分钟级，拖慢请求线程。
+- **根本原因**：推理层超时配置可被设置过大，并且超时后默认重试一次，导致慢请求持续拉长；AI对话类场景不适合重试放大延迟。
+- **修复方案**：
+  - `IntelligenceInferenceOrchestrator` 新增场景级超时封顶：
+    - `ai-advisor` 最大 20 秒
+    - `nl-intent` 最大 12 秒
+    - 其他场景最大 60 秒
+  - `ai-advisor` / `nl-intent` 超时后快速失败，不再进行二次重试
+  - 超时被封顶时输出 info 日志，便于线上排障确认
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/IntelligenceInferenceOrchestrator.java`
+- **对系统的帮助**：把 AI 场景最坏时延从“分钟级不可控”压缩到“秒级可预期”，避免连续出现“修完 Redis 又卡 AI”的连环问题。
+
 ## 2026-03-20（全量系统安全审计 + P1/P2 高危漏洞修复）
 
 ### fix(security): 全量系统安全审计 — 修复2个高危漏洞，记录4个风险点

@@ -2,6 +2,7 @@
 
 - 权限缓存链路从 `RedisTemplate<Object>` 多态反序列化切换为 `StringRedisTemplate + ObjectMapper` 显式 JSON 字符串存储，修复 `role:perms:*` / `user:perms:*` / `tenant:ceiling:*` 在旧缓存格式混杂时反复出现的 Jackson `START_ARRAY` 告警。
 - `PermissionCalculationEngine` 启动清理补齐 `super:all:perms`，并在读取损坏权限缓存时只删除当前 key 后自动回源 DB 重建，避免相同坏缓存长期循环告警。
+- `IntelligenceInferenceOrchestrator` 新增场景级超时封顶与快速失败：`ai-advisor` 最大 20 秒、`nl-intent` 最大 12 秒，其余场景最大 60 秒；`ai-advisor/nl-intent` 超时不再重试，避免分钟级阻塞。
 
 ## 2026-03-16
 

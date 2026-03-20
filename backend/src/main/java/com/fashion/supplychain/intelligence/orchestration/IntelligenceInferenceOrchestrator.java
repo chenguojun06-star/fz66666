@@ -26,6 +26,10 @@ import org.springframework.stereotype.Service;
 public class IntelligenceInferenceOrchestrator {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final int MIN_TIMEOUT_SECONDS = 5;
+    private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 60;
+    private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
+    private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
 
     @Value("${ai.deepseek.api-key:}")
     private String directApiKey;
@@ -74,14 +78,14 @@ public class IntelligenceInferenceOrchestrator {
         String traceId = UUID.randomUUID().toString();
         IntelligenceInferenceResult result;
         if (intelligenceModelGatewayOrchestrator.isGatewayReady()) {
-            result = invokeLitellm(messages, tools, traceId);
+            result = invokeLitellm(scene, messages, tools, traceId);
             if (!result.isSuccess() && intelligenceModelGatewayOrchestrator.isFallbackEnabled()) {
-                IntelligenceInferenceResult fallback = invokeDirect(messages, tools, traceId);
+                IntelligenceInferenceResult fallback = invokeDirect(scene, messages, tools, traceId);
                 fallback.setFallbackUsed(true);
                 result = fallback;
             }
         } else {
-            result = invokeDirect(messages, tools, traceId);
+            result = invokeDirect(scene, messages, tools, traceId);
         }
         result.setTraceId(traceId);
         result.setTraceUrl(intelligenceObservabilityOrchestrator.buildTraceUrl(traceId));
@@ -96,18 +100,19 @@ public class IntelligenceInferenceOrchestrator {
         return intelligenceModelGatewayOrchestrator.isGatewayReady() || hasText(directApiKey);
     }
 
-    private IntelligenceInferenceResult invokeLitellm(List<AiMessage> messages, List<AiTool> tools, String traceId) {
+    private IntelligenceInferenceResult invokeLitellm(String scene, List<AiMessage> messages, List<AiTool> tools, String traceId) {
         String baseUrl = intelligenceModelGatewayOrchestrator.getGatewayBaseUrl();
         String model = intelligenceModelGatewayOrchestrator.getActiveModelName();
         String endpoint = normalizeChatCompletionsUrl(baseUrl);
-        return invokeOpenAiCompatible("litellm", endpoint, litellmApiKey, model, messages, tools, gatewayTimeoutSeconds, traceId);
+        return invokeOpenAiCompatible(scene, "litellm", endpoint, litellmApiKey, model, messages, tools, gatewayTimeoutSeconds, traceId);
     }
 
-    private IntelligenceInferenceResult invokeDirect(List<AiMessage> messages, List<AiTool> tools, String traceId) {
-        return invokeOpenAiCompatible("direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds, traceId);
+    private IntelligenceInferenceResult invokeDirect(String scene, List<AiMessage> messages, List<AiTool> tools, String traceId) {
+        return invokeOpenAiCompatible(scene, "direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds, traceId);
     }
 
-    private IntelligenceInferenceResult invokeOpenAiCompatible(String provider,
+    private IntelligenceInferenceResult invokeOpenAiCompatible(String scene,
+                                                               String provider,
                                                                String endpoint,
                                                                String apiKey,
                                                                String model,
@@ -130,6 +135,9 @@ public class IntelligenceInferenceOrchestrator {
             return result;
         }
 
+        int effectiveTimeoutSeconds = resolveEffectiveTimeoutSeconds(scene, timeoutSeconds);
+        boolean allowRetryOnTimeout = !"ai-advisor".equals(scene) && !"nl-intent".equals(scene);
+
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -143,7 +151,7 @@ public class IntelligenceInferenceOrchestrator {
                     .header("X-Trace-Id", traceId)
                     .header("X-Request-Id", traceId)
                     .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .timeout(Duration.ofSeconds(Math.max(timeoutSeconds, 5)))
+                    .timeout(Duration.ofSeconds(effectiveTimeoutSeconds))
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
@@ -157,8 +165,14 @@ public class IntelligenceInferenceOrchestrator {
                     response.body().substring(0, Math.min(200, response.body().length())));
             return result;
         } catch (java.net.http.HttpTimeoutException e) {
+            if (!allowRetryOnTimeout) {
+                result.setSuccess(false);
+                result.setErrorMessage("timeout-" + effectiveTimeoutSeconds + "s");
+                log.warn("[IntelligenceInference] {} 场景={} 超时({}s)，快速失败不重试", provider, scene, effectiveTimeoutSeconds);
+                return result;
+            }
             // 超时自动重试一次（间隔2秒）
-            log.warn("[IntelligenceInference] {} 首次超时({}s)，即将重试...", provider, timeoutSeconds);
+            log.warn("[IntelligenceInference] {} 场景={} 首次超时({}s)，即将重试...", provider, scene, effectiveTimeoutSeconds);
             try {
                 Thread.sleep(2000);
                 HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -182,6 +196,21 @@ public class IntelligenceInferenceOrchestrator {
             log.warn("[IntelligenceInference] {} 调用异常: {}", provider, e.getMessage());
             return result;
         }
+    }
+
+    private int resolveEffectiveTimeoutSeconds(String scene, int configuredTimeoutSeconds) {
+        int raw = Math.max(configuredTimeoutSeconds, MIN_TIMEOUT_SECONDS);
+        int cap = DEFAULT_MAX_TIMEOUT_SECONDS;
+        if ("ai-advisor".equals(scene)) {
+            cap = AI_ADVISOR_MAX_TIMEOUT_SECONDS;
+        } else if ("nl-intent".equals(scene)) {
+            cap = NL_INTENT_MAX_TIMEOUT_SECONDS;
+        }
+        int effective = Math.min(raw, cap);
+        if (effective != raw) {
+            log.info("[IntelligenceInference] 场景={} 超时已封顶: configured={}s -> effective={}s", scene, raw, effective);
+        }
+        return effective;
     }
 
     private String buildRequestBody(String model, List<AiMessage> messages, List<AiTool> tools) throws Exception {
