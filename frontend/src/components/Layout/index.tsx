@@ -235,7 +235,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
 
   // 工厂账号可见的菜单分组键（其余整组隐藏）
-  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system']);
+  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system', 'basic']);
   // 工厂账号可见的具体路径白名单
   const FACTORY_VISIBLE_PATHS = new Set<string>([
     paths.productionList,   // /production（我的订单）
@@ -246,6 +246,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     paths.financeCenter,    // /finance/center（订单结算(外)）
     paths.profile,          // /system/profile（个人中心）
     paths.factoryWorkers,   // /system/factory-workers（工人名册）
+    paths.templateCenter,   // /basic/template-center（单价维护）
   ]);
 
   // 构建 Menu items
@@ -263,6 +264,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         // 超管专属菜单：非超管不可见
         if (section.superAdminOnly && !isSuperAdmin) return false;
         if (section.items) {
+          // 外发工厂账号：白名单路径即权限，无需额外 permission code 检查
+          if (isFactoryAccount) return section.items.some((item) => FACTORY_VISIBLE_PATHS.has(item.path));
           return section.items.some((item) => hasPermissionForPath(item.path));
         }
         return hasPermissionForPath(section.path!);
@@ -272,8 +275,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const children = section.items
             .filter((item) => {
               if ((item as any).superAdminOnly && !isSuperAdmin) return false;
-              // 外发工厂账号：只显示白名单内的页面
-              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(item.path)) return false;
+              // 外发工厂账号：只显示白名单路径，白名单即权限，不再二次 permission code 检查
+              if (isFactoryAccount) return FACTORY_VISIBLE_PATHS.has(item.path);
               // 租户模块白名单：路径不在白名单内则隐藏
               if (!isTenantModuleEnabled(item.path)) return false;
               return hasPermissionForPath(item.path);

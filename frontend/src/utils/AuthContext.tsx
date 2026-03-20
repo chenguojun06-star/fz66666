@@ -29,6 +29,8 @@ export interface UserInfo extends Record<string, unknown> {
    * 不为空时表示该用户是某外发工厂的联系人，应显示工厂端视图。
    */
   factoryId?: string;
+  /** 是否为外发工厂管理员（可登录 PC 端，管理本厂进度与单价） */
+  isFactoryOwner?: boolean;
   /**
    * 所属租户类型：SELF_FACTORY | HYBRID | BRAND
    * 用于前端菜单裁剪提示（已由后端权限控制实际访问）
@@ -205,6 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isTenantOwner: u.isTenantOwner === true,
               isSuperAdmin: u.isSuperAdmin === true,
               factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
+              isFactoryOwner: u.isFactoryOwner === true,
               tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
               tenantModules: (() => {
                 try {
@@ -305,6 +308,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isTenantOwner: u.isTenantOwner === true,
           isSuperAdmin: u.isSuperAdmin === true,
           factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
+          isFactoryOwner: u.isFactoryOwner === true,
           tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
           tenantModules: (() => {
             try {
