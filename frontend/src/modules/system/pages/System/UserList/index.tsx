@@ -383,8 +383,8 @@ const UserList: React.FC = () => {
       } else {
         setPermTree([]);
       }
-      const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
-      setPermCheckedIds(new Set(idList));
+      const idList = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
+      setPermCheckedIds(new Set(idList.map((id: any) => Number(id))));
     } catch {
       // Intentionally empty
       // 忽略错误
