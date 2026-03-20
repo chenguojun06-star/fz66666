@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs, Pagination } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -244,22 +244,9 @@ const ProductionList: React.FC = () => {
   const setViewMode = (mode: 'list' | 'card') => {
     localStorage.setItem('production_view_mode', mode);
     setViewModeState(mode);
-    if (mode === 'card') {
-      setQueryParams(prev => ({ ...prev, pageSize: cardPageSize, page: 1 }));
-    } else {
-      // 切回列表视图时，恢复用户之前选择的每页条数，不重置为 10
-      const savedSize = readSavedListPageSize();
-      setQueryParams(prev => ({ ...prev, pageSize: savedSize, page: 1 }));
-    }
+    // 无论切到哪个视图，都只重置页码，pageSize 由用户自己选择（不强制覆盖）
+    setQueryParams(prev => ({ ...prev, page: 1 }));
   };
-  // 卡片模式下视口 resize 时同步 pageSize
-  useEffect(() => {
-    if (viewMode === 'card') {
-      setQueryParams(prev =>
-        prev.pageSize === cardPageSize ? prev : { ...prev, pageSize: cardPageSize, page: 1 }
-      );
-    }
-  }, [cardPageSize, viewMode]);
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
@@ -1058,6 +1045,7 @@ const ProductionList: React.FC = () => {
               }}
             />
           ) : (
+            <>
             <UniversalCardView
               dataSource={sortedProductionList}
               columns={cardColumns}
@@ -1162,6 +1150,22 @@ const ProductionList: React.FC = () => {
                 </>
               )}
             />
+            {/* 卡片视图分页器 */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
+              <Pagination
+                current={queryParams.page}
+                pageSize={queryParams.pageSize}
+                total={total}
+                showTotal={(t) => `共 ${t} 条`}
+                showSizeChanger
+                pageSizeOptions={['10', '20', '50', '100']}
+                onChange={(page, pageSize) => {
+                  try { localStorage.setItem('production_list_page_size', String(pageSize)); } catch { /* ignore */ }
+                  setQueryParams({ ...queryParams, page, pageSize });
+                }}
+              />
+            </div>
+            </>
           )}
         </Card>
 
