@@ -911,6 +911,40 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
+  // 申请领取面辅料（BOM行 → 仓库出库领料申请）
+  const handleApplyPickup = (record: StyleBom) => {
+    Modal.confirm({
+      width: '40vw',
+      title: '申请领取',
+      content: `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${record.usageAmount ?? ''}${record.unit || ''}？`,
+      okText: '确认申请',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await api.post('/warehouse/material-pickup', {
+            pickupType: 'INTERNAL',
+            styleNo: currentStyleNo,
+            materialId: record.materialId,
+            materialCode: record.materialCode,
+            materialName: record.materialName,
+            materialType: record.materialType,
+            color: record.color,
+            specification: record.specification,
+            fabricComposition: record.fabricComposition,
+            fabricWidth: record.fabricWidth,
+            fabricWeight: record.fabricWeight,
+            quantity: record.usageAmount,
+            unit: record.unit,
+            unitPrice: record.unitPrice,
+          });
+          message.success('申请领取成功，等待仓库审核');
+        } catch (error: any) {
+          message.error(`申请失败：${error?.message || '请求错误'}`);
+        }
+      },
+    });
+  };
+
   // 删除行
   const handleDelete = async (id: string | number) => {
     if (locked) {
@@ -977,6 +1011,7 @@ const StyleBomTab: React.FC<Props> = ({
     setMaterialModalOpen,
     setMaterialTab,
     setMaterialTargetRowId,
+    onApplyPickup: handleApplyPickup,
   });
 
   return (

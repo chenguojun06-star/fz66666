@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
 import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
@@ -36,6 +37,7 @@ public class MaterialPickupOrchestrator {
 
     private final MaterialPickupRecordMapper pickupMapper;
     private final ProductionOrderService productionOrderService;
+    private final MaterialStockService materialStockService;
 
     /** 简易序号（进程级，重启归零，仅用于单号生成去重） */
     private final AtomicInteger seqCounter = new AtomicInteger(0);
@@ -188,6 +190,25 @@ public class MaterialPickupOrchestrator {
 
         pickupMapper.updateById(record);
         log.info("[MaterialPickup] 审核领取单: {} → {}, 审核人: {}", record.getPickupNo(), newStatus, record.getAuditorName());
+
+        // 审核通过时自动扣减面辅料库存
+        if ("APPROVED".equals(newStatus) && StringUtils.hasText(record.getMaterialId())
+                && record.getQuantity() != null && record.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            int qty = record.getQuantity().intValue();
+            try {
+                materialStockService.decreaseStock(
+                        record.getMaterialId(),
+                        record.getColor(),
+                        null,
+                        qty);
+                log.info("[MaterialPickup] 审核通过扣库存: materialId={}, color={}, qty={}, pickupNo={}",
+                        record.getMaterialId(), record.getColor(), qty, record.getPickupNo());
+            } catch (Exception e) {
+                log.error("[MaterialPickup] 扣库存失败，审核仍通过: pickupNo={}, err={}",
+                        record.getPickupNo(), e.getMessage());
+                throw new IllegalStateException("库存扣减失败: " + e.getMessage());
+            }
+        }
     }
 
     // =================== 财务核算 ===================

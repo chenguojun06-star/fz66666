@@ -48,6 +48,7 @@ interface UseBomColumnsProps {
   setMaterialModalOpen: (v: boolean) => void;
   setMaterialTab: (v: 'select' | 'create') => void;
   setMaterialTargetRowId: (v: string) => void;
+  onApplyPickup?: (record: StyleBom) => void;
 }
 
 export function useBomColumns({
@@ -70,6 +71,7 @@ export function useBomColumns({
   setMaterialModalOpen,
   setMaterialTab,
   setMaterialTargetRowId,
+  onApplyPickup,
 }: UseBomColumnsProps) {
   const columns = [
     {
@@ -491,6 +493,13 @@ export function useBomColumns({
                 disabled: editingKey !== '',
                 onClick: () => edit(record),
                 primary: true,
+              },
+              {
+                key: 'apply_pickup',
+                label: '申请领取',
+                title: record.stockStatus === 'sufficient' ? '申请领取面辅料' : '需先检查库存且库存充足才可申请',
+                disabled: editingKey !== '' || !onApplyPickup || record.stockStatus !== 'sufficient',
+                onClick: () => onApplyPickup?.(record),
               },
               {
                 key: 'delete',

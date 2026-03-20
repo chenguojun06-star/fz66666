@@ -113,6 +113,11 @@ export interface StyleBom extends Record<string, unknown> {
   supplierContactPhone?: string; // 供应商联系电话
   remark?: string;
 
+  /** 关联的面辅料档案 ID（MaterialStock.materialId，用于领料/库存扣减） */
+  materialId?: string;
+  fabricWidth?: string;    // 门幅
+  fabricWeight?: string;   // 克重
+
   // 库存检查字段
   stockStatus?: 'sufficient' | 'insufficient' | 'none' | 'unchecked';
   availableStock?: number;
