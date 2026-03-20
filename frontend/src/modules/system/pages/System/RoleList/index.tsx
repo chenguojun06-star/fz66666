@@ -359,8 +359,8 @@ const RoleList: React.FC = () => {
       } else {
         setPermTree([]);
       }
-      const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
-      setCheckedPermIds(new Set(idList));
+      const idList = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
+      setCheckedPermIds(new Set(idList.map((id: any) => Number(id))));
       permModal.open();
     } catch (e) {
       message.error('加载权限失败');
