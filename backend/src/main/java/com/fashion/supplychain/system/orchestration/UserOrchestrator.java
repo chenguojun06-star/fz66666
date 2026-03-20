@@ -66,7 +66,16 @@ public class UserOrchestrator {
     private StringRedisTemplate stringRedisTemplate;
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
+        return list(page, pageSize, username, name, roleName, status, null);
+    }
+
+    public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId) {
         Long tenantId = UserContext.tenantId();
+        // 🔐 工厂账号安全守卫：只能看自己工厂的成员，忽略前端传入的 factoryId
+        String currentUserFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(currentUserFactoryId)) {
+            factoryId = currentUserFactoryId;
+        }
         Page<User> userPage;
         if (tenantId != null) {
             // 🔐 租户用户：显式过滤，双重保障（TenantInterceptor + 应用层）
@@ -76,6 +85,7 @@ public class UserOrchestrator {
             if (StringUtils.hasText(name)) query.like("name", name);
             if (StringUtils.hasText(roleName)) query.like("role_name", roleName);
             if (StringUtils.hasText(status)) query.eq("status", status);
+            if (StringUtils.hasText(factoryId)) query.eq("factory_id", factoryId);
             userPage = userService.page(new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 10), query);
         } else {
             // 超级管理员：无租户过滤
@@ -731,6 +741,43 @@ public class UserOrchestrator {
         }
         String r = roleName.trim().toLowerCase();
         return "1".equals(roleName.trim()) || r.contains("admin") || r.contains("管理员") || r.contains("管理");
+    }
+
+    /**
+     * 租户管理员重置工厂成员密码（无需旧密码）。
+     * 仅允许重置同租户内 factoryId != null 的外发工厂账号。
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void adminResetMemberPassword(String userId, String newPassword) {
+        if (!StringUtils.hasText(userId)) {
+            throw new IllegalArgumentException("用户ID不能为空");
+        }
+        if (!StringUtils.hasText(newPassword) || newPassword.trim().length() < 6) {
+            throw new IllegalArgumentException("新密码不能少于6个字符");
+        }
+        Long tenantId = UserContext.tenantId();
+        User target = userService.getById(Long.valueOf(userId));
+        if (target == null) {
+            throw new NoSuchElementException("用户不存在");
+        }
+        if (!java.util.Objects.equals(target.getTenantId(), tenantId)) {
+            throw new AccessDeniedException("无权操作其他租户的用户");
+        }
+        if (target.getFactoryId() == null) {
+            throw new IllegalArgumentException("只能重置外发工厂成员的密码");
+        }
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        target.setPassword(encoder.encode(newPassword.trim()));
+        userService.updateById(target);
+        if (stringRedisTemplate != null && target.getId() != null) {
+            try {
+                stringRedisTemplate.opsForValue().increment(PWD_VER_KEY_PREFIX + target.getId());
+            } catch (Exception e) {
+                log.warn("[管理员重置密码] 更新密码版本号失败（Redis 不可用），旧 token 不会立即失效 userId={}", target.getId());
+            }
+        }
+        saveOperationLog("user", String.valueOf(target.getId()), target.getUsername(),
+                "ADMIN_RESET_PASSWORD", "管理员重置工厂成员密码");
     }
 
 }

@@ -48,8 +48,9 @@ public class UserController {
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String roleName,
-            @RequestParam(required = false) String status) {
-        Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String factoryId) {
+        Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status, factoryId);
         return Result.success(userPage);
     }
 
