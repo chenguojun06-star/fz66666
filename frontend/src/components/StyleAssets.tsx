@@ -27,11 +27,14 @@ export const StyleCoverThumb: React.FC<{
   styleNo?: string;
   /** 封面图片链接 */
   src?: string | null;
-  /** 缩略图尺寸，默认48px */
-  size?: number;
+  /** 缩略图尺寸，默认48px；传 'fill' 时填充父容器 100% */
+  size?: number | 'fill';
   /** 圆角半径，默认6px */
   borderRadius?: number;
 }> = ({ styleId, styleNo, src, size = 48, borderRadius = 6 }) => {
+  const isFill = size === 'fill';
+  // NaN 守卫：只有合法正数才使用，否则回退到默认值 48
+  const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 48;
   // 图片链接状态
   const [url, setUrl] = React.useState<string | null>(src || null);
   // 加载状态
@@ -77,14 +80,21 @@ export const StyleCoverThumb: React.FC<{
   }, [styleId, styleNo, src, srcFailed]);
 
   return (
-    <div style={{ width: size ?? 48, minHeight: Math.round((size ?? 48) * 0.55), borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      width: isFill ? '100%' : numSize,
+      height: isFill ? '100%' : undefined,
+      minHeight: isFill ? undefined : Math.round(numSize * 0.55),
+      borderRadius, overflow: 'hidden',
+      background: 'var(--color-bg-subtle)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
       {loading ? (
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', height: `${size}px`, display: 'flex', alignItems: 'center' }}>...</span>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', height: isFill ? '100%' : `${numSize}px`, display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
         <img
           src={getFullAuthedFileUrl(url)}
           alt="cover"
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          style={{ width: '100%', height: isFill ? '100%' : 'auto', objectFit: isFill ? 'cover' : undefined, display: 'block' }}
           onError={() => {
             // 判断当前是 src prop 直接给的URL，还是 fallback 附件 API 查出的URL
             if (url === (src || null) && src && !srcFailed) {
@@ -98,7 +108,7 @@ export const StyleCoverThumb: React.FC<{
           }}
         />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)', height: `${size}px`, display: 'flex', alignItems: 'center' }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)', height: isFill ? '100%' : `${numSize}px`, display: 'flex', alignItems: 'center' }}>无图</span>
       )}
     </div>
   );
