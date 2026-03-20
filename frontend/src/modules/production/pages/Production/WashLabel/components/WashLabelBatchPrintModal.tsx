@@ -97,7 +97,7 @@ function buildCareIconsHtml(item: WashLabelItem): string {
 function buildUCodeHtml(item: WashLabelItem, w: number, qrDataUrl: string): string {
   const qrSize = Math.min(w - 8, 32);
   const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   return `<div class="label-page">
     <div class="dash-sep"></div>
     <div class="content-area">
@@ -132,7 +132,7 @@ function buildWashHtml(item: WashLabelItem): string {
   // ISO 图标行
   const careIconRow = buildCareIconsHtml(item);
   const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   return `<div class="label-page">
     <div class="dash-sep"></div>
     <div class="top-block">
