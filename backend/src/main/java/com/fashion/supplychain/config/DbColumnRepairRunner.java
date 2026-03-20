@@ -399,6 +399,35 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_secondary_process", "attachments",
                     "TEXT DEFAULT NULL COMMENT '工艺附件列表(JSON数组，格式[{name,url}])'");
 
+            // t_agent_execution_log 多代理图执行日志（V20260415001/002 在云端可能未执行）
+            repairedTables += ensureTable(conn, schema,
+                    "t_agent_execution_log",
+                    "CREATE TABLE IF NOT EXISTS `t_agent_execution_log` ("
+                    + "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',"
+                    + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+                    + "`scene` VARCHAR(50) DEFAULT NULL COMMENT '分析场景',"
+                    + "`route` VARCHAR(100) DEFAULT NULL COMMENT 'Supervisor路由决策',"
+                    + "`context_summary` TEXT DEFAULT NULL COMMENT '分析摘要文本',"
+                    + "`reflection` TEXT DEFAULT NULL COMMENT 'LLM批判性反思内容',"
+                    + "`optimization_suggestion` TEXT DEFAULT NULL COMMENT '优化建议',"
+                    + "`confidence_score` INT DEFAULT 0 COMMENT '置信分0-100',"
+                    + "`status` VARCHAR(20) DEFAULT 'COMPLETED' COMMENT 'COMPLETED|ERROR',"
+                    + "`latency_ms` BIGINT DEFAULT 0 COMMENT '执行耗时(毫秒)',"
+                    + "`create_time` DATETIME DEFAULT NULL COMMENT '执行时间',"
+                    + "PRIMARY KEY (`id`),"
+                    + "KEY `idx_aex_tenant_time` (`tenant_id`,`create_time`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='多代理图执行日志'");
+            repaired += ensureColumn(conn, schema, "t_agent_execution_log", "specialist_results",
+                    "TEXT DEFAULT NULL COMMENT '专家Agent执行结果(JSON)'");
+            repaired += ensureColumn(conn, schema, "t_agent_execution_log", "node_trace",
+                    "TEXT DEFAULT NULL COMMENT '图节点执行轨迹(JSON)'");
+            repaired += ensureColumn(conn, schema, "t_agent_execution_log", "digital_twin_snapshot",
+                    "TEXT DEFAULT NULL COMMENT '数字孪生快照(JSON)'");
+            repaired += ensureColumn(conn, schema, "t_agent_execution_log", "user_feedback",
+                    "INT DEFAULT NULL COMMENT '用户反馈评分'");
+            repaired += ensureColumn(conn, schema, "t_agent_execution_log", "feedback_note",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '反馈备注'");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }
