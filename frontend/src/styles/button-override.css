@@ -49,8 +49,10 @@
 }
 
 .ant-btn-primary:active {
-  transform: translateY(0) !important;
-  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
+  /* 按下时轻微下沉 + 缩小，给"按下去"的触觉感 */
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 0 2px 6px rgba(45, 127, 249, 0.12) !important;
+  transition-duration: 0.08s !important;
 }
 
 .ant-btn-primary:disabled,
@@ -81,6 +83,12 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
+.ant-btn-default:active {
+  transform: scale(0.97) !important;
+  border-color: #1890ff !important;
+  transition-duration: 0.08s !important;
+}
+
 /* 次按钮尺寸统一由基础覆盖 */
 
 /* 幽灵按钮 */
@@ -95,6 +103,11 @@
   border-color: #1E6FE8 !important;
 }
 
+.ant-btn-ghost:active {
+  transform: scale(0.97) !important;
+  transition-duration: 0.08s !important;
+}
+
 /* 文本按钮 */
 .ant-btn-text {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -103,6 +116,11 @@
 .ant-btn-text:hover {
   background: rgba(45, 127, 249, 0.06) !important;
   color: #2D7FF9 !important;
+}
+
+.ant-btn-text:active {
+  transform: scale(0.96) !important;
+  transition-duration: 0.08s !important;
 }
 
 /* 链接按钮 */

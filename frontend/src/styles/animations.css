@@ -253,3 +253,221 @@
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   §10 – §19 微交互升级（2026-05）
+   目标：让每一个操作「落地有声」，消除突兀感
+   ══════════════════════════════════════════════════════════════ */
+
+/* ─── §10. 输入框焦点光晕 ─── */
+/* 点击输入框时，边框外包裹一圈柔和蓝色光晕，"落焦有温度" */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-number,
+.ant-picker {
+  transition:
+    border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow   0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper:focus-within,
+.ant-select-focused .ant-select-selector,
+.ant-input-number-focused,
+.ant-picker-focused {
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14) !important;
+}
+
+/* ─── §11. 表单校验失败抖动 ─── */
+/* 提交时字段有误，轻微"摇头"，直观且不恼人 */
+@keyframes formShake {
+  0%,  100% { transform: translateX(0);    }
+  15%        { transform: translateX(-7px); }
+  40%        { transform: translateX( 6px); }
+  65%        { transform: translateX(-4px); }
+  88%        { transform: translateX( 2px); }
+}
+
+.ant-form-item-has-error .ant-input,
+.ant-form-item-has-error .ant-input-affix-wrapper,
+.ant-form-item-has-error .ant-select-selector,
+.ant-form-item-has-error .ant-input-number,
+.ant-form-item-has-error .ant-picker {
+  animation: formShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ─── §12. 下拉框 / Select 弹出动效 ─── */
+/* 从顶部"小→大"弹出，比直接出现更有层次感 */
+@keyframes dropdownAppear {
+  from { opacity: 0; transform: scaleY(0.88) translateY(-5px); }
+  to   { opacity: 1; transform: scaleY(1)    translateY(0);    }
+}
+
+.ant-select-dropdown,
+.ant-dropdown > .ant-dropdown-menu,
+.ant-picker-dropdown {
+  animation: dropdownAppear 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+}
+
+/* ─── §13. Tab 面板内容切换淡入上升 ─── */
+/* 切换 Tab 时内容从下方轻轻浮起，避免硬切 */
+.ant-tabs-tabpane-active > :first-child {
+  animation: fadeInUp-global 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── §14. Skeleton 骨架屏 Shimmer 工具类 ─── */
+/* 用法：<div className="skeleton-shimmer" style={{width, height}} />
+   替代旋转 Spin，数据加载期间给出内容结构预期 */
+@keyframes shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position:  600px 0; }
+}
+
+.skeleton-shimmer,
+.skeleton-row {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e6e6e6 37%,
+    #f0f0f0 63%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* §14 暗色模式 skeleton */
+[data-theme="dark"] .skeleton-shimmer,
+[data-theme="dark"] .skeleton-row {
+  background: linear-gradient(
+    90deg,
+    #2a2a2a 25%,
+    #333333 37%,
+    #2a2a2a 63%
+  );
+  background-size: 600px 100%;
+}
+
+/* ─── §15. 精致细滚动条（亮色模式全局）─── */
+/* 原生滚动条太宽太重，5px 细滚动条更现代 */
+:root:not([data-theme="dark"]) ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+:root:not([data-theme="dark"]) ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root:not([data-theme="dark"]) ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.13);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+:root:not([data-theme="dark"]) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.26);
+}
+
+:root:not([data-theme="dark"]) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.13) transparent;
+}
+
+/* ─── §16. 系统消息 / antd Message 进场动效 ─── */
+/* 从顶部轻轻滑入，比突然出现更自然 */
+@keyframes messageSlideDown {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)      scale(1);   }
+}
+
+.ant-message-notice-wrapper {
+  animation: messageSlideDown 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── §17. Tag 标签平滑过渡 ─── */
+/* hover 微微上浮，体现可交互性 */
+.ant-tag {
+  transition: opacity 0.18s ease, transform 0.18s ease !important;
+}
+
+.ant-tag:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+/* ─── §18. 表格行 hover 过渡（配合 rowSlideIn 进场）─── */
+/* 让行背景变化有渐变过程，不硬闪 */
+.ant-table-tbody > tr {
+  transition: background-color 0.14s ease !important;
+}
+
+/* ─── §19. Tooltip 弹出动效 ─── */
+/* 从中心小→大展开，有"浮现"感 */
+@keyframes tooltipPop {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.ant-tooltip .ant-tooltip-inner {
+  animation: tooltipPop 0.14s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── §10-§19 prefers-reduced-motion 无障碍归零 ─── */
+@media (prefers-reduced-motion: reduce) {
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-select-selector,
+  .ant-input-number,
+  .ant-picker {
+    transition: none !important;
+  }
+
+  .ant-form-item-has-error .ant-input,
+  .ant-form-item-has-error .ant-input-affix-wrapper,
+  .ant-form-item-has-error .ant-select-selector,
+  .ant-form-item-has-error .ant-input-number,
+  .ant-form-item-has-error .ant-picker {
+    animation: none;
+  }
+
+  .ant-select-dropdown,
+  .ant-dropdown > .ant-dropdown-menu,
+  .ant-picker-dropdown {
+    animation: none;
+  }
+
+  .ant-tabs-tabpane-active > :first-child {
+    animation: none;
+  }
+
+  .skeleton-shimmer,
+  .skeleton-row {
+    animation: none;
+    background: #f0f0f0;
+  }
+
+  [data-theme="dark"] .skeleton-shimmer,
+  [data-theme="dark"] .skeleton-row {
+    animation: none;
+    background: #2a2a2a;
+  }
+
+  .ant-message-notice-wrapper {
+    animation: none;
+  }
+
+  .ant-tag {
+    transition: none !important;
+  }
+
+  .ant-table-tbody > tr {
+    transition: none !important;
+  }
+
+  .ant-tooltip .ant-tooltip-inner {
+    animation: none;
+  }
+}
