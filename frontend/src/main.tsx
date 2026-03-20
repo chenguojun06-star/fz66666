@@ -417,6 +417,7 @@ const AppWrapper: React.FC = () => {
     <ConfigProvider
       locale={resolveAntdLocale(language)}
       theme={themeConfig}
+      getPopupContainer={(triggerNode) => (triggerNode?.parentElement ?? document.body) as HTMLElement}
     >
       <AntApp>
         <AntdStaticLoader />

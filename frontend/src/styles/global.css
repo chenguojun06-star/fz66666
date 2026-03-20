@@ -1015,6 +1015,7 @@ body {
 }
 
 .resizable-table-shell {
+  position: relative; /* 建立定位含块，使 getPopupContainer 返回此元素后 popup 能正确定位 */
   width: 100%;
   max-width: 100%;
   min-width: 0;
