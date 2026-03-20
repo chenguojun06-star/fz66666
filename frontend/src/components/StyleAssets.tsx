@@ -31,7 +31,9 @@ export const StyleCoverThumb: React.FC<{
   size?: number | 'fill';
   /** 圆角半径，默认6px */
   borderRadius?: number;
-}> = ({ styleId, styleNo, src, size = 48, borderRadius = 6 }) => {
+  /** 图片适配方式，默认 cover；可传 contain 避免裁切 */
+  fit?: 'cover' | 'contain';
+}> = ({ styleId, styleNo, src, size = 48, borderRadius = 6, fit = 'cover' }) => {
   const isFill = size === 'fill';
   // NaN 守卫：只有合法正数才使用，否则回退到默认值 48
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 48;
@@ -94,7 +96,13 @@ export const StyleCoverThumb: React.FC<{
         <img
           src={getFullAuthedFileUrl(url)}
           alt="cover"
-          style={{ width: '100%', height: isFill ? '100%' : 'auto', objectFit: isFill ? 'cover' : undefined, display: 'block' }}
+          style={{
+            width: '100%',
+            height: isFill ? '100%' : 'auto',
+            objectFit: isFill ? fit : undefined,
+            display: 'block',
+            background: isFill ? '#f5f5f5' : undefined,
+          }}
           onError={() => {
             // 判断当前是 src prop 直接给的URL，还是 fallback 附件 API 查出的URL
             if (url === (src || null) && src && !srcFailed) {

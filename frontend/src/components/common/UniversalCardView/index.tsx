@@ -163,6 +163,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         styleNo={styleNo}
                         src={coverSrc}
                         size="fill"
+                        fit="contain"
                         borderRadius={0}
                       />
                     </div>
