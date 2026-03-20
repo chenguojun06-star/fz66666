@@ -1,5 +1,7 @@
 package com.fashion.supplychain.system.orchestration;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.service.RedisService;
 import com.fashion.supplychain.system.entity.Permission;
 import com.fashion.supplychain.system.service.PermissionService;
@@ -8,6 +10,7 @@ import com.fashion.supplychain.system.service.TenantPermissionCeilingService;
 import com.fashion.supplychain.system.service.UserPermissionOverrideService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -42,6 +45,8 @@ public class PermissionCalculationEngine {
     private static final String ROLE_PERM_CACHE_PREFIX = "role:perms:";
     /** 租户天花板缓存前缀 */
     private static final String TENANT_CEILING_CACHE_PREFIX = "tenant:ceiling:";
+    /** 超管权限缓存key */
+    private static final String SUPER_ALL_PERM_CACHE_KEY = "super:all:perms";
     /** 缓存TTL 30分钟 */
     private static final long CACHE_TTL_MINUTES = 30;
 
@@ -60,6 +65,12 @@ public class PermissionCalculationEngine {
     @Autowired
     private RedisService redisService;
 
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * 启动时清理旧格式权限缓存，防止序列化版本升级后反复出现 WARN
      * 触发场景：新容器替换旧容器时，旧 Redis key 格式不兼容新序列化配置
@@ -67,14 +78,27 @@ public class PermissionCalculationEngine {
      */
     @PostConstruct
     public void clearLegacyPermissionCache() {
+        long role = 0;
+        long user = 0;
+        long ceiling = 0;
         try {
-            long role = redisService.deleteByPattern(ROLE_PERM_CACHE_PREFIX + "*");
-            long user = redisService.deleteByPattern(USER_PERM_CACHE_PREFIX + "*");
-            long ceiling = redisService.deleteByPattern(TENANT_CEILING_CACHE_PREFIX + "*");
-            log.info("[PermissionCache] 启动清理完成：role={}, user={}, ceiling={} — 旧格式缓存已删除，将按新格式重建",
-                    role, user, ceiling);
+            if (redisService != null) {
+                role = redisService.deleteByPattern(ROLE_PERM_CACHE_PREFIX + "*");
+                user = redisService.deleteByPattern(USER_PERM_CACHE_PREFIX + "*");
+                ceiling = redisService.deleteByPattern(TENANT_CEILING_CACHE_PREFIX + "*");
+            }
         } catch (Exception e) {
-            log.warn("[PermissionCache] 启动清理失败，影响不大，首次访问时自愈: {}", e.getMessage());
+            log.warn("[PermissionCache] 权限缓存批量清理失败，影响不大，首次访问时自愈: {}", e.getMessage());
+        }
+
+        try {
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete(SUPER_ALL_PERM_CACHE_KEY);
+            }
+            log.info("[PermissionCache] 启动清理完成：role={}, user={}, ceiling={}, super={} — 旧格式缓存已删除，将按稳定JSON重建",
+                    role, user, ceiling, stringRedisTemplate != null ? 1 : 0);
+        } catch (Exception e) {
+            log.warn("[PermissionCache] 超管权限缓存清理失败，影响不大，首次访问时自愈: {}", e.getMessage());
         }
     }
 
@@ -119,14 +143,10 @@ public class PermissionCalculationEngine {
 
         // 尝试从缓存获取最终权限
         String cacheKey = USER_PERM_CACHE_PREFIX + userId;
-        try {
-            List<String> cached = redisService.get(cacheKey);
-            if (cached != null) {
-                log.debug("用户权限缓存命中: userId={}", userId);
-                return cached;
-            }
-        } catch (Exception e) {
-            log.debug("用户权限缓存读取异常: userId={}", userId);
+        List<String> cachedUserPerms = readCacheList(cacheKey, new TypeReference<List<String>>() {}, "user-perms");
+        if (cachedUserPerms != null) {
+            log.debug("用户权限缓存命中: userId={}", userId);
+            return cachedUserPerms;
         }
 
         // Level 1: 角色权限
@@ -147,11 +167,7 @@ public class PermissionCalculationEngine {
         List<String> permissionCodes = convertToPermissionCodes(effectivePermIds);
 
         // 写入缓存
-        try {
-            redisService.set(cacheKey, permissionCodes, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.debug("用户权限缓存写入异常: userId={}", userId);
-        }
+        writeCache(cacheKey, permissionCodes, "user-perms");
 
         return permissionCodes;
     }
@@ -163,17 +179,13 @@ public class PermissionCalculationEngine {
         if (roleId == null) return List.of();
 
         String cacheKey = ROLE_PERM_CACHE_PREFIX + roleId;
-        try {
-            List<Long> cached = redisService.get(cacheKey);
-            if (cached != null) return cached;
-        } catch (Exception e) { /* ignore */ }
+        List<Long> cachedRolePerms = readCacheList(cacheKey, new TypeReference<List<Long>>() {}, "role-perms");
+        if (cachedRolePerms != null) return cachedRolePerms;
 
         List<Long> ids = rolePermissionService.getPermissionIdsByRoleId(roleId);
         if (ids == null) ids = List.of();
 
-        try {
-            redisService.set(cacheKey, ids, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception e) { /* ignore */ }
+        writeCache(cacheKey, ids, "role-perms");
 
         return ids;
     }
@@ -191,11 +203,9 @@ public class PermissionCalculationEngine {
      * 带缓存，新增权限后TTL内自动生效
      */
     private List<String> getAllPermissionCodes() {
-        String cacheKey = "super:all:perms";
-        try {
-            List<String> cached = redisService.get(cacheKey);
-            if (cached != null) return cached;
-        } catch (Exception ignored) {}
+        String cacheKey = SUPER_ALL_PERM_CACHE_KEY;
+        List<String> cached = readCacheList(cacheKey, new TypeReference<List<String>>() {}, "super-all-perms");
+        if (cached != null) return cached;
 
         List<String> codes = permissionService.list().stream()
                 .map(Permission::getPermissionCode)
@@ -203,9 +213,7 @@ public class PermissionCalculationEngine {
                 .sorted()
                 .collect(Collectors.toList());
 
-        try {
-            redisService.set(cacheKey, codes, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception ignored) {}
+        writeCache(cacheKey, codes, "super-all-perms");
 
         return codes;
     }
@@ -267,16 +275,12 @@ public class PermissionCalculationEngine {
         if (tenantId == null) return null;
 
         String cacheKey = TENANT_CEILING_CACHE_PREFIX + tenantId;
-        try {
-            List<Long> cached = redisService.get(cacheKey);
-            if (cached != null) return cached;
-        } catch (Exception e) { /* ignore */ }
+        List<Long> cached = readCacheList(cacheKey, new TypeReference<List<Long>>() {}, "tenant-ceiling");
+        if (cached != null) return cached;
 
         List<Long> ids = ceilingService.getGrantedPermissionIds(tenantId);
 
-        try {
-            redisService.set(cacheKey, ids, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception e) { /* ignore */ }
+        writeCache(cacheKey, ids, "tenant-ceiling");
 
         return ids;
     }
@@ -302,13 +306,9 @@ public class PermissionCalculationEngine {
     private List<String> calculateTenantOwnerPermissions(Long userId, Long tenantId) {
         // 尝试从缓存获取
         String cacheKey = USER_PERM_CACHE_PREFIX + userId;
-        try {
-            List<String> cached = redisService.get(cacheKey);
-            if (cached != null) {
-                return cached;
-            }
-        } catch (Exception e) {
-            log.debug("租户主权限缓存读取异常: userId={}", userId);
+        List<String> cached = readCacheList(cacheKey, new TypeReference<List<String>>() {}, "tenant-owner-user-perms");
+        if (cached != null) {
+            return cached;
         }
 
         // 获取系统全部权限ID
@@ -329,13 +329,45 @@ public class PermissionCalculationEngine {
         List<String> permissionCodes = convertToPermissionCodes(effectivePermIds);
 
         // 写入缓存
-        try {
-            redisService.set(cacheKey, permissionCodes, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.debug("租户主权限缓存写入异常: userId={}", userId);
-        }
+        writeCache(cacheKey, permissionCodes, "tenant-owner-user-perms");
 
         return permissionCodes;
+    }
+
+    private <T> List<T> readCacheList(String key, TypeReference<List<T>> typeRef, String cacheName) {
+        if (stringRedisTemplate == null) {
+            return null;
+        }
+        try {
+            String raw = stringRedisTemplate.opsForValue().get(key);
+            if (raw == null || raw.isBlank()) {
+                return null;
+            }
+            return objectMapper.readValue(raw, typeRef);
+        } catch (Exception e) {
+            log.warn("[PermissionCache] 读取{}失败，删除损坏key后回源DB: key={} err={}", cacheName, key, e.getMessage());
+            try {
+                stringRedisTemplate.delete(key);
+            } catch (Exception ignored) {
+            }
+            return null;
+        }
+    }
+
+    private void writeCache(String key, List<?> value, String cacheName) {
+        if (stringRedisTemplate == null) {
+            return;
+        }
+        try {
+            stringRedisTemplate.opsForValue().set(
+                    key,
+                    objectMapper.writeValueAsString(value == null ? List.of() : value),
+                    CACHE_TTL_MINUTES,
+                    TimeUnit.MINUTES
+            );
+        } catch (Exception e) {
+            log.debug("[PermissionCache] 写入{}失败: key={} err={}", cacheName, key, e.getMessage());
+        }
     }
 
     // ========== 缓存清除方法 ==========
@@ -345,7 +377,11 @@ public class PermissionCalculationEngine {
      */
     public void evictUserPermissionCache(Long userId) {
         try {
-            redisService.delete(USER_PERM_CACHE_PREFIX + userId);
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete(USER_PERM_CACHE_PREFIX + userId);
+            } else {
+                redisService.delete(USER_PERM_CACHE_PREFIX + userId);
+            }
         } catch (Exception e) {
             log.warn("清除用户权限缓存失败: userId={}", userId);
         }
@@ -356,7 +392,11 @@ public class PermissionCalculationEngine {
      */
     public void evictRolePermissionCache(Long roleId) {
         try {
-            redisService.delete(ROLE_PERM_CACHE_PREFIX + roleId);
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete(ROLE_PERM_CACHE_PREFIX + roleId);
+            } else {
+                redisService.delete(ROLE_PERM_CACHE_PREFIX + roleId);
+            }
         } catch (Exception e) {
             log.warn("清除角色权限缓存失败: roleId={}", roleId);
         }
@@ -367,7 +407,11 @@ public class PermissionCalculationEngine {
      */
     public void evictTenantCeilingCache(Long tenantId) {
         try {
-            redisService.delete(TENANT_CEILING_CACHE_PREFIX + tenantId);
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete(TENANT_CEILING_CACHE_PREFIX + tenantId);
+            } else {
+                redisService.delete(TENANT_CEILING_CACHE_PREFIX + tenantId);
+            }
         } catch (Exception e) {
             log.warn("清除租户天花板缓存失败: tenantId={}", tenantId);
         }

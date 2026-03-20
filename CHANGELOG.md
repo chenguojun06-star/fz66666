@@ -1,3 +1,19 @@
+## 2026-03-20（权限缓存反复 WARN 根修）
+
+### fix(redis): 彻底修复 role:perms:* 权限缓存反序列化告警反复出现
+
+- **问题现象**：云端持续出现 `Redis get failed (cache miss), key=role:perms:* err=Could not read JSON...`，同一个权限 key 会反复 WARN，自愈删除后仍可能再次出现。
+- **根本原因**：权限缓存长期使用 `RedisTemplate<String, Object>` + 多态 JSON 反序列化；`role:perms:* / user:perms:* / tenant:ceiling:*` 一旦混入旧格式或无类型包装的 JSON 数组，读取时就会因为 Jackson 类型信息不匹配反复报错。
+- **修复方案**：
+  - `PermissionCalculationEngine` 不再通过 `RedisService.get(Object)` 读取权限缓存
+  - 权限缓存统一改为 `StringRedisTemplate + ObjectMapper` 显式写入纯 JSON 字符串数组
+  - 读取失败时仅针对当前坏 key 自愈删除，然后回源 DB 重建为稳定新格式
+  - 启动清理补齐 `super:all:perms`，避免超管权限缓存继续保留旧格式
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/system/orchestration/PermissionCalculationEngine.java`
+  - `backend/src/test/java/com/fashion/supplychain/system/orchestration/PermissionCalculationEngineTest.java`
+- **对系统的帮助**：权限缓存从“依赖 Jackson 多态类型包装”改为“稳定字符串 JSON”，后续即使经历版本切换、旧容器残留或历史缓存混杂，也不会再因为 `role:perms:*` 这种数组缓存触发持续告警。
+
 ## 2026-03-20（全量系统安全审计 + P1/P2 高危漏洞修复）
 
 ### fix(security): 全量系统安全审计 — 修复2个高危漏洞，记录4个风险点

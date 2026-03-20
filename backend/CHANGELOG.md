@@ -1,3 +1,8 @@
+## 2026-03-20
+
+- 权限缓存链路从 `RedisTemplate<Object>` 多态反序列化切换为 `StringRedisTemplate + ObjectMapper` 显式 JSON 字符串存储，修复 `role:perms:*` / `user:perms:*` / `tenant:ceiling:*` 在旧缓存格式混杂时反复出现的 Jackson `START_ARRAY` 告警。
+- `PermissionCalculationEngine` 启动清理补齐 `super:all:perms`，并在读取损坏权限缓存时只删除当前 key 后自动回源 DB 重建，避免相同坏缓存长期循环告警。
+
 ## 2026-03-16
 
 - Dashboard 热点查询改为最小字段选择：`DailyBriefOrchestrator` 的高风险订单查询与 `DashboardQueryServiceImpl` 的延期订单、最近订单、最近款号、最近扫码、最近采购查询不再默认读取实体全部列。
