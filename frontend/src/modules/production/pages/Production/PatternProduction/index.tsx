@@ -3,6 +3,7 @@ import { App, Card, Button, Input, Modal, Form, InputNumber, Tag, Select, Toolti
 import type { MenuProps } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { readPageSize } from '@/utils/pageSizeStore';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -813,7 +814,7 @@ const PatternProduction: React.FC = () => {
               resizableColumns={true}
               pagination={{
                 total: dataSource.length,
-                pageSize: 10,
+                defaultPageSize: readPageSize(10),
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
                 pageSizeOptions: ['10', '20', '50', '100'],

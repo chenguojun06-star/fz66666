@@ -15,6 +15,7 @@ import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import { readPageSize } from '@/utils/pageSizeStore';
 import RowActions from '@/components/common/RowActions';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -39,7 +40,6 @@ import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
-import { readPageSize } from '@/utils/pageSizeStore';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -105,7 +105,7 @@ const OrderManagement: React.FC = () => {
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
 
   // ===== 详情页分页状态 =====
-  const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: 20 });
+  const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: readPageSize(20) });
   const [detailTotal, setDetailTotal] = useState(0);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailRows, setDetailRows] = useState<any[]>([]);

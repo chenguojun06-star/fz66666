@@ -3,6 +3,7 @@
  * 功能：获取订单列表、扫码记录、裁剪扎号
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import { ProductionOrder, ProductionQueryParams, ScanRecord, CuttingBundle } from '@/types/production';
 import { productionOrderApi, productionScanApi, productionCuttingApi } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
@@ -18,7 +19,7 @@ export const useProgressData = () => {
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
 
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: readPageSize(10) });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});

@@ -3,6 +3,7 @@ import { Button, Modal, Tag, Input, App } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
+import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
@@ -294,6 +295,7 @@ const OrderTransferPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={{
+            defaultPageSize: readPageSize(10),
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条`,

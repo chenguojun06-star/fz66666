@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import type { StyleBom } from '@/types/style';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
@@ -57,7 +58,7 @@ export function useCuttingBundles({
   const [generateLoading, setGenerateLoading] = useState(false);
 
   // 菲号列表
-  const [queryParams, setQueryParams] = useState<CuttingQueryParams>({ page: 1, pageSize: 10 });
+  const [queryParams, setQueryParams] = useState<CuttingQueryParams>({ page: 1, pageSize: readPageSize(10) });
   const [listLoading, setListLoading] = useState(false);
   const [dataSource, setDataSource] = useState<CuttingBundleRow[]>([]);
   const [total, setTotal] = useState(0);

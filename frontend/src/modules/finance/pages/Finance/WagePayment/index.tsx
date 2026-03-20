@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 import {
   App,
@@ -680,7 +681,7 @@ const PaymentCenterPage: React.FC = () => {
                       rowKey={(r) => `${r.bizType}-${r.bizId}`}
                       loading={payablesLoading}
                       scroll={{ x: 1200 }}
-                      pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+                      pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
                       rowSelection={{
                         selectedRowKeys: selectedPayableKeys,
                         onChange: (keys) => setSelectedPayableKeys(keys),
@@ -754,7 +755,7 @@ const PaymentCenterPage: React.FC = () => {
                       rowKey="id"
                       loading={paymentsLoading}
                       scroll={{ x: 1400 }}
-                      pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+                      pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
                     />
                   </>
                 ),

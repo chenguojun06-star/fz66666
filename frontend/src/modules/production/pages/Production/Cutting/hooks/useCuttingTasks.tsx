@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
@@ -19,7 +20,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // 任务查询状态
-  const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: 10, status: '' as string, orderNo: '', styleNo: '', orgUnitId: '' });
+  const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: readPageSize(10), status: '' as string, orderNo: '', styleNo: '', orgUnitId: '' });
   const [taskDateRange, setTaskDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskList, setTaskList] = useState<CuttingTask[]>([]);

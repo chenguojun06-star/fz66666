@@ -3,6 +3,7 @@ import { Card, Button, Modal, Tag, Space, Drawer, Spin, Empty, Alert } from 'ant
 import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { readPageSize } from '@/utils/pageSizeStore';
 import { intelligenceApi } from '@/services/intelligenceApi';
 import './AiExecutionPanel.css';
 
@@ -296,7 +297,7 @@ export default function AiExecutionPanel() {
               dataSource={pendingCommands}
               rowKey="commandId"
               pagination={{
-                pageSize: 10,
+                defaultPageSize: readPageSize(10),
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total) => `共 ${total} 条`

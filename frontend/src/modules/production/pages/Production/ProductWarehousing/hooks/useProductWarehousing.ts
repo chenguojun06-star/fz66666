@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import { Form } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
@@ -78,7 +79,7 @@ export const useProductWarehousing = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [queryParams, setQueryParams] = useState<WarehousingQueryParams>({
     page: 1,
-    pageSize: 10,
+    pageSize: readPageSize(10),
   });
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 

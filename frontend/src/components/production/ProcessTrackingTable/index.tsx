@@ -7,6 +7,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { productionScanApi } from '@/services/production/productionApi';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 import { useAuth, isAdminUser } from '@/utils/AuthContext';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 interface ProcessTrackingRecord {
   id: string;
@@ -395,7 +396,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
         size="small"
         scroll={{ x: 900, y: 450 }}
         pagination={{
-          pageSize: 50,
+          defaultPageSize: readPageSize(50),
           showSizeChanger: true,
           pageSizeOptions: ['20', '50', '100'],
           showTotal: (total) => `共 ${total} 条记录`,

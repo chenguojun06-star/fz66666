@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { readPageSize } from '@/utils/pageSizeStore';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -482,7 +483,7 @@ const MaterialPurchaseDetail: React.FC = () => {
             scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
-              defaultPageSize: 20,
+              defaultPageSize: readPageSize(20),
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
               pageSizeOptions: ['10', '20', '50', '100'],
