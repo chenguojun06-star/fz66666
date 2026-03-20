@@ -35,7 +35,8 @@ public class ProductionDataConsistencyJob {
      * 每30分钟执行一次，修复生产进度数据
      * 按租户隔离迭代，防止跨租户写入
      */
-    @Scheduled(cron = "0 0/30 * * * ?")
+    // 错开到 :15 和 :45，避免与智能任务同时触发 DB 连接风暴
+    @Scheduled(cron = "0 15/30 * * * ?")
     public void recomputeActiveOrdersProgress() {
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:consistency", 25, TimeUnit.MINUTES);

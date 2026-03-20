@@ -48,7 +48,8 @@ public class AiPatrolOrchestrator {
     /**
      * 每30分钟自动巡检（系统启动5分钟后首次执行，避免DB连接未就绪）
      */
-    @Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 5 * 60 * 1000)
+    // 初始延迟10分钟，错开与 IntelligenceSignalCollectionJob(:05/:35) 的触发时间
+    @Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 10 * 60 * 1000)
     public void schedulePatrol() {
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:ai-patrol", 25, TimeUnit.MINUTES);
