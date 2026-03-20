@@ -206,15 +206,15 @@
 .login-page .login-card .ant-input-affix-wrapper,
 .login-page .login-card .ant-input-password,
 .login-page .login-card .ant-auto-complete .ant-input-affix-wrapper {
-  height: 42px !important;
-  min-height: 42px !important;
+  height: 48px !important;
+  min-height: 48px !important;
   border-radius: 14px !important;
-  padding: 0 10px !important;
+  padding: 0 12px !important;
 }
 
 .login-card .ant-auto-complete .ant-input-affix-wrapper {
   border-radius: 14px !important;
-  height: 42px !important;
+  height: 48px !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
   background: #f6f8ff !important;
   display: flex !important;
@@ -249,7 +249,7 @@
 }
 
 .login-card .ant-input-affix-wrapper {
-  height: 42px !important;
+  height: 48px !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
   background: #f6f8ff !important;
   display: flex !important;
