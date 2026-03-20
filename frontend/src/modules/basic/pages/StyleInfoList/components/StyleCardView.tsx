@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag } from 'antd';
+import { Tag, Pagination } from 'antd';
 
 import UniversalCardView from '@/components/common/UniversalCardView';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
@@ -60,6 +60,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   };
 
   return (
+    <>
     <UniversalCardView
       dataSource={data}
       loading={loading}
@@ -201,6 +202,19 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         pageSizeOptions: ['10', '20', '50', '100'],
       }}
     />
+    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
+      <Pagination
+        current={currentPage}
+        pageSize={pageSize}
+        total={total}
+        showTotal={(t) => `共 ${t} 条`}
+        showSizeChanger
+        showQuickJumper
+        pageSizeOptions={['10', '20', '50', '100']}
+        onChange={onPageChange}
+      />
+    </div>
+    </>
   );
 };
 

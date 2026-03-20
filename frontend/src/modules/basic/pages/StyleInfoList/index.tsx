@@ -58,14 +58,6 @@ const StyleInfoListPage: React.FC = () => {
     return saved === 'card' ? 'card' : 'list';
   });
 
-  useEffect(() => {
-    if (viewMode === 'card') {
-      setQueryParams((prev) => (
-        prev.pageSize === cardPageSize ? prev : { ...prev, page: 1, pageSize: cardPageSize }
-      ));
-    }
-  }, [viewMode, cardPageSize, setQueryParams]);
-
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
@@ -263,7 +255,7 @@ const StyleInfoListPage: React.FC = () => {
                   setViewMode(next);
                   localStorage.setItem('viewMode_styleInfoList', next);
                   if (next === 'card') {
-                    setQueryParams((prev) => ({ ...prev, page: 1, pageSize: cardPageSize }));
+                    setQueryParams((prev) => ({ ...prev, page: 1 }));
                   }
                 }}
               >

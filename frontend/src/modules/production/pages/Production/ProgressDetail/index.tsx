@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Modal, Pagination, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -1264,6 +1264,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               scroll={{ x: 3000 }}
             />
           ) : (
+            <>
             <UniversalCardView
               dataSource={sortedOrders}
               loading={loading && orders.length === 0}
@@ -1274,7 +1275,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               fields={[]}
               fieldGroups={[
                 [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: calcCardProgress,
@@ -1332,6 +1333,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 </>
               )}
             />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
+              <Pagination
+                current={queryParams.page}
+                pageSize={queryParams.pageSize}
+                total={total}
+                showTotal={(t) => `共 ${t} 条`}
+                showSizeChanger
+                pageSizeOptions={['10', '20', '50', '100']}
+                onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
+              />
+            </div>
+            </>
           )}
         </>
       ) : (
@@ -1567,8 +1580,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               scroll={{ x: 3000 }}
             />
           ) : (
+            <>
             <UniversalCardView
-              dataSource={smartQueueFilter === 'all' ? sortedOrders : sortedOrders.filter((o) => smartQueueOrders.some((s) => String(s.id || '') === String(o.id || '')))}
+              dataSource={smartQueueFilter === 'all' ? sortedOrders : sortedOrders.filter((o) => smartQueueOrders.some((s) => String(s.id || '') === String(o.id || '')))
+}
               loading={loading && orders.length === 0}
               columns={cardColumns}
               coverField="styleCover"
@@ -1577,7 +1592,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               fields={[]}
               fieldGroups={[
                 [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
+                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: calcCardProgress,
@@ -1646,6 +1661,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 </>
               )}
             />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
+              <Pagination
+                current={queryParams.page}
+                pageSize={queryParams.pageSize}
+                total={total}
+                showTotal={(t) => `共 ${t} 条`}
+                showSizeChanger
+                pageSizeOptions={['10', '20', '50', '100']}
+                onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
+              />
+            </div>
+            </>
           )}
         </Card>
       )}

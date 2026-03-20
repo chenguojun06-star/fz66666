@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Segmented, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Pagination, Row, Segmented, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
@@ -98,14 +98,6 @@ const OrderManagement: React.FC = () => {
     const saved = localStorage.getItem('viewMode_orderManagement');
     return saved === 'card' ? 'card' : 'table';
   });
-
-  useEffect(() => {
-    if (viewMode === 'card') {
-      setQueryParams((prev) => (
-        prev.pageSize === cardPageSize ? prev : { ...prev, page: 1, pageSize: cardPageSize }
-      ));
-    }
-  }, [viewMode, cardPageSize]);
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -1463,7 +1455,7 @@ const OrderManagement: React.FC = () => {
                     setViewMode(next);
                     localStorage.setItem('viewMode_orderManagement', next);
                     if (next === 'card') {
-                      setQueryParams((prev) => ({ ...prev, page: 1, pageSize: cardPageSize }));
+                      setQueryParams((prev) => ({ ...prev, page: 1 }));
                     }
                   }}
                 >
@@ -1495,6 +1487,7 @@ const OrderManagement: React.FC = () => {
             }}
           />
         ) : (
+          <>
           <UniversalCardView
             dataSource={styles}
             loading={loading}
@@ -1517,6 +1510,18 @@ const OrderManagement: React.FC = () => {
               },
             ]}
           />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
+            <Pagination
+              current={queryParams.page}
+              pageSize={queryParams.pageSize}
+              total={total}
+              showTotal={(t) => `共 ${t} 条`}
+              showSizeChanger
+              pageSizeOptions={['10', '20', '50', '100']}
+              onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
+            />
+          </div>
+          </>
         )}
       </Card>
 

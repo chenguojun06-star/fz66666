@@ -1110,7 +1110,7 @@ const ProductionList: React.FC = () => {
                     label: '剩',
                     key: 'remainingDays',
                     render: (val: unknown, record: Record<string, unknown>) => {
-                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string);
+                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
                       return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
                     }
                   }
