@@ -234,11 +234,22 @@ const ProductionList: React.FC = () => {
   const [viewMode, setViewModeState] = useState<'list' | 'card'>(
     () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'list'
   );
+  const readSavedListPageSize = () => {
+    try {
+      const raw = localStorage.getItem('production_list_page_size');
+      const n = raw ? parseInt(raw, 10) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : 10;
+    } catch { return 10; }
+  };
   const setViewMode = (mode: 'list' | 'card') => {
     localStorage.setItem('production_view_mode', mode);
     setViewModeState(mode);
     if (mode === 'card') {
       setQueryParams(prev => ({ ...prev, pageSize: cardPageSize, page: 1 }));
+    } else {
+      // 切回列表视图时，恢复用户之前选择的每页条数，不重置为 10
+      const savedSize = readSavedListPageSize();
+      setQueryParams(prev => ({ ...prev, pageSize: savedSize, page: 1 }));
     }
   };
   // 卡片模式下视口 resize 时同步 pageSize
