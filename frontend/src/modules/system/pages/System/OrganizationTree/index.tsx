@@ -15,7 +15,7 @@ import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   ApartmentOutlined, BankOutlined, CrownFilled, DeleteOutlined,
-  DownOutlined, EditOutlined, PlusOutlined, QrcodeOutlined, RightOutlined,
+  DownOutlined, EditOutlined, LockOutlined, PlusOutlined, QrcodeOutlined, RightOutlined,
   SnippetsOutlined, UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
@@ -114,9 +114,31 @@ const OrganizationTreePage: React.FC = () => {
   const [setOwnerLoading, setSetOwnerLoading] = useState<string | null>(null);
   // 成员资料 mini 弹窗
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [resetPwdVisible, setResetPwdVisible] = useState(false);
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
+  const [resetPwdValue, setResetPwdValue] = useState('');
   const currentFactoryName = String((user as any)?.tenantName || '').trim();
   const isFactoryAccount = !!(user as any)?.factoryId;
   const currentUserFactoryId = isFactoryAccount ? String((user as any).factoryId) : null;
+
+  const handleResetMemberPwd = useCallback(async () => {
+    if (!profileUser?.id) return;
+    if (!resetPwdValue || resetPwdValue.length < 6) {
+      message.warning('新密码不能少于6位');
+      return;
+    }
+    setResetPwdLoading(true);
+    try {
+      await organizationApi.adminResetMemberPwd(String(profileUser.id), resetPwdValue);
+      message.success('密码已重置');
+      setResetPwdVisible(false);
+      setResetPwdValue('');
+    } catch (e: any) {
+      message.error(e?.message || '重置失败');
+    } finally {
+      setResetPwdLoading(false);
+    }
+  }, [profileUser, resetPwdValue, message]);
 
   const handleInitTemplate = async () => {
     if (!tplModal.type) { message.warning('请选择一个模板类型'); return; }
@@ -473,12 +495,14 @@ const OrganizationTreePage: React.FC = () => {
               <ApartmentOutlined style={{ marginRight: 8 }} />
               组织架构
             </h2>
-            <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
-              管理公司组织结构，包含部门、工厂及人员分配。
-              <span style={{ marginLeft: 12 }}>
-                共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
-              </span>
-            </div>
+            {!isFactoryAccount && (
+              <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
+                管理公司组织结构，包含部门、工厂及人员分配。
+                <span style={{ marginLeft: 12 }}>
+                  共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
+                </span>
+              </div>
+            )}
           </div>
           {!isFactoryAccount && (
             <Space>
@@ -860,7 +884,7 @@ const OrganizationTreePage: React.FC = () => {
       {/* 成员资料 mini 弹窗 */}
       <Modal
         open={!!profileUser}
-        onCancel={() => setProfileUser(null)}
+        onCancel={() => { setProfileUser(null); setResetPwdVisible(false); setResetPwdValue(''); }}
         footer={null}
         width={360}
         title="成员资料"
@@ -894,6 +918,29 @@ const OrganizationTreePage: React.FC = () => {
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
+            {/* 重置密码（仅对工厂成员显示，由管理员操作） */}
+            {(profileUser as any)?.factoryId && (
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+                {!resetPwdVisible ? (
+                  <Button block icon={<LockOutlined />} onClick={() => { setResetPwdValue(''); setResetPwdVisible(true); }}>
+                    重置密码
+                  </Button>
+                ) : (
+                  <div>
+                    <Input.Password
+                      placeholder="请输入新密码（至少6位）"
+                      value={resetPwdValue}
+                      onChange={e => setResetPwdValue(e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                      <Button size="small" onClick={() => { setResetPwdVisible(false); setResetPwdValue(''); }}>取消</Button>
+                      <Button size="small" type="primary" loading={resetPwdLoading} onClick={handleResetMemberPwd}>确认重置</Button>
+                    </Space>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>

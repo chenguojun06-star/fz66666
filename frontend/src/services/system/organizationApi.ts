@@ -59,6 +59,9 @@ export const organizationApi = {
   delete: (id: string, remark: string) => api.delete<boolean>(`/system/organization/${id}`, { params: { remark } }),
   initTemplate: (templateType: string, rootName: string, factoryId?: string) =>
     api.post<void>('/system/organization/init-template', { templateType, rootName, factoryId }),
+  /** 管理员为工厂成员重置密码（无需旧密码） */
+  adminResetMemberPwd: (userId: string, newPassword: string) =>
+    api.post<void>('/system/user/admin-reset-member-pwd', { userId, newPassword }),
 };
 
 export default organizationApi;

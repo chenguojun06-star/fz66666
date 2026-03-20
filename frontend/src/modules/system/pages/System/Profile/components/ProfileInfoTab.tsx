@@ -527,7 +527,8 @@ const ProfileInfoTab: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 员工招募 + 问题反馈（左）+ 智能开关（右） */}
+                    {/* 员工招募 + 问题反馈（左）+ 智能开关（右）— 仅管理员/租户主账号可见 */}
+                    {canManageSmartFlags && (
                     <div
                         style={{
                             marginTop: 32,
@@ -573,6 +574,7 @@ const ProfileInfoTab: React.FC = () => {
                             onSaveProfile={saveSmartProfile}
                         />
                     </div>
+                    )}
 
                     <ProfileFeedbackModal
                         open={feedbackVisible}

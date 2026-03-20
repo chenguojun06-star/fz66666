@@ -306,4 +306,21 @@ public class UserController {
         userOrchestrator.resetTenantOwnerPassword(tenantId, newPassword);
         return Result.successMessage("密码重置成功");
     }
+
+    /**
+     * 租户管理员重置工厂成员密码（无需旧密码，仅限同租户下工厂账号）
+     */
+    @PostMapping("/admin-reset-member-pwd")
+    public Result<Void> adminResetMemberPwd(@RequestBody java.util.Map<String, String> body) {
+        String userId = body.get("userId");
+        String newPassword = body.get("newPassword");
+        if (userId == null || userId.isBlank()) {
+            return Result.fail("userId 不能为空");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            return Result.fail("新密码不能少于6个字符");
+        }
+        userOrchestrator.adminResetMemberPassword(userId, newPassword);
+        return Result.successMessage("密码已重置");
+    }
 }
