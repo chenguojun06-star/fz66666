@@ -9,7 +9,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { Role, RoleQueryParams } from '@/types/system';
 import { getErrorMessage } from '@/types/api';
 import api, { requestWithPathFallback } from '@/utils/api';
-import { organizationApi } from '@/services/system/organizationApi';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
@@ -47,8 +46,6 @@ const RoleList: React.FC = () => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
   };
-  const [brandOptions, setBrandOptions] = useState<{ label: string; value: string }[]>([]);
-  const [deptOptions, setDeptOptions] = useState<{ label: string; value: string }[]>([]);
 
   type PermissionNode = {
     id?: number | string;
@@ -166,36 +163,7 @@ const RoleList: React.FC = () => {
     fetchRoles();
   }, [fetchRoles]);
 
-  useEffect(() => {
-    const fetchDict = async (type: string) => {
-      try {
-        const res = await api.get<{ code: number; data: { records: Array<{ dictLabel: string; dictCode: string }> } }>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
-        if (res.code === 200) {
-          const items = res.data.records || [];
-          return items.map((it) => ({ label: it.dictLabel, value: it.dictCode }));
-        }
-      } catch (error) {
-        console.error('[角色管理] 获取字典数据失败:', error);
-      }
-      return [];
-    };
-    (async () => {
-      const brands = await fetchDict('brand');
-      setBrandOptions(brands);
-      // 部门选项来自组织架构树（t_organization_unit DEPARTMENT 节点）
-      try {
-        const units = await organizationApi.departments();
-        setDeptOptions(
-          (Array.isArray(units) ? units : []).map((u) => ({
-            label: String(u.unitName || u.nodeName || ''),
-            value: String(u.id || ''),
-          }))
-        );
-      } catch (e) {
-        console.error('[角色管理] 获取部门列表失败:', e);
-      }
-    })();
-  }, []);
+
 
   const openDialog = (role?: Role) => {
     roleModal.open(role || null);
@@ -205,8 +173,6 @@ const RoleList: React.FC = () => {
       description: String(role?.description || ''),
       status: role?.status || 'active',
       dataScope: role?.dataScope || 'all',
-      dataScopeBrands: Array.isArray(role?.dataScopeBrands) ? role?.dataScopeBrands : [],
-      dataScopeDepartments: Array.isArray(role?.dataScopeDepartments) ? role?.dataScopeDepartments : [],
     });
   };
 
@@ -285,8 +251,6 @@ const RoleList: React.FC = () => {
         ...values,
         status: (values as any)?.status || 'active',
         dataScope: (values as any)?.dataScope || 'all',
-        dataScopeBrands: Array.isArray((values as any)?.dataScopeBrands) ? (values as any).dataScopeBrands : [],
-        dataScopeDepartments: Array.isArray((values as any)?.dataScopeDepartments) ? (values as any).dataScopeDepartments : [],
       };
 
       const submit = async (remark?: string) => {
@@ -671,39 +635,17 @@ const RoleList: React.FC = () => {
                 ]}
               />
             </Form.Item>
-            <Form.Item name="dataScope" label="数据权限范围" rules={[{ required: true, message: '请选择数据权限范围' }]}>
+            <Form.Item name="dataScope" label="数据权限范围">
               <Select
                 options={[
                   { value: 'all', label: '全部数据' },
-                  { value: 'brand', label: '按品牌' },
-                  { value: 'department', label: '按部门' },
-                  { value: 'custom', label: '自定义' },
                 ]}
+                disabled
               />
             </Form.Item>
           </div>
 
-          <Form.Item shouldUpdate={(prev, next) => prev.dataScope !== next.dataScope} noStyle>
-            {({ getFieldValue }) => {
-              const scope = String(getFieldValue('dataScope') || 'all');
-              const showBrand = scope === 'brand' || scope === 'custom';
-              const showDept = scope === 'department' || scope === 'custom';
-              return (
-                <>
-                  {showBrand ? (
-                    <Form.Item name="dataScopeBrands" label="品牌范围">
-                      <Select mode="multiple" allowClear options={brandOptions} placeholder="选择品牌" />
-                    </Form.Item>
-                  ) : null}
-                  {showDept ? (
-                    <Form.Item name="dataScopeDepartments" label="部门范围">
-                      <Select mode="multiple" allowClear options={deptOptions} placeholder="选择部门" />
-                    </Form.Item>
-                  ) : null}
-                </>
-              );
-            }}
-          </Form.Item>
+
         </Form>
       </ResizableModal>
 
