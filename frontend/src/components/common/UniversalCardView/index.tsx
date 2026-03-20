@@ -20,6 +20,7 @@ export interface CardProgressConfig {
   isCompleted?: (record: any) => boolean; // 明确指定是否完成
   show?: boolean; // 是否显示进度条
   type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
+  minVisiblePercent?: (record: any) => number;
 }
 
 export interface CardAction {
@@ -220,6 +221,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         height={10}
                         status={progressConfig.getStatus?.(record)}
                         isCompleted={progressConfig.isCompleted?.(record)}
+                        minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
                       />
                     ) : (
                       // 胶囊椭圆形进度条（默认）
@@ -227,7 +229,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         className={`universal-card-progress-line universal-card-progress-${
                           progressConfig.getStatus?.(record) || 'default'
                         }`}
-                        style={{ width: `${Math.max(15, progressConfig.calculate(record))}%` }}
+                        style={{
+                          width: `${progressConfig.calculate(record) <= 0
+                            ? (progressConfig.minVisiblePercent?.(record) ?? 0)
+                            : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
+                        }}
                       >
                         <span className="universal-card-progress-text">
                           {progressConfig.calculate(record)}%

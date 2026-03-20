@@ -22,6 +22,7 @@ import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
 import { SchedulingSuggestionResponse, SchedulePlan } from '@/services/intelligence/intelligenceApi';
@@ -58,6 +59,7 @@ const OrderManagement: React.FC = () => {
     }
   }, [params]);
   const { isMobile, isTablet, modalWidth } = useViewport();
+  const { columns: cardColumns, pageSize: cardPageSize } = useCardGridLayout(10);
   const tooltipTheme = useMemo(() => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
     const isDark = theme === 'dark';
@@ -96,6 +98,14 @@ const OrderManagement: React.FC = () => {
     const saved = localStorage.getItem('viewMode_orderManagement');
     return saved === 'card' ? 'card' : 'table';
   });
+
+  useEffect(() => {
+    if (viewMode === 'card') {
+      setQueryParams((prev) => (
+        prev.pageSize === cardPageSize ? prev : { ...prev, page: 1, pageSize: cardPageSize }
+      ));
+    }
+  }, [viewMode, cardPageSize]);
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -1448,7 +1458,14 @@ const OrderManagement: React.FC = () => {
               <Space size={12}>
                 <Button
                   icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                  onClick={() => { const next = viewMode === 'table' ? 'card' : 'table'; setViewMode(next); localStorage.setItem('viewMode_orderManagement', next); }}
+                  onClick={() => {
+                    const next = viewMode === 'table' ? 'card' : 'table';
+                    setViewMode(next);
+                    localStorage.setItem('viewMode_orderManagement', next);
+                    if (next === 'card') {
+                      setQueryParams((prev) => ({ ...prev, page: 1, pageSize: cardPageSize }));
+                    }
+                  }}
                 >
                   {viewMode === 'table' ? '卡片视图' : '列表视图'}
                 </Button>
@@ -1481,7 +1498,7 @@ const OrderManagement: React.FC = () => {
           <UniversalCardView
             dataSource={styles}
             loading={loading}
-            columns={6}
+            columns={cardColumns}
             coverField="cover"
             titleField="styleNo"
             subtitleField="styleName"

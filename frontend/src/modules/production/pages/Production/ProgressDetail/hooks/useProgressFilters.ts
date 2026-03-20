@@ -9,7 +9,7 @@ import { ProductionQueryParams } from '@/types/production';
 export const useProgressFilters = () => {
   const location = useLocation();
 
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '', excludeTerminal: true });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '', includeScrapped: false, excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>(
     () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'card'

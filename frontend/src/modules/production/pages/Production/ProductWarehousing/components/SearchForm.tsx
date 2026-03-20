@@ -53,7 +53,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
             <StandardSearchBar
               searchValue={queryParams.warehousingNo || ''}
               onSearchChange={handleSearchChange}
-              searchPlaceholder="搜索质检入库号/订单号/款号"
+              searchPlaceholder="搜索质检入库号/订单号/款号/工厂名"
               dateValue={dateRange}
               onDateChange={setDateRange}
               statusValue={queryParams.warehouse || ''}

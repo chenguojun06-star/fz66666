@@ -74,6 +74,21 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "styleNo"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
 
+        // 关键词中的“工厂名”来自生产订单表，先查出匹配订单ID后回灌到裁剪任务过滤
+        final List<String> factoryMatchedOrderIds = StringUtils.hasText(orderNo)
+            ? productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                    .select(ProductionOrder::getId)
+                    .like(ProductionOrder::getFactoryName, orderNo)
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
+                        .or().eq(ProductionOrder::getDeleteFlag, 0))
+                    .ne(ProductionOrder::getStatus, "scrapped"))
+                .stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList())
+            : java.util.Collections.emptyList();
+
         // 先查询未删除的生产订单ID列表（用于过滤裁剪任务）
         List<ProductionOrder> allOrders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
@@ -87,8 +102,17 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .collect(Collectors.toList());
 
         // 在查询时就过滤掉已删除订单的任务，确保 total 准确
-        LambdaQueryWrapper<CuttingTask> queryWrapper = new LambdaQueryWrapper<CuttingTask>()
-                .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
+        LambdaQueryWrapper<CuttingTask> queryWrapper = new LambdaQueryWrapper<CuttingTask>();
+        if (StringUtils.hasText(orderNo)) {
+            queryWrapper.and(w -> {
+                w.like(CuttingTask::getProductionOrderNo, orderNo)
+                        .or().like(CuttingTask::getStyleNo, orderNo);
+                if (!factoryMatchedOrderIds.isEmpty()) {
+                    w.or().in(CuttingTask::getProductionOrderId, factoryMatchedOrderIds);
+                }
+            });
+        }
+        queryWrapper
                 .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(status), CuttingTask::getStatus, status)
                 .orderByDesc(CuttingTask::getCreateTime);

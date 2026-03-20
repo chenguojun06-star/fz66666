@@ -313,7 +313,7 @@ const IntelligenceCenter: React.FC = () => {
           {/* 今日生产扫码量 */}
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={scanPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className="c-card c-kpi c-kpi-hoverable">
-            <div className="c-kpi-label"><LiveDot size={7} />今日扫码量</div>
+            <div className="c-kpi-label"><LiveDot size={7} />今日生产扫码量</div>
             <div className="c-kpi-val cyan neon-cyan"><AnimatedNum val={pulse?.todayScanQty?.toLocaleString() ?? '—'} /></div>
             <div className="c-kpi-unit">件</div>
             <div className="c-kpi-sub">速率&nbsp;<b style={{ color: '#00e5ff' }}><AnimatedNum val={pulse?.scanRatePerHour ?? '—'} /></b>&nbsp;件/时</div>

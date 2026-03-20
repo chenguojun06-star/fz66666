@@ -260,6 +260,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (isOrderFrozenByStatus(record)) return dbProgress;
     const orderId = String(record.id || '');
     const stats = boardStatsByOrder[orderId];
+    const hasProcurementAction = Boolean(record.procurementManuallyCompleted)
+      || Boolean(record.procurementConfirmedAt)
+      || (Number(record.materialArrivalRate) || 0) > 0;
+    const hasCuttingAction = (Number(record.cuttingCompletionRate) || 0) > 0
+      || (Number(record.cuttingQuantity) || 0) > 0;
+    const hasBoardAction = !!stats && Object.values(stats as Record<string, number>)
+      .some((value) => (Number(value) || 0) > 0);
+    const hasRealAction = hasProcurementAction || hasCuttingAction || hasBoardAction;
+    if (!hasRealAction) return 0;
     if (!stats) return dbProgress;
     const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
     // 工序流水线顺序（从前到后）
@@ -1271,6 +1280,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,
                 type: 'liquid',
               }}
@@ -1573,6 +1583,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,
                 type: 'liquid',
               }}

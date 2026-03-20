@@ -128,12 +128,13 @@ export function useKpiMetrics(data: CockpitData) {
     const watch: typeof orders = [];
     for (const o of orders) {
       const prog = Number(o.productionProgress) || 0;
+      const isUrgentOrder = String((o as any)?.urgencyLevel || '').trim().toLowerCase() === 'urgent';
       const daysLeft = o.plannedEndDate
         ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)
         : null;
       if (daysLeft !== null && daysLeft < 0) overdue.push(o);
       else if (daysLeft !== null && daysLeft <= 7 && prog < 50) highRisk.push(o);
-      else if (daysLeft !== null && daysLeft <= 14 && prog < 30) watch.push(o);
+      else if (isUrgentOrder && daysLeft !== null && daysLeft <= 14 && prog < 30) watch.push(o);
     }
     return { overdue, highRisk, watch };
   }, [orders]);

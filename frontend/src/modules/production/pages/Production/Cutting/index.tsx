@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Space, Tag } from 'antd';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -19,7 +19,6 @@ import { getMaterialTypeLabel } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 
@@ -39,7 +38,6 @@ const CuttingManagement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { modalWidth } = useViewport();
-  const { departmentOptions } = useOrganizationFilterOptions();
   const params = useParams();
   const routeOrderNo = useMemo(() => {
     const raw = String((params as unknown as any)?.orderNo || '').trim();
@@ -348,7 +346,7 @@ const CuttingManagement: React.FC = () => {
                     <StandardSearchBar
                       searchValue={tasks.taskQuery.orderNo || ''}
                       onSearchChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, orderNo: value, page: 1 }))}
-                      searchPlaceholder="订单号/款号"
+                      searchPlaceholder="订单号/款号/工厂名"
                       dateValue={tasks.taskDateRange}
                       onDateChange={tasks.setTaskDateRange}
                       statusValue={tasks.taskQuery.status || ''}
@@ -366,17 +364,6 @@ const CuttingManagement: React.FC = () => {
                         tasks.setTaskQuery({ page: 1, pageSize: 10, status: '', orderNo: '', styleNo: '', orgUnitId: '' });
                         tasks.setTaskDateRange(null);
                       }}
-                    />
-                    <Select
-                      value={tasks.taskQuery.orgUnitId || ''}
-                      onChange={(value) => {
-                        tasks.setTaskQuery(prev => ({ ...prev, orgUnitId: value || '', page: 1 }));
-                        tasks.fetchTasks();
-                      }}
-                      placeholder="全部生产方"
-                      allowClear
-                      style={{ minWidth: 130 }}
-                      options={departmentOptions}
                     />
                   </>
                 )}

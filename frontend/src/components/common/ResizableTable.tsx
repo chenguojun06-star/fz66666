@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table } from 'antd';
+import { Table, ConfigProvider } from 'antd';
 import type { TableProps } from 'antd';
 
 /**
@@ -448,6 +448,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   // 当前正在拖拽的列 ID
   const draggingIdRef = React.useRef<string | null>(null);
 
+  // 用于 getPopupContainer，使下拉菜单（分页条数选择器等）锚定在表格容器内，避免渲染到 document.body 导致位置偏远
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
   // 保存列宽到本地存储
   React.useEffect(() => {
     if (!resolvedStorageKey) return;
@@ -664,17 +667,19 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, [stickyFooter]);
 
   return (
-    <div className={wrapperClassName}>
-      <Table
-        {...rest}
-        rowKey={rowKey}
-        className={mergedClassName}
-        columns={mergedColumns as TableProps<T>['columns']}
-        components={mergedComponents}
-        scroll={mergedScroll as TableProps<T>['scroll']}
-        tableLayout={tableLayout ?? (resizableColumns ? 'fixed' : undefined)}
-        pagination={mergedPagination as TableProps<T>['pagination']}
-      />
+    <div ref={wrapperRef} className={wrapperClassName}>
+      <ConfigProvider getPopupContainer={() => wrapperRef.current ?? document.body}>
+        <Table
+          {...rest}
+          rowKey={rowKey}
+          className={mergedClassName}
+          columns={mergedColumns as TableProps<T>['columns']}
+          components={mergedComponents}
+          scroll={mergedScroll as TableProps<T>['scroll']}
+          tableLayout={tableLayout ?? (resizableColumns ? 'fixed' : undefined)}
+          pagination={mergedPagination as TableProps<T>['pagination']}
+        />
+      </ConfigProvider>
     </div>
   );
 };

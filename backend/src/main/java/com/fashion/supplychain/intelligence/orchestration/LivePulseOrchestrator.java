@@ -205,6 +205,7 @@ public class LivePulseOrchestrator {
     private List<ScanRecord> queryScans(Long tenantId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
+                    .eq("scan_type", "production")
           .eq("scan_result", "success").gt("quantity", 0)
           .between("scan_time", start, end);
         return scanRecordService.list(qw);

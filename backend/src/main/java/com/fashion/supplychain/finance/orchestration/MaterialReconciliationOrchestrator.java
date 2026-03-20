@@ -338,8 +338,9 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(purchase.getId())) {
             return true;
         }
-        // 仅 orderId（生产订单系统关联）才走入库对账路径；orderNo 为引用字段不影响对账
-        if (StringUtils.hasText(purchase.getOrderId())) {
+        // 内部大货采购（factoryType=INTERNAL）与样衣一致：允许直接走 upsert 对账。
+        // 外部订单采购仍保持入库回流路径，避免改变既有外部工厂流程。
+        if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
             return true;
         }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {
@@ -350,6 +351,38 @@ public class MaterialReconciliationOrchestrator {
             return true;
         }
         return resolveEffectiveQuantity(purchase) <= 0;
+    }
+
+    private boolean shouldRouteOrderLinkedPurchaseToInbound(MaterialPurchase purchase) {
+        if (purchase == null || !StringUtils.hasText(purchase.getOrderId())) {
+            return false;
+        }
+        return !isInternalFactoryPurchase(purchase);
+    }
+
+    private boolean isInternalFactoryPurchase(MaterialPurchase purchase) {
+        if (purchase == null) {
+            return false;
+        }
+
+        if (StringUtils.hasText(purchase.getFactoryType())) {
+            return "INTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
+        }
+
+        if (!StringUtils.hasText(purchase.getOrderId())) {
+            return false;
+        }
+
+        try {
+            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
+            return order != null
+                    && StringUtils.hasText(order.getFactoryType())
+                    && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
+        } catch (Exception e) {
+            log.warn("识别工厂类型失败，按非内部采购处理: purchaseId={}, orderId={}",
+                    purchase.getId(), purchase.getOrderId(), e);
+            return false;
+        }
     }
 
     private void cleanupPendingByPurchaseId(String purchaseId, LocalDateTime now) {
@@ -411,8 +444,8 @@ public class MaterialReconciliationOrchestrator {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
             return false;
         }
-        // 供应商采购有 orderNo 引用但无 orderId 的，应正常进入对账；仅 orderId 存在时走入库路径
-        if (StringUtils.hasText(purchase.getOrderId())) {
+        // 内部大货采购对齐样衣逻辑：允许按采购单直接 upsert 对账。
+        if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
             cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
             return false;
         }

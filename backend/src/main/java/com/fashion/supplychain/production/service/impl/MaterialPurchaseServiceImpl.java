@@ -79,6 +79,21 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String sourceType = (String) safeParams.getOrDefault("sourceType", "");
         String factoryType = (String) safeParams.getOrDefault("factoryType", "");
 
+        final List<String> keywordMatchedOrderIds = StringUtils.hasText(orderNo)
+            ? productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                    .select(ProductionOrder::getId)
+                    .and(w -> w.like(ProductionOrder::getFactoryName, orderNo.trim())
+                        .or().like(ProductionOrder::getOrderNo, orderNo.trim())
+                        .or().like(ProductionOrder::getStyleNo, orderNo.trim()))
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
+                        .or().eq(ProductionOrder::getDeleteFlag, 0)))
+                .stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList())
+            : java.util.Collections.emptyList();
+
         Page<MaterialPurchase> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0);
@@ -86,12 +101,16 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
         if (StringUtils.hasText(orderNo)) {
             String keyword = orderNo.trim();
-            wrapper.and(w -> w
-                .like(MaterialPurchase::getOrderNo, keyword)
-                .or().like(MaterialPurchase::getPurchaseNo, keyword)
-                .or().like(MaterialPurchase::getMaterialCode, keyword)
-                .or().like(MaterialPurchase::getMaterialName, keyword)
-            );
+            wrapper.and(w -> {
+                w.like(MaterialPurchase::getOrderNo, keyword)
+                        .or().like(MaterialPurchase::getPurchaseNo, keyword)
+                        .or().like(MaterialPurchase::getMaterialCode, keyword)
+                        .or().like(MaterialPurchase::getMaterialName, keyword)
+                        .or().like(MaterialPurchase::getSupplierName, keyword);
+                if (!keywordMatchedOrderIds.isEmpty()) {
+                    w.or().in(MaterialPurchase::getOrderId, keywordMatchedOrderIds);
+                }
+            });
         }
 
         // 独立搜索字段（用于高级筛选）

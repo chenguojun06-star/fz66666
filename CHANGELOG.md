@@ -1,3 +1,23 @@
+## 2026-03-20（内部大货与批量采购对账流对齐样衣）
+
+### fix(procurement): 内部大货采购与仓库批量采购统一扭转到物料对账
+
+- **需求背景**：业务要求内部大货采购的流转逻辑与样衣一致，且仓库批量采购确认完成后也必须自动进入物料对账。
+- **修复方案**：
+  - `MaterialReconciliationOrchestrator`：调整 `upsertFromPurchaseId` 路由规则，`orderId` 采购不再一刀切走入库路径；当工厂类型为 `INTERNAL` 时，允许与样衣一致直接走 upsert 对账。
+  - `MaterialPurchaseOrchestrator`：内部订单直采直用（`factoryType=INTERNAL`）在采购完成后直接进入物料对账，不依赖仓库入库回流。
+  - `MaterialInboundOrchestrator`：外部订单采购仍保留入库回流触发对账；批量采购（`sourceType=batch/stock/manual`）完成后同样进入物料对账。
+  - `MaterialPurchaseOrchestrator.confirmPickingOutbound`：仓库确认出库后自动同步写入 `t_material_pickup_record`，并按标签写清分类：`pickupType(INTERNAL/EXTERNAL)`、`sourceType(sample/order/batch/stock/manual)`、`factoryType`、`orderBizType`，确保进销存领取记录可按内部/外部/样衣等维度清晰筛选。
+  - `MaterialPurchaseOrchestrator.syncPickupRecordAfterOutbound`：新增自动同步幂等校验，基于 `AUTO_PICKUP_SYNC` 备注精确去重；同一出库确认重复触发时只保留一条领取记录，避免重试/重复点击产生重复数据。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/finance/orchestration/MaterialReconciliationOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestrator.java`
+- **对系统的帮助**：
+  - 内部大货采购、样衣采购、仓库批量采购三条线的对账入口统一，避免“采购已完成/已出库但未进入物料对账”的断链。
+  - 批量采购不再依赖人工补单，财务侧能按同一物料对账审核链路持续推进。
+  - 仓库面辅料调用出库后，领取记录自动沉淀且分类标签完整，内外部工厂与样衣来源一目了然，避免统计和审计口径混乱。
+  - 自动同步链路具备防重能力，重复确认出库不会再污染领取台账，统计、审核与后续结算口径更稳定。
+
 ## 2026-03-20（权限缓存反复 WARN 根修）
 
 ### fix(redis): 彻底修复 role:perms:* 权限缓存反序列化告警反复出现

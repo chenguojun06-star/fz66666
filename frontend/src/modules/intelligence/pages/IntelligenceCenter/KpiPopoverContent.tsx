@@ -21,9 +21,9 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
 
   const scanPop = (
     <KpiPop
-      title="今日扫码详情"
+      title="今日生产扫码详情"
       items={[
-        { label: '扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: '#00e5ff' },
+        { label: '生产扫码总量',  value: `${pulse?.todayScanQty?.toLocaleString() ?? '—'} 件`, color: '#00e5ff' },
         { label: '实时速率',  value: `${pulse?.scanRatePerHour ?? '—'} 件/时` },
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
         { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家` },

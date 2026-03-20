@@ -71,9 +71,28 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
 
+        // 关键词搜索支持订单号/款号/工厂名：通过生产订单表先命中订单ID
+        final List<String> keywordMatchedOrderIds = StringUtils.hasText(warehousingNo)
+            ? productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                    .select(ProductionOrder::getId)
+                    .and(w -> w.like(ProductionOrder::getOrderNo, warehousingNo)
+                        .or().like(ProductionOrder::getStyleNo, warehousingNo)
+                        .or().like(ProductionOrder::getFactoryName, warehousingNo))
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
+                        .or().eq(ProductionOrder::getDeleteFlag, 0)))
+                .stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::hasText)
+                .toList()
+            : java.util.Collections.emptyList();
+
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
-                .like(StringUtils.hasText(warehousingNo), ProductWarehousing::getWarehousingNo, warehousingNo)
+                .and(StringUtils.hasText(warehousingNo), w -> w
+                        .like(ProductWarehousing::getWarehousingNo, warehousingNo)
+                .or(!keywordMatchedOrderIds.isEmpty()).in(ProductWarehousing::getOrderId,
+                    keywordMatchedOrderIds))
                 .eq(StringUtils.hasText(orderId), ProductWarehousing::getOrderId, orderId)
                 .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)

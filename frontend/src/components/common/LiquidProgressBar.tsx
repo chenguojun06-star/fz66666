@@ -8,6 +8,7 @@ interface LiquidProgressBarProps {
   backgroundColor?: string;
   status?: 'normal' | 'warning' | 'danger' | 'default'; // default=关单/冻结状态灰色无动画
   isCompleted?: boolean; // 明确指定是否已完成，避免自动判断
+  minVisiblePercent?: number;
 }
 
 /**
@@ -22,12 +23,16 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
   backgroundColor = '#f0f0f0',
   status = 'normal',
   isCompleted: externalIsCompleted,
+  minVisiblePercent = 0,
 }) => {
   // 是否已完成：优先使用外部传入的值，否则根据进度判断（兼容旧用法）
   const isCompleted = externalIsCompleted !== undefined ? externalIsCompleted : percent >= 100;
 
   // 是否处于冻结状态（关单/已取消/已完成后再次渲染）：灰色、无动画、显示百分比
   const isFrozen = status === 'default';
+  const safePercent = Math.max(0, percent);
+  const visibleFloor = Math.max(0, minVisiblePercent);
+  const displayWidth = safePercent <= 0 ? visibleFloor : Math.max(visibleFloor, safePercent);
 
   // 根据进度和状态自动选择颜色
   const getColors = () => {
@@ -96,7 +101,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
       {/* 液体波浪容器 */}
       <div
         style={{
-          width: `${Math.max(5, percent)}%`, // 最小5%宽度，0%时也显示一点点
+          width: `${displayWidth}%`,
           height: '100%',
           position: 'absolute',
           left: 0,
@@ -161,7 +166,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
           whiteSpace: 'nowrap',
         }}
       >
-        {isCompleted && !isFrozen ? '已完成' : `${Math.round(percent)}%`}
+        {isCompleted && !isFrozen ? '已完成' : `${Math.round(safePercent)}%`}
       </div>
 
       {/* 脉冲波浪线效果 - 未完成且未冻结时显示 */}

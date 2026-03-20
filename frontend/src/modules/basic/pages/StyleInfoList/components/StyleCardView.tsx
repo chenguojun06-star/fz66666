@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { getStyleSourceText } from '@/utils/styleSource';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -41,6 +42,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { columns: cardColumns } = useCardGridLayout(10);
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
   const isStageDoneRow = (record: StyleInfo) => {
@@ -61,7 +63,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
     <UniversalCardView
       dataSource={data}
       loading={loading}
-      columns={6}
+      columns={cardColumns}
       coverField="cover"
       titleField="styleNo"
       subtitleField="styleName"

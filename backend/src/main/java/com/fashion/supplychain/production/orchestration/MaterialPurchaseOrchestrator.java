@@ -19,6 +19,9 @@ import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
+import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
+import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
+import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -67,6 +70,12 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialOutboundLogMapper materialOutboundLogMapper;
+
+    @Autowired
+    private MaterialPickupOrchestrator materialPickupOrchestrator;
+
+    @Autowired
+    private MaterialPickupRecordMapper materialPickupRecordMapper;
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         return materialPurchaseService.queryPage(params);
@@ -694,8 +703,12 @@ public class MaterialPurchaseOrchestrator {
             return;
         }
 
-        // 供应商采购有 orderNo 引用字段但无 orderId，应允许直接对账同步；仅 orderId 存在时走入库路径
-        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId());
+        // 直采直用场景：
+        // 1) 无 orderId 的采购（批量/库存/手工）直接进入物料对账
+        // 2) INTERNAL 内部订单采购对齐样衣逻辑，采购完成后直接进入物料对账
+        // 3) 其他订单采购（如 EXTERNAL）仍走入库回流链路
+        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId())
+                || isInternalOrderPurchase(purchase);
         if (allowReconciliation && StringUtils.hasText(purchase.getId())) {
             try {
                 materialReconciliationOrchestrator.upsertFromPurchaseId(purchase.getId().trim());
@@ -720,6 +733,25 @@ public class MaterialPurchaseOrchestrator {
             String oid = purchase.getOrderId().trim();
             helper.ensureOrderStatusProduction(oid);
             helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
+        }
+    }
+
+    private boolean isInternalOrderPurchase(MaterialPurchase purchase) {
+        if (purchase == null || !StringUtils.hasText(purchase.getOrderId())) {
+            return false;
+        }
+        if (StringUtils.hasText(purchase.getFactoryType())) {
+            return "INTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
+        }
+        try {
+            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
+            return order != null
+                    && StringUtils.hasText(order.getFactoryType())
+                    && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
+        } catch (Exception e) {
+            log.warn("syncAfterPurchaseChanged: 识别内部订单失败，按非内部处理 purchaseId={}, orderId={}",
+                    purchase.getId(), purchase.getOrderId(), e);
+            return false;
         }
     }
 
@@ -1484,8 +1516,10 @@ public class MaterialPurchaseOrchestrator {
         List<com.fashion.supplychain.production.entity.MaterialPickingItem> items =
                 materialPickingService.getItemsByPickingId(pickingId);
         LocalDateTime outboundTime = LocalDateTime.now();
+        int pickedTotalQty = 0;
         for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+            pickedTotalQty += item.getQuantity();
             MaterialStock stock = materialStockService.getById(item.getMaterialStockId());
                 materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
             recordOutboundLog(picking, item, stock, outboundTime);
@@ -1509,6 +1543,10 @@ public class MaterialPurchaseOrchestrator {
                     purchase.setReceivedTime(LocalDateTime.now());
                     purchase.setUpdateTime(LocalDateTime.now());
                     materialPurchaseService.updateById(purchase);
+
+                    // 自动同步到面辅料领取记录，供进销存按内部/外部/样衣等分类查看。
+                    syncPickupRecordAfterOutbound(picking, purchase, pickedTotalQty);
+
                     // 同步订单面料到货率
                     try {
                         if (StringUtils.hasText(purchase.getOrderId())) {
@@ -1522,6 +1560,94 @@ public class MaterialPurchaseOrchestrator {
         }
 
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+    }
+
+    private void syncPickupRecordAfterOutbound(MaterialPicking picking, MaterialPurchase purchase, int pickedTotalQty) {
+        if (picking == null || purchase == null || pickedTotalQty <= 0) {
+            return;
+        }
+
+        String syncRemark = buildPickupRemark(picking, purchase);
+        if (existsAutoSyncedPickupRecord(syncRemark)) {
+            log.info("syncPickupRecordAfterOutbound: 跳过重复同步, pickingId={}, purchaseId={}",
+                    picking.getId(), purchase.getId());
+            return;
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("pickupType", resolvePickupType(purchase));
+        body.put("orderNo", purchase.getOrderNo());
+        body.put("styleNo", purchase.getStyleNo());
+        body.put("materialId", purchase.getMaterialId());
+        body.put("materialCode", purchase.getMaterialCode());
+        body.put("materialName", purchase.getMaterialName());
+        body.put("materialType", purchase.getMaterialType());
+        body.put("color", purchase.getColor());
+        body.put("specification", purchase.getSpecifications());
+        body.put("fabricComposition", purchase.getFabricComposition());
+        body.put("unit", purchase.getUnit());
+        body.put("quantity", pickedTotalQty);
+        body.put("unitPrice", purchase.getUnitPrice());
+        body.put("remark", syncRemark);
+
+        materialPickupOrchestrator.create(body);
+    }
+
+    private boolean existsAutoSyncedPickupRecord(String syncRemark) {
+        if (!StringUtils.hasText(syncRemark)) {
+            return false;
+        }
+        Long count = materialPickupRecordMapper.selectCount(new LambdaQueryWrapper<MaterialPickupRecord>()
+                .eq(MaterialPickupRecord::getDeleteFlag, 0)
+                .eq(MaterialPickupRecord::getRemark, syncRemark)
+                .last("LIMIT 1"));
+        return count != null && count > 0;
+    }
+
+    private String resolvePickupType(MaterialPurchase purchase) {
+        if (purchase == null) {
+            return "INTERNAL";
+        }
+
+        String factoryType = purchase.getFactoryType();
+        if (!StringUtils.hasText(factoryType) && StringUtils.hasText(purchase.getOrderId())) {
+            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
+            if (order != null) {
+                factoryType = order.getFactoryType();
+            }
+        }
+
+        return StringUtils.hasText(factoryType) && "EXTERNAL".equalsIgnoreCase(factoryType.trim())
+                ? "EXTERNAL"
+                : "INTERNAL";
+    }
+
+    private String buildPickupRemark(MaterialPicking picking, MaterialPurchase purchase) {
+        String sourceType = purchase == null ? null : purchase.getSourceType();
+        String factoryType = purchase == null ? null : purchase.getFactoryType();
+        String orderBizType = purchase == null ? null : purchase.getOrderBizType();
+
+        if ((!StringUtils.hasText(factoryType) || !StringUtils.hasText(orderBizType))
+                && purchase != null && StringUtils.hasText(purchase.getOrderId())) {
+            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
+            if (order != null) {
+                if (!StringUtils.hasText(factoryType)) {
+                    factoryType = order.getFactoryType();
+                }
+                if (!StringUtils.hasText(orderBizType)) {
+                    orderBizType = order.getOrderBizType();
+                }
+            }
+        }
+
+        return "AUTO_PICKUP_SYNC"
+                + "|sourceType=" + (StringUtils.hasText(sourceType) ? sourceType.trim() : "unknown")
+                + "|factoryType=" + (StringUtils.hasText(factoryType) ? factoryType.trim() : "unknown")
+                + "|orderBizType=" + (StringUtils.hasText(orderBizType) ? orderBizType.trim() : "unknown")
+                + "|purchaseId=" + (purchase != null && StringUtils.hasText(purchase.getId()) ? purchase.getId().trim() : "")
+                + "|purchaseNo=" + (purchase != null && StringUtils.hasText(purchase.getPurchaseNo()) ? purchase.getPurchaseNo().trim() : "")
+                + "|pickingId=" + (picking != null && StringUtils.hasText(picking.getId()) ? picking.getId().trim() : "")
+                + "|pickingNo=" + (picking != null && StringUtils.hasText(picking.getPickingNo()) ? picking.getPickingNo().trim() : "");
     }
 
     private void recordOutboundLog(MaterialPicking picking, MaterialPickingItem item, MaterialStock stock, LocalDateTime outboundTime) {

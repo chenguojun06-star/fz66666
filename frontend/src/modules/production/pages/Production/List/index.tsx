@@ -72,7 +72,7 @@ const DEFAULT_HOVER_NODES: ProgressNode[] = [
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
-  const { isMobile } = useViewport();
+  useViewport();
   const { columns: cardColumns, pageSize: cardPageSize } = useCardGridLayout(10);
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
@@ -162,8 +162,16 @@ const ProductionList: React.FC = () => {
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
     const initSearch = new URLSearchParams(window.location.search);
     const initOrderNo = initSearch.get('orderNo') || '';
+    // 读取上次用户选择的每页条数，刷新后仍保持（仅列表模式；卡片模式由 cardPageSize 控制）
+    const savedPageSize = (() => {
+      try {
+        const raw = localStorage.getItem('production_list_page_size');
+        const n = raw ? parseInt(raw, 10) : NaN;
+        return Number.isFinite(n) && n > 0 ? n : 10;
+      } catch { return 10; }
+    })();
     return {
-      page: 1, pageSize: 10, includeScrapped: true, excludeTerminal: true,
+      page: 1, pageSize: savedPageSize, includeScrapped: true, excludeTerminal: false,
       ...(initOrderNo ? { keyword: initOrderNo } : {}),
     };
   });
@@ -242,13 +250,23 @@ const ProductionList: React.FC = () => {
   useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
   useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
 
-  // 卡片进度：取 boardStats 实时扫码数据与 productionProgress DB值 的较大值
+  // 卡片进度：取 boardStats 实时数据与 productionProgress DB值 的较大值，
+  // 但仅下单、无任何采购/裁剪/生产动作时，真实显示值必须是 0。
   const calcCardProgress = useCallback((record: ProductionOrder): number => {
     const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
     if (record.status === 'completed') return 100;
     if (isOrderFrozenByStatus(record)) return dbProgress;
     const orderId = String(record.id || '');
     const stats = boardStatsByOrder[orderId];
+    const hasProcurementAction = Boolean(record.procurementManuallyCompleted)
+      || Boolean(record.procurementConfirmedAt)
+      || (Number(record.materialArrivalRate) || 0) > 0;
+    const hasCuttingAction = (Number(record.cuttingCompletionRate) || 0) > 0
+      || (Number(record.cuttingQuantity) || 0) > 0;
+    const hasBoardAction = !!stats && Object.values(stats as Record<string, number>)
+      .some((value) => (Number(value) || 0) > 0);
+    const hasRealAction = hasProcurementAction || hasCuttingAction || hasBoardAction;
+    if (!hasRealAction) return 0;
     if (!stats) return dbProgress;
     const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
     const PIPELINE = hasProcurementStage(record as any)
@@ -374,7 +392,6 @@ const ProductionList: React.FC = () => {
       status: '',
       delayedOnly: undefined,
       todayOnly: undefined,
-      excludeTerminal: true,
       keyword: targetOrderNo || prev.keyword,
     }));
     triggerOrderFocus(targetOrder);
@@ -641,13 +658,13 @@ const ProductionList: React.FC = () => {
     setActiveStatFilter(type);
     if (type === 'production') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 });
     } else if (type === 'delayed') {
       setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 });
     } else if (type === 'today') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', excludeTerminal: true, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 });
     }
   };
 
@@ -980,7 +997,10 @@ const ProductionList: React.FC = () => {
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
                 pageSizeOptions: ['10', '20', '50', '100'],
-                onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
+                onChange: (page, pageSize) => {
+                  try { localStorage.setItem('production_list_page_size', String(pageSize)); } catch { /* ignore */ }
+                  setQueryParams({ ...queryParams, page, pageSize });
+                },
               }}
             />
           ) : (
@@ -1058,6 +1078,7 @@ const ProductionList: React.FC = () => {
                 calculate: calcCardProgress,
                 getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,
                 type: 'liquid',
               }}

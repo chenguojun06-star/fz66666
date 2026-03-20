@@ -19,6 +19,7 @@ import StyleFilterPanel from './components/StyleFilterPanel';
 import StyleStatsCard from './components/StyleStatsCard';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 
 import '../StyleInfo/styles.css';
 
@@ -29,6 +30,7 @@ import '../StyleInfo/styles.css';
 const StyleInfoListPage: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const { pageSize: cardPageSize } = useCardGridLayout(10);
 
   // 使用现有Hooks
   const {
@@ -55,6 +57,14 @@ const StyleInfoListPage: React.FC = () => {
     const saved = localStorage.getItem('viewMode_styleInfoList');
     return saved === 'card' ? 'card' : 'list';
   });
+
+  useEffect(() => {
+    if (viewMode === 'card') {
+      setQueryParams((prev) => (
+        prev.pageSize === cardPageSize ? prev : { ...prev, page: 1, pageSize: cardPageSize }
+      ));
+    }
+  }, [viewMode, cardPageSize, setQueryParams]);
 
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -248,7 +258,14 @@ const StyleInfoListPage: React.FC = () => {
               </Button>
               <Button
                 icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                onClick={() => { const next = viewMode === 'list' ? 'card' : 'list'; setViewMode(next); localStorage.setItem('viewMode_styleInfoList', next); }}
+                onClick={() => {
+                  const next = viewMode === 'list' ? 'card' : 'list';
+                  setViewMode(next);
+                  localStorage.setItem('viewMode_styleInfoList', next);
+                  if (next === 'card') {
+                    setQueryParams((prev) => ({ ...prev, page: 1, pageSize: cardPageSize }));
+                  }
+                }}
               >
                 {viewMode === 'list' ? '卡片视图' : '列表视图'}
               </Button>
