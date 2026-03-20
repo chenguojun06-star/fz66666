@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.fashion.supplychain.common.UserContext;
 
 /**
  * 样衣多码单价配置Controller
@@ -26,8 +27,10 @@ public class StyleSizePriceController {
      */
     @GetMapping("/list")
     public Result<List<StyleSizePrice>> list(@RequestParam Long styleId) {
+        Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
+        if (tid != null) qw.eq("tenant_id", tid);
         qw.orderByAsc("process_code", "size");
         List<StyleSizePrice> list = styleSizePriceService.list(qw);
         return Result.success(list);
@@ -44,8 +47,10 @@ public class StyleSizePriceController {
 
         // 先删除该款号的所有多码单价数据
         Long styleId = list.get(0).getStyleId();
+        Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
+        if (tid != null) qw.eq("tenant_id", tid);
         styleSizePriceService.remove(qw);
 
         // 批量插入新数据

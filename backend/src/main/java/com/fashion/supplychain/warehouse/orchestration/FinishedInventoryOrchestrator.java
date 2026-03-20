@@ -17,6 +17,7 @@ import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
+import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,9 +68,11 @@ public class FinishedInventoryOrchestrator {
         String factoryType = params.get("factoryType") == null ? null : String.valueOf(params.get("factoryType")).trim();
 
         // 查询SKU表（有库存的）
+        Long tid = UserContext.tenantId();
         Page<ProductSku> skuPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
         wrapper.gt(ProductSku::getStockQuantity, 0);
+        if (tid != null) wrapper.eq(ProductSku::getTenantId, tid);
 
         if (StringUtils.hasText(styleNo)) {
             wrapper.like(ProductSku::getStyleNo, styleNo.trim());

@@ -149,7 +149,9 @@ public class TemplateLibraryOrchestrator {
         String keywordText = StringUtils.hasText(keyword) ? keyword.trim() : null;
         Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
 
+        Long tid = UserContext.tenantId();
         List<StyleInfo> styleInfos = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+                .eq(tid != null, StyleInfo::getTenantId, tid)
                 .like(StringUtils.hasText(keywordText), StyleInfo::getStyleNo, keywordText)
                 .orderByDesc(StyleInfo::getUpdateTime)
                 .orderByDesc(StyleInfo::getCreateTime)
@@ -166,14 +168,20 @@ public class TemplateLibraryOrchestrator {
             merged.put(styleNo, item);
         }
 
-        List<TemplateLibrary> templates = templateLibraryService.list(new LambdaQueryWrapper<TemplateLibrary>()
+        LambdaQueryWrapper<TemplateLibrary> tplWrapper = new LambdaQueryWrapper<TemplateLibrary>()
                 .eq(TemplateLibrary::getTemplateType, "process_price")
                 .isNotNull(TemplateLibrary::getSourceStyleNo)
                 .ne(TemplateLibrary::getSourceStyleNo, "")
-                .like(StringUtils.hasText(keywordText), TemplateLibrary::getSourceStyleNo, keywordText)
-                .orderByDesc(TemplateLibrary::getUpdateTime)
+                .like(StringUtils.hasText(keywordText), TemplateLibrary::getSourceStyleNo, keywordText);
+        if (tid != null) {
+            tplWrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
+        } else {
+            tplWrapper.isNull(TemplateLibrary::getTenantId);
+        }
+        tplWrapper.orderByDesc(TemplateLibrary::getUpdateTime)
                 .orderByDesc(TemplateLibrary::getCreateTime)
-                .last("limit 50"));
+                .last("limit 50");
+        List<TemplateLibrary> templates = templateLibraryService.list(tplWrapper);
         for (TemplateLibrary template : templates) {
             String styleNo = template == null ? null : String.valueOf(template.getSourceStyleNo() == null ? "" : template.getSourceStyleNo()).trim();
             if (!StringUtils.hasText(styleNo) || merged.containsKey(styleNo)) {

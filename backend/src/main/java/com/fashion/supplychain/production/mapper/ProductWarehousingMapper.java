@@ -16,23 +16,26 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     /**
      * 统计成品总数
      */
-    @Select("SELECT IFNULL(SUM(qualified_quantity), 0) FROM t_product_warehousing WHERE delete_flag = 0")
-    Integer selectTotalQuantity();
+    @Select("SELECT IFNULL(SUM(qualified_quantity), 0) FROM t_product_warehousing WHERE delete_flag = 0" +
+            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    Integer selectTotalQuantity(@Param("tenantId") Long tenantId);
 
     /**
      * 统计今日入库次数
      */
     @Select("SELECT COUNT(*) FROM t_product_warehousing " +
-            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0")
-    Integer selectTodayInboundCount(@Param("today") LocalDate today);
+            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
+            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    Integer selectTodayInboundCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询今日入库列表
      */
     @Select("SELECT * FROM t_product_warehousing " +
-            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0 " +
-            "ORDER BY warehousing_end_time DESC LIMIT 20")
-    List<ProductWarehousing> selectTodayInbound(@Param("today") LocalDate today);
+            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
+            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})" +
+            " ORDER BY warehousing_end_time DESC LIMIT 20")
+    List<ProductWarehousing> selectTodayInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询今日每小时入库数量

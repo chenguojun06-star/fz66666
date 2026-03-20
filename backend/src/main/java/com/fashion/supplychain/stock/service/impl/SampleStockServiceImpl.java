@@ -35,8 +35,10 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         String styleNo = (String) params.getOrDefault("styleNo", "");
         String sampleType = (String) params.getOrDefault("sampleType", "");
 
+        Long tid = com.fashion.supplychain.common.UserContext.tenantId();
         LambdaQueryWrapper<SampleStock> wrapper = new LambdaQueryWrapper<SampleStock>()
                 .eq(SampleStock::getDeleteFlag, 0)
+                .eq(tid != null, SampleStock::getTenantId, tid)
                 .like(StringUtils.hasText(styleNo), SampleStock::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(sampleType), SampleStock::getSampleType, sampleType)
                 .orderByDesc(SampleStock::getUpdateTime);

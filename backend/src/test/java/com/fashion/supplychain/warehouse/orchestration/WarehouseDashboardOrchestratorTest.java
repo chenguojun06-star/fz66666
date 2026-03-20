@@ -52,8 +52,8 @@ class WarehouseDashboardOrchestratorTest {
     @Test
     void getRecentOperations_returnsNonNull() {
         // Both iteration calls must return non-null to avoid NPE in for-each
-        when(materialPurchaseMapper.selectTodayArrivals(any())).thenReturn(Collections.emptyList());
-        when(productWarehousingMapper.selectTodayInbound(any())).thenReturn(Collections.emptyList());
+        when(materialPurchaseMapper.selectTodayArrivals(any(), any())).thenReturn(Collections.emptyList());
+        when(productWarehousingMapper.selectTodayInbound(any(), any())).thenReturn(Collections.emptyList());
         var result = orchestrator.getRecentOperations();
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();

@@ -87,9 +87,9 @@ class WarehouseOrchestratorTest {
     @Test
     void getWarehouseStats_withZeroData_returnsDefaultStats() {
         when(materialDatabaseMapper.selectCount(any())).thenReturn(0L);
-        when(productWarehousingMapper.selectTotalQuantity()).thenReturn(null);
-        when(materialPurchaseMapper.selectTodayArrivalCount(any())).thenReturn(0);
-        when(productWarehousingMapper.selectTodayInboundCount(any())).thenReturn(0);
+        when(productWarehousingMapper.selectTotalQuantity(any())).thenReturn(null);
+        when(materialPurchaseMapper.selectTodayArrivalCount(any(), any())).thenReturn(0);
+        when(productWarehousingMapper.selectTodayInboundCount(any(), any())).thenReturn(0);
         when(materialStockMapper.selectCount(any())).thenReturn(0L);
         when(materialStockMapper.selectMaps(any())).thenReturn(Collections.emptyList());
         when(productOutstockMapper.selectCount(any())).thenReturn(0L);
@@ -106,9 +106,9 @@ class WarehouseOrchestratorTest {
     @Test
     void getWarehouseStats_withActualCounts_reflectsAllFields() {
         when(materialDatabaseMapper.selectCount(any())).thenReturn(15L);
-        when(productWarehousingMapper.selectTotalQuantity()).thenReturn(300);
-        when(materialPurchaseMapper.selectTodayArrivalCount(any())).thenReturn(3);
-        when(productWarehousingMapper.selectTodayInboundCount(any())).thenReturn(2);
+        when(productWarehousingMapper.selectTotalQuantity(any())).thenReturn(300);
+        when(materialPurchaseMapper.selectTodayArrivalCount(any(), any())).thenReturn(3);
+        when(productWarehousingMapper.selectTodayInboundCount(any(), any())).thenReturn(2);
         when(materialStockMapper.selectCount(any())).thenReturn(4L);
         when(materialStockMapper.selectMaps(any())).thenReturn(Collections.emptyList());
         when(productOutstockMapper.selectCount(any())).thenReturn(1L);
@@ -132,8 +132,8 @@ class WarehouseOrchestratorTest {
 
     @Test
     void getRecentOperations_withNoData_returnsEmptyList() {
-        when(materialPurchaseMapper.selectTodayArrivals(any())).thenReturn(Collections.emptyList());
-        when(productWarehousingMapper.selectTodayInbound(any())).thenReturn(Collections.emptyList());
+        when(materialPurchaseMapper.selectTodayArrivals(any(), any())).thenReturn(Collections.emptyList());
+        when(productWarehousingMapper.selectTodayInbound(any(), any())).thenReturn(Collections.emptyList());
 
         List<RecentOperationDTO> result = warehouseDashboard.getRecentOperations();
 

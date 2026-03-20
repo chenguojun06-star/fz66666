@@ -16,13 +16,15 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
     @Select("SELECT * FROM t_material_outbound_log " +
             "WHERE DATE(COALESCE(outbound_time, create_time)) = #{today} " +
             "AND (delete_flag IS NULL OR delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
             "ORDER BY COALESCE(outbound_time, create_time) DESC LIMIT 20")
-    List<MaterialOutboundLog> selectTodayOutbounds(@Param("today") LocalDate today);
+    List<MaterialOutboundLog> selectTodayOutbounds(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     @Select("SELECT COUNT(*) FROM t_material_outbound_log " +
             "WHERE DATE(COALESCE(outbound_time, create_time)) = #{today} " +
-            "AND (delete_flag IS NULL OR delete_flag = 0)")
-    Integer selectTodayOutboundCount(@Param("today") LocalDate today);
+            "AND (delete_flag IS NULL OR delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    Integer selectTodayOutboundCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     @Select("SELECT HOUR(COALESCE(outbound_time, create_time)) AS hour, COUNT(*) AS count " +
             "FROM t_material_outbound_log " +

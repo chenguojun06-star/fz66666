@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.MaterialDatabaseMapper;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
@@ -16,6 +17,7 @@ import com.fashion.supplychain.warehouse.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.fashion.supplychain.common.UserContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -53,14 +55,16 @@ public class WarehouseDashboardOrchestrator {
      * 获取仓库统计数据
      */
     public WarehouseStatsDTO getWarehouseStats() {
+        Long tid = UserContext.tenantId();
         WarehouseStatsDTO stats = new WarehouseStatsDTO();
 
         // 1. 物料种类数（从物料数据库统计）
-        Long materialCount = materialDatabaseMapper.selectCount(new QueryWrapper<>());
+        Long materialCount = materialDatabaseMapper.selectCount(
+            new QueryWrapper<MaterialDatabase>().eq(tid != null, "tenant_id", tid));
         stats.setMaterialCount(materialCount.intValue());
 
         // 2. 成品总数（从质检入库统计）
-        Integer finishedCount = productWarehousingMapper.selectTotalQuantity();
+        Integer finishedCount = productWarehousingMapper.selectTotalQuantity(tid);
         stats.setFinishedCount(finishedCount != null ? finishedCount : 0);
 
         // 3. 低库存预警数（从面辅料库存表查询：库存量 < 安全库存）
@@ -69,6 +73,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .apply("quantity < COALESCE(safety_stock, 100)")
+                    .eq(tid != null, "tenant_id", tid)
             );
             stats.setLowStockCount(lowStockCount != null ? lowStockCount.intValue() : 0);
         } catch (Exception e) {
@@ -82,6 +87,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .select("COALESCE(SUM(total_value), 0) as sumValue")
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .eq(tid != null, "tenant_id", tid)
             );
             if (totalValueRows != null && !totalValueRows.isEmpty()) {
                 Object sv = totalValueRows.get(0).get("sumValue");
@@ -96,8 +102,8 @@ public class WarehouseDashboardOrchestrator {
 
         // 5. 今日入库次数（物料采购到货 + 质检入库）
         LocalDate today = LocalDate.now();
-        Integer materialInbound = materialPurchaseMapper.selectTodayArrivalCount(today);
-        Integer productInbound = productWarehousingMapper.selectTodayInboundCount(today);
+        Integer materialInbound = materialPurchaseMapper.selectTodayArrivalCount(today, tid);
+        Integer productInbound = productWarehousingMapper.selectTodayInboundCount(today, tid);
         stats.setTodayInbound((materialInbound != null ? materialInbound : 0) +
                              (productInbound != null ? productInbound : 0));
 
@@ -108,13 +114,14 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<ProductOutstock>()
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .eq(tid != null, "tenant_id", tid)
             );
             todayOutboundTotal += (outstockCount != null ? outstockCount.intValue() : 0);
         } catch (Exception e) {
             log.warn("查询今日成品出库次数失败: {}", e.getMessage());
         }
         try {
-            Integer materialOutboundCount = materialOutboundLogMapper.selectTodayOutboundCount(today);
+            Integer materialOutboundCount = materialOutboundLogMapper.selectTodayOutboundCount(today, tid);
             todayOutboundTotal += (materialOutboundCount != null ? materialOutboundCount : 0);
         } catch (Exception e) {
             log.warn("查询今日面辅料出库次数失败: {}", e.getMessage());
@@ -128,6 +135,7 @@ public class WarehouseDashboardOrchestrator {
      * 获取低库存预警列表（从面辅料库存表查询真实数据）
      */
     public List<LowStockItemDTO> getLowStockItems() {
+        Long tid = UserContext.tenantId();
         List<LowStockItemDTO> result = new ArrayList<>();
 
         try {
@@ -135,6 +143,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .apply("quantity < COALESCE(safety_stock, 100)")
+                    .eq(tid != null, "tenant_id", tid)
                     .orderByAsc("quantity")
                     .last("LIMIT 20")
             );
@@ -162,11 +171,12 @@ public class WarehouseDashboardOrchestrator {
      * 获取今日出入库操作记录
      */
     public List<RecentOperationDTO> getRecentOperations() {
+        Long tid = UserContext.tenantId();
         List<RecentOperationDTO> operations = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
         // 1. 获取今日物料入库记录
-        List<MaterialPurchase> todayArrivals = materialPurchaseMapper.selectTodayArrivals(today);
+        List<MaterialPurchase> todayArrivals = materialPurchaseMapper.selectTodayArrivals(today, tid);
         for (MaterialPurchase purchase : todayArrivals) {
             RecentOperationDTO dto = new RecentOperationDTO();
             dto.setId(purchase.getId().toString());
@@ -179,7 +189,7 @@ public class WarehouseDashboardOrchestrator {
         }
 
         // 2. 获取今日成品入库记录
-        List<ProductWarehousing> todayProducts = productWarehousingMapper.selectTodayInbound(today);
+        List<ProductWarehousing> todayProducts = productWarehousingMapper.selectTodayInbound(today, tid);
         for (ProductWarehousing warehousing : todayProducts) {
             RecentOperationDTO dto = new RecentOperationDTO();
             dto.setId(warehousing.getId().toString());
@@ -193,7 +203,7 @@ public class WarehouseDashboardOrchestrator {
 
         // 3. 获取今日面辅料出库记录
         try {
-            List<MaterialOutboundLog> todayOutbounds = materialOutboundLogMapper.selectTodayOutbounds(today);
+            List<MaterialOutboundLog> todayOutbounds = materialOutboundLogMapper.selectTodayOutbounds(today, tid);
             for (MaterialOutboundLog outboundRecord : todayOutbounds) {
                 RecentOperationDTO dto = new RecentOperationDTO();
                 dto.setId(outboundRecord.getId());
@@ -215,6 +225,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<ProductOutstock>()
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .eq(tid != null, "tenant_id", tid)
                     .orderByDesc("create_time")
                     .last("LIMIT 20")
             );
@@ -267,6 +278,7 @@ public class WarehouseDashboardOrchestrator {
      * 生成日趋势（24小时）
      */
     private List<TrendDataPointDTO> generateDayTrend(String type) {
+        Long tid = UserContext.tenantId();
         List<TrendDataPointDTO> data = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
@@ -300,6 +312,7 @@ public class WarehouseDashboardOrchestrator {
                     .select("HOUR(create_time) as hour, COUNT(*) as count")
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .eq(tid != null, "tenant_id", tid)
                     .groupBy("HOUR(create_time)")
             );
             for (Map<String, Object> row : outboundList) {
