@@ -921,23 +921,25 @@ const StyleBomTab: React.FC<Props> = ({
       cancelText: '取消',
       onOk: async () => {
         try {
-          await api.post('/warehouse/material-pickup', {
-            pickupType: 'INTERNAL',
-            styleNo: currentStyleNo,
-            materialId: record.materialId,
-            materialCode: record.materialCode,
-            materialName: record.materialName,
-            materialType: record.materialType,
-            color: record.color,
-            specification: record.specification,
-            fabricComposition: record.fabricComposition,
-            fabricWidth: record.fabricWidth,
-            fabricWeight: record.fabricWeight,
-            quantity: record.usageAmount,
-            unit: record.unit,
-            unitPrice: record.unitPrice,
+          await api.post('/production/picking/pending', {
+            picking: {
+              styleId: String(styleId || ''),
+              styleNo: currentStyleNo,
+              pickerId: String(user?.id || ''),
+              pickerName: String((user as any)?.name || user?.username || ''),
+              remark: 'BOM_PICK',
+            },
+            items: [{
+              materialId: record.materialId,
+              materialCode: record.materialCode,
+              materialName: record.materialName,
+              color: record.color ?? '',
+              size: '',
+              quantity: record.usageAmount != null ? Number(record.usageAmount) : 1,
+              unit: record.unit ?? '',
+            }],
           });
-          message.success('申请领取成功，等待仓库审核');
+          message.success('申请领取成功，将在「面辅料进销存 → 待出库领料」中显示');
         } catch (error: any) {
           message.error(`申请失败：${error?.message || '请求错误'}`);
         }

@@ -1518,11 +1518,19 @@ public class MaterialPurchaseOrchestrator {
         LocalDateTime outboundTime = LocalDateTime.now();
         int pickedTotalQty = 0;
         for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
-            if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
-            pickedTotalQty += item.getQuantity();
-            MaterialStock stock = materialStockService.getById(item.getMaterialStockId());
-                materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
-            recordOutboundLog(picking, item, stock, outboundTime);
+            if (item.getQuantity() != null && item.getQuantity() > 0) {
+                pickedTotalQty += item.getQuantity();
+                MaterialStock stock = null;
+                if (item.getMaterialStockId() != null) {
+                    // 两步流（采购入库场景）：直接按 stockId 精确扣减
+                    stock = materialStockService.getById(item.getMaterialStockId());
+                    materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
+                } else {
+                    // BOM 申请领取场景：按 materialId/color/size 匹配库存扣减
+                    materialStockService.decreaseStock(
+                            item.getMaterialId(), item.getColor(), item.getSize(), item.getQuantity());
+                }
+                recordOutboundLog(picking, item, stock, outboundTime);
             }
         }
 
