@@ -94,7 +94,7 @@ public class SystemIssueCollectorOrchestrator {
                      "  COUNT(*) as total, " +
                      "  SUM(CASE WHEN status IN ('IN_PROGRESS','in_progress') THEN 1 ELSE 0 END) as in_progress, " +
                      "  SUM(CASE WHEN status IN ('PENDING','pending','CREATED','created') THEN 1 ELSE 0 END) as pending, " +
-                     "  SUM(CASE WHEN DATEDIFF(delivery_date, CURDATE()) BETWEEN 0 AND 7 " +
+                     "  SUM(CASE WHEN DATEDIFF(expected_ship_date, CURDATE()) BETWEEN 0 AND 7 " +
                      "           AND status NOT IN ('completed','cancelled','COMPLETED','CANCELLED') THEN 1 ELSE 0 END) as soon_due " +
                      "FROM t_production_order " +
                      "WHERE delete_flag = 0 " +

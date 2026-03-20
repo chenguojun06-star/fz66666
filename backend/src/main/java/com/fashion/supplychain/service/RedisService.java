@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -86,37 +87,44 @@ public class RedisService {
     }
 
     /**
-     * 按 pattern 批量删除缓存（SCAN游标实现，兼容云端 managed Redis）
+     * 按 pattern 批量删除缓存（SCAN游标实现，兼容云端 managed Redis 及 Redis Cluster）
      * 示例: deleteByPattern("role:perms:*")
-     * 使用 SCAN 而非 KEYS，避免云端 managed Redis 禁用 KEYS 命令导致静默失败
+     * 使用 SCAN 而非 KEYS，避免云端 managed Redis 禁用 KEYS 命令导致静默失败。
+     * 每个 key 单独调用高层 delete() 而非 connection.del(多key)，
+     * 防止 Redis Cluster 下多 key 落在不同 slot 触发 CROSSSLOT 错误而静默失败。
      */
     public long deleteByPattern(String pattern) {
         try {
-            Long deleted = redisTemplate.execute((RedisCallback<Long>) connection -> {
-                long count = 0;
+            // SCAN 阶段：通过底层 connection 获取所有匹配 key 的原始字节
+            List<byte[]> rawKeys = redisTemplate.execute((RedisCallback<List<byte[]>>) connection -> {
+                List<byte[]> found = new ArrayList<>();
                 ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
-                List<byte[]> toDelete = new ArrayList<>();
                 try (Cursor<byte[]> cursor = connection.scan(options)) {
                     while (cursor.hasNext()) {
-                        toDelete.add(cursor.next());
-                        if (toDelete.size() >= 500) {
-                            connection.del(toDelete.toArray(new byte[0][]));
-                            count += toDelete.size();
-                            toDelete.clear();
-                        }
-                    }
-                    if (!toDelete.isEmpty()) {
-                        connection.del(toDelete.toArray(new byte[0][]));
-                        count += toDelete.size();
+                        found.add(cursor.next());
                     }
                 }
-                return count;
+                return found;
             });
-            long result = deleted != null ? deleted : 0;
-            if (result > 0) {
-                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, result);
+
+            if (rawKeys == null || rawKeys.isEmpty()) return 0;
+
+            // DELETE 阶段：逐个调用高层 API（cluster-aware，自动路由到正确 slot）
+            long count = 0;
+            StringRedisSerializer keySerializer = new StringRedisSerializer();
+            for (byte[] rawKey : rawKeys) {
+                try {
+                    String keyStr = keySerializer.deserialize(rawKey);
+                    if (keyStr != null) {
+                        Boolean existed = redisTemplate.delete(keyStr);
+                        if (Boolean.TRUE.equals(existed)) count++;
+                    }
+                } catch (Exception ignored) {}
             }
-            return result;
+            if (count > 0) {
+                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, count);
+            }
+            return count;
         } catch (Exception e) {
             log.warn("Redis deleteByPattern failed, pattern={}, err={}", pattern, e.getMessage());
             return 0;
