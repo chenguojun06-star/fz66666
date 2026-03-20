@@ -88,6 +88,9 @@ public class PayrollAggregationOrchestrator {
                 .or().eq("delegate_target_type", "none")
                 .or().eq("delegate_target_type", "internal"));
 
+        // 工厂账户只能查看分配到本工厂的扫码记录
+        DataPermissionHelper.applyFactoryFilter(qw, "factory_id");
+
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 

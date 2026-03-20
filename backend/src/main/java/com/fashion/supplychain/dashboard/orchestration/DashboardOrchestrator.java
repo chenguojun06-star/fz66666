@@ -194,6 +194,52 @@ public class DashboardOrchestrator {
         return data;
     }
 
+    /**
+     * 工厂账号 TopStats：仅统计本工厂生产订单，样衣/裁剪/出入库置零
+     */
+    private TopStatsResponse buildFactoryTopStats(String factoryId) {
+        TopStatsResponse response = new TopStatsResponse();
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
+        LocalDateTime dayStart = LocalDateTime.of(today, LocalTime.MIN);
+        LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+        LocalDateTime weekStart = LocalDateTime.of(monday, LocalTime.MIN);
+        LocalDateTime monthStart = LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
+        LocalDateTime yearStart = LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
+        LocalDateTime totalStart = LocalDateTime.of(2000, 1, 1, 0, 0, 0);
+
+        // 工厂不可见样衣开发统计
+        response.setSampleDevelopment(new TopStatsResponse.TimeRangeStats());
+
+        // 大货下单：仅统计本工厂订单
+        List<ProductionOrder> factoryOrders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getFactoryId, factoryId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .select(ProductionOrder::getOrderQuantity, ProductionOrder::getCreateTime)
+                .list();
+        TopStatsResponse.TimeRangeStats bulkStats = new TopStatsResponse.TimeRangeStats();
+        bulkStats.setDay((int) sumFactoryOrderQty(factoryOrders, dayStart, endTime));
+        bulkStats.setWeek((int) sumFactoryOrderQty(factoryOrders, weekStart, endTime));
+        bulkStats.setMonth((int) sumFactoryOrderQty(factoryOrders, monthStart, endTime));
+        bulkStats.setYear((int) sumFactoryOrderQty(factoryOrders, yearStart, endTime));
+        bulkStats.setTotal((int) sumFactoryOrderQty(factoryOrders, totalStart, endTime));
+        response.setBulkOrder(bulkStats);
+
+        // 裁剪/出入库无factory_id字段，不安全过滤，置零
+        response.setCutting(new TopStatsResponse.TimeRangeStats());
+        response.setWarehousing(new TopStatsResponse.TimeRangeStats());
+        return response;
+    }
+
+    private long sumFactoryOrderQty(List<ProductionOrder> orders, LocalDateTime start, LocalDateTime end) {
+        return orders.stream()
+                .filter(o -> o.getCreateTime() != null
+                        && !o.getCreateTime().isBefore(start)
+                        && !o.getCreateTime().isAfter(end))
+                .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0L)
+                .sum();
+    }
+
     private static class Activity {
         private final LocalDateTime sortTime;
         private final String id;
@@ -418,6 +464,12 @@ public class DashboardOrchestrator {
      * 获取顶部4个核心统计看板数据 - 返回日周月年4个时间维度
      */
     public TopStatsResponse getTopStats(String range) {
+        // 工厂账号隔离：只看本工厂的订单统计
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
+            return buildFactoryTopStats(ctxFactoryId);
+        }
+
         TopStatsResponse response = new TopStatsResponse();
         LocalDateTime endTime = LocalDateTime.now();
 

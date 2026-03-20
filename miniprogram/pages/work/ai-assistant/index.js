@@ -78,7 +78,7 @@ Page({
       let reply;
       if (this.data.isManager) {
         // 管理员走指令执行通道（LLM解析意图 → ExecutionEngine）
-        const res = await api.intelligence.crewNlExecute({
+        const res = await api.intelligence.naturalLanguageExecute({
           naturalLanguageCommand: text,
           conversationId: this.data.conversationId,
         });

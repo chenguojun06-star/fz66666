@@ -253,7 +253,8 @@ public class OrganizationUnitOrchestrator {
             wrapper.eq(User::getTenantId, tenantId);
         }
         List<User> users = userService.list(wrapper);
-        users.forEach(u -> u.setPassword(null));
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        users.forEach(u -> sanitizeUser(u, isAdmin));
         return users;
     }
 
@@ -352,8 +353,9 @@ public class OrganizationUnitOrchestrator {
             wrapper.eq(User::getTenantId, tenantId);
         }
         List<User> users = userService.list(wrapper);
-        // 清除敏感字段
-        users.forEach(u -> u.setPassword(null));
+        // 清除敏感字段（非管理员额外脱敏手机号、邮箱等 PII）
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        users.forEach(u -> sanitizeUser(u, isAdmin));
         return users.stream().collect(Collectors.groupingBy(User::getOrgUnitId));
     }
 
@@ -458,6 +460,19 @@ public class OrganizationUnitOrchestrator {
     private void assertAdmin() {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
+        }
+    }
+
+    /**
+     * 清除用户敏感字段。管理员仅清除密码；普通员工额外脱敏手机号、邮箱等 PII。
+     */
+    private void sanitizeUser(User u, boolean isAdmin) {
+        u.setPassword(null);
+        if (!isAdmin) {
+            u.setPhone(null);
+            u.setEmail(null);
+            u.setLastLoginIp(null);
+            u.setOpenid(null);
         }
     }
 

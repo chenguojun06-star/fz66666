@@ -105,6 +105,7 @@ public class ExecutionEngineOrchestrator {
                 case "cutting:create"          -> commandExecutor.executeCuttingCreate(command, executorId);
                 case "order:edit"              -> commandExecutor.executeOrderEdit(command, executorId);
                 case "payroll:approve"         -> commandExecutor.executePayrollApprove(command, executorId);
+                case "defective:handle"        -> commandExecutor.executeDefectiveHandle(command, executorId);
                 default -> throw new IllegalArgumentException("未知的命令类型: " + command.getAction());
                 };
             } // end if (not undo)

@@ -13,6 +13,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import SmartAlertBell from './SmartAlertBell';
 import DailyTodoModal from './DailyTodoModal';
+import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import './styles.css';
 
@@ -145,6 +146,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const collapsed = sidebarCollapsed;
   const sidebarIsCollapsed = isMobile ? true : collapsed;
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
+  const [factoryModalOpen, setFactoryModalOpen] = useState(false);
 
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
   const isSuperAdmin = user?.isSuperAdmin === true;
@@ -225,6 +227,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
   const isFactoryAccount = !!(user as any)?.factoryId;
+  const factoryName = (user as any)?.factoryName as string | undefined;
 
   // 租户模块白名单（undefined/空数组=全部开放，有值则按路径白名单过滤侧边栏）
   const tenantModules = (user as any)?.tenantModules as string[] | undefined;
@@ -235,18 +238,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
 
   // 工厂账号可见的菜单分组键（其余整组隐藏）
-  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['production', 'finance', 'system', 'basic']);
+  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['basic', 'production', 'finance', 'system']);
   // 工厂账号可见的具体路径白名单
   const FACTORY_VISIBLE_PATHS = new Set<string>([
-    paths.productionList,   // /production（我的订单）
-    paths.progressDetail,   // /production/progress-detail（生产进度）
-    paths.cutting,          // /production/cutting（裁剪管理）
-    paths.warehousing,      // /production/warehousing（成品入库）
-    paths.materialPurchase, // /production/material（面辅料采购）
-    paths.financeCenter,    // /finance/center（订单结算(外)）
-    paths.profile,          // /system/profile（个人中心）
-    paths.factoryWorkers,   // /system/factory-workers（工人名册）
-    paths.templateCenter,   // /basic/template-center（单价维护）
+    paths.productionList,          // /production（我的订单）
+    paths.progressDetail,          // /production/progress-detail（生产进度）
+    paths.cutting,                 // /production/cutting（裁剪管理）
+    paths.materialPurchase,        // /production/material（面辅料采购）
+    paths.financeCenter,           // /finance/center（订单结算(外)）
+    paths.factoryWorkers,          // /system/factory-workers（工人名册）
+    paths.processPriceMaintenance, // /basic/process-price（单价维护）
+    paths.organization,            // /system/organization（组织架构）
+    paths.tutorial,                // /system/tutorial（系统教学）
   ]);
 
   // 构建 Menu items
@@ -264,9 +267,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         // 超管专属菜单：非超管不可见
         if (section.superAdminOnly && !isSuperAdmin) return false;
         if (section.items) {
-          // 外发工厂账号：白名单路径即权限，无需额外 permission code 检查
-          if (isFactoryAccount) return section.items.some((item) => FACTORY_VISIBLE_PATHS.has(item.path));
-          return section.items.some((item) => hasPermissionForPath(item.path));
+          // 工厂账号：只要白名单内有一项在该分组，整个分组可见
+          return section.items.some((item) =>
+            (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(item.path)) || hasPermissionForPath(item.path)
+          );
         }
         return hasPermissionForPath(section.path!);
       })
@@ -275,10 +279,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const children = section.items
             .filter((item) => {
               if ((item as any).superAdminOnly && !isSuperAdmin) return false;
-              // 外发工厂账号：只显示白名单路径，白名单即权限，不再二次 permission code 检查
-              if (isFactoryAccount) return FACTORY_VISIBLE_PATHS.has(item.path);
+              // 外发工厂账号：只显示白名单内的页面
+              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(item.path)) return false;
               // 租户模块白名单：路径不在白名单内则隐藏
               if (!isTenantModuleEnabled(item.path)) return false;
+              // 工厂账号白名单内的路径直接放行，不受权限码约束
+              if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(item.path)) return true;
               return hasPermissionForPath(item.path);
             })
             .map((item) => ({
@@ -458,10 +464,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
   const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
 
-  // 工厂账号登录后跳转到生产列表（避免停留在仔表盘）
+  // 工厂账号登录后跳转到生产列表（避免停留在仪表盘）
   useEffect(() => {
     if (isFactoryAccount && effectivePathname === '/dashboard') {
-      navigate('/production/list');
+      navigate(paths.productionList);
     }
   }, [isFactoryAccount, effectivePathname, navigate]);
 
@@ -473,6 +479,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className={`layout${collapsed ? ' layout-collapsed' : ''}`}>
       <DailyTodoModal />
+      {isFactoryAccount && (
+        <FactoryPersonalCenterModal open={factoryModalOpen} onClose={() => setFactoryModalOpen(false)} />
+      )}
       <header className="layout-header">
         <div className="header-content">
           <div className="header-left">
@@ -518,7 +527,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {isFactoryAccount && (
               <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 12 }}>
-                🏭 外发工厂端
+                🏭 {factoryName || '外发工厂'}
               </Tag>
             )}
 
@@ -533,7 +542,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 ] as any,
                 onClick: ({ key }) => {
                   if (key === 'logout') handleLogout();
-                  if (key === 'profile') navigate('/system/profile');
+                  if (key === 'profile') {
+                    if (isFactoryAccount) setFactoryModalOpen(true);
+                    else navigate('/system/profile');
+                  }
                 },
               }}
             >

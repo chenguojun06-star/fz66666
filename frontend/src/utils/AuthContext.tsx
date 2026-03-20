@@ -29,8 +29,6 @@ export interface UserInfo extends Record<string, unknown> {
    * 不为空时表示该用户是某外发工厂的联系人，应显示工厂端视图。
    */
   factoryId?: string;
-  /** 是否为外发工厂管理员（可登录 PC 端，管理本厂进度与单价） */
-  isFactoryOwner?: boolean;
   /**
    * 所属租户类型：SELF_FACTORY | HYBRID | BRAND
    * 用于前端菜单裁剪提示（已由后端权限控制实际访问）
@@ -143,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const boot = async () => {
       try {
-        const token = String(sessionStorage.getItem(tokenStorageKey) || '').trim();
+        const token = String(localStorage.getItem(tokenStorageKey) || '').trim();
         if (!token) {
           resetSmartFeatureFlags();
           setUser(null);
@@ -176,7 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setIsAuthenticated(true);
 
-        const storedUser = sessionStorage.getItem(userStorageKey);
+        const storedUser = localStorage.getItem(userStorageKey);
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
@@ -207,7 +205,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isTenantOwner: u.isTenantOwner === true,
               isSuperAdmin: u.isSuperAdmin === true,
               factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
-              isFactoryOwner: u.isFactoryOwner === true,
               tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
               tenantModules: (() => {
                 try {
@@ -218,7 +215,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } catch { return undefined; }
               })(),
             };
-            sessionStorage.setItem(userStorageKey, JSON.stringify(next));
+            localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
 
             await loadTenantSmartFlags();
@@ -228,8 +225,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // 触发用户登录事件
             window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: next.id } }));
           } else {
-            sessionStorage.removeItem(tokenStorageKey);
-            sessionStorage.removeItem(userStorageKey);
+            localStorage.removeItem(tokenStorageKey);
+            localStorage.removeItem(userStorageKey);
             resetSmartFeatureFlags();
             setUser(null);
             setIsAuthenticated(false);
@@ -237,8 +234,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch {
           // Intentionally empty
           // 忽略错误
-          sessionStorage.removeItem(tokenStorageKey);
-          sessionStorage.removeItem(userStorageKey);
+          localStorage.removeItem(tokenStorageKey);
+          localStorage.removeItem(userStorageKey);
           resetSmartFeatureFlags();
           setUser(null);
           setIsAuthenticated(false);
@@ -256,6 +253,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     boot();
   }, []);
 
+  // 🔐 跨标签页 token 变更检测：当其他标签页登录/登出时，自动同步状态
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === tokenStorageKey) {
+        if (!e.newValue) {
+          // 其他标签页登出了 → 本标签页也登出
+          setUser(null);
+          setIsAuthenticated(false);
+        } else if (e.newValue !== e.oldValue) {
+          // 其他标签页切换了用户 → 刷新页面以加载新用户数据
+          window.location.reload();
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // 登录函数
   const login = async (username: string, password: string, tenantId?: number): Promise<boolean> => {
     try {
@@ -267,10 +282,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const u = response?.data?.user || response?.data || null;
       if (response?.code === 200 && token && u) {
         // 🔐 登录成功：先清除所有旧账号数据，防止跨账号数据残留
-        try { sessionStorage.removeItem(tokenStorageKey); } catch { /* ignore */ }
-        try { sessionStorage.removeItem(userStorageKey); } catch { /* ignore */ }
-        try { localStorage.removeItem('user-storage'); } catch { /* ignore */ }
-        try { localStorage.removeItem('userId'); } catch { /* ignore */ }
+        const keysToRemove = [tokenStorageKey, userStorageKey, 'user-storage', 'userId'];
+        keysToRemove.forEach(k => {
+          try { localStorage.removeItem(k); } catch { /* ignore */ }
+        });
         // 通知业务组件清理旧数据
         window.dispatchEvent(new Event('user-logout'));
 
@@ -290,7 +305,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isTenantOwner: u.isTenantOwner === true,
           isSuperAdmin: u.isSuperAdmin === true,
           factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
-          isFactoryOwner: u.isFactoryOwner === true,
           tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
           tenantModules: (() => {
             try {
@@ -302,8 +316,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           })(),
         };
 
-        sessionStorage.setItem(tokenStorageKey, token);
-        sessionStorage.setItem(userStorageKey, JSON.stringify(baseUser));
+        localStorage.setItem(tokenStorageKey, token);
+        localStorage.setItem(userStorageKey, JSON.stringify(baseUser));
         setUser(baseUser);
         setIsAuthenticated(true);
 
@@ -363,7 +377,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!prev) return prev;
       const next: UserInfo = { ...prev, ...patch };
       try {
-        sessionStorage.setItem(userStorageKey, JSON.stringify(next));
+        localStorage.setItem(userStorageKey, JSON.stringify(next));
       } catch {
         // Intentionally empty
         // 忽略错误
@@ -375,10 +389,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 登出函数
   const logout = () => {
     // 清除所有与登录态相关的 localStorage key
-    try { sessionStorage.removeItem(tokenStorageKey); } catch { /* ignore */ }
-    try { sessionStorage.removeItem(userStorageKey); } catch { /* ignore */ }
-    try { localStorage.removeItem('user-storage'); } catch { /* ignore */ }
-    try { localStorage.removeItem('userId'); } catch { /* ignore */ }
+    const keysToRemove = [
+      tokenStorageKey,   // 'authToken'
+      userStorageKey,    // 'userInfo'
+      'user-storage',    // Zustand persist (userStore)
+      'userId',          // api core.ts 用于 X-User-Id header
+    ];
+    keysToRemove.forEach(k => {
+      try { localStorage.removeItem(k); } catch { /* ignore */ }
+    });
     resetSmartFeatureFlags();
 
     // 更新状态

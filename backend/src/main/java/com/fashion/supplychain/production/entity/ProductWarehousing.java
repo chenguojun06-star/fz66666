@@ -78,6 +78,21 @@ public class ProductWarehousing {
 
     private String repairRemark;
 
+    /**
+     * 返修状态: pending_repair(待返修) / repairing(返修中) / repair_done(返修完成) / scrapped(报废)
+     */
+    private String repairStatus;
+
+    /**
+     * 返修操作人姓名
+     */
+    private String repairOperatorName;
+
+    /**
+     * 返修完成时间
+     */
+    private LocalDateTime repairCompletedTime;
+
     private String receiverId;
 
     private String receiverName;

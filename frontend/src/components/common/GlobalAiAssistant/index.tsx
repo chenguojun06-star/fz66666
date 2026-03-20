@@ -16,6 +16,7 @@ import {
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
+import { useAuth } from '@/utils/AuthContext';
 import styles from './index.module.css';
 import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
 
@@ -523,6 +524,7 @@ const saveDismissedPending = (set: Set<string>) => {
 };
 
 const GlobalAiAssistant: React.FC = () => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [_mood, setMood] = useState<CloudMood>('normal');
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
@@ -555,7 +557,8 @@ const GlobalAiAssistant: React.FC = () => {
     const fetchStatus = async () => {
       try {
         setHasFetchedMood(true);
-        const res = await api.get('/dashboard/daily-brief');
+        const factoryId = (user as any)?.factoryId;
+        const res = await api.get('/dashboard/daily-brief', factoryId ? { params: { factoryId } } : undefined);
         // @ts-ignore
         const actualData = res?.code === 200 ? res.data : (res?.data || res);
         if (actualData) {
@@ -704,6 +707,13 @@ const GlobalAiAssistant: React.FC = () => {
     const text = (manualText || inputValue).trim();
     if (!text || isTyping) return;
 
+    // 工厂账号：注入工厂上下文，让 AI 只返回本工厂数据
+    const factoryId = (user as any)?.factoryId;
+    const factoryName = (user as any)?.factoryName;
+    const contextualText = factoryId
+      ? `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}`
+      : text;
+
     // 1. 添加用户消息
     const userMsg: Message = {
       id: `u-${Date.now()}`,
@@ -729,7 +739,7 @@ const GlobalAiAssistant: React.FC = () => {
       let toolStatus = '';
 
       const ctrl = intelligenceApi.aiAdvisorChatStream(
-        text,
+        contextualText,
         (event) => {
           streamStarted = true;
           if (event.type === 'thinking') {
@@ -765,7 +775,7 @@ const GlobalAiAssistant: React.FC = () => {
           setIsTyping(false);
           if (accumulatedText) speak(accumulatedText);
           // 异步增强：不阻塞主答复显示
-          intelligenceApi.hyperAdvisorAsk(advisorSessionId, text).then(resp => {
+          intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
             const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
               ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
             if (!ha) return;
@@ -793,7 +803,7 @@ const GlobalAiAssistant: React.FC = () => {
           }
           try {
             // @ts-ignore
-            const res = await intelligenceApi.aiAdvisorChat(text);
+            const res = await intelligenceApi.aiAdvisorChat(contextualText);
             // @ts-ignore
             const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
             const answer = resultData?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';

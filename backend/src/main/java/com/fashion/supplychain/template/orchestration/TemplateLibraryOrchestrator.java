@@ -147,6 +147,11 @@ public class TemplateLibraryOrchestrator {
 
     public List<Map<String, Object>> listProcessPriceStyleOptions(String keyword) {
         String keywordText = StringUtils.hasText(keyword) ? keyword.trim() : null;
+        // 外发工厂账号：只允许看本工厂有生产订单的款号
+        String currentFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(currentFactoryId)) {
+            return listProcessPriceStyleOptionsForFactory(currentFactoryId, keywordText);
+        }
         Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
 
         Long tid = UserContext.tenantId();
@@ -195,6 +200,56 @@ public class TemplateLibraryOrchestrator {
         }
 
         return new ArrayList<>(merged.values());
+    }
+
+    private List<Map<String, Object>> listProcessPriceStyleOptionsForFactory(String factoryId, String keywordText) {
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getFactoryId, factoryId)
+                .isNotNull(ProductionOrder::getStyleNo)
+                .ne(ProductionOrder::getStyleNo, "")
+                .like(StringUtils.hasText(keywordText), ProductionOrder::getStyleNo, keywordText)
+                .last("limit 100")
+                .list();
+        Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
+        for (ProductionOrder order : orders) {
+            String sn = order.getStyleNo() == null ? "" : order.getStyleNo().trim();
+            if (!StringUtils.hasText(sn) || merged.containsKey(sn)) continue;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("styleNo", sn);
+            item.put("styleName", null);
+            item.put("source", "production_order");
+            merged.put(sn, item);
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    /**
+     * 查询款号下当前工厂可选同步的订单列表（推送前订单选择弹窗用）
+     */
+    public List<Map<String, Object>> listSyncCandidateOrders(String styleNo) {
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
+        if (!StringUtils.hasText(sn)) return new ArrayList<>();
+        String currentFactoryId = UserContext.factoryId();
+        LambdaQueryWrapper<ProductionOrder> q = new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getStyleNo, sn)
+                .isNotNull(ProductionOrder::getStyleNo);
+        if (StringUtils.hasText(currentFactoryId)) {
+            q.eq(ProductionOrder::getFactoryId, currentFactoryId);
+        }
+        List<ProductionOrder> orders = productionOrderService.list(q);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ProductionOrder o : orders) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", o.getId());
+            m.put("orderNo", o.getOrderNo());
+            m.put("styleNo", o.getStyleNo());
+            m.put("status", o.getStatus());
+            m.put("orderQuantity", o.getOrderQuantity());
+            result.add(m);
+        }
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -734,15 +789,28 @@ public class TemplateLibraryOrchestrator {
      * @return 同步结果摘要
      */
     public Map<String, Object> syncProcessUnitPricesByStyleNo(String styleNo) {
+        return syncProcessUnitPricesByStyleNo(styleNo, null);
+    }
+
+    public Map<String, Object> syncProcessUnitPricesByStyleNo(String styleNo, List<String> orderIds) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
         if (!StringUtils.hasText(sn)) {
             throw new IllegalArgumentException("款号不能为空");
         }
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+        String currentFactoryId = UserContext.factoryId();
+        LambdaQueryWrapper<ProductionOrder> orderQuery = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getStyleNo, sn)
-                .isNotNull(ProductionOrder::getStyleNo)
-                .list();
+                .isNotNull(ProductionOrder::getStyleNo);
+        // 外发工厂账号：只同步本工厂的订单，防止跨厂污染
+        if (StringUtils.hasText(currentFactoryId)) {
+            orderQuery.eq(ProductionOrder::getFactoryId, currentFactoryId);
+        }
+        // 用户选定的订单 ID 列表：只同步选中的部分
+        if (orderIds != null && !orderIds.isEmpty()) {
+            orderQuery.in(ProductionOrder::getId, orderIds);
+        }
+        List<ProductionOrder> orders = productionOrderService.list(orderQuery);
         int totalOrders = orders.size();
         int successCount = 0;
         int totalSynced = 0;

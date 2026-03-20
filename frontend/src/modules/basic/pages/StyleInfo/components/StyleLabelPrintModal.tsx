@@ -91,6 +91,8 @@ const PAPER_SIZES: Record<PaperSize, { w: number; h: number; label: string }> = 
  */
 function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize, suitPart = 'all'): string {
   const { w, h } = PAPER_SIZES[size];
+  const _now = new Date();
+  const dateStr = `${_now.getFullYear()}${String(_now.getMonth() + 1).padStart(2, '0')}${String(_now.getDate()).padStart(2, '0')}`;
   const allSections = buildWashLabelSections(info.fabricCompositionParts, info.fabricComposition);
   const sections = suitPart !== 'all' ? allSections.filter(s => s.key === suitPart) : allSections;
   const partTitle = suitPart !== 'all' ? allSections.find(s => s.key === suitPart)?.label : undefined;
@@ -131,7 +133,7 @@ function buildWashLabelHtml(info: StyleLabelInfo, size: PaperSize, suitPart = 'a
   <div class="bottom-block">
     ${careIconRow || ''}
     <div class="country">MADE IN CHINA</div>
-    <div class="date-box">202603</div>
+    <div class="date-box">${dateStr}</div>
   </div>
 </div>`;
   };

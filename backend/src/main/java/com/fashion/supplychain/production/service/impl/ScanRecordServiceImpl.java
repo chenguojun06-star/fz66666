@@ -199,19 +199,30 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         @Override
         public IPage<ScanRecord> queryByOrderId(String orderId, int page, int pageSize) {
                 Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
-                return baseMapper.selectPage(pageInfo,
-                                new LambdaQueryWrapper<ScanRecord>()
-                                                .eq(ScanRecord::getOrderId, orderId)
-                                                .orderByDesc(ScanRecord::getScanTime));
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderId, orderId)
+                                .orderByDesc(ScanRecord::getScanTime);
+                // 工厂账户只能查看本工厂的扫码记录
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                }
+                applyDataPermissionFilter(wrapper);
+                return baseMapper.selectPage(pageInfo, wrapper);
         }
 
         @Override
         public IPage<ScanRecord> queryByStyleNo(String styleNo, int page, int pageSize) {
                 Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
-                return baseMapper.selectPage(pageInfo,
-                                new LambdaQueryWrapper<ScanRecord>()
-                                                .eq(ScanRecord::getStyleNo, styleNo)
-                                                .orderByDesc(ScanRecord::getScanTime));
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getStyleNo, styleNo)
+                                .orderByDesc(ScanRecord::getScanTime);
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                }
+                applyDataPermissionFilter(wrapper);
+                return baseMapper.selectPage(pageInfo, wrapper);
         }
 
         @Override
@@ -242,12 +253,17 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 if (!StringUtils.hasText(orderNo)) {
                         return java.util.Collections.emptyList();
                 }
-                return baseMapper.selectMaps(
-                                new QueryWrapper<ScanRecord>()
-                                                .select("color", "size", "count(*) as count")
-                                                .eq("order_no", orderNo.trim())
-                                                .eq("scan_result", "success")
-                                                .groupBy("color", "size"));
+                QueryWrapper<ScanRecord> wrapper = new QueryWrapper<ScanRecord>()
+                                .select("color", "size", "count(*) as count")
+                                .eq("order_no", orderNo.trim())
+                                .eq("scan_result", "success")
+                                .groupBy("color", "size");
+                // 工厂隔离
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq("factory_id", ctxFactoryId);
+                }
+                return baseMapper.selectMaps(wrapper);
         }
 
         @Override
@@ -260,6 +276,11 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                         .ne(StringUtils.hasText(excludeProcessCode), ScanRecord::getProcessCode, excludeProcessCode)
                         .orderByDesc(ScanRecord::getScanTime)
                         .orderByDesc(ScanRecord::getCreateTime);
+                // 工厂隔离
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                }
                 return baseMapper.selectList(wrapper);
         }
 
@@ -272,6 +293,11 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                         .eq(ScanRecord::getScanResult, "success")
                         .orderByDesc(ScanRecord::getScanTime)
                         .orderByDesc(ScanRecord::getCreateTime);
+                // 工厂隔离
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
+                }
                 return baseMapper.selectList(wrapper);
         }
 

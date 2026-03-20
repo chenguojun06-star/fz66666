@@ -1759,8 +1759,89 @@ public class ProductWarehousingOrchestrator {
                 "当前状态不是次品待返修，无法操作（当前：" + currentStatus + "）");
         }
         bundle.setStatus("repaired_waiting_qc");
+        // 同步更新 repair_status
+        updateRepairStatus(bundleId, "repair_done", null);
         return cuttingBundleService.updateById(bundle);
     }
 
-    // 使用TextUtils.safeText()和NumberUtils.toInt()替代
+    /**
+     * AI次品处理：标记菲号为「返修中」
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void startBundleRepair(String bundleId, String operatorName) {
+        if (!org.springframework.util.StringUtils.hasText(bundleId)) {
+            throw new IllegalArgumentException("bundleId 不能为空");
+        }
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
+        if (!"unqualified".equals(bundle.getStatus())) {
+            throw new IllegalStateException("当前状态不是次品待返修（当前：" + bundle.getStatus() + "）");
+        }
+        updateRepairStatus(bundleId, "repairing", operatorName);
+    }
+
+    /**
+     * AI次品处理：标记返修完成 → 进入待质检
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void completeBundleRepair(String bundleId) {
+        if (!org.springframework.util.StringUtils.hasText(bundleId)) {
+            throw new IllegalArgumentException("bundleId 不能为空");
+        }
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
+        String st = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
+        if (!"unqualified".equals(st) && !"repairing".equalsIgnoreCase(getRepairStatusByBundle(bundleId))) {
+            throw new IllegalStateException("菲号未处于返修状态，无法完成（当前：" + st + "）");
+        }
+        bundle.setStatus("repaired_waiting_qc");
+        cuttingBundleService.updateById(bundle);
+        updateRepairStatus(bundleId, "repair_done", null);
+    }
+
+    /**
+     * AI次品处理：标记菲号为报废
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void scrapBundle(String bundleId) {
+        if (!org.springframework.util.StringUtils.hasText(bundleId)) {
+            throw new IllegalArgumentException("bundleId 不能为空");
+        }
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
+        if (!"unqualified".equals(bundle.getStatus())) {
+            throw new IllegalStateException("当前状态不是次品待返修，无法报废（当前：" + bundle.getStatus() + "）");
+        }
+        bundle.setStatus("scrapped");
+        cuttingBundleService.updateById(bundle);
+        updateRepairStatus(bundleId, "scrapped", null);
+    }
+
+    /** 更新 t_product_warehousing 的 repair_status / repair_operator_name / repair_completed_time */
+    private void updateRepairStatus(String bundleId, String status, String operatorName) {
+        Long tenantId = UserContext.tenantId();
+        LambdaUpdateWrapper<ProductWarehousing> uw = new LambdaUpdateWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                .set(ProductWarehousing::getRepairStatus, status);
+        if (operatorName != null && !operatorName.isBlank()) {
+            uw.set(ProductWarehousing::getRepairOperatorName, operatorName);
+        }
+        if ("repair_done".equals(status)) {
+            uw.set(ProductWarehousing::getRepairCompletedTime, LocalDateTime.now());
+        }
+        productWarehousingService.update(uw);
+    }
+
+    private String getRepairStatusByBundle(String bundleId) {
+        Long tenantId = UserContext.tenantId();
+        ProductWarehousing pw = productWarehousingService.getOne(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getTenantId, tenantId)
+                        .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                        .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                        .last("LIMIT 1"));
+        return pw != null ? pw.getRepairStatus() : null;
+    }
 }

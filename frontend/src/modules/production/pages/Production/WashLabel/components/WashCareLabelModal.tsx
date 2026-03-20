@@ -129,9 +129,9 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
     // ── 图标行 ─────────────────────────────────────────────────────────────
     const careIconRow = buildCareIconsHtml(styleData);
 
-    // ── 日期（YYYYMM 格式，与 PatPat 一致）──────────────────────────────
+    // ── 日期（YYYYMMDD 格式）──────────────────────────────────────────────
     const now     = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
     const washText = (styleData.washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
     const html = `<!DOCTYPE html>

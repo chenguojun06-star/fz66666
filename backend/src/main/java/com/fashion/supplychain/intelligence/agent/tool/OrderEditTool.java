@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -104,6 +105,12 @@ public class OrderEditTool implements AgentTool {
             return mapper.writeValueAsString(Map.of("error", "订单不存在"));
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+
+        // 工厂账号只能编辑自己工厂的订单
+        String userFactoryId = UserContext.factoryId();
+        if (userFactoryId != null && !userFactoryId.equals(order.getFactoryId())) {
+            return mapper.writeValueAsString(Map.of("error", "该订单不属于您的工厂，无权编辑"));
+        }
 
         List<String> updatedFields = new ArrayList<>();
 

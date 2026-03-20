@@ -8,8 +8,8 @@ import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
-  App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input,
-  InputNumber, QRCode, Row, Select, Space, Tag, Tooltip, Typography,
+  App, Avatar, Button, Card, Checkbox, Col, Descriptions, Empty, Form, Input,
+  InputNumber, Modal, QRCode, Row, Select, Space, Tag, Tooltip, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -46,6 +46,20 @@ function getDescendantIds(node: OrganizationUnit): string[] {
     node.children.forEach(child => ids.push(...getDescendantIds(child)));
   }
   return ids;
+}
+
+/** 递归过滤组织树，只保留属于指定工厂的节点（工厂账号数据隔离） */
+function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): OrganizationUnit[] {
+  return nodes.flatMap(node => {
+    if (node.factoryId && String(node.factoryId) === factoryId) {
+      return [node]; // 完整保留该节点及其所有子节点
+    }
+    const filteredChildren = filterTreeByFactory(node.children ?? [], factoryId);
+    if (filteredChildren.length > 0) {
+      return [{ ...node, children: filteredChildren }];
+    }
+    return [];
+  });
 }
 
 const OrganizationTreePage: React.FC = () => {
@@ -98,7 +112,11 @@ const OrganizationTreePage: React.FC = () => {
   const [batchAssignLoading, setBatchAssignLoading] = useState(false);
   // 设为老板操作 loading（存 userId）
   const [setOwnerLoading, setSetOwnerLoading] = useState<string | null>(null);
+  // 成员资料 mini 弹窗
+  const [profileUser, setProfileUser] = useState<User | null>(null);
   const currentFactoryName = String((user as any)?.tenantName || '').trim();
+  const isFactoryAccount = !!(user as any)?.factoryId;
+  const currentUserFactoryId = isFactoryAccount ? String((user as any).factoryId) : null;
 
   const handleInitTemplate = async () => {
     if (!tplModal.type) { message.warning('请选择一个模板类型'); return; }
@@ -306,6 +324,12 @@ const OrganizationTreePage: React.FC = () => {
     return Object.values(membersMap).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
   }, [membersMap]);
 
+  /** 工厂账号只能看到自己工厂相关的组织节点 */
+  const visibleTreeData = useMemo(() => {
+    if (!isFactoryAccount || !currentUserFactoryId) return treeData;
+    return filterTreeByFactory(treeData, currentUserFactoryId);
+  }, [isFactoryAccount, currentUserFactoryId, treeData]);
+
   // 当前弹窗节点下的成员 id 集合（用于标注已添加状态，不过滤）
   const currentNodeMemberIds = useMemo(() => {
     if (!assignModal.node?.id) return new Set<string>();
@@ -364,7 +388,8 @@ const OrganizationTreePage: React.FC = () => {
           <Avatar
             size={24}
             icon={<UserOutlined />}
-            style={{ backgroundColor: r.isFactoryOwner ? '#faad14' : '#52c41a', flexShrink: 0 }}
+            style={{ backgroundColor: r.isFactoryOwner ? '#faad14' : '#52c41a', flexShrink: 0, cursor: 'pointer' }}
+            onClick={() => setProfileUser(r)}
           />
           {v || r.username}
           {r.isFactoryOwner && (
@@ -400,7 +425,7 @@ const OrganizationTreePage: React.FC = () => {
       dataIndex: 'name',
       render: (v: string, r: User) => (
         <Space size={6}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff', flexShrink: 0 }} />
+          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: '#1677ff', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
         </Space>
       ),
@@ -455,26 +480,28 @@ const OrganizationTreePage: React.FC = () => {
               </span>
             </div>
           </div>
-          <Space>
-            <Button
-              icon={<SnippetsOutlined />}
-              onClick={() => setTplModal({ open: true, type: null, rootName: '' })}
-            >
-              使用模板
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
-              新增部门
-            </Button>
-          </Space>
+          {!isFactoryAccount && (
+            <Space>
+              <Button
+                icon={<SnippetsOutlined />}
+                onClick={() => setTplModal({ open: true, type: null, rootName: '' })}
+              >
+                使用模板
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
+                新增部门
+              </Button>
+            </Space>
+          )}
         </div>
 
-        {treeData.length === 0 && !loading ? (
-          <Empty description="暂无组织架构数据，请先新增部门" style={{ padding: '60px 0' }} />
+        {visibleTreeData.length === 0 && !loading ? (
+          <Empty description="暂无组织架构数据" style={{ padding: '60px 0' }} />
         ) : (
           <div className="org-split-layout">
             {/* 左侧：组织架构树 */}
             <div className="org-tree-panel">
-              {treeData.map((node) => (
+              {visibleTreeData.map((node) => (
                 <TreeItem
                   key={node.id ?? node.unitName}
                   node={node}
@@ -486,6 +513,7 @@ const OrganizationTreePage: React.FC = () => {
                   onDelete={handleDelete}
                   onAddMember={handleOpenAssign}
                   onShowQRCode={handleShowQRCode}
+                  readOnly={isFactoryAccount}
                 />
               ))}
             </div>
@@ -517,7 +545,7 @@ const OrganizationTreePage: React.FC = () => {
                     >
                       包括下级成员
                     </Checkbox>
-                    {isExternalSelected ? (
+                    {!isFactoryAccount && (isExternalSelected ? (
                       <Button
                         icon={<QrcodeOutlined />}
                         onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
@@ -532,7 +560,7 @@ const OrganizationTreePage: React.FC = () => {
                       >
                         添加成员
                       </Button>
-                    )}
+                    ))}
                   </div>
                   <ResizableTable<User>
                     size="small"
@@ -705,7 +733,7 @@ const OrganizationTreePage: React.FC = () => {
           <QRCode
             value={
               qrModal.unit
-                ? `${window.location.origin}/register?type=FACTORY_INVITE&tenantCode=${encodeURIComponent(qrModal.tenantCode)}&factoryId=${encodeURIComponent(qrModal.unit.factoryId || String(qrModal.unit.id))}&factoryName=${encodeURIComponent(qrModal.unit.unitName)}`
+                ? `${window.location.origin}/register?type=FACTORY_INVITE&tenantCode=${encodeURIComponent(qrModal.tenantCode)}&factoryId=${encodeURIComponent(qrModal.unit.factoryId || String(qrModal.unit.id))}&factoryName=${encodeURIComponent(qrModal.unit.unitName)}&orgUnitId=${encodeURIComponent(String(qrModal.unit.id))}`
                 : ' '
             }
             size={220}
@@ -828,6 +856,47 @@ const OrganizationTreePage: React.FC = () => {
           )}
         </div>
       </ResizableModal>
+
+      {/* 成员资料 mini 弹窗 */}
+      <Modal
+        open={!!profileUser}
+        onCancel={() => setProfileUser(null)}
+        footer={null}
+        width={360}
+        title="成员资料"
+        centered
+      >
+        {profileUser && (
+          <div>
+            <div style={{ textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #f0f0f0', marginBottom: 16 }}>
+              <Avatar
+                size={64}
+                icon={<UserOutlined />}
+                style={{ backgroundColor: profileUser.isFactoryOwner ? '#faad14' : '#1677ff', display: 'block', margin: '0 auto 12px' }}
+              />
+              <div style={{ fontSize: 16, fontWeight: 600 }}>
+                {profileUser.name || profileUser.username}
+                {profileUser.isFactoryOwner && (
+                  <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 8 }}>老板</Tag>
+                )}
+              </div>
+              <div style={{ color: '#999', fontSize: 13, marginTop: 4 }}>@{profileUser.username}</div>
+            </div>
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="手机">{profileUser.phone || '—'}</Descriptions.Item>
+              <Descriptions.Item label="角色">{profileUser.roleName || '—'}</Descriptions.Item>
+              <Descriptions.Item label="所属部门">
+                {profileUser.orgUnitId ? (unitNameMap[profileUser.orgUnitId] || '—') : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="帐号状态">
+                <Tag color={profileUser.status === 'active' ? 'green' : 'default'}>
+                  {profileUser.status === 'active' ? '正常' : '已停用'}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
     </Layout>
   );
 };
@@ -844,10 +913,12 @@ interface TreeItemProps {
   onDelete: (record: OrganizationUnit) => void;
   onAddMember: (node: OrganizationUnit) => void;
   onShowQRCode: (node: OrganizationUnit) => void;
+  /** 工厂账号只读模式：隐藏新增/编辑/删除等操作按钮 */
+  readOnly?: boolean;
 }
 
 const TreeItem: React.FC<TreeItemProps> = ({
-  node, depth, selectedId, onSelect, onAdd, onEdit, onDelete, onAddMember, onShowQRCode,
+  node, depth, selectedId, onSelect, onAdd, onEdit, onDelete, onAddMember, onShowQRCode, readOnly,
 }) => {
   const [expanded, setExpanded] = useState(depth < 2);
   const hasChildren = Array.isArray(node.children) && node.children.length > 0;
@@ -876,7 +947,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
           <span className="tree-node-name">{node.unitName}</span>
         </span>
         <div className="tree-item-actions">
-          {isExternal ? (
+          {!readOnly && (isExternal ? (
             <Tooltip title="注册二维码">
               <Button type="text" size="small" icon={<QrcodeOutlined />}
                 onClick={e => { e.stopPropagation(); onShowQRCode(node); }} />
@@ -886,8 +957,8 @@ const TreeItem: React.FC<TreeItemProps> = ({
               <Button type="text" size="small" icon={<UserAddOutlined />}
                 onClick={e => { e.stopPropagation(); onAddMember(node); }} />
             </Tooltip>
-          )}
-          {(!isFactory || isExternal) && (
+          ))}
+          {!readOnly && (!isFactory || isExternal) && (
             <>
               <Tooltip title="新增下级">
                 <Button type="text" size="small" icon={<PlusOutlined />}
@@ -919,6 +990,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
               onDelete={onDelete}
               onAddMember={onAddMember}
               onShowQRCode={onShowQRCode}
+              readOnly={readOnly}
             />
           ))}
         </div>

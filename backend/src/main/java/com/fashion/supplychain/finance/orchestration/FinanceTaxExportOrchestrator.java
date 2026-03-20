@@ -45,11 +45,19 @@ public class FinanceTaxExportOrchestrator {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    /** 财税导出仅限管理层，工厂账户禁止访问 */
+    private void assertNotFactoryAccount() {
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            throw new org.springframework.security.access.AccessDeniedException("工厂账户无权访问财税导出");
+        }
+    }
+
     // -----------------------------------------------------------------------
     // 工资结算导出
     // -----------------------------------------------------------------------
 
     public byte[] exportPayrollExcel(String startDate, String endDate, String format) throws IOException {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<PayrollSettlement> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -226,6 +234,7 @@ public class FinanceTaxExportOrchestrator {
     // -----------------------------------------------------------------------
 
     public byte[] exportMaterialExcel(String startDate, String endDate, String format) throws IOException {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<MaterialReconciliation> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -279,6 +288,7 @@ public class FinanceTaxExportOrchestrator {
     // -----------------------------------------------------------------------
 
     public byte[] exportSupplierPaymentExcel(String startDate, String endDate, String format) throws IOException {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<Payable> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -353,6 +363,7 @@ public class FinanceTaxExportOrchestrator {
     // -----------------------------------------------------------------------
 
     public byte[] exportTaxSummaryExcel(String startDate, String endDate, String format) throws IOException {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<Invoice> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);

@@ -2,8 +2,13 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,6 +26,12 @@ public class ScanUndoTool implements AgentTool {
 
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -87,6 +98,18 @@ public class ScanUndoTool implements AgentTool {
         if ((recordId == null || recordId.isBlank()) && (scanCode == null || scanCode.isBlank())) {
             return mapper.writeValueAsString(Map.of(
                     "error", "请提供扫码记录ID或扫码码值（菲号），才能定位要撤回的记录"));
+        }
+
+        // 工厂账号：校验扫码记录所属订单归属本工厂
+        String userFactoryId = UserContext.factoryId();
+        if (userFactoryId != null && recordId != null && !recordId.isBlank()) {
+            ScanRecord record = scanRecordService.getById(recordId.trim());
+            if (record != null && record.getOrderId() != null) {
+                ProductionOrder order = productionOrderService.getById(record.getOrderId());
+                if (order == null || !userFactoryId.equals(order.getFactoryId())) {
+                    return mapper.writeValueAsString(Map.of("error", "该扫码记录不属于您的工厂，无权撤回"));
+                }
+            }
         }
 
         try {

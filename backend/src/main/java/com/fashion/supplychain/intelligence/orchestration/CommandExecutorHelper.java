@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
+import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.common.UserContext;
@@ -42,6 +43,7 @@ public class CommandExecutorHelper {
     @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;
     @Autowired private CuttingTaskOrchestrator cuttingTaskOrchestrator;
     @Autowired private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
+    @Autowired private ProductWarehousingOrchestrator productWarehousingOrchestrator;
 
     private static final int MAX_UNDO_ENTRIES = 500;
     private final ConcurrentHashMap<Long, UndoSnapshot> undoSnapshots = new ConcurrentHashMap<>();
@@ -350,6 +352,34 @@ public class CommandExecutorHelper {
         payrollSettlementOrchestrator.approve(settlementId, remark);
         log.info("[PayrollApprove] AI审批工资结算: settlementId={}, executor={}", settlementId, executorId);
         return Map.of("success", true, "message", "工资结算单已审批通过");
+    }
+
+    public Map<String, Object> executeDefectiveHandle(ExecutableCommand command, Long executorId) {
+        String action = (String) command.getParams().getOrDefault("action", "list");
+        String bundleId = command.getTargetId();
+        switch (action) {
+            case "start_repair" -> {
+                String operatorName = (String) command.getParams().getOrDefault("operatorName", "");
+                productWarehousingOrchestrator.startBundleRepair(bundleId, operatorName);
+                log.info("[DefectiveHandle] AI启动返修: bundleId={}, executor={}", bundleId, executorId);
+                return Map.of("success", true, "message", "菲号 " + bundleId + " 已开始返修");
+            }
+            case "complete_repair" -> {
+                productWarehousingOrchestrator.completeBundleRepair(bundleId);
+                log.info("[DefectiveHandle] AI完成返修: bundleId={}, executor={}", bundleId, executorId);
+                return Map.of("success", true, "message", "菲号 " + bundleId + " 返修完成，可进行质检");
+            }
+            case "scrap" -> {
+                productWarehousingOrchestrator.scrapBundle(bundleId);
+                log.info("[DefectiveHandle] AI报废次品: bundleId={}, executor={}", bundleId, executorId);
+                return Map.of("success", true, "message", "菲号 " + bundleId + " 已标记为报废");
+            }
+            default -> {
+                var tasks = productWarehousingOrchestrator.listPendingRepairTasks(UserContext.tenantId());
+                log.info("[DefectiveHandle] AI查询次品列表: count={}, executor={}", tasks.size(), executorId);
+                return Map.of("success", true, "data", tasks, "count", tasks.size());
+            }
+        }
     }
 
     // ── 快照 & 撤回 ──

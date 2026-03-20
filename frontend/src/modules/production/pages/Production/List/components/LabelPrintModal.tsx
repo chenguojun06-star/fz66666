@@ -326,7 +326,7 @@ async function printWashLabels(
   const styleName = order.styleName || '-';
 
   const today = new Date();
-  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
 
   const oneLabelHtml = `
     <div class="label">
@@ -424,7 +424,7 @@ async function printUCodeLabels(
       size: row.size,
       seq: i + 1,
       total,
-      qrContent: [styleNo, row.color, row.size, String(i + 1)].filter(Boolean).join('-'),
+      qrContent: [styleNo, row.color, row.size].filter(Boolean).join('-'),
     }));
   });
 
@@ -453,7 +453,6 @@ async function printUCodeLabels(
           ${styleName ? `<div class="info-row"><span class="lbl">款名</span><span class="val">${styleName}</span></div>` : ''}
           <div class="info-row"><span class="lbl">颜色</span><span class="val">${entry.color || '-'}</span></div>
           <div class="info-row"><span class="lbl">码数</span><span class="val">${entry.size || '-'}</span></div>
-          <div class="info-row seq-row"><span class="lbl">编号</span><span class="seq-val">${seqStr}</span></div>
           ${factoryCode ? `<div class="info-row"><span class="lbl">GC:</span><span class="val">${factoryCode}</span></div>` : ''}
           <div class="info-row date-row">${dateStr}</div>
         </div>

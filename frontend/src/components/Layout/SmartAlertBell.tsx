@@ -12,6 +12,7 @@ import {
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
+import { useAuth } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
 import DecisionInsightCard, { type DecisionInsight } from '../common/DecisionInsightCard';
 
@@ -97,6 +98,7 @@ const saveDismissedNotices = (ids: Set<number>) => {
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [events, setEvents] = useState<UrgentEvent[]>([]);
@@ -154,9 +156,10 @@ const SmartAlertBell: React.FC = () => {
     abortRef.current = ac;
     setLoading(true);
     try {
+      const factoryId = (user as any)?.factoryId || undefined;
       const [briefRes, eventsRes] = await Promise.allSettled([
-        api.get('/dashboard/daily-brief', { signal: ac.signal }) as Promise<ApiResult<BriefData>>,
-        api.get('/dashboard/urgent-events', { signal: ac.signal }) as Promise<ApiResult<UrgentEvent[]>>,
+        api.get('/dashboard/daily-brief', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<BriefData>>,
+        api.get('/dashboard/urgent-events', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<UrgentEvent[]>>,
       ]);
       if (ac.signal.aborted) return;
       if (briefRes.status === 'fulfilled' && briefRes.value.code === 200) {
@@ -169,7 +172,7 @@ const SmartAlertBell: React.FC = () => {
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
-  }, [fetchedToday, brief]);
+  }, [fetchedToday, brief, user]);
 
   // 每 10 分钟后台静默刷新；每 60 秒轮询我的通知
   useEffect(() => {
@@ -300,7 +303,6 @@ const SmartAlertBell: React.FC = () => {
           )}
         </span>
         <span className="smart-alert-btn-label">
-          <span className="smart-alert-btn-sub">AI助手</span>
           <span className="smart-alert-btn-main">今日预警</span>
         </span>
         {alertCount > 0 && (

@@ -197,9 +197,12 @@ public class ProductionOrderQueryService {
     }
 
     public ProductionOrder getDetailById(String id) {
-        ProductionOrder productionOrder = productionOrderMapper.selectOne(new LambdaQueryWrapper<ProductionOrder>()
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getId, id)
-                .eq(ProductionOrder::getDeleteFlag, 0));
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(org.springframework.util.StringUtils.hasText(ctxFactoryId), ProductionOrder::getFactoryId, ctxFactoryId);
+        ProductionOrder productionOrder = productionOrderMapper.selectOne(wrapper);
 
         if (productionOrder != null) {
             fillDetails(List.of(productionOrder));
@@ -209,10 +212,13 @@ public class ProductionOrderQueryService {
     }
 
     public ProductionOrder getDetailByOrderNo(String orderNo) {
-        ProductionOrder productionOrder = productionOrderMapper.selectOne(new LambdaQueryWrapper<ProductionOrder>()
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getOrderNo, orderNo)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .last("limit 1"));
+                .eq(org.springframework.util.StringUtils.hasText(ctxFactoryId), ProductionOrder::getFactoryId, ctxFactoryId)
+                .last("limit 1");
+        ProductionOrder productionOrder = productionOrderMapper.selectOne(wrapper);
 
         if (productionOrder != null) {
             fillDetails(List.of(productionOrder));

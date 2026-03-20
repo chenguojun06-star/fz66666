@@ -11,7 +11,6 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { receivableApi, type Receivable, type ReceivableStats } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
-import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Text } = Typography;
 
@@ -202,7 +201,7 @@ const ReceivableList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ReceivableStats>({ totalPending: 0, totalOverdue: 0, overdueCount: 0, newThisMonth: 0 });
   const [statusFilter, setStatusFilter] = useState('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: readPageSize(20) });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [createOpen, setCreateOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [activeRecord, setActiveRecord] = useState<Receivable | null>(null);

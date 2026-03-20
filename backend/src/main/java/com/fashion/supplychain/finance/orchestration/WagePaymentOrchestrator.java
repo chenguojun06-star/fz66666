@@ -315,6 +315,18 @@ public class WagePaymentOrchestrator {
             .le(query.getEndTime() != null, WagePayment::getCreateTime, query.getEndTime())
             .orderByDesc(WagePayment::getCreateTime);
 
+        // 工厂账户/仅看自己 → 只能查看自己的支付记录
+        String dataScope = UserContext.getDataScope();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()
+                || "own".equals(dataScope) || "self".equals(dataScope)) {
+            String currentUserId = UserContext.userId();
+            if (currentUserId != null) {
+                wrapper.eq(WagePayment::getPayeeId, currentUserId);
+            } else {
+                wrapper.apply("1=0");
+            }
+        }
+
         return wagePaymentService.list(wrapper);
     }
 

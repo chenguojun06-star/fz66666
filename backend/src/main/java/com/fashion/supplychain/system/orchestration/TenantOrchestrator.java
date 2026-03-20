@@ -1583,7 +1583,7 @@ public class TenantOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> workerRegister(String username, String password, String name,
-                                                String phone, String tenantCode, String factoryId) {
+                                                String phone, String tenantCode, String factoryId, String orgUnitId) {
         // 验证租户码（统一错误消息防止枚举）
         Tenant tenant = tenantService.findByTenantCode(tenantCode);
         if (tenant == null || !"active".equals(tenant.getStatus())) {
@@ -1623,6 +1623,9 @@ public class TenantOrchestrator {
         user.setPermissionRange("self");
         if (org.springframework.util.StringUtils.hasText(factoryId)) {
             user.setFactoryId(factoryId);
+        }
+        if (org.springframework.util.StringUtils.hasText(orgUnitId)) {
+            user.setOrgUnitId(orgUnitId);
         }
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());

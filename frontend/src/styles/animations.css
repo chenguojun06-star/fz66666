@@ -299,14 +299,17 @@
 
 /* ─── §12. 下拉框 / Select 弹出动效 ─── */
 /* 从顶部"小→大"弹出，比直接出现更有层次感 */
+/* ⚠️ 注意：此动画仅作用于 Button Dropdown 菜单，*不*覆盖 Select/Picker。
+   antd 6 的 Select/Picker 由 rc-motion 内置动画驱动；若再覆盖 .ant-select-dropdown
+   / .ant-picker-dropdown，两套 animation 同时运行会在第一帧出现 opacity:0 + scaleY(0.88)
+   的闪烁（"一抖"）。故严禁将 Select/Picker 选择器加回此处。 */
 @keyframes dropdownAppear {
   from { opacity: 0; transform: scaleY(0.88) translateY(-5px); }
   to   { opacity: 1; transform: scaleY(1)    translateY(0);    }
 }
 
-.ant-select-dropdown,
-.ant-dropdown > .ant-dropdown-menu,
-.ant-picker-dropdown {
+/* 仅对 Button Dropdown 菜单生效，Select/Picker 由 antd 自身控制 */
+.ant-dropdown > .ant-dropdown-menu {
   animation: dropdownAppear 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: top center;
 }
@@ -433,9 +436,7 @@
     animation: none;
   }
 
-  .ant-select-dropdown,
-  .ant-dropdown > .ant-dropdown-menu,
-  .ant-picker-dropdown {
+  .ant-dropdown > .ant-dropdown-menu {
     animation: none;
   }
 

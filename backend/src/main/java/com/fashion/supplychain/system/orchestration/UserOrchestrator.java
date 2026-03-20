@@ -245,29 +245,26 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(permRange)) {
             if (Boolean.TRUE.equals(user.getIsTenantOwner())
                     || isAdminRole(user.getRoleName())
-                    || !StringUtils.hasText(user.getFactoryId())
-                    || Boolean.TRUE.equals(user.getIsFactoryOwner())) {
+                    || !StringUtils.hasText(user.getFactoryId())) {
                 // 未绑定工厂的 PC 端账号（跟单员、财务、采购等）默认看全部
-                // 工厂管理员（isFactoryOwner=true）也给 "all"，配合 applyFactoryFilter 限制范围到本厂
                 permRange = "all";
             } else {
-                // 绑定工厂的普通工人账号默认只看自己
+                // 绑定工厂的工人账号默认只看自己
                 permRange = "own";
             }
         }
-        // 安全兜底：租户主/管理角色/工厂管理员必须拥有 "all" 权限，防止 DB 脏数据导致数据不可见
+        // 安全兜底：租户主/管理角色必须拥有 "all" 权限，防止 DB 脏数据导致数据不可见
         // 与小程序端 WeChatMiniProgramAuthOrchestrator 保持一致
-        if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())
-                || Boolean.TRUE.equals(user.getIsFactoryOwner())) {
+        if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())) {
             if (!"all".equals(permRange)) {
-                log.warn("[PC登录] 租户主/管理员/工厂管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
+                log.warn("[PC登录] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
                         user.getId(), permRange);
                 permRange = "all";
                 persistPermissionRangeIfNeeded(user, permRange, "PC登录");
             }
         }
         subject.setPermissionRange(permRange);
-        // 工厂管理员：将 factoryId 写入 JWT，API 全链路均可直接从 token 获取
+        // 设置工厂ID（工厂工人账号隔离，与小程序端 WeChatMiniProgramAuthOrchestrator 保持一致）
         if (StringUtils.hasText(user.getFactoryId())) {
             subject.setFactoryId(user.getFactoryId());
         }
@@ -391,11 +388,10 @@ public class UserOrchestrator {
         result.put("tenantId", user.getTenantId());
         result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
         result.put("isSuperAdmin", Boolean.TRUE.equals(user.getIsSuperAdmin()));
-        // 外发工厂管理员：返回 factoryId + isFactoryOwner，前端据此进入工厂管理视图
+        // 外发工厂联系人：返回 factoryId，前端据此进入工厂端视图
         if (user.getFactoryId() != null && !user.getFactoryId().isBlank()) {
             result.put("factoryId", user.getFactoryId());
         }
-        result.put("isFactoryOwner", Boolean.TRUE.equals(user.getIsFactoryOwner()));
         // 补充 tenantName 和 tenantType，从数据库实时查询（保证修改后立即生效）
         if (user.getTenantId() != null && tenantService != null) {
             try {

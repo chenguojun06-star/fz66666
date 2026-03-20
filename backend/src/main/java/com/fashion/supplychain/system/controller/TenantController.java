@@ -490,7 +490,8 @@ public class TenantController {
         String phone = params.get("phone");
         String tenantCode = params.get("tenantCode");
         String factoryId = params.get("factoryId");
-        return Result.success(tenantOrchestrator.workerRegister(username, password, name, phone, tenantCode, factoryId));
+        String orgUnitId = params.get("orgUnitId");
+        return Result.success(tenantOrchestrator.workerRegister(username, password, name, phone, tenantCode, factoryId, orgUnitId));
     }
 
     /**

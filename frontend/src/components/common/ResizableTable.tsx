@@ -461,8 +461,17 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   // 当前正在拖拽的列 ID
   const draggingIdRef = React.useRef<string | null>(null);
 
-  // 用于 getPopupContainer，使下拉菜单（分页条数选择器等）锚定在表格容器内，避免渲染到 document.body 导致位置偏远
-  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  // getPopupContainer：表格在 Modal 内时锚定到 .ant-modal-body（避免弹层被遮挡），
+  // 否则回退到 document.body。
+  // ⚠️ 禁止将 popup 容器设为表格 wrapper div：该 div 无 position:relative，
+  //    absolute 弹层初始定位到错误祖先再修正，会导致视觉"抖动"（闪烁）。
+  const getTablePopupContainer = React.useCallback((triggerNode?: HTMLElement) => {
+    if (triggerNode) {
+      const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
+      if (modal) return modal;
+    }
+    return document.body;
+  }, []);
 
   // 保存列宽到本地存储
   React.useEffect(() => {
@@ -680,8 +689,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, [stickyFooter]);
 
   return (
-    <div ref={wrapperRef} className={wrapperClassName}>
-      <ConfigProvider getPopupContainer={() => wrapperRef.current ?? document.body}>
+    <div className={wrapperClassName}>
+      <ConfigProvider getPopupContainer={getTablePopupContainer}>
         <Table
           {...rest}
           rowKey={rowKey}

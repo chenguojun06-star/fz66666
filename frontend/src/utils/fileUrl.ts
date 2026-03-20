@@ -19,7 +19,7 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
   const url = fileUrl.trim();
   if (!url) return '';
 
-  const token = sessionStorage.getItem('authToken');
+  const token = localStorage.getItem('authToken');
   if (!token) return url;
 
   if (url.startsWith('http://') || url.startsWith('https://')) {

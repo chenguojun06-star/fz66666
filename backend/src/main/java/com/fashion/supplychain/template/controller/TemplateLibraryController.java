@@ -1,6 +1,7 @@
 package com.fashion.supplychain.template.controller;
 
 import com.fashion.supplychain.common.Result;
+import java.util.List;
 import java.util.Map;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
@@ -109,11 +110,26 @@ public class TemplateLibraryController {
     }
 
     /**
-     * 按款号同步工序进度单价到生产订单
+     * 查询可同步订单候选列表（按款号+当前工厂，推送前让用户选择）
+     */
+    @GetMapping("/sync-candidates")
+    public Result<?> syncCandidates(@RequestParam(required = false) String styleNo) {
+        return Result.success(templateLibraryOrchestrator.listSyncCandidateOrders(styleNo));
+    }
+
+    /**
+     * 按款号同步工序进度单价到生产订单；支持传 orderIds 指定只同步部分订单
      */
     @PostMapping("/sync-process-prices")
     public Result<?> syncProcessPrices(@RequestBody Map<String, Object> body) {
         String styleNo = body == null ? null : (body.get("styleNo") == null ? null : String.valueOf(body.get("styleNo")).trim());
-        return Result.success(templateLibraryOrchestrator.syncProcessUnitPricesByStyleNo(styleNo));
+        List<String> orderIds = null;
+        if (body != null && body.get("orderIds") instanceof java.util.Collection<?> rawList) {
+            orderIds = new java.util.ArrayList<>();
+            for (Object o : rawList) {
+                if (o != null) orderIds.add(o.toString());
+            }
+        }
+        return Result.success(templateLibraryOrchestrator.syncProcessUnitPricesByStyleNo(styleNo, orderIds));
     }
 }

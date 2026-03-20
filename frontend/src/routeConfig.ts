@@ -40,6 +40,7 @@ export const paths = {
 
   dataCenter: '/data-center',
   templateCenter: '/basic/template-center',
+  processPriceMaintenance: '/basic/process-price',
   patternRevision: '/basic/pattern-revision',
 
   productionList: '/production',
@@ -184,7 +185,7 @@ export const menuConfig: MenuSection[] = [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
       { label: '样板生产', path: paths.patternProduction, icon: React.createElement(ScissorOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
-      { label: '单价维护', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
+      { label: '单价维护', path: paths.processPriceMaintenance, icon: React.createElement(DollarOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },

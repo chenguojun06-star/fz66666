@@ -36,10 +36,18 @@ public class FinancialReportOrchestrator {
     @Autowired
     private InvoiceService invoiceService;
 
+    /** 财务报表仅限管理层查看，工厂账户禁止访问 */
+    private void assertNotFactoryAccount() {
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            throw new org.springframework.security.access.AccessDeniedException("工厂账户无权访问财务报表");
+        }
+    }
+
     /**
      * 利润表 — 一段时间内的收入/成本/费用/利润汇总
      */
     public Map<String, Object> generateProfitLoss(LocalDate startDate, LocalDate endDate) {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt   = endDate.atTime(LocalTime.MAX);
@@ -86,6 +94,7 @@ public class FinancialReportOrchestrator {
      * 资产负债表（简化版）— 应收/应付/现金快照
      */
     public Map<String, Object> generateBalanceSheet(LocalDate asOfDate) {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
 
         // 应付余额（未结清）
@@ -124,6 +133,7 @@ public class FinancialReportOrchestrator {
      * 现金流量表（简化版）— 资金进出汇总
      */
     public Map<String, Object> generateCashFlow(LocalDate startDate, LocalDate endDate) {
+        assertNotFactoryAccount();
         Long tenantId = UserContext.tenantId();
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt   = endDate.atTime(LocalTime.MAX);

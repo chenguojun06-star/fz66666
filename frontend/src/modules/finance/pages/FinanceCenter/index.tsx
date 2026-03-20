@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs } from 'antd';
 import { FileTextOutlined, LineChartOutlined, ShopOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/utils/AuthContext';
 import Layout from '@/components/Layout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import FactorySummaryContent from './FactorySummaryContent';
@@ -12,6 +13,8 @@ type TabKey = 'settlement' | 'factory' | 'dashboard';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const isFactoryAccount = !!(user as any)?.factoryId;
   // 已审核订单号集合：Tab1审核后流入Tab2，Tab2驳回后回流Tab1
   const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
 
@@ -40,6 +43,14 @@ const FinanceCenter: React.FC = () => {
       setSearchParams({ tab: activeTab }, { replace: true });
     }
   }, []);
+
+  // 工厂账号不能访问其他 Tab︌强制跳回订单汇总
+  useEffect(() => {
+    if (isFactoryAccount && activeTab !== 'settlement') {
+      setActiveTab('settlement');
+      setSearchParams({ tab: 'settlement' }, { replace: true });
+    }
+  }, [isFactoryAccount]);
 
   const tabItems = [
     {
@@ -84,13 +95,15 @@ const FinanceCenter: React.FC = () => {
     },
   ];
 
+  const visibleTabItems = isFactoryAccount ? tabItems.slice(0, 1) : tabItems;
+
   return (
     <Layout>
       <div className={styles.container}>
         <Tabs
           activeKey={activeTab}
           onChange={handleTabChange}
-          items={tabItems}
+          items={visibleTabItems}
           className={styles.tabs}
           size="large"
         />

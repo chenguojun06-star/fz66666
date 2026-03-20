@@ -74,6 +74,26 @@ public class FinishedInventoryOrchestrator {
         wrapper.gt(ProductSku::getStockQuantity, 0);
         if (tid != null) wrapper.eq(ProductSku::getTenantId, tid);
 
+        // 工厂账号隔离：仅展示本工厂订单关联的款号库存
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            List<String> factoryStyleNos = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .select(ProductionOrder::getStyleNo)
+                    .list()
+                    .stream()
+                    .map(ProductionOrder::getStyleNo)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (factoryStyleNos.isEmpty()) {
+                // 该工厂无订单，返回空页
+                return new Page<>(page, pageSize);
+            }
+            wrapper.in(ProductSku::getStyleNo, factoryStyleNos);
+        }
+
         if (StringUtils.hasText(styleNo)) {
             wrapper.like(ProductSku::getStyleNo, styleNo.trim());
         }

@@ -146,6 +146,30 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/system/tenant/roles/**").authenticated()
                         .antMatchers("/api/system/tenant/registration/**").permitAll()
                         .antMatchers("/api/system/tenant/registrations/**").authenticated()
+
+                        // ── 系统模块只读端点：所有登录用户可访问（必须放在 /api/system/** 兜底之前）──
+                        // 组织架构：查看部门树/成员（创建/修改/删除由兜底规则限定为管理员）
+                        .antMatchers(HttpMethod.GET, "/api/system/organization/tree").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/organization/departments").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/organization/members").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/organization/assignable-users").authenticated()
+                        // 工厂：查看列表/详情（创建/修改/删除由兜底规则限定为管理员）
+                        .antMatchers(HttpMethod.GET, "/api/system/factory/list").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/factory/*").authenticated()
+                        // 应用商店：浏览、我的应用、试用（admin 端点有 method 级 @PreAuthorize 二次拦截）
+                        .antMatchers("/api/system/app-store/list").authenticated()
+                        .antMatchers("/api/system/app-store/my-apps").authenticated()
+                        .antMatchers("/api/system/app-store/my-subscriptions").authenticated()
+                        .antMatchers("/api/system/app-store/start-trial").authenticated()
+                        .antMatchers("/api/system/app-store/create-order").authenticated()
+                        .antMatchers("/api/system/app-store/quick-setup").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/app-store/trial-status/**").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/app-store/*").authenticated()
+                        // 租户智能配置/功能开关（查看当前租户配置；save/reset 由兜底规则限为管理员）
+                        .antMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
+
+                        // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
                         .antMatchers("/api/system/tenant/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",

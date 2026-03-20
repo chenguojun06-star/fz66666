@@ -46,11 +46,13 @@ export const getProgressColorStatus = (plannedEndDate?: string | null): Progress
 export const getRemainingDaysDisplay = (
   endDate?: string | null,
   createTime?: string | null,
-  actualEndDate?: string | null
+  actualEndDate?: string | null,
+  status?: string | null
 ): { text: string; color: string } => {
   if (!endDate) return { text: '-', color: '#999' };
-  // 已关单：停止倒计时，固定显示"已关单"（灰色）
-  if (actualEndDate) return { text: '已关单', color: '#8c8c8c' };
+  // 终态订单：停止倒计时，显示对应状态文字
+  if (status === 'scrapped') return { text: '已报废', color: '#8c8c8c' };
+  if (status === 'cancelled' || actualEndDate) return { text: '已关单', color: '#8c8c8c' };
 
   const now = new Date();
   const deadline = new Date(endDate);

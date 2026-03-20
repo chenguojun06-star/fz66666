@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleBomService;
@@ -33,6 +35,9 @@ public class MaterialCalculationTool implements AgentTool {
 
     @Autowired
     private StyleBomService styleBomService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -87,6 +92,20 @@ public class MaterialCalculationTool implements AgentTool {
             }
 
             Long tenantId = UserContext.tenantId();
+
+            // 工厂账号：只能查看分配给本工厂的款式BOM
+            String userFactoryId = UserContext.factoryId();
+            if (userFactoryId != null) {
+                long orderCount = productionOrderService.count(
+                        new QueryWrapper<ProductionOrder>()
+                                .eq("factory_id", userFactoryId)
+                                .eq(tenantId != null, "tenant_id", tenantId)
+                                .eq("style_no", styleNo)
+                                .eq("delete_flag", 0));
+                if (orderCount == 0) {
+                    return "{\"error\": \"您的工厂没有此款号的生产订单，无权查看BOM成本\"}";
+                }
+            }
 
             // 查找款式
             QueryWrapper<StyleInfo> styleQw = new QueryWrapper<StyleInfo>()
