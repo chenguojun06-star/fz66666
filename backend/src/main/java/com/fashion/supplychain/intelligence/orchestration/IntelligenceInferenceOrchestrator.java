@@ -30,6 +30,7 @@ public class IntelligenceInferenceOrchestrator {
     private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 60;
     private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
     private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
+    private static final int DAILY_BRIEF_MAX_TIMEOUT_SECONDS = 5;
 
     @Value("${ai.deepseek.api-key:}")
     private String directApiKey;
@@ -136,7 +137,9 @@ public class IntelligenceInferenceOrchestrator {
         }
 
         int effectiveTimeoutSeconds = resolveEffectiveTimeoutSeconds(scene, timeoutSeconds);
-        boolean allowRetryOnTimeout = !"ai-advisor".equals(scene) && !"nl-intent".equals(scene);
+        boolean allowRetryOnTimeout = !"ai-advisor".equals(scene)
+            && !"nl-intent".equals(scene)
+            && !"daily-brief".equals(scene);
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -205,6 +208,8 @@ public class IntelligenceInferenceOrchestrator {
             cap = AI_ADVISOR_MAX_TIMEOUT_SECONDS;
         } else if ("nl-intent".equals(scene)) {
             cap = NL_INTENT_MAX_TIMEOUT_SECONDS;
+        } else if ("daily-brief".equals(scene)) {
+            cap = DAILY_BRIEF_MAX_TIMEOUT_SECONDS;
         }
         int effective = Math.min(raw, cap);
         if (effective != raw) {

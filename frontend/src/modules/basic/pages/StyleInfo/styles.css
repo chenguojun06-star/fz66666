@@ -54,3 +54,12 @@
   height: 32px;
   width: 200px;
 }
+
+/* 样衣开发卡片：封面区域适度收窄，避免个别留白较大的图片把卡片视觉拉得过高 */
+.style-dev-card-view .universal-card-cover {
+  padding-top: 72%;
+}
+
+.style-dev-card-view .universal-card-row {
+  min-height: 16px;
+}

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,6 +71,8 @@ public class PermissionCalculationEngine {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    private final Set<String> brokenCacheWarnedKeys = ConcurrentHashMap.newKeySet();
 
     /**
      * 启动时清理旧格式权限缓存，防止序列化版本升级后反复出现 WARN
@@ -343,14 +346,107 @@ public class PermissionCalculationEngine {
             if (raw == null || raw.isBlank()) {
                 return null;
             }
-            return objectMapper.readValue(raw, typeRef);
-        } catch (Exception e) {
-            log.warn("[PermissionCache] 读取{}失败，删除损坏key后回源DB: key={} err={}", cacheName, key, e.getMessage());
-            try {
-                stringRedisTemplate.delete(key);
-            } catch (Exception ignored) {
+            List<T> parsed = objectMapper.readValue(raw, typeRef);
+            if (parsed != null) {
+                brokenCacheWarnedKeys.remove(key);
             }
+            return parsed;
+        } catch (Exception e) {
+            List<T> fallback = parseLegacyCache(rawValue(key), cacheName);
+            if (fallback != null) {
+                writeCache(key, fallback, cacheName + "-migrated");
+                brokenCacheWarnedKeys.remove(key);
+                log.info("[PermissionCache] 已自动迁移旧格式缓存: cache={} key={}", cacheName, key);
+                return fallback;
+            }
+
+            if (brokenCacheWarnedKeys.add(key)) {
+                log.warn("[PermissionCache] 读取{}失败，删除损坏key后回源DB: key={} err={}", cacheName, key, e.getMessage());
+            } else {
+                log.debug("[PermissionCache] 重复读取损坏缓存，已降级debug: cache={} key={} err={}", cacheName, key, e.getMessage());
+            }
+            safeDeleteKey(key);
             return null;
+        }
+    }
+
+    private String rawValue(String key) {
+        try {
+            return stringRedisTemplate == null ? null : stringRedisTemplate.opsForValue().get(key);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> List<T> parseLegacyCache(String raw, String cacheName) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            if (cacheName.contains("role-perms") || cacheName.contains("tenant-ceiling")) {
+                List<Long> longs = new ArrayList<>();
+                collectLongs(objectMapper.readTree(raw), longs);
+                if (!longs.isEmpty()) {
+                    return (List<T>) longs;
+                }
+            }
+            if (cacheName.contains("user-perms") || cacheName.contains("super-all-perms")) {
+                List<String> strings = new ArrayList<>();
+                collectStrings(objectMapper.readTree(raw), strings);
+                if (!strings.isEmpty()) {
+                    return (List<T>) strings;
+                }
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        return null;
+    }
+
+    private void collectLongs(com.fasterxml.jackson.databind.JsonNode node, List<Long> out) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isArray()) {
+            node.forEach(child -> collectLongs(child, out));
+            return;
+        }
+        if (node.isNumber()) {
+            out.add(node.asLong());
+            return;
+        }
+        if (node.isTextual()) {
+            String v = node.asText();
+            if (v != null && !v.isBlank()) {
+                try {
+                    out.add(Long.parseLong(v.trim()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+    }
+
+    private void collectStrings(com.fasterxml.jackson.databind.JsonNode node, List<String> out) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isArray()) {
+            node.forEach(child -> collectStrings(child, out));
+            return;
+        }
+        String v = node.asText();
+        if (v != null && !v.isBlank()) {
+            out.add(v.trim());
+        }
+    }
+
+    private void safeDeleteKey(String key) {
+        try {
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete(key);
+            }
+        } catch (Exception ignored) {
         }
     }
 

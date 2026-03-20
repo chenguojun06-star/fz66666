@@ -36,6 +36,20 @@ function report(type: string, message: string, stack?: string) {
   const key = `${type}:${message.slice(0, 100)}`;
   if (dedup(key)) return;
 
+  const token = (() => {
+    try {
+      const ls = localStorage.getItem('authToken');
+      const ss = sessionStorage.getItem('authToken');
+      const v = String(ls || ss || '').trim();
+      return v || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // 用户未登录时跳过，避免401噪音
+  if (!token) return;
+
   const payload = {
     type,
     message: message.slice(0, 500),
@@ -47,7 +61,10 @@ function report(type: string, message: string, stack?: string) {
   // 使用 fetch 而非 axios，避免循环依赖；fetch 失败静默处理
   fetch(REPORT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(payload),
     credentials: 'include', // 携带 Cookie/Session
   }).catch(() => {/* 静默 */});

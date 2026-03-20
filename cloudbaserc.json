@@ -37,7 +37,9 @@
             "COS_BUCKET": "{{COS_BUCKET}}",
             "SERPAPI_ENABLED": "true",
             "QWEN_VL_API_KEY": "{{QWEN_VL_API_KEY}}",
-            "DOUBAO_API_KEY": "7a8b0840-0a70-4fc1-a765-bb10c67beb06"
+            "DOUBAO_API_KEY": "7a8b0840-0a70-4fc1-a765-bb10c67beb06",
+            "APP_QRCODE_HMAC_SECRET": "{{QRCODE_HMAC_SECRET}}",
+            "APP_QRCODE_REQUIRE_SIGNATURE": "true"
           },
           "customLogs": "stdout",
           "healthPath": "/actuator/health/liveness"

@@ -89,10 +89,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
-                .and(StringUtils.hasText(warehousingNo), w -> w
-                        .like(ProductWarehousing::getWarehousingNo, warehousingNo)
-                .or(!keywordMatchedOrderIds.isEmpty()).in(ProductWarehousing::getOrderId,
-                    keywordMatchedOrderIds))
                 .eq(StringUtils.hasText(orderId), ProductWarehousing::getOrderId, orderId)
                 .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)
@@ -102,6 +98,15 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 .eq(StringUtils.hasText(cuttingBundleQrCode), ProductWarehousing::getCuttingBundleQrCode,
                         cuttingBundleQrCode)
                 .orderByDesc(ProductWarehousing::getCreateTime);
+
+        if (StringUtils.hasText(warehousingNo)) {
+            wrapper.and(w -> {
+                w.like(ProductWarehousing::getWarehousingNo, warehousingNo);
+                if (!keywordMatchedOrderIds.isEmpty()) {
+                    w.or().in(ProductWarehousing::getOrderId, keywordMatchedOrderIds);
+                }
+            });
+        }
 
         // 工厂账号隔离（由 ProductWarehousingOrchestrator 注入 _factoryOrderIds）
         @SuppressWarnings("unchecked")

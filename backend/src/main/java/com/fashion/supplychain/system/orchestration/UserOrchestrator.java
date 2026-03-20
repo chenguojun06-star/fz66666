@@ -260,6 +260,7 @@ public class UserOrchestrator {
                 log.warn("[PC登录] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
                         user.getId(), permRange);
                 permRange = "all";
+                persistPermissionRangeIfNeeded(user, permRange, "PC登录");
             }
         }
         subject.setPermissionRange(permRange);
@@ -288,6 +289,24 @@ public class UserOrchestrator {
         payload.put("token", token);
         payload.put("user", user);
         return payload;
+    }
+
+    private void persistPermissionRangeIfNeeded(User user, String targetPermRange, String scene) {
+        if (user == null || user.getId() == null || !StringUtils.hasText(targetPermRange)) {
+            return;
+        }
+        try {
+            User patch = new User();
+            patch.setId(user.getId());
+            patch.setPermissionRange(targetPermRange);
+            if (userService.updateById(patch)) {
+                user.setPermissionRange(targetPermRange);
+                log.info("[{}] 已自动修复用户权限范围 userId={} -> {}", scene, user.getId(), targetPermRange);
+            }
+        } catch (Exception e) {
+            log.warn("[{}] 自动修复用户权限范围失败 userId={} err={}",
+                    scene, user.getId(), e.getMessage());
+        }
     }
 
     public void assertLoginAllowed(String username, String ip) {

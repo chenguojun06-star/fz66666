@@ -1,3 +1,47 @@
+## 2026-03-20（线上告警连锁根修：Redis超时 + 管理员权限范围脏数据）
+
+### fix(stability): 解决 Redis 500ms 超时连锁告警，并自动修复管理员 permissionRange 脏值
+
+- **问题现象**：
+  - `TokenAuthFilter` 频繁出现 `Redis 不可用，pwdVersion 校验已熔断 60s`。
+  - `PermissionCalculationEngine` 读取 `role:perms:*` 出现 `Redis command timed out after 500ms`。
+  - `UserOrchestrator/WeChatMiniProgramAuthOrchestrator` 登录时持续告警 `dbPermRange=self, 强制覆盖为 all`。
+- **根本原因**：
+  - `application-prod.yml` Redis 超时固定为 `500ms`，云环境网络抖动下极易触发超时并放大为权限缓存/登录链路告警。
+  - 历史用户数据中存在租户主/管理员 `permission_range=self` 脏值，导致每次登录重复触发兜底 WARN。
+- **修复方案**：
+  - `application-prod.yml`：Redis 超时改为可配置并提升默认值（`timeout=5000ms`、`connect-timeout=2000ms`），同时放宽 lettuce 连接池默认容量。
+  - `UserOrchestrator`：PC 登录发现管理员权限范围异常时，除内存兜底外自动 `updateById` 回写 `permission_range=all`，一次修复后不再反复告警。
+  - `WeChatMiniProgramAuthOrchestrator`：小程序登录路径同步自动回写修复逻辑，避免双端行为不一致。
+- **涉及文件**：
+  - `backend/src/main/resources/application-prod.yml`
+  - `backend/src/main/java/com/fashion/supplychain/system/orchestration/UserOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/wechat/orchestration/WeChatMiniProgramAuthOrchestrator.java`
+- **对系统的帮助**：
+  - Redis 抖动下权限链路告警显著下降，登录链路更稳定。
+  - 管理员权限范围脏值自动一次性修复，长期消除重复 WARN 噪音。
+
+## 2026-03-20（告警收敛：权限缓存 + AI日报超时 + 二维码签名配置）
+
+### fix(stability): 收敛三类高频告警，降低线上噪音并提升降级稳定性
+
+- **问题现象**：
+  - `PermissionCalculationEngine` 持续出现 `role:perms:*` 反序列化告警（`Cannot deserialize Long from Array`）。
+  - `AiAdvisorService.getDailyAdvice(..)` 出现 8s 级慢方法告警。
+  - `QrCodeSigner` 提示缺少 `app.qrcode.hmac-secret`，二维码以明文生成存在伪造风险。
+- **修复方案**：
+  - `PermissionCalculationEngine`：读取缓存失败时新增“旧格式容错迁移”逻辑（支持嵌套数组/字符串数字自动拉平）；成功迁移后回写新格式 JSON，并对同一损坏 key 的重复告警降级为 debug，避免日志刷屏。
+  - `IntelligenceInferenceOrchestrator`：对 `daily-brief` 场景新增独立超时封顶（5s）并关闭超时重试，避免 AI 建议调用长尾阻塞与重复重试放大。
+  - `cloudbaserc.json`：补齐 `APP_QRCODE_HMAC_SECRET` 与 `APP_QRCODE_REQUIRE_SIGNATURE` 环境变量占位，云端可直接配置密钥后启用签名强校验。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/system/orchestration/PermissionCalculationEngine.java`
+  - `backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/IntelligenceInferenceOrchestrator.java`
+  - `cloudbaserc.json`
+- **对系统的帮助**：
+  - 权限缓存旧脏数据可自愈迁移，不再反复触发同类 WARN。
+  - 日报 AI 建议调用在超时场景更快失败、无重试放大，慢调用告警显著减少。
+  - 二维码签名具备云端配置入口，能够从“明文二维码”升级到“带签名二维码”安全模式。
+
 ## 2026-03-20（内部大货与批量采购对账流对齐样衣）
 
 ### fix(procurement): 内部大货采购与仓库批量采购统一扭转到物料对账

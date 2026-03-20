@@ -157,6 +157,49 @@ const ProductionList: React.FC = () => {
     }
   }, [shareModal.record, message]);
 
+  const copyTextSafely = useCallback(async (text: string) => {
+    const value = String(text || '').trim();
+    if (!value) {
+      message.warning('复制内容为空');
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        message.success('链接已复制');
+        return;
+      }
+    } catch {
+      // fallback to document.execCommand('copy')
+    }
+
+    try {
+      if (typeof document === 'undefined') {
+        message.error('当前环境不支持复制，请手动复制');
+        return;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', 'true');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-1000px';
+      textarea.style.left = '-1000px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (copied) {
+        message.success('链接已复制');
+      } else {
+        message.error('复制失败，请手动复制');
+      }
+    } catch {
+      message.error('复制失败，请手动复制');
+    }
+  }, [message]);
+
   // ===== 查询参数 =====
   // 跨页跳转精准定位：组件 mount 时就从 URL 读取 orderNo，避免初始 fetch 与 URL params effect 之间的竞态条件
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
@@ -1574,8 +1617,7 @@ const ProductionList: React.FC = () => {
                   type="primary"
                   icon={<CopyOutlined />}
                   onClick={() => {
-                    void navigator.clipboard.writeText(`${window.location.origin}/share/${shareModal.token}`);
-                    message.success('链接已复制');
+                    void copyTextSafely(`${window.location.origin}/share/${shareModal.token}`);
                   }}
                 >
                   复制
