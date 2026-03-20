@@ -37,10 +37,13 @@ public class PermissionOrchestrator {
             return List.of();
         }
 
-        List<Permission> filtered = list;
+        // Bug3修复: 默认排除 DISABLED 权限，避免已禁用模块出现在授权弹窗中
+        List<Permission> filtered = list.stream()
+                .filter(p -> !"DISABLED".equalsIgnoreCase(p.getStatus()))
+                .toList();
         if (status != null && !status.isBlank()) {
             String s = status.trim();
-            filtered = list.stream().filter(p -> Objects.equals(s, p.getStatus())).toList();
+            filtered = filtered.stream().filter(p -> Objects.equals(s, p.getStatus())).toList();
         }
 
         Map<Long, PermissionNode> byId = new HashMap<>();

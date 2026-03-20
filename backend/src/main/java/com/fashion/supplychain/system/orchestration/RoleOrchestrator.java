@@ -30,6 +30,9 @@ public class RoleOrchestrator {
     @Autowired
     private LoginLogService loginLogService;
 
+    @Autowired
+    private PermissionCalculationEngine permissionEngine;
+
     public Page<Role> list(Long page, Long pageSize, String roleName, String roleCode, String status) {
         return roleService.getRolePage(page, pageSize, roleName, roleCode, status);
     }
@@ -117,6 +120,14 @@ public class RoleOrchestrator {
             throw new IllegalStateException("保存失败");
         }
         saveOperationLog("role", String.valueOf(id), "PERMISSION_UPDATE", normalized);
+        // Bug1修复: 驱逐角色权限缓存及所有用户权限缓存，确保变更立即生效，无需等待30分钟TTL
+        try {
+            permissionEngine.evictRolePermissionCache(id);
+            permissionEngine.evictAllUserPermissionCaches();
+            log.info("[RoleOrchestrator] 角色{}权限已更新，缓存已清除", id);
+        } catch (Exception e) {
+            log.warn("[RoleOrchestrator] 清除权限缓存失败，将在TTL后自动生效: {}", e.getMessage());
+        }
         return true;
     }
 

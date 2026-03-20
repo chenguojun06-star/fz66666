@@ -512,4 +512,19 @@ public class PermissionCalculationEngine {
             log.warn("清除租户天花板缓存失败: tenantId={}", tenantId);
         }
     }
+
+    /**
+     * 批量清除所有用户权限缓存
+     * 角色权限变更时调用，确保持有该角色的所有用户权限立即生效，无需等待 30 分钟 TTL
+     */
+    public void evictAllUserPermissionCaches() {
+        try {
+            if (redisService != null) {
+                long deleted = redisService.deleteByPattern(USER_PERM_CACHE_PREFIX + "*");
+                log.info("[PermissionCache] 角色权限变更批量清除用户缓存完成: deleted={}", deleted);
+            }
+        } catch (Exception e) {
+            log.warn("[PermissionCache] 批量清除用户权限缓存失败，权限变更将在 TTL(30分钟)后自动生效: {}", e.getMessage());
+        }
+    }
 }
