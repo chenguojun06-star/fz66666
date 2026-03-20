@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { ProductionQueryParams } from '@/types/production';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 /**
  * 筛选条件、排序、统计卡片状态管理
@@ -9,7 +10,7 @@ import { ProductionQueryParams } from '@/types/production';
 export const useProgressFilters = () => {
   const location = useLocation();
 
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '', includeScrapped: false, excludeTerminal: true });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: readPageSize(10), keyword: '', includeScrapped: false, excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>(
     () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'card'

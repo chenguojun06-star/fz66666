@@ -30,6 +30,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { TextArea } = Input;
 
@@ -55,7 +56,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(readPageSize(20));
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
   const [filterType, setFilterType] = useState<string | undefined>();
   const [keyword, setKeyword] = useState('');

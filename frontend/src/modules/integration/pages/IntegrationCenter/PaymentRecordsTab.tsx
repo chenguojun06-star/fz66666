@@ -6,6 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 interface PaymentRecord {
   id: number;
@@ -39,7 +40,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
   const [data, setData] = useState<PaymentRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
   const [filters, setFilters] = useState<{ channel?: string; status?: string; orderId?: string }>({});
 
   const fetchData = useCallback(async (pg = page, ps = pageSize, fl = filters) => {

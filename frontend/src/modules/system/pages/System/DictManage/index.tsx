@@ -11,6 +11,7 @@ import type { ColumnsType } from 'antd/es/table';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Option } = Select;
 
@@ -80,6 +81,7 @@ const DictManage: React.FC = () => {
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DictItem[]>([]);
+  const [dictPageSize, setDictPageSize] = useState(readPageSize(50));
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const showDictAutocollect = useMemo(() => isSmartFeatureEnabled('smart.dict.autocollect.enabled'), []);
@@ -525,7 +527,8 @@ const DictManage: React.FC = () => {
         loading={loading}
         rowKey={(record) => record.id || `${record.dictType}-${record.dictCode}`}
         pagination={{
-          pageSize: 50,
+          pageSize: dictPageSize,
+          onChange: (_, ps) => setDictPageSize(ps),
           showTotal: (total) => `共 ${total} 条`,
           showSizeChanger: true,
           showQuickJumper: true,

@@ -24,6 +24,7 @@ import type { TemplateLibraryRecord } from './utils/templateUtils';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 type PageResp<T> = {
   records: T[];
@@ -58,10 +59,10 @@ const TemplateCenter: React.FC = () => {
     setSmartError({ title, reason, code });
   };
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
   const [total, setTotal] = useState(0);
   const pageRef = useRef(1);
-  const pageSizeRef = useRef(10);
+  const pageSizeRef = useRef(readPageSize(10));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);

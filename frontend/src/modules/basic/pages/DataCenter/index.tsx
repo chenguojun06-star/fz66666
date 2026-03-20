@@ -17,6 +17,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import dayjs from 'dayjs';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { TextArea } = Input;
 
@@ -307,7 +308,7 @@ const DataCenter: React.FC = () => {
 
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1,
-    pageSize: 10,
+    pageSize: readPageSize(10),
     onlyCompleted: true,
   });
   const [styles, setStyles] = useState<StyleInfo[]>([]);

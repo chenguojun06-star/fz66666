@@ -11,11 +11,12 @@ import './styles.css';
 
 import dayjs from 'dayjs';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const LoginLogList: React.FC = () => {
   const [queryParams, setQueryParams] = useState<LoginLogQueryParams>({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(10)
   });
 
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);

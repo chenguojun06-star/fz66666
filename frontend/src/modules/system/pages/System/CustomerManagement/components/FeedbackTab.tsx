@@ -9,6 +9,7 @@ import feedbackService from '@/services/feedbackService';
 import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import type { ColumnsType } from 'antd/es/table';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const FEEDBACK_CATEGORY: Record<string, { label: string; color: string }> = {
   BUG: { label: '缺陷', color: 'red' },
@@ -30,7 +31,7 @@ const FeedbackTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<FeedbackStats | null>(null);
-  const [queryParams, setQueryParams] = useState({ page: 1, pageSize: 20, status: '', tenantName: '', category: '' });
+  const [queryParams, setQueryParams] = useState({ page: 1, pageSize: readPageSize(20), status: '', tenantName: '', category: '' });
   const replyModal = useModal<UserFeedback>();
   const detailModal = useModal<UserFeedback>();
   const [replyForm] = Form.useForm();

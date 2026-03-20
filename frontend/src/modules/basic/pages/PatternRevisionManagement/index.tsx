@@ -32,6 +32,7 @@ import {
   getRevisionStatusLabel,
   getRevisionStatusColor,
 } from '@/types/patternRevision';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { TextArea } = Input;
 const { confirm } = Modal;
@@ -49,7 +50,7 @@ const PatternRevisionManagement: React.FC = () => {
   const [data, setData] = useState<PatternRevision[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
 
   // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false);

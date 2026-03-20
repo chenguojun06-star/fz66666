@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Text } = Typography;
 
@@ -41,7 +42,7 @@ const EcSalesRevenue: React.FC = () => {
     status: undefined as string | undefined,
     keyword: '',
     page: 1,
-    pageSize: 20,
+    pageSize: readPageSize(20),
   });
 
   const fetchSummary = useCallback(async () => {

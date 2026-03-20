@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 interface UseStyleListReturn {
   loading: boolean;
@@ -23,7 +24,7 @@ export const useStyleList = (): UseStyleListReturn => {
   const [total, setTotal] = useState(0);
   const [queryParams, setQueryParams] = useState<StyleQueryParams>(({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(10)
   }));
 
   const fetchList = useCallback(async (params?: StyleQueryParams) => {

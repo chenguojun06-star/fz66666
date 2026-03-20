@@ -18,6 +18,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import './styles.css';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const RoleList: React.FC = () => {
   const { message } = App.useApp();
@@ -27,7 +28,7 @@ const RoleList: React.FC = () => {
   const permModal = useModal();
   const [queryParams, setQueryParams] = useState<RoleQueryParams>({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(10)
   });
 
   type RoleRecord = Role & Record<string, unknown>;

@@ -11,6 +11,7 @@ import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -65,7 +66,7 @@ const OrdersTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(readPageSize(20));
   const [filterPlatform, setFilterPlatform] = useState('');
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [keyword, setKeyword] = useState('');

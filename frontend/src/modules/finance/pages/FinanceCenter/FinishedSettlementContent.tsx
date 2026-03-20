@@ -17,6 +17,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { downloadFile } from '@/utils/fileUrl';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -85,7 +86,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const { factoryTypeOptions } = useOrganizationFilterOptions();
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
-    pageSize: 20,
+    pageSize: readPageSize(20),
   });
   const buildPageParams = useCallback((overrides?: Partial<PageParams>): PageParams => ({
     page: overrides?.page || 1,

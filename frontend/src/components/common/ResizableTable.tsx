@@ -1,6 +1,7 @@
 import React from 'react';
 import { Table, ConfigProvider } from 'antd';
 import type { TableProps } from 'antd';
+import { savePageSize } from '@/utils/pageSizeStore';
 
 /**
  * 任意记录类型定义
@@ -399,8 +400,20 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     if (paginationProp === undefined || paginationProp === null) return paginationProp;
     const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
     const { position, placement, ...baseRest } = base as any;
+
+    // 拦截 onChange：当用户切换每页条数时，自动持久化到 localStorage
+    const originalOnChange = base?.onChange;
+    const trackedPageSize = base?.pageSize as number | undefined;
+    const interceptedOnChange = (page: number, pageSize: number) => {
+      if (trackedPageSize === undefined || pageSize !== trackedPageSize) {
+        savePageSize(pageSize);
+      }
+      originalOnChange?.(page, pageSize);
+    };
+
     return {
       ...baseRest,
+      onChange: interceptedOnChange,
       simple: base?.simple ?? true,
       showSizeChanger: base?.showSizeChanger ?? true,
       placement: placement ?? position ?? ['bottomRight'],

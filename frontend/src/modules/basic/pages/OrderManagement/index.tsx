@@ -39,6 +39,7 @@ import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -72,7 +73,7 @@ const OrderManagement: React.FC = () => {
   }, []);
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1,
-    pageSize: 10,
+    pageSize: readPageSize(10),
     onlyCompleted: true,
     keyword: ''
   });

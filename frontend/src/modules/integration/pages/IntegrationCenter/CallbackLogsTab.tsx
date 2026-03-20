@@ -7,6 +7,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Text } = Typography;
 
@@ -37,7 +38,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
   const [data, setData] = useState<CallbackLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
   const [filters, setFilters] = useState<{ type?: string; channel?: string; processed?: string }>({});
   const [rawBodyModal, setRawBodyModal] = useState<{ open: boolean; content: string }>({ open: false, content: '' });
 

@@ -6,6 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 interface LogisticsRecord {
   id: number;
@@ -41,7 +42,7 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
   const [data, setData] = useState<LogisticsRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
   const [filters, setFilters] = useState<{ companyCode?: string; status?: string; orderId?: string }>({});
 
   const fetchData = useCallback(async (pg = page, ps = pageSize, fl = filters) => {

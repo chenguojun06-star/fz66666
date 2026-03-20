@@ -19,6 +19,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -948,7 +949,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             showTotal: (total) => `共 ${total} 条`,
                                             showSizeChanger: true,
                                             pageSizeOptions: ['10', '20', '50', '100'],
-                                            defaultPageSize: 20,
+                                            defaultPageSize: readPageSize(20),
                                         }}
                                         scroll={{ x: 1600 }}
                                     />
@@ -992,7 +993,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             showTotal: (total) => `共 ${total} 条`,
                                             showSizeChanger: true,
                                             pageSizeOptions: ['10', '20', '50', '100'],
-                                            defaultPageSize: 20,
+                                            defaultPageSize: readPageSize(20),
                                         }}
                                         scroll={{ x: 1300 }}
                                     />
@@ -1110,7 +1111,7 @@ function WorkerEfficiencyTab({
                 columns={columns}
                 dataSource={list as any}
                 loading={loading}
-                pagination={{ showTotal: (t) => `共 ${t} 人`, defaultPageSize: 50, showSizeChanger: true }}
+                pagination={{ showTotal: (t) => `共 ${t} 人`, defaultPageSize: readPageSize(50), showSizeChanger: true }}
                 scroll={{ x: 900 }}
                 size="small"
             />

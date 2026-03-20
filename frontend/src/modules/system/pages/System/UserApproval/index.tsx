@@ -9,6 +9,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { TextArea } = Input;
 
@@ -18,7 +19,7 @@ const UserApproval: React.FC = () => {
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(readPageSize(10));
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);

@@ -22,6 +22,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { paths } from '@/routeConfig';
 import { organizationApi } from '@/services/system/organizationApi';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -61,7 +62,7 @@ const FactoryList: React.FC = () => {
   };
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(10)
   });
 
   const [factoryList, setFactoryList] = useState<FactoryType[]>([]);

@@ -16,6 +16,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, receivableApi, generatePortalLink, type Customer, type Receivable } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -222,7 +223,7 @@ const CustomerManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: readPageSize(20) });
   const [stats, setStats] = useState({ total: 0, activeCount: 0, newThisMonth: 0, vip: 0 });
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Customer | null>(null);

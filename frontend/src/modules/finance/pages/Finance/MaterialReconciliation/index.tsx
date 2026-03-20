@@ -28,6 +28,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/production/productionApi';
 import type { FinanceAuditResponse } from '@/services/production/productionApi';
+import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Option } = Select;
 
@@ -39,7 +40,7 @@ const MaterialReconciliation: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [queryParams, setQueryParams] = useState<MaterialReconQueryParams>({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(10)
   });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [_filterForm] = Form.useForm();

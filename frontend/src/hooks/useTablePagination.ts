@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { readPageSize, savePageSize } from '@/utils/pageSizeStore';
 
 /**
  * 表格分页配置
@@ -40,7 +41,7 @@ export interface PaginationConfig {
 export const useTablePagination = (initialPageSize = 10) => {
   const [pagination, setPagination] = useState<PaginationConfig>({
     current: 1,
-    pageSize: initialPageSize,
+    pageSize: readPageSize(initialPageSize),
     total: 0,
     showSizeChanger: true,
     showQuickJumper: true,
@@ -51,11 +52,10 @@ export const useTablePagination = (initialPageSize = 10) => {
    * 页码或每页条数变化时的回调
    */
   const onChange = (page: number, pageSize: number) => {
-    setPagination(prev => ({
-      ...prev,
-      current: page,
-      pageSize: pageSize !== prev.pageSize ? prev.pageSize : pageSize,
-    }));
+    setPagination(prev => {
+      if (pageSize !== prev.pageSize) savePageSize(pageSize);
+      return { ...prev, current: page, pageSize };
+    });
   };
 
   /**
