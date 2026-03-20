@@ -118,7 +118,7 @@ const MaterialReconciliation: React.FC = () => {
     const lines = [header.map(escapeCsvCell).join(',')];
     for (const r of rows) {
       const st = getMaterialReconStatusConfig((r as any)?.status);
-      const sourceTypeText = (r as any)?.sourceType === 'sample' ? '样衣采购' : '批量采购';
+      const sourceTypeText = (r as any)?.sourceType === 'sample' ? '样衣采购' : ((r as any)?.sourceType === 'order' ? '大货采购' : '批量采购');
       const quantity = Number((r as any)?.quantity ?? 0) || 0;
       const unitPrice = Number((r as any)?.unitPrice ?? 0) || 0;
       const totalAmount = quantity * unitPrice;
@@ -515,6 +515,7 @@ const MaterialReconciliation: React.FC = () => {
       width: 100,
       render: (value: string) => {
         if (value === 'sample') return <Tag color="purple">样衣采购</Tag>;
+        if (value === 'order') return <Tag color="blue">大货采购</Tag>;
         return <Tag color="green">批量采购</Tag>;
       },
     },
@@ -772,6 +773,7 @@ const MaterialReconciliation: React.FC = () => {
                   >
                     <Option value="">全部</Option>
                     <Option value="sample">样衣采购</Option>
+                    <Option value="order">大货采购</Option>
                     <Option value="batch">批量采购</Option>
                   </Select>
                 </>
