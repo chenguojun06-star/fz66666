@@ -844,6 +844,15 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             }
         }
 
+        // 租户隔离：普通租户只看自己的+系统级(tenantId=null)，超管只看系统级模板
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null) {
+            final Long tid = currentTenantId;
+            wrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
+        } else {
+            wrapper.isNull(TemplateLibrary::getTenantId);
+        }
+
         return baseMapper.selectPage(pageInfo, wrapper);
     }
 
@@ -853,10 +862,19 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (!StringUtils.hasText(t)) {
             return List.of();
         }
-        return list(new LambdaQueryWrapper<TemplateLibrary>()
+        LambdaQueryWrapper<TemplateLibrary> wrapper = new LambdaQueryWrapper<TemplateLibrary>()
                 .eq(TemplateLibrary::getTemplateType, t)
                 .orderByAsc(TemplateLibrary::getTemplateName)
-                .orderByAsc(TemplateLibrary::getTemplateKey));
+                .orderByAsc(TemplateLibrary::getTemplateKey);
+        // 租户隔离：普通租户只看自己的+系统级(tenantId=null)，超管只看系统级模板
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null) {
+            final Long tid = currentTenantId;
+            wrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
+        } else {
+            wrapper.isNull(TemplateLibrary::getTenantId);
+        }
+        return list(wrapper);
     }
 
     @Override
