@@ -83,7 +83,6 @@ const RoleList: React.FC = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<OperationLog[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
-  const [showOnlyChecked, setShowOnlyChecked] = useState(false);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -349,7 +348,6 @@ const RoleList: React.FC = () => {
   };
 
   const openPermDialog = async (role: Role) => {
-    setShowOnlyChecked(false);
     roleModal.setModalData(role);
     try {
       const treeRes = await requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree');
@@ -753,11 +751,6 @@ const RoleList: React.FC = () => {
           <Space wrap>
             <Button onClick={() => applyTemplate(allPermissionIds)} disabled={!allPermissionIds.size}>全选</Button>
             <Button onClick={() => applyTemplate(new Set())} disabled={!checkedPermIds.size}>清空</Button>
-            <Button
-              type={showOnlyChecked ? 'primary' : 'default'}
-              onClick={() => setShowOnlyChecked(v => !v)}
-              disabled={!checkedPermIds.size}
-            >只看已选</Button>
             {templatePresets.map((t) => (
               <Button
                 key={t.key}
@@ -778,26 +771,11 @@ const RoleList: React.FC = () => {
             alignItems: 'flex-start'
           }}>
             {permissionsByModule
-              .filter((module) => {
-                if (!showOnlyChecked) return true;
-                const allIds = [
-                  module.moduleId,
-                  ...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]),
-                  ...module.directButtons.map(b => b.id),
-                ];
-                return allIds.some(id => checkedPermIds.has(id));
-              })
               .map((module) => {
               const allBtnIds = [
                 ...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]),
                 ...module.directButtons.map(b => b.id),
               ];
-              const visibleGroups = showOnlyChecked
-                ? module.groups.filter(g => checkedPermIds.has(g.groupId) || g.buttons.some(b => checkedPermIds.has(b.id)))
-                : module.groups;
-              const visibleDirectBtns = showOnlyChecked
-                ? module.directButtons.filter(b => checkedPermIds.has(b.id))
-                : module.directButtons;
               return (
                 <div key={module.moduleId} style={{ minWidth: 130, maxWidth: 200, border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden', fontSize: 12, flexShrink: 0 }}>
                   {/* 模块头 - 主色背景 */}
@@ -814,7 +792,7 @@ const RoleList: React.FC = () => {
                     >{module.moduleName}</Checkbox>
                   </div>
                   {/* 子模块分组 */}
-                  {visibleGroups.map(group => (
+                  {module.groups.map(group => (
                     <div key={group.groupId} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <div style={{ background: checkedPermIds.has(group.groupId) ? '#dbeafe' : '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
                         <Checkbox
@@ -830,7 +808,7 @@ const RoleList: React.FC = () => {
                         >{group.groupName}</Checkbox>
                       </div>
                       <div style={{ padding: '2px 4px 4px 16px' }}>
-                        {(showOnlyChecked ? group.buttons.filter(b => checkedPermIds.has(b.id)) : group.buttons).map(btn => (
+                        {group.buttons.map(btn => (
                           <div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}>
                             <Checkbox
                               checked={checkedPermIds.has(btn.id)}
@@ -848,9 +826,9 @@ const RoleList: React.FC = () => {
                     </div>
                   ))}
                   {/* 直属功能按钮 */}
-                  {visibleDirectBtns.length > 0 && (
+                  {module.directButtons.length > 0 && (
                     <div style={{ padding: '4px 6px' }}>
-                      {visibleDirectBtns.map(btn => (
+                      {module.directButtons.map(btn => (
                         <div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}>
                           <Checkbox
                             checked={checkedPermIds.has(btn.id)}
