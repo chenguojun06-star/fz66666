@@ -175,6 +175,7 @@ const Login: React.FC = () => {
                 },
               },
             ]}
+            validateTrigger={['onBlur', 'onSubmit']}
             label={t('login.company', language)}
             extra={selectedTenant ? <span style={{ color: '#52c41a', fontSize: 12 }}>{t('login.companySelectedPrefix', language)}{selectedTenant.tenantName}</span> : null}
           >
@@ -185,6 +186,7 @@ const Login: React.FC = () => {
               onFocus={() => { /* 不自动展开，等用户输入后再搜索 */ }}
               placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
               disabled={submitting || tenantsLoading}
+              getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
             >
               <Input
                 prefix={<SearchOutlined className="site-form-item-icon" />}
