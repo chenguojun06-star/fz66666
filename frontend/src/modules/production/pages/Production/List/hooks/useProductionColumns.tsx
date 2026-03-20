@@ -322,6 +322,8 @@ export function useProductionColumns({
           );
         }
 
+        // ★ 采购节点：有到货即显示 ✓（不显示件数比），进度锁 100% 避免波浪死循环
+        const procurePercent = (rate || 0) > 0 ? 100 : 0;
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
@@ -331,9 +333,9 @@ export function useProductionColumns({
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {completed}/{total}
+              {(rate || 0) > 0 ? '✓' : ''}
             </div>
-            <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
+            <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
           </div>
         );
       },
@@ -599,7 +601,7 @@ export function useProductionColumns({
       width: 155,
       render: (value: unknown, record: ProductionOrder) => {
         const dateStr = value ? formatDateTime(value as string) : '-';
-        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate);
+        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
         // 进度风险标签：综合 daysLeft + productionProgress 给出预警
         const s = record.status;
         const prog = Number(record.productionProgress) || 0;
