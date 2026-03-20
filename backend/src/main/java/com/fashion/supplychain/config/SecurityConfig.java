@@ -150,6 +150,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         // ── 系统模块只读端点：所有登录用户可访问（必须放在 /api/system/** 兜底之前）──
                         // 用户列表：工厂账号可查自己工厂成员（Orchestrator 层自动按 factoryId 过滤，防越权）
                         .antMatchers(HttpMethod.GET, "/api/system/user/list").authenticated()
+                        // 成员状态切换：工厂账号可启停自己工厂成员（Orchestrator 层校验 factoryId 归属，防越权）
+                        .antMatchers(HttpMethod.PUT, "/api/system/user/status").authenticated()
                         // 组织架构：查看部门树/成员（创建/修改/删除由兜底规则限定为管理员）
                         .antMatchers(HttpMethod.GET, "/api/system/organization/tree").authenticated()
                         .antMatchers(HttpMethod.GET, "/api/system/organization/departments").authenticated()

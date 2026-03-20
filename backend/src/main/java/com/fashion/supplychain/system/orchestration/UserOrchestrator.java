@@ -196,18 +196,33 @@ public class UserOrchestrator {
     }
 
     public boolean toggleStatus(Long id, String status, String remark) {
-        if (!UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("无权限操作");
-        }
-        String normalized = TextUtils.safeText(remark);
-        if (!StringUtils.hasText(normalized)) {
-            throw new IllegalArgumentException("操作原因不能为空");
+        String currentFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(currentFactoryId)) {
+            // 工厂账号：只能切换自己工厂成员的状态（越权防护）
+            User targetUser = userService.getById(id);
+            if (targetUser == null) {
+                throw new IllegalArgumentException("用户不存在");
+            }
+            if (!currentFactoryId.equals(targetUser.getFactoryId())) {
+                throw new AccessDeniedException("只能操作本工厂的成员");
+            }
+        } else {
+            // 租户管理员：需要顶级管理员权限 + 操作原因
+            if (!UserContext.isTopAdmin()) {
+                throw new AccessDeniedException("无权限操作");
+            }
+            String normalized = TextUtils.safeText(remark);
+            if (!StringUtils.hasText(normalized)) {
+                throw new IllegalArgumentException("操作原因不能为空");
+            }
         }
         boolean success = userService.toggleUserStatus(id, status);
         if (!success) {
             throw new IllegalStateException("状态切换失败");
         }
-        saveOperationLog("user", id == null ? null : String.valueOf(id), null, "STATUS_UPDATE", normalized);
+        String logRemark = StringUtils.hasText(remark) ? TextUtils.safeText(remark)
+                : (StringUtils.hasText(currentFactoryId) ? "工厂账号操作" : "");
+        saveOperationLog("user", id == null ? null : String.valueOf(id), null, "STATUS_UPDATE", logRemark);
         return true;
     }
 
