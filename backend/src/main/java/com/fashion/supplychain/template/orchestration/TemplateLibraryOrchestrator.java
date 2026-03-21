@@ -744,11 +744,12 @@ public class TemplateLibraryOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean rollback(String id, String reason) {
-        // 管理员或工厂用户（仅限其被分配款号的模板）均可解锁
-        boolean isAdmin = UserContext.isTopAdmin();
+        // 管理员/主管/工厂用户（仅限其被分配款号的模板）均可退回
+        // 使用 isSupervisorOrAbove()（含"管理"角色），与前端 isAdminUser(role.includes('管理')) 保持一致
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
         boolean isFactory = DataPermissionHelper.isFactoryAccount();
         if (!isAdmin && !isFactory) {
-            log.warn("[模板退回] 权限不足 userId={}, role={}, factoryId={}, isAdmin={}, isFactory={}",
+            log.warn("[模板退回] 权限不足 userId={}, role={}, factoryId={}, isSupervisor={}, isFactory={}",
                     UserContext.userId(), UserContext.role(), UserContext.factoryId(), isAdmin, isFactory);
             throw new AccessDeniedException("无权限操作");
         }
