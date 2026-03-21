@@ -140,7 +140,7 @@ export const permissionCodes = {
   appStore: 'MENU_APP_STORE_VIEW',
   dataImport: 'MENU_DATA_IMPORT',
   integrationCenter: 'MENU_INTEGRATION',
-  intelligenceCenter: 'MENU_DASHBOARD', // 智能中心复用仪表盘权限码
+  intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
   crm: 'MENU_CRM',
