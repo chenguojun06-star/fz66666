@@ -112,6 +112,7 @@ public class DailyBriefOrchestrator {
 
         // ④ 高风险订单（进行中 + 7天内到期但【尚未逾期】 + 进度 < 50%）
         // 注意：已逾期订单已在 overdueOrderCount 中计数，此处排除避免双重计数
+        String briefFactoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的订单
         LocalDateTime nowTime = today.atStartOfDay();
         LocalDateTime deadline = today.plusDays(7).atTime(LocalTime.MAX);
         List<ProductionOrder> highRisk = productionOrderService.list(
@@ -126,6 +127,7 @@ public class DailyBriefOrchestrator {
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())  // 🔒 租户隔离
+                .eq(org.springframework.util.StringUtils.hasText(briefFactoryId), ProductionOrder::getFactoryId, briefFactoryId)  // 🔒 工厂隔离
                 .eq(ProductionOrder::getStatus, "production")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .ge(ProductionOrder::getPlannedEndDate, nowTime)   // 未逾期（今天之后）

@@ -339,9 +339,13 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 获取延期订单列表（仅包含生产中订单）
         int lim = Math.max(1, limit);
         LocalDateTime now = LocalDateTime.now();
+        Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的数据
         return productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getPlannedEndDate)
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)  // 🔒 租户隔离
+                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)  // 🔒 工厂隔离
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
