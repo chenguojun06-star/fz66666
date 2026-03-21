@@ -1,5 +1,25 @@
 # 2026-03-22
 
+## 仪表板 / 今日预警和小云面板工厂数据隔离修复
+
+- **问题现象**：工厂账号（如"演示工人小李"）登录后，今日预警弹窗和小云 AI 助手面板显示了所有工厂的订单，而非仅本工厂订单。
+- **根本原因**：
+  - `DailyBriefOrchestrator.getBrief()` 的 highRisk 查询仅有租户隔离，缺少工厂隔离过滤。
+  - `DashboardQueryServiceImpl.listOverdueOrders()` 既无租户隔离也无工厂隔离，导致获取了全部订单。
+  - 工厂账号的 `UserContext.factoryId()` 被正确设置但未在这两个查询中使用。
+- **修复方案**：
+  - `DailyBriefOrchestrator.getBrief()`：highRisk LambdaQueryWrapper 新增 `.eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, briefFactoryId)` 工厂过滤。
+  - `DashboardQueryServiceImpl.listOverdueOrders()`：新增二重隔离 — 租户检查 `tenantId != null` + 工厂检查 `StringUtils.hasText(factoryId)`。
+  - 行为对齐 `DashboardOrchestrator.dashboard()` 的既有工厂隔离模式。
+- **修复后表现**：
+  - 工厂账号只显示本工厂的逾期订单、高风险订单、待办事项。
+  - 超管／租户主账号无 `factoryId` 时，条件为 false，查询全量订单，行为不变。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/dashboard/orchestration/DailyBriefOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java`
+- **对系统的帮助**：工厂工人不再看到其他工厂的订单信息，完全符合多租户多工厂的安全隔离规范。工作任务面板聚焦真实可处理的订单，提升工作效率和信息准确性。
+- **Commit**：`85d45389`
+
 ## 采购管理 / 到货数量显示精度修复
 
 - 修复面辅料采购列表“采购数量 / 到货数量 / 待到数量”出现 `0.179999999999` 一类浮点尾数的问题。
