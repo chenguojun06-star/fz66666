@@ -31,7 +31,20 @@ import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
 import './styles.css';
 
-
+/* ── 拖拽工作台：模块定义（组件外部，避免每次渲染重建） ── */
+interface CanvasModule { key: string; x: number; y: number; }
+const DRAG_MODULES = [
+  { key: 'stagnant-alert',  icon: '🔸', title: '停滞预警',     desc: '工厂停工实时检测' },
+  { key: 'order-risk',      icon: '⚠️', title: '订单交付风险', desc: '逾期/高风险订单' },
+  { key: 'system-health',   icon: '🔧', title: '系统自愈诊断', desc: '异常检查与自动修复' },
+  { key: 'factory-ranking', icon: '🏆', title: '工厂绩效排行', desc: '实时绩效对比排行' },
+  { key: 'ai-brain',        icon: '🤖', title: 'AI 大脑状态',  desc: '模型网关&信号汇总' },
+  { key: 'action-center',   icon: '⚡', title: '行动中心',     desc: '待办任务与优先级' },
+  { key: 'ai-meeting',      icon: '🧠', title: 'Agent 例会',  desc: '多Agent智能辩论' },
+  { key: 'profit-forecast', icon: '💰', title: '利润分析',     desc: '完工预测与利润估算' },
+  { key: 'monthly-summary', icon: '📊', title: '月度汇总',     desc: '全维度经营报告' },
+  { key: 'supply-chain',    icon: '🔗', title: '供应链追踪',   desc: '面料缺货&健康状态' },
+] as const;
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -102,6 +115,12 @@ const IntelligenceCenter: React.FC = () => {
       .catch(() => {});
     return () => ac.abort();
   }, []);
+
+  /* ── 拖拽工作台：画布状态 ── */
+  const [canvasModules, setCanvasModules] = useState<CanvasModule[]>([]);
+  const [dragOverCanvas, setDragOverCanvas] = useState(false);
+  const [dragging, setDragging] = useState<{ key: string; offX: number; offY: number } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   /* ── 主面板折叠/展开（localStorage 持久化） ── */
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>(() => {
@@ -191,7 +210,7 @@ const IntelligenceCenter: React.FC = () => {
     }
   }, [reload]);
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, brain, actionCenter, factoryCapacity, productionStats } = data;
 
   /* ── KPI 指标（委托给 useKpiMetrics） ── */
   const {
@@ -207,6 +226,176 @@ const IntelligenceCenter: React.FC = () => {
 
   /* ── KPI Popover 内容（委托给 useKpiPopovers） ── */
   const { scanPop, factoryPop, healthPop, stagnantPop, shortagePop, notifyPop } = useKpiPopovers({ data, currentKpiMetrics, now });
+
+  /* ── 画布 drop / 拖移处理 ── */
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverCanvas(false);
+    const key = e.dataTransfer.getData('module-key');
+    if (!key || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    setCanvasModules(prev => [
+      ...prev.filter(m => m.key !== key),
+      { key, x: Math.max(0, e.clientX - rect.left - 20), y: Math.max(0, e.clientY - rect.top - 20) },
+    ]);
+  };
+  const handleCardMouseDown = (e: React.MouseEvent, key: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragging({ key, offX: e.clientX - rect.left, offY: e.clientY - rect.top });
+    e.preventDefault();
+  };
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!dragging || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = Math.max(0, e.clientX - rect.left - dragging.offX);
+    const y = Math.max(0, e.clientY - rect.top - dragging.offY);
+    setCanvasModules(prev => prev.map(m => m.key === dragging.key ? { ...m, x, y } : m));
+  };
+
+  /* ── 渲染各模块内容 ── */
+  const renderModuleContent = (key: string): React.ReactNode => {
+    switch (key) {
+      case 'stagnant-alert':
+        return pulse?.stagnantFactories?.length ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {pulse.stagnantFactories.slice(0, 5).map((f: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ color: '#f7a600', fontSize: 9, fontWeight: 700, minWidth: 24 }}>停滞</span>
+                <span style={{ color: '#b0c4de', flex: 1 }}>{f.factoryName}</span>
+                <span style={{ color: '#5a8aa8', flexShrink: 0 }}>{f.silentMinutes}min</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">暂无停滞预警</div>;
+
+      case 'order-risk':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { label: '已逾期', val: overdueRisk.overdue.length, color: '#ff4136', bg: 'rgba(255,65,54,0.06)' },
+                { label: '高风险', val: overdueRisk.highRisk.length, color: '#f7a600', bg: 'rgba(247,166,0,0.06)' },
+                { label: '关注',   val: overdueRisk.watch.length,    color: '#a78bfa', bg: 'rgba(167,139,250,0.06)' },
+              ].map(({ label, val, color, bg }) => (
+                <div key={label} style={{ flex: 1, textAlign: 'center', background: bg, borderRadius: 6, padding: '5px 4px' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color }}>{val}</div>
+                  <div style={{ fontSize: 10, color: '#7aaec8' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            {overdueRisk.overdue.slice(0, 2).map((o: any, i: number) => (
+              <div key={i} style={{ fontSize: 11, color: '#ff4136', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 3 }}>
+                {o.orderNo} · {o.factoryName}
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'system-health':
+        return healing?.items?.length ? (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: healing.healthScore >= 80 ? '#73d13d' : '#d48806', marginBottom: 6 }}>
+              健康分 {healing.healthScore} · 发现 {healing.issuesFound} 项
+            </div>
+            {healing.items.slice(0, 4).map((item: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, padding: '2px 0' }}>
+                <span className={`c-heal-dot ${item.status === 'OK' ? 'dot-ok' : item.autoFixed ? 'dot-fixed' : 'dot-warn'}`} />
+                <span style={{ color: '#b0c8d8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.checkName}</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">暂无诊断数据</div>;
+
+      case 'factory-ranking':
+        return ranking?.rankings?.length ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {ranking.rankings.slice(0, 5).map((r: any, i: number) => (
+              <div key={r.factoryId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <span style={{ color: medalColor[i] ?? '#7a8999', fontSize: 14, width: 22, flexShrink: 0 }}>
+                  {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${r.rank}`}
+                </span>
+                <span style={{ color: '#b8cce0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.factoryName}</span>
+                <span style={{ color: '#00e5ff', fontWeight: 700, flexShrink: 0 }}>{r.totalScore}</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">暂无排行数据</div>;
+
+      case 'ai-brain':
+        return brain ? (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginBottom: 8 }}>
+              {[
+                { val: brain.summary.todayScanQty.toLocaleString(), label: '今日扫码', color: '#00e5ff', bg: 'rgba(0,229,255,0.04)' },
+                { val: brain.summary.anomalyCount,                  label: '异常项',   color: '#a78bfa', bg: 'rgba(167,139,250,0.04)' },
+                { val: brain.summary.highRiskOrders,                label: '高风险',   color: brain.summary.highRiskOrders > 0 ? '#ff4136' : '#39ff14', bg: 'rgba(255,65,54,0.04)' },
+              ].map(({ val, label, color, bg }) => (
+                <div key={label} style={{ textAlign: 'center', background: bg, borderRadius: 5, padding: '4px 0' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color }}>{val}</div>
+                  <div style={{ fontSize: 9, color: '#7aaec8' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: brain.modelGateway.status === 'CONNECTED' ? '#39ff14' : '#ff4136' }}>
+              ● {brain.modelGateway.status} · {brain.modelGateway.activeModel}
+            </div>
+          </div>
+        ) : <div className="c-empty">大脑状态加载中...</div>;
+
+      case 'action-center':
+        return actionCenter?.tasks?.length ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, color: '#7aaec8', marginBottom: 2 }}>
+              待处理 {actionCenter.summary.totalTasks} · 紧急 {actionCenter.summary.highPriorityTasks}
+            </div>
+            {actionCenter.tasks.slice(0, 4).map((task: any, i: number) => (
+              <div key={i} style={{ fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#b0c4de' }}>
+                <span style={{ color: task.priority === 'CRITICAL' ? '#ff4136' : '#f7a600', fontWeight: 700, marginRight: 6 }}>L{task.escalationLevel}</span>
+                {task.title}
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">暂无待办任务</div>;
+
+      case 'ai-meeting':
+        return meetingHistory.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {meetingHistory.slice(0, 4).map((m: any, i: number) => (
+              <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ fontSize: 10, color: '#a78bfa' }}>{m.meetingType ?? '辩论'}</div>
+                <div style={{ fontSize: 11, color: '#b0c4de' }}>{m.topic}</div>
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">暂无例会记录</div>;
+
+      case 'profit-forecast':
+        return <div style={{ overflow: 'hidden', maxHeight: 220 }}><ProfitDeliveryPanel /></div>;
+
+      case 'monthly-summary':
+        return (isSuperAdmin || isTenantOwner || (user?.permissions ?? []).includes('INTELLIGENCE_MONTHLY_VIEW'))
+          ? <div style={{ overflow: 'hidden', maxHeight: 220 }}><MonthlyBizSummary /></div>
+          : <div className="c-empty">无权限查看月度汇总</div>;
+
+      case 'supply-chain':
+        return shortage?.shortageItems?.length ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {shortage.shortageItems.slice(0, 5).map((s: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, padding: '2px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span className="c-shortage-risk" style={{ color: s.riskLevel === 'HIGH' ? '#ff4136' : '#f7a600', borderColor: 'currentColor' }}>
+                  {s.riskLevel === 'HIGH' ? '紧急' : '预警'}
+                </span>
+                <span style={{ flex: 1, color: '#9ab0c4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.materialName}</span>
+                <span style={{ color: '#ff4136', fontWeight: 700, flexShrink: 0 }}>{s.shortageQuantity}&nbsp;{s.unit}</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="c-empty">供应链状态良好</div>;
+
+      default:
+        return <div className="c-empty">内容加载中...</div>;
+    }
+  };
 
   /* 面板折叠按钮（chevron 图标，放在 c-card-title 末尾） */
   const CollapseChevron = ({ panelKey }: { panelKey: string }) => (
@@ -953,6 +1142,86 @@ const IntelligenceCenter: React.FC = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* ╔══════════════════════════════════════╗
+            ║   🎛 自定义模块工作台（拖拽）          ║
+            ╚══════════════════════════════════════╝ */}
+        <div className="c-card quantum-workspace-block">
+          <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('quantumWorkspace')}>
+            <LiveDot color="#00e5ff" />
+            自定义工作台
+            <span className="c-card-badge" style={{ background: 'rgba(0,229,255,0.08)', color: '#00e5ff', borderColor: 'rgba(0,229,255,0.28)' }}>
+              拖拽模块 · 自由组合
+            </span>
+            {canvasModules.length > 0 && (
+              <span className="c-card-badge purple-badge">{canvasModules.length} 个模块</span>
+            )}
+            <CollapseChevron panelKey="quantumWorkspace" />
+          </div>
+          <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['quantumWorkspace'] ? 0 : 640, transition: 'max-height 0.3s ease' }}>
+            <div className="quantum-workspace">
+              {/* ── 左侧：模块库 ── */}
+              <div className="quantum-sidebar">
+                <div className="quantum-sidebar-title">模块库</div>
+                {DRAG_MODULES.map(m => (
+                  <div
+                    key={m.key}
+                    className="quantum-module-tile"
+                    draggable
+                    onDragStart={e => e.dataTransfer.setData('module-key', m.key)}
+                  >
+                    <span className="qm-icon">{m.icon}</span>
+                    <div className="qm-info">
+                      <div className="qm-title">{m.title}</div>
+                      <div className="qm-desc">{m.desc}</div>
+                    </div>
+                    <span className="qm-drag-hint">⋮⋮</span>
+                  </div>
+                ))}
+              </div>
+              {/* ── 右侧：画布 ── */}
+              <div
+                ref={canvasRef}
+                className={`quantum-canvas${dragOverCanvas ? ' drag-over' : ''}`}
+                onDragOver={e => { e.preventDefault(); setDragOverCanvas(true); }}
+                onDragLeave={() => setDragOverCanvas(false)}
+                onDrop={handleCanvasDrop}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={() => setDragging(null)}
+                onMouseLeave={() => setDragging(null)}
+              >
+                {canvasModules.length === 0 && (
+                  <div className="quantum-canvas-empty">
+                    <div className="qce-icon">⬅ 从左侧拖入模块</div>
+                    <div className="qce-hint">你要看什么，拉什么进来</div>
+                  </div>
+                )}
+                {canvasModules.map(m => (
+                  <div
+                    key={m.key}
+                    className="quantum-canvas-card"
+                    style={{ left: m.x, top: m.y }}
+                    onMouseDown={e => handleCardMouseDown(e, m.key)}
+                  >
+                    <div className="qcc-header">
+                      <span className="qcc-icon">{DRAG_MODULES.find(d => d.key === m.key)?.icon}</span>
+                      <span className="qcc-title">{DRAG_MODULES.find(d => d.key === m.key)?.title}</span>
+                      <button
+                        className="qcc-close"
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => setCanvasModules(prev => prev.filter(c => c.key !== m.key))}
+                      >×</button>
+                    </div>
+                    <div className="qcc-body">{renderModuleContent(m.key)}</div>
+                  </div>
+                ))}
+                {canvasModules.length > 0 && (
+                  <button className="quantum-clear-btn" onClick={() => setCanvasModules([])}>清空画布</button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ╔══════════════════════════════════════════════╗
