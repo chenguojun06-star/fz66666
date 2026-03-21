@@ -157,6 +157,13 @@ const SmartAlertBell: React.FC = () => {
     setLoading(true);
     try {
       const factoryId = (user as any)?.factoryId || undefined;
+      // 仅管理员/老板/工厂账号才拉取公司/工厂级数据；普通员工（worker等）只看"我的通知"
+      const isManagerLevel = !!(user as any)?.isSuperAdmin || !!(user as any)?.isTenantOwner
+        || ['admin', '管理员', '管理'].some(k => ((user as any)?.role || '').toLowerCase().includes(k));
+      if (!factoryId && !isManagerLevel) {
+        setFetchedToday(today);
+        return;
+      }
       const [briefRes, eventsRes] = await Promise.allSettled([
         api.get('/dashboard/daily-brief', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<BriefData>>,
         api.get('/dashboard/urgent-events', { signal: ac.signal, params: factoryId ? { factoryId } : undefined }) as Promise<ApiResult<UrgentEvent[]>>,

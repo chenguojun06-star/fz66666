@@ -40,7 +40,6 @@ export const paths = {
 
   dataCenter: '/data-center',
   templateCenter: '/basic/template-center',
-  processPriceMaintenance: '/basic/process-price',
   patternRevision: '/basic/pattern-revision',
 
   productionList: '/production',
@@ -185,7 +184,7 @@ export const menuConfig: MenuSection[] = [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
       { label: '样板生产', path: paths.patternProduction, icon: React.createElement(ScissorOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
-      { label: '单价维护', path: paths.processPriceMaintenance, icon: React.createElement(DollarOutlined) },
+      { label: '单价维护', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },
@@ -330,7 +329,9 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.integrationCenter]: permissionCodes.integrationCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
-  // financeTaxExport: 标准格式免费开放，所有有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
+  // financeTaxExport: 标准格式免费开放，有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
+  [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT
+  [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,

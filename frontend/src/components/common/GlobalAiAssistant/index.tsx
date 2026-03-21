@@ -558,6 +558,10 @@ const GlobalAiAssistant: React.FC = () => {
       try {
         setHasFetchedMood(true);
         const factoryId = (user as any)?.factoryId;
+        // 仅管理员/老板/工厂账号才拉取公司/工厂级日报数据；普通员工保持默认 normal 状态
+        const isManagerLevel = !!(user as any)?.isSuperAdmin || !!(user as any)?.isTenantOwner
+          || ['admin', '管理员', '管理'].some(k => ((user as any)?.role || '').toLowerCase().includes(k));
+        if (!factoryId && !isManagerLevel) return;
         const res = await api.get('/dashboard/daily-brief', factoryId ? { params: { factoryId } } : undefined);
         // @ts-ignore
         const actualData = res?.code === 200 ? res.data : (res?.data || res);

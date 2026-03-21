@@ -108,6 +108,12 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
          * - 普通工人: 只能查看自己的数据
          */
         private void applyDataPermissionFilter(LambdaQueryWrapper<ScanRecord> wrapper) {
+                // 外发工厂账号：factoryId 已在调用处添加过滤，直接放行（可查看本工厂全部数据）
+                String ctxFactoryId = UserContext.factoryId();
+                if (StringUtils.hasText(ctxFactoryId)) {
+                        log.debug("数据权限: 外发工厂账号 factoryId={}, 跳过个人范围过滤", ctxFactoryId);
+                        return;
+                }
                 String dataScope = UserContext.getDataScope();
 
                 switch (dataScope) {
