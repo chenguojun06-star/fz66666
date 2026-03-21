@@ -463,7 +463,9 @@ public class TemplateLibraryOrchestrator {
     }
 
     public TemplateLibrary create(TemplateLibrary tpl) {
-        if (!UserContext.isTopAdmin()) {
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
             throw new AccessDeniedException("无权限操作");
         }
         if (tpl == null) {
@@ -541,7 +543,9 @@ public class TemplateLibraryOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean save(TemplateLibrary tpl) {
-        if (!UserContext.isTopAdmin()) {
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
             throw new AccessDeniedException("无权限操作");
         }
         if (tpl == null) {
@@ -619,7 +623,9 @@ public class TemplateLibraryOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean update(TemplateLibrary tpl) {
-        if (!UserContext.isTopAdmin()) {
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
             throw new AccessDeniedException("无权限操作");
         }
         if (tpl == null || !StringUtils.hasText(String.valueOf(tpl.getId() == null ? "" : tpl.getId()).trim())) {
@@ -810,7 +816,9 @@ public class TemplateLibraryOrchestrator {
     }
 
     public boolean delete(String id) {
-        if (!UserContext.isTopAdmin()) {
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
             throw new AccessDeniedException("无权限操作");
         }
         boolean ok = templateLibraryService.removeById(id);

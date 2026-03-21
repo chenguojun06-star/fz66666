@@ -352,11 +352,14 @@ public class SecurityConfig implements WebMvcConfigurer {
             }
 
             // 修复：无论走 TokenAuth 还是 HeaderAuth，都需要补全 tenantId、isTenantOwner、isSuperAdmin 和 factoryId
-            // 条件扩展：tenantId 缺失 OR factoryId 缺失时均触发 DB 回退（缓存保证性能）
-            if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin() && (ctx.getTenantId() == null || ctx.getFactoryId() == null)) {
+            // 条件扩展：只要 userId 有效且非超管，始终经缓存确认 isTenantOwner（缓存 O(1)，无性能损耗）
+            // 背景：旧 JWT 内嵌 tenantId/factoryId 非 null，原有 (tenantId==null||factoryId==null) 条件会短路跳过，
+            //       导致 isTenantOwner 永远从 JWT 读到 false → isTopAdmin() 错误返回 false → 403
+            if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin()) {
                 String cacheKey = ctx.getUserId();
                 // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin + "|" + factoryId
                 String cached = tenantInfoCache.get(cacheKey);
+                boolean wasCacheMiss = (cached == null);
                 if (cached == null) {
                     try {
                         List<String> rows = jdbcTemplate.query(
@@ -392,8 +395,10 @@ public class SecurityConfig implements WebMvcConfigurer {
                     if (parts.length > 3 && !parts[3].isEmpty()) {
                         ctx.setFactoryId(parts[3]);
                     }
-                    log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
-                            ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
+                    if (wasCacheMiss) {
+                        log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
+                                ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
+                    }
 
                     // 自愈修复：租户主账号 t_user.tenant_id 为 NULL 时，从 t_tenant 表反查并回填
                     // （V20260323 迁移脚本会批量修复存量数据，此处处理极端情况或迁移前的首次登录）
@@ -431,8 +436,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             // 症状：租户主账号在前端（从用户资料API正确读到isTenantOwner=true）能点击按钮，
             //       但后端 UserContext.isTopAdmin() 返回 false → 403
             if (ctx.getUserId() == null && jdbcTemplate != null && !ctx.getSuperAdmin()
-                    && org.springframework.util.StringUtils.hasText(ctx.getUsername())
-                    && (ctx.getTenantId() == null || ctx.getFactoryId() == null)) {
+                    && org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
                 String cacheKey = "u:" + ctx.getUsername();
                 String cached = tenantInfoCache.get(cacheKey);
                 if (cached == null) {
