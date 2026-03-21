@@ -426,6 +426,60 @@ public class SecurityConfig implements WebMvcConfigurer {
                 }
             }
 
+            // [2026-03-21 修复] 旧JWT无uid字段（userId=null）时，降级用 username 查询 DB 补全 isTenantOwner 等
+            // 根因：userId=null → 原有 DB fallback 条件 ctx.getUserId()!=null 短路跳过 → isTenantOwner 无法加载
+            // 症状：租户主账号在前端（从用户资料API正确读到isTenantOwner=true）能点击按钮，
+            //       但后端 UserContext.isTopAdmin() 返回 false → 403
+            if (ctx.getUserId() == null && jdbcTemplate != null && !ctx.getSuperAdmin()
+                    && org.springframework.util.StringUtils.hasText(ctx.getUsername())
+                    && (ctx.getTenantId() == null || ctx.getFactoryId() == null)) {
+                String cacheKey = "u:" + ctx.getUsername();
+                String cached = tenantInfoCache.get(cacheKey);
+                if (cached == null) {
+                    try {
+                        List<String> rows = jdbcTemplate.query(
+                            "SELECT id, tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user WHERE username = ? LIMIT 1",
+                            (rs, i) -> {
+                                long uid = rs.getLong(1);
+                                Long tid = rs.getObject(2, Long.class);
+                                Boolean owner = rs.getObject(3) != null && rs.getInt(3) == 1;
+                                Boolean superAdm = rs.getObject(4) != null && rs.getInt(4) == 1;
+                                String fid = rs.getString(5);
+                                return uid + "|" + (tid == null ? "" : tid) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "" : fid);
+                            },
+                            ctx.getUsername()
+                        );
+                        if (!rows.isEmpty()) {
+                            cached = rows.get(0);
+                            tenantInfoCache.put(cacheKey, cached);
+                        }
+                    } catch (Exception e) {
+                        log.warn("[UserContextInterceptor] username-fallback 补全失败, username={}", ctx.getUsername(), e);
+                    }
+                }
+                if (cached != null) {
+                    String[] parts = cached.split("\\|", 5);
+                    // parts: [0]=id, [1]=tenantId, [2]=isTenantOwner, [3]=isSuperAdmin, [4]=factoryId
+                    if (parts.length > 0 && !parts[0].isEmpty()) {
+                        ctx.setUserId(parts[0]);  // 旧JWT缺失uid字段时从DB补齐
+                    }
+                    if (ctx.getTenantId() == null && parts.length > 1 && !parts[1].isEmpty()) {
+                        ctx.setTenantId(Long.parseLong(parts[1]));
+                    }
+                    if (parts.length > 2) {
+                        ctx.setTenantOwner(Boolean.parseBoolean(parts[2]));
+                    }
+                    if (parts.length > 3) {
+                        ctx.setSuperAdmin(Boolean.parseBoolean(parts[3]));
+                    }
+                    if (parts.length > 4 && !parts[4].isEmpty()) {
+                        ctx.setFactoryId(parts[4]);
+                    }
+                    log.info("[UserContextInterceptor] username-fallback 补全: userId={}, username={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
+                            ctx.getUserId(), ctx.getUsername(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
+                }
+            }
+
             UserContext.set(ctx);
             return true;
         }
