@@ -139,8 +139,8 @@ public class TenantOrchestrator {
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.save(tenant);
 
-        // 2. 为新租户创建管理员角色（克隆模板）—— 必须成功，失败则整体回滚
-        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenantName, tenant.getTenantType());
+        // 2. 为新租户初始化全套职位角色（克隆所有模板）—— 必须成功，失败则整体回滚
+        Role tenantAdminRole = initializeAllTenantRoles(tenant.getId(), tenantName, tenant.getTenantType());
         // 强制校验：管理员角色必须存在且有效
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("[数据完整性] 租户管理员角色创建失败，无法继续创建租户: " + tenantCode);
@@ -369,9 +369,8 @@ public class TenantOrchestrator {
         // 自动生成租户编码
         String tenantCode = "T" + String.format("%04d", tenantId);
 
-        // 为新租户创建管理员角色
-        // 申请时未指定类型，默认 HYBRID（全量权限）
-        Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenant.getTenantName(), "HYBRID");
+        // 为新租户初始化全套职位角色（克隆所有模板），申请时未指定类型，默认 HYBRID
+        Role tenantAdminRole = initializeAllTenantRoles(tenant.getId(), tenant.getTenantName(), "HYBRID");
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("租户管理员角色创建失败，请检查 full_admin 角色模板是否存在");
         }
@@ -1846,5 +1845,86 @@ public class TenantOrchestrator {
         if (UserContext.isSuperAdmin()) return;
         if (UserContext.isTenantOwner()) return;
         throw new AccessDeniedException("仅超级管理员或租户主账号可执行此操作");
+    }
+
+    // ========== 新租户职位体系初始化 ==========
+
+    /**
+     * 初始化新租户的完整职位角色体系：自动将所有 is_template=true 的职位模板克隆到租户。
+     * <p>
+     * 职位模板在 t_role 表中以 is_template=1, tenant_id=NULL 存储，模板的权限可由
+     * 超管在「系统设置→角色模板」中调整，租户管理员拿到克隆副本后也可在「角色管理」中
+     * 二次调整，所有权限逻辑来自数据库，不含任何硬编码权限列表。
+     * </p>
+     * <p>
+     * 新员工添加时只需选择对应职位，权限即刻生效，无需逐人配置。
+     * </p>
+     *
+     * @param tenantId   目标租户ID
+     * @param tenantName 租户名称（用于描述字段）
+     * @param tenantType 租户类型（影响天花板过滤，如 SELF_FACTORY/BRAND/HYBRID）
+     * @return 租户全能管理员角色（full_admin 克隆），供主账号绑定时使用
+     */
+    @Transactional(rollbackFor = Exception.class)
+    private Role initializeAllTenantRoles(Long tenantId, String tenantName, String tenantType) {
+        // Step 1: 必须先克隆 full_admin（主账号绑定角色）
+        Role adminRole = createTenantAdminRole(tenantId, tenantName, tenantType);
+
+        // Step 2: 查出所有其余活跃职位模板，逐一克隆到租户
+        LambdaQueryWrapper<Role> q = new LambdaQueryWrapper<>();
+        q.eq(Role::getIsTemplate, true)
+         .eq(Role::getStatus, "active")
+         .ne(Role::getRoleCode, "full_admin")  // full_admin 已在 Step 1 处理
+         .orderByAsc(Role::getSortOrder);
+        List<Role> otherTemplates = roleService.list(q);
+
+        for (Role tmpl : otherTemplates) {
+            try {
+                // 幂等：同租户已有同 role_code 则跳过
+                LambdaQueryWrapper<Role> dup = new LambdaQueryWrapper<>();
+                dup.eq(Role::getTenantId, tenantId).eq(Role::getRoleCode, tmpl.getRoleCode());
+                if (roleService.count(dup) > 0) {
+                    log.debug("[职位初始化] 租户 {} 已有角色 {}，跳过", tenantId, tmpl.getRoleCode());
+                    continue;
+                }
+
+                // 克隆角色行
+                Role cloned = new Role();
+                cloned.setRoleName(tmpl.getRoleName());
+                cloned.setRoleCode(tmpl.getRoleCode());
+                cloned.setDescription(tmpl.getDescription());
+                cloned.setStatus("active");
+                cloned.setDataScope(tmpl.getDataScope());
+                cloned.setTenantId(tenantId);
+                cloned.setIsTemplate(false);
+                cloned.setSourceTemplateId(tmpl.getId());
+                cloned.setSortOrder(tmpl.getSortOrder());
+                cloned.setCreateTime(LocalDateTime.now());
+                cloned.setUpdateTime(LocalDateTime.now());
+                roleService.save(cloned);
+
+                // 克隆权限（含天花板过滤 + 租户类型过滤，与 createTenantAdminRole 逻辑对齐）
+                List<Long> tmplPermIds = rolePermissionService.getPermissionIdsByRoleId(tmpl.getId());
+                if (tmplPermIds != null && !tmplPermIds.isEmpty()) {
+                    List<Long> ceilingGranted = ceilingService.getGrantedPermissionIds(tenantId);
+                    List<Long> effectiveIds;
+                    if (ceilingGranted != null && !ceilingGranted.isEmpty()) {
+                        Set<Long> ceilingSet = new HashSet<>(ceilingGranted);
+                        effectiveIds = tmplPermIds.stream().filter(ceilingSet::contains).collect(Collectors.toList());
+                    } else {
+                        effectiveIds = applyTenantTypePermissionFilter(tmplPermIds, tenantType);
+                    }
+                    rolePermissionService.replaceRolePermissions(cloned.getId(), effectiveIds);
+                }
+                log.info("[职位初始化] 克隆完成 tenantId={} 职位={}({})",
+                         tenantId, tmpl.getRoleName(), tmpl.getRoleCode());
+            } catch (Exception e) {
+                // 非 full_admin 克隆失败不阻断主流程，仅记录警告（租户管理员之后可手动克隆）
+                log.warn("[职位初始化] 克隆失败（非阻断）tenantId={} role={} err={}",
+                         tenantId, tmpl.getRoleCode(), e.getMessage());
+            }
+        }
+        log.info("[职位初始化] 完成 tenantId={} 已初始化角色数={}", tenantId, otherTemplates.size() + 1);
+        return adminRole;
     }
 }
