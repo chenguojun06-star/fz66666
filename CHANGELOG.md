@@ -1,3 +1,44 @@
+## 2026-03-21（个人中心账单入口权限对齐）
+
+### fix(system): 普通员工不再显示“我的账单”入口，前后端权限语义保持一致
+
+- **问题现象**：
+  - 租户普通员工进入个人中心时仍能看到“我的账单”Tab。
+  - 点击后浏览器请求 `/api/system/tenant/my/billing`、`/api/system/tenant/my/bills` 返回 403，形成“入口可见但不可用”的错误体验。
+- **根本原因**：
+  - 前端 `Profile/index.tsx` 之前仅用 `factoryId` 判断是否隐藏账单入口，只排除了外发工厂账号。
+  - 后端 `SecurityConfig` 对 `/api/system/tenant/**` 采用管理员兜底规则，仅 `ROLE_admin` / `ROLE_ADMIN` / `ROLE_1` / `ROLE_tenant_owner` 可访问账单相关接口。
+  - 结果是“租户内部普通员工”在前端被误放行，但后端实际仍正确拒绝，造成 UI 与鉴权规则不一致。
+- **修复方案**：
+  - 前端个人中心账单 Tab 改为仅在“租户主账号或管理员”场景显示。
+  - 平台超管、外发工厂账号、租户普通员工统一不显示该入口。
+  - 系统教学文案同步更新，明确“我的账单”不是所有付费用户都可见，而是租户管理侧入口。
+- **涉及文件**：
+  - `frontend/src/modules/system/pages/System/Profile/index.tsx`
+  - `frontend/src/modules/system/pages/System/Tutorial/tutorialData.ts`
+- **对系统的帮助**：
+  - 消除普通员工点击账单即 403 的误导性入口。
+  - 前端展示逻辑与后端安全规则完全对齐，减少权限争议和误报。
+
+## 2026-03-21（个人中心智能画像表单告警修复）
+
+### fix(system): 消除 ProfileInfoTab 中 smartProfileForm 未连接 Form 的告警
+
+- **问题现象**：
+  - 打开个人中心时浏览器控制台出现 antd 警告：`Instance created by useForm is not connected to any Form element`。
+  - 堆栈指向 `ProfileInfoTab.tsx` 的 `syncSmartProfileForm()` / `loadSmartProfile()`。
+- **根本原因**：
+  - `ProfileInfoTab` 首次挂载时会无条件调用 `loadSmartProfile()`，进而执行 `smartProfileForm.setFieldsValue(...)`。
+  - 但智能经营偏好面板本身是按 `canManageSmartFlags` 条件渲染的；在用户权限信息尚未就绪或当前账号本就不展示该面板时，`smartProfileForm` 尚未绑定到真实 `<Form form={smartProfileForm}>`，因此 antd 发出警告。
+- **修复方案**：
+  - 将智能画像加载逻辑改为仅在 `canManageSmartFlags` 为真时触发。
+  - 保证调用 `setFieldsValue` 时，表单实例已经挂载到页面中的 Form 组件。
+- **涉及文件**：
+  - `frontend/src/modules/system/pages/System/Profile/components/ProfileInfoTab.tsx`
+- **对系统的帮助**：
+  - 去掉控制台噪音，避免误判为表单状态异常。
+  - 权限未就绪或无权限账号访问个人中心时，不再触发无效的智能画像表单写入。
+
 ## 2026-03-21（质检入库页/成品库存页 500 降级修复）
 
 ### fix(warehouse): 为 ProductWarehousing 与 FinishedInventory 的订单补充链路增加容错，避免残余 schema 漂移把整页打成 500
@@ -12,6 +53,7 @@
 - **修复方案**：
   - `ProductWarehousingOrchestrator`：新增安全加载方法，订单补充信息查询失败时记录 error 日志并降级为空映射，主入库列表继续返回。
   - `FinishedInventoryOrchestrator`：对按 `orderId` 和 `orderNo` 加载生产订单的两条链路统一加容错，失败时跳过工厂/组织补充字段，但库存主数据照常返回。
+  - `ProductWarehousingServiceImpl` 与 `FinishedInventoryOrchestrator`：把 `t_product_warehousing` 的列表读取改为显式列裁剪，只查询当前页面实际需要的稳定列，不再整实体映射返修扩展字段。
 - **涉及文件**：
   - `backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductWarehousingOrchestrator.java`
   - `backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedInventoryOrchestrator.java`

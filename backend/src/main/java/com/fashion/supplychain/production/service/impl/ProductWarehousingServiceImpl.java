@@ -88,6 +88,41 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             : java.util.Collections.emptyList();
 
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
+            .select(
+                ProductWarehousing::getId,
+                ProductWarehousing::getWarehousingNo,
+                ProductWarehousing::getOrderId,
+                ProductWarehousing::getOrderNo,
+                ProductWarehousing::getStyleId,
+                ProductWarehousing::getStyleNo,
+                ProductWarehousing::getStyleName,
+                ProductWarehousing::getWarehousingQuantity,
+                ProductWarehousing::getQualifiedQuantity,
+                ProductWarehousing::getUnqualifiedQuantity,
+                ProductWarehousing::getWarehousingType,
+                ProductWarehousing::getWarehouse,
+                ProductWarehousing::getWarehousingStartTime,
+                ProductWarehousing::getWarehousingEndTime,
+                ProductWarehousing::getWarehousingOperatorId,
+                ProductWarehousing::getWarehousingOperatorName,
+                ProductWarehousing::getQualityStatus,
+                ProductWarehousing::getCuttingBundleId,
+                ProductWarehousing::getCuttingBundleNo,
+                ProductWarehousing::getCuttingBundleQrCode,
+                ProductWarehousing::getUnqualifiedImageUrls,
+                ProductWarehousing::getDefectCategory,
+                ProductWarehousing::getDefectRemark,
+                ProductWarehousing::getRepairRemark,
+                ProductWarehousing::getReceiverId,
+                ProductWarehousing::getReceiverName,
+                ProductWarehousing::getReceivedTime,
+                ProductWarehousing::getInspectionStatus,
+                ProductWarehousing::getCreateTime,
+                ProductWarehousing::getUpdateTime,
+                ProductWarehousing::getDeleteFlag,
+                ProductWarehousing::getQualityOperatorId,
+                ProductWarehousing::getQualityOperatorName,
+                ProductWarehousing::getTenantId)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(orderId), ProductWarehousing::getOrderId, orderId)
                 .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)

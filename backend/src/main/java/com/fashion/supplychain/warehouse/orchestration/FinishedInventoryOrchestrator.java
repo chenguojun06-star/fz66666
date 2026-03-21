@@ -167,6 +167,18 @@ public class FinishedInventoryOrchestrator {
         if (!styleIds.isEmpty()) {
             List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
+                        .select(
+                            ProductWarehousing::getStyleId,
+                            ProductWarehousing::getOrderId,
+                            ProductWarehousing::getOrderNo,
+                            ProductWarehousing::getStyleName,
+                            ProductWarehousing::getWarehouse,
+                            ProductWarehousing::getWarehousingEndTime,
+                            ProductWarehousing::getWarehousingNo,
+                            ProductWarehousing::getWarehousingOperatorName,
+                            ProductWarehousing::getQualityOperatorName,
+                            ProductWarehousing::getQualifiedQuantity,
+                            ProductWarehousing::getDeleteFlag)
                             .in(ProductWarehousing::getStyleId,
                                     styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
                             .eq(ProductWarehousing::getDeleteFlag, 0)
@@ -279,6 +291,10 @@ public class FinishedInventoryOrchestrator {
         if (!styleIds.isEmpty()) {
             List<ProductWarehousing> allWarehousing = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
+                        .select(
+                            ProductWarehousing::getStyleId,
+                            ProductWarehousing::getQualifiedQuantity,
+                            ProductWarehousing::getDeleteFlag)
                             .in(ProductWarehousing::getStyleId,
                                     styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
                             .eq(ProductWarehousing::getDeleteFlag, 0)
