@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（157个编排器）| **规模**：257k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-22 | **AI指令版本**：v3.23（云端热点接口 schema 漂移修复 + 工厂隔离补强）
+> **最后更新**：2026-03-22 | **AI指令版本**：v3.24（云端缺列热修补强：factory_type / repair_status）
 
 ---
 
@@ -2564,6 +2564,60 @@ Pattern：与 DashboardOrchestrator.dashboard() 既有工厂隔离保持一致
 
 Commit：见本次云端 schema 漂移修复提交记录
 Pattern：与 dashboard schema drift 既有规律一致，先降耦合，再决定是否补数据库列
+```
+
+### 2026-03-22 变更批次（补充修复：云端缺列热修补强）
+
+#### 变更 #🩹 🔴 BUG修复 — factory_type / repair_status 缺列导致日志风暴与热点接口反复 500
+
+```
+触发问题：
+  云端 backend 日志持续刷：
+    - Unknown column 'factory_type' in 'field list'
+    - Unknown column 'repair_status' in 'field list'
+  且首页、铃铛任务面板、扫码页会并发请求，造成同一类缺列错误在数秒内重复几十次。
+
+根本原因：
+  1️⃣ t_cutting_task.factory_type 缺失时，仍有热路径在直接读 CuttingTask 整实体：
+     - CuttingTaskServiceImpl.queryPage()
+     - CuttingTaskOrchestrator.getStatusStats()
+     - 任务领取 / 回滚 / 裁剪完成内部的 getById() / getOne()
+
+  2️⃣ t_product_warehousing.repair_status 缺失时，待返修任务入口虽然业务只需少数字段，
+     但仍存在实体映射读取路径，云端铃铛面板会把这一缺列错误放大成高频日志。
+
+修复方案：
+  ✅ CuttingTaskServiceImpl.queryPage()
+     - 改为显式 select 核心字段，完全移除对 t_cutting_task.factory_type 的直接读取
+     - factoryType 筛选改为先查 t_production_order.factory_type → 回灌 productionOrderId 过滤
+
+  ✅ CuttingTaskServiceImpl 热路径
+     - 新增 loadTaskCoreById / loadTaskCoreByOrderId
+     - 覆盖 receiveTask / rollbackTask / markBundledByOrderId / createTaskIfAbsent
+     - 避免 getById() / getOne() 整实体再次读取缺失列
+
+  ✅ CuttingTaskOrchestrator.getStatusStats()
+     - 工厂类型过滤改走 t_production_order，不再依赖 CuttingTask.factoryType
+
+  ✅ ProductWarehousingOrchestrator.listPendingRepairTasks()
+     - 改为 QueryWrapper + listMaps，只取 cutting_bundle_id / order_id / order_no /
+       unqualified_quantity / defect_category
+     - 彻底绕开 ProductWarehousing 实体对 repair_status 系列字段的映射依赖
+
+修复后表现：
+  ✅ 裁剪任务列表、统计、领取/回滚热路径不再因 factory_type 缺列直接 500
+  ✅ 铃铛中的待返修任务入口不再因 repair_status 缺列直接 500
+  ✅ 云端即使仍有补库欠账，热点入口也优先恢复，不再被同一缺列反复打爆
+
+涉及文件：
+  📄 backend/src/main/java/com/fashion/supplychain/production/service/impl/CuttingTaskServiceImpl.java
+  📄 backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java
+  📄 backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductWarehousingOrchestrator.java
+
+验证结果：
+  ✅ 本地 mvn clean compile -q 退出码 = 0
+
+废弃代码清查：✅ 无临时兼容分支残留，直接切换为最小字段查询 / map 查询
 ```
 
 ---

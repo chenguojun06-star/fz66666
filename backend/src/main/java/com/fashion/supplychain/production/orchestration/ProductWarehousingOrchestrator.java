@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -1695,28 +1696,24 @@ public class ProductWarehousingOrchestrator {
         if (tenantId == null) return Collections.emptyList();
 
         // 1) 从 t_product_warehousing 查当前租户的 quality_scan 记录（次品来源）
-        List<ProductWarehousing> qualityScans = productWarehousingService.list(
-                new LambdaQueryWrapper<ProductWarehousing>()
-                        .eq(ProductWarehousing::getTenantId, tenantId)
-                        .eq(ProductWarehousing::getWarehousingType, "quality_scan")
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
-                        .select(ProductWarehousing::getCuttingBundleId,
-                                ProductWarehousing::getOrderId,
-                                ProductWarehousing::getOrderNo,
-                                ProductWarehousing::getUnqualifiedQuantity,
-                                ProductWarehousing::getDefectCategory));
+        QueryWrapper<ProductWarehousing> qualityScanQuery = new QueryWrapper<>();
+        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category")
+            .eq("tenant_id", tenantId)
+            .eq("warehousing_type", "quality_scan")
+            .eq("delete_flag", 0)
+            .gt("unqualified_quantity", 0);
+        List<Map<String, Object>> qualityScans = productWarehousingService.listMaps(qualityScanQuery);
 
         if (qualityScans == null || qualityScans.isEmpty()) return Collections.emptyList();
 
         // 2) 按 bundleId 去重（同一菲号多轮质检取 unqualifiedQty 最大那条）
-        Map<String, ProductWarehousing> qsMap = new HashMap<>();
-        for (ProductWarehousing qs : qualityScans) {
-            String bid = qs.getCuttingBundleId();
+        Map<String, Map<String, Object>> qsMap = new HashMap<>();
+        for (Map<String, Object> qs : qualityScans) {
+            String bid = TextUtils.safeText(qs.get("cutting_bundle_id"));
             if (!StringUtils.hasText(bid)) continue;
-            ProductWarehousing existing = qsMap.get(bid);
-            int newQty = qs.getUnqualifiedQuantity() == null ? 0 : qs.getUnqualifiedQuantity();
-            int oldQty = (existing == null || existing.getUnqualifiedQuantity() == null) ? 0 : existing.getUnqualifiedQuantity();
+            Map<String, Object> existing = qsMap.get(bid);
+            int newQty = parseIntOrDefault(qs.get("unqualified_quantity"), 0);
+            int oldQty = existing == null ? 0 : parseIntOrDefault(existing.get("unqualified_quantity"), 0);
             if (existing == null || newQty > oldQty) {
                 qsMap.put(bid, qs);
             }
@@ -1725,6 +1722,16 @@ public class ProductWarehousingOrchestrator {
 
         // 3) 查 t_cutting_bundle：只取 status=unqualified（已申报返修则 status=repaired_waiting_qc 不出现）
         List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+            .select(CuttingBundle::getId,
+                CuttingBundle::getBundleNo,
+                CuttingBundle::getQrCode,
+                CuttingBundle::getColor,
+                CuttingBundle::getSize,
+                CuttingBundle::getStyleNo,
+                CuttingBundle::getProductionOrderId,
+                CuttingBundle::getProductionOrderNo,
+                CuttingBundle::getQuantity,
+                CuttingBundle::getStatus)
                 .in(CuttingBundle::getId, qsMap.keySet())
                 .eq(CuttingBundle::getStatus, "unqualified")
                 .list();
@@ -1734,7 +1741,7 @@ public class ProductWarehousingOrchestrator {
         // 4) 组装响应 DTO
         List<Map<String, Object>> result = new ArrayList<>();
         for (CuttingBundle bundle : bundles) {
-            ProductWarehousing qs = qsMap.get(bundle.getId());
+            Map<String, Object> qs = qsMap.get(bundle.getId());
             Map<String, Object> item = new HashMap<>();
             item.put("bundleId", bundle.getId());
             item.put("bundleNo", bundle.getBundleNo());
@@ -1744,14 +1751,32 @@ public class ProductWarehousingOrchestrator {
             item.put("styleNo", TextUtils.safeText(bundle.getStyleNo()));
             item.put("orderId", bundle.getProductionOrderId());
             item.put("orderNo", bundle.getProductionOrderNo());
-            int defectQty = (qs != null && qs.getUnqualifiedQuantity() != null)
-                    ? qs.getUnqualifiedQuantity()
+            int defectQty = qs != null
+                    ? parseIntOrDefault(qs.get("unqualified_quantity"), 0)
                     : (bundle.getQuantity() == null ? 0 : bundle.getQuantity());
             item.put("defectQty", defectQty);
-            item.put("defectCategory", qs != null ? TextUtils.safeText(qs.getDefectCategory()) : "");
+            item.put("defectCategory", qs != null ? TextUtils.safeText(qs.get("defect_category")) : "");
             result.add(item);
         }
         return result;
+    }
+
+    private int parseIntOrDefault(Object value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        String text = String.valueOf(value).trim();
+        if (!StringUtils.hasText(text)) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
     }
 
     /**

@@ -1,5 +1,26 @@
 # 2026-03-22
 
+## 云端稳定性 / factory_type 与 repair_status 缺列热修补强
+
+- **问题现象**：云端日志持续刷 `Unknown column 'factory_type' in 'field list'` 与 `Unknown column 'repair_status' in 'field list'`，同一时间段内小程序首页、铃铛任务面板、扫码页会并发触发多条请求，导致错误成片放大。
+- **根本原因**：
+  - `CuttingTaskServiceImpl.queryPage()`、`CuttingTaskOrchestrator.getStatusStats()` 仍然会直接读取 `t_cutting_task` 整实体或直接依赖 `CuttingTask.factoryType`，云端库缺少 `factory_type` 时会继续 500。
+  - `ProductWarehousingOrchestrator.listPendingRepairTasks()` 虽然业务上只需要少数字段，但仍存在通过实体映射读取 `t_product_warehousing` 的路径，云端库缺少 `repair_status` 系列字段时会被放大成铃铛任务面板的高频报错。
+- **修复方案**：
+  - `CuttingTaskServiceImpl.queryPage()`：改为显式 `select(...)` 只查核心字段，彻底去掉对 `t_cutting_task.factory_type` 的直接读取。
+  - `CuttingTaskServiceImpl` 内部新增按任务 ID / 订单 ID 的最小字段加载方法，覆盖领取、回滚、裁剪完成等热路径，避免 `getById()` 整实体再踩缺列。
+  - `CuttingTaskOrchestrator.getStatusStats()`：工厂类型过滤改为先查 `t_production_order.factory_type` 得到订单 ID，再按 `productionOrderId` 过滤裁剪任务。
+  - `ProductWarehousingOrchestrator.listPendingRepairTasks()`：改为 `listMaps + QueryWrapper.select("...")`，只取 `cutting_bundle_id / order_id / order_no / unqualified_quantity / defect_category`，彻底绕开 `repair_status` 实体映射。
+- **修复后表现**：
+  - 云端裁剪任务列表、裁剪任务统计、任务领取/回滚热路径不再因为 `t_cutting_task.factory_type` 缺失直接查询失败。
+  - 云端铃铛中的待返修任务入口不再依赖 `t_product_warehousing.repair_status` 系列列存在。
+  - 即使云端补库仍在进行，热点入口也优先恢复可用性，减少同类错误的日志风暴。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/production/service/impl/CuttingTaskServiceImpl.java`
+  - `backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductWarehousingOrchestrator.java`
+- **验证结果**：后端编译通过，`mvn clean compile -q` 退出码为 `0`。
+
 ## 云端稳定性 / 裁剪任务、质检任务、TopStats 接口 schema 漂移修复
 
 - **问题现象**：云端小程序连续出现 500，涉及 `GET /api/production/cutting-task/list?myTasks=true`、`GET /api/production/scan/my-quality-tasks`、`GET /api/dashboard/top-stats?range=week`。

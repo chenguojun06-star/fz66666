@@ -65,6 +65,52 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
+    private LambdaQueryWrapper<CuttingTask> buildTaskCoreSelect() {
+        return new LambdaQueryWrapper<CuttingTask>().select(
+                CuttingTask::getId,
+                CuttingTask::getProductionOrderId,
+                CuttingTask::getProductionOrderNo,
+                CuttingTask::getOrderQrCode,
+                CuttingTask::getStyleId,
+                CuttingTask::getStyleNo,
+                CuttingTask::getStyleName,
+                CuttingTask::getColor,
+                CuttingTask::getSize,
+                CuttingTask::getOrderQuantity,
+                CuttingTask::getStatus,
+                CuttingTask::getReceiverId,
+                CuttingTask::getReceiverName,
+                CuttingTask::getReceivedTime,
+                CuttingTask::getBundledTime,
+                CuttingTask::getCreateTime,
+                CuttingTask::getUpdateTime,
+                CuttingTask::getRemarks,
+                CuttingTask::getExpectedShipDate,
+                CuttingTask::getCreatorId,
+                CuttingTask::getCreatorName,
+                CuttingTask::getUpdaterId,
+                CuttingTask::getUpdaterName,
+                CuttingTask::getTenantId);
+    }
+
+    private CuttingTask loadTaskCoreById(String taskId) {
+        if (!StringUtils.hasText(taskId)) {
+            return null;
+        }
+        return this.getOne(buildTaskCoreSelect()
+                .eq(CuttingTask::getId, taskId.trim())
+                .last("limit 1"), false);
+    }
+
+    private CuttingTask loadTaskCoreByOrderId(String productionOrderId) {
+        if (!StringUtils.hasText(productionOrderId)) {
+            return null;
+        }
+        return this.getOne(buildTaskCoreSelect()
+                .eq(CuttingTask::getProductionOrderId, productionOrderId.trim())
+                .last("limit 1"), false);
+    }
+
     @Override
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
@@ -95,6 +141,31 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
         // 在查询时就过滤掉已删除订单的任务，确保 total 准确
         LambdaQueryWrapper<CuttingTask> queryWrapper = new LambdaQueryWrapper<CuttingTask>();
+        queryWrapper.select(
+            CuttingTask::getId,
+            CuttingTask::getProductionOrderId,
+            CuttingTask::getProductionOrderNo,
+            CuttingTask::getOrderQrCode,
+            CuttingTask::getStyleId,
+            CuttingTask::getStyleNo,
+            CuttingTask::getStyleName,
+            CuttingTask::getColor,
+            CuttingTask::getSize,
+            CuttingTask::getOrderQuantity,
+            CuttingTask::getStatus,
+            CuttingTask::getReceiverId,
+            CuttingTask::getReceiverName,
+            CuttingTask::getReceivedTime,
+            CuttingTask::getBundledTime,
+            CuttingTask::getCreateTime,
+            CuttingTask::getUpdateTime,
+            CuttingTask::getRemarks,
+            CuttingTask::getExpectedShipDate,
+            CuttingTask::getCreatorId,
+            CuttingTask::getCreatorName,
+            CuttingTask::getUpdaterId,
+            CuttingTask::getUpdaterName,
+            CuttingTask::getTenantId);
         if (StringUtils.hasText(orderNo)) {
             queryWrapper.and(w -> {
                 w.like(CuttingTask::getProductionOrderNo, orderNo)
@@ -120,9 +191,23 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 return new Page<>(page, pageSize);
             }
             queryWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
-        } else {
-            // 普通上下文：直接按 t_cutting_task.factory_type 过滤，无需关联查询
-            queryWrapper.eq(StringUtils.hasText(factoryType), CuttingTask::getFactoryType, factoryType);
+        } else if (StringUtils.hasText(factoryType)) {
+            List<String> matchedOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryType, factoryType)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
+                                    .or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream()
+                    .map(ProductionOrder::getId)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (matchedOrderIds.isEmpty()) {
+                return new Page<>(page, pageSize, 0);
+            }
+            queryWrapper.in(CuttingTask::getProductionOrderId, matchedOrderIds);
         }
 
         IPage<CuttingTask> pageResult = baseMapper.selectPage(pageInfo, queryWrapper);
@@ -276,10 +361,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return null;
         }
 
-        CuttingTask existing = this.getOne(
-                new LambdaQueryWrapper<CuttingTask>()
-                        .eq(CuttingTask::getProductionOrderId, order.getId())
-                        .last("limit 1"));
+        CuttingTask existing = loadTaskCoreByOrderId(order.getId());
         if (existing != null) {
             return existing;
         }
@@ -313,7 +395,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        CuttingTask task = this.getById(taskIdTrim);
+        CuttingTask task = loadTaskCoreById(taskIdTrim);
         if (task == null) {
             return false;
         }
@@ -355,7 +437,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return true;
         }
 
-        CuttingTask latest = this.getById(taskIdTrim);
+        CuttingTask latest = loadTaskCoreById(taskIdTrim);
         if (latest == null) {
             return false;
         }
@@ -390,10 +472,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        CuttingTask task = this.getOne(
-                new LambdaQueryWrapper<CuttingTask>()
-                        .eq(CuttingTask::getProductionOrderId, oid)
-                        .last("limit 1"));
+        CuttingTask task = loadTaskCoreByOrderId(oid);
         if (task == null) {
             return false;
         }
@@ -606,7 +685,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        CuttingTask task = this.getById(taskId);
+        CuttingTask task = loadTaskCoreById(taskId);
         if (task == null) {
             return false;
         }

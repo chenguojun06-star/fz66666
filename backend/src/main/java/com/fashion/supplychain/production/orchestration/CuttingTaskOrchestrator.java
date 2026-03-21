@@ -119,9 +119,28 @@ public class CuttingTaskOrchestrator {
         String factoryType = normalizeFactoryType(params != null ? getTrimmedText(params, "factoryType") : null);
 
         LambdaQueryWrapper<CuttingTask> baseWrapper = new LambdaQueryWrapper<CuttingTask>()
+                .select(CuttingTask::getId, CuttingTask::getStatus, CuttingTask::getOrderQuantity, CuttingTask::getProductionOrderId)
                 .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
-                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo)
-                .eq(StringUtils.hasText(factoryType), CuttingTask::getFactoryType, factoryType);
+                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo);
+
+        if (StringUtils.hasText(factoryType)) {
+            List<String> matchedOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryType, factoryType)
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
+            if (matchedOrderIds.isEmpty()) {
+                Map<String, Object> emptyStats = new java.util.LinkedHashMap<>();
+                emptyStats.put("totalCount", 0L);
+                emptyStats.put("totalQuantity", 0L);
+                emptyStats.put("pendingCount", 0L);
+                emptyStats.put("receivedCount", 0L);
+                emptyStats.put("bundledCount", 0L);
+                return emptyStats;
+            }
+            baseWrapper.in(CuttingTask::getProductionOrderId, matchedOrderIds);
+        }
 
         List<CuttingTask> allTasks = cuttingTaskService.list(baseWrapper);
 
