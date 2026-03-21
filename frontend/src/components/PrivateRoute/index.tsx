@@ -8,7 +8,6 @@ import { paths, resolvePermissionCode, superAdminOnlyPaths } from '../../routeCo
 // 注意：paths.productionList ('/production') 仅做精确匹配，避免放行 /production/picking 等非白名单路径
 const FACTORY_EXACT_PATHS = new Set<string>([
   paths.productionList, // /production（我的订单，精确匹配）
-  paths.profile,        // /system/profile（个人中心，工厂账号可看个人信息，个人)Tab 由页面层屏蔽）
 ]);
 const FACTORY_PREFIX_PATHS: string[] = [
   paths.progressDetail,          // /production/progress-detail
@@ -16,7 +15,7 @@ const FACTORY_PREFIX_PATHS: string[] = [
   paths.materialPurchase,        // /production/material（含 /:styleNo）
   paths.financeCenter,           // /finance/center
   paths.factoryWorkers,          // /system/factory-workers
-  paths.processPriceMaintenance, // /basic/process-price
+  paths.templateCenter,          // /basic/template-center
   paths.organization,            // /system/organization
   paths.tutorial,                // /system/tutorial（系统教学）
 ];

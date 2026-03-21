@@ -12,7 +12,7 @@ import WebSocketNotification from './components/common/WebSocketNotification';
 import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, ProcessPriceMaintenance } from './modules/basic';
+import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
 import {
   MaterialReconciliation,
   PayrollOperatorSummary,
@@ -284,7 +284,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />
           <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
           <Route path={paths.patternRevision} element={<Suspense fallback={<Spin />}><PatternRevisionManagement /></Suspense>} />
-          <Route path={paths.processPriceMaintenance} element={<Suspense fallback={<Spin />}><ProcessPriceMaintenance /></Suspense>} />
         </Route>
         {/* 客户订单分享页（无需登录） */}
         <Route path="/share/:token" element={<Suspense fallback={<Spin />}><ShareOrderPage /></Suspense>} />

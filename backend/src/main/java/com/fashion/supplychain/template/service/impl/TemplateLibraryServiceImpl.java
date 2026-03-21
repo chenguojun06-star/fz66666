@@ -834,6 +834,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 .orderByDesc(TemplateLibrary::getUpdateTime)
                 .orderByDesc(TemplateLibrary::getCreateTime);
 
+        // 外发工厂用户：仅允许查看分配给该工厂订单的款号模板
+        @SuppressWarnings("unchecked")
+        java.util.List<String> allowedStyleNos = (java.util.List<String>) params.get("allowedStyleNos");
+        if (allowedStyleNos != null) {
+            wrapper.in(TemplateLibrary::getSourceStyleNo, allowedStyleNos);
+        }
+
         if (StringUtils.hasText(templateType)) {
             if ("process".equalsIgnoreCase(templateType)) {
                 wrapper.and(q -> q.eq(TemplateLibrary::getTemplateType, "process")

@@ -66,7 +66,8 @@ class PermissionCalculationEngineTest {
     @Test
     void getRolePermissionIds_shouldDeleteBrokenLegacyCacheAndRebuildAsPlainJson() {
         String cacheKey = "role:perms:1";
-        when(valueOperations.get(cacheKey)).thenReturn("[[\"java.util.ArrayList\",[1,2]]]");
+        // 完全损坏的值（无法被任何解析器处理），触发 safeDeleteKey + 回源DB 路径
+        when(valueOperations.get(cacheKey)).thenReturn("CORRUPT::CACHE::NOT_JSON");
         when(rolePermissionService.getPermissionIdsByRoleId(1L)).thenReturn(List.of(1L, 2L));
 
         List<Long> result = engine.getRolePermissionIds(1L);

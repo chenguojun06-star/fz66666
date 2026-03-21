@@ -92,6 +92,7 @@ const TemplateCenter: React.FC = () => {
   const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);
 
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
+  const isFactoryUser = useMemo(() => !!user?.factoryId, [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
     const v = Number(row?.locked);
@@ -100,7 +101,7 @@ const TemplateCenter: React.FC = () => {
 
   const handleRollback = async (row: TemplateLibrary) => {
     if (!row?.id) return;
-    if (!isAdminUser) {
+    if (!isAdminUser && !isFactoryUser) {
       message.error('仅管理员可退回修改');
       return;
     }
@@ -694,9 +695,27 @@ const TemplateCenter: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 170,
+      width: isFactoryUser ? 100 : 170,
       render: (_, row) => {
         const locked = isLocked(row);
+
+        // 外发工厂用户：锁定时可解锁，解锁后可编辑，无删除权限
+        if (isFactoryUser) {
+          const factoryAction: RowAction = locked
+            ? {
+                key: 'unlock',
+                label: '解锁',
+                onClick: () => {
+                  setRollbackTarget(row);
+                },
+              }
+            : {
+                key: 'edit',
+                label: '编辑',
+                onClick: () => editModalRef.current?.openEdit(row),
+              };
+          return <RowActions actions={[{ ...factoryAction, primary: true }]} />;
+        }
 
         const primaryAction: RowAction = locked
           ? {
@@ -737,7 +756,7 @@ const TemplateCenter: React.FC = () => {
         title="单价维护"
         tabList={[
           { key: 'list', tab: '模板列表' },
-          { key: 'knowledge', tab: '工序智能库' },
+          ...(!isFactoryUser ? [{ key: 'knowledge', tab: '工序智能库' }] : []),
         ]}
         activeTabKey={cardTab}
         onTabChange={(key) => setCardTab(key as 'list' | 'knowledge')}
@@ -809,17 +828,21 @@ const TemplateCenter: React.FC = () => {
                 </Form.Item>
               </Space>
               <Space>
-                <Button onClick={() => setCreateOpen(true)}>
-                  从款号生成模板
-                </Button>
+                {!isFactoryUser && (
+                  <Button onClick={() => setCreateOpen(true)}>
+                    从款号生成模板
+                  </Button>
+                )}
                 <Button type="primary" onClick={() => fetchList({ page: 1 })}>
                   刷新
                 </Button>
-                <Button
-                  onClick={() => setSyncPriceOpen(true)}
-                >
-                  独立维护工序单价
-                </Button>
+                {!isFactoryUser && (
+                  <Button
+                    onClick={() => setSyncPriceOpen(true)}
+                  >
+                    独立维护工序单价
+                  </Button>
+                )}
               </Space>
             </div>
           </Form>

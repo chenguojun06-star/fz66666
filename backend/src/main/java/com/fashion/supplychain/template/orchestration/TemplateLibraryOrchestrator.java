@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -64,7 +65,57 @@ public class TemplateLibraryOrchestrator {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * 工厂账号访问款号校验：外发工厂用户只能操作自己有生产订单的款号。
+     * 非工厂账号直接放行。
+     */
+    private void assertFactoryCanAccessStyle(String styleNo) {
+        String currentFactoryId = UserContext.factoryId();
+        if (!StringUtils.hasText(currentFactoryId)) {
+            return; // 非工厂账号，不限制
+        }
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
+        if (!StringUtils.hasText(sn)) {
+            return; // 无款号，由业务方法自行校验
+        }
+        Long tenantId = UserContext.tenantId();
+        long count = productionOrderService.count(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getFactoryId, currentFactoryId)
+                .eq(ProductionOrder::getStyleNo, sn));
+        if (count == 0) {
+            throw new AccessDeniedException("无权访问该款号的模板");
+        }
+    }
+
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
+        // 外发工厂用户：只能看到分配给自己工厂的款式的模板
+        String currentFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(currentFactoryId)) {
+            Long tenantId = UserContext.tenantId();
+            List<String> allowedStyleNos = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getFactoryId, currentFactoryId)
+                    .isNotNull(ProductionOrder::getStyleNo)
+                    .ne(ProductionOrder::getStyleNo, "")
+                    .select(ProductionOrder::getStyleNo)
+                    .list()
+                    .stream()
+                    .map(o -> o.getStyleNo().trim())
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (allowedStyleNos.isEmpty()) {
+                // 没有任何订单分配给该工厂，返回空页
+                com.baomidou.mybatisplus.extension.plugins.pagination.Page<TemplateLibrary> emptyPage =
+                        new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10, 0);
+                emptyPage.setRecords(List.of());
+                return emptyPage;
+            }
+            params.put("allowedStyleNos", allowedStyleNos);
+        }
         IPage<TemplateLibrary> pageResult = templateLibraryService.queryPage(params);
         // 补充来源款式封面图
         List<String> styleNos = pageResult.getRecords().stream()
@@ -97,7 +148,35 @@ public class TemplateLibraryOrchestrator {
     }
 
     public List<TemplateLibrary> listByType(String templateType) {
-        return templateLibraryService.listByType(templateType);
+        List<TemplateLibrary> all = templateLibraryService.listByType(templateType);
+        // 外发工厂用户：只返回分配给本工厂的款式的模板
+        String currentFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(currentFactoryId)) {
+            Long tenantId = UserContext.tenantId();
+            List<String> allowedStyleNos = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getFactoryId, currentFactoryId)
+                    .isNotNull(ProductionOrder::getStyleNo)
+                    .ne(ProductionOrder::getStyleNo, "")
+                    .select(ProductionOrder::getStyleNo)
+                    .list()
+                    .stream()
+                    .map(o -> o.getStyleNo().trim())
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (allowedStyleNos.isEmpty()) {
+                return List.of();
+            }
+            return all.stream()
+                    .filter(t -> {
+                        String sn = t.getSourceStyleNo();
+                        return StringUtils.hasText(sn) && allowedStyleNos.contains(sn.trim());
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return all;
     }
 
     public TemplateLibrary detail(String id) {
@@ -105,6 +184,7 @@ public class TemplateLibraryOrchestrator {
         if (tpl == null) {
             throw new NoSuchElementException("模板不存在");
         }
+        assertFactoryCanAccessStyle(tpl.getSourceStyleNo());
         return tpl;
     }
 
@@ -113,6 +193,7 @@ public class TemplateLibraryOrchestrator {
         if (!StringUtils.hasText(sn)) {
             throw new IllegalArgumentException("styleNo不能为空");
         }
+        assertFactoryCanAccessStyle(sn);
         return templateLibraryService.resolveProcessUnitPrices(sn);
     }
 
@@ -121,11 +202,13 @@ public class TemplateLibraryOrchestrator {
         if (!StringUtils.hasText(sn)) {
             throw new IllegalArgumentException("styleNo不能为空");
         }
+        assertFactoryCanAccessStyle(sn);
         return templateLibraryService.resolveProgressNodeUnitPrices(sn);
     }
 
     public Map<String, Object> getProcessPriceTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        assertFactoryCanAccessStyle(sn);
         TemplateLibrary matched = StringUtils.hasText(sn) ? findStyleScopedProcessPriceTemplate(sn) : null;
 
         String matchedScope = "empty";
@@ -203,8 +286,10 @@ public class TemplateLibraryOrchestrator {
     }
 
     private List<Map<String, Object>> listProcessPriceStyleOptionsForFactory(String factoryId, String keywordText) {
+        Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .isNotNull(ProductionOrder::getStyleNo)
                 .ne(ProductionOrder::getStyleNo, "")
@@ -231,8 +316,10 @@ public class TemplateLibraryOrchestrator {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
         if (!StringUtils.hasText(sn)) return new ArrayList<>();
         String currentFactoryId = UserContext.factoryId();
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<ProductionOrder> q = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getStyleNo, sn)
                 .isNotNull(ProductionOrder::getStyleNo);
         if (StringUtils.hasText(currentFactoryId)) {
@@ -259,6 +346,7 @@ public class TemplateLibraryOrchestrator {
         if (!StringUtils.hasText(styleNo)) {
             throw new IllegalArgumentException("styleNo不能为空");
         }
+        assertFactoryCanAccessStyle(styleNo);
 
         Map<String, Object> content = coerceMap(payload.get("templateContent"));
         List<Map<String, Object>> rawSteps = coerceListOfMap(content.get("steps"));
@@ -656,7 +744,12 @@ public class TemplateLibraryOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean rollback(String id, String reason) {
-        if (!UserContext.isTopAdmin()) {
+        // 管理员或工厂用户（仅限其被分配款号的模板）均可解锁
+        boolean isAdmin = UserContext.isTopAdmin();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
+            log.warn("[模板退回] 权限不足 userId={}, role={}, factoryId={}, isAdmin={}, isFactory={}",
+                    UserContext.userId(), UserContext.role(), UserContext.factoryId(), isAdmin, isFactory);
             throw new AccessDeniedException("无权限操作");
         }
         String tid = String.valueOf(id == null ? "" : id).trim();
@@ -674,6 +767,10 @@ public class TemplateLibraryOrchestrator {
         // 混合表：租户私有模板需校验归属，系统共享模板(tenantId=null)由TopAdmin权限保护
         if (current.getTenantId() != null) {
             TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "模板");
+        }
+        // 工厂用户只能解锁自己被分配款号的模板
+        if (DataPermissionHelper.isFactoryAccount()) {
+            assertFactoryCanAccessStyle(current.getSourceStyleNo());
         }
         if (!isLocked(current)) {
             return true;
@@ -727,10 +824,9 @@ public class TemplateLibraryOrchestrator {
     }
 
     public List<TemplateLibrary> createFromStyle(Map<String, Object> body) {
-        // 移除权限限制，工序模板应该允许所有有权限的用户创建
-        // if (!UserContext.isTopAdmin()) {
-        //     throw new AccessDeniedException("无权限操作");
-        // }
+        if (StringUtils.hasText(UserContext.factoryId())) {
+            throw new AccessDeniedException("外发工厂账号无权执行此操作");
+        }
 
         String sourceStyleNo = body == null ? null
                 : (body.get("sourceStyleNo") == null ? null : String.valueOf(body.get("sourceStyleNo")));
@@ -747,10 +843,9 @@ public class TemplateLibraryOrchestrator {
     }
 
     public boolean applyToStyle(Map<String, Object> body) {
-        // 移除权限限制，工序模板应该允许所有有权限的用户使用
-        // if (!UserContext.isTopAdmin()) {
-        //     throw new AccessDeniedException("无权限操作");
-        // }
+        if (StringUtils.hasText(UserContext.factoryId())) {
+            throw new AccessDeniedException("外发工厂账号无权执行此操作");
+        }
 
         String templateId = body == null ? null
                 : (body.get("templateId") == null ? null : String.valueOf(body.get("templateId")));

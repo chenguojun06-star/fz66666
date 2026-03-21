@@ -172,6 +172,10 @@ public class SecurityConfig implements WebMvcConfigurer {
                         // 租户智能配置/功能开关（查看当前租户配置；save/reset 由兜底规则限为管理员）
                         .antMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
                         .antMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
+                        // 字典查询：工序名/机器类型等词典数据，前端下拉/自动完成组件需要，所有登录用户可读
+                        // （写操作 POST/PUT/DELETE 由兜底规则限为管理员）
+                        .antMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()
+                        .antMatchers(HttpMethod.GET, "/api/system/dict/by-type").authenticated()
 
                         // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
                         .antMatchers("/api/system/tenant/**").hasAnyAuthority(
@@ -347,8 +351,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                 }
             }
 
-            // 修复：无论走 TokenAuth 还是 HeaderAuth，都需要补全 tenantId、isTenantOwner 和 isSuperAdmin
-            if (ctx.getUserId() != null && jdbcTemplate != null && ctx.getTenantId() == null && !ctx.getSuperAdmin()) {
+            // 修复：无论走 TokenAuth 还是 HeaderAuth，都需要补全 tenantId、isTenantOwner、isSuperAdmin 和 factoryId
+            // 条件扩展：tenantId 缺失 OR factoryId 缺失时均触发 DB 回退（缓存保证性能）
+            if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin() && (ctx.getTenantId() == null || ctx.getFactoryId() == null)) {
                 String cacheKey = ctx.getUserId();
                 // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin + "|" + factoryId
                 String cached = tenantInfoCache.get(cacheKey);
