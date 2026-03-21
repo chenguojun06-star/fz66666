@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -50,6 +51,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     private final ScanRecordService scanRecordService;
     private final MaterialPurchaseService materialPurchaseService;
     private final ProductWarehousingService productWarehousingService;
+    private final ProductionOrderMapper productionOrderMapper;
     private final ProductWarehousingMapper productWarehousingMapper;
     private final ProductOutstockService productOutstockService;
     private final RedisService redisService;
@@ -63,6 +65,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             ScanRecordService scanRecordService,
             MaterialPurchaseService materialPurchaseService,
             ProductWarehousingService productWarehousingService,
+            ProductionOrderMapper productionOrderMapper,
             ProductWarehousingMapper productWarehousingMapper,
             ProductOutstockService productOutstockService,
             RedisService redisService) {
@@ -74,6 +77,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         this.scanRecordService = scanRecordService;
         this.materialPurchaseService = materialPurchaseService;
         this.productWarehousingService = productWarehousingService;
+        this.productionOrderMapper = productionOrderMapper;
         this.productWarehousingMapper = productWarehousingMapper;
         this.productOutstockService = productOutstockService;
         this.redisService = redisService;
@@ -427,16 +431,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计订单数量总和：时间范围内所有订单的orderQuantity之和（包括已完成订单）
-        // 注意：不使用 .select() 限制列，避免 MyBatis-Plus 单列选择时字段映射返回null的问题
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .ge(start != null, ProductionOrder::getCreateTime, start)
-                .le(end != null, ProductionOrder::getCreateTime, end)
-                .list();
-        return orders.stream()
-                .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0L)
-                .sum();
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
+            .select("COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
+            .eq("delete_flag", 0)
+            .ge(start != null, "create_time", start)
+            .le(end != null, "create_time", end);
+        return extractLongScalar(productionOrderMapper.selectMaps(qw), "total");
     }
 
     @Override
@@ -462,16 +462,31 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计出入库数量：质检入库的 qualifiedQuantity + unqualifiedQuantity
-        List<ProductWarehousing> warehousing = productWarehousingService.lambdaQuery()
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
-                .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
-                .list();
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                .select("COALESCE(SUM(COALESCE(qualified_quantity, 0) + COALESCE(unqualified_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0)
+                .ge(start != null, "warehousing_end_time", start)
+                .le(end != null, "warehousing_end_time", end);
+        return extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
+    }
 
-        return warehousing.stream()
-                .mapToInt(w -> w.getQualifiedQuantity() + w.getUnqualifiedQuantity())
-                .sum();
+    private long extractLongScalar(List<Map<String, Object>> rows, String fieldName) {
+        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.get(0);
+        Object value = first == null ? null : first.get(fieldName);
+        if (value == null && first != null) {
+            value = first.get(fieldName.toUpperCase());
+        }
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     @Override

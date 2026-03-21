@@ -1,3 +1,28 @@
+## 2026-03-21（首页日报 500 根修：去除 dashboard 热点接口整表映射）
+
+### fix(dashboard): 修复 /api/dashboard/daily-brief 因无关缺列导致的 500，并阻断同类连锁报错
+
+- **问题现象**：
+  - 首页多处组件同时报错：`GET /api/dashboard/daily-brief 500`。
+  - 小云助手的 `system mood`、提醒弹窗、智能中心等位置都会重复打印 `数据库操作异常，请联系管理员`。
+- **根本原因**：
+  - `DailyBriefOrchestrator` 自身高风险订单查询已做列裁剪，但它依赖的 `DashboardQueryServiceImpl.sumOrderQuantityBetween()` 与 `sumWarehousingQuantityBetween()` 仍使用实体 `.list()` 做整表映射。
+  - 线上一旦 `t_production_order` 或 `t_product_warehousing` 存在与日报无关的扩展列缺失，这两个汇总方法就会因为实体字段映射触发 SQL 异常，把热点接口 `/api/dashboard/daily-brief` 直接打成 500。
+  - 前端多个组件共用该接口获取日报/系统情绪，所以用户会看到“一个问题变成很多问题”的连锁表现。
+- **修复方案**：
+  - `DashboardQueryServiceImpl`：
+    - `sumOrderQuantityBetween()` 改为 `ProductionOrderMapper.selectMaps()` + `SUM(order_quantity)` 聚合，不再映射整张 `t_production_order`。
+    - `sumWarehousingQuantityBetween()` 改为 `ProductWarehousingMapper.selectMaps()` + `SUM(qualified_quantity + unqualified_quantity)` 聚合，不再映射整张 `t_product_warehousing`。
+    - 新增 `extractLongScalar()` 统一处理 MySQL 聚合结果的 `total/TOTAL` 兼容解析。
+  - 新增 `DashboardQueryServiceImplTest`，锁定“日报汇总必须走 SQL 聚合，不能退回整表查询”的回归约束。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java`
+  - `backend/src/test/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImplTest.java`
+- **对系统的帮助**：
+  - 首页日报对数据库 schema 漂移的敏感度显著下降，云端即使还存在无关扩展列缺失，也不再优先把 `/api/dashboard/daily-brief` 打挂。
+  - 同一日报接口被多个前端入口复用时，不再出现“一处缺列，整页多个模块同时报错”的连锁放大。
+  - 后续 dashboard 热点接口整改有了明确基线：统计类接口优先走 SQL 聚合，避免实体全字段耦合。
+
 ## 2026-03-20（线上告警连锁根修：Redis超时 + 管理员权限范围脏数据）
 
 ### fix(stability): 解决 Redis 500ms 超时连锁告警，并自动修复管理员 permissionRange 脏值
