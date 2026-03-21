@@ -1,5 +1,22 @@
 # 2026-03-22
 
+## 云端稳定性 / 裁剪任务、质检任务、TopStats 接口 schema 漂移修复
+
+- **问题现象**：云端小程序连续出现 500，涉及 `GET /api/production/cutting-task/list?myTasks=true`、`GET /api/production/scan/my-quality-tasks`、`GET /api/dashboard/top-stats?range=week`。
+- **根本原因**：多个热点接口在云端仍存在“整实体 `.list()` / `getById()` 读取”路径，数据库只要缺少任意无关扩展列，就会在 MyBatis 映射阶段直接抛出数据库异常。
+- **修复方案**：
+  - `CuttingTaskOrchestrator.getMyTasks()`：改为只查询裁剪任务必需字段；关联订单有效性判断也只查询 `id`。
+  - `ScanRecordQueryHelper.getMyQualityTasks()`：不再走通用全字段 `queryPage()`，改为最小字段查询；中途的订单、菲号、入库、质检确认记录查询全部收窄为必要列。
+  - `DashboardQueryServiceImpl.sumCuttingQuantityBetween()`：裁剪统计只查询 `orderQuantity`，避免 `top-stats` 因 `t_cutting_task` 的无关扩展列缺失而 500。
+- **修复后表现**：
+  - 云端“我的裁剪任务”“待质检任务”“首页 top-stats”三条高频入口不再依赖整表 schema 完整性。
+  - 即使云端存在非核心扩展列漂移，热点接口仍可优先恢复可用性。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/production/helper/ScanRecordQueryHelper.java`
+  - `backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java`
+- **对系统的帮助**：优先切断云端任务面板和首页统计对扩展列的脆弱依赖，减少“某个表缺一列导致整块业务 500”的连锁故障。
+
 ## 仪表板 / 今日预警和小云面板工厂数据隔离修复
 
 - **问题现象**：工厂账号（如"演示工人小李"）登录后，今日预警弹窗和小云 AI 助手面板显示了所有工厂的订单，而非仅本工厂订单。

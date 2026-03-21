@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（157个编排器）| **规模**：257k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-22 | **AI指令版本**：v3.22（工厂数据隔离缺失修复 + 今日预警/小云面板隔离）
+> **最后更新**：2026-03-22 | **AI指令版本**：v3.23（云端热点接口 schema 漂移修复 + 工厂隔离补强）
 
 ---
 
@@ -2496,6 +2496,74 @@ commit: 6260b04d
 
 Commit：85d45389
 Pattern：与 DashboardOrchestrator.dashboard() 既有工厂隔离保持一致
+```
+
+---
+
+### 2026-03-22 变更批次（补充修复：云端热点接口 schema 漂移）
+
+#### 变更 #🧯 🔴 BUG修复 — 裁剪任务 / 质检任务 / TopStats 云端同时 500
+
+```
+触发问题：
+  云端小程序连续报错：
+    - GET /api/production/cutting-task/list?myTasks=true → 500
+    - GET /api/production/scan/my-quality-tasks → 500
+    - GET /api/dashboard/top-stats?range=week → 500
+  前端统一表现为「数据库操作异常，请联系管理员」。
+
+根本原因（共同模式）：
+  这三条高频接口链路里都存在整实体 `.list()` / `getById()` 读取：
+  1️⃣ CuttingTaskOrchestrator.getMyTasks()
+     - 直接 `cuttingTaskService.lambdaQuery().list()` 取整实体
+     - 后续有效订单判断也用 `productionOrderService.lambdaQuery().list()` 取整实体
+
+  2️⃣ ScanRecordQueryHelper.getMyQualityTasks()
+     - 先走通用 `scanRecordService.queryPage(params)`，分页查询返回全字段 ScanRecord
+     - 中途又用 `productionOrderService.getById(orderId)`、`cuttingBundleService.getById(bundleId)`
+       和 `productWarehousingService.list(...)` 继续整实体读取
+
+  3️⃣ DashboardQueryServiceImpl.sumCuttingQuantityBetween()
+     - 裁剪统计用 `cuttingTaskService.lambdaQuery().list()` 拉整实体后再累加数量
+
+  云端只要缺失任意无关扩展列，就会在 MyBatis 映射阶段直接抛错，
+  最终导致任务面板和首页统计一起 500。
+
+修复方案：
+  ✅ CuttingTaskOrchestrator.getMyTasks()
+     - 只查询裁剪任务必需字段：id / productionOrderId / productionOrderNo / styleNo / color / orderQuantity / receivedTime
+     - 有效订单校验仅查询 `ProductionOrder.id`
+
+  ✅ ScanRecordQueryHelper.getMyQualityTasks()
+     - 不再走通用全字段 queryPage，改为最小字段查询 ScanRecord
+     - 订单校验改为仅查 `id / deleteFlag / status`
+     - 菲号校验改为仅查 `id / quantity`
+     - 入库汇总改为只查 `qualifiedQuantity`
+     - 质检阶段/质检确认记录都改为最小字段 `select(...)`
+
+  ✅ DashboardQueryServiceImpl.sumCuttingQuantityBetween()
+     - 裁剪统计只查询 `CuttingTask.orderQuantity`
+     - 避免 top-stats 因 `t_cutting_task` 无关列缺失而崩溃
+
+修复后表现：
+  ✅ 云端「我的裁剪任务」不再依赖整张 t_cutting_task 表结构完整
+  ✅ 云端「待质检任务」不再依赖 t_scan_record / t_production_order / t_cutting_bundle / t_product_warehousing 的非核心扩展列
+  ✅ 云端「首页 TopStats」中的裁剪统计不再因扩展列缺失导致整块 500
+
+涉及文件：
+  📄 backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java
+  📄 backend/src/main/java/com/fashion/supplychain/production/helper/ScanRecordQueryHelper.java
+  📄 backend/src/main/java/com/fashion/supplychain/dashboard/service/impl/DashboardQueryServiceImpl.java
+
+对系统的帮助：
+  🎯 优先恢复云端任务面板与首页统计可用性
+  🎯 降低热点接口对扩展列 schema 一致性的脆弱依赖
+  🎯 后续就算云端仍有历史结构债，也不会先把高频入口全部打成 500
+
+废弃代码清查：✅ 无废弃兼容逻辑残留，直接改为最小字段查询路径
+
+Commit：见本次云端 schema 漂移修复提交记录
+Pattern：与 dashboard schema drift 既有规律一致，先降耦合，再决定是否补数据库列
 ```
 
 ---

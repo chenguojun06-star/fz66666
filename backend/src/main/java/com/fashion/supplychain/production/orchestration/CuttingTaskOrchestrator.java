@@ -680,6 +680,15 @@ public class CuttingTaskOrchestrator {
 
         // 查询当前用户已领取的裁剪任务（status = received）
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .select(
+                        CuttingTask::getId,
+                        CuttingTask::getProductionOrderId,
+                        CuttingTask::getProductionOrderNo,
+                        CuttingTask::getStyleNo,
+                        CuttingTask::getColor,
+                        CuttingTask::getOrderQuantity,
+                        CuttingTask::getReceivedTime
+                )
                 .eq(CuttingTask::getReceiverId, userId)
                 .eq(CuttingTask::getStatus, "received")
                 .orderByDesc(CuttingTask::getReceivedTime)
@@ -701,6 +710,7 @@ public class CuttingTaskOrchestrator {
 
         // 查询有效订单（排除已关闭/已完成/已取消/已归档/已报废）
         Set<String> validOrderIds = productionOrderService.lambdaQuery()
+            .select(ProductionOrder::getId)
                 .in(ProductionOrder::getId, orderIds)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")

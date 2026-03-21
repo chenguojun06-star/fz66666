@@ -447,6 +447,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end) {
         // 统计裁剪数量：仅统计已完成（bundled）的裁剪任务
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .select(CuttingTask::getOrderQuantity)
                 .eq(CuttingTask::getStatus, "bundled")  // 仅统计已完成的任务
                 .ge(start != null, CuttingTask::getBundledTime, start)  // 使用完成时间
                 .le(end != null, CuttingTask::getBundledTime, end)

@@ -169,15 +169,36 @@ public class ScanRecordQueryHelper {
             throw new AccessDeniedException("未登录");
         }
 
-        Map<String, Object> params = new HashMap<>();
-        params.put("operatorId", operatorId);
-        params.put("scanType", "quality");
-        params.put("processCode", "quality_receive");
-        params.put("page", 1);
-        params.put("pageSize", 100);
-
-        IPage<ScanRecord> receivedPage = scanRecordService.queryPage(params);
-        List<ScanRecord> receivedRecords = receivedPage.getRecords();
+        List<ScanRecord> receivedRecords = scanRecordService.lambdaQuery()
+                .select(
+                        ScanRecord::getId,
+                        ScanRecord::getScanCode,
+                        ScanRecord::getOrderId,
+                        ScanRecord::getOrderNo,
+                        ScanRecord::getStyleNo,
+                        ScanRecord::getColor,
+                        ScanRecord::getSize,
+                        ScanRecord::getQuantity,
+                        ScanRecord::getCuttingBundleId,
+                        ScanRecord::getCuttingBundleNo,
+                        ScanRecord::getScanTime,
+                        ScanRecord::getCreateTime,
+                        ScanRecord::getProcessCode,
+                        ScanRecord::getProgressStage,
+                        ScanRecord::getProcessName,
+                        ScanRecord::getOperatorId,
+                        ScanRecord::getOperatorName,
+                        ScanRecord::getScanType,
+                        ScanRecord::getScanResult,
+                        ScanRecord::getConfirmTime,
+                        ScanRecord::getFactoryId
+                )
+                .eq(ScanRecord::getOperatorId, operatorId)
+                .eq(ScanRecord::getScanType, "quality")
+                .eq(ScanRecord::getProcessCode, "quality_receive")
+                .orderByDesc(ScanRecord::getScanTime)
+                .last("limit 100")
+                .list();
 
         if (receivedRecords == null || receivedRecords.isEmpty()) {
             return List.of();
@@ -190,7 +211,10 @@ public class ScanRecordQueryHelper {
 
             // 排除已关闭/已完成/已取消/已归档订单
             if (hasText(orderId)) {
-                ProductionOrder order = productionOrderService.getById(orderId);
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
+                        .eq(ProductionOrder::getId, orderId)
+                        .one();
                 if (order == null || order.getDeleteFlag() == 1) {
                     continue;
                 }
@@ -211,12 +235,16 @@ public class ScanRecordQueryHelper {
 
             // 检查该菲号是否已全部入库
             if (hasText(bundleId)) {
-                CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        CuttingBundle bundle = cuttingBundleService.lambdaQuery()
+            .select(CuttingBundle::getId, CuttingBundle::getQuantity)
+            .eq(CuttingBundle::getId, bundleId)
+            .one();
                 if (bundle != null) {
                     int cuttingQuantity = bundle.getQuantity() == null ? 0 : bundle.getQuantity();
 
                     List<ProductWarehousing> warehousingRecords = productWarehousingService.list(
                             new LambdaQueryWrapper<ProductWarehousing>()
+                    .select(ProductWarehousing::getQualifiedQuantity)
                                     .eq(ProductWarehousing::getCuttingBundleId, bundleId)
                                     .eq(ProductWarehousing::getDeleteFlag, 0));
 
@@ -245,6 +273,9 @@ public class ScanRecordQueryHelper {
         }
         try {
             return scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
+                    .select(ScanRecord::getId, ScanRecord::getOrderId, ScanRecord::getCuttingBundleId,
+                            ScanRecord::getProcessCode, ScanRecord::getScanType, ScanRecord::getScanResult,
+                            ScanRecord::getConfirmTime)
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanType, "quality")
@@ -267,6 +298,7 @@ public class ScanRecordQueryHelper {
         }
         try {
             return scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
+                    .select(ScanRecord::getId, ScanRecord::getConfirmTime)
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanType, "quality")
