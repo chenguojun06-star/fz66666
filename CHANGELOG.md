@@ -1,3 +1,25 @@
+## 2026-03-21（质检入库页/成品库存页 500 降级修复）
+
+### fix(warehouse): 为 ProductWarehousing 与 FinishedInventory 的订单补充链路增加容错，避免残余 schema 漂移把整页打成 500
+
+- **问题现象**：
+  - `GET /api/production/warehousing/list` 在线上持续返回 500。
+  - `POST /api/warehouse/finished-inventory/list` 同时返回 500，前端提示“数据库操作异常，请联系管理员”。
+- **根本原因**：
+  - 两个接口在组装展示字段时，都会无保护调用 `ProductionOrderService.listByIds()` / `list()`，对 `t_production_order` 做整实体映射。
+  - 云端一旦还残留任意 `t_production_order` 扩展列缺失，这类整表映射就会抛出 `BadSqlGrammarException`，导致页面整体 500。
+  - 这两个接口真正需要的只是订单补充字段（工厂名、组织、业务类型），不该因为补充信息失败而阻断主列表。
+- **修复方案**：
+  - `ProductWarehousingOrchestrator`：新增安全加载方法，订单补充信息查询失败时记录 error 日志并降级为空映射，主入库列表继续返回。
+  - `FinishedInventoryOrchestrator`：对按 `orderId` 和 `orderNo` 加载生产订单的两条链路统一加容错，失败时跳过工厂/组织补充字段，但库存主数据照常返回。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductWarehousingOrchestrator.java`
+  - `backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedInventoryOrchestrator.java`
+- **对系统的帮助**：
+  - 质检入库页和成品库存页不再被订单补充字段拖垮，优先恢复“可查看、可操作”的主流程。
+  - 云端即使仍有残余 schema 漂移，也会退化为部分展示字段缺失，而不是整页 500。
+  - error 日志会明确打印失败场景和订单 ID/单号，方便后续继续反查具体缺列。
+
 ## 2026-03-21（首页日报 500 根修：去除 dashboard 热点接口整表映射）
 
 ### fix(dashboard): 修复 /api/dashboard/daily-brief 因无关缺列导致的 500，并阻断同类连锁报错

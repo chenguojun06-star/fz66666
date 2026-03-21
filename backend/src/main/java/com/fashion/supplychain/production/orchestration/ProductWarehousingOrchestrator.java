@@ -39,6 +39,8 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -93,11 +95,11 @@ public class ProductWarehousingOrchestrator {
         IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);
         // 填充缺失的显示字段（兼容旧数据）
         if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
-            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(page.getRecords().stream()
-                    .map(ProductWarehousing::getOrderId)
-                    .filter(StringUtils::hasText)
-                    .collect(java.util.stream.Collectors.toSet())).stream()
-                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, order -> order, (a, b) -> a));
+            Set<String> orderIds = page.getRecords().stream()
+                .map(ProductWarehousing::getOrderId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+            Map<String, ProductionOrder> orderMap = loadProductionOrdersSafely(orderIds, "warehousing-list");
             // 收集所有需要查询的菲号ID和二维码
             List<String> bundleIds = new ArrayList<>();
             List<String> bundleQrCodes = new ArrayList<>();
@@ -191,6 +193,19 @@ public class ProductWarehousingOrchestrator {
             }
         }
         return page;
+    }
+
+    private Map<String, ProductionOrder> loadProductionOrdersSafely(Set<String> orderIds, String scene) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return productionOrderService.listByIds(orderIds).stream()
+                    .collect(Collectors.toMap(ProductionOrder::getId, order -> order, (left, right) -> left));
+        } catch (Exception ex) {
+            log.error("[{}] 加载生产订单失败，跳过订单补充字段，orderIds={}", scene, orderIds, ex);
+            return Collections.emptyMap();
+        }
     }
 
     /**

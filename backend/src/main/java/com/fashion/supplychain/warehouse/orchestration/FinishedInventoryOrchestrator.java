@@ -232,7 +232,7 @@ public class FinishedInventoryOrchestrator {
             }
         });
         if (!orderIds.isEmpty()) {
-            productionOrderService.listByIds(orderIds).forEach(order -> {
+            loadProductionOrdersByIdsSafely(orderIds, "finished-inventory-listByIds").forEach(order -> {
                 orderById.put(order.getId(), order);
                 if (StringUtils.hasText(order.getOrderNo())) {
                     orderByNo.put(order.getOrderNo(), order);
@@ -240,10 +240,11 @@ public class FinishedInventoryOrchestrator {
             });
         }
         if (!orderNos.isEmpty()) {
-            productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
-                    .in(ProductionOrder::getOrderNo, orderNos)
-                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0)))
-                    .forEach(order -> orderByNo.put(order.getOrderNo(), order));
+            loadProductionOrdersByNosSafely(orderNos, "finished-inventory-listByOrderNo").forEach(order -> {
+                if (StringUtils.hasText(order.getOrderNo())) {
+                    orderByNo.put(order.getOrderNo(), order);
+                }
+            });
         }
 
         Map<String, ProductOutstock> latestOutstockByStyleId = new HashMap<>();
@@ -445,6 +446,32 @@ public class FinishedInventoryOrchestrator {
         Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, dtoList.size());
         resultPage.setRecords(dtoList);
         return resultPage;
+    }
+
+    private List<ProductionOrder> loadProductionOrdersByIdsSafely(Set<String> orderIds, String scene) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            return productionOrderService.listByIds(orderIds);
+        } catch (Exception ex) {
+            log.error("[{}] 按ID加载生产订单失败，跳过订单补充字段，orderIds={}", scene, orderIds, ex);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<ProductionOrder> loadProductionOrdersByNosSafely(Set<String> orderNos, String scene) {
+        if (orderNos == null || orderNos.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            return productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
+                    .in(ProductionOrder::getOrderNo, orderNos)
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0)));
+        } catch (Exception ex) {
+            log.error("[{}] 按单号加载生产订单失败，跳过订单补充字段，orderNos={}", scene, orderNos, ex);
+            return Collections.emptyList();
+        }
     }
 
     /**
