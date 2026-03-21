@@ -208,11 +208,10 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
                                 .eq(ScanRecord::getOrderId, orderId)
                                 .orderByDesc(ScanRecord::getScanTime);
-                // 工厂账户只能查看本工厂的扫码记录
-                String ctxFactoryId = UserContext.factoryId();
-                if (StringUtils.hasText(ctxFactoryId)) {
-                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
-                }
+                // 不在此处按 factory_id 过滤：小程序/历史扫码记录的 factory_id 字段可能为 null，
+                // 按 factory_id 过滤会导致外发工厂账号进度球查询返回 0 条。
+                // orderId 本身已足够限定范围（工厂账号只能请求本厂订单的 orderId，
+                // 订单列表上层已做工厂级隔离），此处无需额外过滤。
                 applyDataPermissionFilter(wrapper);
                 return baseMapper.selectPage(pageInfo, wrapper);
         }
@@ -223,10 +222,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
                                 .eq(ScanRecord::getStyleNo, styleNo)
                                 .orderByDesc(ScanRecord::getScanTime);
-                String ctxFactoryId = UserContext.factoryId();
-                if (StringUtils.hasText(ctxFactoryId)) {
-                        wrapper.eq(ScanRecord::getFactoryId, ctxFactoryId);
-                }
+                // 同 queryByOrderId：不按 factory_id 过滤，历史记录该字段可能为 null。
                 applyDataPermissionFilter(wrapper);
                 return baseMapper.selectPage(pageInfo, wrapper);
         }
