@@ -192,10 +192,14 @@ public class ProductionOrderOrchestrator {
                         .distinct()
                         .collect(java.util.stream.Collectors.toList());
                 if (!orderIds.isEmpty()) {
+                    // 只 SELECT order_id/unqualified_quantity，避免 SELECT * 触发
+                    // repair_status 等新增列在云端缺失时的 "Unknown column" 错误
                     List<com.fashion.supplychain.production.entity.ProductWarehousing> defectRecords =
                             productWarehousingService.list(
                                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
                                             com.fashion.supplychain.production.entity.ProductWarehousing>()
+                                            .select(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
+                                                    com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity)
                                             .in(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId, orderIds)
                                             .gt(com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity, 0)
                                             .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0)

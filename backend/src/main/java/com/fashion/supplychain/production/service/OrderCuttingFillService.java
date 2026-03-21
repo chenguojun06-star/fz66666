@@ -138,8 +138,22 @@ public class OrderCuttingFillService {
         Map<String, CuttingTask> cuttingTaskMap = new HashMap<>();
 
         try {
+            // 显式 SELECT 稳定列，排除 factory_type（V202607192303 因 COMMENT'' Flyway
+            // 截断问题在云端可能未成功 ADD COLUMN，全量 SELECT * 会触发 Unknown column）
             List<CuttingTask> tasks = cuttingTaskMapper.selectList(
                     new LambdaQueryWrapper<CuttingTask>()
+                            .select(CuttingTask::getId, CuttingTask::getProductionOrderId,
+                                    CuttingTask::getProductionOrderNo, CuttingTask::getOrderQrCode,
+                                    CuttingTask::getStyleId, CuttingTask::getStyleNo,
+                                    CuttingTask::getStyleName, CuttingTask::getColor,
+                                    CuttingTask::getSize, CuttingTask::getOrderQuantity,
+                                    CuttingTask::getStatus, CuttingTask::getReceiverId,
+                                    CuttingTask::getReceiverName, CuttingTask::getReceivedTime,
+                                    CuttingTask::getBundledTime, CuttingTask::getCreateTime,
+                                    CuttingTask::getUpdateTime, CuttingTask::getRemarks,
+                                    CuttingTask::getExpectedShipDate, CuttingTask::getCreatorId,
+                                    CuttingTask::getCreatorName, CuttingTask::getUpdaterId,
+                                    CuttingTask::getUpdaterName, CuttingTask::getTenantId)
                             .in(CuttingTask::getProductionOrderId, orderIds));
             if (tasks != null) {
                 for (CuttingTask task : tasks) {
