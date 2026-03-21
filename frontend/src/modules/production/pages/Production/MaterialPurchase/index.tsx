@@ -14,6 +14,7 @@ import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
+import { formatMaterialQuantity } from './utils';
 
 const MaterialPurchase: React.FC = () => {
   const {
@@ -86,6 +87,17 @@ const MaterialPurchase: React.FC = () => {
                           ]}
                           style={{ width: 120 }}
                           placeholder="订单类型"
+                        />
+                        <Select
+                          value={queryParams.factoryType || ''}
+                          onChange={(value) => setQueryParams(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
+                          options={[
+                            { label: '全部工厂', value: '' },
+                            { label: '内部自产', value: 'INTERNAL' },
+                            { label: '外发工厂', value: 'EXTERNAL' },
+                          ]}
+                          style={{ width: 132 }}
+                          placeholder="工厂类型"
                         />
                         <Segmented
                           value={queryParams.materialType || ''}
@@ -168,7 +180,7 @@ const MaterialPurchase: React.FC = () => {
                       onReset={() => {
                         const params = new URLSearchParams(location.search);
                         const orderNo = (params.get('orderNo') || '').trim();
-                        setQueryParams({ page: 1, pageSize: 10, orderNo, materialType: '' });
+                        setQueryParams({ page: 1, pageSize: 10, orderNo, materialType: '', factoryType: '', sourceType: '', status: '' });
                       }}
                       onExport={handleExport}
                       onAdd={() => openDialog('create')}
@@ -365,6 +377,7 @@ const MaterialPurchase: React.FC = () => {
                       key: 'purchaseQuantity',
                       width: 90,
                       align: 'right' as const,
+                      render: (v: number) => formatMaterialQuantity(v),
                     },
                     {
                       title: '到货数',
@@ -372,6 +385,7 @@ const MaterialPurchase: React.FC = () => {
                       key: 'arrivedQuantity',
                       width: 90,
                       align: 'right' as const,
+                      render: (v: number) => formatMaterialQuantity(v),
                     },
                     {
                       title: '实际回料数',

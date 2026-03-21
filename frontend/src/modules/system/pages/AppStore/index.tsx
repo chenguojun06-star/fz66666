@@ -465,9 +465,9 @@ const AppStore: React.FC = () => {
       >
         <Steps current={wizardStep} size="small" style={{ marginBottom: 20, padding: '0 20px' }}
           items={[
-            { title: 'API凭证', description: '自动生成' },
-            { title: '配置地址', description: '填写您的接口' },
-            { title: '完成', description: '开始使用' },
+            { title: 'API凭证', content: '自动生成' },
+            { title: '配置地址', content: '填写您的接口' },
+            { title: '完成', content: '开始使用' },
           ]}
         />
 

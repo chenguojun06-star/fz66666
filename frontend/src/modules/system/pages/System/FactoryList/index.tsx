@@ -203,9 +203,14 @@ const FactoryList: React.FC = () => {
     }
   }, [location.search]);
 
-  const openDialog = (mode: DialogMode, factory?: FactoryType) => {
-    setDialogMode(mode);
-    if (mode === 'create') {
+  useEffect(() => {
+    if (!factoryModal.visible) {
+      form.resetFields();
+      setLicenseFileList([]);
+      return;
+    }
+
+    if (dialogMode === 'create') {
       form.setFieldsValue({
         factoryCode: '',
         factoryName: '',
@@ -221,23 +226,28 @@ const FactoryList: React.FC = () => {
         businessLicense: undefined,
       });
       setLicenseFileList([]);
-    } else {
-      form.setFieldsValue({
-        factoryCode: factory?.factoryCode,
-        factoryName: factory?.factoryName,
-        contactPerson: factory?.contactPerson,
-        contactPhone: factory?.contactPhone,
-        managerId: factory?.managerId,
-        address: factory?.address,
-        dailyCapacity: factory?.dailyCapacity,
-        status: factory?.status || 'inactive',
-        supplierType: factory?.supplierType || 'MATERIAL',
-        factoryType: factory?.factoryType || 'INTERNAL',
-        parentOrgUnitId: factory?.parentOrgUnitId,
-        businessLicense: (factory as any)?.businessLicense,
-      });
-      setLicenseFileList(buildImageFileList((factory as any)?.businessLicense));
+      return;
     }
+
+    form.setFieldsValue({
+      factoryCode: factoryModal.data?.factoryCode,
+      factoryName: factoryModal.data?.factoryName,
+      contactPerson: factoryModal.data?.contactPerson,
+      contactPhone: factoryModal.data?.contactPhone,
+      managerId: factoryModal.data?.managerId,
+      address: factoryModal.data?.address,
+      dailyCapacity: factoryModal.data?.dailyCapacity,
+      status: factoryModal.data?.status || 'inactive',
+      supplierType: factoryModal.data?.supplierType || 'MATERIAL',
+      factoryType: factoryModal.data?.factoryType || 'INTERNAL',
+      parentOrgUnitId: factoryModal.data?.parentOrgUnitId,
+      businessLicense: (factoryModal.data as any)?.businessLicense,
+    });
+    setLicenseFileList(buildImageFileList((factoryModal.data as any)?.businessLicense));
+  }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
+
+  const openDialog = (mode: DialogMode, factory?: FactoryType) => {
+    setDialogMode(mode);
     factoryModal.open(factory || null);
   };
 

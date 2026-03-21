@@ -6,6 +6,28 @@ import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
 import type { Dayjs } from 'dayjs';
 
+const CUTTING_TASK_QUERY_STORAGE_KEY = 'Cutting.taskQuery';
+
+type CuttingTaskQuery = {
+  page: number;
+  pageSize: number;
+  status: string;
+  orderNo: string;
+  styleNo: string;
+  orgUnitId: string;
+  factoryType: '' | 'INTERNAL' | 'EXTERNAL';
+};
+
+const createDefaultTaskQuery = (): CuttingTaskQuery => ({
+  page: 1,
+  pageSize: readPageSize(10),
+  status: '',
+  orderNo: '',
+  styleNo: '',
+  orgUnitId: '',
+  factoryType: '',
+});
+
 interface UseCuttingTasksOptions {
   message: any;
   isEntryPage: boolean;
@@ -20,7 +42,28 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // 任务查询状态
-  const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: readPageSize(10), status: '' as string, orderNo: '', styleNo: '', orgUnitId: '' });
+  const [taskQuery, setTaskQuery] = useState<CuttingTaskQuery>(() => {
+    const base = createDefaultTaskQuery();
+    if (typeof window === 'undefined') return base;
+    try {
+      const raw = window.localStorage.getItem(CUTTING_TASK_QUERY_STORAGE_KEY);
+      if (!raw) return base;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return base;
+      const page = Number((parsed as Partial<CuttingTaskQuery>).page);
+      const pageSize = Number((parsed as Partial<CuttingTaskQuery>).pageSize);
+      const factoryType = String((parsed as Partial<CuttingTaskQuery>).factoryType || '').trim().toUpperCase();
+      return {
+        ...base,
+        ...(parsed as Partial<CuttingTaskQuery>),
+        page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
+        pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
+        factoryType: factoryType === 'INTERNAL' || factoryType === 'EXTERNAL' ? factoryType : '',
+      };
+    } catch {
+      return base;
+    }
+  });
   const [taskDateRange, setTaskDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskList, setTaskList] = useState<CuttingTask[]>([]);
@@ -91,6 +134,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       const filterParams: Record<string, string> = {};
       if (taskQuery.orderNo) filterParams.orderNo = taskQuery.orderNo;
       if (taskQuery.styleNo) filterParams.styleNo = taskQuery.styleNo;
+      if (taskQuery.factoryType) filterParams.factoryType = taskQuery.factoryType;
       const res = await api.get<{ code: number; data: typeof cuttingStats }>('/production/cutting-task/stats', { params: filterParams });
       if (res.code === 200 && res.data) {
         setCuttingStats(res.data);
@@ -98,7 +142,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
     } catch (error) {
       console.error('获取裁剪统计失败', error);
     }
-  }, [taskQuery.orderNo, taskQuery.styleNo]);
+  }, [taskQuery.orderNo, taskQuery.styleNo, taskQuery.factoryType]);
 
   // 统计卡片筛选
   const handleStatClick = (type: 'all' | 'pending' | 'received' | 'bundled') => {
@@ -212,6 +256,15 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   useEffect(() => {
     if (isEntryPage) return;
     fetchTasks();
+  }, [isEntryPage, taskQuery]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || isEntryPage) return;
+    try {
+      window.localStorage.setItem(CUTTING_TASK_QUERY_STORAGE_KEY, JSON.stringify(taskQuery));
+    } catch {
+      // ignore storage errors
+    }
   }, [isEntryPage, taskQuery]);
 
   useEffect(() => {

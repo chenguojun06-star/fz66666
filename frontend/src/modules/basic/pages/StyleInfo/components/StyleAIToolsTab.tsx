@@ -45,7 +45,7 @@ const StyleAIToolsTab: React.FC<Props> = ({ styleNo, coverImageUrl: _coverImageU
           type="info"
           showIcon
           style={{ marginBottom: 12, fontSize: 12 }}
-          message={
+          title={
             styleNo
               ? `当前款号：${styleNo}｜粘贴图片地址（COS/CDN链接均可）后点击「开始分析」`
               : '粘贴样衣图片地址即可进行AI质检，支持 COS / CDN 外链'
@@ -81,7 +81,7 @@ const StyleAIToolsTab: React.FC<Props> = ({ styleNo, coverImageUrl: _coverImageU
           type="info"
           showIcon
           style={{ marginBottom: 12, fontSize: 12 }}
-          message={
+          title={
             styleNo
               ? `预测类型选「面料需求」，主体 ID 填入款号 ${styleNo}，选择预测周期后点击开始`
               : '预测类型选「面料需求」，主体 ID 填入款号，选择预测周期后开始预测'

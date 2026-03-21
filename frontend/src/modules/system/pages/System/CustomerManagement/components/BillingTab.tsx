@@ -94,7 +94,12 @@ const BillingTab: React.FC = () => {
   useEffect(() => { fetchTenants(); fetchPlans(); }, [fetchTenants, fetchPlans]);
   useEffect(() => { fetchBills(); }, [fetchBills]);
 
-  const handleOpenPlanModal = (record: TenantInfo) => {
+  useEffect(() => {
+    if (!planModal.visible || !planModal.data) {
+      planForm.resetFields();
+      return;
+    }
+    const record = planModal.data;
     planForm.setFieldsValue({
       planType: record.planType || 'TRIAL',
       billingCycle: record.billingCycle || 'MONTHLY',
@@ -102,6 +107,9 @@ const BillingTab: React.FC = () => {
       storageQuotaMb: record.storageQuotaMb || 1024,
       maxUsers: record.maxUsers || 50,
     });
+  }, [planForm, planModal.data, planModal.visible]);
+
+  const handleOpenPlanModal = (record: TenantInfo) => {
     planModal.open(record);
   };
 

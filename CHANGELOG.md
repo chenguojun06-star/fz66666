@@ -1,3 +1,21 @@
+# 2026-03-22
+
+## 采购管理 / 到货数量显示精度修复
+
+- 修复面辅料采购列表“采购数量 / 到货数量 / 待到数量”出现 `0.179999999999` 一类浮点尾数的问题。
+- 根因是前端显示层直接输出 JavaScript 浮点减法结果，例如 `6.18 - 6` 被原样渲染成 `0.179999999999...`，并非数据库真实存了异常数量。
+- 新增物料采购数量公共格式化工具，对数量统一做“安全四舍五入 + 去尾零 + 负零归零”，同时将待到数量改为安全减法显示。
+- 同步覆盖采购列表、采购详情弹窗、采购明细页、合并领取提示、Excel 导出、AI 提示文案等多个入口，避免同一批数据在不同界面显示不一致。
+- 帮助：面料按米数、小数数量采购场景下，页面与导出都能稳定显示 `0.18`、`6.2` 这类业务可读值，减少误判为脏数据或计算错误。
+
+## 采购管理 / 裁剪管理筛选增强
+
+- 采购管理新增“工厂类型”筛选，支持“全部工厂 / 内部自产 / 外发工厂”。
+- 裁剪管理新增同维度“工厂类型”筛选，列表与统计卡片同步按筛选结果刷新。
+- 两个页面的筛选选择改为本地持久化，刷新页面或重新进入后会自动恢复上次选择。
+- 帮助：减少采购、裁剪两页来回切换时重复选择筛选条件，按生产组织查看数据更稳定。
+- 同步清理一批前端 antd 废弃告警：`Alert.message` 改为 `title`，`Steps.items.description` 改为 `content`，减少控制台噪音并对齐当前组件 API。
+
 ## 2026-03-21（个人中心账单入口权限对齐）
 
 ### fix(system): 普通员工不再显示“我的账单”入口，前后端权限语义保持一致
@@ -38,6 +56,34 @@
 - **对系统的帮助**：
   - 去掉控制台噪音，避免误判为表单状态异常。
   - 权限未就绪或无权限账号访问个人中心时，不再触发无效的智能画像表单写入。
+
+## 2026-03-21（系统管理弹窗表单生命周期对齐）
+
+### fix(system): 修复客户管理多处弹窗在首次打开前写入 Form 实例的潜在告警
+
+- **问题现象**：
+  - 系统管理的客户管理页存在多处“先 `setFieldsValue`，后 `open` 弹窗”的写法。
+  - 由于 `ResizableModal` 默认不会强制预渲染内部 Form，首次打开时存在触发 antd `useForm is not connected to any Form element` 告警的风险。
+- **根本原因**：
+  - `BillingTab` 的套餐设置弹窗、`RegistrationTab` 的编辑申请弹窗、`TenantListTab` 的审批通过弹窗，都在表单尚未挂载时尝试写入初始值。
+  - 这种写法和个人中心刚修复的 `smartProfileForm` 告警属于同一类生命周期时序问题。
+- **修复方案**：
+  - 统一改为“弹窗 visible 且 data 就绪后，再在 `useEffect` 中同步 `setFieldsValue`”。
+  - 弹窗关闭时统一 `resetFields`，避免旧值残留到下一次打开。
+- **涉及文件**：
+  - `frontend/src/modules/system/pages/System/CustomerManagement/components/BillingTab.tsx`
+  - `frontend/src/modules/system/pages/System/CustomerManagement/components/RegistrationTab.tsx`
+  - `frontend/src/modules/system/pages/System/CustomerManagement/components/TenantListTab.tsx`
+  - `frontend/src/modules/system/pages/System/CustomerManagement/components/FeedbackTab.tsx`
+  - `frontend/src/modules/system/pages/System/DictManage/index.tsx`
+  - `frontend/src/modules/system/pages/System/FactoryList/index.tsx`
+  - `frontend/src/modules/system/pages/System/UserList/index.tsx`
+  - `frontend/src/modules/finance/pages/Finance/WagePayment/index.tsx`
+  - `frontend/src/modules/finance/pages/TaxExport/index.tsx`
+  - `frontend/src/modules/warehouse/pages/EcommerceOrders/index.tsx`
+- **对系统的帮助**：
+  - 消除系统管理页首次打开弹窗时的潜在控制台告警。
+  - 将同类修复扩展到财务导出与电商订单页面，统一弹窗表单初始化模式，降低后续同类问题复发概率。
 
 ## 2026-03-21（质检入库页/成品库存页 500 降级修复）
 

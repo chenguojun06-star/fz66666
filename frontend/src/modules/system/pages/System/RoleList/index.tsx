@@ -526,7 +526,7 @@ const RoleList: React.FC = () => {
                 type="warning"
                 showIcon
                 icon={<span>🛡️</span>}
-                message="权限防呆检测"
+                title="权限防呆检测"
                 description={
                   <span>
                     当前有 <strong>{broadRoles.length}</strong> 个启用角色使用“全部数据”范围（

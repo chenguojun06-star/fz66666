@@ -11,6 +11,7 @@
 import React from 'react';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialQuantity, normalizeMaterialQuantity, subtractMaterialQuantity } from './index';
 
 export interface PurchaseInsight {
   totalMaterials: number;
@@ -28,12 +29,13 @@ export interface PurchaseInsight {
 
 /** 判断单条记录是否已到齐 */
 const isFullyArrived = (r: MaterialPurchaseType) =>
-  (Number(r.arrivedQuantity) || 0) >= (Number(r.purchaseQuantity) || 0) && (Number(r.purchaseQuantity) || 0) > 0;
+  normalizeMaterialQuantity(r.arrivedQuantity) >= normalizeMaterialQuantity(r.purchaseQuantity)
+  && normalizeMaterialQuantity(r.purchaseQuantity) > 0;
 
 /** 从同一订单的采购记录中提取智能洞察 */
 export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsight {
-  const totalP = orderRecs.reduce((s, r) => s + (Number(r.purchaseQuantity) || 0), 0);
-  const totalA = orderRecs.reduce((s, r) => s + (Number(r.arrivedQuantity) || 0), 0);
+  const totalP = orderRecs.reduce((s, r) => s + normalizeMaterialQuantity(r.purchaseQuantity), 0);
+  const totalA = orderRecs.reduce((s, r) => s + normalizeMaterialQuantity(r.arrivedQuantity), 0);
   const rate = totalP > 0 ? Math.round(totalA / totalP * 100) : 0;
 
   // 成本分析
@@ -64,8 +66,8 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
     verdict = 'critical';
     criticalPath = '主料未到，无法开裁';
     pendingFabrics.forEach(r => {
-      const gap = (Number(r.purchaseQuantity) || 0) - (Number(r.arrivedQuantity) || 0);
-      risks.push(`${r.materialName} 缺 ${gap}${r.unit || ''}（${r.supplierName || '未分配'}）`);
+      const gap = subtractMaterialQuantity(r.purchaseQuantity, r.arrivedQuantity);
+      risks.push(`${r.materialName} 缺 ${formatMaterialQuantity(gap)}${r.unit || ''}（${r.supplierName || '未分配'}）`);
     });
     suggestions.push('立即催面料供应商发货');
     if (pendingFabrics.length >= 2) {

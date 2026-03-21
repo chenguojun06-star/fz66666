@@ -44,6 +44,9 @@ import org.springframework.security.access.AccessDeniedException;
 @Slf4j
 public class CuttingTaskOrchestrator {
 
+    private static final String FACTORY_TYPE_INTERNAL = "INTERNAL";
+    private static final String FACTORY_TYPE_EXTERNAL = "EXTERNAL";
+
     private boolean isDirectCuttingOrder(ProductionOrder order, CuttingTask task) {
         String orderNo = order != null && StringUtils.hasText(order.getOrderNo())
                 ? order.getOrderNo().trim()
@@ -110,33 +113,15 @@ public class CuttingTaskOrchestrator {
      * 获取裁剪任务状态统计（各状态数量）
      */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
-        // 获取有效订单ID列表（排除已删除的订单）
-        List<ProductionOrder> allOrders = productionOrderService.list(
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .select(ProductionOrder::getId)
-                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-                .ne(ProductionOrder::getStatus, "scrapped")
-        );
-        List<String> validOrderIds = allOrders.stream()
-                .map(ProductionOrder::getId)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toList());
-
         // 基础过滤条件
         String orderNo = params != null ? getTrimmedText(params, "orderNo") : null;
         String styleNo = params != null ? getTrimmedText(params, "styleNo") : null;
+        String factoryType = normalizeFactoryType(params != null ? getTrimmedText(params, "factoryType") : null);
 
         LambdaQueryWrapper<CuttingTask> baseWrapper = new LambdaQueryWrapper<CuttingTask>()
                 .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
-                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo);
-
-        // 只查有效订单的任务
-        if (!validOrderIds.isEmpty()) {
-            baseWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
-                    .or().isNull(CuttingTask::getProductionOrderId));
-        } else {
-            baseWrapper.isNull(CuttingTask::getProductionOrderId);
-        }
+                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(factoryType), CuttingTask::getFactoryType, factoryType);
 
         List<CuttingTask> allTasks = cuttingTaskService.list(baseWrapper);
 
@@ -155,6 +140,17 @@ public class CuttingTaskOrchestrator {
         stats.put("receivedCount", receivedCount);
         stats.put("bundledCount", bundledCount);
         return stats;
+    }
+
+    private String normalizeFactoryType(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String normalized = raw.trim().toUpperCase();
+        if (FACTORY_TYPE_INTERNAL.equals(normalized) || FACTORY_TYPE_EXTERNAL.equals(normalized)) {
+            return normalized;
+        }
+        return null;
     }
 
     private String getTrimmedText(Map<String, Object> body, String key) {

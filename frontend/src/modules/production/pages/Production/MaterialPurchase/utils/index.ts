@@ -42,6 +42,37 @@ export const escapeHtml = (v: unknown) => {
     .replace(/'/g, '&#39;');
 };
 
+const MATERIAL_QUANTITY_PRECISION = 4;
+
+export const normalizeMaterialQuantity = (value: unknown, precision = MATERIAL_QUANTITY_PRECISION) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  const factor = 10 ** precision;
+  const rounded = Math.round((n + Number.EPSILON) * factor) / factor;
+  return Object.is(rounded, -0) ? 0 : rounded;
+};
+
+export const subtractMaterialQuantity = (
+  total: unknown,
+  arrived: unknown,
+  precision = MATERIAL_QUANTITY_PRECISION
+) => {
+  const diff = normalizeMaterialQuantity(Number(total || 0) - Number(arrived || 0), precision);
+  return diff > 0 ? diff : 0;
+};
+
+export const formatMaterialQuantity = (value: unknown, precision = MATERIAL_QUANTITY_PRECISION) => {
+  const normalized = normalizeMaterialQuantity(value, precision);
+  const text = normalized.toFixed(precision).replace(/\.0+$|(?<=\.\d*?)0+$/g, '');
+  return text === '-0' ? '0' : text;
+};
+
+export const formatMaterialQuantityWithUnit = (value: unknown, unit?: unknown, precision = MATERIAL_QUANTITY_PRECISION) => {
+  const quantityText = formatMaterialQuantity(value, precision);
+  const unitText = String(unit || '').trim();
+  return unitText ? `${quantityText} ${unitText}` : quantityText;
+};
+
 export const getStatusConfig = (status: MaterialPurchaseType['status']) => {
   // 处理空状态或未定义
   if (!status || String(status).trim() === '') {
@@ -141,8 +172,8 @@ export const buildPurchaseSheetHtml = (
   const buildRows = (list: readonly MaterialPurchaseType[]) => {
     const rows = list.map((r) => {
       const typeLabel = getMaterialTypeLabel(r?.materialType);
-      const purchaseQty = Number(r?.purchaseQuantity) || 0;
-      const arrivedQty = Number(r?.arrivedQuantity) || 0;
+      const purchaseQty = normalizeMaterialQuantity(r?.purchaseQuantity);
+      const arrivedQty = normalizeMaterialQuantity(r?.arrivedQuantity);
       const unitPrice = Number(r?.unitPrice);
       const amountText = Number.isFinite(unitPrice) ? (arrivedQty * unitPrice).toFixed(2) : '-';
       const unitPriceText = Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '-';

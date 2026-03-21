@@ -428,6 +428,29 @@ const UserList: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    if (!userModal.visible) {
+      form.resetFields();
+      return;
+    }
+
+    if (userModal.data) {
+      const next = {
+        ...userModal.data,
+        roleId: String((userModal.data as any).roleId ?? ''),
+      };
+      form.setFieldsValue(next);
+      return;
+    }
+
+    form.resetFields();
+    form.setFieldsValue({
+      permissionRange: 'all',
+      status: 'active',
+      approvalStatus: 'approved'
+    });
+  }, [form, userModal.data, userModal.visible]);
+
   // 打开弹窗
   const openDialog = (user?: UserType, initialTab: 'base' | 'perm' = 'base') => {
     setActiveEditTab(initialTab);
@@ -436,22 +459,6 @@ const UserList: React.FC = () => {
     // 确保加载角色选项
     if (roleOptions.length === 0 && !roleOptionsLoading) {
       fetchRoleOptions();
-    }
-
-    if (user) {
-      const next = {
-        ...user,
-        roleId: String((user as any).roleId ?? ''),
-      };
-      form.setFieldsValue(next);
-    } else {
-      form.resetFields();
-      // 设置默认值
-      form.setFieldsValue({
-        permissionRange: 'all',
-        status: 'active',
-        approvalStatus: 'approved'
-      });
     }
   };
 

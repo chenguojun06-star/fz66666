@@ -3,6 +3,7 @@ import { Alert } from 'antd';
 import { RobotOutlined } from '@ant-design/icons';
 import type { MaterialPurchase } from '@/types/production';
 import { getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialQuantity, normalizeMaterialQuantity, subtractMaterialQuantity } from '../utils';
 
 interface MaterialPurchaseAIBannerProps {
   /** 当前已加载的采购记录（由 queryParams 过滤后） */
@@ -47,8 +48,8 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       }
       const matList: MatSummary[] = active.map(r => ({
         name: r.materialName,
-        purchaseQuantity: Number(r.purchaseQuantity) || 0,
-        arrivedQuantity: Number(r.arrivedQuantity) || 0,
+        purchaseQuantity: normalizeMaterialQuantity(r.purchaseQuantity),
+        arrivedQuantity: normalizeMaterialQuantity(r.arrivedQuantity),
         unit: r.unit || '',
         supplier: r.supplierName || '',
         status: r.status,
@@ -80,7 +81,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
         .map(([type, { arrived, total }]) => {
           const rate = total > 0 ? Math.round((arrived / total) * 100) : 0;
           const icon = arrived >= total ? '✅' : arrived > 0 ? '⚡' : '❌';
-          return `${type} ${arrived}/${total}${icon}(${rate}%)`;
+          return `${type} ${formatMaterialQuantity(arrived)}/${formatMaterialQuantity(total)}${icon}(${rate}%)`;
         })
         .join('  ');
 
@@ -89,7 +90,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
 
       if (notArrived.length === 0 && partial.length === 0) {
         // 全部到齐
-        msg = `订单 ${currentOrderNo} 面辅料全部到货（共 ${totalArrived}/${totalPurchase} 单位）。` +
+        msg = `订单 ${currentOrderNo} 面辅料全部到货（共 ${formatMaterialQuantity(totalArrived)}/${formatMaterialQuantity(totalPurchase)} 单位）。` +
           `${typeDesc}  材料已备齐，可安排裁剪 🟢`;
         alertType = 'success';
       } else if (notArrived.length > 0) {
@@ -106,7 +107,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       } else {
         // 仅有部分到货
         const partDesc = partial.slice(0, 2)
-          .map(m => `${m.name} ${m.arrivedQuantity}/${m.purchaseQuantity}${m.unit}`)
+          .map(m => `${m.name} ${formatMaterialQuantity(m.arrivedQuantity)}/${formatMaterialQuantity(m.purchaseQuantity)}${m.unit}`)
           .join('、');
         msg = `订单 ${currentOrderNo} 部分物料在途 ⚡\n` +
           `部分到货：${partDesc}${partial.length > 2 ? `等 ${partial.length} 种` : ''}。` +
@@ -128,16 +129,16 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
     if (totalRecords === 0) return null;
 
     // 统计到货率
-    const totalPurchaseQty = active.reduce((s, r) => s + (Number(r.purchaseQuantity) || 0), 0);
-    const totalArrivedQty = active.reduce((s, r) => s + (Number(r.arrivedQuantity) || 0), 0);
+    const totalPurchaseQty = active.reduce((s, r) => s + normalizeMaterialQuantity(r.purchaseQuantity), 0);
+    const totalArrivedQty = active.reduce((s, r) => s + normalizeMaterialQuantity(r.arrivedQuantity), 0);
     const overallRate = totalPurchaseQty > 0 ? Math.round((totalArrivedQty / totalPurchaseQty) * 100) : 0;
 
     // 找出未到货最多的订单（分组按 orderNo 统计缺口）
     const orderGapMap = new Map<string, number>();
     for (const r of active) {
       if (!r.orderNo || r.arrivedQuantity >= r.purchaseQuantity) continue;
-      const gap = (Number(r.purchaseQuantity) || 0) - (Number(r.arrivedQuantity) || 0);
-      orderGapMap.set(String(r.orderNo), (orderGapMap.get(String(r.orderNo)) ?? 0) + gap);
+      const gap = subtractMaterialQuantity(r.purchaseQuantity, r.arrivedQuantity);
+      orderGapMap.set(String(r.orderNo), normalizeMaterialQuantity((orderGapMap.get(String(r.orderNo)) ?? 0) + gap));
     }
     const topMissingOrders = Array.from(orderGapMap.entries())
       .sort(([, a], [, b]) => b - a)

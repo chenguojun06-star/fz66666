@@ -178,6 +178,14 @@ const TenantListTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    if (!approveModal.visible || !approveModal.data) {
+      approveForm.resetFields();
+      return;
+    }
+    approveForm.setFieldsValue({ planType: 'TRIAL', trialDays: 30 });
+  }, [approveForm, approveModal.data, approveModal.visible]);
+
   const handleCreate = async () => {
     try {
       const values = await form.validateFields();
@@ -230,7 +238,6 @@ const TenantListTab: React.FC = () => {
   };
 
   const handleApproveApplication = (record: TenantInfo) => {
-    approveForm.setFieldsValue({ planType: 'TRIAL', trialDays: 30 });
     setApproveEnabledModules(null);
     approveModal.open(record);
   };
@@ -489,7 +496,7 @@ const TenantListTab: React.FC = () => {
             onSearch={(v) => setQueryParams(p => ({ ...p, tenantName: v, page: 1 }))}
             style={{ width: 200 }}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); modal.open(); }}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { modal.open(); }}>
             新建租户
           </Button>
         </div>

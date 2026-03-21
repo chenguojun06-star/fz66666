@@ -1750,7 +1750,7 @@ export const tutorials: Tutorial[] = [
         },
         {
           title: '查看我的账单',
-          description: '在「我的账单」Tab下，查看个人相关的账单和发票信息（付费用户可见）。',
+          description: '租户主账号或管理员可在「我的账单」Tab下查看本租户的账单和发票信息，普通员工不显示该入口。',
           tips: [
             '账单按月汇总显示',
             '可下载电子发票',

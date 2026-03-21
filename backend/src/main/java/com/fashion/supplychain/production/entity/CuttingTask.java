@@ -78,9 +78,8 @@ public class CuttingTask {
     private String factoryName;
 
     /**
-     * 生产方类型（来自关联的生产订单）: INTERNAL / EXTERNAL
+     * 生产方类型: INTERNAL / EXTERNAL（存储于 t_cutting_task.factory_type 列）
      */
-    @TableField(exist = false)
     private String factoryType;
 
     @TableField(exist = false)

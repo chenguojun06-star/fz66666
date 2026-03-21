@@ -159,7 +159,6 @@ const ProfileInfoTab: React.FC = () => {
         tenantSmartFeatureService.list().then((flags) => {
             setSmartFlags(replaceSmartFeatureFlags(flags));
         }).catch(() => {});
-        void loadSmartProfile();
 
         // 加载租户信息
         const tid = (user as any)?.tenantId;
@@ -188,6 +187,13 @@ const ProfileInfoTab: React.FC = () => {
             }
         }
     }, []);
+
+    useEffect(() => {
+        if (!canManageSmartFlags) {
+            return;
+        }
+        void loadSmartProfile();
+    }, [canManageSmartFlags]);
 
     const onThemeChange = (next: string) => {
         const v = String(next || '').trim() || 'default';

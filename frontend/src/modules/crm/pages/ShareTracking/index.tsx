@@ -78,7 +78,7 @@ export default function ShareTracking() {
         <div style={{ marginTop: 24 }}>
           <Title level={5}>生产阶段</Title>
           {progressNodes.length > 0 ? (
-             <Steps direction="vertical" current={progressNodes.findIndex((n: any) => !n.completed)} items={progressNodes.map((node: any, index: number) => ({ key: index, title: node.name, description: `已完成 ${node.completedQuantity || 0} 件`, status: node.completed ? "finish" : (node.completedQuantity > 0 ? "process" : "wait") }))} />
+             <Steps direction="vertical" current={progressNodes.findIndex((n: any) => !n.completed)} items={progressNodes.map((node: any, index: number) => ({ key: index, title: node.name, content: `已完成 ${node.completedQuantity || 0} 件`, status: node.completed ? "finish" : (node.completedQuantity > 0 ? "process" : "wait") }))} />
           ) : (
             <Text type="secondary">暂无生产进度数据</Text>
           )}

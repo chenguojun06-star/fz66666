@@ -38,6 +38,8 @@ import org.springframework.util.StringUtils;
 public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, CuttingTask> implements CuttingTaskService {
 
     private static final String CUTTING_PROCESS_NAME = "裁剪";
+    private static final String FACTORY_TYPE_INTERNAL = "INTERNAL";
+    private static final String FACTORY_TYPE_EXTERNAL = "EXTERNAL";
 
     @Autowired
     private CuttingBundleMapper cuttingBundleMapper;
@@ -73,6 +75,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "orderNo"));
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "styleNo"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
+        String factoryType = normalizeFactoryType(ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "factoryType")));
 
         // 关键词中的“工厂名”来自生产订单表，先查出匹配订单ID后回灌到裁剪任务过滤
         final List<String> factoryMatchedOrderIds = StringUtils.hasText(orderNo)
@@ -80,6 +83,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
                     .like(ProductionOrder::getFactoryName, orderNo)
+                    .eq(StringUtils.hasText(factoryType), ProductionOrder::getFactoryType, factoryType)
                     .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
                         .or().eq(ProductionOrder::getDeleteFlag, 0))
                     .ne(ProductionOrder::getStatus, "scrapped"))
@@ -88,18 +92,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toList())
             : java.util.Collections.emptyList();
-
-        // 先查询未删除的生产订单ID列表（用于过滤裁剪任务）
-        List<ProductionOrder> allOrders = productionOrderService.list(
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .select(ProductionOrder::getId)
-                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-                .ne(ProductionOrder::getStatus, "scrapped")
-        );
-        List<String> validOrderIds = allOrders.stream()
-                .map(ProductionOrder::getId)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toList());
 
         // 在查询时就过滤掉已删除订单的任务，确保 total 准确
         LambdaQueryWrapper<CuttingTask> queryWrapper = new LambdaQueryWrapper<CuttingTask>();
@@ -129,13 +121,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             }
             queryWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
         } else {
-            // 普通上下文：过滤已删除订单的任务，保留无关联订单的任务
-            if (!validOrderIds.isEmpty()) {
-                queryWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
-                        .or().isNull(CuttingTask::getProductionOrderId));
-            } else {
-                queryWrapper.isNull(CuttingTask::getProductionOrderId);
-            }
+            // 普通上下文：直接按 t_cutting_task.factory_type 过滤，无需关联查询
+            queryWrapper.eq(StringUtils.hasText(factoryType), CuttingTask::getFactoryType, factoryType);
         }
 
         IPage<CuttingTask> pageResult = baseMapper.selectPage(pageInfo, queryWrapper);
@@ -222,11 +209,21 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         // 关联查询订单信息，填充下单人、下单时间和生产方
-        if (!orderIdsFiltered.isEmpty()) {
+        if (!orderIdsFiltered.isEmpty() || !orderNos.isEmpty()) {
             List<ProductionOrder> orders = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
-                            .in(ProductionOrder::getId, orderIdsFiltered)
-                    .select(ProductionOrder::getId, ProductionOrder::getStyleNo,
+                            .and(w -> {
+                                if (!orderIdsFiltered.isEmpty()) {
+                                    w.in(ProductionOrder::getId, orderIdsFiltered);
+                                }
+                                if (!orderNos.isEmpty()) {
+                                    if (!orderIdsFiltered.isEmpty()) {
+                                        w.or();
+                                    }
+                                    w.in(ProductionOrder::getOrderNo, orderNos);
+                                }
+                            })
+                    .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getStyleNo,
                         ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime,
                                     ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
             );
@@ -234,11 +231,22 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             Map<String, ProductionOrder> orderMap = orders.stream()
                     .filter(o -> o != null && StringUtils.hasText(o.getId()))
                     .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a1, b) -> a1));
+            Map<String, ProductionOrder> orderNoMap = orders.stream()
+                    .filter(o -> o != null && StringUtils.hasText(o.getOrderNo()))
+                    .collect(Collectors.toMap(o -> o.getOrderNo().trim(), o -> o, (a1, b) -> a1));
 
             for (CuttingTask t : records) {
+                ProductionOrder order = null;
                 String orderId = t.getProductionOrderId();
                 if (StringUtils.hasText(orderId) && orderMap.containsKey(orderId.trim())) {
-                    ProductionOrder order = orderMap.get(orderId.trim());
+                    order = orderMap.get(orderId.trim());
+                } else {
+                    String orderNoKey = StringUtils.hasText(t.getProductionOrderNo()) ? t.getProductionOrderNo().trim() : null;
+                    if (StringUtils.hasText(orderNoKey)) {
+                        order = orderNoMap.get(orderNoKey);
+                    }
+                }
+                if (order != null) {
                     t.setOrderCreatorName(order.getCreatedByName());
                     t.setOrderTime(order.getCreateTime());
                     t.setFactoryName(order.getFactoryName());
@@ -249,6 +257,17 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         return pageResult;
+    }
+
+    private String normalizeFactoryType(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String normalized = raw.trim().toUpperCase();
+        if (FACTORY_TYPE_INTERNAL.equals(normalized) || FACTORY_TYPE_EXTERNAL.equals(normalized)) {
+            return normalized;
+        }
+        return null;
     }
 
     @Override
@@ -276,6 +295,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         task.setColor(order.getColor());
         task.setSize(order.getSize());
         task.setOrderQuantity(order.getOrderQuantity());
+        task.setFactoryType(order.getFactoryType());
         task.setStatus("pending");
         task.setCreateTime(now);
         task.setUpdateTime(now);

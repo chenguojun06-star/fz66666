@@ -13,7 +13,7 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
-import { getStatusConfig } from '../utils';
+import { formatMaterialQuantityWithUnit, getStatusConfig, subtractMaterialQuantity } from '../utils';
 import api from '@/utils/api';
 
 interface MaterialTableProps {
@@ -192,7 +192,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       render: (v: number, record: MaterialPurchaseType) => {
         // 样衣开发款（MP开头）没有订单数量，显示采购数量
         if (!v && record.purchaseNo?.startsWith('MP')) {
-          return record.purchaseQuantity ? `${record.purchaseQuantity} ${record.unit || ''}` : '-';
+          return record.purchaseQuantity ? formatMaterialQuantityWithUnit(record.purchaseQuantity, record.unit) : '-';
         }
         return v ? `${v} 件` : '-';
       },
@@ -280,7 +280,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'purchaseQuantity',
       width: 100,
       align: 'right' as const,
-      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
+      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
     },
     {
       title: '到货数量',
@@ -288,7 +288,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'arrivedQuantity',
       width: 100,
       align: 'right' as const,
-      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
+      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
     },
     {
       title: '待到数量',
@@ -296,10 +296,8 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       width: 100,
       align: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
-        const total = Number(record?.purchaseQuantity || 0);
-        const arrived = Number(record?.arrivedQuantity || 0);
-        const remaining = Math.max(0, total - arrived);
-        return `${remaining} ${record.unit || ''}`;
+        const remaining = subtractMaterialQuantity(record?.purchaseQuantity, record?.arrivedQuantity);
+        return formatMaterialQuantityWithUnit(remaining, record.unit);
       },
     },
     {
@@ -473,7 +471,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       description={cancelTarget ? (
         <div>
           <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的领取记录？</p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{cancelTarget.arrivedQuantity || 0} {cancelTarget.unit || ''}</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(cancelTarget.arrivedQuantity || 0, cancelTarget.unit)}</p>
         </div>
       ) : null}
       fieldLabel="撤回原因"

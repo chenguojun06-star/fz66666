@@ -312,16 +312,25 @@ const DictManage: React.FC = () => {
     fetchData(selectedType);
   }, [selectedType]);
 
+  useEffect(() => {
+    if (!dictModal.visible) {
+      form.resetFields();
+      return;
+    }
+    if (dictModal.data) {
+      form.setFieldsValue(dictModal.data);
+      return;
+    }
+    form.setFieldsValue({ dictType: selectedType });
+  }, [dictModal.data, dictModal.visible, form, selectedType]);
+
   // 新建
   const handleAdd = () => {
-    form.resetFields();
-    form.setFieldsValue({ dictType: selectedType });
     dictModal.open(null);
   };
 
   // 编辑
   const handleEdit = (record: DictItem) => {
-    form.setFieldsValue(record);
     dictModal.open(record);
   };
 

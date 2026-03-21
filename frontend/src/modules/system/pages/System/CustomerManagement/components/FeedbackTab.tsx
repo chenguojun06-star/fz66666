@@ -57,6 +57,17 @@ const FeedbackTab: React.FC = () => {
 
   useEffect(() => { fetchData(); fetchStats(); }, [fetchData]);
 
+  useEffect(() => {
+    if (!replyModal.visible || !replyModal.data) {
+      replyForm.resetFields();
+      return;
+    }
+    replyForm.setFieldsValue({
+      reply: replyModal.data.reply || '',
+      status: 'RESOLVED',
+    });
+  }, [replyForm, replyModal.data, replyModal.visible]);
+
   const handleReply = async () => {
     const record = replyModal.data;
     if (!record?.id) return;
@@ -104,7 +115,7 @@ const FeedbackTab: React.FC = () => {
       render: (_: unknown, record: UserFeedback) => {
         const actions: RowAction[] = [
           { key: 'detail', label: '查看', primary: true, onClick: () => detailModal.open(record) },
-          { key: 'reply', label: '回复', onClick: () => { replyModal.open(record); replyForm.setFieldsValue({ reply: record.reply || '', status: 'RESOLVED' }); } },
+          { key: 'reply', label: '回复', onClick: () => { replyModal.open(record); } },
         ];
         if (record.status === 'PENDING') {
           actions.push({ key: 'processing', label: '处理中', onClick: () => handleUpdateStatus(record.id!, 'PROCESSING') });

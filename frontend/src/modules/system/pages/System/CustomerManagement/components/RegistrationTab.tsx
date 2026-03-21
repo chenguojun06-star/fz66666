@@ -73,12 +73,20 @@ const RegistrationTab: React.FC = () => {
     }
   };
 
-  const handleEditApplication = (record: TenantInfo) => {
+  useEffect(() => {
+    if (!editModal.visible || !editModal.data) {
+      editForm.resetFields();
+      return;
+    }
+    const record = editModal.data;
     editForm.setFieldsValue({
       applyUsername: record.applyUsername,
       contactName: record.contactName,
       contactPhone: record.contactPhone,
     });
+  }, [editForm, editModal.data, editModal.visible]);
+
+  const handleEditApplication = (record: TenantInfo) => {
     editModal.open(record);
   };
 
@@ -129,7 +137,7 @@ const RegistrationTab: React.FC = () => {
   return (
     <div>
       <Alert
-        message="功能说明"
+        title="功能说明"
         description={'此页面用于审批新工厂的入驻申请。审批通过后工厂主账号将自动创建，工厂即可登录使用。员工注册审批由各工厂在「人员管理」中自行处理。'}
         type="info"
         showIcon
@@ -171,7 +179,7 @@ const RegistrationTab: React.FC = () => {
         }
       >
         <Alert
-          message="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
+          title="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}

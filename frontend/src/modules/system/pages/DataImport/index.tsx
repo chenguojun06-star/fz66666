@@ -134,10 +134,10 @@ const ZipImportPanel: React.FC = () => {
           size="small"
           style={{ marginBottom: 12 }}
           items={[
-            { title: '下载 Excel 模板', description: '填写款式数据' },
-            { title: '准备图片', description: '文件名 = 款号（如 FZ2024001.jpg）' },
-            { title: '打包 ZIP', description: 'Excel + 图片一起压缩' },
-            { title: '上传导入', description: '系统自动解析并关联' },
+            { title: '下载 Excel 模板', content: '填写款式数据' },
+            { title: '准备图片', content: '文件名 = 款号（如 FZ2024001.jpg）' },
+            { title: '打包 ZIP', content: 'Excel + 图片一起压缩' },
+            { title: '上传导入', content: '系统自动解析并关联' },
           ]}
         />
         <Space orientation="vertical" size={2}>
@@ -215,7 +215,7 @@ const ZipImportPanel: React.FC = () => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  message={result.message}
+                  title={result.message}
                   description={
                     <Space wrap>
                       <Tag icon={<CheckCircleOutlined />} color="success">成功 {result.successCount} 条</Tag>
@@ -414,7 +414,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                 <Alert
                   type={result.successCount > 0 ? 'warning' : 'error'}
                   showIcon
-                  message={result.message}
+                  title={result.message}
                   description={
                     <Space>
                       <Tag icon={<CheckCircleOutlined />} color="success">

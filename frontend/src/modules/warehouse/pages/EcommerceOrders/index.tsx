@@ -121,6 +121,9 @@ const OrdersTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // linkForm / outboundForm 在 Modal 内部，关闭时 Form 已卸载，无需手动 resetFields
+  // （Form 重新打开时会自动从初始值渲染，不会保留脏数据）
+
   const handleLink = async () => {
     if (!linkTarget) return;
     try {
@@ -259,12 +262,12 @@ const OrdersTab: React.FC = () => {
           <Tooltip title={r.productionOrderNo ? '已关联' : '关联排产'}>
             <Button size="small" type="text" icon={<LinkOutlined />}
               disabled={!!r.productionOrderNo}
-              onClick={() => { setLinkTarget(r); linkForm.resetFields(); }} />
+              onClick={() => { setLinkTarget(r); }} />
           </Tooltip>
           {(r.warehouseStatus ?? 0) < 2 && (
             <Tooltip title="现货直接出库">
               <Button size="small" type="text" icon={<CarOutlined />}
-                onClick={() => { setOutboundTarget(r); outboundForm.resetFields(); }} />
+                onClick={() => { setOutboundTarget(r); }} />
             </Tooltip>
           )}
         </Space>
@@ -402,7 +405,7 @@ const OrdersTab: React.FC = () => {
           </div>
         )}
         <Alert style={{ marginBottom: 12, fontSize: 12 }} type="info" showIcon
-          message="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
+          title="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
         <Form form={linkForm} layout="vertical" size="small">
           <Form.Item name="productionOrderNo" label="生产订单号"
             rules={[{ required: true, message: '请输入生产订单号' }]}>
@@ -422,7 +425,7 @@ const OrdersTab: React.FC = () => {
           </div>
         )}
         <Alert style={{ marginBottom: 12, fontSize: 12 }} type="success" showIcon
-          message="现货直接出库——出库后订单状态自动更新为【已出库】，并自动生成销售收入流水" />
+          title="现货直接出库——出库后订单状态自动更新为【已出库】，并自动生成销售收入流水" />
         <Form form={outboundForm} layout="vertical" size="small">
           <Form.Item name="expressCompany" label="快递公司"
             rules={[{ required: true, message: '请输入快递公司' }]}>
@@ -540,7 +543,7 @@ const PricingTab: React.FC = () => {
   return (
     <div>
       <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
-        message="此处的【售价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
+        title="此处的【售价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
       <Card size="small" style={{ marginBottom: 10 }}>
         <Space>
           <Input placeholder="按款式号筛选" allowClear style={{ width: 180 }}
@@ -565,15 +568,15 @@ const EcommerceOrders: React.FC = () => (
   <Layout>
   <div style={{ padding: 20 }}>
     <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
-      message="电商对接全流程"
+      title="电商对接全流程"
       description={
         <Steps size="small" style={{ marginTop: 8 }}
           items={[
-            { title: '配置平台',  description: '应用商店填写密钥',          icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
-            { title: '平台推单',  description: '各平台 Webhook 推入本系统',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
-            { title: '关联排产',  description: '订单管理页手动关联生产单',   icon: <ShoppingCartOutlined style={{ color: '#722ed1' }} /> },
-            { title: '仓库出库',  description: '出库自动更新仓库状态+快递', icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
-            { title: '财务核算',  description: 'SKU定价页设置售价/成本看毛利', icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
+            { title: '配置平台',  content: '应用商店填写密钥',          icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
+            { title: '平台推单',  content: '各平台 Webhook 推入本系统',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
+            { title: '关联排产',  content: '订单管理页手动关联生产单',   icon: <ShoppingCartOutlined style={{ color: '#722ed1' }} /> },
+            { title: '仓库出库',  content: '出库自动更新仓库状态+快递', icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
+            { title: '财务核算',  content: 'SKU定价页设置售价/成本看毛利', icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
           ]}
         />
       }

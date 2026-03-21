@@ -22,6 +22,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
+import { formatMaterialQuantityWithUnit, normalizeMaterialQuantity } from '../MaterialPurchase/utils';
 
 const { TextArea } = Input;
 
@@ -74,8 +75,8 @@ const MaterialPurchaseDetail: React.FC = () => {
 
   // 计算物料到货率
   const materialArrivalRate = React.useMemo(() => {
-    const totalRequired = purchaseList.reduce((sum, item) => sum + (Number(item.purchaseQuantity) || 0), 0);
-    const totalArrived = purchaseList.reduce((sum, item) => sum + (Number(item.arrivedQuantity) || 0), 0);
+    const totalRequired = purchaseList.reduce((sum, item) => sum + normalizeMaterialQuantity(item.purchaseQuantity), 0);
+    const totalArrived = purchaseList.reduce((sum, item) => sum + normalizeMaterialQuantity(item.arrivedQuantity), 0);
     if (totalRequired === 0) return 0;
     return Math.round((totalArrived / totalRequired) * 100);
   }, [purchaseList]);
@@ -255,7 +256,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'purchaseQuantity',
       width: 100,
       align: 'right',
-      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
+      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
     },
     {
       title: '到货数量',
@@ -263,7 +264,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'arrivedQuantity',
       width: 100,
       align: 'right',
-      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
+      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
     },
     {
       title: '单价',

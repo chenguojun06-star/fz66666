@@ -10,6 +10,7 @@ import { useModal } from '@/hooks';
 import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
+import { formatMaterialQuantity, subtractMaterialQuantity } from '../utils';
 
 interface UsePurchaseActionsOptions {
   message: any;
@@ -228,7 +229,7 @@ export function usePurchaseActions({
                   <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid #e8e8e8' : 'none', paddingBottom: 4 }}>
                     <span style={{ color: 'var(--color-text-secondary)' }}>{item.orderNo || item.styleNo || '-'}</span>{' '}
                     <span>{item.materialName}</span>{' '}
-                    <span style={{ color: 'var(--color-primary)' }}>{item.purchaseQuantity}{item.unit || ''}</span>
+                    <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(item.purchaseQuantity)}{item.unit || ''}</span>
                     {item.supplierName ? <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>{item.supplierName}</span> : null}
                   </div>
                 ))}
@@ -344,9 +345,9 @@ export function usePurchaseActions({
       item.materialCode || '-',
       item.specifications || '-',
       item.supplierName || '-',
-      item.purchaseQuantity ?? '-',
-      item.arrivedQuantity ?? '-',
-      (Number(item.purchaseQuantity || 0) - Number(item.arrivedQuantity || 0)) || 0,
+      formatMaterialQuantity(item.purchaseQuantity),
+      formatMaterialQuantity(item.arrivedQuantity),
+      formatMaterialQuantity(subtractMaterialQuantity(item.purchaseQuantity, item.arrivedQuantity)),
       item.unitPrice ?? '-',
       item.totalAmount ?? '-',
       item.status || '-',

@@ -10,6 +10,11 @@ import { DEFAULT_PAGE_SIZE } from '@/constants/business';
 import { PURCHASE_QUERY_STORAGE_KEY, type MaterialPurchaseTabKey } from '../types';
 import type { SmartErrorInfo } from '@/smart/core/types';
 
+const getPurchaseQueryStorage = () => {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage;
+};
+
 type PurchaseStats = {
   totalCount: number; totalQuantity: number;
   pendingCount: number; receivedCount: number;
@@ -48,17 +53,13 @@ export function usePurchaseList({
     const base: MaterialQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
     if (typeof window === 'undefined') return base;
     try {
-      const raw = sessionStorage.getItem(PURCHASE_QUERY_STORAGE_KEY);
+      const storage = getPurchaseQueryStorage();
+      const raw = storage?.getItem(PURCHASE_QUERY_STORAGE_KEY) || window.sessionStorage.getItem(PURCHASE_QUERY_STORAGE_KEY);
       if (!raw) return base;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return base;
       const page = Number((parsed as any).page);
       const pageSize = Number((parsed as any).pageSize);
-      // 发现旧缓存里有 factoryType，立即删掉并回写干净数据，不等 useEffect
-      if ('factoryType' in (parsed as any)) {
-        delete (parsed as any).factoryType;
-        try { sessionStorage.setItem(PURCHASE_QUERY_STORAGE_KEY, JSON.stringify(parsed)); } catch { /**/ }
-      }
       return {
         ...base, ...(parsed as any),
         page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
@@ -67,10 +68,13 @@ export function usePurchaseList({
     } catch { return base; }
   });
 
-  // sessionStorage 同步
+  // 本地持久化，同步兼容旧 sessionStorage 缓存并清理旧键
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try { sessionStorage.setItem(PURCHASE_QUERY_STORAGE_KEY, JSON.stringify(queryParams)); } catch { /**/ }
+    try {
+      getPurchaseQueryStorage()?.setItem(PURCHASE_QUERY_STORAGE_KEY, JSON.stringify(queryParams));
+      window.sessionStorage.removeItem(PURCHASE_QUERY_STORAGE_KEY);
+    } catch { /**/ }
   }, [queryParams]);
 
   // URL 参数 → queryParams（如从订单页跳转携带 orderNo）

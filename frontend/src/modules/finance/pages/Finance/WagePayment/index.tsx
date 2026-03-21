@@ -180,6 +180,54 @@ const PaymentCenterPage: React.FC = () => {
     }
   }, [activeTab, fetchPayables, fetchPayments]);
 
+  useEffect(() => {
+    if (!payModalOpen) {
+      payForm.resetFields();
+      return;
+    }
+
+    if (!currentPayable) {
+      return;
+    }
+
+    payForm.setFieldsValue({
+      payeeType: currentPayable.payeeType,
+      payeeId: currentPayable.payeeId,
+      payeeName: currentPayable.payeeName,
+      amount: Number(currentPayable.amount) - Number(currentPayable.paidAmount || 0),
+      bizType: currentPayable.bizType,
+      bizId: currentPayable.bizId,
+      bizNo: currentPayable.bizNo,
+    });
+  }, [currentPayable, payForm, payModalOpen]);
+
+  useEffect(() => {
+    if (!accountDetailOpen) {
+      accountForm.resetFields();
+      setQrFileList([]);
+      return;
+    }
+
+    if (!editingAccount) {
+      return;
+    }
+
+    accountForm.setFieldsValue({
+      accountType: editingAccount.accountType,
+      accountName: editingAccount.accountName,
+      accountNo: editingAccount.accountNo,
+      bankName: editingAccount.bankName,
+      bankBranch: editingAccount.bankBranch,
+      qrCodeUrl: editingAccount.qrCodeUrl,
+      isDefault: editingAccount.isDefault === 1,
+    });
+    if (editingAccount.qrCodeUrl) {
+      setQrFileList([{ uid: '-1', name: '二维码', status: 'done', url: editingAccount.qrCodeUrl }]);
+    } else {
+      setQrFileList([]);
+    }
+  }, [accountDetailOpen, accountForm, editingAccount]);
+
   // ============================================================
   //  发起支付（从待付款项目触发，或手动发起）
   // ============================================================
@@ -191,15 +239,6 @@ const PaymentCenterPage: React.FC = () => {
     setCurrentPayable(payable ?? null);
 
     if (payable) {
-      payForm.setFieldsValue({
-        payeeType: payable.payeeType,
-        payeeId: payable.payeeId,
-        payeeName: payable.payeeName,
-        amount: Number(payable.amount) - Number(payable.paidAmount || 0),
-        bizType: payable.bizType,
-        bizId: payable.bizId,
-        bizNo: payable.bizNo,
-      });
       loadPayeeAccounts(payable.payeeType, payable.payeeId);
     }
     setPayModalOpen(true);
@@ -345,20 +384,6 @@ const PaymentCenterPage: React.FC = () => {
 
   const handleEditAccount = (account: PaymentAccount) => {
     setEditingAccount(account);
-    accountForm.setFieldsValue({
-      accountType: account.accountType,
-      accountName: account.accountName,
-      accountNo: account.accountNo,
-      bankName: account.bankName,
-      bankBranch: account.bankBranch,
-      qrCodeUrl: account.qrCodeUrl,
-      isDefault: account.isDefault === 1,
-    });
-    if (account.qrCodeUrl) {
-      setQrFileList([{ uid: '-1', name: '二维码', status: 'done', url: account.qrCodeUrl }]);
-    } else {
-      setQrFileList([]);
-    }
     setAccountDetailOpen(true);
   };
 

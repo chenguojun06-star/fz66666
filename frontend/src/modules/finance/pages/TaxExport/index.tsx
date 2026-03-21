@@ -123,6 +123,23 @@ const InvoiceTab: React.FC = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  useEffect(() => {
+    if (!formOpen) {
+      form.resetFields();
+      return;
+    }
+
+    if (!editRecord) {
+      return;
+    }
+
+    form.setFieldsValue({
+      ...editRecord,
+      taxRate: editRecord.taxRate != null ? +(editRecord.taxRate * 100).toFixed(2) : undefined,
+      issueDate: editRecord.issueDate ? dayjs(editRecord.issueDate) : undefined,
+    });
+  }, [editRecord, form, formOpen]);
+
   const handleSave = async (vals: any) => {
     setSubmitting(true);
     try {
@@ -181,11 +198,6 @@ const InvoiceTab: React.FC = () => {
         <Space>
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => {
             setEditRecord(r);
-            form.setFieldsValue({
-              ...r,
-              taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined,
-              issueDate: r.issueDate ? dayjs(r.issueDate) : undefined,
-            });
             setFormOpen(true);
           }}>编辑</Button>
           {r.status === 'DRAFT' && <Button size="small" type="link" onClick={() => handleIssue(r.id)}>开票</Button>}
@@ -248,7 +260,7 @@ const InvoiceTab: React.FC = () => {
           <Col xs={24} md={10} style={{ textAlign: 'right' }}>
             <Space>
               <Button onClick={() => { setFilters({ status: undefined, invoiceType: undefined, keyword: '' }); setPage(1); }}>重置</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新建发票</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新建发票</Button>
             </Space>
           </Col>
         </Row>
@@ -377,6 +389,12 @@ const PayableTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    if (!formOpen) {
+      createForm.resetFields();
+    }
+  }, [createForm, formOpen]);
+
   const handleMarkPaid = async (id: string, amount?: number) => {
     try {
       await payableApi.markPaid(id, amount ?? undefined);
@@ -488,7 +506,7 @@ const PayableTab: React.FC = () => {
           <Col xs={12} md={12} style={{ textAlign: 'right' }}>
             <Space>
               <Button onClick={() => { setFilters({ status: undefined, keyword: '' }); setPage(1); }}>重置</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setFormOpen(true); }}>新建应付款</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setFormOpen(true); }}>新建应付款</Button>
             </Space>
           </Col>
         </Row>
@@ -591,6 +609,24 @@ const TaxConfigTab: React.FC = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  useEffect(() => {
+    if (!formOpen) {
+      form.resetFields();
+      return;
+    }
+
+    if (!editRecord) {
+      return;
+    }
+
+    form.setFieldsValue({
+      ...editRecord,
+      taxRate: editRecord.taxRate != null ? +(editRecord.taxRate * 100).toFixed(2) : undefined,
+      effectiveDate: editRecord.effectiveDate ? dayjs(editRecord.effectiveDate) : undefined,
+      expiryDate: editRecord.expiryDate ? dayjs(editRecord.expiryDate) : undefined,
+    });
+  }, [editRecord, form, formOpen]);
+
   const handleSave = async (vals: any) => {
     setSubmitting(true);
     try {
@@ -636,12 +672,6 @@ const TaxConfigTab: React.FC = () => {
         <Space>
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => {
             setEditRecord(r);
-            form.setFieldsValue({
-              ...r,
-              taxRate: r.taxRate != null ? +(r.taxRate * 100).toFixed(2) : undefined,
-              effectiveDate: r.effectiveDate ? dayjs(r.effectiveDate) : undefined,
-              expiryDate: r.expiryDate ? dayjs(r.expiryDate) : undefined,
-            });
             setFormOpen(true);
           }}>编辑</Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r.id)}>
@@ -662,7 +692,7 @@ const TaxConfigTab: React.FC = () => {
         description="发票台账默认 VAT 税额来自这里的默认税率；建议至少维护默认 VAT、附加税等常用税码，并标清生效时间。"
       />
       <div style={{ marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); form.resetFields(); setFormOpen(true); }}>新增税率</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新增税率</Button>
       </div>
       <ResizableTable rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" pagination={false} />
       <ResizableModal
