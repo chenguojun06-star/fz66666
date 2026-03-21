@@ -123,6 +123,16 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
                     "VARCHAR(50) DEFAULT NULL COMMENT '尺寸分组名，如上装区/下装区' ");
+                repaired += ensureColumn(conn, schema, "t_cutting_task", "factory_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型：internal=内部工厂 external=外发工厂'");
+                repaired += ensureColumn(conn, schema, "t_product_warehousing", "repair_status",
+                    "VARCHAR(30) DEFAULT NULL COMMENT '返修状态：pending_repair/in_repair/repaired_confirmed'");
+                repaired += ensureColumn(conn, schema, "t_product_warehousing", "repair_operator_name",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '返修操作人姓名'");
+                repaired += ensureColumn(conn, schema, "t_product_warehousing", "repair_completed_time",
+                    "DATETIME DEFAULT NULL COMMENT '返修完成时间'");
+                repaired += ensureColumn(conn, schema, "t_product_warehousing", "unqualified_quantity",
+                    "INT NOT NULL DEFAULT 0 COMMENT '不合格数量'");
             repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
                     "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
 

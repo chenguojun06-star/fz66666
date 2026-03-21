@@ -1,5 +1,23 @@
 # 2026-03-22
 
+## 云端稳定性 / 核心缺列预检与启动自愈补强
+
+- **问题现象**：这类云端缺列问题之所以反复出现，不只是某个接口写得脆弱，还因为现有启动防线对 `t_cutting_task.factory_type`、`t_product_warehousing.repair_status` 这类新增业务列没有纳入统一守护名单，结果常常是页面请求先炸，日志里才看到 `Unknown column`。
+- **根本原因**：
+  - `CoreSchemaPreflightChecker` 之前只覆盖部分核心表，对裁剪任务和返修任务这组高频表缺少关键列检测。
+  - `DbColumnRepairRunner` 之前也没有把上述列纳入启动自愈范围，Flyway 一旦遗漏或云端库版本漂移，只能等运行期暴露。
+- **修复方案**：
+  - `CoreSchemaPreflightChecker` 新增对 `t_cutting_task.factory_type` 与 `t_product_warehousing.repair_status / repair_operator_name / repair_completed_time / unqualified_quantity` 的缺列预检。
+  - `DbColumnRepairRunner` 启动时自动补齐上述列，形成“启动先发现 + 启动先补齐”的双保险。
+  - 预检通过日志文案同步升级，明确覆盖范围已包含裁剪与质检入库高频链路。
+- **修复后表现**：
+  - 同类缺列不再必须等到首页、铃铛或扫码页被用户点到才暴露。
+  - 本地和云端启动阶段即可发现并尽量自愈高频表结构缺口，明显降低 `Unknown column` 再次演变成线上 500 风暴的概率。
+- **涉及文件**：
+  - `backend/src/main/java/com/fashion/supplychain/config/CoreSchemaPreflightChecker.java`
+  - `backend/src/main/java/com/fashion/supplychain/config/DbColumnRepairRunner.java`
+- **验证结果**：后端编译通过，`mvn clean compile -q` 退出码为 `0`。
+
 ## 云端稳定性 / factory_type 与 repair_status 缺列热修补强
 
 - **问题现象**：云端日志持续刷 `Unknown column 'factory_type' in 'field list'` 与 `Unknown column 'repair_status' in 'field list'`，同一时间段内小程序首页、铃铛任务面板、扫码页会并发触发多条请求，导致错误成片放大。
