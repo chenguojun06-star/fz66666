@@ -187,12 +187,19 @@ const StylePatternTab: React.FC<Props> = ({
         const currentMap = bom.sizeUsageMap ?? '';
         const newLoss = lossEdits[bom.id] ?? Number(bom.lossRate ?? 0);
         const lossChanged = Number(newLoss) !== Number(bom.lossRate ?? 0);
-        if (newMapJson !== currentMap || lossChanged) {
+        // 计算平均用量（各码均值），同步到 BOM 的 usageAmount
+        const sizeVals = Object.values(mapObj).filter(v => v > 0);
+        const avgUsage = sizeVals.length > 0
+          ? Math.round((sizeVals.reduce((a, b) => a + b, 0) / sizeVals.length) * 100) / 100
+          : null;
+        const usageChanged = avgUsage !== null && Number(avgUsage) !== Number(bom.usageAmount ?? 0);
+        if (newMapJson !== currentMap || lossChanged || usageChanged) {
           promises.push(
             api.put('/style/bom', {
               ...bom,
               sizeUsageMap: newMapJson || null,
               lossRate: newLoss,
+              ...(avgUsage !== null ? { usageAmount: avgUsage } : {}),
             })
           );
         }

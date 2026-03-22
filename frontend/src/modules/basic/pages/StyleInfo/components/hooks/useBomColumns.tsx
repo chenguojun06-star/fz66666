@@ -418,7 +418,7 @@ export function useBomColumns({
     {
       title: '操作',
       dataIndex: 'operation',
-      width: 110,
+      width: 150,
       resizable: false,
       render: (_: unknown, record: StyleBom) => {
         if (locked) {
@@ -496,7 +496,7 @@ export function useBomColumns({
               },
               {
                 key: 'apply_pickup',
-                label: '申请领取',
+                label: '领取',
                 title: record.stockStatus === 'sufficient' ? '申请领取面辅料' : '需先检查库存且库存充足才可申请',
                 disabled: editingKey !== '' || !onApplyPickup || record.stockStatus !== 'sufficient',
                 onClick: () => onApplyPickup?.(record),
