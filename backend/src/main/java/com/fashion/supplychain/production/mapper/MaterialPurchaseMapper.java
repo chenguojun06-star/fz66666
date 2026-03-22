@@ -61,7 +61,10 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "FROM t_material_purchase " +
             "WHERE DATE(actual_arrival_date) = #{today} " +
             "  AND delete_flag = 0 " +
-            "  AND material_type = #{materialType} " +
+            "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
+            "       OR (#{materialType} = 'accessory' AND material_type = '辅料')) " +
             "GROUP BY HOUR(actual_arrival_date)")
     List<Map<String, Object>> selectTodayInboundByHourAndType(
         @Param("today") LocalDate today,
@@ -78,7 +81,10 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "WHERE actual_arrival_date >= #{startDate} " +
             "  AND actual_arrival_date <= #{endDate} " +
             "  AND delete_flag = 0 " +
-            "  AND material_type = #{materialType} " +
+            "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
+            "       OR (#{materialType} = 'accessory' AND material_type = '辅料')) " +
             "GROUP BY DATE(actual_arrival_date)")
     List<Map<String, Object>> selectLast7DaysInboundByType(
         @Param("startDate") LocalDate startDate,
@@ -96,7 +102,10 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "WHERE actual_arrival_date >= #{startDate} " +
             "  AND actual_arrival_date <= #{endDate} " +
             "  AND delete_flag = 0 " +
-            "  AND material_type = #{materialType} " +
+            "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
+            "       OR (#{materialType} = 'accessory' AND material_type = '辅料')) " +
             "GROUP BY DAY(actual_arrival_date)")
     List<Map<String, Object>> selectLast30DaysInboundByType(
         @Param("startDate") LocalDate startDate,
@@ -113,7 +122,10 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "FROM t_material_purchase " +
             "WHERE YEAR(actual_arrival_date) = #{year} " +
             "  AND delete_flag = 0 " +
-            "  AND material_type = #{materialType} " +
+            "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
+            "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
+            "       OR (#{materialType} = 'accessory' AND material_type = '辅料')) " +
             "GROUP BY MONTH(actual_arrival_date)")
     List<Map<String, Object>> selectYearInboundByMonthAndType(
         @Param("year") Integer year,
