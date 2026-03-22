@@ -322,6 +322,16 @@ public class IntelligenceExecutionController {
                 cmd.put("riskLevel", l.getRiskLevel());
                 cmd.put("createdAt", l.getCreatedAt());
                 cmd.put("executorId", l.getExecutorId());
+                cmd.put("waitingFor", getApprovalRolesForAction(l.getAction()));
+                try {
+                    ExecutableCommand originalCommand = objectMapper.readValue(
+                            l.getResultData(), ExecutableCommand.class);
+                    cmd.put("params", originalCommand.getParams() != null ? originalCommand.getParams() : Map.of());
+                    cmd.put("requiresApproval", originalCommand.getRequiresApproval());
+                } catch (Exception ignored) {
+                    cmd.put("params", Map.of());
+                    cmd.put("requiresApproval", true);
+                }
                 return cmd;
             }).collect(Collectors.toList());
 
@@ -497,5 +507,30 @@ public class IntelligenceExecutionController {
             log.error("[NL-Execute] 自然语言指令执行异常", e);
             return Result.fail("系统异常: " + e.getMessage());
         }
+    }
+
+    private String[] getApprovalRolesForAction(String action) {
+        if (action == null) {
+            return new String[]{"MANAGER"};
+        }
+        return switch (action) {
+            case "order:hold", "order:expedite", "order:approve", "order:reject" ->
+                new String[]{"PRODUCTION_DIRECTOR"};
+            case "style:approve", "style:return" ->
+                new String[]{"STYLE_DIRECTOR", "ADMIN"};
+            case "quality:reject" ->
+                new String[]{"QC_DIRECTOR", "PRODUCTION_DIRECTOR"};
+            case "settlement:approve" ->
+                new String[]{"FINANCE_DIRECTOR"};
+            case "payroll:approve" ->
+                new String[]{"FINANCE_DIRECTOR"};
+            case "purchase:create" ->
+                new String[]{"PROCUREMENT_DIRECTOR", "ADMIN"};
+            case "scan:undo", "cutting:create", "order:edit" ->
+                new String[]{"PRODUCTION_DIRECTOR"};
+            case "defective:handle" ->
+                new String[]{"QC_DIRECTOR", "PRODUCTION_DIRECTOR"};
+            default -> new String[]{"MANAGER"};
+        };
     }
 }

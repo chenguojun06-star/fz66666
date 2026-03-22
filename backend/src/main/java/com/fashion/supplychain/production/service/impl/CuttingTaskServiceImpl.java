@@ -166,6 +166,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             CuttingTask::getUpdaterId,
             CuttingTask::getUpdaterName,
             CuttingTask::getTenantId);
+        queryWrapper.apply("(production_order_id IS NULL OR production_order_id = '' OR production_order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1 OR status = 'scrapped'))");
         if (StringUtils.hasText(orderNo)) {
             queryWrapper.and(w -> {
                 w.like(CuttingTask::getProductionOrderNo, orderNo)
@@ -197,7 +198,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                             .select(ProductionOrder::getId)
                             .eq(ProductionOrder::getFactoryType, factoryType)
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
-                                    .or().eq(ProductionOrder::getDeleteFlag, 0))
+                            .or().eq(ProductionOrder::getDeleteFlag, 0))
+                        .ne(ProductionOrder::getStatus, "scrapped")
             ).stream()
                     .map(ProductionOrder::getId)
                     .filter(StringUtils::hasText)

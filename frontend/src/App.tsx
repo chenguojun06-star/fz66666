@@ -36,7 +36,7 @@ import {
   EcommerceOrders,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, ApprovalCenter } from './modules/system';
+import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
 import { IntelligenceCenter } from './modules/intelligence';
 import {
@@ -264,7 +264,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.dict} element={<Suspense fallback={<Spin />}><DictManage /></Suspense>} />
           <Route path={paths.tutorial} element={<Suspense fallback={<Spin />}><Tutorial /></Suspense>} />
           <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
-          <Route path={paths.approvalCenter} element={<Suspense fallback={<Spin />}><ApprovalCenter /></Suspense>} />
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
           <Route path={paths.organization} element={<Suspense fallback={<Spin />}><OrganizationTree /></Suspense>} />
           <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />

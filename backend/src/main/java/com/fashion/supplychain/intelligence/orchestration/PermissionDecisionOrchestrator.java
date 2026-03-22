@@ -184,8 +184,14 @@ public class PermissionDecisionOrchestrator {
                 new String[]{"QC_MANAGER", "PRODUCTION_MANAGER", "ADMIN"};
             case "settlement:approve" ->
                 new String[]{"FINANCE_MANAGER", "ADMIN"};
+            case "payroll:approve" ->
+                new String[]{"FINANCE_MANAGER", "ADMIN"};
             case "purchase:create" ->
                 new String[]{"PROCUREMENT_MANAGER", "PRODUCTION_MANAGER", "ADMIN"};
+            case "scan:undo", "cutting:create", "order:edit" ->
+                new String[]{"PRODUCTION_MANAGER", "ADMIN"};
+            case "defective:handle" ->
+                new String[]{"QC_MANAGER", "PRODUCTION_MANAGER", "ADMIN"};
             default -> new String[]{"USER"};
         };
     }
@@ -203,8 +209,14 @@ public class PermissionDecisionOrchestrator {
                 new String[]{"QC_DIRECTOR", "PRODUCTION_DIRECTOR"};
             case "settlement:approve" ->
                 new String[]{"FINANCE_DIRECTOR"};
+            case "payroll:approve" ->
+                new String[]{"FINANCE_DIRECTOR"};
             case "purchase:create" ->
                 new String[]{"PROCUREMENT_DIRECTOR", "ADMIN"};
+            case "scan:undo", "cutting:create", "order:edit" ->
+                new String[]{"PRODUCTION_DIRECTOR"};
+            case "defective:handle" ->
+                new String[]{"QC_DIRECTOR", "PRODUCTION_DIRECTOR"};
             default -> new String[]{"MANAGER"};
         };
     }

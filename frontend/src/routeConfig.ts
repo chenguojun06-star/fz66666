@@ -20,7 +20,6 @@ import {
   ShoppingCartOutlined,
   ScissorOutlined,
   ThunderboltOutlined,
-  AuditOutlined,
   FireOutlined,
 } from '@ant-design/icons';
 
@@ -86,7 +85,6 @@ export const paths = {
   appStore: '/system/app-store',
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
-  approvalCenter: '/system/approval-center',
   integrationCenter: '/integration/center',
   intelligenceCenter: '/intelligence/center',
   crm: '/crm',
@@ -125,7 +123,6 @@ export const permissionCodes = {
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
-  approvalCenter: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
   organization: 'MENU_FACTORY',
   factory: 'MENU_FACTORY',
@@ -243,7 +240,6 @@ export const menuConfig: MenuSection[] = [
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
-      { label: '审批中心', path: paths.approvalCenter, icon: React.createElement(AuditOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
@@ -314,7 +310,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.wagePayment]: permissionCodes.wagePayment,
   [paths.user]: permissionCodes.user,
   [paths.userApproval]: permissionCodes.userApproval,
-  [paths.approvalCenter]: permissionCodes.approvalCenter,
   [paths.role]: permissionCodes.role,
   [paths.factory]: permissionCodes.factory,
   [paths.factoryWorkers]: permissionCodes.factoryWorkers,

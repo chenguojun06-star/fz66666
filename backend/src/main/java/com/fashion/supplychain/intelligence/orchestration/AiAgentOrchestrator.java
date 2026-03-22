@@ -367,7 +367,11 @@ public class AiAgentOrchestrator {
                 "⑬ tool_change_approval — 变更审批：查看待审批列表(list_pending)、审批通过(approve)、驳回(reject)。当用户问'有什么待审批'、'通过那个申请'时调用\n" +
                 "⑭ tool_whatif — 推演沙盘：分析[如果提前X天交货/换工厂/加X个工人/降成本/推迟开工]对完工日、成本、逾期风险的量化影响，并给出最优策略。当用户说如果提前/换厂/加人/推迟时调用\n" +
                 "⑮ tool_multi_agent — 多智能体协同图谱：排产+采购+合规+物流专家并行分析，反思引擎整合，适合全面分析/综合评估所有订单/我最需要关注什么等宏观决策\n" +
-                "⑯ tool_knowledge_search — 知识库RAG问答：用混合检索回答行业术语(FOB/CMT/菲号等)、系统操作指南(如何建单/扫码/结算)、业务FAQ，并自动更新向量索引\n\n" +
+                "⑯ tool_knowledge_search — 知识库RAG问答：用混合检索回答行业术语(FOB/CMT/菲号等)、系统操作指南(如何建单/扫码/结算)、业务FAQ，并自动更新向量索引\n" +
+                "⑰ tool_scan_undo — 扫码撤回：撤回错误扫码记录，受工资结算/后续工序/时效限制\n" +
+                "⑱ tool_cutting_task_create — 裁剪单创建：按款号+颜色尺码数量直接创建裁剪单\n" +
+                "⑲ tool_order_edit — 订单编辑：修改备注、紧急程度、工厂、客户、预计出货日期等\n" +
+                "⑳ tool_payroll_approve — 工资结算审批：approve(通过) / cancel(取消/驳回)\n\n" +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
@@ -385,7 +389,10 @@ public class AiAgentOrchestrator {
                 "6. 当用户问\"现在最应该关注什么\" → 调 tool_system_overview 读取 topPriorities，按优先级逐条解读并给出操作建议\n" +
                 "7. 库存问题 → 面辅料用 tool_query_warehouse_stock；样衣用 tool_sample_stock；成品/大货用 tool_finished_product_stock\n" +
                 "8. 客户/人员问题 → 客户档案用 tool_query_crm_customer；员工信息用 tool_query_system_user\n" +
-                "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 调 tool_change_approval(action=list_pending) 查看待审批列表，确认后可 approve/reject\n\n" +
+                "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 变更审批用 tool_change_approval(action=list_pending)；工资结算审批用 tool_payroll_approve\n" +
+                "10. 扫码撤回（\"撤回刚才那条扫码/撤销菲号扫码\"）→ 调 tool_scan_undo，优先传 recordId，其次传 scanCode\n" +
+                "11. 创建裁剪单（\"帮我开裁剪单\"）→ 调 tool_cutting_task_create\n" +
+                "12. 修改订单（\"把这个订单交期改到xx/备注改成xx\"）→ 调 tool_order_edit\n\n" +
                 "【输出要求】\n" +
                 "- 默认用这个顺序组织回答：结论 → 依据 → 动作。需要时再补风险或预期效果。\n" +
                 "- 结论必须短，依据必须有数字或对象，动作最多 3 条。\n" +

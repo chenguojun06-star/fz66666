@@ -87,7 +87,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                         .or().like(ProductionOrder::getOrderNo, orderNo.trim())
                         .or().like(ProductionOrder::getStyleNo, orderNo.trim()))
                     .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
-                        .or().eq(ProductionOrder::getDeleteFlag, 0)))
+                        .or().eq(ProductionOrder::getDeleteFlag, 0))
+                    .ne(ProductionOrder::getStatus, "scrapped"))
                 .stream()
                 .map(ProductionOrder::getId)
                 .filter(StringUtils::hasText)
@@ -155,14 +156,14 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             wrapper.like(MaterialPurchase::getSupplierName, supplier);
         }
 
-        // 排除已报废订单（delete_flag=1）关联的采购记录，报废后不应再显示
-        wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1))");
+        // 只有“我的订单”允许显示报废订单，采购页默认必须排除报废订单关联记录。
+        wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1 OR status = 'scrapped'))");
 
         // factoryType 过滤：通过子查询匹配关联订单工厂类型（INTERNAL/EXTERNAL）
         // 无 order_id 的记录（batch/stock/manual）不受此过滤影响
         if (StringUtils.hasText(factoryType)) {
             wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
-                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
+                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0) AND status <> 'scrapped'))",
                     factoryType.trim().toUpperCase());
         }
 

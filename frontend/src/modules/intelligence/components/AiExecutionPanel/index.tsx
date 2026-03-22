@@ -81,16 +81,18 @@ export default function AiExecutionPanel() {
   // 事件处理：执行命令
   // =====================================================
 
-  const handleExecuteCommand = async () => {
+  const handleApproveCommand = async () => {
     if (!selectedCommand) return;
 
     try {
       setExecuting(true);
-      const result = await intelligenceApi.executeCommand(selectedCommand);
+      const result = await intelligenceApi.approveCommand(selectedCommand.commandId, {
+        remark: '用户在智能执行面板批准并执行'
+      });
 
       setExecuteResult({
         success: result.status === 'SUCCESS',
-        message: result.message || '命令执行成功',
+        message: result.message || '命令已批准并执行',
         data: result.data,
         cascadedTasks: result.cascadedTasks,
         notifiedRecipients: result.notifiedRecipients
@@ -105,7 +107,7 @@ export default function AiExecutionPanel() {
     } catch (err: any) {
       setExecuteResult({
         success: false,
-        message: err.message || '执行失败',
+        message: err.message || '批准并执行失败',
         error: err
       });
       setShowResult(true);
@@ -411,10 +413,10 @@ export default function AiExecutionPanel() {
                 <Button
                   type="primary"
                   icon={<CheckCircleOutlined />}
-                  onClick={handleExecuteCommand}
+                  onClick={handleApproveCommand}
                   loading={executing}
                 >
-                  执行
+                  批准并执行
                 </Button>
               </Space>
             </div>

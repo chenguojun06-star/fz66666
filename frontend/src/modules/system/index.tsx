@@ -16,4 +16,3 @@ export const CustomerManagement = React.lazy(() => import('./pages/System/Custom
 export const AppStore = React.lazy(() => import('./pages/AppStore'));
 export const DataImport = React.lazy(() => import('./pages/DataImport'));
 export const SystemIssueBoard = React.lazy(() => import('./pages/System/SystemIssueBoard'));
-export const ApprovalCenter = React.lazy(() => import('./pages/System/ApprovalCenter'));
