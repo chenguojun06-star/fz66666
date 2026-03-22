@@ -329,7 +329,7 @@ export function useProductionColumns({
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'procurement'); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -357,7 +357,7 @@ export function useProductionColumns({
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'cutting'); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '裁剪', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -405,7 +405,7 @@ export function useProductionColumns({
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'secondaryProcess'); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '二次工艺', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -433,7 +433,7 @@ export function useProductionColumns({
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'carSewing'); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '车缝', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -461,7 +461,7 @@ export function useProductionColumns({
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'tailProcess'); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '尾部', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>

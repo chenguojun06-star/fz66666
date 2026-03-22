@@ -80,7 +80,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   const textY = nodeName ? C + FS * 0.75 : C;
 
   return (
-    <div style={{ width: D, height: D, display: 'inline-block', flexShrink: 0 }}>
+    <div style={{ width: D, height: D, display: 'inline-block', flexShrink: 0, borderRadius: '50%', overflow: 'hidden', boxShadow: '0 0 0 1.5px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1)' }}>
       <svg width={D} height={D} viewBox={`0 0 ${D} ${D}`} style={{ display: 'block' }}>
         <defs>
           {/*
@@ -114,9 +114,12 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           </mask>
         </defs>
 
-        {/* ① 轨道环（始终灰色衬底） */}
+        {/* ⓪ 球体背景圆 —— 白底上保持可见（不用纯白，用浅蓝灰） */}
+        <circle cx={C} cy={C} r={C} fill="#e8edf4" />
+
+        {/* ① 轨道环（灰色衬底，加深确保白底可见） */}
         <circle cx={C} cy={C} r={R}
-          fill="none" stroke="#e4e8ee" strokeWidth={SW} />
+          fill="none" stroke="#c8d0db" strokeWidth={SW} />
 
 
 

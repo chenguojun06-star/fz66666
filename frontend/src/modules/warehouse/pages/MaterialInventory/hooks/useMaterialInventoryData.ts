@@ -296,6 +296,27 @@ export function useMaterialInventoryData() {
       return;
     }
     setInstructionTarget(alert);
+    // 若预警记录缺少颜色，异步从物料资料库补充（进销存与资料库可能未完全同步）
+    if (!alert.color && alert.materialCode) {
+      api.get('/material/database/list', { params: { keyword: alert.materialCode, pageSize: 10 } })
+        .then((res) => {
+          const records: any[] = res?.data?.records || [];
+          const dbMatch = records.find((r: any) => r.materialCode === alert.materialCode);
+          if (dbMatch) {
+            setInstructionTarget((prev) =>
+              prev ? {
+                ...prev,
+                color: prev.color || dbMatch.color || '',
+                supplierName: prev.supplierName || dbMatch.supplierName || '',
+                fabricWidth: prev.fabricWidth || dbMatch.fabricWidth || '',
+                fabricWeight: prev.fabricWeight || dbMatch.fabricWeight || '',
+                fabricComposition: prev.fabricComposition || dbMatch.fabricComposition || '',
+              } : prev
+            );
+          }
+        })
+        .catch(() => {}); // 静默失败，不影响主流程
+    }
     const suggested = Number(alert.suggestedSafetyStock ?? alert.safetyStock ?? 0);
     const current = Number(alert.quantity ?? 0);
     const shortage = Math.max(0, suggested - current);
@@ -347,7 +368,18 @@ export function useMaterialInventoryData() {
     // 优先检查该物料是否有预警记录（有则自动填充缺口数量）
     const alertMatch = alertList.find((item) => item.materialCode === value) || null;
     if (alertMatch) {
-      setInstructionTarget(alertMatch);
+      // 用 DB 搜索结果补全预警记录中可能为空的颜色/规格等字段
+      const dbOpt0 = dbMaterialOptions.find((opt) => opt.value === value);
+      const dbRec0 = dbOpt0?.dbRecord;
+      setInstructionTarget({
+        ...alertMatch,
+        color: alertMatch.color || dbRec0?.color || '',
+        size: alertMatch.size || dbRec0?.size || '',
+        supplierName: alertMatch.supplierName || dbRec0?.supplierName || '',
+        fabricWidth: alertMatch.fabricWidth || dbRec0?.fabricWidth || '',
+        fabricWeight: alertMatch.fabricWeight || dbRec0?.fabricWeight || '',
+        fabricComposition: alertMatch.fabricComposition || dbRec0?.fabricComposition || '',
+      });
       const suggested = Number(alertMatch.suggestedSafetyStock ?? alertMatch.safetyStock ?? 0);
       const current = Number(alertMatch.quantity ?? 0);
       const shortage = Math.max(0, suggested - current);
@@ -357,13 +389,15 @@ export function useMaterialInventoryData() {
       const dbOpt = dbMaterialOptions.find((opt) => opt.value === value);
       const m = dbOpt?.dbRecord;
       if (m) {
-        // 先设置基本信息
+        // 先设置基本信息（含颜色、尺码）
         setInstructionTarget({
           materialId: String(m.id || ''),
           materialCode: m.materialCode || '',
           materialName: m.materialName || '',
           materialType: m.materialType || '',
           unit: m.unit || '',
+          color: m.color || '',
+          size: m.size || '',
           supplierName: m.supplierName || '',
           fabricWidth: m.fabricWidth || '',
           fabricWeight: m.fabricWeight || '',

@@ -371,7 +371,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
             当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
           </span>
         )}
-        <Space split={'·'}>
+        <Space separator={'·'}>
           <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
             菲号: <strong>{stats.bundles}</strong> 个
           </span>

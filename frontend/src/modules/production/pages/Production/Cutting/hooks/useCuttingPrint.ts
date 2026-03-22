@@ -15,12 +15,14 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   const [printBundles, setPrintBundles] = useState<CuttingBundleRow[]>([]);
   const [printUnlocked, setPrintUnlocked] = useState(false);
 
-  // 打印配置：固定两种纸张规格
+// 打印配置：自由输入纸张宽高（单位：cm），默认 7×4
   const [printConfig, setPrintConfig] = useState<{
-    paperSize: '7x4' | '10x5';
+    paperWidth: number;
+    paperHeight: number;
     qrSize: number;
   }>({
-    paperSize: '7x4',
+    paperWidth: 7,
+    paperHeight: 4,
     qrSize: 84,
   });
 
@@ -47,9 +49,9 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       return;
     }
 
-    const labelW = printConfig.paperSize === '7x4' ? 70 : 100;
-    const labelH = printConfig.paperSize === '7x4' ? 40 : 50;
-    const pageSize = printConfig.paperSize === '7x4' ? '70mm 40mm' : '100mm 50mm';
+    const labelW = Math.round(printConfig.paperWidth * 10);   // cm → mm
+    const labelH = Math.round(printConfig.paperHeight * 10);
+    const pageSize = `${labelW}mm ${labelH}mm`;
     const qrSize = printConfig.qrSize;
 
     // 本地生成 QR 码 DataURL（替代外部 api.qrserver.com，防止业务数据泄露）

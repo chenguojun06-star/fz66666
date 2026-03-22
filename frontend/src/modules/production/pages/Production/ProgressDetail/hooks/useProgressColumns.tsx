@@ -414,9 +414,9 @@ export const useProgressColumns = ({
               flexWrap: 'wrap',
               gap: 4,
               minHeight: 22,
-              background: '#f8fafc',
+              background: 'transparent',
               borderRadius: 5,
-              border: '1px solid #f0f0f0',
+              border: '1px solid rgba(0,0,0,0.06)',
             }}>
               {/* 左侧：各字段间用 · 分隔 */}
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0 }}>
@@ -505,7 +505,6 @@ export const useProgressColumns = ({
                     flex: 1,
                     cursor: frozen ? 'default' : 'pointer',
                     padding: 4,
-                    transition: 'background 0.2s',
                     opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
                   }}
                   onClick={() => !frozen && openNodeDetail(
@@ -521,9 +520,8 @@ export const useProgressColumns = ({
                       unitPrice: n.unitPrice,
                     }))
                   )}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={() => {
                     if (frozen) return;
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
                     void triggerPredict({
                       orderId: String(record.id || '').trim(),
                       orderNo: String(record.orderNo || '').trim() || undefined,
@@ -531,7 +529,6 @@ export const useProgressColumns = ({
                       currentProgress: percent,
                     });
                   }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   title={completionTime
                     ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
                     : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}

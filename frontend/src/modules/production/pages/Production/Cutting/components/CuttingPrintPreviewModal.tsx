@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, InputNumber, Select } from 'antd';
+import { Button, InputNumber } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { QRCodeCanvas } from 'qrcode.react';
 import type { CuttingPrintState } from '../hooks';
@@ -37,14 +37,26 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, alignItems: 'center' }}>
         <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>打印纸规格</span>
-        <Select
-          value={print.printConfig.paperSize}
-          style={{ width: 150 }}
-          options={[
-            { label: '7cm × 4cm', value: '7x4' },
-            { label: '10cm × 5cm', value: '10x5' },
-          ]}
-          onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperSize: v as '7x4' | '10x5' }))}
+        <InputNumber
+          min={2}
+          max={50}
+          precision={1}
+          value={print.printConfig.paperWidth}
+          onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperWidth: Math.max(2, Number(v) || 7) }))}
+          addonBefore="宽"
+          suffix="cm"
+          style={{ width: 110 }}
+        />
+        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-base)' }}>×</span>
+        <InputNumber
+          min={2}
+          max={50}
+          precision={1}
+          value={print.printConfig.paperHeight}
+          onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperHeight: Math.max(2, Number(v) || 4) }))}
+          addonBefore="高"
+          suffix="cm"
+          style={{ width: 110 }}
         />
         <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginLeft: 16 }}>二维码大小</span>
         <InputNumber
@@ -70,7 +82,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           fontWeight: 600,
         }}
       >
-        共 {print.printBundles.length} 张菲号标签，实际尺寸：{print.printConfig.paperSize === '7x4' ? '7cm × 4cm' : '10cm × 5cm'}（一页一张，居中显示）
+        共 {print.printBundles.length} 张菲号标签，实际尺寸：{print.printConfig.paperWidth}cm × {print.printConfig.paperHeight}cm（一页一张，居中显示）
       </div>
       <div
         style={{
@@ -99,7 +111,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         }}
       >
         {print.printBundles.map((b, idx) => {
-          const paperRatio = print.printConfig.paperSize === '7x4' ? (70 / 40) : (100 / 50);
+          const paperRatio = print.printConfig.paperWidth / print.printConfig.paperHeight;
           const previewWidth = 280;
           const previewHeight = previewWidth / paperRatio;
 
