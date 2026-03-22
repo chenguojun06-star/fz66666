@@ -13,6 +13,8 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
+  /* 始终预留滚动条空间，防止 antd Modal/Drawer 打开时 body padding-right 变化导致全页抖动 */
+  scrollbar-gutter: stable;
 }
 
 /* ===== 文字选中 - 品牌蓝 ===== */

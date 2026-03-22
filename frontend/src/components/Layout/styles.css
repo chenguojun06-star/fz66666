@@ -61,7 +61,8 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
   position: relative;
   overflow: hidden;
-  animation: header-brand-flow 7.5s ease-in-out infinite;
+  /* 原 animation: header-brand-flow 7.5s ease-in-out infinite 已移除 */
+  /* 理由：background-position 对纯色背景无视觉效果，但强制 GPU 每帧合成 backdrop-filter，是全页抖动噪声源 */
 }
 
 /* 深色主题下的品牌标签 - 增强对比度 */
