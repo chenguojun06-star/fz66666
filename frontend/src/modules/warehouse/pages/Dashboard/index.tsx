@@ -335,6 +335,9 @@ const WarehouseDashboard: React.FC = () => {
           style={{ marginTop: 16 }}
           extra={
             <Space size="middle">
+              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-tertiary)', marginRight: 4 }}>
+                👇 按类型和时间段统计入库/出库次数
+              </span>
               <span style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>物料类型：</span>
               <Select
                 value={materialType}

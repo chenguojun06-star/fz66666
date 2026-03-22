@@ -53,4 +53,40 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "AND (delete_flag IS NULL OR delete_flag = 0) " +
             "GROUP BY MONTH(COALESCE(outbound_time, create_time))")
     List<Map<String, Object>> selectYearOutboundByMonth(@Param("year") int year);
+
+    @Select("SELECT HOUR(COALESCE(m.outbound_time, m.create_time)) AS hour, COUNT(*) AS count " +
+            "FROM t_material_outbound_log m " +
+            "JOIN t_material_stock s ON m.stock_id = s.id " +
+            "WHERE DATE(COALESCE(m.outbound_time, m.create_time)) = #{today} " +
+            "AND s.material_type = #{materialType} " +
+            "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "GROUP BY HOUR(COALESCE(m.outbound_time, m.create_time))")
+    List<Map<String, Object>> selectTodayOutboundByHourAndType(@Param("today") LocalDate today, @Param("materialType") String materialType);
+
+    @Select("SELECT DATE(COALESCE(m.outbound_time, m.create_time)) AS date, COUNT(*) AS count " +
+            "FROM t_material_outbound_log m " +
+            "JOIN t_material_stock s ON m.stock_id = s.id " +
+            "WHERE DATE(COALESCE(m.outbound_time, m.create_time)) BETWEEN #{startDate} AND #{today} " +
+            "AND s.material_type = #{materialType} " +
+            "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "GROUP BY DATE(COALESCE(m.outbound_time, m.create_time))")
+    List<Map<String, Object>> selectLast7DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType);
+
+    @Select("SELECT DAY(COALESCE(m.outbound_time, m.create_time)) AS day, COUNT(*) AS count " +
+            "FROM t_material_outbound_log m " +
+            "JOIN t_material_stock s ON m.stock_id = s.id " +
+            "WHERE DATE(COALESCE(m.outbound_time, m.create_time)) BETWEEN #{startDate} AND #{today} " +
+            "AND s.material_type = #{materialType} " +
+            "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "GROUP BY DAY(COALESCE(m.outbound_time, m.create_time))")
+    List<Map<String, Object>> selectLast30DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType);
+
+    @Select("SELECT MONTH(COALESCE(m.outbound_time, m.create_time)) AS month, COUNT(*) AS count " +
+            "FROM t_material_outbound_log m " +
+            "JOIN t_material_stock s ON m.stock_id = s.id " +
+            "WHERE YEAR(COALESCE(m.outbound_time, m.create_time)) = #{year} " +
+            "AND s.material_type = #{materialType} " +
+            "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "GROUP BY MONTH(COALESCE(m.outbound_time, m.create_time))")
+    List<Map<String, Object>> selectYearOutboundByMonthAndType(@Param("year") int year, @Param("materialType") String materialType);
 }

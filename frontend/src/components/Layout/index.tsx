@@ -566,7 +566,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           collapsible={!isMobile}
           collapsed={sidebarIsCollapsed}
           onCollapse={isMobile ? undefined : setSidebarCollapsed}
-          width={180}
+          width={210}
           collapsedWidth={64}
           trigger={null}
           className="layout-sidebar"

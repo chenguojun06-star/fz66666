@@ -59,6 +59,7 @@ const DashboardLineChart: React.FC<DashboardLineChartProps> = ({
     xField,
     yField,
     seriesField,
+    colorField: seriesField,   // v2.x 需要 colorField 才能给多条线着不同颜色
     height,
     smooth,
     color,
@@ -120,7 +121,11 @@ const DashboardLineChart: React.FC<DashboardLineChartProps> = ({
     },
     tooltip: {
       showTitle: true,
-      title: (title: string) => `📅 ${title}`,
+      // @ant-design/charts v2.x (G2 v5) 中 title 回调收到的是 datum 对象而非字符串
+      title: (d: LineChartDataPoint | string) => {
+        const dateStr = typeof d === 'string' ? d : (d as LineChartDataPoint)?.date;
+        return dateStr ? `📅 ${dateStr}` : '';
+      },
       formatter: (datum: LineChartDataPoint) => {
         const value = datum.value || 0;
         let formattedValue = '';
