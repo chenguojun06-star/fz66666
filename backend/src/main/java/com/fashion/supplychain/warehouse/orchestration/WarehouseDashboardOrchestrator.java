@@ -294,9 +294,8 @@ public class WarehouseDashboardOrchestrator {
                 inboundByHour.put(hour, count);
             }
         } else {
-            // 物料入库（面料或辅料）- 注意：数据库中material_type存的是中文
-            String materialType = "fabric".equals(type) ? "面料" : "辅料";
-            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectTodayInboundByHourAndType(today, materialType);
+            // 物料入库（面料或辅料）- t_material_purchase.material_type 存英文 'fabric'/'accessory'
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectTodayInboundByHourAndType(today, type);
             for (Map<String, Object> row : inboundList) {
                 Integer hour = ((Number) row.get("hour")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
@@ -322,9 +321,8 @@ public class WarehouseDashboardOrchestrator {
                     outboundByHour.put(hour, count);
                 }
             } else {
-                // 面辅料出库（t_material_outbound_log）按类型过滤
-                String materialTypeOut = "fabric".equals(type) ? "面料" : "辅料";
-                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectTodayOutboundByHourAndType(today, materialTypeOut);
+                // 面辅料出库（t_material_outbound_log）按类型过滤 - t_material_stock.material_type 存英文 'fabric'/'accessory'
+                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectTodayOutboundByHourAndType(today, type);
                 for (Map<String, Object> row : materialOutList) {
                     Integer hour = ((Number) row.get("hour")).intValue();
                     Integer count = ((Number) row.get("count")).intValue();
@@ -374,8 +372,7 @@ public class WarehouseDashboardOrchestrator {
                 inboundByDate.put(date, count);
             }
         } else {
-            String materialType = "fabric".equals(type) ? "面料" : "辅料";
-            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast7DaysInboundByType(startDate, today, materialType);
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast7DaysInboundByType(startDate, today, type);
             for (Map<String, Object> row : inboundList) {
                 LocalDate date = LocalDate.parse(row.get("date").toString());
                 Integer count = ((Number) row.get("count")).intValue();
@@ -401,8 +398,7 @@ public class WarehouseDashboardOrchestrator {
                 }
             } else {
                 // 面辅料出库（t_material_outbound_log）按类型过滤
-                String materialTypeOut = "fabric".equals(type) ? "面料" : "辅料";
-                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast7DaysOutboundByType(startDate, today, materialTypeOut);
+                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast7DaysOutboundByType(startDate, today, type);
                 for (Map<String, Object> row : materialOutList) {
                     LocalDate date = LocalDate.parse(row.get("date").toString());
                     Integer count = ((Number) row.get("count")).intValue();
@@ -454,8 +450,7 @@ public class WarehouseDashboardOrchestrator {
                 inboundByDay.put(day, count);
             }
         } else {
-            String materialType = "fabric".equals(type) ? "面料" : "辅料";
-            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast30DaysInboundByType(startDate, today, materialType);
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast30DaysInboundByType(startDate, today, type);
             for (Map<String, Object> row : inboundList) {
                 Integer day = ((Number) row.get("day")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
@@ -481,8 +476,7 @@ public class WarehouseDashboardOrchestrator {
                 }
             } else {
                 // 面辅料出库（t_material_outbound_log）按类型过滤
-                String materialTypeOut = "fabric".equals(type) ? "面料" : "辅料";
-                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast30DaysOutboundByType(startDate, today, materialTypeOut);
+                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectLast30DaysOutboundByType(startDate, today, type);
                 for (Map<String, Object> row : materialOutList) {
                     Integer day = ((Number) row.get("day")).intValue();
                     Integer count = ((Number) row.get("count")).intValue();
@@ -530,8 +524,7 @@ public class WarehouseDashboardOrchestrator {
                 inboundByMonth.put(month, count);
             }
         } else {
-            String materialType = "fabric".equals(type) ? "面料" : "辅料";
-            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectYearInboundByMonthAndType(currentYear, materialType);
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectYearInboundByMonthAndType(currentYear, type);
             for (Map<String, Object> row : inboundList) {
                 Integer month = ((Number) row.get("month")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();
@@ -557,8 +550,7 @@ public class WarehouseDashboardOrchestrator {
                 }
             } else {
                 // 面辅料出库（t_material_outbound_log）按类型过滤
-                String materialTypeOut = "fabric".equals(type) ? "面料" : "辅料";
-                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectYearOutboundByMonthAndType(currentYear, materialTypeOut);
+                List<Map<String, Object>> materialOutList = materialOutboundLogMapper.selectYearOutboundByMonthAndType(currentYear, type);
                 for (Map<String, Object> row : materialOutList) {
                     Integer month = ((Number) row.get("month")).intValue();
                     Integer count = ((Number) row.get("count")).intValue();
