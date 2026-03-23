@@ -59,7 +59,17 @@ const PrivateRoute: React.FC = () => {
   }
 
   const hasAny = Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(required));
-  return hasAny ? <Outlet /> : <Navigate to={paths.dashboard} replace />;
+  if (hasAny) {
+    return <Outlet />;
+  }
+
+  // 避免死循环：如果当前路径就是 dashboard，或者其他没有权限的路径，
+  // 我们需要寻找一个他们有权限的后备路径，或者去 profile
+  if (user?.permissions?.includes('MENU_PRODUCTION_LIST')) {
+    return <Navigate to={paths.productionList} replace />;
+  }
+  
+  return <Navigate to={paths.profile} replace />;
 };
 
 export default PrivateRoute;
