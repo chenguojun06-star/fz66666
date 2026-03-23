@@ -97,6 +97,7 @@ public class CuttingTaskOrchestrator {
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
             if (factoryOrderIds.isEmpty()) {
@@ -123,11 +124,34 @@ public class CuttingTaskOrchestrator {
                 .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo);
 
+        // 工厂账号隔离
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            List<String> factoryOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .ne(ProductionOrder::getStatus, "scrapped")
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+            if (factoryOrderIds.isEmpty()) {
+                Map<String, Object> emptyStats = new java.util.LinkedHashMap<>();
+                emptyStats.put("totalCount", 0L);
+                emptyStats.put("totalQuantity", 0L);
+                emptyStats.put("pendingCount", 0L);
+                emptyStats.put("receivedCount", 0L);
+                emptyStats.put("bundledCount", 0L);
+                return emptyStats;
+            }
+            baseWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
+        }
+
         if (StringUtils.hasText(factoryType)) {
             List<String> matchedOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
                             .eq(ProductionOrder::getFactoryType, factoryType)
+                            .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
             if (matchedOrderIds.isEmpty()) {

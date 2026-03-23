@@ -506,6 +506,13 @@ public class DeepAnalysisTool implements AgentTool {
         QueryWrapper<ScanRecord> q = new QueryWrapper<>();
         q.eq("scan_result", "success");
         if (tenantId != null) q.eq("tenant_id", tenantId);
+        
+        // 工厂隔离
+        String factoryId = UserContext.factoryId();
+        if (factoryId != null && !factoryId.isBlank()) {
+            q.eq("factory_id", factoryId);
+        }
+        
         return q;
     }
 
@@ -513,6 +520,13 @@ public class DeepAnalysisTool implements AgentTool {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("delete_flag", 0);
         if (tenantId != null) q.eq("tenant_id", tenantId);
+        
+        // 工厂隔离
+        String factoryId = UserContext.factoryId();
+        if (factoryId != null && !factoryId.isBlank()) {
+            q.eq("factory_id", factoryId);
+        }
+        
         return q;
     }
 

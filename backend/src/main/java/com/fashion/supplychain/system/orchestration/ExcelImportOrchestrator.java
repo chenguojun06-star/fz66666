@@ -516,14 +516,12 @@ public class ExcelImportOrchestrator {
                 sp.setCreateTime(LocalDateTime.now());
                 sp.setUpdateTime(LocalDateTime.now());
 
-                boolean saved = styleProcessService.save(sp);
-                if (!saved) throw new RuntimeException("保存失败");
-
                 Map<String, Object> success = new LinkedHashMap<>();
                 success.put("row", index + 2);
                 success.put("styleNo", styleNo);
                 success.put("processName", processName);
                 success.put("processCode", sp.getProcessCode());
+                success.put("entity", sp);
                 successRecords.add(success);
             } catch (Exception e) {
                 Map<String, Object> fail = new LinkedHashMap<>();
@@ -532,6 +530,16 @@ public class ExcelImportOrchestrator {
                 fail.put("processName", item.get("工序名称*"));
                 fail.put("error", e.getMessage());
                 failedRecords.add(fail);
+            }
+        }
+
+        if (!successRecords.isEmpty()) {
+            List<StyleProcess> insertBatch = new ArrayList<>();
+            for (Map<String, Object> rec : successRecords) {
+                insertBatch.add((StyleProcess) rec.get("entity"));
+            }
+            if (!insertBatch.isEmpty()) {
+                styleProcessService.saveBatch(insertBatch, 500);
             }
         }
 

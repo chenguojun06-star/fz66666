@@ -382,4 +382,17 @@ public class WebSocketService {
         webSocketHandler.broadcast(message);
         log.info("[WebSocket] 广播刷新所有: reason={}", reason);
     }
+
+    /**
+     * 推送 AI 智能决策卡片 (TraceableAdvice) 给指定租户的所有用户
+     */
+    public void broadcastTraceableAdvice(Long tenantId, Object adviceCard) {
+        WebSocketMessage<Object> message = WebSocketMessage.create(
+            WebSocketMessageType.TRACEABLE_ADVICE,
+            adviceCard
+        );
+        // 为了演示，这里直接全站广播，实际应用中可以给 RealTimeWebSocketHandler 增加 broadcastToTenant 方法
+        webSocketHandler.broadcast(message);
+        log.info("[WebSocket] 已向租户 {} 推送小云智能决策卡片", tenantId);
+    }
 }

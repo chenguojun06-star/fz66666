@@ -65,32 +65,69 @@ const DEFAULT_DATETIME_RANGE_PICKER_PROPS: Partial<RangePickerProps> = {
   showTime: { format: TIME_FORMAT },
 };
 
+export interface UnifiedDatePickerProps extends Omit<DatePickerProps, 'value' | 'onChange'> {
+  value?: string | dayjs.Dayjs | null;
+  onChange?: (date: dayjs.Dayjs | null, dateString: string | string[]) => void;
+  id?: string;
+}
+
 /**
  * 统一日期选择器
  */
-export const UnifiedDatePicker: React.FC<DatePickerProps> = (props) => {
-  const { showTime, ...restProps } = props;
+export const UnifiedDatePicker: React.FC<UnifiedDatePickerProps> = (props) => {
+  const { showTime, value, onChange, id, ...restProps } = props;
 
   // 根据是否显示时间选择不同的默认配置
   const defaultProps = showTime
     ? DEFAULT_DATETIME_PICKER_PROPS
     : DEFAULT_DATE_PICKER_PROPS;
 
-  return <DatePicker {...defaultProps} {...restProps} showTime={showTime} />;
+  const parsedValue = typeof value === 'string' ? dayjs(value) : value;
+
+  return (
+    <DatePicker
+      {...defaultProps}
+      {...restProps}
+      id={id}
+      value={parsedValue as any}
+      onChange={onChange as any}
+      showTime={showTime}
+    />
+  );
 };
+
+export interface UnifiedRangePickerProps extends Omit<RangePickerProps, 'value' | 'onChange'> {
+  value?: [string | dayjs.Dayjs | null, string | dayjs.Dayjs | null] | null;
+  onChange?: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null, dateStrings: [string, string]) => void;
+  id?: string;
+}
 
 /**
  * 统一日期范围选择器
  */
-export const UnifiedRangePicker: React.FC<RangePickerProps> = (props) => {
-  const { showTime, ...restProps } = props;
+export const UnifiedRangePicker: React.FC<UnifiedRangePickerProps> = (props) => {
+  const { showTime, value, onChange, id, ...restProps } = props;
 
   // 根据是否显示时间选择不同的默认配置
   const defaultProps = showTime
     ? DEFAULT_DATETIME_RANGE_PICKER_PROPS
     : DEFAULT_RANGE_PICKER_PROPS;
 
-  return <RangePicker {...defaultProps} {...restProps} showTime={showTime} />;
+  const parsedValue = value ? [
+    typeof value[0] === 'string' ? dayjs(value[0]) : value[0],
+    typeof value[1] === 'string' ? dayjs(value[1]) : value[1]
+  ] : null;
+
+  return (
+    <RangePicker
+      {...defaultProps}
+      {...restProps}
+      id={id}
+      value={parsedValue as any}
+      onChange={onChange as any}
+      showTime={showTime}
+    />
+  );
 };
 
 // 导出常用的日期处理工具

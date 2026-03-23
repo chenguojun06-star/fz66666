@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Tag, App, Space, Tooltip } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -110,7 +111,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'styleCover',
       width: 72,
       render: (_: any, record: MaterialPurchaseType) => (
-        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
+        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={40} borderRadius={6} />
       )
     },
     {
@@ -413,6 +414,40 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       render: (_: string, record: MaterialPurchaseType) => resolveOperatorName(record) || '-',
     },
     {
+      title: '采购单据',
+      dataIndex: 'invoiceUrls',
+      key: 'invoiceUrls',
+      width: 100,
+      render: (v: string | null, record: MaterialPurchaseType) => {
+        let urls: string[] = [];
+        if (v) {
+          try {
+            urls = JSON.parse(v);
+          } catch {
+            urls = v.split(',').filter(Boolean);
+          }
+        }
+        if (!urls || urls.length === 0) {
+          return (
+            <span 
+              style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} 
+              onClick={() => onEdit(record)}
+            >
+              <UploadOutlined /> 上传单据
+            </span>
+          );
+        }
+        
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} onClick={() => onView(record)}>
+              <UploadOutlined style={{ marginRight: 2 }} />查看单据({urls.length})
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
@@ -430,10 +465,6 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       fixed: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const frozen = isOrderFrozenForRecord(record);
-        // 已领取/已到货状态可撤回（pending/cancelled 不可撤回）
-        const canCancelReceive = !frozen
-          && record.status !== 'pending'
-          && record.status !== 'cancelled';
         return (
           <RowActions
             actions={[
@@ -444,18 +475,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 primary: true,
               },
               {
-                key: 'quickEdit',
+                key: 'edit',
                 label: '编辑',
-                disabled: frozen,
                 onClick: () => onEdit(record),
+                disabled: frozen,
               },
-              ...(canCancelReceive ? [{
-                key: 'cancelReceive',
-                label: cancelLoading === record.id ? '撤回中...' : '撤回领取',
-                danger: true as const,
-                disabled: cancelLoading === record.id,
-                onClick: () => handleCancelReceive(record),
-              }] : []),
             ]}
           />
         );

@@ -94,7 +94,6 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     }
 
     /** 从缓存获取，命中则直接返回；未命中返回null */
-    @SuppressWarnings("unchecked")
     private <T> T getFromCache(String key) {
         try {
             return redisService.get(tenantCacheKey(key));

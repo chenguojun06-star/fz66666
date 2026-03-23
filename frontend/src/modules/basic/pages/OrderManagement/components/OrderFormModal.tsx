@@ -518,6 +518,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       <Col xs={24} sm={8}>
                         <Form.Item name="plateType" label="单型">
                           <Select
+                            id="plateType"
                             placeholder="不填自动判断"
                             allowClear
                             options={[
@@ -530,6 +531,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       <Col xs={24} sm={8}>
                         <Form.Item name="orderBizType" label="下单类型">
                           <Select
+                            id="orderBizType"
                             placeholder="选填（FOB/ODM/OEM/CMT）"
                             allowClear
                             options={[
@@ -544,6 +546,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       <Col xs={24} sm={8}>
                         <Form.Item name="productCategory" label="品类">
                           <Select
+                            id="productCategory"
                             placeholder="请选择品类（选填）"
                             allowClear
                             showSearch
@@ -556,6 +559,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       <Col xs={24} sm={8}>
                         <Form.Item name="patternMaker" label="纸样师">
                           <Select
+                            id="patternMaker"
                             placeholder="请选择纸样师（选填）"
                             allowClear
                             showSearch
@@ -570,6 +574,7 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       <Col xs={24} sm={8}>
                         <Form.Item label="订单总数量">
                           <InputNumber
+                            id="totalQuantity"
                             min={1}
                             style={{ width: '100%' }}
                             value={totalOrderQuantity}
@@ -613,6 +618,14 @@ const OrderFormModal: React.FC<OrderFormModalProps> = ({
                           rules={[{ required: true, message: '请选择计划完成时间' }]}
                         >
                           <UnifiedDatePicker showTime />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col xs={24}>
+                        <Form.Item name="remarks" label="订单备注">
+                          <Input.TextArea id="remarks" rows={4} placeholder="选填（比如：注意袖口走线、使用拉链#03等）" />
                         </Form.Item>
                       </Col>
                     </Row>

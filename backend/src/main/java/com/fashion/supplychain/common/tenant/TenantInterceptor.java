@@ -62,6 +62,7 @@ public class TenantInterceptor implements InnerInterceptor {
             "(?:FROM|JOIN|UPDATE|DELETE\\s+FROM)\\s+([`]?\\w+[`]?)", Pattern.CASE_INSENSITIVE);
 
     @Override
+    @SuppressWarnings("rawtypes")
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
         UserContext ctx = UserContext.get();

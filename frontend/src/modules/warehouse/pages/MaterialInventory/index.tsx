@@ -32,6 +32,7 @@ import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import PageStatCards from '@/components/common/PageStatCards';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
@@ -99,26 +100,52 @@ const _MaterialInventory: React.FC = () => {
           </Card>
         ) : null}
 
-        <Card size="small" className="material-summary-bar">
-          <div className="material-summary-content">
-            <div className="material-summary-item">
-              <span className="material-summary-label">库存总值</span>
-              <span className="material-summary-value">¥{Number(stats.totalValue || 0).toLocaleString()}</span>
-            </div>
-            <div className="material-summary-item">
-              <span className="material-summary-label">库存总量</span>
-              <span className="material-summary-value">{Number(stats.totalQty || 0).toLocaleString()} 件/米</span>
-            </div>
-            <div className="material-summary-item">
-              <span className="material-summary-label">低于安全库存</span>
-              <span className="material-summary-value">{Number(stats.lowStockCount || 0).toLocaleString()} 种</span>
-            </div>
-            <div className="material-summary-item">
-              <span className="material-summary-label">物料种类</span>
-              <span className="material-summary-value">{Number(stats.materialTypes || 0).toLocaleString()} 类</span>
-            </div>
-          </div>
-        </Card>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>数据概览</h2>
+          <StandardSearchBar
+            onSearchChange={() => {}}
+            dateValue={dateRange}
+            onDateChange={setDateRange}
+            showSearchButton={false}
+            showStatus={false}
+            showDatePresets={true}
+          />
+        </div>
+        <PageStatCards
+          activeKey={selectedType || 'all'}
+          cards={[
+            {
+              key: 'all',
+              items: [
+                { label: '库存总值', value: `¥${Number(stats.totalValue || 0).toLocaleString()}`, color: 'var(--color-primary)' },
+                { label: '库存总量', value: Number(stats.totalQty || 0), unit: '件/米', color: 'var(--color-success)' },
+              ],
+              onClick: () => setSelectedType(''),
+              activeColor: 'var(--color-primary)',
+              activeBg: 'rgba(45, 127, 249, 0.1)',
+            },
+            {
+              key: 'low',
+              items: [
+                { label: '低于安全库存', value: Number(stats.lowStockCount || 0), unit: '种', color: 'var(--color-danger)' },
+                { label: '物料种类', value: Number(stats.materialTypes || 0), unit: '类', color: 'var(--color-info)' },
+              ],
+              onClick: () => setSelectedType('low'),
+              activeColor: 'var(--color-danger)',
+              activeBg: '#fff1f0',
+            },
+            {
+              key: 'today',
+              items: [
+                { label: '今日入库', value: Number(stats.todayInCount || 0), unit: '次', color: 'var(--color-success)' },
+                { label: '今日出库', value: Number(stats.todayOutCount || 0), unit: '次', color: 'var(--color-warning)' },
+              ],
+              onClick: () => setSelectedType('today'),
+              activeColor: 'var(--color-success)',
+              activeBg: '#f6ffed',
+            }
+          ]}
+        />
 
         <Tabs
           defaultActiveKey="overview"
@@ -149,10 +176,9 @@ const _MaterialInventory: React.FC = () => {
                 searchValue={searchText}
                 onSearchChange={setSearchText}
                 searchPlaceholder="搜索物料编号/名称"
-                dateValue={dateRange}
-                onDateChange={setDateRange}
                 statusValue={selectedType}
                 onStatusChange={setSelectedType}
+                showDate={false}
                 statusOptions={[
                   { label: '全部', value: '' },
                   { label: '面料', value: '面料' },
@@ -1154,41 +1180,41 @@ const _MaterialInventory: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="materialCode" label="物料编号" rules={[{ required: true, message: '请填写物料编号' }]}>
-                <Input placeholder="如 FA-0001" />
+                <Input id="materialCode" placeholder="如 FA-0001" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请填写物料名称' }]}>
-                <Input placeholder="如 纯棉布料" />
+                <Input id="materialName" placeholder="如 纯棉布料" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="materialType" label="物料类型">
-                <Input placeholder="如：面料/辅料/里料" />
+                <Input id="materialType" placeholder="如：面料/辅料/里料" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="color" label="颜色">
-                <Input placeholder="选填" />
+                <Input id="color" placeholder="选填" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="specification" label="规格">
-                <Input placeholder="如：150cm/200g" />
+                <Input id="specification" placeholder="如：150cm/200g" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="fabricWidth" label="幅宽">
-                <Input placeholder="如：150cm" />
+                <Input id="fabricWidth" placeholder="如：150cm" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="fabricWeight" label="克重">
-                <Input placeholder="如：200g/m²" />
+                <Input id="fabricWeight" placeholder="如：200g/m²" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -1200,12 +1226,12 @@ const _MaterialInventory: React.FC = () => {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
-                <InputNumber min={0.01} style={{ width: '100%' }} placeholder="如 100" />
+                <InputNumber id="quantity" min={0.01} style={{ width: '100%' }} placeholder="如 100" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="unit" label="单位" initialValue="件">
-                <Select>
+                <Select id="unit">
                   <Option value="件">件</Option>
                   <Option value="米">米</Option>
                   <Option value="kg">kg</Option>
@@ -1216,12 +1242,12 @@ const _MaterialInventory: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="unitPrice" label="单价(元)">
-                <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="选填" />
+                <InputNumber id="unitPrice" min={0} precision={2} style={{ width: '100%' }} placeholder="选填" />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} placeholder="选填" />
+            <Input.TextArea id="remark" rows={2} placeholder="选填" />
           </Form.Item>
         </Form>
       </StandardModal>

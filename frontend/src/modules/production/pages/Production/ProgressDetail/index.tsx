@@ -88,6 +88,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { factoryTypeOptions } = useOrganizationFilterOptions();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
+  const isFactoryAccount = !!(user as any)?.factoryId;
+  const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
@@ -1136,6 +1138,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     stagnantOrderIds,
     deliveryRiskMap,
     onShareOrder: handleShareOrder,
+    canManageOrderLifecycle,
   });
   const { columns: cardColumns } = useCardGridLayout(10);
 
@@ -1625,13 +1628,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   title: frozen ? frozenTitle : '打印标签',
                   onClick: () => void handlePrintLabel(record),
                 },
-                {
+                ...(canManageOrderLifecycle ? [{
                   key: 'close',
                   label: '关单',
                   disabled: frozen,
                   title: frozen ? frozenTitle : '关单',
                   onClick: () => handleCloseOrder(record),
-                },
+                }] : []),
                 {
                   key: 'divider1',
                   type: 'divider' as const,

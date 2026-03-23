@@ -938,9 +938,36 @@ public class MaterialPurchaseOrchestrator {
      * 支持按 materialType / sourceType / orderNo(keyword) 筛选
      */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
-        // 复用 queryPage 的筛选逻辑，但不分页
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0);
+
+        // 工厂账号隔离：只统计该工厂的采购记录
+        String qFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        Long qTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (StringUtils.hasText(qFactoryId)) {
+            List<String> factoryOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(qTenantId != null, ProductionOrder::getTenantId, qTenantId)
+                            .eq(ProductionOrder::getFactoryId, qFactoryId)
+                            .ne(ProductionOrder::getStatus, "scrapped")
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+            if (factoryOrderIds.isEmpty()) {
+                return Map.of(
+                        "pendingCount", 0,
+                        "receivedCount", 0,
+                        "partialCount", 0,
+                        "completedCount", 0,
+                        "cancelledCount", 0,
+                        "totalCount", 0,
+                        "totalQuantity", 0
+                );
+            }
+            wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+        }
+
+        // 复用 queryPage 的筛选逻辑，但不分页
 
         String orderNo = params == null ? "" : String.valueOf(params.getOrDefault("orderNo", "")).trim();
         String materialType = params == null ? "" : String.valueOf(params.getOrDefault("materialType", "")).trim();
@@ -982,6 +1009,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // factoryType 过滤：通过子查询匹配关联订单工厂类型
+        // 如果上面已经执行了工厂账号隔离 (wrapper.in(OrderId))，这里的 factoryType 筛选依然可以叠加
         if (StringUtils.hasText(factoryType)) {
             wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
                     "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",

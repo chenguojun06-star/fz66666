@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
+import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
@@ -658,27 +659,48 @@ const _FinishedInventory: React.FC = () => {
           </Card>
         ) : null}
 
-        <StatsGrid
-          items={[
-            { key: 'total', title: '成品总数', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0) + (r.defectQty ?? 0), 0), suffix: '件' },
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>数据概览</h2>
+          <StandardSearchBar
+            onSearchChange={() => {}}
+            dateValue={dateRange}
+            onDateChange={setDateRange}
+            showSearchButton={false}
+            showStatus={false}
+            showDatePresets={true}
+          />
+        </div>
+        <PageStatCards
+          activeKey={statusValue || 'all'}
+          cards={[
+            {
+              key: 'all',
+              items: [
+                { label: '成品总数', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0) + (r.defectQty ?? 0), 0), unit: '件', color: 'var(--color-primary)' },
+              ],
+              onClick: () => setStatusValue(''),
+              activeColor: 'var(--color-primary)',
+              activeBg: 'rgba(45, 127, 249, 0.1)',
+            },
             {
               key: 'available',
-              title: '可用库存',
-              value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0), 0),
-              suffix: '件',
-              valueStyle: { color: 'var(--success-color-dark)' }
+              items: [
+                { label: '可用库存', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0), 0), unit: '件', color: 'var(--color-success)' },
+              ],
+              onClick: () => setStatusValue('available'),
+              activeColor: 'var(--color-success)',
+              activeBg: '#f6ffed',
             },
             {
-              key: 'defective',
-              title: '次品数量',
-              value: rawDataSource.reduce((s, r) => s + (r.defectQty ?? 0), 0),
-              suffix: '件',
-              valueStyle: { color: 'var(--color-danger)' }
-            },
+              key: 'defect',
+              items: [
+                { label: '次品数量', value: rawDataSource.reduce((s, r) => s + (r.defectQty ?? 0), 0), unit: '件', color: 'var(--color-danger)' },
+              ],
+              onClick: () => setStatusValue('defect'),
+              activeColor: 'var(--color-danger)',
+              activeBg: '#fff1f0',
+            }
           ]}
-          columns={3}
-          gutter={16}
-          style={{ marginBottom: 16 }}
         />
 
         <Card>
@@ -693,10 +715,9 @@ const _FinishedInventory: React.FC = () => {
                   searchValue={searchText}
                   onSearchChange={setSearchText}
                   searchPlaceholder="搜索订单号/款号/SKU/组织"
-                  dateValue={dateRange}
-                  onDateChange={setDateRange}
                   statusValue={statusValue}
                   onStatusChange={setStatusValue}
+                  showDate={false}
                   statusOptions={[
                     { label: '全部', value: '' },
                     { label: '可用库存', value: 'available' },

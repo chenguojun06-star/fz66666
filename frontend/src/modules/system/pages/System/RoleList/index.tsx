@@ -612,19 +612,19 @@ const RoleList: React.FC = () => {
         minWidth={isMobile ? 320 : 520}
         scaleWithViewport
       >
-        <Form form={form} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item name="roleName" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
-              <Input placeholder="请输入角色名称" />
-            </Form.Item>
-            <Form.Item name="roleCode" label="角色编码" rules={[{ required: true, message: '请输入角色编码' }]}>
-              <Input placeholder="请输入角色编码" />
-            </Form.Item>
-          </div>
+          <Form form={form} layout="vertical">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Form.Item name="roleName" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
+                <Input id="roleName" placeholder="请输入角色名称" />
+              </Form.Item>
+              <Form.Item name="roleCode" label="角色编码" rules={[{ required: true, message: '请输入角色编码' }]}>
+                <Input id="roleCode" placeholder="如：MANAGER" disabled={!!roleModal.data} />
+              </Form.Item>
+            </div>
 
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入描述" />
-          </Form.Item>
+            <Form.Item name="description" label="描述">
+              <Input.TextArea id="description" rows={3} placeholder="请输入描述" />
+            </Form.Item>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>

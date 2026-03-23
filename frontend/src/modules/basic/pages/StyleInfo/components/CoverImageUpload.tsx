@@ -224,15 +224,18 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       {/* 大图 */}
       <div
         style={{
-          width: 400,
-          height: 400,
-          border: '1px solid #e8e8e8',
-          background: 'var(--color-bg-container)',
+          width: '100%',
+          maxWidth: 400,
+          aspectRatio: '1 / 1',
+          border: '1px dashed #d9d9d9',
+          borderRadius: 8,
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 16,
           overflow: 'hidden',
-          marginBottom: 12,
+          background: '#fafafa',
+          cursor: isNewMode || enabled ? 'pointer' : 'default',
         }}
       >
         {currentImage ? (
@@ -261,8 +264,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      {/* 缩略图列表 - 固定4个框，对齐主图宽度400px */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, width: 400, marginBottom: 12 }}>
+      {/* 缩略图列表 - 固定4个框，宽度跟随容器自动适应最大400px */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, width: '100%', maxWidth: 400, marginBottom: 12 }}>
         {[0, 1, 2, 3].map((idx) => {
           const img = displayImages[idx];
           const hover = hoverIndex === idx;
@@ -275,16 +278,16 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onMouseLeave={() => setHoverIndex(null)}
               style={{
                 width: '100%',
-                aspectRatio: '1',
-                border: img && currentIndex === idx ? '2px solid #1890ff' : '1px solid #e8e8e8',
+                aspectRatio: '1 / 1',
+                border: currentIndex === idx ? '2px solid var(--color-warning)' : '1px solid #d9d9d9',
+                borderRadius: 8,
                 overflow: 'hidden',
-                cursor: img ? 'pointer' : 'default',
-                background: 'var(--color-bg-container)',
-                transition: 'all 0.2s',
+                position: 'relative',
+                cursor: img && (isNewMode || enabled) ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                position: 'relative',
+                background: '#f0f0f0',
               }}
             >
               {img ? (
@@ -309,6 +312,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 8,
+                        borderRadius: 8,
                       }}
                     >
                       <div

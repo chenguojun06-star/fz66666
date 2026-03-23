@@ -186,13 +186,13 @@ const RegistrationTab: React.FC = () => {
         />
         <Form form={editForm} layout="vertical">
           <Form.Item label="申请账号" name="applyUsername" rules={[{ required: true, message: '账号不能为空' }]}>
-            <Input placeholder="修改后将用此账号创建主账号" />
+            <Input id="applyUsername" placeholder="修改后将用此账号创建主账号" />
           </Form.Item>
           <Form.Item label="联系人" name="contactName">
-            <Input />
+            <Input id="contactName" />
           </Form.Item>
           <Form.Item label="联系电话" name="contactPhone">
-            <Input />
+            <Input id="contactPhone" />
           </Form.Item>
         </Form>
       </ResizableModal>

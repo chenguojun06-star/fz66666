@@ -121,7 +121,7 @@ public class TenantFileController {
                     // 回退：服务端代理下载预签名 URL 内容（避免 302 跳转后浏览器 ORB 拦截）
                     try {
                         String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
-                        URL cosUrl = new URL(presignedUrl);
+                        URL cosUrl = java.net.URI.create(presignedUrl).toURL();
                         HttpURLConnection conn = (HttpURLConnection) cosUrl.openConnection();
                         conn.setConnectTimeout(5000);
                         conn.setReadTimeout(15000);

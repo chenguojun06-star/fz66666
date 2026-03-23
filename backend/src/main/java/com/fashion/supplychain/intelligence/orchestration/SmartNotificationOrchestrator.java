@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 智能推送编排器 — 根据业务状态生成个性化通知建议
@@ -42,35 +43,55 @@ public class SmartNotificationOrchestrator {
     public SmartNotificationResponse generateNotifications() {
         SmartNotificationResponse resp = new SmartNotificationResponse();
         try {
-        Long tenantId = UserContext.tenantId();
-        List<NotificationItem> notifications = new ArrayList<>();
+            Long tenantId = UserContext.tenantId();
+            String factoryId = UserContext.factoryId();
+            List<NotificationItem> notifications = new ArrayList<>();
 
-        // ── 1. 交期迫近 ──
-        notifications.addAll(detectDeadlineWarnings(tenantId));
+            // ── 1. 交期迫近 ──
+            notifications.addAll(detectDeadlineWarnings(tenantId));
 
-        // ── 2. 停滞预警 ──
-        notifications.addAll(detectStagnantOrders(tenantId));
+            // ── 2. 停滞预警 ──
+            notifications.addAll(detectStagnantOrders(tenantId));
 
-        // ── 3. 质量异常 ──
-        notifications.addAll(detectQualityIssues(tenantId));
+            // ── 3. 质量异常 ──
+            notifications.addAll(detectQualityIssues(tenantId));
 
-        // ── 4. 里程碑通知 ──
-        notifications.addAll(detectMilestones(tenantId));
+            // ── 4. 里程碑通知 ──
+            notifications.addAll(detectMilestones(tenantId));
+            
+            // ── 工厂账号隔离 ──
+            if (StringUtils.hasText(factoryId)) {
+                // 如果是工厂账号，只保留该工厂的订单相关通知
+                List<String> factoryOrderNos = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getOrderNo)
+                        .eq(ProductionOrder::getFactoryId, factoryId)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .list()
+                        .stream()
+                        .map(ProductionOrder::getOrderNo)
+                        .filter(StringUtils::hasText)
+                        .toList();
+                        
+                notifications = notifications.stream()
+                        .filter(n -> StringUtils.hasText(n.getOrderNo()) && factoryOrderNos.contains(n.getOrderNo()))
+                        .collect(Collectors.toList());
+            }
 
-        // 按优先级排序: high > medium > low
-        Map<String, Integer> prioOrder = Map.of("high", 0, "medium", 1, "low", 2);
-        notifications.sort(Comparator.comparingInt(n -> prioOrder.getOrDefault(n.getPriority(), 9)));
+            // 按优先级排序: high > medium > low
+            Map<String, Integer> prioOrder = Map.of("high", 0, "medium", 1, "low", 2);
+            notifications.sort(Comparator.comparingInt(n -> prioOrder.getOrDefault(n.getPriority(), 9)));
 
-        int sentToday = notifications.size();
-        int highPriorityCount = (int) notifications.stream()
-                .filter(n -> "high".equals(n.getPriority())).count();
-        resp.setNotifications(notifications);
-        resp.setPendingCount(highPriorityCount);
-        resp.setSentToday(sentToday);
-        // 非紧急通知占比：高优先级越少，系统越健康（100% = 全为中低优先级/无通知）
-        double successRate = sentToday == 0 ? 100.0
-                : Math.round((double)(sentToday - highPriorityCount) / sentToday * 1000) / 10.0;
-        resp.setSuccessRate(successRate);
+            int sentToday = notifications.size();
+            int highPriorityCount = (int) notifications.stream()
+                    .filter(n -> "high".equals(n.getPriority())).count();
+            resp.setNotifications(notifications);
+            resp.setPendingCount(highPriorityCount);
+            resp.setSentToday(sentToday);
+            // 非紧急通知占比：高优先级越少，系统越健康（100% = 全为中低优先级/无通知）
+            double successRate = sentToday == 0 ? 100.0
+                    : Math.round((double)(sentToday - highPriorityCount) / sentToday * 1000) / 10.0;
+            resp.setSuccessRate(successRate);
         } catch (Exception e) {
             log.error("[智能通知] 数据加载异常（降级返回空数据）: {}", e.getMessage(), e);
         }

@@ -217,7 +217,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updateProductionProgress(String id, Integer progress, String rollbackRemark,
             String rollbackToProcessName) {

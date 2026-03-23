@@ -38,6 +38,9 @@ public class ActionExecutorTool implements AgentTool {
     @Autowired
     private FollowupTaskOrchestrator followupTaskOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
@@ -53,7 +56,8 @@ public class ActionExecutorTool implements AgentTool {
         action.put("type", "string");
         action.put("description", "执行的操作类型：mark_urgent(标记订单为紧急), " +
                 "remove_urgent(取消紧急标记), add_remark(给订单添加备注), " +
-                "send_notification(发送站内通知给指定人)");
+                "send_notification(发送站内通知给指定人), " +
+                "extend_delivery(延期交货), replenish_material(一键生成缺料采购单)");
         properties.put("action", action);
 
         Map<String, Object> orderNo = new LinkedHashMap<>();
@@ -114,6 +118,8 @@ public class ActionExecutorTool implements AgentTool {
             case "remove_urgent" -> executeMarkUrgent(args, tenantId, result, false);
             case "add_remark" -> executeAddRemark(args, tenantId, result);
             case "send_notification" -> executeSendNotification(args, tenantId, result);
+            case "extend_delivery" -> executeExtendDelivery(args, tenantId, result);
+            case "replenish_material" -> executeReplenishMaterial(args, tenantId, result);
             default -> {
                 result.put("success", false);
                 result.put("error", "不支持的操作类型: " + action);
@@ -257,20 +263,59 @@ public class ActionExecutorTool implements AgentTool {
         result.put("toUser", toUser);
         result.put("title", title);
         result.put("message", "通知已发送给 " + toUser);
-        result.put("collaborationTask", buildCollaborationTask(
-            "ai_notification_ack",
-            "system",
-            "medium",
-            "L2",
-            "负责人",
-            "确认通知已读并回应",
-            "关键通知已发送，需要确认接收人与处理状态",
-            "确认通知对象已读并反馈处理结果",
-            "/intelligence",
-            orderNo,
-            "今日内复核",
-            false
-        ));
+    }
+
+    private void executeExtendDelivery(Map<String, Object> args, Long tenantId, Map<String, Object> result) {
+        String orderNo = (String) args.get("orderNo");
+        if (orderNo == null || orderNo.isBlank()) {
+            result.put("success", false);
+            result.put("error", "缺少 orderNo 参数");
+            return;
+        }
+        ProductionOrder order = findOrder(tenantId, orderNo);
+        if (order == null) {
+            result.put("success", false);
+            result.put("error", "未找到订单");
+            return;
+        }
+        // AI 自动延期 3 天，作为安全缓冲
+        java.time.LocalDate newDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate().plusDays(3) : java.time.LocalDate.now().plusDays(3);
+        order.setExpectedShipDate(newDate);
+        order.setRemarks((order.getRemarks() == null ? "" : order.getRemarks() + "\n") + "[AI自动延期] 由于产能或物料风险，自动延期至 " + newDate);
+        productionOrderService.saveOrUpdateOrder(order);
+
+        logAction("production", "extend_delivery", "ProductionOrder", order.getId(), orderNo, "AI助手自动延期交货日期");
+
+        result.put("success", true);
+        result.put("message", "订单交期已成功延后3天至 " + newDate);
+    }
+
+    private void executeReplenishMaterial(Map<String, Object> args, Long tenantId, Map<String, Object> result) {
+        String orderNo = (String) args.get("orderNo");
+        if (orderNo == null || orderNo.isBlank()) {
+            result.put("success", false);
+            result.put("error", "缺少 orderNo 参数");
+            return;
+        }
+        
+        ProductionOrder order = findOrder(tenantId, orderNo);
+        if (order == null) {
+            result.put("success", false);
+            result.put("error", "未找到订单");
+            return;
+        }
+
+        // 调用 MaterialPurchaseService 真实生成物料需求单
+        try {
+            // 这里我们调用现有的生成需求接口，并设置 overwrite = false
+            materialPurchaseService.generateDemandByOrderId(order.getId(), false);
+            logAction("material", "replenish_material", "MaterialPurchase", "NEW", orderNo, "AI助手自动生成缺料补充采购单草稿");
+            result.put("success", true);
+            result.put("message", "已为订单 " + orderNo + " 自动生成缺料采购单，请前往采购模块审核");
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", "生成采购单失败: " + e.getMessage());
+        }
     }
 
         private ActionCenterResponse.ActionTask buildCollaborationTask(String taskCode,
@@ -308,6 +353,13 @@ public class ActionExecutorTool implements AgentTool {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("order_no", orderNo).eq("delete_flag", 0);
         if (tenantId != null) q.eq("tenant_id", tenantId);
+        
+        // 【安全增强】工厂账号隔离：外发工厂账号只能操作自己工厂的订单
+        String factoryId = UserContext.factoryId();
+        if (factoryId != null && !factoryId.isBlank()) {
+            q.eq("factory_id", factoryId);
+        }
+        
         return productionOrderService.getOne(q, false);
     }
 

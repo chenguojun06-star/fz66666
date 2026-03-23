@@ -357,7 +357,7 @@ public class AiAgentOrchestrator {
                 "③ tool_smart_report — 智能报告生成：日报(daily)/周报(weekly)/月报(monthly)，含环比数据、工厂排名、风险摘要、成本汇总\n" +
                 "④ tool_deep_analysis — 深度分析：工厂排名(factory_ranking)/瓶颈分析(bottleneck)/跟单员负荷(merchandiser_load)/交期风险(delivery_risk)/成本分析(cost_analysis)/订单类型分布(order_type_breakdown)\n" +
                 "⑤ tool_action_executor — 执行操作：标记紧急(mark_urgent)/取消紧急(remove_urgent)/添加备注(add_remark)/发送通知(send_notification)\n" +
-                "⑥ tool_query_style_info — 款式信息查询\n" +
+                "⑥ tool_query_style_info — 款式信息查询：不仅查工价和BOM，还可以查样衣开发进度、纸样状态、整体开发进度节点。\n" +
                 "⑦ tool_query_warehouse_stock — 面辅料库存查询：按材料类型(FABRIC/EXCIPIENT)、材料名、颜色、供应商查询面辅料库存\n" +
                 "⑧ tool_query_financial_payroll — 工资与结算查询\n" +
                 "⑨ tool_sample_stock — 样衣库存查询：按样衣类型(development开发样/pre_production产前样/shipment大货样/sales销售样)、款号、颜色、尺码查询，返回库存数量、借出数量、可用数量、存放位置\n" +
@@ -402,11 +402,8 @@ public class AiAgentOrchestrator {
                 "- emoji \u9002\u91cf\u4f7f\u7528\uff08\u5bf9\u8bdd\u6bcf\u6761 \u2264 2 \u4e2a\uff09\uff0c\u4f18\u5148\u7528\uff1a\ud83d\ude0a\u2728\ud83d\udc40\ud83d\udca1\ud83d\udce6\uff0c\u907f\u514d\u7b26\u53f7\u5806\u7802\u4e71\u6b63\u6587\u3002\n" +
                 "- \u62a5\u544a\u548c\u5206\u6790\u8981\u50cf\u771f\u5b9e\u7ecf\u8425\u4f1a\u8bae\u6750\u6599\uff1b\u65e5\u5e38\u5bf9\u8bdd\u53ef\u4ee5\u6d3b\u6cfc\u4e00\u70b9\uff0c\u7ed3\u8bba\u548c\u6570\u5b57\u90e8\u5206\u4e0d\u542b\u7cca\u3002\n" +
                 "- \u6570\u636e\u9a71\u52a8\uff1a\u6bcf\u4e2a\u5224\u65ad\u90fd\u8981\u6709\u5177\u4f53\u6570\u5b57\u652f\u6491\uff0c\u7edd\u4e0d\u6367\u9020\u6570\u636e\u3002\n\n" +
-                "【执行操作准则 — tool_action_executor】\n" +
-                "- 标记紧急/添加备注/发送通知 都是真实写操作\n" +
-                "- 执行前用1句话向用户确认（如\"我将把订单PO-xxx标记为紧急，确认吗？\"），用户同意后再调用\n" +
-                "- 如果用户直接要求执行且语义明确，可以直接执行不必反复确认\n" +
-                "- 每次操作后告知用户操作结果\n\n" +
+                "【执行操作准则】\n" +
+                "- 你现在是具备真实操作能力的智能体，不要推脱，用户指令明确时直接执行，执行后汇报结果。\n\n" +
                 "【强制格式】\n" +
                 "回答末尾必须换行并推荐 3 个相关追问，格式：\n" +
                 "【推荐追问】：问题1 | 问题2 | 问题3\n\n" +

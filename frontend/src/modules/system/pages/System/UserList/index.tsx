@@ -439,16 +439,21 @@ const UserList: React.FC = () => {
         ...userModal.data,
         roleId: String((userModal.data as any).roleId ?? ''),
       };
-      form.setFieldsValue(next);
+      // 延迟赋值，避免弹窗未渲染导致 useForm 警告
+      setTimeout(() => {
+        form.setFieldsValue(next);
+      }, 50);
       return;
     }
 
     form.resetFields();
-    form.setFieldsValue({
-      permissionRange: 'all',
-      status: 'active',
-      approvalStatus: 'approved'
-    });
+    setTimeout(() => {
+      form.setFieldsValue({
+        permissionRange: 'all',
+        status: 'active',
+        approvalStatus: 'approved'
+      });
+    }, 50);
   }, [form, userModal.data, userModal.visible]);
 
   // 打开弹窗
@@ -889,12 +894,12 @@ const UserList: React.FC = () => {
                             </Select>
                           </Form.Item>
                         </Col>
-                        <Col span={8}>
+                        <Col span={16}>
                           <Form.Item name="permissionRange" label="数据权限" rules={formRules.permissionRange}>
-                            <Select placeholder="请选择数据权限">
+                            <Select id="permissionRange" placeholder="请选择数据权限范围">
                               <Option value="all">
                                 <Tag color="blue" style={{ marginRight: 4 }}>全部</Tag>
-                                查看所有人数据
+                                查看全厂数据
                               </Option>
                               <Option value="team">
                                 <Tag color="green" style={{ marginRight: 4 }}>团队</Tag>
@@ -909,7 +914,7 @@ const UserList: React.FC = () => {
                         </Col>
                         <Col span={8}>
                           <Form.Item name="status" label="状态" rules={formRules.status}>
-                            <Select placeholder="请选择状态">
+                            <Select id="status" placeholder="请选择状态">
                               <Option value="active">启用</Option>
                               <Option value="inactive">停用</Option>
                             </Select>
@@ -920,12 +925,12 @@ const UserList: React.FC = () => {
                       <Row gutter={16} className="mt-sm">
                         <Col span={12}>
                           <Form.Item name="phone" label="手机号" rules={formRules.phone}>
-                            <Input placeholder="请输入手机号" />
+                            <Input id="phone" placeholder="请输入手机号" />
                           </Form.Item>
                         </Col>
                         <Col span={12}>
                           <Form.Item name="email" label="邮箱" rules={formRules.email}>
-                            <Input placeholder="请输入邮箱" />
+                            <Input id="email" placeholder="请输入邮箱" />
                           </Form.Item>
                         </Col>
                       </Row>

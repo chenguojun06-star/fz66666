@@ -202,6 +202,7 @@ const Register: React.FC = () => {
             hidden={!isApplyMode}
           >
             <Input
+              id="tenantName"
               prefix={<BankOutlined className="site-form-item-icon" />}
               placeholder="请输入工厂 / 公司名称"
               size="large"
@@ -217,6 +218,7 @@ const Register: React.FC = () => {
             hidden={!isApplyMode}
           >
             <Input
+              id="contactName"
               prefix={<IdcardOutlined className="site-form-item-icon" />}
               placeholder="请输入联系人姓名"
               size="large"
@@ -326,6 +328,7 @@ const Register: React.FC = () => {
             label="用户名"
           >
             <Input
+              id="username"
               prefix={<UserOutlined className="site-form-item-icon" />}
               placeholder="请输入用户名"
               size="large"
@@ -344,6 +347,7 @@ const Register: React.FC = () => {
             hidden={isApplyMode}
           >
             <Input
+              id="name"
               prefix={<IdcardOutlined className="site-form-item-icon" />}
               placeholder="请输入真实姓名"
               size="large"
@@ -362,9 +366,11 @@ const Register: React.FC = () => {
             label="密码"
           >
             <Input.Password
+              id="password"
               prefix={<LockOutlined className="site-form-item-icon" />}
-              placeholder="请输入密码"
+              placeholder="请输入密码（至少6位）"
               size="large"
+              allowClear
               disabled={submitting}
               autoComplete="new-password"
             />
@@ -376,7 +382,9 @@ const Register: React.FC = () => {
               { required: true, message: '请确认密码' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('password') === value) return Promise.resolve();
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
                   return Promise.reject(new Error('两次输入的密码不一致'));
                 },
               }),
@@ -384,9 +392,11 @@ const Register: React.FC = () => {
             label="确认密码"
           >
             <Input.Password
+              id="confirmPassword"
               prefix={<LockOutlined className="site-form-item-icon" />}
               placeholder="请再次输入密码"
               size="large"
+              allowClear
               disabled={submitting}
               autoComplete="new-password"
             />

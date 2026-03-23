@@ -493,13 +493,21 @@ const ProfileInfoTab: React.FC = () => {
                         </div>
                         <Form form={pwdForm} layout="vertical" requiredMark={false}>
                             <Form.Item label="原密码" name="oldPassword" rules={[{ required: true, message: '请输入原密码' }]}>
-                                <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
+                                <Input.Password id="oldPassword" placeholder="请输入当前密码" autoComplete="current-password" />
                             </Form.Item>
                             <Form.Item label="新密码" name="newPassword" rules={[{ required: true, min: 6, message: '新密码不能少于6位' }]}>
-                                <Input.Password placeholder="请输入新密码（至少6位）" autoComplete="new-password" />
+                                <Input.Password id="newPassword" placeholder="请输入新密码（至少6位）" autoComplete="new-password" />
                             </Form.Item>
-                            <Form.Item label="确认新密码" name="confirmPassword" rules={[{ required: true, message: '请再次输入新密码' }]}>
-                                <Input.Password placeholder="请再次输入新密码" autoComplete="new-password" />
+                            <Form.Item label="确认新密码" name="confirmPassword" dependencies={['newPassword']} rules={[
+                                { required: true, message: '请再次输入新密码' },
+                                ({ getFieldValue }) => ({
+                                    validator(_, value) {
+                                        if (!value || getFieldValue('newPassword') === value) return Promise.resolve();
+                                        return Promise.reject(new Error('两次输入的密码不一致!'));
+                                    },
+                                }),
+                            ]}>
+                                <Input.Password id="confirmPassword" placeholder="请再次输入新密码" autoComplete="new-password" />
                             </Form.Item>
                             <Form.Item>
                                 <Button type="primary" onClick={changePassword} loading={savingPwd} icon={<LockOutlined />}>

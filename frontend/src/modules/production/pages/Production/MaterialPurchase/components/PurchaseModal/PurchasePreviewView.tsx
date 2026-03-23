@@ -21,7 +21,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             key: 'styleCover',
             width: 72,
             render: (_: any, record: any) => (
-              <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
+              <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={40} borderRadius={6} />
             )
           },
           {

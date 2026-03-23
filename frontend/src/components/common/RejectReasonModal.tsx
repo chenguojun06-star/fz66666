@@ -88,6 +88,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
           rules={required ? [{ required: true, message: `请输入${fieldLabel}` }] : []}
         >
           <Input.TextArea
+            id="reason"
             placeholder={placeholder}
             rows={4}
             maxLength={200}

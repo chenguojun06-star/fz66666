@@ -38,6 +38,7 @@ export interface UseProductionColumnsProps {
   stagnantOrderIds?: Map<string, number>;
   handleShareOrder: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
+  canManageOrderLifecycle?: boolean;
 }
 
 /**
@@ -54,6 +55,7 @@ export function useProductionColumns({
   stagnantOrderIds,
   handleShareOrder,
   handlePrintLabel,
+  canManageOrderLifecycle = false,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -698,26 +700,28 @@ export function useProductionColumns({
                 disabled: frozen,
                 onClick: () => { quickEditModal.open(record); },
               },
-              {
-                key: 'close',
-                label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
-                disabled: frozen,
-                onClick: () => handleCloseOrder(record),
-              },
-              ...(isSupervisorOrAbove ? [{
-                key: 'scrap',
-                label: completed ? '报废(已完成)' : '报废',
-                danger: true,
-                disabled: completed,
-                onClick: () => handleScrapOrder(record),
-              }] : []),
-              {
-                key: 'transfer',
-                label: '转单',
-                title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
-                disabled: frozen,
-                onClick: () => handleTransferOrder(record),
-              },
+              ...(canManageOrderLifecycle ? [
+                {
+                  key: 'close',
+                  label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
+                  disabled: frozen,
+                  onClick: () => handleCloseOrder(record),
+                },
+                ...(isSupervisorOrAbove ? [{
+                  key: 'scrap',
+                  label: completed ? '报废(已完成)' : '报废',
+                  danger: true,
+                  disabled: completed,
+                  onClick: () => handleScrapOrder(record),
+                }] : []),
+                {
+                  key: 'transfer',
+                  label: '转单',
+                  title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
+                  disabled: frozen,
+                  onClick: () => handleTransferOrder(record),
+                }
+              ] : []),
               {
                 key: 'share',
                 label: '🔗 分享',

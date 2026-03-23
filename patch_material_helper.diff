@@ -1,0 +1,10 @@
+--- backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java
++++ backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java
+@@ -53,6 +53,7 @@
+                             .select(ProductionOrder::getId)
+                             .eq(ctxTenantId != null, ProductionOrder::getTenantId, ctxTenantId)
+                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
++                            .ne(ProductionOrder::getStatus, "scrapped")
+                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+             if (factoryOrderIds.isEmpty()) {

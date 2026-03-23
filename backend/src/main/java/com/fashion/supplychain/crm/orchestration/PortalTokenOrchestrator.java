@@ -16,7 +16,6 @@ import cn.hutool.jwt.JWT;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.Map;
 
 /**
@@ -36,7 +35,6 @@ public class PortalTokenOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private static final SecureRandom RANDOM = new SecureRandom();
     /** 令牌默认有效期（天） */
     private static final int DEFAULT_EXPIRE_DAYS = 30;
 

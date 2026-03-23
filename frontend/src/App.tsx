@@ -28,7 +28,7 @@ const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
 
 import { SelectionCenter } from './modules/selection';
 import {
-  WarehouseDashboard,
+  // WarehouseDashboard,
   MaterialInventory,
   MaterialDatabase,
   FinishedInventory,
@@ -253,7 +253,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
           <Route path={paths.selectionBatch} element={<SelectionCenter />} />
 
-          <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
           <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />
           <Route path={paths.materialDatabase} element={<Suspense fallback={<Spin />}><MaterialDatabase /></Suspense>} />
           <Route path={paths.finishedInventory} element={<Suspense fallback={<Spin />}><FinishedInventory /></Suspense>} />

@@ -77,6 +77,8 @@ const ProductionList: React.FC = () => {
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
+  const isFactoryAccount = !!(user as any)?.factoryId;
+  const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const navigate = useNavigate();
   const location = useLocation();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
@@ -686,6 +688,7 @@ const ProductionList: React.FC = () => {
     stagnantOrderIds,
     handleShareOrder,
     handlePrintLabel,
+    canManageOrderLifecycle,
   });
 
   // 根据 visibleColumns 过滤列
@@ -1135,7 +1138,7 @@ const ProductionList: React.FC = () => {
                 return [
                 { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
                 { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
-                { key: 'close', label: '关单', disabled: frozen, title: frozen ? frozenTitle : '关单', onClick: () => { handleCloseOrder(record); } },
+                ...(canManageOrderLifecycle ? [{ key: 'close', label: '关单', disabled: frozen, title: frozen ? frozenTitle : '关单', onClick: () => { handleCloseOrder(record); } }] : []),
                 { key: 'divider1', type: 'divider' as const, label: '' },
                 { key: 'edit', label: '编辑', disabled: frozen, title: frozen ? frozenTitle : '编辑', onClick: () => { quickEditModal.open(record); } },
                 { key: 'share', label: '分享', disabled: frozen, title: frozen ? frozenTitle : '分享', onClick: () => { void handleShareOrder(record); } },

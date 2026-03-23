@@ -186,12 +186,20 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
+    title: '采购管理',
+    key: 'procurement',
+    icon: React.createElement(ShoppingCartOutlined),
+    items: [
+      { label: '面辅料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
+      { label: '供应商管理', path: paths.factory, icon: React.createElement(TeamOutlined) },
+    ],
+  },
+  {
     title: '生产管理',
     key: 'production',
     icon: React.createElement(BuildOutlined),
     items: [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
-      { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '生产进度', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
@@ -202,7 +210,6 @@ export const menuConfig: MenuSection[] = [
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [
-      { label: '数据看板', path: paths.warehouseDashboard, icon: React.createElement(DashboardOutlined) },
       { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料资料库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
@@ -240,7 +247,6 @@ export const menuConfig: MenuSection[] = [
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
-      { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },

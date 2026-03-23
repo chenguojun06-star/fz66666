@@ -49,17 +49,20 @@ public class MaterialPurchaseOrchestratorHelper {
     public Map<String, Object> listWithEnrichment(Map<String, Object> params) {
         // 工厂账号隔离：只查询该工厂的采购记录
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        Long ctxTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (StringUtils.hasText(ctxFactoryId)) {
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
+                            .eq(ctxTenantId != null, ProductionOrder::getTenantId, ctxTenantId)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
             if (factoryOrderIds.isEmpty()) {
                 return buildPageResult(List.of(), new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
             }
-            params = new HashMap<>(params != null ? params : new HashMap<>());
+            params = params != null ? new HashMap<>(params) : new HashMap<>();
             params.put("_factoryOrderIds", factoryOrderIds);
         }
         IPage<MaterialPurchase> page = materialPurchaseService.queryPage(params);

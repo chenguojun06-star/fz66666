@@ -1,5 +1,6 @@
-import React from 'react';
-import { Button, DatePicker, Input, Select, Space } from 'antd';
+import React, { useState } from 'react';
+import { Button, DatePicker, Input, Select, Space, Radio } from 'antd';
+import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import './StandardSearchBar.css';
 
@@ -8,7 +9,7 @@ const { RangePicker } = DatePicker;
 export type StandardSearchOption = { label: string; value: string };
 
 export interface StandardSearchBarProps {
-  searchValue: string;
+  searchValue?: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
   dateValue?: [Dayjs | null, Dayjs | null] | null;
@@ -17,6 +18,7 @@ export interface StandardSearchBarProps {
   onStatusChange?: (value: string) => void;
   statusOptions?: StandardSearchOption[];
   showDate?: boolean;
+  showDatePresets?: boolean;
   showStatus?: boolean;
   showSearchButton?: boolean;
   onSearch?: () => void;
@@ -34,32 +36,82 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   onStatusChange,
   statusOptions = [],
   showDate = true,
+  showDatePresets = false,
   showStatus = true,
   showSearchButton = false,
   onSearch,
   showResetButton = false,
   onReset,
 }) => {
+  const [presetValue, setPresetValue] = useState<string>('');
+
+  const handlePresetChange = (e: any) => {
+    const val = e.target.value;
+    setPresetValue(val);
+    if (!onDateChange) return;
+
+    const today = dayjs();
+    switch (val) {
+      case 'today':
+        onDateChange([today.startOf('day'), today.endOf('day')]);
+        break;
+      case 'week':
+        onDateChange([today.startOf('week'), today.endOf('week')]);
+        break;
+      case 'month':
+        onDateChange([today.startOf('month'), today.endOf('month')]);
+        break;
+      case 'year':
+        onDateChange([today.startOf('year'), today.endOf('year')]);
+        break;
+      default:
+        onDateChange(null);
+    }
+  };
+
+  const handleDateChange = (value: any) => {
+    setPresetValue('');
+    if (onDateChange) onDateChange(value as [Dayjs | null, Dayjs | null] | null);
+  };
+
   return (
     <div className="standard-search-bar">
       <Space size={12} wrap className="standard-search-row">
-        <Input
-          id="standard-search-keyword"
-          name="keyword"
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={searchPlaceholder}
-          className="standard-search-input"
-          allowClear
-          onPressEnter={onSearch}
-        />
-        {showDate ? (
-          <RangePicker
-            id="standard-search-date"
-            value={dateValue || null}
-            onChange={(value) => onDateChange && onDateChange(value as [Dayjs | null, Dayjs | null] | null)}
-            className="standard-search-date"
+        {searchValue !== undefined && (
+          <Input
+            id="standard-search-keyword"
+            name="keyword"
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="standard-search-input"
+            allowClear
+            onPressEnter={onSearch}
           />
+        )}
+        {showDate ? (
+          <Space size={8}>
+            {showDatePresets && (
+              <Radio.Group 
+                value={presetValue} 
+                onChange={handlePresetChange} 
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+              >
+                <Radio.Button value="today">日</Radio.Button>
+                <Radio.Button value="week">周</Radio.Button>
+                <Radio.Button value="month">月</Radio.Button>
+                <Radio.Button value="year">年</Radio.Button>
+              </Radio.Group>
+            )}
+            <RangePicker
+              id="standard-search-date"
+              value={dateValue || null}
+              onChange={handleDateChange}
+              className="standard-search-date"
+            />
+          </Space>
         ) : null}
         {showStatus ? (
           <Select
@@ -78,7 +130,10 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
           </Button>
         )}
         {showResetButton && (
-          <Button onClick={onReset}>
+          <Button onClick={() => {
+            setPresetValue('');
+            onReset && onReset();
+          }}>
              重置
           </Button>
         )}

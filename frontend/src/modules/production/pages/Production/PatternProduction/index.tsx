@@ -191,7 +191,7 @@ const PatternProduction: React.FC = () => {
       // 使用 requestAnimationFrame 或 setTimeout
       const timer = setTimeout(() => {
         form.setFieldsValue(progressModal.data!.progressNodes);
-      }, 0);
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [progressModal.visible, progressModal.data, form]);

@@ -191,7 +191,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
     <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} confirmLoading={loading}>
       <Form form={form} onFinish={handleFinish} layout="vertical">
         <Form.Item name="orderId" label="生产订单" rules={[{ required: true }]}>
-            <Select onChange={handleOrderChange} showSearch optionFilterProp="children">
+            <Select id="orderId" onChange={handleOrderChange} showSearch optionFilterProp="children">
                 {orders.map(o => <Select.Option key={o.id} value={o.id}>{o.orderNo} - {o.styleNo}</Select.Option>)}
             </Select>
         </Form.Item>

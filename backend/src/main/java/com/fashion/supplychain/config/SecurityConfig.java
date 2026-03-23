@@ -305,7 +305,24 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
+        registry.addInterceptor(new HostCheckInterceptor()).order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
         registry.addInterceptor(new UserContextInterceptor());
+    }
+
+    private class HostCheckInterceptor implements HandlerInterceptor {
+        @Override
+        public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+                                 @NonNull Object handler) throws Exception {
+            String host = request.getHeader("Host");
+            // 屏蔽微信云托管的默认测试域名，强制要求走自定义域名或本地访问
+            if (host != null && host.contains("tcloudbase.com")) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\": 403, \"msg\": \"Forbidden: Please use official domain\"}");
+                return false;
+            }
+            return true;
+        }
     }
 
     // 将匿名内部类提取为静态内部类
@@ -356,11 +373,13 @@ public class SecurityConfig implements WebMvcConfigurer {
             // 背景：旧 JWT 内嵌 tenantId/factoryId 非 null，原有 (tenantId==null||factoryId==null) 条件会短路跳过，
             //       导致 isTenantOwner 永远从 JWT 读到 false → isTopAdmin() 错误返回 false → 403
             if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin()) {
-                String cacheKey = ctx.getUserId();
+                String cacheKey = "u:" + ctx.getUserId();
                 // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin + "|" + factoryId
                 String cached = tenantInfoCache.get(cacheKey);
+                boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 4 || "".equals(cached.split("\\|", -1)[3]));
+                boolean shouldRefreshFromDb = cached == null || isOldCache;
                 boolean wasCacheMiss = (cached == null);
-                if (cached == null) {
+                if (shouldRefreshFromDb) {
                     try {
                         List<String> rows = jdbcTemplate.query(
                             "SELECT tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user WHERE id = ? LIMIT 1",
@@ -369,7 +388,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 Boolean owner = rs.getObject(2) != null && rs.getInt(2) == 1;
                                 Boolean superAdm = rs.getObject(3) != null && rs.getInt(3) == 1;
                                 String fid = rs.getString(4);
-                                return (tid == null ? "" : tid.toString()) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "" : fid);
+                                return (tid == null ? "" : tid.toString()) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "null" : fid);
                             },
                             Long.parseLong(ctx.getUserId())
                         );
@@ -382,18 +401,18 @@ public class SecurityConfig implements WebMvcConfigurer {
                     }
                 }
                 if (cached != null) {
-                    String[] parts = cached.split("\\|", 4);
+                    String[] parts = cached.split("\\|", -1);
                     if (ctx.getTenantId() == null && !parts[0].isEmpty()) {
                         ctx.setTenantId(Long.parseLong(parts[0]));
                     }
-                    if (parts.length > 1) {
+                    if (parts.length > 1 && !parts[1].isEmpty()) {
                         ctx.setTenantOwner(Boolean.parseBoolean(parts[1]));
                     }
-                    if (parts.length > 2) {
+                    if (parts.length > 2 && !parts[2].isEmpty()) {
                         ctx.setSuperAdmin(Boolean.parseBoolean(parts[2]));
                     }
-                    if (parts.length > 3 && !parts[3].isEmpty()) {
-                        ctx.setFactoryId(parts[3]);
+                    if (parts.length > 3 && org.springframework.util.StringUtils.hasText(parts[3]) && !"null".equals(parts[3])) {
+                        ctx.setFactoryId(parts[3].trim());
                     }
                     if (wasCacheMiss) {
                         log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
@@ -439,18 +458,22 @@ public class SecurityConfig implements WebMvcConfigurer {
                     && org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
                 String cacheKey = "u:" + ctx.getUsername();
                 String cached = tenantInfoCache.get(cacheKey);
-                if (cached == null) {
+                boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 5 || "".equals(cached.split("\\|", -1)[4]));
+                if (cached == null || isOldCache) {
                     try {
                         List<String> rows = jdbcTemplate.query(
-                            "SELECT id, tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user WHERE username = ? LIMIT 1",
+                            "SELECT id, tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user " +
+                                    "WHERE username = ? OR name = ? ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END LIMIT 1",
                             (rs, i) -> {
                                 long uid = rs.getLong(1);
                                 Long tid = rs.getObject(2, Long.class);
                                 Boolean owner = rs.getObject(3) != null && rs.getInt(3) == 1;
                                 Boolean superAdm = rs.getObject(4) != null && rs.getInt(4) == 1;
                                 String fid = rs.getString(5);
-                                return uid + "|" + (tid == null ? "" : tid) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "" : fid);
+                                return uid + "|" + (tid == null ? "" : tid) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "null" : fid);
                             },
+                            ctx.getUsername(),
+                            ctx.getUsername(),
                             ctx.getUsername()
                         );
                         if (!rows.isEmpty()) {
@@ -462,7 +485,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                     }
                 }
                 if (cached != null) {
-                    String[] parts = cached.split("\\|", 5);
+                    String[] parts = cached.split("\\|", -1);
                     // parts: [0]=id, [1]=tenantId, [2]=isTenantOwner, [3]=isSuperAdmin, [4]=factoryId
                     if (parts.length > 0 && !parts[0].isEmpty()) {
                         ctx.setUserId(parts[0]);  // 旧JWT缺失uid字段时从DB补齐
@@ -470,14 +493,14 @@ public class SecurityConfig implements WebMvcConfigurer {
                     if (ctx.getTenantId() == null && parts.length > 1 && !parts[1].isEmpty()) {
                         ctx.setTenantId(Long.parseLong(parts[1]));
                     }
-                    if (parts.length > 2) {
+                    if (parts.length > 2 && !parts[2].isEmpty()) {
                         ctx.setTenantOwner(Boolean.parseBoolean(parts[2]));
                     }
-                    if (parts.length > 3) {
+                    if (parts.length > 3 && !parts[3].isEmpty()) {
                         ctx.setSuperAdmin(Boolean.parseBoolean(parts[3]));
                     }
-                    if (parts.length > 4 && !parts[4].isEmpty()) {
-                        ctx.setFactoryId(parts[4]);
+                    if (parts.length > 4 && org.springframework.util.StringUtils.hasText(parts[4]) && !"null".equals(parts[4])) {
+                        ctx.setFactoryId(parts[4].trim());
                     }
                     log.info("[UserContextInterceptor] username-fallback 补全: userId={}, username={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
                             ctx.getUserId(), ctx.getUsername(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());

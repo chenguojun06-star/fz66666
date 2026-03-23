@@ -262,9 +262,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
 
         {/* 添加 / 编辑表单 */}
         {formOpen && (
-          <Card
-            title={editing ? '编辑账户' : '添加账户'}
-            size="small"
+          <div
             style={{ marginTop: 16 }}
           >
             <Form form={form} layout="vertical" requiredMark="optional">
@@ -380,7 +378,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
                 </Button>
               </Space>
             </Form>
-          </Card>
+          </div>
         )}
       </div>
     </ResizableModal>

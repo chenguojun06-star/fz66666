@@ -47,6 +47,25 @@ public class DuplicateScanPreventer {
     }
 
     /**
+     * AI 财务风控拦截器 - 检查单次扫码数量与标准工时的合理性
+     * 防止工人刷单：例如 1 小时内扫了 1000 件耗时 20 分钟的工序
+     */
+    public void validateReasonableOutput(String operatorId, Integer quantity, Integer standardMinutes) {
+        if (quantity == null || standardMinutes == null || quantity <= 0 || standardMinutes <= 0) {
+            return;
+        }
+        
+        // 假设正常人最高效率是标准的 2 倍
+        double expectedMaxPerHour = (60.0 / standardMinutes) * 2; 
+        
+        // 如果本次扫码的数量超过了 4 小时的极限产量，则拦截
+        if (quantity > expectedMaxPerHour * 4) {
+            log.warn("[AI 财务风控] 拦截异常扫码: 操作人={}, 数量={}, 标准工时={}", operatorId, quantity, standardMinutes);
+            throw new IllegalStateException("AI 财务风控拦截：单次扫码数量超出了合理的人类极限产能，请拆分批次或联系厂长核实。");
+        }
+    }
+
+    /**
      * 检查是否存在近期重复扫码
      *
      * 防重复算法（优化版 2026-02-15）：

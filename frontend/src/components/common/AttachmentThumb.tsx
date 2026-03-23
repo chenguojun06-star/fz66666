@@ -49,22 +49,30 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId, src }) => {
   return (
     <div
       style={{
-        width: 48,
-        minHeight: 28,
+        width: 40,
+        height: 40,
         borderRadius: 4,
         overflow: 'hidden',
         background: 'var(--color-bg-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        const validUrl = getFullAuthedFileUrl(url);
+        if (validUrl) {
+          window.open(validUrl, '_blank');
+        }
       }}
     >
       {loading ? (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>...</span>
+        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
-        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: 'auto', display: 'block' }} onError={() => setUrl(null)} />
+        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setUrl(null)} />
       ) : (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>无图</span>
+        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
       )}
     </div>
   );

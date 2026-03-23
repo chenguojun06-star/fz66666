@@ -648,7 +648,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 label="领取人"
                 name="assignee"
               >
-                <Input placeholder="请输入领取人姓名" />
+                <Input id="assignee" placeholder="请输入领取人姓名" />
               </Form.Item>
             </Col>
 
@@ -657,7 +657,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 label="完成时间"
                 name="completedTime"
               >
-                <Input placeholder="例如：2026-01-28 14:30:00" />
+                <Input id="completedTime" placeholder="例如：2026-01-28 14:30:00" />
               </Form.Item>
             </Col>
 
@@ -667,7 +667,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 name="status"
                 rules={[{ required: true, message: '请选择状态' }]}
               >
-                <Select placeholder="请选择状态">
+                <Select id="status" placeholder="请选择状态">
                   {statusOptions.map(opt => (
                     <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                   ))}

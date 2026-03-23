@@ -1346,25 +1346,26 @@ const StyleBomTab: React.FC<Props> = ({
                 >
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                     <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
-                      <Input />
+                      <Input id="materialCode" />
                     </Form.Item>
                     <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
-                      <Input />
+                      <Input id="materialName" />
                     </Form.Item>
                     <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
-                      <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" />
+                      <DictAutoComplete dictType="material_unit" placeholder="请输入或选择单位" id="unit" />
                     </Form.Item>
                     <Form.Item name="supplierId" hidden>
-                      <Input />
+                      <Input id="supplierId" />
                     </Form.Item>
                     <Form.Item name="supplierContactPerson" hidden>
-                      <Input />
+                      <Input id="supplierContactPerson" />
                     </Form.Item>
                     <Form.Item name="supplierContactPhone" hidden>
-                      <Input />
+                      <Input id="supplierContactPhone" />
                     </Form.Item>
                     <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
                       <SupplierSelect
+                        id="supplierName"
                         placeholder="选择供应商"
                         onChange={(value, option) => {
                           if (option) {
@@ -1379,6 +1380,7 @@ const StyleBomTab: React.FC<Props> = ({
                     </Form.Item>
                     <Form.Item name="materialType" label="类型" initialValue="accessory">
                       <Select
+                        id="materialType"
                         options={[
                           { value: 'fabric', label: 'fabric' },
                           { value: 'lining', label: 'lining' },
@@ -1387,19 +1389,19 @@ const StyleBomTab: React.FC<Props> = ({
                       />
                     </Form.Item>
                     <Form.Item name="color" label="颜色">
-                      <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" />
+                      <DictAutoComplete dictType="color" placeholder="请输入或选择颜色" id="color" />
                     </Form.Item>
                     <Form.Item name="specifications" label="规格">
-                      <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" />
+                      <DictAutoComplete dictType="material_specification" placeholder="请输入或选择规格" id="specifications" />
                     </Form.Item>
                     <Form.Item name="fabricComposition" label="成分">
-                      <Input placeholder="如：100%棉" />
+                      <Input id="fabricComposition" placeholder="如：100%棉" />
                     </Form.Item>
                     <Form.Item name="unitPrice" label="单价" initialValue={0}>
-                      <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
+                      <InputNumber id="unitPrice" min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                     </Form.Item>
                     <Form.Item name="remark" label="备注">
-                      <Input />
+                      <Input id="remark" />
                     </Form.Item>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

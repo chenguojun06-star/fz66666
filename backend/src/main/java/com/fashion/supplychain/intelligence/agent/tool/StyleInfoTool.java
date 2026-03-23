@@ -34,7 +34,7 @@ public class StyleInfoTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("根据款号获取款式的基本信息、单价、工序列表、IE标准工时、工价等全景数据。当用户询问某一款式的价格、工序或相关详情时调用此工具。");
+        function.setDescription("根据款号获取款式的全景数据：基本信息、开发阶段状态（纸样/样衣进度）、工序列表、IE标准工时、工价等。当用户询问某一款式的开发进度、价格、工序或相关详情时调用此工具。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         Map<String, Object> props = new HashMap<>();
 
@@ -84,6 +84,12 @@ public class StyleInfoTool implements AgentTool {
         sb.append("品类: ").append(info.getCategory() != null ? info.getCategory() : "无").append("\n");
         sb.append("款式单价: ").append(info.getPrice() != null ? info.getPrice().toString() : "未设置").append("\n");
         sb.append("开发周期: ").append(info.getCycle() != null ? info.getCycle() : "无").append("\n");
+        
+        // 追加开发状态进度信息
+        sb.append("纸样状态: ").append(info.getPatternStatus() != null ? info.getPatternStatus() : "未开始").append("\n");
+        sb.append("样衣状态: ").append(info.getSampleStatus() != null ? info.getSampleStatus() : "未开始").append("\n");
+        sb.append("样衣进度: ").append(info.getSampleProgress() != null ? info.getSampleProgress() + "%" : "0%").append("\n");
+        sb.append("开发整体进度节点: ").append(info.getProgressNode() != null ? info.getProgressNode() : "未知").append("\n");
 
         if (processes != null && !processes.isEmpty()) {
             sb.append("\n工序及标准工时/工价：\n");

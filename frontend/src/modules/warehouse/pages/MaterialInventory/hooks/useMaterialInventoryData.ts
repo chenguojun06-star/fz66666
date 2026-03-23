@@ -96,7 +96,7 @@ export function useMaterialInventoryData() {
   const [safetyStockValue, setSafetyStockValue] = useState<number>(100);
   const [safetyStockSubmitting, setSafetyStockSubmitting] = useState(false);
 
-  const [stats, setStats] = useState({ totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0 });
+  const [stats, setStats] = useState({ totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0, todayInCount: 0, todayOutCount: 0 });
 
   const fetchData = async () => {
     setLoading(true);
@@ -132,7 +132,9 @@ export function useMaterialInventoryData() {
           totalValue: list.reduce((sum: number, i: any) => sum + (i.totalValue || 0), 0),
           totalQty: list.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0),
           lowStockCount: list.filter((i: any) => (i.quantity || 0) < (i.safetyStock || 100)).length,
-          materialTypes: list.length
+          materialTypes: list.length,
+          todayInCount: res.data?.todayInCount || 0,
+          todayOutCount: res.data?.todayOutCount || 0,
         });
         if (showSmartErrorNotice) setSmartError(null);
       }

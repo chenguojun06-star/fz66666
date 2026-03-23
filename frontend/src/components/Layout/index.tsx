@@ -162,7 +162,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     [paths.cutting]: 'menu.items.cutting',
     [paths.progressDetail]: 'menu.items.progressDetail',
     [paths.warehousing]: 'menu.items.warehousing',
-    [paths.warehouseDashboard]: 'menu.items.warehouseDashboard',
     [paths.materialInventory]: 'menu.items.materialInventory',
     [paths.materialDatabase]: 'menu.items.materialDatabase',
     [paths.finishedInventory]: 'menu.items.finishedInventory',
@@ -185,6 +184,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuI18nMapBySectionKey = useMemo<Record<string, string>>(() => ({
     dashboard: 'menu.sections.dashboard',
     basic: 'menu.sections.basic',
+    procurement: 'menu.sections.procurement',
     production: 'menu.sections.production',
     warehouse: 'menu.sections.warehouse',
     finance: 'menu.sections.finance',
@@ -238,7 +238,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
 
   // 工厂账号可见的菜单分组键（其余整组隐藏）
-  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['basic', 'production', 'finance', 'system']);
+  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['basic', 'procurement', 'production', 'finance', 'system']);
   // 工厂账号可见的具体路径白名单
   const FACTORY_VISIBLE_PATHS = new Set<string>([
     paths.productionList,          // /production（我的订单）
@@ -269,7 +269,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (section.items) {
           // 工厂账号：只要白名单内有一项在该分组，整个分组可见
           return section.items.some((item) =>
-            (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(item.path)) || hasPermissionForPath(item.path)
+            (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) || hasPermissionForPath(item.path)
           );
         }
         return hasPermissionForPath(section.path!);
@@ -280,11 +280,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             .filter((item) => {
               if ((item as any).superAdminOnly && !isSuperAdmin) return false;
               // 外发工厂账号：只显示白名单内的页面
-              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(item.path)) return false;
+              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) return false;
               // 租户模块白名单：路径不在白名单内则隐藏
               if (!isTenantModuleEnabled(item.path)) return false;
               // 工厂账号白名单内的路径直接放行，不受权限码约束
-              if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(item.path)) return true;
+              if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) return true;
               return hasPermissionForPath(item.path);
             })
             .map((item) => ({

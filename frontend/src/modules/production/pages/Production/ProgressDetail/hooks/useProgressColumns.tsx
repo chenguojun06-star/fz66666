@@ -110,6 +110,7 @@ interface UseProgressColumnsParams {
   deliveryRiskMap?: Map<string, DeliveryRiskItem>;
   /** 分享订单给客户的回调 */
   onShareOrder?: (order: ProductionOrder) => void;
+  canManageOrderLifecycle?: boolean;
 }
 
 /**
@@ -133,6 +134,7 @@ export const useProgressColumns = ({
   stagnantOrderIds,
   deliveryRiskMap,
   onShareOrder,
+  canManageOrderLifecycle = false,
 }: UseProgressColumnsParams) => {
   const navigate = useNavigate();
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
@@ -608,7 +610,7 @@ export const useProgressColumns = ({
                 disabled: frozen,
                 onClick: () => { setQuickEditRecord(record); setQuickEditVisible(true); },
               },
-              ...(isSupervisorOrAbove
+              ...(canManageOrderLifecycle
                 ? [{ key: 'close', label: '关单', disabled: frozen, onClick: () => handleCloseOrder(record) }]
                 : []),
               {

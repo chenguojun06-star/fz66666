@@ -536,6 +536,7 @@ const MaterialDatabasePage: React.FC = () => {
                   onDateChange={setDateRange}
                   statusValue={statusValue}
                   onStatusChange={setStatusValue}
+                  showDatePresets={false}
                   statusOptions={[
                     { label: '全部', value: '' },
                     { label: '面料', value: 'fabric' },

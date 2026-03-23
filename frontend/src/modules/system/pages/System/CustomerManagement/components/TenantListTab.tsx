@@ -123,7 +123,6 @@ const TenantListTab: React.FC = () => {
       { path: '/production/warehousing', label: '质检入库' },
     ]},
     { key: 'warehouse', title: '仓库管理', paths: [
-      { path: '/warehouse/dashboard', label: '数据看板' },
       { path: '/warehouse/material', label: '面辅料进销存' },
       { path: '/warehouse/material-database', label: '物料资料库' },
       { path: '/warehouse/finished', label: '成品进销存' },
@@ -179,10 +178,10 @@ const TenantListTab: React.FC = () => {
 
   useEffect(() => {
     if (!approveModal.visible || !approveModal.data) {
-      approveForm.resetFields();
+      setTimeout(() => approveForm?.resetFields(), 50);
       return;
     }
-    approveForm.setFieldsValue({ planType: 'TRIAL', trialDays: 30 });
+    setTimeout(() => approveForm?.setFieldsValue({ planType: 'TRIAL', trialDays: 30 }), 50);
   }, [approveForm, approveModal.data, approveModal.visible]);
 
   const handleCreate = async () => {

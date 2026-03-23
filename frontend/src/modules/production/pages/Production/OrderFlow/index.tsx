@@ -406,7 +406,7 @@ const OrderFlow: React.FC = () => {
               styleCover={(order as any)?.styleCover || null}
               color={String((order as any)?.color || '').trim()}
               totalQuantity={toNumberSafe((order as any)?.orderQuantity)}
-              coverSize={160}
+              coverSize={64}
               extraFields={[
                 { label: '加工厂', value: (order as any)?.factoryName || '-' },
                 { label: '订单状态', value: orderStatusTag((order as any)?.status) },

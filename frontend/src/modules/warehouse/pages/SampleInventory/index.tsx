@@ -208,6 +208,7 @@ const SampleInventory: React.FC = () => {
                   onDateChange={setDateRange}
                   statusValue={sampleType || ''}
                   onStatusChange={(value) => setSampleType(value || undefined)}
+                  showDatePresets={false}
                   statusOptions={[
                     { label: '全部', value: '' },
                     ...Object.entries(SampleTypeMap).map(([key, label]) => ({

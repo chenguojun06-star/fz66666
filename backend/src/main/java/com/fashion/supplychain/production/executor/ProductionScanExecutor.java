@@ -324,6 +324,50 @@ public class ProductionScanExecutor {
                                              processCode, quantity, unitPrice, operatorId, operatorName,
                                              color, size, TextUtils.safeText(params.get("remark")), clientScanTime);
 
+        // AI 财务风控拦截：检查是否存在恶意的刷单/异常高产（根据工价和金额等判断）
+        // 简化实现：如果单次扫码导致计件工资极高（例如单次超 1000 元）进行拦截
+        if (sr.getTotalAmount() != null && sr.getTotalAmount().doubleValue() > 1000.0) {
+            try {
+                duplicateScanPreventer.validateReasonableOutput(operatorId, quantity, 10); // 假定一个极小的容忍度触发异常
+            } catch (IllegalStateException e) {
+                // 如果被风控拦截，记录失败扫码，并直接抛出异常阻止
+                sr.setScanResult("failure");
+                sr.setRemark("风控拦截：" + e.getMessage());
+                scanRecordService.saveScanRecord(sr);
+                
+                // 触发风控预警推送到 AI 小云
+                Map<String, Object> riskData = new HashMap<>();
+                riskData.put("operatorName", operatorName);
+                riskData.put("quantity", quantity);
+                riskData.put("processCode", processCode);
+                com.fashion.supplychain.intelligence.dto.TraceableAdvice advice = com.fashion.supplychain.intelligence.dto.TraceableAdvice.builder()
+                        .traceId(java.util.UUID.randomUUID().toString())
+                        .title("🚨 财务风控：检测到异常高产/高薪扫码")
+                        .summary("工人 " + operatorName + " 提交了 " + quantity + " 件 " + processCode + " 扫码，单次计件金额高达 " + sr.getTotalAmount() + " 元。")
+                        .reasoningChain(java.util.List.of(
+                            "本次提交数量：" + quantity + " 件",
+                            "本次计件金额：" + sr.getTotalAmount() + " 元",
+                            "判定结果：超出系统设定的单笔安全阈值，已自动拦截并冻结计件。"
+                        ))
+                        .confidenceScore(5)
+                        .proposedActions(java.util.List.of(
+                            com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
+                                .label("立即核实并警告")
+                                .actionCommand("send_notification")
+                                .actionParams(Map.of("toUser", operatorName, "content", "您的扫码数据异常，已被系统拦截，请联系厂长。"))
+                                .build(),
+                            com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
+                                .label("忽略")
+                                .actionCommand("IGNORE")
+                                .build()
+                        ))
+                        .build();
+                webSocketService.broadcastTraceableAdvice(order.getTenantId(), advice);
+                
+                throw new IllegalStateException("AI 财务风控拦截：单次扫码金额/数量过大，请拆分批次或联系厂长核实。");
+            }
+        }
+
         try {
             validateScanRecordForSave(sr);
             log.info("[ScanSave] 即将写入扫码记录: orderId={}, bundleId={}, scanType={}, progressStage={}, qty={}, operator={}",

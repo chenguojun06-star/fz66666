@@ -183,7 +183,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         showOrderNo={!isSamplePurchase}
         hideEmptyColor={isSamplePurchase}
         hideSizeBlockWhenNoRealSize={isSamplePurchase}
-        coverSize={160}
+        coverSize={80}
       />
 
       <Card
@@ -454,12 +454,12 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               {invoiceUrls.map((url, idx) => (
                 <div
                   key={url + idx}
-                  style={{ position: 'relative', width: 120, height: 90 }}
+                  style={{ position: 'relative', width: 64, height: 64 }}
                 >
                   <Image
                     src={url}
-                    width={120}
-                    height={90}
+                    width={64}
+                    height={64}
                     style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
                     preview={{ mask: '预览' }}
                   />

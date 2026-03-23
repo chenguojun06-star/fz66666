@@ -137,6 +137,12 @@ public class ProductionProgressTool implements AgentTool {
                 LocalDate ed = LocalDate.parse(endDate);
                 query.le("create_time", LocalDateTime.of(ed, LocalTime.MAX));
             }
+
+            // 【安全增强】工厂级数据隔离
+            String factoryId = UserContext.factoryId();
+            if (factoryId != null && !factoryId.isBlank()) {
+                query.eq("factory_id", factoryId);
+            }
             Long tenantId = UserContext.tenantId();
             if (tenantId != null) {
                 query.eq("tenant_id", tenantId);

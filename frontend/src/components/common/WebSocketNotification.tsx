@@ -103,6 +103,15 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe, notification]);
 
+  // ⚠️ AI小云决策卡片 (TraceableAdvice) 推送处理
+  useEffect(() => {
+    return subscribe('ai:traceable_advice', (msg) => {
+      // 通过自定义事件广播给 GlobalAiAssistant 组件去渲染 UI
+      const event = new CustomEvent('ai:traceable_advice', { detail: msg.payload });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe]);
+
   // 不渲染任何 DOM
   return null;
 };

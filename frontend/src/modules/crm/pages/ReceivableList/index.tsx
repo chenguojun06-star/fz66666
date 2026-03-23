@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import {
   CheckCircleOutlined, DollarOutlined, ExclamationCircleOutlined,
   PlusOutlined, WarningOutlined,
@@ -106,8 +106,7 @@ const CreateReceivableModal: React.FC<{
           </Col>
         </Row>
         <Form.Item name="description" label="备注">
-          <input placeholder="备注说明" className="ant-input" style={{ width: '100%' }}
-            onChange={e => form.setFieldValue('description', e.target.value)} />
+          <Input id="description" placeholder="备注说明" style={{ width: '100%' }} />
         </Form.Item>
       </Form>
     </ResizableModal>

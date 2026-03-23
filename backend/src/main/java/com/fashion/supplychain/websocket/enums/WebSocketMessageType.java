@@ -52,6 +52,7 @@ public enum WebSocketMessageType {
     ORDER_OVERDUE("order:overdue", "订单逾期预警"),
     QUALITY_ANOMALY("quality:anomaly", "质检异常AI预警"),
     SCAN_REALTIME("scan:realtime", "实时扫码播报"),
+    TRACEABLE_ADVICE("ai:traceable_advice", "AI小云智能决策卡片推送"),
 
     // 系统消息
     PING("ping", "心跳"),

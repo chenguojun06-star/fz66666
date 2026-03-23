@@ -14,6 +14,7 @@ import {
   DislikeOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { Tooltip } from 'antd';
 import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
@@ -196,6 +197,21 @@ interface Message {
   traceId?: string;
   advisorSessionId?: string;
   userQuery?: string;             // 保存原始用户问题，用于反馈
+
+  /* ── Traceable Advice 卡片 ── */
+  traceableAdvice?: {
+    traceId: string;
+    title: string;
+    summary: string;
+    reasoningChain: string[];
+    proposedActions: Array<{
+      label: string;
+      actionCommand: string;
+      actionParams?: Record<string, unknown>;
+      riskWarning?: string;
+    }>;
+    confidenceScore?: number;
+  };
 }
 
 const INITIAL_MSG: Message = {
@@ -544,6 +560,30 @@ const GlobalAiAssistant: React.FC = () => {
 
   // 每日关闭记忆
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
+
+  // 监听后端推送的 AI 智能决策卡片 (TraceableAdvice)
+  useEffect(() => {
+    const handleAdvicePush = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const advice = customEvent.detail;
+      if (!advice || !advice.title) return;
+
+      // 收到推送后，打开小云面板并追加消息
+      setIsOpen(true);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `advice-${Date.now()}`,
+          role: 'ai',
+          text: advice.summary || '系统发来了一条智能建议。',
+          traceableAdvice: advice,
+        }
+      ]);
+    };
+
+    window.addEventListener('ai:traceable_advice', handleAdvicePush);
+    return () => window.removeEventListener('ai:traceable_advice', handleAdvicePush);
+  }, []);
   const dismissPendingItem = (orderNo: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedPending(prev => {
@@ -1224,6 +1264,53 @@ const GlobalAiAssistant: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {/* ── Traceable Advice 卡片渲染 ── */}
+                  {msg.role === 'ai' && msg.traceableAdvice && (
+                    <div style={{ marginTop: 12, padding: 12, background: 'rgba(255, 255, 255, 0.05)', borderRadius: 8, border: '1px solid rgba(0, 229, 255, 0.2)' }}>
+                      <div style={{ fontWeight: 'bold', color: '#00e5ff', marginBottom: 8, fontSize: 14 }}>
+                        {msg.traceableAdvice.title}
+                      </div>
+                      
+                      <div style={{ marginBottom: 12 }}>
+                        <details style={{ cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                          <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>
+                          <ul style={{ marginTop: 8, paddingLeft: 20, color: 'rgba(255,255,255,0.8)' }}>
+                            {msg.traceableAdvice.reasoningChain?.map((reason, idx) => (
+                              <li key={idx} style={{ marginBottom: 4 }}>{reason}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      </div>
+
+                      {msg.traceableAdvice.proposedActions && msg.traceableAdvice.proposedActions.length > 0 && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {msg.traceableAdvice.proposedActions.map((action, idx) => (
+                            <Tooltip key={idx} title={action.riskWarning || '点击执行'}>
+                              <button
+                                className={styles.actionBtn}
+                                style={{
+                                  background: action.actionCommand === 'IGNORE' ? 'rgba(255,255,255,0.1)' : 'rgba(0, 229, 255, 0.1)',
+                                  borderColor: action.actionCommand === 'IGNORE' ? 'transparent' : 'rgba(0, 229, 255, 0.3)',
+                                  color: action.actionCommand === 'IGNORE' ? 'rgba(255,255,255,0.6)' : '#00e5ff'
+                                }}
+                                onClick={() => {
+                                  if (action.actionCommand === 'IGNORE') {
+                                    handleSend('我忽略了这条建议。');
+                                  } else {
+                                    handleSend(`执行操作：${action.label}`);
+                                    // 这里可以扩展实际的 API 调用
+                                  }
+                                }}
+                              >
+                                {action.label}
+                              </button>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* ── hyper-advisor 增强区域 ── */}
                   {msg.role === 'ai' && msg.needsClarification && <ClarificationCard />}
                   {msg.role === 'ai' && !!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}

@@ -7,7 +7,7 @@ interface DictAutoCompleteProps extends Omit<AutoCompleteProps, 'options'> {
   dictType: string; // 词典类型
   autoCollect?: boolean; // 是否启用自动收录，默认 true
   maxSuggestions?: number; // 最大建议数量，默认 50
-  id?: string; // 表单元素 id，用于 label 的 for 属性
+  id?: string; // 表单元素 ID，用于 label 的 for 属性
   className?: string; // 自定义样式类
 }
 

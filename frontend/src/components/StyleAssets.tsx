@@ -33,10 +33,10 @@ export const StyleCoverThumb: React.FC<{
   borderRadius?: number;
   /** 图片适配方式，默认 cover；可传 contain 避免裁切 */
   fit?: 'cover' | 'contain';
-}> = ({ styleId, styleNo, src, size = 48, borderRadius = 6, fit = 'cover' }) => {
+}> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover' }) => {
   const isFill = size === 'fill';
-  // NaN 守卫：只有合法正数才使用，否则回退到默认值 48
-  const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 48;
+  // NaN 守卫：只有合法正数才使用，否则回退到默认值 40
+  const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
   // 图片链接状态
   const [url, setUrl] = React.useState<string | null>(src || null);
   // 加载状态
@@ -82,24 +82,36 @@ export const StyleCoverThumb: React.FC<{
   }, [styleId, styleNo, src, srcFailed]);
 
   return (
-    <div style={{
-      width: isFill ? '100%' : numSize,
-      height: isFill ? '100%' : undefined,
-      minHeight: isFill ? undefined : Math.round(numSize * 0.55),
-      borderRadius, overflow: 'hidden',
-      background: 'var(--color-bg-subtle)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
+    <div
+      style={{
+        width: isFill ? '100%' : numSize,
+        height: isFill ? '100%' : numSize,
+        borderRadius: 4,
+        overflow: 'hidden',
+        background: 'var(--color-bg-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        const validUrl = getFullAuthedFileUrl(url);
+        if (validUrl) {
+          window.open(validUrl, '_blank');
+        }
+      }}
+    >
       {loading ? (
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', height: isFill ? '100%' : `${numSize}px`, display: 'flex', alignItems: 'center' }}>...</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
       ) : url ? (
         <img
           src={getFullAuthedFileUrl(url)}
           alt="cover"
           style={{
             width: '100%',
-            height: isFill ? '100%' : 'auto',
-            objectFit: isFill ? fit : undefined,
+            height: '100%',
+            objectFit: fit,
             display: 'block',
             background: isFill ? '#f5f5f5' : undefined,
           }}
@@ -116,7 +128,7 @@ export const StyleCoverThumb: React.FC<{
           }}
         />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)', height: isFill ? '100%' : `${numSize}px`, display: 'flex', alignItems: 'center' }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
       )}
     </div>
   );

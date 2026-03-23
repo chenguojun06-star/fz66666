@@ -46,10 +46,7 @@ public class ExecutionEngineOrchestrator {
      * @return 执行结果
      */
     @Transactional(rollbackFor = Exception.class)
-    public <T> ExecutionResult<T> execute(
-        ExecutableCommand command,
-        Long executorId
-    ) {
+    public <T> ExecutionResult<T> execute(ExecutableCommand command, Long executorId) {
         long startTime = System.currentTimeMillis();
         String auditId = command.getCommandId();
 

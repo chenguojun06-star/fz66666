@@ -275,7 +275,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
           <Form.Item name="materialType" label="面料辅料类型" rules={[{ required: true, message: '必填' }]}>
-            <Select>
+            <Select id="materialType">
               <Option value="fabricA">面料A</Option>
               <Option value="fabricB">面料B</Option>
               <Option value="fabricC">面料C</Option>
@@ -297,6 +297,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         <Col xs={24} md={6}>
           <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
             <Select
+              id="materialCode"
               showSearch
               filterOption={false}
               loading={materialDbLoading}
@@ -311,12 +312,12 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
-            <Input />
+            <Input id="materialName" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
-            <Input />
+            <Input id="unit" />
           </Form.Item>
         </Col>
       </Row>
@@ -324,22 +325,22 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
           <Form.Item name="color" label="颜色">
-            <Input placeholder="输入颜色" />
+            <Input id="color" placeholder="输入颜色" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="size" label="尺码">
-            <Input placeholder="输入尺码" />
+            <Input id="size" placeholder="输入尺码" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="specifications" label="规格">
-            <Input />
+            <Input id="specifications" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="fabricComposition" label="成分">
-            <Input placeholder="如：棉100%" />
+            <Input id="fabricComposition" placeholder="如：棉100%" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
@@ -375,6 +376,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         <Col xs={24} md={6}>
           <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
             <SupplierSelect
+              id="supplierName"
               onChange={(value, option) => {
                 form.setFieldsValue({
                   supplierName: value,
@@ -387,28 +389,28 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
           </Form.Item>
           {/* 隐藏字段：供应商ID和联系信息 */}
           <Form.Item name="supplierId" hidden>
-            <Input />
+            <Input id="supplierId" />
           </Form.Item>
           <Form.Item name="supplierContactPerson" hidden>
-            <Input />
+            <Input id="supplierContactPerson" />
           </Form.Item>
           <Form.Item name="supplierContactPhone" hidden>
-            <Input />
+            <Input id="supplierContactPhone" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="unitPrice" label="单价(元)" rules={[{ required: true, message: '必填' }]}>
-            <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
+            <InputNumber id="unitPrice" style={{ width: '100%' }} min={0} step={0.01} />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="totalAmount" label="金额(元)">
-            <InputNumber disabled style={{ width: '100%' }} />
+            <InputNumber id="totalAmount" disabled style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: '必填' }]}>
-            <Select>
+            <Select id="status">
               <Option value="pending">待采购</Option>
               <Option value="partial">部分到货</Option>
               <Option value="completed">全部到货</Option>
@@ -421,19 +423,82 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
           <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
-            <InputNumber style={{ width: '100%' }} min={0} />
+            <InputNumber id="purchaseQuantity" style={{ width: '100%' }} min={0} />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="arrivedQuantity" label="到货数量">
-            <InputNumber style={{ width: '100%' }} min={0} />
+            <InputNumber id="arrivedQuantity" style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 0]}>
+        <Col span={24}>
+          <Form.Item name="invoiceUrls" hidden>
+            <Input id="invoiceUrls" />
+          </Form.Item>
+          <Form.Item label="采购单据" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
+            <Upload
+              accept="image/jpeg,image/jpg,image/png,application/pdf"
+              listType="picture-card"
+              fileList={(() => {
+                const urlsStr = form.getFieldValue('invoiceUrls');
+                if (!urlsStr) return [];
+                try {
+                  const urls = JSON.parse(urlsStr);
+                  return urls.map((url: string, i: number) => ({ uid: `-${i}`, name: `单据${i+1}`, status: 'done', url }));
+                } catch {
+                  return [];
+                }
+              })()}
+              onRemove={(file) => {
+                const urlsStr = form.getFieldValue('invoiceUrls');
+                if (!urlsStr) return;
+                try {
+                  const urls = JSON.parse(urlsStr);
+                  const newUrls = urls.filter((u: string) => u !== file.url);
+                  form.setFieldsValue({ invoiceUrls: JSON.stringify(newUrls) });
+                } catch {}
+              }}
+              customRequest={async (options: any) => {
+                const { file, onSuccess, onError } = options;
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                  const res = await api.post('/common/upload', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                  }) as any;
+                  if (res?.code === 200 && res?.data) {
+                    const url = typeof res.data === 'string' ? res.data : (res.data?.url ?? '');
+                    const urlsStr = form.getFieldValue('invoiceUrls');
+                    let urls = [];
+                    if (urlsStr) {
+                      try { urls = JSON.parse(urlsStr); } catch {}
+                    }
+                    urls.push(url);
+                    form.setFieldsValue({ invoiceUrls: JSON.stringify(urls) });
+                    onSuccess(res);
+                  } else {
+                    onError(new Error(res?.message || '上传失败'));
+                  }
+                } catch (error) {
+                  onError(error);
+                }
+              }}
+            >
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>上传单据</div>
+              </div>
+            </Upload>
           </Form.Item>
         </Col>
       </Row>
 
       {/* 备注区域 */}
       <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
-        <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} />
+        <Input.TextArea id="remark" autoSize={{ minRows: 4, maxRows: 8 }} />
       </Form.Item>
       </Form>
     </>

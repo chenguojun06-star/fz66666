@@ -7,10 +7,13 @@ import type { FormInstance } from 'antd/es/form';
 interface Props {
   form?: FormInstance | null;
   disabled?: boolean;
+  id?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 
-const CustomerSearcher: React.FC<Props> = ({ form, disabled }) => {
+const CustomerSearcher: React.FC<Props> = ({ form, disabled, id, value, onChange }) => {
   const [options, setOptions] = useState<{ value: string; label: string; key?: string; type?: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -21,7 +24,7 @@ const CustomerSearcher: React.FC<Props> = ({ form, disabled }) => {
     try {
       // 客户
       const customerRes = await customerApi.list({ page: 1, pageSize: 8, keyword });
-      const customerRecords = customerRes.data?.data?.records || customerRes.data?.records || [];
+      const customerRecords = (customerRes.data as any)?.data?.records || customerRes.data?.records || [];
       const customerOpts = (customerRecords as Customer[]).map(r => ({
         value: r.companyName || '',
         label: `客户: ${r.companyName || ''}`,
@@ -30,7 +33,7 @@ const CustomerSearcher: React.FC<Props> = ({ form, disabled }) => {
       }));
       // 供应商（工厂）
       const factoryRes = await factoryApi.list({ page: 1, pageSize: 8, factoryName: keyword, supplierType: 'OUTSOURCE' });
-      const factoryRecords = factoryRes.data?.data?.records || factoryRes.data?.records || [];
+      const factoryRecords = (factoryRes.data as any)?.data?.records || factoryRes.data?.records || [];
       const factoryOpts = (factoryRecords as Factory[]).map(f => ({
         value: f.factoryName || '',
         label: `供应商: ${f.factoryName || ''}`,
@@ -58,6 +61,9 @@ const CustomerSearcher: React.FC<Props> = ({ form, disabled }) => {
 
   return (
     <AutoComplete
+      id={id}
+      value={value}
+      onChange={onChange}
       disabled={disabled}
       options={options}
       onSearch={handleSearch}

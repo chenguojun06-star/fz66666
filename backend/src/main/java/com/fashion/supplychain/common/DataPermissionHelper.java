@@ -3,7 +3,6 @@ package com.fashion.supplychain.common;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.util.StringUtils;
-import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 

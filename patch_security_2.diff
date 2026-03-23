@@ -1,0 +1,12 @@
+--- backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java
++++ backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java
+@@ -442,7 +442,8 @@
+                     && org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
+                 String cacheKey = "u:" + ctx.getUsername();
+                 String cached = tenantInfoCache.get(cacheKey);
+-                if (cached == null) {
++                boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 5 || "".equals(cached.split("\\|", -1)[4]));
++                if (cached == null || isOldCache) {
+                     try {
+                         List<String> rows = jdbcTemplate.query(
+                             "SELECT id, tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user " +
