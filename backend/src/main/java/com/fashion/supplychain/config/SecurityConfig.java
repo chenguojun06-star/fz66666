@@ -139,6 +139,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "ROLE_admin",
                                 "ROLE_ADMIN",
                                 "ROLE_1")
+                        .antMatchers("/api/system/diag/**").permitAll() // 临时放行诊断接口
                         .antMatchers("/api/system/serial/**").authenticated()
                         .antMatchers("/api/system/tenant/my").authenticated()
                         .antMatchers("/api/system/tenant/sub/**").authenticated()
