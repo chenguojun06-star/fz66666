@@ -56,12 +56,12 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
-  const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [, setCancelLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
 
   /** 撤回采购领取/到货登记 */
-  const handleCancelReceive = useCallback((record: MaterialPurchaseType) => {
+  const _handleCancelReceive = useCallback((record: MaterialPurchaseType) => {
     setCancelTarget(record);
   }, []);
 

@@ -287,20 +287,7 @@ public class MaterialReconciliationOrchestrator {
         if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
             throw new IllegalStateException("当前状态不允许删除，请先退回到上一个环节");
         }
-        MaterialReconciliation patch = new MaterialReconciliation();
-        patch.setId(key);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        UserContext ctx = UserContext.get();
-        String uid = ctx == null ? null : ctx.getUserId();
-        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-        if (StringUtils.hasText(uid)) {
-            patch.setUpdateBy(uid);
-            if (!StringUtils.hasText(current.getCreateBy())) {
-                patch.setCreateBy(uid);
-            }
-        }
-        boolean ok = materialReconciliationService.updateById(patch);
+        boolean ok = materialReconciliationService.removeById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
@@ -408,11 +395,7 @@ public class MaterialReconciliationOrchestrator {
             return;
         }
 
-        MaterialReconciliation patch = new MaterialReconciliation();
-        patch.setId(existed.getId().trim());
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(now == null ? LocalDateTime.now() : now);
-        materialReconciliationService.updateById(patch);
+        materialReconciliationService.removeById(existed.getId().trim());
     }
 
     @Transactional(rollbackFor = Exception.class)

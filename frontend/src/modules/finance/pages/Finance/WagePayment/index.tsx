@@ -14,10 +14,10 @@ import {
   Modal,
   Select,
   Space,
-  Statistic,
   Tabs,
   Tag,
   Upload,
+  message,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -28,6 +28,7 @@ import {
   DeleteOutlined,
   PayCircleOutlined,
   AccountBookOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -54,7 +55,24 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 
+
 const { RangePicker } = DatePicker;
+import * as XLSX from 'xlsx';
+
+export const exportToExcel = (data: any[], columns: any[], filename: string) => {
+    const formattedData = data.map(item => {
+        const row: any = {};
+        columns.forEach(col => {
+            row[col.title] = item[col.dataIndex] || '';
+        });
+        return row;
+    });
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, `${filename}_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+};
+
 
 // ============================================================
 // 主组件 — 统一付款中心
@@ -80,7 +98,7 @@ const PaymentCenterPage: React.FC = () => {
   const [payables, setPayables] = useState<PayableItem[]>([]);
   const [payablesLoading, setPayablesLoading] = useState(true);
   const [payableBizType, setPayableBizType] = useState<string>('');
-  const [payableYearMonth, setPayableYearMonth] = useState<string>('');
+  const [payableDateRange, setPayableDateRange] = useState<[string, string]>(['', '']);
 
   // ---- 待付款批量选择 ----
   const [selectedPayableKeys, setSelectedPayableKeys] = useState<React.Key[]>([]);
@@ -500,12 +518,12 @@ const PaymentCenterPage: React.FC = () => {
 
   /** 按 yearMonth 前端过滤（bizType 后端已过滤，yearMonth 前端再过滤） */
   const filteredPayables = useMemo(() => {
-    if (!payableYearMonth) return payables;
+    if (!payableDateRange[0]) return payables;
     return payables.filter(p => {
       const ym = p.yearMonth ?? p.createTime?.substring(0, 7) ?? '';
-      return ym === payableYearMonth;
+      return ym === payableDateRange[0];
     });
-  }, [payables, payableYearMonth]);
+  }, [payables, payableDateRange[0]]);
 
   const pendingStats = useMemo(() => {
     const total = filteredPayables.length;
@@ -646,11 +664,32 @@ const PaymentCenterPage: React.FC = () => {
                 children: (
                   <>
                     {/* 统计行 */}
-                    <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
-                      <Statistic title="待付款总额" value={pendingStats.totalAmount} precision={2} prefix="¥" styles={{ content: { fontSize: 18, color: '#cf1322' } }} />
-                      <Statistic title="工厂对账" value={pendingStats.reconCount} suffix="笔" styles={{ content: { fontSize: 18 } }} />
-                      <Statistic title="费用报销" value={pendingStats.reimbCount} suffix="笔" styles={{ content: { fontSize: 18 } }} />
-                      <Statistic title="员工工资" value={pendingStats.payrollCount} suffix="笔" styles={{ content: { fontSize: 18 } }} />
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      marginBottom: 20, 
+                      padding: '16px 24px', 
+                      background: '#f9f9f9', 
+                      borderRadius: '8px',
+                      border: '1px solid #f0f0f0'
+                    }}>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>待付款总额</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>工厂对账</div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>费用报销</div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>员工工资</div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                      </div>
                     </div>
 
                     {/* 过滤 */}
@@ -667,16 +706,42 @@ const PaymentCenterPage: React.FC = () => {
                             {opt.label}
                           </Button>
                         ))}
-                        <span style={{ color: '#666', marginLeft: 8 }}>月份：</span>
-                        <DatePicker
-                          picker="month"
+                        <span style={{ color: '#666', marginLeft: 8 }}>时间：</span>
+                        <RangePicker
                           size="small"
-                          placeholder="选择月份"
                           allowClear
-                          value={payableYearMonth ? dayjs(payableYearMonth, 'YYYY-MM') : null}
-                          onChange={(_, dateStr) => { setPayableYearMonth(typeof dateStr === 'string' ? dateStr : ''); setSelectedPayableKeys([]); }}
-                          style={{ width: 120 }}
+                          value={payableDateRange[0] && payableDateRange[1] ? [dayjs(payableDateRange[0], 'YYYY-MM-DD'), dayjs(payableDateRange[1], 'YYYY-MM-DD')] : null}
+                          onChange={(dates) => {
+                            if (dates && dates[0] && dates[1]) {
+                              setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
+                            } else {
+                              setPayableDateRange(['', '']);
+                            }
+                            setSelectedPayableKeys([]);
+                          }}
                         />
+                        <Button 
+                          size="small" 
+                          icon={<DownloadOutlined />} 
+                          style={{ marginLeft: 8 }}
+                          onClick={() => {
+                            if (payables.length === 0) {
+                              message.warning('当前没有数据可导出');
+                              return;
+                            }
+                            exportToExcel(payables, [
+                                { title: '业务类型', dataIndex: 'bizType' },
+                                { title: '单据编号', dataIndex: 'bizNo' },
+                                { title: '收款方', dataIndex: 'receiverName' },
+                                { title: '应付金额', dataIndex: 'amount' },
+                                { title: '已付金额', dataIndex: 'paidAmount' },
+                                { title: '描述', dataIndex: 'description' },
+                                { title: '创建时间', dataIndex: 'createTime' }
+                            ], '待付款明细');
+                          }}
+                        >
+                          导出Excel
+                        </Button>
                         {selectedPayableKeys.length > 0 && (
                           <>
                             <span style={{ color: '#1677ff', marginLeft: 8 }}>
@@ -713,7 +778,7 @@ const PaymentCenterPage: React.FC = () => {
                         selections: [
                           {
                             key: 'select-all-month',
-                            text: payableYearMonth ? `全选 ${payableYearMonth} 月` : '全选当前月份',
+                            text: payableDateRange[0] ? `全选 ${payableDateRange[0]} 月` : '全选当前月份',
                             onSelect: () => setSelectedPayableKeys(filteredPayables.map(p => `${p.bizType}-${p.bizId}`)),
                           },
                         ],
@@ -732,11 +797,32 @@ const PaymentCenterPage: React.FC = () => {
                 children: (
                   <>
                     {/* 统计行 */}
-                    <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
-                      <Statistic title="支付总额" value={paymentStats.totalAmount} precision={2} prefix="¥" />
-                      <Statistic title="已付金额" value={paymentStats.successAmount} precision={2} prefix="¥" styles={{ content: { color: '#389e0d' } }} />
-                      <Statistic title="总笔数" value={paymentStats.total} suffix="笔" />
-                      <Statistic title="成功" value={paymentStats.successCount} suffix="笔" styles={{ content: { color: '#389e0d' } }} />
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      marginBottom: 20, 
+                      padding: '16px 24px', 
+                      background: '#f9f9f9', 
+                      borderRadius: '8px',
+                      border: '1px solid #f0f0f0'
+                    }}>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>支付总额</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>¥ {Number(paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>已付金额</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>总笔数</div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                      </div>
+                      <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>成功</div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#389e0d' }}>{paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                      </div>
                     </div>
 
                     {/* 过滤器 */}
@@ -770,6 +856,30 @@ const PaymentCenterPage: React.FC = () => {
                       </Form.Item>
                       <Form.Item>
                         <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>查询</Button>
+                      </Form.Item>
+                      <Form.Item>
+                        <Button 
+                          icon={<DownloadOutlined />} 
+                          onClick={() => {
+                            if (payments.length === 0) {
+                              message.warning('当前没有数据可导出');
+                              return;
+                            }
+                            exportToExcel(payments, [
+                                { title: '支付单号', dataIndex: 'paymentNo' },
+                                { title: '业务类型', dataIndex: 'bizType' },
+                                { title: '收款方', dataIndex: 'payeeName' },
+                                { title: '支付方式', dataIndex: 'paymentMethod' },
+                                { title: '金额', dataIndex: 'amount' },
+                                { title: '状态', dataIndex: 'status' },
+                                { title: '业务单号', dataIndex: 'bizNo' },
+                                { title: '操作人', dataIndex: 'operatorName' },
+                                { title: '创建时间', dataIndex: 'createTime' }
+                            ], '支付记录明细');
+                          }}
+                        >
+                          导出Excel
+                        </Button>
                       </Form.Item>
                     </Form>
 

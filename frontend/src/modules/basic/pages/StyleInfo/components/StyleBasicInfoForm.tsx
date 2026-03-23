@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Form, Input, InputNumber, Row, Col, FormInstance, Select, AutoComplete, Spin } from 'antd';
-import { customerApi } from '@/services/crm/customerApi';
+import React from 'react';
+import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
 import CompositionPartsEditor from './CompositionPartsEditor';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';

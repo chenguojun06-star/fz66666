@@ -46,6 +46,9 @@ public class OrganizationUnitOrchestrator {
     @Autowired
     private DictOrchestrator dictOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.system.service.LoginLogService loginLogService;
+
     public List<OrganizationUnit> tree() {
         List<OrganizationUnit> nodes = bindingHelper.listTenantNodes(UserContext.tenantId());
         Map<String, OrganizationUnit> byId = nodes.stream()
@@ -227,19 +230,20 @@ public class OrganizationUnitOrchestrator {
             throw new IllegalArgumentException("组织节点不存在");
         }
         long children = organizationUnitService.count(new LambdaQueryWrapper<OrganizationUnit>()
-                .eq(OrganizationUnit::getParentId, id)
-                .eq(OrganizationUnit::getDeleteFlag, 0));
+                .eq(OrganizationUnit::getParentId, id));
         if (children > 0) {
             throw new IllegalStateException("请先移走下级部门或工厂");
         }
-        existing.setDeleteFlag(1);
-        existing.setUpdateTime(LocalDateTime.now());
-        organizationUnitService.updateById(existing);
+        organizationUnitService.removeById(id);
         // 级联清除该部门下所有人员的组织归属
         userService.lambdaUpdate()
                 .eq(User::getOrgUnitId, id)
                 .set(User::getOrgUnitId, null)
                 .update();
+
+        // 记录操作日志
+        saveOperationLog("organization", id, existing.getNodeName(), "DELETE_DEPARTMENT", remark);
+
         return true;
     }
 
@@ -287,10 +291,13 @@ public class OrganizationUnitOrchestrator {
 
     /** 从组织节点移出用户（清空归属） */
     @Transactional(rollbackFor = Exception.class)
-    public void removeMember(String userId) {
+    public void removeMember(String userId, String remark) {
         assertAdmin();
         if (!StringUtils.hasText(userId)) {
             throw new IllegalArgumentException("参数不完整");
+        }
+        if (!StringUtils.hasText(TextUtils.safeText(remark))) {
+            throw new IllegalArgumentException("操作原因不能为空");
         }
         Long userIdLong;
         try {
@@ -302,6 +309,11 @@ public class OrganizationUnitOrchestrator {
                 .eq(User::getId, userIdLong)
                 .set(User::getOrgUnitId, null)
                 .update();
+
+        // 记录操作日志
+        User user = userService.getById(userIdLong);
+        String targetName = user != null ? user.getUsername() : userId;
+        saveOperationLog("organization", userId, targetName, "REMOVE_MEMBER", remark);
     }
 
     /**
@@ -479,5 +491,15 @@ public class OrganizationUnitOrchestrator {
     private String resolveOwnerType(String ownerType) {
         String value = TextUtils.safeText(ownerType);
         return StringUtils.hasText(value) ? value.toUpperCase() : "NONE";
+    }
+
+    private void saveOperationLog(String bizType, String bizId, String targetName, String action, String remark) {
+        try {
+            UserContext ctx = UserContext.get();
+            String operator = (ctx != null ? ctx.getUsername() : null);
+            loginLogService.recordOperation(bizType, bizId, targetName, action, operator, remark);
+        } catch (Exception e) {
+            // Ignore
+        }
     }
 }

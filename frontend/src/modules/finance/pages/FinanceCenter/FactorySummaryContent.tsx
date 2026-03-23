@@ -5,12 +5,17 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   ShopOutlined,
+  PrinterOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
+import * as XLSX from 'xlsx';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { FactoryRank } from '@/services/intelligence/intelligenceApi';
 import ResizableTable from '@/components/common/ResizableTable';
+import FactoryStatementPrintModal from './FactoryStatementPrintModal';
+import dayjs from 'dayjs';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -64,6 +69,38 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [leaderboard, setLeaderboard] = useState<FactoryRank[]>([]);
   const [lbLoading, setLbLoading] = useState(false);
   const [lbCollapsed, setLbCollapsed] = useState(false);
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+
+  const handlePrintStatement = () => {
+    if (selectedRowKeys.length === 0) {
+      return;
+    }
+    setPrintModalVisible(true);
+  };
+
+  const getPrintData = () => {
+    return selectedRowKeys.map(key => {
+      const summary = data.find((r: any) => r.factoryId === key);
+      if (!summary) return null;
+      return {
+        factoryId: summary.factoryId,
+        factoryName: summary.factoryName,
+        totalAmount: summary.totalAmount,
+        totalOrderQuantity: summary.totalOrderQuantity,
+        orderCount: summary.orderCount,
+        orderNos: summary.orderNos
+      };
+    }).filter(Boolean) as any[];
+  };
+
+  const getDateRange = (): [string, string] => {
+    const values = form.getFieldsValue();
+    if (values.dateRange && values.dateRange.length === 2) {
+      return [values.dateRange[0].format('YYYY-MM-DD'), values.dateRange[1].format('YYYY-MM-DD')];
+    }
+    return ['-', '-'];
+  };
+
   const lbFetched = React.useRef(false);
 
   const fetchLeaderboard = useCallback(async () => {
@@ -237,6 +274,29 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         }
       },
     });
+  };
+
+  const handleExport = () => {
+    if (data.length === 0) {
+      message.warning('无数据可导出');
+      return;
+    }
+    const formattedData = data.map((item: any) => ({
+      '工厂名称': item.factoryName || '-',
+      '订单数': item.orderCount || 0,
+      '下单总量': item.totalOrderQuantity || 0,
+      '入库总量': item.totalWarehousedQuantity || 0,
+      '次品量': item.totalDefectQuantity || 0,
+      '面辅料成本': item.totalMaterialCost || 0,
+      '生产成本': item.totalProductionCost || 0,
+      '总金额': item.totalAmount || 0,
+      '利润': item.totalProfit || 0,
+      '订单号列表': item.orderNos?.join(', ') || '-'
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, `工厂订单汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
   };
 
   // 表格列定义
@@ -521,6 +581,20 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
             >
               批量终审推送 ({selectedRowKeys.length})
             </Button>
+            <Button
+              icon={<PrinterOutlined />}
+              disabled={selectedRowKeys.length === 0}
+              onClick={handlePrintStatement}
+            >
+              打印对账单 ({selectedRowKeys.length})
+            </Button>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+              disabled={data.length === 0}
+            >
+              导出汇总
+            </Button>
           </Space>
         }
         right={
@@ -575,6 +649,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
             </ResizableTable.Summary.Row>
           </ResizableTable.Summary>
         )}
+      />
+      <FactoryStatementPrintModal
+        visible={printModalVisible}
+        onClose={() => setPrintModalVisible(false)}
+        factoryData={getPrintData()}
+        dateRange={getDateRange()}
       />
     </div>
   );

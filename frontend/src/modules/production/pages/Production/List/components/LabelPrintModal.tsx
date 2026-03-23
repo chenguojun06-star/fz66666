@@ -441,7 +441,6 @@ async function printUCodeLabels(
   }
 
   const labelsHtml = pieceList.map((entry, idx) => {
-    const seqStr = `${entry.seq}/${entry.total}`;
     return `<div class="page">
       <div class="label">
         <div class="qr-col">

@@ -73,7 +73,7 @@ const DEFAULT_HOVER_NODES: ProgressNode[] = [
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
   useViewport();
-  const { columns: cardColumns, pageSize: cardPageSize } = useCardGridLayout(10);
+  const { columns: cardColumns } = useCardGridLayout(10);
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -236,13 +236,6 @@ const ProductionList: React.FC = () => {
   const [viewMode, setViewModeState] = useState<'list' | 'card'>(
     () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'list'
   );
-  const readSavedListPageSize = () => {
-    try {
-      const raw = localStorage.getItem('production_list_page_size');
-      const n = raw ? parseInt(raw, 10) : NaN;
-      return Number.isFinite(n) && n > 0 ? n : 10;
-    } catch { return 10; }
-  };
   const setViewMode = (mode: 'list' | 'card') => {
     localStorage.setItem('production_view_mode', mode);
     setViewModeState(mode);

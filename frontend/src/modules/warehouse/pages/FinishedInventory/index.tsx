@@ -10,7 +10,6 @@ import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
-import { StatsGrid } from '@/components/common/StatsGrid';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { StyleCoverThumb } from '@/components/StyleAssets';

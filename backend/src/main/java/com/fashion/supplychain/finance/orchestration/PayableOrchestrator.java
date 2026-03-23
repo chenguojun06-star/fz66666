@@ -181,10 +181,7 @@ public class PayableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        Payable p = new Payable();
-        p.setId(id);
-        p.setDeleteFlag(1);
-        payableService.updateById(p);
+        payableService.removeById(id);
     }
 
     @Transactional(rollbackFor = Exception.class)

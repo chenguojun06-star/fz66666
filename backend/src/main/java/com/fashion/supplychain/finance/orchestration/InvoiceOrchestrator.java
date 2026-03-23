@@ -181,10 +181,7 @@ public class InvoiceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        Invoice inv = new Invoice();
-        inv.setId(id);
-        inv.setDeleteFlag(1);
-        invoiceService.updateById(inv);
+        invoiceService.removeById(id);
     }
 
     // ─── 内部方法 ────────────────────────────────────────────────────────────

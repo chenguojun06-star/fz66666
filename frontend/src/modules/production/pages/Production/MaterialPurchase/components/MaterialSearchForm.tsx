@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Select, Space } from 'antd';
+import { Button, Card, Space } from 'antd';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
@@ -21,7 +21,6 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   queryParams,
   setQueryParams,
   onSearch,
-  onReset,
   onExport,
   onAdd,
   loading = false,

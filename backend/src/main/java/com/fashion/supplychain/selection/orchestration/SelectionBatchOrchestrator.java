@@ -162,7 +162,6 @@ public class SelectionBatchOrchestrator {
         if ("APPROVED".equals(batch.getStatus())) {
             throw new RuntimeException("已确认批次不可删除");
         }
-        batch.setDeleteFlag(1);
-        batchService.updateById(batch);
+        batchService.removeById(id);
     }
 }

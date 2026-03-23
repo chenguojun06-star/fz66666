@@ -59,7 +59,6 @@ export interface UniversalCardViewProps {
 const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   dataSource,
   loading = false,
-  columns = 4,
   coverField = 'coverImage',
   styleIdField = 'styleId',
   styleNoField = 'styleNo',

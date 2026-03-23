@@ -26,7 +26,7 @@ const FactoryWorkerList: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const isFactoryAccount = !!user?.factoryId;
   const factoryIdFromUrl = searchParams.get('factoryId');
@@ -103,13 +103,39 @@ const FactoryWorkerList: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await api.delete(`/factory-worker/${id}`);
-      message.success('删除成功');
-      fetchWorkers();
-    } catch {
-      message.error('删除失败');
-    }
+    let remarkValue = '';
+    modal.confirm({
+      title: '确认删除',
+      content: (
+        <div>
+          <p>确认要删除该账号吗？</p>
+          <div style={{ marginTop: 16 }}>
+            <span style={{ color: 'red' }}>*</span> 删除原因：
+            <Input.TextArea
+              rows={3}
+              placeholder="请输入删除原因（必填）"
+              onChange={(e) => { remarkValue = e.target.value; }}
+            />
+          </div>
+        </div>
+      ),
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        if (!remarkValue.trim()) {
+          message.error('请填写删除原因');
+          return Promise.reject(new Error('未填写原因'));
+        }
+        try {
+          await api.delete(`/factory-worker/${id}`, { params: { remark: remarkValue.trim() } });
+          message.success('删除成功');
+          fetchWorkers();
+        } catch {
+          message.error('删除失败');
+        }
+      }
+    });
   };
 
   const handleCreateAccount = async (values: { username: string; password: string; name?: string; phone?: string }) => {

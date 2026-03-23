@@ -1103,11 +1103,7 @@ public class ProductWarehousingOrchestrator {
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
 
-        ProductWarehousing patch = new ProductWarehousing();
-        patch.setId(key);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        boolean ok = productWarehousingService.updateById(patch);
+        boolean ok = productWarehousingService.removeById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
@@ -1517,11 +1513,7 @@ public class ProductWarehousingOrchestrator {
             }
 
             if (q <= remaining) {
-                ProductWarehousing patch = new ProductWarehousing();
-                patch.setId(w.getId());
-                patch.setDeleteFlag(1);
-                patch.setUpdateTime(now);
-                productWarehousingService.updateById(patch);
+                productWarehousingService.removeById(w.getId());
                 remaining -= q;
 
                 // Decrement Stock

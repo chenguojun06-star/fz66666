@@ -146,11 +146,7 @@ public class FactoryOrchestrator {
         // 删除前先获取工厂名称用于日志
         Factory existing = factoryService.getById(id);
         String factoryName = existing != null ? existing.getFactoryName() : null;
-        Factory factory = new Factory();
-        factory.setId(id);
-        factory.setDeleteFlag(1);
-        factory.setUpdateTime(LocalDateTime.now());
-        boolean ok = factoryService.updateById(factory);
+        boolean ok = factoryService.removeById(id);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }

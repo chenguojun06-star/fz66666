@@ -17,9 +17,12 @@ import WorkerPerformanceBadge from '@/smart/components/WorkerPerformanceBadge';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
+import WageSlipPrintModal from './WageSlipPrintModal';
+import { PrinterOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 import { readPageSize } from '@/utils/pageSizeStore';
+import * as XLSX from 'xlsx';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -90,6 +93,7 @@ const PayrollOperatorSummary: React.FC = () => {
     // Tab1 已选中行（用于批量审核）
     const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+    const [printModalVisible, setPrintModalVisible] = useState(false);
     const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
     // ── 效率排名 Tab 数据 ────────────────────────────────────────────────────
@@ -363,61 +367,53 @@ const PayrollOperatorSummary: React.FC = () => {
     };
 
     const exportToExcel = () => {
-        if (rows.length === 0) {
-            message.warning('无数据可导出');
-            return;
+        if (activeTab === 'summary') {
+            if (summaryRows.length === 0) {
+                message.warning('无汇总数据可导出');
+                return;
+            }
+            const formattedData = summaryRows.map((item: any) => ({
+                '人员': item.operatorName || '-',
+                '总数量': toNumberOrZero(item.totalQuantity),
+                '总金额(元)': toNumberOrZero(item.totalAmount),
+                '扫码次数': toNumberOrZero(item.recordCount),
+                '订单数': toNumberOrZero(item.orderCount),
+                '备注': String(item.remark || '').trim() || '-',
+                '审核时间': item.approvalTime ? dayjs(item.approvalTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                '付款时间': item.paymentTime ? dayjs(item.paymentTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '工资汇总');
+            XLSX.writeFile(workbook, `工资汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+            message.success('汇总导出成功');
+        } else if (activeTab === 'detail') {
+            if (rows.length === 0) {
+                message.warning('无明细数据可导出');
+                return;
+            }
+            const formattedData = rows.map((r: any) => ({
+                '订单号': String(r?.orderNo || ''),
+                '款号': String(r?.styleNo || ''),
+                '颜色': String(r?.color || ''),
+                '尺码': String(r?.size || ''),
+                '人员': String(r?.operatorName || ''),
+                '工序': String(r?.processName || ''),
+                '生产节点': scanTypeText(r?.scanType),
+                '开始时间': r?.startTime ? dayjs(r.startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                '完成时间': r?.endTime ? dayjs(r.endTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                '数量': toNumberOrZero(r?.quantity),
+                '单价(元)': toNumberOrZero(r?.unitPrice),
+                '金额(元)': toNumberOrZero(r?.totalAmount),
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '工序明细');
+            XLSX.writeFile(workbook, `工资结算明细_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+            message.success('明细导出成功');
+        } else {
+            message.warning('当前标签页不支持导出');
         }
-
-        const headers = ['订单号', '款号', '颜色', '尺码', '人员', '工序', '生产节点', '开始时间', '完成时间', '数量', '单价(元)', '金额(元)'];
-        const csvRows = [headers.join(',')];
-
-        rows.forEach((row) => {
-            const r = row as any;
-            const csvRow = [
-                String(r?.orderNo || ''),
-                String(r?.styleNo || ''),
-                String(r?.color || ''),
-                String(r?.size || ''),
-                String(r?.operatorName || ''),
-                String(r?.processName || ''),
-                scanTypeText(r?.scanType),
-                r?.startTime ? dayjs(r.startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                r?.endTime ? dayjs(r.endTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                String(toNumberOrZero(r?.quantity)),
-                toMoneyText(r?.unitPrice),
-                toMoneyText(r?.totalAmount),
-            ].map(escapeCsvCell);
-            csvRows.push(csvRow.join(','));
-        });
-
-        // 添加合计行
-        csvRows.push([
-            '合计', '', '', '', '', '',
-            String(totalQuantity),
-            '',
-            totalAmount.toFixed(2),
-        ].map(escapeCsvCell).join(','));
-
-        const csvContent = '\uFEFF' + csvRows.join('\n'); // UTF-8 的 BOM 头，避免中文乱码
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const timestamp = dayjs().format('YYYYMMDDHHmmss');
-        link.download = `工资结算_${timestamp}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        message.success('导出成功');
-    };
-
-    const escapeCsvCell = (value: unknown) => {
-        const text = String(value ?? '');
-        if (/[\r\n",]/.test(text)) {
-            return `"${text.replace(/"/g, '""')}"`;
-        }
-        return text;
     };
 
     // Tab1: 审核单条明细行（加入已审核集合）
@@ -485,6 +481,28 @@ const PayrollOperatorSummary: React.FC = () => {
     };
 
     // Tab2: 批量终审推送到付款中心
+    
+    const handlePrintWageSlips = () => {
+        if (selectedRowKeys.length === 0) {
+            message.warning('请选择需要打印工资条的人员');
+            return;
+        }
+        setPrintModalVisible(true);
+    };
+
+    const getPrintData = () => {
+        return selectedRowKeys.map(key => {
+            const summary = summaryRows.find((r: any) => r.operatorName === key);
+            const details = rows.filter(r => String((r as any)?.operatorName || '') === key);
+            return {
+                operatorName: key,
+                totalAmount: summary ? toNumberOrZero(summary.totalAmount) : 0,
+                totalQuantity: summary ? toNumberOrZero(summary.totalQuantity) : 0,
+                details: details
+            };
+        });
+    };
+
     const handleBatchFinalPush = async () => {
         if (selectedRowKeys.length === 0) {
             message.warning('请选择要审核的人员');
@@ -973,6 +991,13 @@ const PayrollOperatorSummary: React.FC = () => {
                                             >
                                                 批量终审推送 ({selectedRowKeys.length})
                                             </Button>
+                                            <Button
+                                                icon={<PrinterOutlined />}
+                                                onClick={handlePrintWageSlips}
+                                                disabled={selectedRowKeys.length === 0}
+                                            >
+                                                打印工资条 ({selectedRowKeys.length})
+                                            </Button>
                                         </Space>
                                     </Card>
 
@@ -1019,6 +1044,12 @@ const PayrollOperatorSummary: React.FC = () => {
 
 
             </Card>
+                    <WageSlipPrintModal
+                visible={printModalVisible}
+                onClose={() => setPrintModalVisible(false)}
+                workerData={getPrintData()}
+                dateRange={dateRange?.[0] && dateRange?.[1] ? [dayjs(dateRange[0]).format('YYYY-MM-DD'), dayjs(dateRange[1]).format('YYYY-MM-DD')] : ['-', '-']}
+            />
         </Layout>
     );
 };

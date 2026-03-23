@@ -793,9 +793,7 @@ public class StyleBomOrchestrator {
             for (MaterialPurchase mp : existingRecords) {
                 String status = mp.getStatus() == null ? "" : mp.getStatus().trim().toLowerCase();
                 if (MaterialConstants.STATUS_PENDING.equals(status)) {
-                    mp.setDeleteFlag(1);
-                    mp.setUpdateTime(LocalDateTime.now());
-                    materialPurchaseService.updateById(mp);
+                    materialPurchaseService.removeById(mp.getId());
                     softDeletedCount++;
                 } else {
                     log.warn("样衣采购记录已{}，无法删除，跳过重新生成: purchaseNo={}", status, mp.getPurchaseNo());

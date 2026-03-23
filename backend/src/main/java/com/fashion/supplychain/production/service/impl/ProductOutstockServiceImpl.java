@@ -165,12 +165,8 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
         if (!StringUtils.hasText(orderId)) {
             return false;
         }
-        ProductOutstock patch = new ProductOutstock();
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        return this.update(patch, new LambdaUpdateWrapper<ProductOutstock>()
-                .eq(ProductOutstock::getOrderId, orderId.trim())
-                .eq(ProductOutstock::getDeleteFlag, 0));
+        return this.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductOutstock>()
+                .eq(ProductOutstock::getOrderId, orderId.trim()));
     }
 
     private String buildOutstockNo(LocalDateTime now) {

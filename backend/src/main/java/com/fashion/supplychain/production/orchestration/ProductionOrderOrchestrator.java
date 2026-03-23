@@ -538,14 +538,10 @@ public class ProductionOrderOrchestrator {
                 .eq(MaterialPurchase::getStatus, "pending")
                 .list();
         if (!pendingList.isEmpty()) {
-            MaterialPurchase upd = new MaterialPurchase();
-            upd.setDeleteFlag(1);
-            upd.setUpdateTime(LocalDateTime.now());
             materialPurchaseService.lambdaUpdate()
                     .eq(MaterialPurchase::getOrderId, oid)
-                    .eq(MaterialPurchase::getDeleteFlag, 0)
                     .eq(MaterialPurchase::getStatus, "pending")
-                    .update(upd);
+                    .remove();
             log.info("scrapOrder: 订单{}报废，自动作废{}条待领取采购记录", oid, pendingList.size());
         }
 

@@ -119,11 +119,7 @@ public class ProductionOrderCommandService {
             throw new IllegalStateException("订单进行中或已完成，无法删除");
         }
 
-        // 逻辑删除
-        order.setDeleteFlag(1);
-        order.setUpdateTime(LocalDateTime.now());
-
-        return productionOrderService.updateById(order);
+        return productionOrderService.removeById(id.trim());
     }
 
     /**

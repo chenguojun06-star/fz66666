@@ -241,10 +241,7 @@ public class PatternProductionController {
         }
         TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
 
-        record.setDeleteFlag(1);
-        record.setUpdateBy(UserContext.username());
-        record.setUpdateTime(LocalDateTime.now());
-        patternProductionService.updateById(record);
+        patternProductionService.removeById(id);
 
         log.info("Pattern production deleted: id={}", id);
         return Result.success("删除成功");

@@ -155,11 +155,7 @@ public class MaterialDatabaseOrchestrator {
             log.warn("[MATERIAL-DB-DELETE] id={} already deleted, idempotent success", id);
             return true;
         }
-        MaterialDatabase patch = new MaterialDatabase();
-        patch.setId(current.getId());
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        boolean ok = materialDatabaseService.updateById(patch);
+        boolean ok = materialDatabaseService.removeById(current.getId());
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }

@@ -48,12 +48,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (!StringUtils.hasText(orderId)) {
             return false;
         }
-        MaterialPurchase patch = new MaterialPurchase();
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        return this.update(patch, new LambdaUpdateWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getOrderId, orderId.trim())
-                .eq(MaterialPurchase::getDeleteFlag, 0));
+        return this.remove(new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getOrderId, orderId.trim()));
     }
 
     @Override
@@ -255,11 +251,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Override
     public boolean deleteById(String id) {
-        MaterialPurchase materialPurchase = new MaterialPurchase();
-        materialPurchase.setId(id);
-        materialPurchase.setDeleteFlag(1);
-        materialPurchase.setUpdateTime(LocalDateTime.now());
-        return this.updateById(materialPurchase);
+        return this.removeById(id);
     }
 
     @Override
@@ -619,12 +611,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         if (exists > 0 && overwrite) {
-            MaterialPurchase toUpdate = new MaterialPurchase();
-            toUpdate.setDeleteFlag(1);
-            toUpdate.setUpdateTime(LocalDateTime.now());
-            this.update(toUpdate, new LambdaQueryWrapper<MaterialPurchase>()
-                    .eq(MaterialPurchase::getOrderId, orderId)
-                    .eq(MaterialPurchase::getDeleteFlag, 0));
+            this.remove(new LambdaQueryWrapper<MaterialPurchase>()
+                    .eq(MaterialPurchase::getOrderId, orderId));
         }
 
         List<MaterialPurchase> items = serviceHelper.buildDemandItems(orderId, this);

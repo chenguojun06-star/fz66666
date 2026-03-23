@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
-import { Line } from '@ant-design/charts';
-import { StatsGrid } from '@/components/common/StatsGrid';
+
+const ReactECharts = lazy(() => import('echarts-for-react'));
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
@@ -13,7 +13,6 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { HealthIndexResponse } from '@/services/intelligence/intelligenceApi';
 
 const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 // 统计卡片数据接口
 interface StatCardData {
@@ -42,13 +41,6 @@ interface StatCardData {
   materialCost: number;      // 面辅料总价
   productionCost: number;    // 生产总价
   totalProfit: number;       // 利润
-}
-
-// 趋势数据
-interface TrendData {
-  time: string;
-  value: number;
-  type: string;
 }
 
 // 排名数据
@@ -82,6 +74,14 @@ type TimeRangeType = 'day' | 'week' | 'month' | 'year' | 'custom';
 interface Factory {
   id: string;
   factoryName: string;
+}
+
+interface EChartData {
+  dates: string[];
+  amounts: number[];
+  warehoused: number[];
+  orders: number[];
+  defects: number[];
 }
 
 const DashboardContent: React.FC = () => {
@@ -141,7 +141,13 @@ const DashboardContent: React.FC = () => {
     totalProfit: 0,
   });
 
-  const [trendData, setTrendData] = useState<TrendData[]>([]);
+  const [chartData, setChartData] = useState<EChartData>({
+    dates: [],
+    amounts: [],
+    warehoused: [],
+    orders: [],
+    defects: [],
+  });
   const [rankData, setRankData] = useState<RankData[]>([]);
 
   // 获取时间范围对比文字
@@ -155,14 +161,43 @@ const DashboardContent: React.FC = () => {
     }
   };
 
-  // 加载工厂列表
+  // 加载工厂列表 (调用组织架构接口以获取内部和外部工厂)
   const loadFactories = async () => {
     try {
-      const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', {
-        params: { page: 1, pageSize: 1000 }
-      });
-      if (response.code === 200) {
-        setFactories(response.data.records || []);
+      const response = await api.get<{ code: number; data: any[] }>('/system/organization/tree');
+      // 注意：有些后端的封装返回可能没有 code=200 这一层，直接是数组或者 data
+      const resData = (response as any).data || response;
+      const treeNodes = Array.isArray(resData) ? resData : (resData?.data || []);
+      
+      if (treeNodes && treeNodes.length > 0) {
+        // 递归展平树结构，筛选所有的生产相关组和工厂
+        const flattenTree = (nodes: any[]): Factory[] => {
+          let result: Factory[] = [];
+          nodes.forEach(node => {
+            // 将工厂和生产相关的部门都纳入筛选范围
+            // 后端返回的可能是 nodeName 或 unitName，注意不能取 id 当名字
+            const name = node.unitName || node.nodeName || node.name || '';
+            
+            // 只有当名字有效且不是一段纯哈希/ID（通常长度大于20）时，才加入列表
+            if (name && name.length < 30) {
+              if (node.nodeType === 'FACTORY' || node.ownerType === 'EXTERNAL' || name.includes('生产') || name.includes('车间')) {
+                result.push({
+                  id: node.id,
+                  factoryName: name
+                } as Factory);
+              }
+            }
+            if (node.children && node.children.length > 0) {
+              result = result.concat(flattenTree(node.children));
+            }
+          });
+          return result;
+        };
+        const formattedFactories = flattenTree(treeNodes);
+        
+        // 去重（避免有同名的或重复推入）
+        const uniqueFactories = Array.from(new Map(formattedFactories.map(item => [item.id, item])).values());
+        setFactories(uniqueFactories);
       }
     } catch (error) {
       console.error('加载工厂列表失败:', error);
@@ -274,7 +309,12 @@ const DashboardContent: React.FC = () => {
       // 生成趋势数据
       const warehousedTrend: number[] = [];
       const orderTrend: number[] = [];
-      const trendPoints: TrendData[] = [];
+      
+      const dates: string[] = [];
+      const amounts: number[] = [];
+      const warehoused: number[] = [];
+      const orders: number[] = [];
+      const defects: number[] = [];
 
       // 根据时间范围生成趋势点
       if (timeRange === 'day') {
@@ -284,10 +324,16 @@ const DashboardContent: React.FC = () => {
           const hourRecords = records.filter(r => r.createTime && dayjs(r.createTime).hour() === i);
           const amountVal = hourRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
           const countVal = hourRecords.reduce((sum, r) => sum + (r.warehousedQuantity || 0), 0);
-          trendPoints.push({ time: hour, value: amountVal, type: '金额' });
-          trendPoints.push({ time: hour, value: countVal, type: '入库数量' });
+          const orderVal = hourRecords.length;
+          const defectVal = hourRecords.reduce((sum, r) => sum + (r.defectQuantity || 0), 0);
+          
+          dates.push(hour);
+          amounts.push(amountVal);
+          warehoused.push(countVal);
+          orders.push(orderVal);
+          defects.push(defectVal);
           warehousedTrend.push(countVal);
-          orderTrend.push(hourRecords.length);
+          orderTrend.push(orderVal);
         }
       } else if (timeRange === 'week') {
         // 按天聚合
@@ -297,10 +343,16 @@ const DashboardContent: React.FC = () => {
           const dayRecords = records.filter(r => r.createTime && dayjs(r.createTime).format('YYYY-MM-DD') === date.format('YYYY-MM-DD'));
           const amountVal = dayRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
           const countVal = dayRecords.reduce((sum, r) => sum + (r.warehousedQuantity || 0), 0);
-          trendPoints.push({ time: dayLabel, value: amountVal, type: '金额' });
-          trendPoints.push({ time: dayLabel, value: countVal, type: '入库数量' });
+          const orderVal = dayRecords.length;
+          const defectVal = dayRecords.reduce((sum, r) => sum + (r.defectQuantity || 0), 0);
+
+          dates.push(dayLabel);
+          amounts.push(amountVal);
+          warehoused.push(countVal);
+          orders.push(orderVal);
+          defects.push(defectVal);
           warehousedTrend.push(countVal);
-          orderTrend.push(dayRecords.length);
+          orderTrend.push(orderVal);
         }
       } else if (timeRange === 'month') {
         // 按天聚合（当月每天）
@@ -311,10 +363,16 @@ const DashboardContent: React.FC = () => {
           const dayRecords = records.filter(r => r.createTime && dayjs(r.createTime).format('YYYY-MM-DD') === date.format('YYYY-MM-DD'));
           const amountVal = dayRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
           const countVal = dayRecords.reduce((sum, r) => sum + (r.warehousedQuantity || 0), 0);
-          trendPoints.push({ time: dayLabel, value: amountVal, type: '金额' });
-          trendPoints.push({ time: dayLabel, value: countVal, type: '入库数量' });
+          const orderVal = dayRecords.length;
+          const defectVal = dayRecords.reduce((sum, r) => sum + (r.defectQuantity || 0), 0);
+
+          dates.push(dayLabel);
+          amounts.push(amountVal);
+          warehoused.push(countVal);
+          orders.push(orderVal);
+          defects.push(defectVal);
           warehousedTrend.push(countVal);
-          orderTrend.push(dayRecords.length);
+          orderTrend.push(orderVal);
         }
       } else {
         // 年度按月聚合
@@ -323,10 +381,16 @@ const DashboardContent: React.FC = () => {
           const monthRecords = records.filter(r => r.createTime && dayjs(r.createTime).month() === idx);
           const amountVal = monthRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
           const countVal = monthRecords.reduce((sum, r) => sum + (r.warehousedQuantity || 0), 0);
-          trendPoints.push({ time: month, value: amountVal, type: '金额' });
-          trendPoints.push({ time: month, value: countVal, type: '入库数量' });
+          const orderVal = monthRecords.length;
+          const defectVal = monthRecords.reduce((sum, r) => sum + (r.defectQuantity || 0), 0);
+
+          dates.push(month);
+          amounts.push(amountVal);
+          warehoused.push(countVal);
+          orders.push(orderVal);
+          defects.push(defectVal);
           warehousedTrend.push(countVal);
-          orderTrend.push(monthRecords.length);
+          orderTrend.push(orderVal);
         });
       }
 
@@ -353,7 +417,7 @@ const DashboardContent: React.FC = () => {
         totalProfit,
       });
 
-      setTrendData(trendPoints);
+      setChartData({ dates, amounts, warehoused, orders, defects });
 
       // 工厂总金额排名
       const factoryMap: Record<string, number> = {};
@@ -389,7 +453,7 @@ const DashboardContent: React.FC = () => {
         profitRate: 0, profitRateChange: 0,
         materialCost: 0, productionCost: 0, totalProfit: 0,
       });
-      setTrendData([]);
+      setChartData({ dates: [], amounts: [], warehoused: [], orders: [], defects: [] });
       setRankData([]);
     } finally {
       setLoading(false);
@@ -443,54 +507,123 @@ const DashboardContent: React.FC = () => {
     );
   };
 
-  // 迷你柱状图数据（用 CSS 渲染）
-  const renderMiniBar = (data: number[], color: string = 'var(--primary-color)') => {
-    const max = Math.max(...data, 1);
-    return (
-      <div className={styles.miniBarContainer}>
-        {data.map((val, idx) => (
-          <div
-            key={idx}
-            className={styles.miniBarItem}
-            style={{
-              height: `${(val / max) * 100}%`,
-              backgroundColor: color,
-            }}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  // 折线图配置
-  const lineChartConfig = {
-    data: trendData,
-    xField: 'time',
-    yField: 'value',
-    seriesField: 'type',
-    smooth: true,
-    animation: { appear: { animation: 'path-in', duration: 1000 } },
-    color: ['var(--primary-color)', 'var(--color-success)'],
-    lineStyle: { lineWidth: 2 },
-    point: { size: 3, shape: 'circle' },
-    legend: { position: 'top-right' as const },
-    xAxis: { label: { style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" } } },
-    yAxis: {
-      label: {
-        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
-        formatter: (v: string) => {
-          const num = Number(v);
-          if (num >= 10000) return `${(num / 10000).toFixed(0)}万`;
-          return num.toLocaleString();
-        },
-      },
-    },
+  // ECharts 图表配置
+  const chartOption = {
     tooltip: {
-      formatter: (datum: TrendData) => ({
-        name: datum.type,
-        value: datum.type === '金额' ? `¥${datum.value.toLocaleString()}` : datum.value.toLocaleString(),
-      }),
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: '#fff',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      textStyle: { color: '#1a1a1a' },
     },
+    legend: {
+      data: ['总金额', '入库数量', '订单数量', '次品数量'],
+      top: 0,
+      textStyle: { fontSize: 13, color: '#666' },
+    },
+    grid: { left: '2%', right: '2%', bottom: '5%', top: 40, containLabel: true },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: chartData.dates,
+      axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisLabel: { color: '#999', fontSize: 12 },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '金额 (¥)',
+        position: 'left',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#999', fontSize: 12 },
+        splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } },
+      },
+      {
+        type: 'value',
+        name: '数量',
+        position: 'right',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#999', fontSize: 12 },
+        splitLine: { show: false },
+      }
+    ],
+    series: [
+      {
+        name: '总金额',
+        type: 'line',
+        yAxisIndex: 0,
+        smooth: true,
+        data: chartData.amounts,
+        lineStyle: { width: 2, color: '#36cfc9' },
+        itemStyle: { color: '#36cfc9' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(54, 207, 201, 0.3)' },
+              { offset: 1, color: 'rgba(54, 207, 201, 0.05)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '入库数量',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        data: chartData.warehoused,
+        lineStyle: { width: 2, color: '#975FE4' },
+        itemStyle: { color: '#975FE4' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(151, 95, 228, 0.3)' },
+              { offset: 1, color: 'rgba(151, 95, 228, 0.05)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '订单数量',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        data: chartData.orders,
+        lineStyle: { width: 2, color: '#597ef7' },
+        itemStyle: { color: '#597ef7' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(89, 126, 247, 0.3)' },
+              { offset: 1, color: 'rgba(89, 126, 247, 0.05)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '次品数量',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        data: chartData.defects,
+        lineStyle: { width: 2, color: '#ff4d4f' },
+        itemStyle: { color: '#ff4d4f' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(255, 77, 79, 0.3)' },
+              { offset: 1, color: 'rgba(255, 77, 79, 0.05)' }
+            ]
+          }
+        }
+      }
+    ]
   };
 
   return (
@@ -579,7 +712,7 @@ const DashboardContent: React.FC = () => {
       )}
 
       {/* 顶部筛选区域：时间范围 + 工厂选择 */}
-      <div className={styles.periodSelector}>
+      <div className={styles.periodSelector} style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
           <TimeRangeSelector />
           <Select
@@ -592,153 +725,81 @@ const DashboardContent: React.FC = () => {
             optionFilterProp="children"
           >
             {factories.map((factory) => (
-              <Option key={factory.id} value={factory.id}>
+              <Select.Option key={factory.id} value={factory.id}>
                 {factory.factoryName}
-              </Option>
+              </Select.Option>
             ))}
           </Select>
         </div>
       </div>
 
-      {/* 顶部统计卡片 - 等高布局 */}
-      <Row gutter={12} className={styles.statCards}>
-        {/* 总金额 */}
-        <Col span={6}>
-          <Card className={styles.statCard} size="small">
-            <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>总金额</span>
-              <Tooltip title="所选时间范围内的订单总金额">
-                <InfoCircleOutlined className={styles.infoIcon} />
-              </Tooltip>
-            </div>
-            <div className={styles.statValue}>¥{statData.totalAmount.toLocaleString()}</div>
-            <div className={styles.tinyChart}>
-              {renderMiniBar(statData.warehousedTrend, '#36cfc9')}
-            </div>
-            <div className={styles.compareRow}>
-              <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.totalAmountChange, statData.totalAmount, statData.prevTotalAmount, true)}
-            </div>
-          </Card>
-        </Col>
-
-        {/* 入库数量 */}
-        <Col span={6}>
-          <Card className={styles.statCard} size="small">
-            <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>入库数量</span>
-              <Tooltip title="所选时间范围内的成品入库总数">
-                <InfoCircleOutlined className={styles.infoIcon} />
-              </Tooltip>
-            </div>
-            <div className={styles.statValue}>{statData.warehousedCount.toLocaleString()}</div>
-            <div className={styles.tinyChart}>
-              {renderMiniBar(statData.warehousedTrend, '#975FE4')}
-            </div>
-            <div className={styles.compareRow}>
-              <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.warehousedChange, statData.warehousedCount, statData.prevWarehousedCount)}
-            </div>
-          </Card>
-        </Col>
-
-        {/* 订单数量 */}
-        <Col span={6}>
-          <Card className={styles.statCard} size="small">
-            <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>订单数量</span>
-              <Tooltip title="所选时间范围内的订单总数">
-                <InfoCircleOutlined className={styles.infoIcon} />
-              </Tooltip>
-            </div>
-            <div className={styles.statValue}>{statData.orderCount.toLocaleString()}</div>
-            <div className={styles.tinyChart}>
-              {renderMiniBar(statData.orderTrend, '#597ef7')}
-            </div>
-            <div className={styles.compareRow}>
-              <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.orderChange, statData.orderCount, statData.prevOrderCount)}
-            </div>
-          </Card>
-        </Col>
-
-        {/* 次品数量 */}
-        <Col span={6}>
-          <Card className={styles.statCard} size="small">
-            <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>次品数量</span>
-              <Tooltip title="所选时间范围内的次品总数">
-                <InfoCircleOutlined className={styles.infoIcon} />
-              </Tooltip>
-            </div>
-            <div className={styles.statValue} style={{ color: statData.defectCount > 0 ? 'var(--color-danger)' : 'var(--neutral-text)' }}>
-              {statData.defectCount.toLocaleString()}
-            </div>
-            <div className={styles.tinyChart}>
-              <div className={styles.defectInfo}>
-                <span className={styles.defectLabel}>次品率</span>
-                <span className={styles.defectValue} style={{ color: statData.defectRate > 5 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                  {statData.defectRate.toFixed(1)}%
-                </span>
+      {/* 顶部统计卡片合并展示 */}
+      <Card size="small" style={{ marginBottom: 16, borderRadius: '8px', boxShadow: '0 1px 2px -2px rgba(0, 0, 0, 0.08), 0 3px 6px 0 rgba(0, 0, 0, 0.06), 0 5px 12px 4px rgba(0, 0, 0, 0.04)' }}>
+        <Row gutter={24} style={{ padding: '16px 16px 24px 16px' }}>
+          <Col span={18}>
+            <div style={{ display: 'flex', gap: '24px', paddingBottom: '24px', marginBottom: '24px' }}>
+              <div style={{ flex: 1, padding: '16px', background: 'var(--background-secondary)', borderRadius: '8px' }}>
+                <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 8, fontSize: 14 }}>
+                  总金额
+                  <Tooltip title="所选时间范围内的订单总金额"><InfoCircleOutlined style={{ marginLeft: 6 }} /></Tooltip>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 600, color: 'var(--primary-color)' }}>¥{statData.totalAmount.toLocaleString()}</div>
+                <div style={{ marginTop: 8, fontSize: 13 }}>
+                  <span style={{ color: '#8c8c8c', marginRight: 8 }}>{getCompareLabel()}</span>
+                  {renderChange(statData.totalAmountChange, statData.totalAmount, statData.prevTotalAmount, true)}
+                </div>
+              </div>
+              <div style={{ flex: 1, padding: '16px', background: 'var(--background-secondary)', borderRadius: '8px' }}>
+                <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 8, fontSize: 14 }}>
+                  入库数量
+                  <Tooltip title="所选时间范围内的成品入库总数"><InfoCircleOutlined style={{ marginLeft: 6 }} /></Tooltip>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 600 }}>{statData.warehousedCount.toLocaleString()}</div>
+                <div style={{ marginTop: 8, fontSize: 13 }}>
+                  <span style={{ color: '#8c8c8c', marginRight: 8 }}>{getCompareLabel()}</span>
+                  {renderChange(statData.warehousedChange, statData.warehousedCount, statData.prevWarehousedCount)}
+                </div>
+              </div>
+              <div style={{ flex: 1, padding: '16px', background: 'var(--background-secondary)', borderRadius: '8px' }}>
+                <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 8, fontSize: 14 }}>
+                  订单数量
+                  <Tooltip title="所选时间范围内的订单总数"><InfoCircleOutlined style={{ marginLeft: 6 }} /></Tooltip>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 600 }}>{statData.orderCount.toLocaleString()}</div>
+                <div style={{ marginTop: 8, fontSize: 13 }}>
+                  <span style={{ color: '#8c8c8c', marginRight: 8 }}>{getCompareLabel()}</span>
+                  {renderChange(statData.orderChange, statData.orderCount, statData.prevOrderCount)}
+                </div>
+              </div>
+              <div style={{ flex: 1, position: 'relative', padding: '16px', background: 'var(--background-secondary)', borderRadius: '8px' }}>
+                <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 8, fontSize: 14 }}>
+                  次品数量
+                  <Tooltip title="所选时间范围内的次品总数"><InfoCircleOutlined style={{ marginLeft: 6 }} /></Tooltip>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 600, color: statData.defectCount > 0 ? 'var(--color-danger)' : 'inherit' }}>{statData.defectCount.toLocaleString()}</div>
+                <div style={{ marginTop: 8, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ color: '#8c8c8c', marginRight: 8 }}>{getCompareLabel()}</span>
+                    {renderChange(statData.defectChange, statData.defectCount, statData.prevDefectCount)}
+                  </div>
+                  <div style={{ color: statData.defectRate > 5 ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                    次品率 {statData.defectRate.toFixed(1)}%
+                  </div>
+                </div>
               </div>
             </div>
-            <div className={styles.compareRow}>
-              <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.defectChange, statData.defectCount, statData.prevDefectCount)}
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 图表区域 */}
-      <Card className={styles.chartCard} size="small">
-        {/* 图表上方汇总统计 - 使用通用StatsGrid组件 */}
-        <div className={styles.chartSummary}>
-          <StatsGrid
-            items={[
-              { key: 'totalAmount', title: '总金额', value: statData.totalAmount, prefix: '¥', precision: 2 },
-              { key: 'orderCount', title: '订单数量', value: statData.orderCount, suffix: '单' },
-              { key: 'warehousedCount', title: '入库数量', value: statData.warehousedCount, suffix: '件' },
-              { key: 'materialCost', title: '面辅料总价', value: statData.materialCost, prefix: '¥', precision: 2 },
-              { key: 'productionCost', title: '生产总价', value: statData.productionCost, prefix: '¥', precision: 2 },
-              {
-                key: 'profitRate',
-                title: '利润率',
-                value: statData.profitRate,
-                precision: 1,
-                suffix: '%',
-                valueStyle: statData.profitRate >= 0 ? { color: 'var(--color-success)' } : { color: 'var(--color-danger)' }
-              },
-              {
-                key: 'totalProfit',
-                title: '利润',
-                value: statData.totalProfit,
-                prefix: '¥',
-                precision: 2,
-                valueStyle: statData.totalProfit >= 0 ? { color: 'var(--color-success)' } : { color: 'var(--color-danger)' }
-              },
-            ]}
-            columns={7}
-            gutter={16}
-          />
-        </div>
-
-        <div className={styles.chartHeader}>
-          <h4 className={styles.sectionTitle}>趋势分析</h4>
-        </div>
-
-        <Row gutter={16}>
-          <Col span={16}>
-            <div className={styles.trendSection}>
-              <div style={{ height: 260 }}>
-                <Line {...lineChartConfig} />
-              </div>
-            </div>
+            
+            <Suspense fallback={<div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
+              <ReactECharts option={chartOption} style={{ height: 350, width: '100%' }} />
+            </Suspense>
           </Col>
-          <Col span={8}>
-            <div className={styles.rankSection}>
-              <h4 className={styles.sectionTitle}>工厂总金额排名</h4>
-              <div className={styles.rankList}>
+          
+          <Col span={6}>
+            <div className={styles.rankSection} style={{ marginTop: 0, height: '100%', paddingTop: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h4 className={styles.sectionTitle} style={{ margin: 0 }}>工厂总金额排名</h4>
+              </div>
+              <div className={styles.rankList} style={{ maxHeight: 440, overflowY: 'auto' }}>
                 {rankData.map((item) => (
                   <div key={item.rank} className={styles.rankItem}>
                     <span className={`${styles.rankNum} ${item.rank <= 3 ? styles.topRank : ''}`}>
@@ -754,6 +815,44 @@ const DashboardContent: React.FC = () => {
             </div>
           </Col>
         </Row>
+      </Card>
+
+      {/* 财务明细数据 */}
+      <Card className={styles.chartCard} size="small" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '12px', background: 'var(--background-secondary)', padding: '16px', borderRadius: '8px', overflowX: 'auto' }}>
+          <div style={{ flex: 1, minWidth: 120, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>总金额</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--primary-color)' }}>¥{statData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 100, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>订单数量</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>{statData.orderCount.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 400, color: '#999' }}>单</span></div>
+          </div>
+          <div style={{ flex: 1, minWidth: 100, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>入库数量</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>{statData.warehousedCount.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 400, color: '#999' }}>件</span></div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>面辅料总价</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>¥{statData.materialCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>生产总价</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>¥{statData.productionCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>利润</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: statData.totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+              ¥{statData.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 100, background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>利润率</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: statData.profitRate >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+              {statData.profitRate.toFixed(1)}%
+            </div>
+          </div>
+        </div>
       </Card>
     </Spin>
   );

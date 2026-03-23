@@ -691,7 +691,7 @@ const GlobalAiAssistant: React.FC = () => {
         setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
       })
       .catch(() => { /* 静默降级，不影响正常使用 */ });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // 监听回车和滚到底部

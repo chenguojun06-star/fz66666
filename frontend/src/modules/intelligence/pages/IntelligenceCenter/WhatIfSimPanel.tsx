@@ -162,10 +162,6 @@ const WhatIfSimPanel: React.FC = () => {
     () => Array.from(new Set(selectedStyles.flatMap((item) => item.orderIds))),
     [selectedStyles]
   );
-  const selectedOrders = useMemo(
-    () => orders.filter((order) => selectedOrderIds.includes(order.id)),
-    [orders, selectedOrderIds]
-  );
   const totalSelectedQuantity = selectedStyles.reduce((sum, item) => sum + item.totalQuantity, 0);
   const targetFactory = factories.find((factory) => String(factory.id || '').trim() === targetFactoryId);
   const scenarioRows = result && Array.isArray(result.scenarios) ? result.scenarios : [];

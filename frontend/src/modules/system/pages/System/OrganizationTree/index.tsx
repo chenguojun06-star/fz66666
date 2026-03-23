@@ -9,18 +9,18 @@ import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Card, Checkbox, Col, Descriptions, Empty, Form, Input,
-  InputNumber, Modal, QRCode, Row, Select, Space, Tag, Tooltip, Typography,
+  InputNumber, Modal, QRCode, Row, Select, Space, Tag, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
-  ApartmentOutlined, BankOutlined, CrownFilled, DeleteOutlined,
-  DownOutlined, EditOutlined, LockOutlined, PlusOutlined, QrcodeOutlined, RightOutlined,
+  ApartmentOutlined, BankOutlined, CrownFilled,
+  LockOutlined, PlusOutlined, QrcodeOutlined,
   SnippetsOutlined, UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
 
-type DialogMode = 'create' | 'edit';
+// import type { DialogMode } from './hooks/useOrganizationModals'; // 暂时不用
 
 const ownerTypeOptions = [
   { value: 'NONE', label: '通用部门' },
@@ -48,32 +48,41 @@ function getDescendantIds(node: OrganizationUnit): string[] {
   return ids;
 }
 
-/** 递归过滤组织树，只保留属于指定工厂的节点（工厂账号数据隔离） */
-function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): OrganizationUnit[] {
-  return nodes.flatMap(node => {
-    if (node.factoryId && String(node.factoryId) === factoryId) {
-      return [node]; // 完整保留该节点及其所有子节点
-    }
-    const filteredChildren = filterTreeByFactory(node.children ?? [], factoryId);
-    if (filteredChildren.length > 0) {
-      return [{ ...node, children: filteredChildren }];
-    }
-    return [];
-  });
-}
+import { useOrganizationTreeData } from './hooks/useOrganizationTreeData';
+import { useOrganizationModals } from './hooks/useOrganizationModals';
+import { useMemberActions } from './hooks/useMemberActions';
+import { TreeItem } from './components/TreeItem';
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
   const { user } = useAuth();
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [departments, setDepartments] = useState<OrganizationUnit[]>([]);
-  const [treeData, setTreeData] = useState<OrganizationUnit[]>([]);
-  const [membersMap, setMembersMap] = useState<Record<string, User[]>>({});
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<DialogMode>('create');
-  const [currentRecord, setCurrentRecord] = useState<OrganizationUnit | null>(null);
-  const [submitLoading, setSubmitLoading] = useState(false);
+  
+  const {
+    loading,
+    treeData,
+    visibleTreeData,
+    departments,
+    membersMap,
+    setMembersMap,
+    assignableUsers,
+    loadData,
+    loadAssignableUsers,
+    totalMembers,
+    unitNameMap,
+    isFactoryAccount,
+  } = useOrganizationTreeData();
+
+  const {
+    form,
+    dialogOpen,
+    dialogMode,
+    currentRecord,
+    submitLoading,
+    openCreate,
+    openEdit,
+    closeDialog,
+    handleSubmit,
+  } = useOrganizationModals(loadData);
 
   // 左树选中节点
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -103,42 +112,27 @@ const OrganizationTreePage: React.FC = () => {
     }
   }, [tplModal.open]);
 
-  // 成员分配弹窗状态
-  const [assignModal, setAssignModal] = useState<{ open: boolean; node: OrganizationUnit | null }>({ open: false, node: null });
-  const [assignableUsers, setAssignableUsers] = useState<User[]>([]);
-  const [assignSearch, setAssignSearch] = useState('');
-  // 批量添加：选中用户ID列表 + loading
-  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([]);
-  const [batchAssignLoading, setBatchAssignLoading] = useState(false);
-  // 设为老板操作 loading（存 userId）
-  const [setOwnerLoading, setSetOwnerLoading] = useState<string | null>(null);
-  // 成员资料 mini 弹窗
-  const [profileUser, setProfileUser] = useState<User | null>(null);
-  const [resetPwdVisible, setResetPwdVisible] = useState(false);
-  const [resetPwdLoading, setResetPwdLoading] = useState(false);
-  const [resetPwdValue, setResetPwdValue] = useState('');
-  const currentFactoryName = String((user as any)?.tenantName || '').trim();
-  const isFactoryAccount = !!(user as any)?.factoryId;
-  const currentUserFactoryId = isFactoryAccount ? String((user as any).factoryId) : null;
+  // 成员分配、操作相关的逻辑
+  const {
+    assignModal, setAssignModal,
+    assignSearch, setAssignSearch,
+    batchSelectedIds, setBatchSelectedIds,
+    batchAssignLoading,
+    setOwnerLoading,
+    profileUser, setProfileUser,
+    resetPwdVisible, setResetPwdVisible,
+    resetPwdLoading,
+    resetPwdValue, setResetPwdValue,
+    handleResetMemberPwd,
+    handleOpenAssign,
+    handleBatchAssign,
+    handleRemoveMember,
+    handleSetFactoryOwner,
+    currentNodeMemberIds,
+    filteredAssignableUsers,
+  } = useMemberActions(membersMap, setMembersMap, assignableUsers, loadAssignableUsers);
 
-  const handleResetMemberPwd = useCallback(async () => {
-    if (!profileUser?.id) return;
-    if (!resetPwdValue || resetPwdValue.length < 6) {
-      message.warning('新密码不能少于6位');
-      return;
-    }
-    setResetPwdLoading(true);
-    try {
-      await organizationApi.adminResetMemberPwd(String(profileUser.id), resetPwdValue);
-      message.success('密码已重置');
-      setResetPwdVisible(false);
-      setResetPwdValue('');
-    } catch (e: any) {
-      message.error(e?.message || '重置失败');
-    } finally {
-      setResetPwdLoading(false);
-    }
-  }, [profileUser, resetPwdValue, message]);
+  const currentFactoryName = String((user as any)?.tenantName || '').trim();
 
   const handleInitTemplate = async () => {
     if (!tplModal.type) { message.warning('请选择一个模板类型'); return; }
@@ -156,40 +150,6 @@ const OrganizationTreePage: React.FC = () => {
     }
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // 关键数据：tree + departments 必须成功
-      const [tree, departmentList] = await Promise.all([
-        organizationApi.tree(),
-        organizationApi.departments(),
-      ]);
-      setTreeData(Array.isArray(tree) ? tree : []);
-      setDepartments(Array.isArray(departmentList) ? departmentList : []);
-    } catch (error: any) {
-      message.error(error?.message || '组织架构加载失败');
-    } finally {
-      setLoading(false);
-    }
-    // 成员数据独立加载，失败不影响主体
-    organizationApi.members()
-      .then((m) => setMembersMap(m && typeof m === 'object' ? m : {}))
-      .catch(() => { /* 静默，成员数据非关键 */ });
-  }, [message]);
-
-  useEffect(() => { void loadData(); }, [loadData]);
-
-  // 加载可分配用户（一次性，点开弹窗时刷新）
-  const loadAssignableUsers = useCallback(async () => {
-    try {
-      const users = await organizationApi.assignableUsers();
-      setAssignableUsers(Array.isArray(users) ? users : []);
-    } catch (e: any) {
-      message.error('加载用户列表失败：' + (e?.message || '请重试'));
-      setAssignableUsers([]);
-    }
-  }, [message]);
-
   const departmentOptions = useMemo(() => {
     return departments
       .map((item) => ({
@@ -199,105 +159,45 @@ const OrganizationTreePage: React.FC = () => {
       .filter((item) => item.value);
   }, [departments]);
 
-  const openCreate = (parent?: OrganizationUnit) => {
-    setDialogMode('create');
-    setCurrentRecord(parent || null);
-    form.setFieldsValue({
-      unitName: '',
-      parentId: parent?.id ? String(parent.id) : undefined,
-      ownerType: parent?.ownerType || 'NONE',
-      sortOrder: 0,
-    });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (record: OrganizationUnit) => {
-    setDialogMode('edit');
-    setCurrentRecord(record);
-    form.setFieldsValue({
-      id: record.id ? String(record.id) : undefined,
-      unitName: record.unitName,
-      parentId: record.parentId ? String(record.parentId) : undefined,
-      ownerType: record.ownerType || 'NONE',
-      sortOrder: record.sortOrder || 0,
-    });
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setCurrentRecord(null);
-    form.resetFields();
-  };
-
   const handleDelete = (record: OrganizationUnit) => {
+    let remarkValue = '';
     modal.confirm({
       width: '30vw',
       title: `删除部门「${record.unitName}」`,
-      content: '仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。',
+      content: (
+        <div>
+          <p>仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。</p>
+          <div style={{ marginTop: 16 }}>
+            <span style={{ color: 'red' }}>*</span> 删除原因：
+            <Input.TextArea 
+              rows={3} 
+              placeholder="请输入删除原因（必填）" 
+              onChange={e => { remarkValue = e.target.value; }}
+            />
+          </div>
+        </div>
+      ),
       okText: '删除',
       okButtonProps: { danger: true, type: 'default' },
       cancelText: '取消',
       onOk: async () => {
-        const remark = `删除组织节点：${record.unitName}`;
-        await organizationApi.delete(String(record.id), remark);
-        message.success('删除成功');
-        await loadData();
+        if (!remarkValue.trim()) {
+          message.error('请填写删除原因');
+          return Promise.reject(new Error('未填写原因'));
+        }
+        try {
+          const remark = remarkValue.trim();
+          await organizationApi.delete(String(record.id), remark);
+          message.success('删除成功');
+          await loadData();
+        } catch (error: any) {
+          console.error('Failed to delete organization unit:', error);
+          const errorMsg = error?.response?.data?.message || error?.message || '删除失败，请检查该部门是否还有子节点或成员';
+          message.error(errorMsg);
+        }
       },
     });
   };
-
-  const handleSubmit = async () => {
-    const values = await form.validateFields();
-    setSubmitLoading(true);
-    try {
-      const payload = { ...values, nodeType: 'DEPARTMENT', status: 'active' };
-      if (dialogMode === 'edit') {
-        await organizationApi.update(payload);
-      } else {
-        await organizationApi.create(payload);
-      }
-      message.success(dialogMode === 'edit' ? '部门更新成功' : '部门创建成功');
-      closeDialog();
-      await loadData();
-    } catch (error: any) {
-      message.error(error?.message || '保存失败');
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
-  // 打开分配成员弹窗
-  const handleOpenAssign = useCallback(async (node: OrganizationUnit) => {
-    setAssignSearch('');
-    setBatchSelectedIds([]);
-    setAssignModal({ open: true, node });
-    await loadAssignableUsers();
-  }, [loadAssignableUsers]);
-
-  // 批量分配用户到节点
-  const handleBatchAssign = useCallback(async () => {
-    if (!assignModal.node?.id || batchSelectedIds.length === 0) {
-      message.warning('请勾选要添加的用户');
-      return;
-    }
-    setBatchAssignLoading(true);
-    try {
-      await Promise.all(
-        batchSelectedIds.map((uid) => organizationApi.assignMember(uid, String(assignModal.node!.id))),
-      );
-      message.success(`已成功添加 ${batchSelectedIds.length} 名成员`);
-      setBatchSelectedIds([]);
-      const [m] = await Promise.allSettled([organizationApi.members(), loadAssignableUsers()]);
-      if (m.status === 'fulfilled' && m.value && typeof m.value === 'object') {
-        setMembersMap(m.value);
-      }
-    } catch (error: any) {
-      message.error(error?.message || '批量添加失败');
-    } finally {
-      setBatchAssignLoading(false);
-    }
-  }, [assignModal.node, batchSelectedIds, message, loadAssignableUsers]);
 
   // 显示外发工厂注册二维码
   const handleShowQRCode = useCallback(async (node: OrganizationUnit) => {
@@ -308,79 +208,6 @@ const OrganizationTreePage: React.FC = () => {
     } catch { /* 静默，二维码依然可以展示 */ }
     setQrModal({ open: true, unit: node, tenantCode });
   }, []);
-
-  // 移出成员
-  const handleRemoveMember = useCallback(async (userId: string, userName: string) => {
-    modal.confirm({
-      width: '30vw',
-      title: `移出成员「${userName}」`,
-      content: '该成员将从当前组织节点移出，账号本身不受影响。',
-      okText: '移出',
-      okButtonProps: { danger: true, type: 'default' },
-      cancelText: '取消',
-      onOk: async () => {
-        await organizationApi.removeMember(userId);
-        message.success('已移出');
-        organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
-      },
-    });
-  }, [modal, message]);
-
-  // 设置外发工厂主账号（老板）
-  const handleSetFactoryOwner = useCallback(async (user: User) => {
-    if (!user.factoryId || !user.id) return;
-    setSetOwnerLoading(String(user.id));
-    try {
-      await organizationApi.setFactoryOwner(String(user.id), String(user.factoryId));
-      message.success(`已设置「${user.name || user.username}」为工厂主账号（老板）`);
-      organizationApi.members().then((m) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
-    } catch (e: unknown) {
-      const err = e as { message?: string };
-      message.error(err?.message || '设置失败');
-    } finally {
-      setSetOwnerLoading(null);
-    }
-  }, [message]);
-
-  const totalMembers = useMemo(() => {
-    return Object.values(membersMap).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
-  }, [membersMap]);
-
-  /** 工厂账号只能看到自己工厂相关的组织节点 */
-  const visibleTreeData = useMemo(() => {
-    if (!isFactoryAccount || !currentUserFactoryId) return treeData;
-    return filterTreeByFactory(treeData, currentUserFactoryId);
-  }, [isFactoryAccount, currentUserFactoryId, treeData]);
-
-  // 当前弹窗节点下的成员 id 集合（用于标注已添加状态，不过滤）
-  const currentNodeMemberIds = useMemo(() => {
-    if (!assignModal.node?.id) return new Set<string>();
-    const members = membersMap[String(assignModal.node.id)] || [];
-    return new Set(members.map((u) => String(u.id)));
-  }, [assignModal.node, membersMap]);
-
-  // 可供分配的用户列表（显示所有人，按搜索过滤，已在本节点的排在后面）
-  const filteredAssignableUsers = useMemo(() => {
-    const filtered = assignableUsers.filter((u) => {
-      if (!assignSearch.trim()) return true;
-      const q = assignSearch.toLowerCase();
-      return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
-    });
-    // 已在本节点的排到最后
-    return [
-      ...filtered.filter(u => !currentNodeMemberIds.has(String(u.id))),
-      ...filtered.filter(u => currentNodeMemberIds.has(String(u.id))),
-    ];
-  }, [assignableUsers, currentNodeMemberIds, assignSearch]);
-
-  // 部门 ID → 名称 快查表
-  const unitNameMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    departments.forEach(d => {
-      if (d.id) map[String(d.id)] = d.unitName || '';
-    });
-    return map;
-  }, [departments]);
 
   // 当前选中的 OrganizationUnit 对象
   const selectedUnit = useMemo(() => findUnit(treeData, selectedUnitId), [treeData, selectedUnitId]);
@@ -945,104 +772,6 @@ const OrganizationTreePage: React.FC = () => {
         )}
       </Modal>
     </Layout>
-  );
-};
-
-/* ---------- 左侧树节点 ---------- */
-
-interface TreeItemProps {
-  node: OrganizationUnit;
-  depth: number;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onAdd: (parent: OrganizationUnit) => void;
-  onEdit: (record: OrganizationUnit) => void;
-  onDelete: (record: OrganizationUnit) => void;
-  onAddMember: (node: OrganizationUnit) => void;
-  onShowQRCode: (node: OrganizationUnit) => void;
-  /** 工厂账号只读模式：隐藏新增/编辑/删除等操作按钮 */
-  readOnly?: boolean;
-}
-
-const TreeItem: React.FC<TreeItemProps> = ({
-  node, depth, selectedId, onSelect, onAdd, onEdit, onDelete, onAddMember, onShowQRCode, readOnly,
-}) => {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = Array.isArray(node.children) && node.children.length > 0;
-  const isSelected = String(node.id) === selectedId;
-  const isFactory = node.nodeType === 'FACTORY';
-  const isExternal = node.ownerType === 'EXTERNAL';
-
-  return (
-    <div>
-      <div
-        className={`tree-item${isSelected ? ' tree-item-selected' : ''}`}
-        style={{ paddingLeft: depth * 16 + 8 }}
-      >
-        <span
-          className="tree-chevron"
-          onClick={() => hasChildren && setExpanded(v => !v)}
-          style={{ cursor: hasChildren ? 'pointer' : 'default', opacity: hasChildren ? 1 : 0 }}
-        >
-          {expanded ? <DownOutlined /> : <RightOutlined />}
-        </span>
-        <span className="tree-node-label" onClick={() => onSelect(String(node.id))}>
-          {isFactory
-            ? <BankOutlined style={{ color: '#1677ff', marginRight: 4 }} />
-            : <ApartmentOutlined style={{ color: '#722ed1', marginRight: 4 }} />
-          }
-          <span className="tree-node-name">{node.unitName}</span>
-        </span>
-        <div className="tree-item-actions">
-          {!readOnly && (isExternal ? (
-            <Tooltip title="注册二维码">
-              <Button type="text" size="small" icon={<QrcodeOutlined />}
-                onClick={e => { e.stopPropagation(); onShowQRCode(node); }} />
-            </Tooltip>
-          ) : (
-            <Tooltip title="添加成员">
-              <Button type="text" size="small" icon={<UserAddOutlined />}
-                onClick={e => { e.stopPropagation(); onAddMember(node); }} />
-            </Tooltip>
-          ))}
-          {!readOnly && (!isFactory || isExternal) && (
-            <>
-              <Tooltip title="新增下级">
-                <Button type="text" size="small" icon={<PlusOutlined />}
-                  onClick={e => { e.stopPropagation(); onAdd(node); }} />
-              </Tooltip>
-              <Tooltip title="编辑">
-                <Button type="text" size="small" icon={<EditOutlined />}
-                  onClick={e => { e.stopPropagation(); onEdit(node); }} />
-              </Tooltip>
-              <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />}
-                  onClick={e => { e.stopPropagation(); onDelete(node); }} />
-              </Tooltip>
-            </>
-          )}
-        </div>
-      </div>
-      {hasChildren && expanded && (
-        <div>
-          {node.children!.map(child => (
-            <TreeItem
-              key={child.id ?? child.unitName}
-              node={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onAdd={onAdd}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onAddMember={onAddMember}
-              onShowQRCode={onShowQRCode}
-              readOnly={readOnly}
-            />
-          ))}
-        </div>
-      )}
-    </div>
   );
 };
 

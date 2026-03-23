@@ -164,10 +164,7 @@ public class ExpenseReimbursementOrchestrator {
         }
 
         // 软删除
-        entity.setDeleteFlag(1);
-        entity.setUpdateBy(UserContext.username());
-        entity.setUpdateTime(LocalDateTime.now());
-        expenseReimbursementService.updateById(entity);
+        expenseReimbursementService.removeById(id);
         log.info("报销单已删除: no={}", entity.getReimbursementNo());
     }
 }

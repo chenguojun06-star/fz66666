@@ -199,12 +199,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     @Override
     public boolean deleteById(String id) {
         // 逻辑删除
-        ProductionOrder productionOrder = new ProductionOrder();
-        productionOrder.setId(id);
-        productionOrder.setDeleteFlag(1);
-        productionOrder.setUpdateTime(LocalDateTime.now());
-
-        return this.updateById(productionOrder);
+        return this.removeById(id);
     }
 
     @Override

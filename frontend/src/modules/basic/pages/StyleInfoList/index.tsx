@@ -30,7 +30,7 @@ import '../StyleInfo/styles.css';
 const StyleInfoListPage: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { pageSize: cardPageSize } = useCardGridLayout(10);
+  useCardGridLayout(10);
 
   // 使用现有Hooks
   const {

@@ -174,11 +174,7 @@ public class ProductOutstockOrchestrator {
             }
         }
 
-        ProductOutstock patch = new ProductOutstock();
-        patch.setId(key);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        boolean ok = productOutstockService.updateById(patch);
+        boolean ok = productOutstockService.removeById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }

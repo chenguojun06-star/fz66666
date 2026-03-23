@@ -256,8 +256,7 @@ public class SelectionCandidateOrchestrator {
                 throw new RuntimeException("审核通过后的候选款需保留满10天后才可删除");
             }
         }
-        candidate.setDeleteFlag(1);
-        candidateService.updateById(candidate);
+        candidateService.removeById(id);
     }
 
     /** 查询该候选款所有评审记录 */

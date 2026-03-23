@@ -106,9 +106,7 @@ public class OrganizationUnitBindingHelper {
             return;
         }
         String nodeOrgUnitId = node.getId();
-        node.setDeleteFlag(1);
-        node.setUpdateTime(LocalDateTime.now());
-        organizationUnitService.updateById(node);
+        organizationUnitService.removeById(nodeOrgUnitId);
         // 工厂删除时级联清除该节点下所有成员的组织归属
         if (org.springframework.util.StringUtils.hasText(nodeOrgUnitId)) {
             userService.lambdaUpdate()

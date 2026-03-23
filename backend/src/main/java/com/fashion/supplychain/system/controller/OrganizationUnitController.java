@@ -54,7 +54,7 @@ public class OrganizationUnitController {
 
     @PostMapping("/remove-member")
     public Result<Void> removeMember(@RequestBody Map<String, String> body) {
-        organizationUnitOrchestrator.removeMember(body.get("userId"));
+        organizationUnitOrchestrator.removeMember(body.get("userId"), body.get("remark"));
         return Result.success(null);
     }
 

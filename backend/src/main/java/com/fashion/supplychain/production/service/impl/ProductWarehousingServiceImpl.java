@@ -691,12 +691,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (!StringUtils.hasText(orderId)) {
             return false;
         }
-        ProductWarehousing patch = new ProductWarehousing();
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        return this.update(patch, new LambdaUpdateWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getOrderId, orderId.trim())
-                .eq(ProductWarehousing::getDeleteFlag, 0));
+        return this.remove(new LambdaQueryWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getOrderId, orderId.trim()));
     }
 
     @Override

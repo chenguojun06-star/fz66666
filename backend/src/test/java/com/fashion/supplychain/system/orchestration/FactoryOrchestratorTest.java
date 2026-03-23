@@ -188,12 +188,12 @@ class FactoryOrchestratorTest {
     @Test
     void delete_valid_softDeletesFactory() {
         when(factoryService.getById("1")).thenReturn(null);
-        when(factoryService.updateById(any())).thenReturn(true);
+        when(factoryService.removeById(any(String.class))).thenReturn(true);
 
         boolean result = orchestrator.delete("1", "下线工厂");
 
         assertThat(result).isTrue();
-        verify(factoryService).updateById(any());
+        verify(factoryService).removeById(any(String.class));
     }
 
     // ── helpers ───────────────────────────────────────────────────────

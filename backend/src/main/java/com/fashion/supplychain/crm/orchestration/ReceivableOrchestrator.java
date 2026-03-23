@@ -181,10 +181,7 @@ public class ReceivableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        Receivable r = new Receivable();
-        r.setId(id);
-        r.setDeleteFlag(1);
-        receivableService.updateById(r);
+        receivableService.removeById(id);
     }
 
     /**

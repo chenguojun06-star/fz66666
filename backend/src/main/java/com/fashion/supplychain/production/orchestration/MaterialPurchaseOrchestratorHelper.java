@@ -274,12 +274,8 @@ public class MaterialPurchaseOrchestratorHelper {
             for (String idRaw : orderIds) {
                 String oid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
                 if (!StringUtils.hasText(oid)) continue;
-                MaterialPurchase patch = new MaterialPurchase();
-                patch.setDeleteFlag(1);
-                patch.setUpdateTime(now);
-                materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
-                        .eq(MaterialPurchase::getOrderId, oid)
-                        .eq(MaterialPurchase::getDeleteFlag, 0));
+                materialPurchaseService.remove(new LambdaQueryWrapper<MaterialPurchase>()
+                        .eq(MaterialPurchase::getOrderId, oid));
             }
         }
 

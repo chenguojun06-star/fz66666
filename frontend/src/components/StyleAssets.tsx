@@ -86,7 +86,7 @@ export const StyleCoverThumb: React.FC<{
       style={{
         width: isFill ? '100%' : numSize,
         height: isFill ? '100%' : numSize,
-        borderRadius: 4,
+        borderRadius,
         overflow: 'hidden',
         background: 'var(--color-bg-subtle)',
         display: 'flex',

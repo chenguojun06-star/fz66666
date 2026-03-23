@@ -146,8 +146,7 @@ public class AiMemoryOrchestrator {
         if (all.size() > MAX_MEMORIES_PER_USER) {
             for (int i = MAX_MEMORIES_PER_USER; i < all.size(); i++) {
                 AiConversationMemory old = all.get(i);
-                old.setDeleteFlag(1);
-                memoryMapper.updateById(old);
+                memoryMapper.deleteById(old.getId());
             }
         }
     }

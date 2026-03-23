@@ -111,11 +111,7 @@ public class ProductionCleanupOrchestrator {
             }
 
             if (!orphanIds.isEmpty()) {
-                MaterialPurchase patch = new MaterialPurchase();
-                patch.setDeleteFlag(1);
-                patch.setUpdateTime(LocalDateTime.now());
-                patch.setRemark("System cleanup orphan");
-                materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
+                materialPurchaseService.remove(new LambdaQueryWrapper<MaterialPurchase>()
                         .in(MaterialPurchase::getId, orphanIds));
                 log.info("Cleaned up {} orphan purchase orders.", orphanIds.size());
             }
@@ -186,11 +182,7 @@ public class ProductionCleanupOrchestrator {
         }
 
         if (!duplicateIds.isEmpty()) {
-            MaterialPurchase patch = new MaterialPurchase();
-            patch.setDeleteFlag(1);
-            patch.setUpdateTime(LocalDateTime.now());
-            patch.setRemark("System cleanup duplicate");
-            materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
+            materialPurchaseService.remove(new LambdaQueryWrapper<MaterialPurchase>()
                     .in(MaterialPurchase::getId, duplicateIds));
             log.info("Cleaned up {} duplicate purchase orders.", duplicateIds.size());
         }

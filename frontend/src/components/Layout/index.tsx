@@ -593,10 +593,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             className="sidebar-menu"
           />
           {!sidebarIsCollapsed && !isMobile && (
-            <div className="sidebar-icp">
-              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-                粤ICP备2026026776号-1
-              </a>
+            <div className="sidebar-icp" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(255,255,255,0.45)', padding: '10px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
+                  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    粤公网安备44011302005352号
+                  </a>
+                </div>
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  粤ICP备2026026776号-1
+                </a>
+              </div>
             </div>
           )}
         </AntLayout.Sider>

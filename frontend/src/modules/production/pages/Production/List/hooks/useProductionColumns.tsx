@@ -302,8 +302,6 @@ export function useProductionColumns({
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
         const directCutting = isDirectCuttingOrder(record as any);
-        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const completed = Math.round((rate || 0) * total / 100);
         const frozen = isOrderFrozenByStatus(record);
         const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
 

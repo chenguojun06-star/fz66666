@@ -344,9 +344,7 @@ public class MaterialPickupOrchestrator {
         if (!"PENDING".equals(record.getAuditStatus())) {
             throw new IllegalStateException("仅待审核状态的记录可以作废");
         }
-        record.setDeleteFlag(1);
-        record.setUpdateTime(LocalDateTime.now());
-        pickupMapper.updateById(record);
+        pickupMapper.deleteById(id);
         log.info("[MaterialPickup] 作废领取单: {}", record.getPickupNo());
     }
 

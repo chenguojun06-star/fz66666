@@ -164,11 +164,7 @@ public class CustomerOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("客户ID不能为空");
         }
-        Customer c = new Customer();
-        c.setId(id);
-        c.setDeleteFlag(1);
-        c.setUpdateTime(LocalDateTime.now());
-        customerService.updateById(c);
+        customerService.removeById(id);
         log.info("[CRM] 删除客户: id={}", id);
     }
 

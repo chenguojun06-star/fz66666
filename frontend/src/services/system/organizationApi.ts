@@ -49,8 +49,8 @@ export const organizationApi = {
   },
   assignMember: (userId: string, orgUnitId: string) =>
     api.post<void>('/system/organization/assign-member', { userId, orgUnitId }),
-  removeMember: (userId: string) =>
-    api.post<void>('/system/organization/remove-member', { userId }),
+  removeMember: (userId: string, remark?: string) =>
+    api.post<void>('/system/organization/remove-member', { userId, remark }),
   /** 设置外发工厂主账号（老板/联系人），同一工厂前一个主账号自动清除 */
   setFactoryOwner: (userId: string, factoryId: string) =>
     api.post<void>('/system/organization/factory/set-owner', { userId, factoryId }),

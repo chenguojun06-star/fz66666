@@ -84,10 +84,6 @@ public class FactoryWorkerController {
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
-        FactoryWorker worker = new FactoryWorker();
-        worker.setId(id);
-        worker.setDeleteFlag(1);
-        worker.setUpdateTime(LocalDateTime.now());
-        return Result.success(factoryWorkerService.updateById(worker));
+        return Result.success(factoryWorkerService.removeById(id));
     }
 }
