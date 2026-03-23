@@ -54,7 +54,8 @@ public class TenantInterceptor implements InnerInterceptor {
     private static final Set<String> SUPERADMIN_MANAGED_TABLES = Set.of(
             "t_user", "t_app_order", "t_tenant_subscription",
             "t_payment_record", "t_logistics_record", "t_user_feedback",
-            "t_tenant_billing", "t_billing_record", "t_plan_definition"
+            "t_tenant_billing", "t_billing_record", "t_plan_definition",
+            "t_organization_unit" // 允许超管查看所有组织的架构
     );
 
     /** 匹配 FROM/JOIN/UPDATE/DELETE FROM 后表名的正则 */
