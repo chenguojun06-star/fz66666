@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, Typography, App, AutoComplete } from 'antd';
 import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
+import { getDefaultRouteForUser } from '../../routeConfig';
 import api from '../../utils/api';
 import { t } from '../../i18n';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
@@ -116,10 +117,10 @@ const Login: React.FC = () => {
     }
     setSubmitting(true);
     try {
-      const success = await login(values.username, values.password, selectedTenant.id);
+      const { success, user } = await login(values.username, values.password, selectedTenant.id);
       if (success) {
         message.success(t('login.loginSuccess', language));
-        navigate('/dashboard');
+        navigate(getDefaultRouteForUser(user));
       } else {
         message.error(t('login.loginFailed', language));
       }

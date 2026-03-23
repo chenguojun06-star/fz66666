@@ -129,7 +129,7 @@ public class ProductWarehousingStockSyncTest {
         warehousing.setDeleteFlag(0);
 
         when(productWarehousingService.getById("W1")).thenReturn(warehousing);
-        when(productWarehousingService.updateById(any(ProductWarehousing.class))).thenReturn(true);
+        when(productWarehousingService.removeById("W1")).thenReturn(true);
 
         CuttingBundle bundle = new CuttingBundle();
         bundle.setId("B1");

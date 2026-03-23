@@ -85,7 +85,7 @@ interface AuthContextType {
   user: UserInfo | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (username: string, password: string, tenantId?: number) => Promise<boolean>;
+  login: (username: string, password: string, tenantId?: number) => Promise<{ success: boolean; user?: UserInfo }>;
   updateUser: (patch: Partial<UserInfo>) => void;
   logout: () => void;
   /** 便捷方法：是否管理员 */
@@ -105,7 +105,7 @@ const fallbackAuthContext: AuthContextType = {
   user: null,
   isAuthenticated: false,
   loading: false,
-  login: async () => false,
+  login: async () => ({ success: false }),
   updateUser: () => {
   },
   logout: () => {
@@ -272,7 +272,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // 登录函数
-  const login = async (username: string, password: string, tenantId?: number): Promise<boolean> => {
+  const login = async (username: string, password: string, tenantId?: number): Promise<{ success: boolean; user?: UserInfo }> => {
     try {
       const response = (await api.post('/system/user/login', { username, password, tenantId })) as {
         code?: number;
@@ -361,9 +361,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 🔐 强制刷新页面，清空所有 React 组件状态（防止跨租户数据残留）
         // 这是最可靠的方式：unmount 所有组件 → 重新 mount → 每个组件重新请求数据
         window.location.href = '/';
-        return true;
+        return { success: true, user: baseUser };
       }
-      return false;
+      return { success: false };
     } catch (e: unknown) {
       // 把后端真实错误消息作为 Error 抛出，让调用方展示
       const msg = (e instanceof Error ? e.message : String((e as any)?.message || '')) || '登录失败，请检查用户名和密码';

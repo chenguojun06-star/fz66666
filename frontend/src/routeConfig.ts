@@ -357,5 +357,43 @@ export const resolvePermissionCode = (pathname: string): string | undefined => {
       if (!best || prefix.length > best.prefix.length) best = { prefix, code };
     }
   }
-  return best?.code;
+
+  return best ? best.code : undefined;
+};
+
+/**
+ * 智能获取用户的默认主页（防止白屏死循环）
+ * 优先级：超级管理员/工厂模式 -> Dashboard -> 根据权限按顺序分配 -> Profile保底
+ */
+export const getDefaultRouteForUser = (user: any): string => {
+  if (!user) return paths.login;
+  if (user.isSuperAdmin) return paths.dashboard;
+  
+  // 工厂账号专属默认页
+  if (user.factoryId) return paths.productionList;
+
+  // 普通账号：如果拥有 dashboard 权限，优先去 dashboard
+  const perms = user.permissions || [];
+  if (perms.includes('all') || perms.includes(permissionCodes.dashboard)) {
+    return paths.dashboard;
+  }
+
+  // 如果没有 dashboard 权限，按优先级智能分配第一个有权限的菜单
+  const fallbackPriority = [
+    { code: permissionCodes.productionList, path: paths.productionList },
+    { code: permissionCodes.styleInfo, path: paths.styleInfoList },
+    { code: permissionCodes.orderManagement, path: paths.orderManagementList },
+    { code: permissionCodes.materialInventory, path: paths.materialInventory },
+    { code: permissionCodes.crm, path: paths.crm },
+    { code: permissionCodes.financeCenter, path: paths.financeCenter },
+  ];
+
+  for (const item of fallbackPriority) {
+    if (perms.includes(item.code)) {
+      return item.path;
+    }
+  }
+
+  // 实在没有任何业务菜单权限，保底去个人中心（所有人都有权限看自己）
+  return paths.profile;
 };

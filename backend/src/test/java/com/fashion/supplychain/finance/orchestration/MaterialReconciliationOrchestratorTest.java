@@ -294,13 +294,12 @@ class MaterialReconciliationOrchestratorTest {
             existing.setDeleteFlag(0);
 
             when(materialReconciliationService.getById("rec123")).thenReturn(existing);
-            when(materialReconciliationService.updateById(any(MaterialReconciliation.class))).thenReturn(true);
+            when(materialReconciliationService.removeById("rec123")).thenReturn(true);
 
             boolean result = orchestrator.delete("rec123");
 
             assertTrue(result);
-            verify(materialReconciliationService).updateById(argThat(r ->
-                    r.getDeleteFlag() != null && r.getDeleteFlag() == 1));
+            verify(materialReconciliationService).removeById("rec123");
         }
 
         @Test
@@ -341,11 +340,12 @@ class MaterialReconciliationOrchestratorTest {
             existing.setDeleteFlag(0);
 
             when(materialReconciliationService.getById("rec123")).thenReturn(existing);
-            when(materialReconciliationService.updateById(any(MaterialReconciliation.class))).thenReturn(true);
+            when(materialReconciliationService.removeById("rec123")).thenReturn(true);
 
             boolean result = orchestrator.delete("rec123");
 
             assertTrue(result);
+            verify(materialReconciliationService).removeById("rec123");
         }
     }
 
