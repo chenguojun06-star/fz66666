@@ -286,66 +286,77 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
                 noStyle
                 shouldUpdate={(prev, cur) => prev.accountType !== cur.accountType}
               >
-                {({ getFieldValue }) =>
-                  getFieldValue('accountType') === 'BANK' ? (
-                    <>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                        <Form.Item
-                          label="银行卡号"
-                          name="accountNo"
-                          rules={[{ required: true, message: '请输入银行卡号' }]}
-                        >
-                          <Input placeholder="银行卡号" />
-                        </Form.Item>
-                        <Form.Item
-                          label="开户银行"
-                          name="bankName"
-                          rules={[{ required: true, message: '请输入开户银行' }]}
-                        >
-                          <Input placeholder="如：中国工商银行" />
+                {({ getFieldValue }) => {
+                  const type = getFieldValue('accountType');
+                  if (type === 'BANK') {
+                    return (
+                      <div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                          <Form.Item
+                            label="银行卡号"
+                            name="accountNo"
+                            rules={[{ required: true, message: '请输入银行卡号' }]}
+                          >
+                            <Input placeholder="银行卡号" />
+                          </Form.Item>
+                          <Form.Item
+                            label="开户银行"
+                            name="bankName"
+                            rules={[{ required: true, message: '请输入开户银行' }]}
+                          >
+                            <Input placeholder="如：中国工商银行" />
+                          </Form.Item>
+                        </div>
+                        <Form.Item label="开户支行" name="bankBranch">
+                          <Input placeholder="选填" />
                         </Form.Item>
                       </div>
-                      <Form.Item label="开户支行" name="bankBranch">
-                        <Input placeholder="选填" />
-                      </Form.Item>
-                    </>
-                  ) : getFieldValue('accountType') ? (
-                    <>
-                      <Form.Item
-                        label="收款二维码"
-                        name="qrCodeUrl"
-                        rules={[{ required: true, message: '请上传收款二维码' }]}
-                      >
-                        <Input placeholder="自动填充" disabled />
-                      </Form.Item>
-                      <Upload
-                        accept="image/*"
-                        listType="picture-card"
-                        maxCount={1}
-                        fileList={qrFileList}
-                        onRemove={() => {
-                          form.setFieldsValue({ qrCodeUrl: undefined });
-                          setQrFileList([]);
-                          return true;
-                        }}
-                        beforeUpload={(file) => {
-                          void uploadQrImage(file as File);
-                          return Upload.LIST_IGNORE;
-                        }}
-                      >
-                        {qrFileList.length === 0 && (
-                          <div>
-                            <UploadOutlined />
-                            <div style={{ marginTop: 8 }}>上传二维码</div>
-                          </div>
-                        )}
-                      </Upload>
-                    </>
-                  ) : null
-                }
+                    );
+                  }
+
+                  if (type) {
+                    return (
+                      <div>
+                        <Form.Item
+                          label="收款二维码"
+                          name="qrCodeUrl"
+                          rules={[{ required: true, message: '请上传收款二维码' }]}
+                        >
+                          <Input placeholder="自动填充" disabled />
+                        </Form.Item>
+                        <div>
+                          <Upload
+                            accept="image/*"
+                            listType="picture-card"
+                            maxCount={1}
+                            fileList={qrFileList}
+                            onRemove={() => {
+                              form.setFieldsValue({ qrCodeUrl: undefined });
+                              setQrFileList([]);
+                              return true;
+                            }}
+                            beforeUpload={(file) => {
+                              void uploadQrImage(file as File);
+                              return Upload.LIST_IGNORE;
+                            }}
+                          >
+                            {qrFileList.length === 0 && (
+                              <div>
+                                <UploadOutlined />
+                                <div style={{ marginTop: 8 }}>上传二维码</div>
+                              </div>
+                            )}
+                          </Upload>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                }}
               </Form.Item>
 
-              <Form.Item name="isDefault" valuePropName="checked">
+              <Form.Item name="isDefault">
                 <Select
                   options={[
                     { label: '是', value: true },

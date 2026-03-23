@@ -623,10 +623,10 @@ const AppStore: React.FC = () => {
             </Form.Item>
             <Form.Item noStyle shouldUpdate={(prev, curr) => prev.invoiceRequired !== curr.invoiceRequired}>
               {({ getFieldValue }) => getFieldValue('invoiceRequired') ? (
-                <>
+                <div>
                   <Form.Item name="invoiceTitle" label="发票抬头" rules={[{ required: true }]}><Input placeholder="请输入发票抬头" /></Form.Item>
                   <Form.Item name="invoiceTaxNo" label="纳税人识别号" rules={[{ required: true }]}><Input placeholder="请输入纳税人识别号" /></Form.Item>
-                </>
+                </div>
               ) : null}
             </Form.Item>
           </Form>

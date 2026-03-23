@@ -117,3 +117,4 @@ rag/index.json
 rag/tokens.json
 # .backup-* 目录不入库
 deployment/backend.jar
+node_modules/

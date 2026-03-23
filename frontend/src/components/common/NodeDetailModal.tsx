@@ -1155,7 +1155,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               {predicting ? (
                 <span style={{ color: '#1677ff' }}>预测中…</span>
               ) : prediction?.predictedFinishTime ? (
-                <>
+                <div>
                   <span style={{ color: '#333' }}>
                     预计完工：<b style={{ color: '#1677ff' }}>
                       {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
@@ -1173,7 +1173,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                       · {prediction.reasons[0]}
                     </span>
                   )}
-                </>
+                </div>
               ) : null}
             </div>
             {!!prediction?.predictedFinishTime && (
@@ -1227,7 +1227,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     return pName && (pName === nodeLabel || pName.includes(nodeLabel) || nodeLabel.includes(pName));
                   });
                   return (
-                    <>
+                    <div>
                       <div style={{ marginBottom: 8, textAlign: 'right' }}>
                         <Button
                           size="small"
@@ -1246,7 +1246,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                         processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}
                         onUndoSuccess={handleUndoSuccess}
                       />
-                    </>
+                    </div>
                   );
                 })(),
               },

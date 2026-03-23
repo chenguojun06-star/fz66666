@@ -78,14 +78,12 @@ const CreateReceivableModal: React.FC<{
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="customerName" label="客户名称" rules={[{ required: true }]}>
-              <Form.Item name="customerName" noStyle>
-                <input
-                  placeholder="客户公司全称"
-                  className="ant-input"
-                  style={{ width: '100%' }}
-                  onChange={e => form.setFieldValue('customerName', e.target.value)}
-                />
-              </Form.Item>
+              <input
+                placeholder="客户公司全称"
+                className="ant-input"
+                style={{ width: '100%' }}
+                onChange={e => form.setFieldValue('customerName', e.target.value)}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>

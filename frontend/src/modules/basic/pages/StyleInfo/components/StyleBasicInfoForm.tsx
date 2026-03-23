@@ -1,8 +1,10 @@
-import React from 'react';
-import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
+import React, { useState, useCallback } from 'react';
+import { Form, Input, InputNumber, Row, Col, FormInstance, Select, AutoComplete, Spin } from 'antd';
+import { customerApi } from '@/services/crm/customerApi';
 import CompositionPartsEditor from './CompositionPartsEditor';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import CustomerSearcher from '@/components/common/CustomerSearcher';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
@@ -157,8 +159,14 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             </div>
             <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
+                <Form.Item name="customerId" noStyle hidden>
+                  <Input />
+                </Form.Item>
+                <Form.Item name="customerType" noStyle hidden>
+                  <Input />
+                </Form.Item>
                 <Form.Item name="customer" label="客户">
-                  <Input placeholder="请选择客户" disabled={isFieldLocked((currentStyle as any)?.customer)} />
+                  <CustomerSearcher form={_form} disabled={isFieldLocked((currentStyle as any)?.customer)} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>

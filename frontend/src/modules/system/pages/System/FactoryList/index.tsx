@@ -751,7 +751,7 @@ const FactoryList: React.FC = () => {
                 const factoryType = getFieldValue('factoryType');
                 const isInternal = factoryType === 'INTERNAL';
                 return (
-                  <>
+                  <div>
                     {isInternal ? (
                       <Form.Item name="managerId" label="负责人">
                         <Select
@@ -780,7 +780,7 @@ const FactoryList: React.FC = () => {
                     </Form.Item>
                     {/* Hidden fields to store synced values if needed */}
                     {isInternal && <Form.Item name="contactPerson" hidden><Input /></Form.Item>}
-                  </>
+                  </div>
                 );
               }}
             </Form.Item>

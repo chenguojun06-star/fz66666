@@ -857,8 +857,9 @@ const PaymentCenterPage: React.FC = () => {
                 <InputNumber prefix="¥" min={0.01} precision={2} style={{ width: '100%' }} placeholder="支付金额" />
               </Form.Item>
 
+              <Form.Item name="paymentMethod" hidden><Input /></Form.Item>
               {/* 支付方式选择卡片 */}
-              <Form.Item label="选择支付方式" name="paymentMethod" rules={[{ required: true, message: '请选择支付方式' }]}>
+              <Form.Item label="选择支付方式" required>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                   {PAYMENT_METHOD_OPTIONS.map(opt => (
                     <div
@@ -1029,7 +1030,7 @@ const PaymentCenterPage: React.FC = () => {
                   <Form.Item noStyle shouldUpdate={(prev, cur) => prev.accountType !== cur.accountType}>
                     {({ getFieldValue }) =>
                       getFieldValue('accountType') === 'BANK' ? (
-                        <>
+                        <div>
                           <Form.Item label="银行卡号" name="accountNo" rules={[{ required: true, message: '请输入' }]}>
                             <Input placeholder="银行卡号" />
                           </Form.Item>
@@ -1039,9 +1040,9 @@ const PaymentCenterPage: React.FC = () => {
                           <Form.Item label="开户支行" name="bankBranch">
                             <Input placeholder="选填" />
                           </Form.Item>
-                        </>
+                        </div>
                       ) : getFieldValue('accountType') ? (
-                        <>
+                        <div>
                           <Form.Item label="收款二维码" name="qrCodeUrl" rules={[{ required: true, message: '请上传二维码' }]}>
                             <Input placeholder="自动填充" disabled />
                           </Form.Item>
@@ -1057,11 +1058,11 @@ const PaymentCenterPage: React.FC = () => {
                               <div><UploadOutlined /><div style={{ marginTop: 8 }}>上传二维码</div></div>
                             )}
                           </Upload>
-                        </>
+                        </div>
                       ) : null
                     }
                   </Form.Item>
-                  <Form.Item name="isDefault" valuePropName="checked">
+                  <Form.Item name="isDefault">
                     <Select
                       options={[{ label: '是', value: true }, { label: '否', value: false }]}
                       placeholder="设为默认账户"

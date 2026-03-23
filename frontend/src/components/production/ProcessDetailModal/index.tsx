@@ -528,7 +528,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{cuttingQty} 件</span>
           </div>
           {operatorInfo && (
-            <>
+            <div>
               <div>
                 <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}操作人：</span>
                 {operatorInfo.operatorName ? (
@@ -557,12 +557,12 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       minute: '2-digit'
                     })
                   ) : (
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
-                  )}
-                </span>
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+                    )}
+                  </span>
+                </div>
               </div>
-            </>
-          )}
+            )}
         </div>
 
         {/* 裁剪数量尺码明细 */}
