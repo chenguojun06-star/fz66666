@@ -127,7 +127,7 @@ class CuttingTaskOrchestratorTest {
     @Test
     @DisplayName("getStatusStats - 无订单时各状态均返回 0")
     void getStatusStats_noOrders_returnsAllZeros() {
-        when(productionOrderService.list(Mockito.<Wrapper<ProductionOrder>>any())).thenReturn(Collections.emptyList());
+        when(cuttingTaskService.list(Mockito.<Wrapper<CuttingTask>>any())).thenReturn(Collections.emptyList());
 
         Map<String, Object> stats = orchestrator.getStatusStats(Map.of());
 
@@ -140,10 +140,6 @@ class CuttingTaskOrchestratorTest {
     @Test
     @DisplayName("getStatusStats - 正确统计各状态数量")
     void getStatusStats_withOrders_countsCorrectly() {
-        ProductionOrder o1 = buildOrder("ord-1");
-        ProductionOrder o2 = buildOrder("ord-2");
-        when(productionOrderService.list(Mockito.<Wrapper<ProductionOrder>>any())).thenReturn(List.of(o1, o2));
-
         CuttingTask pending1 = buildTask("t1", "pending");
         CuttingTask pending2 = buildTask("t2", "pending");
         CuttingTask received1 = buildTask("t3", "received");

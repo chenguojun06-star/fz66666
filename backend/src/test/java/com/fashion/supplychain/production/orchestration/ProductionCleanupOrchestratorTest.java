@@ -123,7 +123,7 @@ class ProductionCleanupOrchestratorTest {
 
         orchestrator.cleanupOrphanData();
 
-        verify(materialPurchaseService, atLeastOnce()).update(any(), any());
+        verify(materialPurchaseService, atLeastOnce()).remove(any(LambdaQueryWrapper.class));
     }
 
     // ---- cleanupSince ----

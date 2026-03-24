@@ -324,4 +324,4 @@ intelligence:
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
   api-key: 128e1b4ca5b24addc0a67f8cab12ed76e29804b54752a080a4c29cf605603580
-  enabled: true
+  enabled: false
