@@ -164,10 +164,12 @@ public class StyleAttachmentOrchestrator {
             }
 
             return attachment;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Upload style attachment failed: styleId={}, bizType={}, fileName={}", styleId, bizType,
                     file == null ? null : file.getOriginalFilename(), e);
-            throw new IllegalStateException("文件上传失败");
+            throw new IllegalStateException(StringUtils.hasText(e.getMessage()) ? e.getMessage() : "文件上传失败");
         }
     }
 

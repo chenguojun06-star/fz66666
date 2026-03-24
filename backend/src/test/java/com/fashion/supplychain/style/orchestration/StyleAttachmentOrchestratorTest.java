@@ -12,7 +12,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -112,6 +114,28 @@ class StyleAttachmentOrchestratorTest {
         List<StyleAttachment> result = orchestrator.list("10", null, "image");
 
         assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void upload_storageFailure_exposesConcreteMessage() throws Exception {
+        StyleInfo style = new StyleInfo();
+        style.setId(10L);
+        when(styleInfoService.getById(10L)).thenReturn(style);
+        when(styleInfoService.isPatternLocked(10L)).thenReturn(false);
+        when(cosService.isEnabled()).thenReturn(true);
+        doThrow(new IOException("不允许上传此类型文件（dxf）"))
+                .when(cosService).upload(eq(1L), anyString(), any());
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "sample.dxf",
+                "application/octet-stream",
+                "pattern".getBytes()
+        );
+
+        assertThatThrownBy(() -> orchestrator.upload(file, "10", "pattern"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("不允许上传此类型文件（dxf）");
     }
 
     // ── delete() ──────────────────────────────────────────────────────────────

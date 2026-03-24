@@ -141,7 +141,8 @@ public class CosService {
     private static final java.util.Set<String> ALLOWED_EXTENSIONS = java.util.Set.of(
             "jpg", "jpeg", "png", "gif", "bmp", "webp",
             "pdf", "doc", "docx", "xls", "xlsx", "csv", "txt",
-            "zip", "rar", "7z"
+            "zip", "rar", "7z",
+            "dxf", "plt", "ets"
     );
     /** 单文件最大 50MB */
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
