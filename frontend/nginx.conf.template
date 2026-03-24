@@ -45,7 +45,9 @@ server {
     # ---- SSE 流式端点（必须在 /api/ 之前，nginx 按最长前缀匹配） ----
     # AI 顾问流式问答需要关闭缓冲 + 长超时，否则事件流被截断
     location ^~ /api/intelligence/ai-advisor/chat/stream {
-        proxy_pass http://dgfbkffb.backend.j6jq9qgw.o7t59w4f.com;
+        resolver ${RESOLVER} valid=30s ipv6=off;
+        set $backend "${BACKEND_URL}";
+        proxy_pass $backend;
         proxy_ssl_server_name on;
         proxy_ssl_verify off;
         proxy_http_version 1.1;
@@ -73,7 +75,9 @@ server {
     # ^~ 修饰符：确保 /api/ 前缀匹配优先于静态资源正则
     # 否则 /api/file/.../xxx.png 会被 ~* \.(png|jpg)$ 截走 → 返回404
     location ^~ /api/ {
-        proxy_pass http://dgfbkffb.backend.j6jq9qgw.o7t59w4f.com;
+        resolver ${RESOLVER} valid=30s ipv6=off;
+        set $backend "${BACKEND_URL}";
+        proxy_pass $backend;
         proxy_ssl_server_name on;
         proxy_ssl_verify off;
         proxy_http_version 1.1;
@@ -96,7 +100,9 @@ server {
 
     # ---- WebSocket 反向代理 ----
     location ^~ /ws/ {
-        proxy_pass http://dgfbkffb.backend.j6jq9qgw.o7t59w4f.com;
+        resolver ${RESOLVER} valid=30s ipv6=off;
+        set $backend "${BACKEND_URL}";
+        proxy_pass $backend;
         proxy_ssl_server_name on;
         proxy_ssl_verify off;
         proxy_http_version 1.1;
