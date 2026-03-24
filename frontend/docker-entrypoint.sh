@@ -20,9 +20,9 @@ fi
 # www.webyszl.cn 已绑定到【前端服务】，若 BACKEND_URL 仍指向它会造成死循环。
 # 同样，frontend-226678-* 是前端容器自身域名，也不能作为代理目标。
 # 检测到以上情况自动修正为正确后端地址，无需人工介入。
-CORRECT_BACKEND="https://backend-226678-6-1405390085.sh.run.tcloudbase.com"
+CORRECT_BACKEND="http://backend:8088"
 case "$BACKEND_URL" in
-  *frontend-226678*|*www.webyszl.cn*|*webyszl.cn*)
+  *frontend-226678*|www.webyszl.cn|https://www.webyszl.cn|http://www.webyszl.cn|webyszl.cn|https://webyszl.cn|http://webyszl.cn)
     echo "[WARNING] BACKEND_URL='${BACKEND_URL}' 指向前端自身，检测到循环代理风险！"
     echo "[WARNING] 已自动修正为正确后端地址: ${CORRECT_BACKEND}"
     BACKEND_URL="$CORRECT_BACKEND"

@@ -60,7 +60,7 @@ const OrderManagement: React.FC = () => {
     }
   }, [params]);
   const { isMobile, isTablet, modalWidth } = useViewport();
-  const { columns: cardColumns, pageSize: cardPageSize } = useCardGridLayout(10);
+  const { columns: cardColumns, pageSize: _cardPageSize } = useCardGridLayout(10);
   const tooltipTheme = useMemo(() => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
     const isDark = theme === 'dark';

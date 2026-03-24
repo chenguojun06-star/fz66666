@@ -216,7 +216,7 @@ const StyleInfoListPage: React.FC = () => {
       <Card className="page-card">
         {/* 页面头部 */}
         <div className="page-header">
-          <h2 className="page-title">样衣开发</h2>
+          <h2 className="page-title">样衣开发与生产</h2>
         </div>
 
         {/* 开发费用统计看板 */}
@@ -229,8 +229,8 @@ const StyleInfoListPage: React.FC = () => {
 
         <SmartPredictionStrip
           items={[
-            { key: 'overdue', count: overdueStyleCount, tone: 'danger', label: '个样衣开发已延期' },
-            { key: 'warning', count: warningStyleCount, tone: 'warning', label: '个样衣开发即将超期' },
+            { key: 'overdue', count: overdueStyleCount, tone: 'danger', label: '个项目已延期' },
+            { key: 'warning', count: warningStyleCount, tone: 'warning', label: '个项目临近交期' },
           ]}
         />
 

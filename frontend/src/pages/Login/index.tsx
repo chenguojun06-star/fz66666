@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Form, Input, Button, Card, Typography, App, AutoComplete } from 'antd';
-import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Typography, App, AutoComplete } from 'antd';
+import { UserOutlined, LockOutlined, SearchOutlined, SkinOutlined, ScissorOutlined, DeploymentUnitOutlined, AuditOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import { getDefaultRouteForUser } from '../../routeConfig';
@@ -142,7 +142,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page modern-login-page">
       {/* 左侧：70%科技感展示区 */}
       <div className="login-left-pane">
         <div className="tech-bg" aria-hidden="true">
@@ -153,21 +153,43 @@ const Login: React.FC = () => {
         <section className="login-showcase">
           <div className="tech-core-container">
              <div className="tech-ring ring-1"></div>
-             <div className="tech-ring ring-2"></div>
+             <div className="tech-ring ring-2 stitch-ring"></div>
              <div className="tech-ring ring-3"></div>
-             <div className="tech-core">AI</div>
+             <div className="tech-orbit orbit-a"></div>
+             <div className="tech-orbit orbit-b"></div>
+             <div className="signal-node signal-node-1"></div>
+             <div className="signal-node signal-node-2"></div>
+             <div className="signal-node signal-node-3"></div>
+             <div className="tech-core">
+               <SkinOutlined />
+             </div>
+             <div className="small-ai-badge">AI</div>
           </div>
           <div className="login-kicker">MARS INTELLIGENCE</div>
           <Title level={2} className="login-showcase-title">
             智能供应链协同中枢
           </Title>
           <div className="login-showcase-desc">
-            基于数据驱动的全局视图，实时洞察订单状态、生产进度与仓储流转，打造透明、高效的智能化管理体验。
+            围绕订单协同、裁剪排产、工序流转、质检入仓等关键节点，形成可感知、可协同、可预警的服装智能供应链视图。
           </div>
           <div className="login-showcase-points">
-            <span className="login-showcase-point"><span className="point-dot"></span>全链路追踪</span>
-            <span className="login-showcase-point"><span className="point-dot"></span>智能预警与决策</span>
-            <span className="login-showcase-point"><span className="point-dot"></span>多端协同透明化</span>
+            <div className="flow-beam"></div>
+            <div className="login-showcase-point">
+              <span className="flow-icon"><DeploymentUnitOutlined /></span>
+              <span className="flow-label">订单协同</span>
+            </div>
+            <div className="login-showcase-point">
+              <span className="flow-icon"><ScissorOutlined /></span>
+              <span className="flow-label">裁剪排产</span>
+            </div>
+            <div className="login-showcase-point">
+              <span className="flow-icon"><SkinOutlined /></span>
+              <span className="flow-label">工序流转</span>
+            </div>
+            <div className="login-showcase-point">
+              <span className="flow-icon"><AuditOutlined /></span>
+              <span className="flow-label">质检入仓</span>
+            </div>
           </div>
         </section>
       </div>
@@ -188,7 +210,9 @@ const Login: React.FC = () => {
             name="login"
             onFinish={handleLogin}
             className="login-form"
-            layout="vertical"
+            labelCol={{ flex: '80px' }}
+            wrapperCol={{ flex: 1 }}
+            labelAlign="left"
           >
             <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
             <Form.Item
@@ -261,7 +285,7 @@ const Login: React.FC = () => {
                 autoComplete="current-password"
               />
             </Form.Item>
-            <Form.Item>
+            <Form.Item wrapperCol={{ span: 24 }}>
               <Button
                 type="primary"
                 htmlType="submit"
@@ -272,7 +296,7 @@ const Login: React.FC = () => {
                 {t('login.submit', language)}
               </Button>
             </Form.Item>
-            <Form.Item style={{ marginBottom: 0 }}>
+            <Form.Item wrapperCol={{ span: 24 }} style={{ marginBottom: 0 }}>
               <Button
                 type="link"
                 onClick={() => navigate('/register')}

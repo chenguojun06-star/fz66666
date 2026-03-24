@@ -48,6 +48,6 @@ EXPOSE 80
 # 环境变量默认值（可在微信云托管控制台覆盖）
 # ⚠️ 前端容器内部走 VPC 内网，必须用后端内网服务地址（自定义域名走公网会被拒绝）
 # www.webyszl.cn 供小程序等外部客户端使用，nginx 代理不能用
-ENV BACKEND_URL=https://backend-226678-6-1405390085.sh.run.tcloudbase.com
+ENV BACKEND_URL=http://backend:8088
 
 CMD ["/docker-entrypoint.sh"]
