@@ -47,7 +47,7 @@ const Login: React.FC = () => {
   const loadTenants = useCallback(async () => {
     setTenantsLoading(true);
     try {
-      const res = await api.get('/system/tenant/public-list') as { code?: number; data?: TenantOption[] };
+      const res = await api.get('/system/tenant/public-list', { timeout: 8000, retry: -1 } as any) as { code?: number; data?: TenantOption[] };
       if (res?.code === 200 && Array.isArray(res.data)) {
         tenantsRef.current = res.data;
         // 如果只有一个租户，自动选中
@@ -68,11 +68,20 @@ const Login: React.FC = () => {
         }
       }
     } catch {
-      // 加载失败静默处理
+      const cachedTenantId = Number(localStorage.getItem('lastTenantId') || '');
+      const cachedTenantName = String(localStorage.getItem('lastTenantName') || '').trim();
+      if (Number.isFinite(cachedTenantId) && cachedTenantId > 0 && cachedTenantName) {
+        const cachedTenant = { id: cachedTenantId, tenantName: cachedTenantName };
+        setSelectedTenant(cachedTenant);
+        form.setFieldsValue({ companySearch: cachedTenantName, tenantId: cachedTenantId });
+        tenantsRef.current = [cachedTenant];
+      } else {
+        message.error('公司列表加载失败，请稍后重试');
+      }
     } finally {
       setTenantsLoading(false);
     }
-  }, [form]);
+  }, [form, message]);
 
   useEffect(() => {
     loadTenants();
