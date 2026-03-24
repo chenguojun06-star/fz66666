@@ -1049,6 +1049,24 @@ body {
    操作列统一样式
    ======================================== */
 
+/* 让表格分页自然吸附在可视区域底部，避免长表格需要拉到底才能翻页 */
+.resizable-table-shell .ant-pagination {
+  position: sticky;
+  bottom: 0;
+  background: var(--neutral-white);
+  z-index: 10;
+  padding: 12px 16px;
+  margin: 0 !important;
+  border-top: 1px solid var(--table-border-light);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .resizable-table-shell .ant-pagination {
+  background: var(--color-bg-container);
+  border-top-color: var(--table-border-light);
+}
+
 /* 操作按钮基础样式 */
 .ant-btn-link {
   font-weight: var(--font-weight-semibold);

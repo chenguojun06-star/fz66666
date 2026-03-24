@@ -127,6 +127,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const tokenStorageKey = 'authToken';
   const userStorageKey = 'userInfo';
+  const fallbackTheme = 'white';
+
+  const applyThemeValue = (nextTheme: string | null | undefined) => {
+    if (typeof document === 'undefined') return;
+    const raw = String(nextTheme || '').trim();
+    const resolvedTheme = !raw || raw === 'default' ? fallbackTheme : raw;
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  };
 
   const loadTenantSmartFlags = async () => {
     try {
@@ -155,17 +163,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             const userThemeKey = `app.theme.user.${userId}`;
             const userTheme = localStorage.getItem(userThemeKey);
-            if (userTheme) {
-              localStorage.setItem('app.theme', userTheme);
-              if (typeof document !== 'undefined') {
-                const root = document.documentElement;
-                if (userTheme === 'default') {
-                  root.removeAttribute('data-theme');
-                } else {
-                  root.setAttribute('data-theme', userTheme);
-                }
-              }
-            }
+            const resolvedTheme = userTheme || fallbackTheme;
+            localStorage.setItem('app.theme', resolvedTheme);
+            applyThemeValue(resolvedTheme);
           } catch {
             // Intentionally empty
             // 忽略错误
@@ -326,16 +326,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 恢复用户主题设置
         try {
           const userThemeKey = `app.theme.user.${baseUser.id}`;
-          const userTheme = localStorage.getItem(userThemeKey) || 'default';
+          const userTheme = localStorage.getItem(userThemeKey) || fallbackTheme;
           localStorage.setItem('app.theme', userTheme);
-          if (typeof document !== 'undefined') {
-            const root = document.documentElement;
-            if (userTheme === 'default') {
-              root.removeAttribute('data-theme');
-            } else {
-              root.setAttribute('data-theme', userTheme);
-            }
-          }
+          applyThemeValue(userTheme);
           // 触发用户登录事件
           window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
         } catch {
@@ -406,10 +399,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // 清除主题设置，恢复默认主题
     try {
-      localStorage.setItem('app.theme', 'default');
-      if (typeof document !== 'undefined') {
-        document.documentElement.removeAttribute('data-theme');
-      }
+      localStorage.setItem('app.theme', fallbackTheme);
+      applyThemeValue(fallbackTheme);
       // 触发用户退出事件
       window.dispatchEvent(new Event('user-logout'));
     } catch {

@@ -59,6 +59,7 @@ const ProfileInfoTab: React.FC = () => {
     const [loadingSmartProfile, setLoadingSmartProfile] = useState(false);
     const [savingSmartProfile, setSavingSmartProfile] = useState(false);
     const canManageSmartFlags = isAdmin || isTenantOwner || isSuperAdmin;
+    const fallbackTheme = 'white';
 
     // 主题
     const getUserThemeKey = () => {
@@ -68,9 +69,9 @@ const ProfileInfoTab: React.FC = () => {
 
     const [theme, setTheme] = useState<string>(() => {
         try {
-            return localStorage.getItem(getUserThemeKey()) || 'default';
+            return localStorage.getItem(getUserThemeKey()) || fallbackTheme;
         } catch {
-            return 'default';
+            return fallbackTheme;
         }
     });
 
@@ -81,11 +82,8 @@ const ProfileInfoTab: React.FC = () => {
         if (typeof document === 'undefined') return;
         const root = document.documentElement;
         const t = String(nextTheme || '').trim();
-        if (!t || t === 'default') {
-            root.removeAttribute('data-theme');
-            return;
-        }
-        root.setAttribute('data-theme', t);
+        const resolvedTheme = !t || t === 'default' ? fallbackTheme : t;
+        root.setAttribute('data-theme', resolvedTheme);
     };
 
     const loadProfile = async () => {

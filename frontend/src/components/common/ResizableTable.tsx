@@ -487,11 +487,23 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   // 合并滚动配置
   const mergedScroll = React.useMemo(() => {
-    if (!resizableColumns) return scroll;
-    if (!scroll) return { x: 'max-content' as const };
-    if ((scroll as any).x) return scroll;
     const baseScroll = typeof scroll === 'object' && scroll !== null ? (scroll as any) : {};
-    return { ...baseScroll, x: 'max-content' as const };
+    // 默认提供一个 y 轴滚动高度，使表头可以固定，并且分页区域自然呈现在可视区域底部
+    // 使用 calc(100vh - 330px) 适配绝大多数页面（减去顶部导航、搜索栏、底部分页等高度）
+    // 增加 min() 限制避免极端小屏幕下表格高度过小
+    const defaultY = 'max(300px, calc(100vh - 330px))';
+
+    if (!resizableColumns) {
+      if (!scroll) return { y: defaultY };
+      return { ...baseScroll, y: baseScroll.y ?? defaultY };
+    }
+
+    if (!scroll) return { x: 'max-content' as const, y: defaultY };
+    return { 
+      ...baseScroll, 
+      x: baseScroll.x ?? 'max-content', 
+      y: baseScroll.y ?? defaultY 
+    };
   }, [resizableColumns, scroll]);
 
   // 合并组件配置

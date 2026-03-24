@@ -143,147 +143,165 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-page">
-      <div className="login-bg" aria-hidden="true" />
-      <div className="login-constellation" aria-hidden="true">
-        <div className="constellation-line" />
-        <div className="constellation-glow" />
-        <span className="constellation-dot" style={{ left: 41, top: 43 }} />
-        <span className="constellation-dot" style={{ left: 82, top: 86 }} />
-        <span className="constellation-dot" style={{ left: 116, top: 125 }} />
-        <span className="constellation-dot" style={{ left: 156, top: 106 }} />
-        <span className="constellation-dot" style={{ left: 197, top: 134 }} />
-        <span className="constellation-dot" style={{ left: 231, top: 168 }} />
-        <span className="constellation-dot" style={{ left: 265, top: 149 }} />
-        <span className="constellation-dot" style={{ left: 292, top: 187 }} />
-        <span className="constellation-dot" style={{ left: 313, top: 206 }} />
-      </div>
-      <Card className="login-card" variant="borderless">
-        <div className="login-header">
-          <Title level={2} className="login-title">
-            {selectedTenant?.tenantName || t('login.brand', language)}
-          </Title>
+      {/* 左侧：70%科技感展示区 */}
+      <div className="login-left-pane">
+        <div className="tech-bg" aria-hidden="true">
+          <div className="tech-grid" />
+          <div className="tech-glow-left" />
+          <div className="tech-glow-right" />
         </div>
-        <Form
-          form={form}
-          name="login"
-          onFinish={handleLogin}
-          className="login-form"
-          layout="vertical"
-        >
-          {/* 隐藏字段存储实际tenantId */}
-          <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
-          <Form.Item
-            name="companySearch"
-            rules={[
-              { required: true, message: t('login.companySelectRequired', language) },
-              {
-                validator: (_, value) => {
-                  if (value && !selectedTenant) {
-                    return Promise.reject(t('login.companySelectFromResult', language));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-            validateTrigger={['onBlur', 'onSubmit']}
-            label={t('login.company', language)}
-            extra={selectedTenant ? <span style={{ color: '#52c41a', fontSize: 12 }}>{t('login.companySelectedPrefix', language)}{selectedTenant.tenantName}</span> : null}
+        <section className="login-showcase">
+          <div className="tech-core-container">
+             <div className="tech-ring ring-1"></div>
+             <div className="tech-ring ring-2"></div>
+             <div className="tech-ring ring-3"></div>
+             <div className="tech-core">AI</div>
+          </div>
+          <div className="login-kicker">MARS INTELLIGENCE</div>
+          <Title level={2} className="login-showcase-title">
+            智能供应链协同中枢
+          </Title>
+          <div className="login-showcase-desc">
+            基于数据驱动的全局视图，实时洞察订单状态、生产进度与仓储流转，打造透明、高效的智能化管理体验。
+          </div>
+          <div className="login-showcase-points">
+            <span className="login-showcase-point"><span className="point-dot"></span>全链路追踪</span>
+            <span className="login-showcase-point"><span className="point-dot"></span>智能预警与决策</span>
+            <span className="login-showcase-point"><span className="point-dot"></span>多端协同透明化</span>
+          </div>
+        </section>
+      </div>
+
+      {/* 右侧：30%表单区 */}
+      <div className="login-right-pane">
+        <div className="login-form-wrapper">
+          <div className="login-header">
+            <Title level={2} className="login-title">
+              欢迎使用
+            </Title>
+            <div className="login-subtitle">
+              {selectedTenant?.tenantName || t('login.brand', language)}
+            </div>
+          </div>
+          <Form
+            form={form}
+            name="login"
+            onFinish={handleLogin}
+            className="login-form"
+            layout="vertical"
           >
-            <AutoComplete
-              options={searchOptions}
-              onSearch={handleSearch}
-              onSelect={handleSelect}
-              onFocus={() => { /* 不自动展开，等用户输入后再搜索 */ }}
-              placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
-              disabled={submitting || tenantsLoading}
-              getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
+            <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
+            <Form.Item
+              name="companySearch"
+              rules={[
+                { required: true, message: t('login.companySelectRequired', language) },
+                {
+                  validator: (_, value) => {
+                    if (value && !selectedTenant) {
+                      return Promise.reject(t('login.companySelectFromResult', language));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
+              validateTrigger={['onBlur', 'onSubmit']}
+              label={t('login.company', language)}
+              extra={selectedTenant ? <span className="login-company-selected">{t('login.companySelectedPrefix', language)}{selectedTenant.tenantName}</span> : null}
+            >
+              <AutoComplete
+                options={searchOptions}
+                onSearch={handleSearch}
+                onSelect={handleSelect}
+                onFocus={() => undefined}
+                placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
+                disabled={submitting || tenantsLoading}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
+              >
+                <Input
+                  prefix={<SearchOutlined className="site-form-item-icon" />}
+                  size="large"
+                  allowClear
+                  autoComplete="off"
+                  onClear={() => {
+                    setSelectedTenant(null);
+                    form.setFieldsValue({ tenantId: undefined });
+                  }}
+                />
+              </AutoComplete>
+            </Form.Item>
+            <Form.Item
+              name="username"
+              rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
+              label={t('login.username', language)}
+              htmlFor="login_username"
             >
               <Input
-                prefix={<SearchOutlined className="site-form-item-icon" />}
+                id="login_username"
+                prefix={<UserOutlined className="site-form-item-icon" />}
+                placeholder={t('login.usernamePlaceholder', language)}
                 size="large"
+                autoFocus
                 allowClear
-                autoComplete="off"
-                onClear={() => {
-                  setSelectedTenant(null);
-                  form.setFieldsValue({ tenantId: undefined });
-                }}
+                disabled={submitting}
+                autoComplete="username"
               />
-            </AutoComplete>
-          </Form.Item>
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
-            label={t('login.username', language)}
-            htmlFor="login_username"
-          >
-            <Input
-              id="login_username"
-              prefix={<UserOutlined className="site-form-item-icon" />}
-              placeholder={t('login.usernamePlaceholder', language)}
-              size="large"
-              autoFocus
-              allowClear
-              disabled={submitting}
-              autoComplete="username"
-            />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
-            label={t('login.password', language)}
-            htmlFor="login_password"
-          >
-            <Input.Password
-              id="login_password"
-              prefix={<LockOutlined className="site-form-item-icon" />}
-              placeholder={t('login.passwordPlaceholder', language)}
-              size="large"
-              disabled={submitting}
-              autoComplete="current-password"
-            />
-          </Form.Item>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="login-button"
-              size="large"
-              loading={submitting}
+            </Form.Item>
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
+              label={t('login.password', language)}
+              htmlFor="login_password"
             >
-              {t('login.submit', language)}
-            </Button>
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button
-              type="link"
-              onClick={() => navigate('/register')}
-              style={{ width: '100%', padding: 0 }}
-              disabled={submitting}
-            >
-              {t('login.noAccount', language)}{t('login.registerNow', language)}
-            </Button>
-          </Form.Item>
-        </Form>
-        <div className="login-footer">© {year} {t('login.brand', language)}</div>
-        <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
-          部署版本：{buildCommit} · 构建时间：{buildTimeText}
-        </div>
-        <div className="login-footer" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
-              <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer"
-                 style={{ color: 'rgba(255,255,255,0.45)' }}>
-                粤公网安备44011302005352号
+              <Input.Password
+                id="login_password"
+                prefix={<LockOutlined className="site-form-item-icon" />}
+                placeholder={t('login.passwordPlaceholder', language)}
+                size="large"
+                disabled={submitting}
+                autoComplete="current-password"
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                className="login-button"
+                size="large"
+                loading={submitting}
+              >
+                {t('login.submit', language)}
+              </Button>
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button
+                type="link"
+                onClick={() => navigate('/register')}
+                className="login-register-button"
+                disabled={submitting}
+              >
+                {t('login.noAccount', language)}{t('login.registerNow', language)}
+              </Button>
+            </Form.Item>
+          </Form>
+          <div className="login-footer">© {year} {t('login.brand', language)}</div>
+          <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
+            部署版本：{buildCommit} · 构建时间：{buildTimeText}
+          </div>
+          <div className="login-footer login-filing">
+            <div className="login-filing-row">
+              <div className="login-filing-item">
+                <img src="/police.png" alt="公安备案图标" className="login-filing-icon" />
+                <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer" className="login-filing-link">
+                  粤公网安备44011302005352号
+                </a>
+              </div>
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="login-filing-link">
+                粤ICP备2026026776号-1
               </a>
             </div>
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-               style={{ color: 'rgba(255,255,255,0.45)' }}>
-              粤ICP备2026026776号-1
-            </a>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

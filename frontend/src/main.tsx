@@ -75,16 +75,14 @@ import './styles/button-override.css'; // 按钮统一样式
 import './styles/animations.css'; // 全局动效：Chrome 146 scroll-driven + View Transitions
 
 const themeStorageKey = 'app.theme';
+const fallbackTheme = 'white';
 
 const applyTheme = (themeValue: string | null) => {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  const t = String(themeValue || '').trim();
-  if (!t || t === 'default') {
-    root.removeAttribute('data-theme');
-    return;
-  }
-  root.setAttribute('data-theme', t);
+  const raw = String(themeValue || '').trim();
+  const resolvedTheme = !raw || raw === 'default' ? fallbackTheme : raw;
+  root.setAttribute('data-theme', resolvedTheme);
 };
 
 const shouldSuppressExternalError = (message: string, filename?: string, stack?: string) => {
@@ -236,18 +234,18 @@ const AppWrapper: React.FC = () => {
   const { language } = useAppLanguage();
   const [currentTheme, setCurrentTheme] = useState<string>(() => {
     try {
-      return localStorage.getItem(themeStorageKey) || 'default';
+      return localStorage.getItem(themeStorageKey) || fallbackTheme;
     } catch {
     // Intentionally empty
       // 忽略错误
-      return 'default';
+      return fallbackTheme;
     }
   });
 
   useEffect(() => {
     // 监听主题变化
     const handleStorageChange = () => {
-      const newTheme = localStorage.getItem(themeStorageKey) || 'default';
+      const newTheme = localStorage.getItem(themeStorageKey) || fallbackTheme;
       setCurrentTheme(newTheme);
     };
 
@@ -258,7 +256,7 @@ const AppWrapper: React.FC = () => {
         const userId = customEvent.detail?.userId;
         if (userId) {
           const userThemeKey = `app.theme.user.${userId}`;
-          const userTheme = localStorage.getItem(userThemeKey) || 'default';
+          const userTheme = localStorage.getItem(userThemeKey) || fallbackTheme;
           localStorage.setItem(themeStorageKey, userTheme);
           setCurrentTheme(userTheme);
           applyTheme(userTheme);
@@ -272,9 +270,9 @@ const AppWrapper: React.FC = () => {
     // 监听用户登出事件，恢复默认主题
     const handleUserLogout = () => {
       try {
-        localStorage.setItem(themeStorageKey, 'default');
-        setCurrentTheme('default');
-        applyTheme('default');
+        localStorage.setItem(themeStorageKey, fallbackTheme);
+        setCurrentTheme(fallbackTheme);
+        applyTheme(fallbackTheme);
       } catch {
     // Intentionally empty
       // 忽略错误
