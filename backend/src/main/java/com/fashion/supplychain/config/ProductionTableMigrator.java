@@ -340,6 +340,24 @@ public class ProductionTableMigrator {
         if (!dbHelper.columnExists("t_cutting_bundle", "update_time")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
         }
+        if (!dbHelper.columnExists("t_cutting_bundle", "tenant_id")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN tenant_id BIGINT DEFAULT NULL COMMENT '租户ID'");
+        }
+        if (!dbHelper.columnExists("t_cutting_bundle", "bed_no")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN bed_no INT DEFAULT NULL COMMENT '床号'");
+        }
+        if (!dbHelper.columnExists("t_cutting_bundle", "creator_id")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN creator_id VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        }
+        if (!dbHelper.columnExists("t_cutting_bundle", "creator_name")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN creator_name VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        }
+        if (!dbHelper.columnExists("t_cutting_bundle", "operator_id")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN operator_id VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
+        }
+        if (!dbHelper.columnExists("t_cutting_bundle", "operator_name")) {
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN operator_name VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
+        }
         if (!dbHelper.columnExists("t_cutting_bundle", "root_bundle_id")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN root_bundle_id VARCHAR(32) NULL COMMENT '主菲号ID'");
         }
@@ -358,8 +376,18 @@ public class ProductionTableMigrator {
         if (!dbHelper.columnExists("t_cutting_bundle", "split_seq")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN split_seq INT NOT NULL DEFAULT 0 COMMENT '拆分序号'");
         }
+        dbHelper.execSilently(
+                "UPDATE t_cutting_bundle cb "
+                        + "JOIN t_production_order po ON ("
+                        + "((cb.production_order_id IS NOT NULL AND cb.production_order_id != '') AND cb.production_order_id = po.id) "
+                        + "OR (((cb.production_order_id IS NULL OR cb.production_order_id = '') "
+                        + "AND cb.production_order_no IS NOT NULL AND cb.production_order_no != '') "
+                        + "AND cb.production_order_no = po.order_no)) "
+                        + "SET cb.tenant_id = po.tenant_id "
+                        + "WHERE cb.tenant_id IS NULL AND po.tenant_id IS NOT NULL");
         dbHelper.execSilently("UPDATE t_cutting_bundle SET root_bundle_id = id WHERE (root_bundle_id IS NULL OR root_bundle_id = '')");
         dbHelper.execSilently("UPDATE t_cutting_bundle SET bundle_label = CAST(bundle_no AS CHAR) WHERE (bundle_label IS NULL OR bundle_label = '') AND bundle_no IS NOT NULL");
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cb_tenant_id", "tenant_id");
         dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cb_root_bundle_id", "root_bundle_id");
         dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cb_parent_bundle_id", "parent_bundle_id");
         dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cb_split_status", "split_status");
