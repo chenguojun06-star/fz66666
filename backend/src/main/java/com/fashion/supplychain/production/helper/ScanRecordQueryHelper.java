@@ -125,16 +125,12 @@ public class ScanRecordQueryHelper {
      * 为裁剪扫码记录填充cutting_bundle详细信息
      */
     private void enrichCuttingDetails(ScanRecord record) {
-        if (!hasText(record.getOrderId())) {
+        if (!hasText(record.getOrderId()) && !hasText(record.getOrderNo())) {
             return;
         }
 
         try {
-            List<CuttingBundle> bundles = cuttingBundleService.list(
-                new LambdaQueryWrapper<CuttingBundle>()
-                    .eq(CuttingBundle::getProductionOrderId, record.getOrderId())
-                    .orderByAsc(CuttingBundle::getSize)
-            );
+            List<CuttingBundle> bundles = queryBundlesForRecord(record);
 
             if (bundles != null && !bundles.isEmpty()) {
                 Map<String, Integer> sizeQuantityMap = new HashMap<>();
@@ -157,6 +153,21 @@ public class ScanRecordQueryHelper {
         } catch (Exception e) {
             log.warn("填充裁剪详情失败: orderId={}, error={}", record.getOrderId(), e.getMessage());
         }
+    }
+
+    private List<CuttingBundle> queryBundlesForRecord(ScanRecord record) {
+        if (hasText(record.getOrderNo())) {
+            return cuttingBundleService.list(
+                    new LambdaQueryWrapper<CuttingBundle>()
+                            .select(CuttingBundle::getProductionOrderNo, CuttingBundle::getSize, CuttingBundle::getQuantity)
+                            .eq(CuttingBundle::getProductionOrderNo, record.getOrderNo())
+                            .orderByAsc(CuttingBundle::getSize));
+        }
+        return cuttingBundleService.list(
+                new LambdaQueryWrapper<CuttingBundle>()
+                        .select(CuttingBundle::getProductionOrderId, CuttingBundle::getSize, CuttingBundle::getQuantity)
+                        .eq(CuttingBundle::getProductionOrderId, record.getOrderId())
+                        .orderByAsc(CuttingBundle::getSize));
     }
 
     /**

@@ -729,24 +729,40 @@ public class ScanRecordOrchestrator {
      */
     private void enrichBedNo(List<ScanRecord> records) {
         if (records == null || records.isEmpty()) return;
-        List<String> bundleIds = records.stream()
-                .map(ScanRecord::getCuttingBundleId)
-                .filter(id -> id != null && !id.isEmpty())
-                .distinct()
-                .collect(java.util.stream.Collectors.toList());
-        if (bundleIds.isEmpty()) return;
-        Map<String, Integer> bedNoMap = cuttingBundleService.listByIds(bundleIds)
-                .stream()
-                .filter(b -> b.getBedNo() != null)
-                .collect(java.util.stream.Collectors.toMap(
-                        CuttingBundle::getId,
-                        CuttingBundle::getBedNo,
-                        (a, b) -> a));
-        records.forEach(r -> {
-            if (r.getCuttingBundleId() != null) {
-                r.setBedNo(bedNoMap.get(r.getCuttingBundleId()));
+        try {
+            List<String> orderNos = records.stream()
+                    .map(ScanRecord::getOrderNo)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (orderNos.isEmpty()) {
+                return;
             }
-        });
+            Map<String, Integer> bedNoMap = cuttingBundleService.list(
+                            new LambdaQueryWrapper<CuttingBundle>()
+                                    .select(CuttingBundle::getProductionOrderNo, CuttingBundle::getBundleNo, CuttingBundle::getBedNo)
+                                    .in(CuttingBundle::getProductionOrderNo, orderNos))
+                    .stream()
+                    .filter(b -> StringUtils.hasText(b.getProductionOrderNo()))
+                    .filter(b -> b.getBundleNo() != null)
+                    .filter(b -> b.getBedNo() != null)
+                    .collect(java.util.stream.Collectors.toMap(
+                            b -> buildBedNoKey(b.getProductionOrderNo(), b.getBundleNo()),
+                            CuttingBundle::getBedNo,
+                            (a, b) -> a));
+            records.forEach(r -> {
+                if (StringUtils.hasText(r.getOrderNo()) && r.getCuttingBundleNo() != null) {
+                    r.setBedNo(bedNoMap.get(buildBedNoKey(r.getOrderNo(), r.getCuttingBundleNo())));
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Failed to enrich bedNo for scan records: recordCount={}", records.size(), e);
+        }
+    }
+
+    private String buildBedNoKey(String orderNo, Integer bundleNo) {
+        return (orderNo == null ? "" : orderNo.trim()) + "#" + bundleNo;
     }
 
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {

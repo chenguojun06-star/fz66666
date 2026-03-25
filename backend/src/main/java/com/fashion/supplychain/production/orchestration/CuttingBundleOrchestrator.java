@@ -30,17 +30,20 @@ public class CuttingBundleOrchestrator {
         // 工厂账号隔离：只能查看本工厂订单的裁剪格号
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
-            List<String> factoryOrderIds = productionOrderService.list(
+            List<String> factoryOrderNos = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
+                            .select(ProductionOrder::getOrderNo)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
-            if (factoryOrderIds.isEmpty()) {
+            ).stream()
+                    .map(ProductionOrder::getOrderNo)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+            if (factoryOrderNos.isEmpty()) {
                 return new Page<>();
             }
             Map<String, Object> mutableParams = new HashMap<>(params != null ? params : new HashMap<>());
-            mutableParams.put("_factoryOrderIds", factoryOrderIds);
+            mutableParams.put("_factoryOrderNos", factoryOrderNos);
             return cuttingBundleService.queryPage(mutableParams);
         }
         return cuttingBundleService.queryPage(params);

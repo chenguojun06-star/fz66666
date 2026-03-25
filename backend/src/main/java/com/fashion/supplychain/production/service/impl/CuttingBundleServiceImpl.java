@@ -67,7 +67,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
         // 工厂账号隔离：通过 CuttingBundleOrchestrator 注入
         @SuppressWarnings("unchecked")
-        List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
+        List<String> factoryOrderNos = (List<String>) params.get("_factoryOrderNos");
 
         LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<CuttingBundle>()
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
@@ -77,8 +77,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
                 .orderByAsc(CuttingBundle::getBundleNo);
 
-        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
-            wrapper.in(CuttingBundle::getProductionOrderId, factoryOrderIds);
+        if (factoryOrderNos != null && !factoryOrderNos.isEmpty()) {
+            wrapper.in(CuttingBundle::getProductionOrderNo, factoryOrderNos);
         }
 
         return baseMapper.selectPage(pageInfo, wrapper);
