@@ -1,6 +1,7 @@
 const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
+const { toast } = require('../../utils/uiHelper.js');
 
 Component({
   properties: {
@@ -33,6 +34,9 @@ Component({
     isTenantOwner: false,
     isManager: false,
     taskLoading: false,
+    isRecording: false,
+    voiceEnabled: false,
+    voiceHint: '',
   },
   lifetimes: {
     attached() {
@@ -75,6 +79,7 @@ Component({
             content: greeting,
           }],
         });
+        this.initVoiceRecognition();
       }, 0);
     },
   },
@@ -97,6 +102,56 @@ Component({
     }
   },
   methods: {
+    initVoiceRecognition() {
+      if (this.voiceManager) {
+        this.setData({ voiceEnabled: true });
+        return;
+      }
+      try {
+        const plugin = requirePlugin('WechatSI');
+        const manager = plugin && typeof plugin.getRecordRecognitionManager === 'function'
+          ? plugin.getRecordRecognitionManager()
+          : null;
+        if (!manager) {
+          this.setData({ voiceEnabled: false });
+          return;
+        }
+        this.voiceManager = manager;
+        manager.onStart = () => {
+          this.setData({ isRecording: true, voiceHint: '正在听，请松开结束' });
+        };
+        manager.onRecognize = (res) => {
+          const text = String((res && res.result) || '').trim();
+          if (text) {
+            this.setData({ voiceHint: text });
+          }
+        };
+        manager.onStop = (res) => {
+          const text = String((res && res.result) || '').trim().replace(/[。]+$/g, '');
+          this.setData({ isRecording: false, voiceHint: '' });
+          if (!text) {
+            toast.info('没听清，再说一次');
+            return;
+          }
+          this.setData({ inputValue: text }, () => {
+            this.sendMessage();
+          });
+        };
+        manager.onError = (res) => {
+          this.setData({ isRecording: false, voiceHint: '' });
+          const msg = String((res && (res.msg || res.errMsg)) || '');
+          if (msg.includes('auth deny')) {
+            toast.error('请先允许麦克风权限');
+            return;
+          }
+          toast.error('语音识别失败，请重试');
+        };
+        this.setData({ voiceEnabled: true });
+      } catch (err) {
+        console.warn('[AiAssistant] voice plugin unavailable', err);
+        this.setData({ voiceEnabled: false });
+      }
+    },
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
     },
@@ -171,6 +226,34 @@ Component({
     },
     onInput(e) {
       this.setData({ inputValue: e.detail.value });
+    },
+    startVoiceInput() {
+      if (!this.data.voiceEnabled) {
+        toast.info('当前小程序未启用语音插件');
+        return;
+      }
+      if (this.data.isLoading || this.data.isRecording || !this.voiceManager) {
+        return;
+      }
+      wx.authorize({
+        scope: 'scope.record',
+        success: () => {
+          wx.vibrateShort({ type: 'light' });
+          this.voiceManager.start({
+            lang: 'zh_CN',
+            duration: 60000,
+          });
+        },
+        fail: () => {
+          toast.error('请先允许麦克风权限');
+        },
+      });
+    },
+    stopVoiceInput() {
+      if (!this.data.isRecording || !this.voiceManager) {
+        return;
+      }
+      this.voiceManager.stop();
     },
     async sendMessage() {
       const text = this.data.inputValue.trim();

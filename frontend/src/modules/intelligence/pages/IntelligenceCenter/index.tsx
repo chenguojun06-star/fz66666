@@ -29,6 +29,7 @@ import ABTestStatsPanel from '../../components/ABTestStatsPanel';
 import StageCapsulePanel from './components/StageCapsulePanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
+import { paths } from '@/routeConfig';
 import './styles.css';
 
 
@@ -262,6 +263,11 @@ const IntelligenceCenter: React.FC = () => {
             <Tooltip title="⌘K 全局搜索">
               <button className="cockpit-fs-btn" onClick={() => setShowSearch(true)} style={{ marginRight: 4 }}>
                 <SearchOutlined />
+              </button>
+            </Tooltip>
+            <Tooltip title="查看 AI 执行记录">
+              <button className="cockpit-fs-btn" onClick={() => navigate(paths.aiAgentTraceCenter)} style={{ marginRight: 4 }}>
+                <RobotOutlined />
               </button>
             </Tooltip>
             <Tooltip title={isFullscreen ? '退出全屏 (F)' : '全屏投屏 (F)'}>

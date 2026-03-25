@@ -1,4 +1,3 @@
-import React from 'react';
 import { Form, Input, Button, Select, InputNumber, Tag, Modal, Space, Image } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { StyleBom } from '@/types/style';
@@ -49,6 +48,7 @@ interface UseBomColumnsProps {
   setMaterialTab: (v: 'select' | 'create') => void;
   setMaterialTargetRowId: (v: string) => void;
   onApplyPickup?: (record: StyleBom) => void;
+  activeSizes?: string[];
 }
 
 export function useBomColumns({
@@ -72,7 +72,38 @@ export function useBomColumns({
   setMaterialTab,
   setMaterialTargetRowId,
   onApplyPickup,
+  activeSizes = [],
 }: UseBomColumnsProps) {
+  const parseSizeUsageMap = (value?: string) => {
+    try {
+      const parsed = JSON.parse(String(value || '{}'));
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, number> : {};
+    } catch {
+      return {};
+    }
+  };
+  const isZipperRow = (record: StyleBom) => /拉链/.test(String(record.materialName || ''));
+  const computeAverageMeterUsage = (record: StyleBom) => {
+    const row = form.getFieldValue(String(record.id)) || {};
+    const rowUsageMap = row.sizeUsageMapObject || parseSizeUsageMap(row.sizeUsageMap || record.patternSizeUsageMap || record.sizeUsageMap);
+    const values = activeSizes
+      .map((sizeKey) => Number(rowUsageMap?.[sizeKey] ?? 0))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (values.length) {
+      return Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(4));
+    }
+    return Number(record.usageAmount || 0);
+  };
+  const computeConvertedUsage = (record: StyleBom) => {
+    const row = form.getFieldValue(String(record.id)) || {};
+    const conversionRate = Number(row.conversionRate ?? record.conversionRate ?? 1) || 1;
+    const meterValue = computeAverageMeterUsage(record);
+    if (conversionRate <= 0) {
+      return { unit: '公斤', value: null as number | null };
+    }
+    return { unit: '公斤', value: Number((meterValue / conversionRate).toFixed(4)) };
+  };
+
   const columns = [
     {
       title: '图片',
@@ -195,6 +226,24 @@ export function useBomColumns({
       }
     },
     {
+      title: '克重',
+      dataIndex: 'fabricWeight',
+      key: 'fabricWeight',
+      width: 90,
+      ellipsis: true,
+      editable: true,
+      render: (text: string, record: StyleBom) => {
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <Form.Item name={rowName(record.id, 'fabricWeight')} style={{ margin: 0 }}>
+              <Input placeholder="如：220g" />
+            </Form.Item>
+          );
+        }
+        return text || '-';
+      }
+    },
+    {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
@@ -261,6 +310,135 @@ export function useBomColumns({
           );
         })();
         return <span>{text}{anomalyEl}</span>;
+      }
+    },
+    {
+      title: '尺码用量',
+      dataIndex: 'sizeUsageMap',
+      key: 'sizeUsageMap',
+      width: Math.max(260, activeSizes.length * 120),
+      render: (text: string, record: StyleBom) => {
+        const row = form.getFieldValue(String(record.id)) || {};
+        const rowUsageMap = row.sizeUsageMapObject || parseSizeUsageMap(row.sizeUsageMap || text);
+        const rowSpecMap = row.sizeSpecMapObject || parseSizeUsageMap(record.sizeSpecMap);
+        const zipperRow = isZipperRow(record);
+        if (!activeSizes.length) {
+          return '-';
+        }
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <div style={{ display: 'grid', gap: zipperRow ? 8 : 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeSizes.length}, minmax(108px, 1fr))`, gap: 8 }}>
+                {activeSizes.map((sizeKey) => (
+                  <div key={sizeKey} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <span style={{ flex: '0 0 auto', minWidth: 16, fontSize: 12, color: '#595959', textAlign: 'center' }}>{sizeKey}</span>
+                    <Form.Item
+                      name={[String(record.id), 'sizeUsageMapObject', sizeKey]}
+                      style={{ margin: 0, flex: 1 }}
+                      initialValue={Number(rowUsageMap?.[sizeKey] ?? record.usageAmount ?? 0)}
+                    >
+                      <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                    </Form.Item>
+                  </div>
+                ))}
+              </div>
+              {zipperRow ? (
+                <div style={{ padding: '6px 8px', borderRadius: 8, background: '#fafafa' }}>
+                  <div style={{ marginBottom: 6, fontSize: 12, color: '#8c8c8c' }}>拉链规格(cm)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeSizes.length}, minmax(108px, 1fr))`, gap: 8 }}>
+                    {activeSizes.map((sizeKey) => (
+                      <div key={`spec-${sizeKey}`} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ flex: '0 0 auto', minWidth: 16, fontSize: 12, color: '#595959', textAlign: 'center' }}>{sizeKey}</span>
+                        <Form.Item
+                          name={[String(record.id), 'sizeSpecMapObject', sizeKey]}
+                          style={{ margin: 0, flex: 1 }}
+                          initialValue={Number(rowSpecMap?.[sizeKey] ?? 0)}
+                        >
+                          <InputNumber min={0} step={1} style={{ width: '100%' }} />
+                        </Form.Item>
+                        <span style={{ flex: '0 0 auto', fontSize: 12, color: '#8c8c8c' }}>cm</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        }
+        return (
+          <div style={{ display: 'grid', gap: zipperRow ? 8 : 0 }}>
+            <Space size={[4, 4]} wrap>
+              {activeSizes.map((sizeKey) => (
+                <Tag key={sizeKey} style={{ marginInlineEnd: 0 }}>
+                  {sizeKey}:{Number(rowUsageMap?.[sizeKey] ?? record.usageAmount ?? 0)}
+                </Tag>
+              ))}
+            </Space>
+            {zipperRow ? (
+              <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.8 }}>
+                拉链规格：
+                {activeSizes.map((sizeKey) => (
+                  <span key={`spec-view-${sizeKey}`} style={{ marginLeft: 8 }}>
+                    {sizeKey} {Number(rowSpecMap?.[sizeKey] ?? 0)}cm
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      }
+    },
+    {
+      title: '几米一公斤',
+      dataIndex: 'conversionRate',
+      key: 'conversionRate',
+      width: 220,
+      render: (text: number, record: StyleBom) => {
+        const value = Number(text ?? 1) || 1;
+        const formulaText = '填写 1公斤对应多少米';
+        const exampleText = '示例：3米=1公斤，就填 3';
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div style={{ fontSize: 11, color: '#595959', lineHeight: 1.4 }}>
+                {formulaText}
+              </div>
+              <Form.Item name={rowName(record.id, 'conversionRate')} style={{ margin: 0 }} initialValue={value}>
+                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+              </Form.Item>
+              <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4 }}>
+                {`${exampleText}；系统会用“米数 ÷ 几米一公斤”算出公斤数`}
+              </div>
+            </div>
+          );
+        }
+        return value > 0 ? `1公斤 = ${value}米` : '-';
+      }
+    },
+    {
+      title: '公斤数',
+      key: 'convertedUsage',
+      width: 120,
+      render: (_: unknown, record: StyleBom) => {
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <Form.Item
+              noStyle
+              shouldUpdate={(prev, next) =>
+                JSON.stringify(prev?.[String(record.id)]) !== JSON.stringify(next?.[String(record.id)])
+              }
+            >
+              {() => {
+                const converted = computeConvertedUsage(record);
+                if (converted.value == null) return '-';
+                return `${converted.value}${converted.unit}`;
+              }}
+            </Form.Item>
+          );
+        }
+        const converted = computeConvertedUsage(record);
+        if (converted.value == null) return '-';
+        return `${converted.value}${converted.unit}`;
       }
     },
     {
@@ -363,7 +541,7 @@ export function useBomColumns({
               <Form.Item name={rowName(record.id, 'supplier')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
                 <SupplierSelect
                   placeholder="选择供应商"
-                  onChange={(value, option) => {
+                  onChange={(_, option) => {
                     if (option) {
                       form.setFieldsValue({
                         [rowName(record.id, 'supplierId') as any]: option.id,

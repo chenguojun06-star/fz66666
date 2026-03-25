@@ -15,6 +15,8 @@ interface Props {
 }
 
 const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles }) => {
+  const highlightedSet = new Set((print.highlightedBundleIds || []).map((item) => String(item)));
+  const highlightedBundles = print.printBundles.filter((item) => item.id && highlightedSet.has(String(item.id)));
   return (
     <ResizableModal
       open={print.printPreviewOpen}
@@ -102,6 +104,23 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <div>• 每张标签独占一页，居中显示，方便裁剪</div>
         <div>• 建议使用专用标签打印机或A4纸打印后裁剪</div>
       </div>
+      {!!highlightedBundles.length && (
+        <div
+          style={{
+            padding: '10px 16px',
+            background: '#fff7e6',
+            color: '#ad6800',
+            marginBottom: '16px',
+            borderRadius: '4px',
+            border: '1px solid #ffd591',
+            fontSize: '13px',
+            lineHeight: '1.6',
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>✂️ 本次拆菲新生成的子菲号</div>
+          <div>{highlightedBundles.map((item) => String(item.bundleLabel || item.bundleNo || '-')).join('、')}</div>
+        </div>
+      )}
       <div
         style={{
           maxHeight: 'calc(85vh - 310px)',
@@ -111,6 +130,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         }}
       >
         {print.printBundles.map((b, idx) => {
+          const isHighlighted = b.id && highlightedSet.has(String(b.id));
           const paperRatio = print.printConfig.paperWidth / print.printConfig.paperHeight;
           const previewWidth = 280;
           const previewHeight = previewWidth / paperRatio;
@@ -123,7 +143,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                 height: `${previewHeight}px`,
                 margin: '0 auto 16px',
                 background: 'var(--neutral-white)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                boxShadow: isHighlighted ? '0 0 0 2px #fa8c16, 0 6px 18px rgba(250,140,22,0.22)' : '0 2px 8px rgba(0,0,0,0.15)',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -134,7 +154,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                 style={{
                   width: '100%',
                   height: '100%',
-                  border: '1px solid #000',
+                  border: isHighlighted ? '2px solid #fa8c16' : '1px solid #000',
                   padding: '6px',
                   display: 'flex',
                   gap: '6px',
@@ -158,7 +178,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                   <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
                   <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
                   <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                  <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
+                  <div>{`扎号：${String(b.bundleLabel || '').trim() || Number(b.bundleNo || 0) || '-'}`}</div>
                 </div>
               </div>
             </div>

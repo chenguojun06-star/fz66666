@@ -1193,11 +1193,24 @@ export const intelligenceApi = {
 
   /** AI顾问问答 — 优先本地规则引擎，无法回答时走 DeepSeek */
   aiAdvisorChat: (question: string) =>
-    api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' } }>(
+    api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' | 'error'; commandId?: string } }>(
       '/intelligence/ai-advisor/chat',
       { question },
       { timeout: 90000 },
     ),
+
+  getAiAgentTraceDetail: (commandId: string) =>
+    api.get<{ code: number; data: { commandId: string; logs: Array<Record<string, unknown>>; count: number } }>(`/intelligence/ai-agent/traces/${commandId}`),
+
+  getAiAgentRecentTraces: (params?: {
+    limit?: number;
+    toolName?: string;
+    status?: string;
+    executorKeyword?: string;
+    startTime?: string;
+    endTime?: string;
+  }) =>
+    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/ai-agent/traces/recent', { params }),
 
   /** SafeAdvisor — RAG 增强问答（知识库召回 + DeepSeek 推理，精度更高） */
   safeAdvisorAnalyze: (question: string) =>
@@ -1366,6 +1379,40 @@ export const intelligenceApi = {
     const json = await res.json() as { code: number; data: { filename: string; parsedContent: string }; message?: string };
     if (json.code !== 200) throw new Error(json.message ?? '文件分析失败');
     return json.data;
+  },
+
+  recognizePurchaseDoc: async (file: File, orderNo?: string): Promise<Record<string, unknown>> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (orderNo) formData.append('orderNo', orderNo);
+    const token = localStorage.getItem('authToken') || '';
+    const res = await fetch(`/api/production/purchase/recognize-doc${orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : ''}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const json = await res.json() as { code: number; data: Record<string, unknown>; message?: string };
+    if (json.code !== 200) throw new Error(json.message ?? '采购单据识别失败');
+    return json.data;
+  },
+
+  autoExecutePurchaseDoc: async (payload: {
+    docId?: string;
+    orderNo?: string;
+    warehouseLocation?: string;
+    confirmInbound?: boolean;
+  }): Promise<Record<string, unknown>> => {
+    const resp = await api.post<{ code: number; data: Record<string, unknown>; message?: string }>('/production/purchase/auto-execute-doc', payload);
+    const raw = (resp as unknown as { data?: { code?: number; data?: Record<string, unknown>; message?: string } }).data;
+    if (raw?.code && raw.code !== 200) throw new Error(raw.message ?? '采购单据自动执行失败');
+    return raw?.data ?? (resp as unknown as { data: Record<string, unknown> }).data;
+  },
+
+  replayPurchaseDoc: async (payload: { docId?: string; orderNo?: string }): Promise<Record<string, unknown>> => {
+    const resp = await api.post<{ code: number; data: Record<string, unknown>; message?: string }>('/production/purchase/replay-doc', payload);
+    const raw = (resp as unknown as { data?: { code?: number; data?: Record<string, unknown>; message?: string } }).data;
+    if (raw?.code && raw.code !== 200) throw new Error(raw.message ?? '采购单据回放失败');
+    return raw?.data ?? (resp as unknown as { data: Record<string, unknown> }).data;
   },
 
   /** 催单：更新订单的预计出货日期和备注 */

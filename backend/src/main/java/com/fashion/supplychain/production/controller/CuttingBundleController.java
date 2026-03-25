@@ -1,7 +1,10 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.dto.CuttingBundleSplitRollbackRequest;
+import com.fashion.supplychain.production.dto.CuttingBundleSplitTransferRequest;
 import com.fashion.supplychain.production.orchestration.CuttingBundleOrchestrator;
+import com.fashion.supplychain.production.orchestration.CuttingBundleSplitTransferOrchestrator;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,9 @@ public class CuttingBundleController {
 
     @Autowired
     private CuttingBundleOrchestrator cuttingBundleOrchestrator;
+
+    @Autowired
+    private CuttingBundleSplitTransferOrchestrator cuttingBundleSplitTransferOrchestrator;
 
     /**
      * 【新版统一查询】分页查询菲号列表
@@ -64,6 +70,21 @@ public class CuttingBundleController {
     @PostMapping("/receive")
     public Result<?> receive(@RequestBody Map<String, Object> body) {
         return Result.success(cuttingBundleOrchestrator.receive(body));
+    }
+
+    @PostMapping("/split-transfer")
+    public Result<?> splitTransfer(@RequestBody CuttingBundleSplitTransferRequest request) {
+        return Result.success(cuttingBundleSplitTransferOrchestrator.splitAndTransfer(request));
+    }
+
+    @PostMapping("/split-rollback")
+    public Result<?> splitRollback(@RequestBody CuttingBundleSplitRollbackRequest request) {
+        return Result.success(cuttingBundleSplitTransferOrchestrator.rollbackSplit(request));
+    }
+
+    @GetMapping("/family/{bundleId}")
+    public Result<?> family(@PathVariable String bundleId) {
+        return Result.success(cuttingBundleSplitTransferOrchestrator.queryFamily(bundleId));
     }
 
 }

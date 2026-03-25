@@ -84,8 +84,9 @@ Controller → Orchestrator → Service → Mapper
 | [设计系统完整规范-2026.md](设计系统完整规范-2026.md) | 前端 UI/UX 强制规范 |
 | [INVENTORY_SYSTEM_GUIDE.md](INVENTORY_SYSTEM_GUIDE.md) | 进销存系统操作指南 |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md) | AI 开发助手参考指令 |
+| [docs/小云智能体能力地图-20260325.md](docs/小云智能体能力地图-20260325.md) | 小云已接入能力、指令覆盖、缺口清单与更新记录 |
 
-**技术文档（docs/）**：扫码系统、小程序开发、Modal 组件、日期选择器、多租户配置、工资结算等
+**技术文档（docs/）**：扫码系统、小程序开发、Modal 组件、日期选择器、多租户配置、工资结算、小云智能体能力地图等
 
 **部署文档（deployment/）**：数据库配置、部署说明、小程序发布指南
 

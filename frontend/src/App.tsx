@@ -38,7 +38,7 @@ import {
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
-import { IntelligenceCenter } from './modules/intelligence';
+import { AiAgentTraceCenter, IntelligenceCenter } from './modules/intelligence';
 import {
   ProductionList,
   CuttingManagement,
@@ -49,7 +49,6 @@ import {
   OrderTransfer,
   OrderFlow,
   ProgressDetail,
-  PatternProduction,
   MaterialPicking,
 } from './modules/production';
 
@@ -221,7 +220,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfoList /></Suspense>} />
           <Route path="/style-info/new" element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
           <Route path={paths.styleInfoDetail} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
-          <Route path={paths.patternProduction} element={<Suspense fallback={<Spin />}><PatternProduction /></Suspense>} />
           <Route path={paths.productionList} element={<Suspense fallback={<Spin />}><ProductionList /></Suspense>} />
           <Route path={paths.cutting} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
           <Route path={paths.cuttingTask} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
@@ -265,6 +263,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
           <Route path={paths.organization} element={<Suspense fallback={<Spin />}><OrganizationTree /></Suspense>} />
+          <Route path={paths.productionPartners} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
           <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
           <Route path={paths.factoryWorkers} element={<Suspense fallback={<Spin />}><FactoryWorkerList /></Suspense>} />
           <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
@@ -277,6 +276,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.dataImport} element={<Suspense fallback={<Spin />}><DataImport /></Suspense>} />
           <Route path={paths.integrationCenter} element={<Suspense fallback={<Spin />}><IntegrationCenter /></Suspense>} />
           <Route path={paths.intelligenceCenter} element={<Suspense fallback={<Spin />}><IntelligenceCenter /></Suspense>} />
+          <Route path={paths.aiAgentTraceCenter} element={<Suspense fallback={<Spin />}><AiAgentTraceCenter /></Suspense>} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />

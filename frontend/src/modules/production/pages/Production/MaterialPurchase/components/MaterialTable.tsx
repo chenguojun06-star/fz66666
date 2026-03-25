@@ -14,7 +14,7 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
-import { formatMaterialQuantityWithUnit, getStatusConfig, subtractMaterialQuantity } from '../utils';
+import { formatMaterialQuantityWithUnit, formatReferenceKilograms, getStatusConfig, subtractMaterialQuantity } from '../utils';
 import api from '@/utils/api';
 
 interface MaterialTableProps {
@@ -276,12 +276,20 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       ellipsis: true,
     },
     {
-      title: '采购数量',
+      title: '需求数量',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,
       align: 'right' as const,
       render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
+    },
+    {
+      title: '参考公斤数',
+      key: 'referenceKilograms',
+      width: 110,
+      align: 'right' as const,
+      render: (_: unknown, record: MaterialPurchaseType) =>
+        formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
     },
     {
       title: '到货数量',

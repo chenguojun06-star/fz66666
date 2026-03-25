@@ -65,7 +65,14 @@
       </block>
       <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
     </scroll-view>
+    <view class="voice-hint" wx:if="{{voiceHint}}">{{voiceHint}}</view>
     <view class="chat-input-area">
+      <view
+        class="voice-btn {{isRecording ? 'voice-btn-recording' : ''}} {{(!voiceEnabled || isLoading) ? 'voice-btn-disabled' : ''}}"
+        catchtouchstart="startVoiceInput"
+        catchtouchend="stopVoiceInput"
+        catchtouchcancel="stopVoiceInput"
+      >{{isRecording ? '松开发送' : '按住说话'}}</view>
       <input class="chat-input" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
       <button class="send-btn {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage" disabled="{{isLoading || !inputValue}}">发送</button>
     </view>

@@ -22,6 +22,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { paths } from '@/routeConfig';
 import { organizationApi } from '@/services/system/organizationApi';
+import CustomerManagementTab from './CustomerManagementTab';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -53,7 +54,11 @@ const FactoryList: React.FC = () => {
   const [remarkLoading, setRemarkLoading] = useState(false);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
+  const [managementTab, setManagementTab] = useState<'supplier' | 'customer'>('supplier');
   const [activeTab, setActiveTab] = useState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('ALL');
+  const handleManagementTabChange = (tab: string) => {
+    setManagementTab(tab as 'supplier' | 'customer');
+  };
   const handleTabChange = (tab: string) => {
     const t = tab as 'ALL' | 'MATERIAL' | 'OUTSOURCE';
     setActiveTab(t);
@@ -182,8 +187,9 @@ const FactoryList: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (managementTab !== 'supplier') return;
     fetchFactories();
-  }, [queryParams]);
+  }, [managementTab, queryParams]);
 
   useEffect(() => {
     void fetchDepartments();
@@ -191,8 +197,10 @@ const FactoryList: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const view = params.get('view');
     const factoryName = (params.get('factoryName') || '').trim();
     const factoryCode = (params.get('factoryCode') || '').trim();
+    setManagementTab(view === 'customer' ? 'customer' : 'supplier');
     if (factoryName || factoryCode) {
       setQueryParams((prev) => ({
         ...prev,
@@ -569,102 +577,127 @@ const FactoryList: React.FC = () => {
           </Card>
         ) : null}
         <div className="page-header">
-          <h2 className="page-title">供应商管理</h2>
+          <h2 className="page-title">{managementTab === 'customer' ? '客户管理' : '供应商管理'}</h2>
         </div>
 
         <Tabs
-          activeKey={activeTab}
-          onChange={handleTabChange}
-          style={{ marginBottom: 8 }}
+          activeKey={managementTab}
+          onChange={handleManagementTabChange}
           items={[
-            { key: 'ALL', label: '全部' },
-            { key: 'MATERIAL', label: '面辅料供应商' },
-            { key: 'OUTSOURCE', label: '外发供应商' },
+            {
+              key: 'supplier',
+              label: '供应商管理',
+              children: (
+                <>
+                  <Tabs
+                    activeKey={activeTab}
+                    onChange={handleTabChange}
+                    style={{ marginBottom: 8 }}
+                    items={[
+                      { key: 'ALL', label: '全部' },
+                      { key: 'MATERIAL', label: '面辅料供应商' },
+                      { key: 'OUTSOURCE', label: '外发供应商' },
+                    ]}
+                  />
+
+                  <Card size="small" className="filter-card mb-sm">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+                      <Space wrap size={12}>
+                        <Input
+                          placeholder="供应商编码"
+                          style={{ width: 180 }}
+                          allowClear
+                          value={String((queryParams as any)?.factoryCode || '')}
+                          onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
+                        />
+                        <Input
+                          placeholder="供应商名称"
+                          style={{ width: 220 }}
+                          allowClear
+                          value={String((queryParams as any)?.factoryName || '')}
+                          onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
+                        />
+                        <Select
+                          placeholder="状态"
+                          style={{ width: 140 }}
+                          allowClear
+                          value={String((queryParams as any)?.status || '') || undefined}
+                          options={[
+                            { value: 'active', label: '启用' },
+                            { value: 'inactive', label: '停用' },
+                          ]}
+                          onChange={(value) => setQueryParams((prev) => ({ ...prev, status: value, page: 1 }))}
+                        />
+                        <Select
+                          placeholder="内外标签"
+                          style={{ width: 140 }}
+                          allowClear
+                          value={String((queryParams as any)?.factoryType || '') || undefined}
+                          options={[
+                            { value: 'INTERNAL', label: '内部' },
+                            { value: 'EXTERNAL', label: '外部' },
+                          ]}
+                          onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: value, page: 1 }))}
+                        />
+                        <Select
+                          placeholder="归属部门"
+                          style={{ width: 220 }}
+                          allowClear
+                          value={String((queryParams as any)?.parentOrgUnitId || '') || undefined}
+                          options={departmentOptions.map((item) => ({
+                            value: String(item.id || ''),
+                            label: getDepartmentLabel(item),
+                          }))}
+                          onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, page: 1 }))}
+                        />
+                        <Button type="primary" onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}>
+                          查询
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            setQueryParams({
+                              page: 1,
+                              pageSize: queryParams.pageSize,
+                              supplierType: activeTab === 'ALL' ? undefined : activeTab,
+                            })
+                          }
+                        >
+                          重置
+                        </Button>
+                      </Space>
+                      <Button type="primary" onClick={() => openDialog('create')}>
+                        {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <ResizableTable<FactoryType>
+                    storageKey="system-factory-table"
+                    rowKey={(r) => String(r.id || r.factoryCode)}
+                    columns={columns as any}
+                    dataSource={factoryList}
+                    loading={loading}
+                    pagination={{
+                      current: queryParams.page,
+                      pageSize: queryParams.pageSize,
+                      total,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (t) => `共 ${t} 条`,
+                      pageSizeOptions: ['10', '20', '50', '100'],
+                      onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
+                    }}
+                    scroll={{ x: 'max-content' }}
+                  />
+                </>
+              ),
+            },
+            {
+              key: 'customer',
+              label: '客户管理',
+              children: <CustomerManagementTab active={managementTab === 'customer'} />,
+            },
           ]}
-        />
-
-        <Card size="small" className="filter-card mb-sm">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
-            <Space wrap size={12}>
-              <Input
-                placeholder="供应商编码"
-                style={{ width: 180 }}
-                allowClear
-                value={String((queryParams as any)?.factoryCode || '')}
-                onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
-              />
-              <Input
-                placeholder="供应商名称"
-                style={{ width: 220 }}
-                allowClear
-                value={String((queryParams as any)?.factoryName || '')}
-                onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
-              />
-              <Select
-                placeholder="状态"
-                style={{ width: 140 }}
-                allowClear
-                value={String((queryParams as any)?.status || '') || undefined}
-                options={[
-                  { value: 'active', label: '启用' },
-                  { value: 'inactive', label: '停用' },
-                ]}
-                onChange={(value) => setQueryParams((prev) => ({ ...prev, status: value, page: 1 }))}
-              />
-              <Select
-                placeholder="内外标签"
-                style={{ width: 140 }}
-                allowClear
-                value={String((queryParams as any)?.factoryType || '') || undefined}
-                options={[
-                  { value: 'INTERNAL', label: '内部' },
-                  { value: 'EXTERNAL', label: '外部' },
-                ]}
-                onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: value, page: 1 }))}
-              />
-              <Select
-                placeholder="归属部门"
-                style={{ width: 220 }}
-                allowClear
-                value={String((queryParams as any)?.parentOrgUnitId || '') || undefined}
-                options={departmentOptions.map((item) => ({
-                  value: String(item.id || ''),
-                  label: getDepartmentLabel(item),
-                }))}
-                onChange={(value) => setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value, page: 1 }))}
-              />
-              <Button type="primary" onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}>
-                查询
-              </Button>
-              <Button onClick={() => setQueryParams({
-                page: 1,
-                pageSize: queryParams.pageSize,
-                supplierType: activeTab === 'ALL' ? undefined : activeTab,
-              })}>重置</Button>
-            </Space>
-            <Button type="primary" onClick={() => openDialog('create')}>
-              {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
-            </Button>
-          </div>
-        </Card>
-
-        <ResizableTable<FactoryType>
-          storageKey="system-factory-table"
-          rowKey={(r) => String(r.id || r.factoryCode)}
-          columns={columns as any}
-          dataSource={factoryList}
-          loading={loading}
-          pagination={{
-            current: queryParams.page,
-            pageSize: queryParams.pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
-          }}
-          scroll={{ x: 'max-content' }}
         />
       </Card>
 

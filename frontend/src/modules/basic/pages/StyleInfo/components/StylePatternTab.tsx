@@ -7,11 +7,18 @@ import StyleAttachmentTab from './StyleAttachmentTab';
 import StyleStageControlBar from './StyleStageControlBar';
 
 const { Text } = Typography;
+type PatternRowMode = 'usage' | 'spec';
+type PatternMaterialRow = {
+  id: string;
+  bomId: string | number;
+  mode: PatternRowMode;
+  bom: StyleBom;
+};
 
 interface SizeColorConfigInput {
-  sizes: [string, string, string, string, string];
-  colors: [string, string, string, string, string];
-  quantities: [number, number, number, number, number];
+  sizes: string[];
+  colors: string[];
+  quantities: number[];
   commonSizes?: string[];
   commonColors?: string[];
 }
@@ -30,6 +37,25 @@ interface Props {
 
 /** 单位为「米」的物料需要在纸样开发中录入各码用量和损耗率 */
 const isMeterUnit = (unit?: string) => String(unit || '').trim() === '米';
+const shouldIncludePatternMaterial = (bom: StyleBom) => {
+  const unit = String(bom.unit || '').trim();
+  const materialType = String(bom.materialType || '').trim().toLowerCase();
+  const materialName = String(bom.materialName || '').trim();
+  return isMeterUnit(unit)
+    || materialType.startsWith('fabric')
+    || materialType.startsWith('lining')
+    || materialType.startsWith('accessory')
+    || /拉链|纽扣|魔术贴|松紧|织带|绳|扣|辅料/.test(materialName);
+};
+const isZipperMaterial = (bom: StyleBom) => /拉链/.test(String(bom.materialName || '').trim());
+const parseNumberMap = (value?: string) => {
+  try {
+    const parsed = JSON.parse(String(value || '{}'));
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, number> : {};
+  } catch {
+    return {};
+  }
+};
 
 const StylePatternTab: React.FC<Props> = ({
   styleId,
@@ -51,6 +77,8 @@ const StylePatternTab: React.FC<Props> = ({
   const [bomLoading, setBomLoading] = useState(false);
   /** { [bomId]: { [size]: value } } */
   const [usageEdits, setUsageEdits] = useState<Record<string | number, Record<string, number | null>>>({});
+  /** { [bomId]: { [size]: specCm } } */
+  const [specEdits, setSpecEdits] = useState<Record<string | number, Record<string, number | null>>>({});
   /** { [bomId]: lossRate } */
   const [lossEdits, setLossEdits] = useState<Record<string | number, number | null>>({});
   const [savingUsage, setSavingUsage] = useState(false);
@@ -87,7 +115,7 @@ const StylePatternTab: React.FC<Props> = ({
         return 5;
       };
       const fabricBoms = list
-        .filter((b: StyleBom) => isMeterUnit(b.unit))
+        .filter((b: StyleBom) => shouldIncludePatternMaterial(b))
         .sort((a: StyleBom, b: StyleBom) => {
           const d = sortOrder(a.materialType) - sortOrder(b.materialType);
           if (d !== 0) return d;
@@ -96,24 +124,26 @@ const StylePatternTab: React.FC<Props> = ({
       setBomList(fabricBoms);
       // 从已保存的 sizeUsageMap 和 lossRate 初始化编辑状态
       const initEdits: Record<string | number, Record<string, number | null>> = {};
+      const initSpecEdits: Record<string | number, Record<string, number | null>> = {};
       const initLoss: Record<string | number, number | null> = {};
       for (const b of fabricBoms) {
         if (!b.id) continue;
         const parsed: Record<string, number | null> = {};
-        if (b.sizeUsageMap) {
-          try {
-            const m = JSON.parse(b.sizeUsageMap) as Record<string, number>;
-            for (const [k, v] of Object.entries(m)) {
-              parsed[k] = typeof v === 'number' ? v : null;
-            }
-          } catch {
-            // ignore
-          }
+        const sourceMap = parseNumberMap(b.patternSizeUsageMap || b.sizeUsageMap);
+        for (const [k, v] of Object.entries(sourceMap)) {
+          parsed[k] = typeof v === 'number' ? v : null;
+        }
+        const parsedSpec: Record<string, number | null> = {};
+        const sourceSpecMap = parseNumberMap(b.sizeSpecMap);
+        for (const [k, v] of Object.entries(sourceSpecMap)) {
+          parsedSpec[k] = typeof v === 'number' ? v : null;
         }
         initEdits[b.id] = parsed;
+        initSpecEdits[b.id] = parsedSpec;
         initLoss[b.id] = b.lossRate != null ? Number(b.lossRate) : 0;
       }
       setUsageEdits(initEdits);
+      setSpecEdits(initSpecEdits);
       setLossEdits(initLoss);
     } catch {
       // ignore – BOM list optional for pattern tab
@@ -147,13 +177,13 @@ const StylePatternTab: React.FC<Props> = ({
     });
   }, [patternFiles]);
 
-  // 当前有效的码数列表：优先用 commonSizes（完整码数组），兜底用 sizes 5格元组
+  // 当前有效的码数列表：优先用已选码数，兜底用常用码数
   const activeSizes = useMemo<string[]>(() => {
-    if (sizeColorConfig?.commonSizes?.length) {
-      return sizeColorConfig.commonSizes.filter(Boolean);
-    }
     if (sizeColorConfig?.sizes) {
       return sizeColorConfig.sizes.filter(Boolean);
+    }
+    if (sizeColorConfig?.commonSizes?.length) {
+      return sizeColorConfig.commonSizes.filter(Boolean);
     }
     return [];
   }, [sizeColorConfig]);
@@ -163,10 +193,25 @@ const StylePatternTab: React.FC<Props> = ({
       [bomId]: { ...(prev[bomId] ?? {}), [size]: val },
     }));
   }, []);
+  const handleSpecChange = useCallback((bomId: string | number, size: string, val: number | null) => {
+    setSpecEdits((prev) => ({
+      ...prev,
+      [bomId]: { ...(prev[bomId] ?? {}), [size]: val },
+    }));
+  }, []);
 
   const handleLossChange = useCallback((bomId: string | number, val: number | null) => {
     setLossEdits((prev) => ({ ...prev, [bomId]: val }));
   }, []);
+
+  const patternRows = useMemo<PatternMaterialRow[]>(() => bomList.flatMap((bom) => {
+    const baseRow: PatternMaterialRow = { id: `${bom.id}-usage`, bomId: String(bom.id || ''), mode: 'usage', bom };
+    if (!isZipperMaterial(bom)) return [baseRow];
+    return [
+      baseRow,
+      { id: `${bom.id}-spec`, bomId: String(bom.id || ''), mode: 'spec', bom },
+    ];
+  }), [bomList]);
 
   const handleSaveUsage = useCallback(async () => {
     if (bomList.length === 0) return;
@@ -176,28 +221,41 @@ const StylePatternTab: React.FC<Props> = ({
       for (const bom of bomList) {
         if (!bom.id) continue;
         const edits = usageEdits[bom.id] ?? {};
-        // 构建 sizeUsageMap JSON：只保留非 null 值
+        const conversionRate = Number(bom.conversionRate ?? 1) || 1;
         const mapObj: Record<string, number> = {};
         for (const [size, val] of Object.entries(edits)) {
           if (val !== null && val !== undefined && val > 0) {
             mapObj[size] = val;
           }
         }
-        const newMapJson = Object.keys(mapObj).length > 0 ? JSON.stringify(mapObj) : '';
+        const specMapObj: Record<string, number> = {};
+        for (const [size, val] of Object.entries(specEdits[bom.id] ?? {})) {
+          if (val !== null && val !== undefined && val > 0) {
+            specMapObj[size] = val;
+          }
+        }
+        const rawMapJson = Object.keys(mapObj).length > 0 ? JSON.stringify(mapObj) : '';
+        const newMapJson = rawMapJson;
+        const newSpecJson = Object.keys(specMapObj).length > 0 ? JSON.stringify(specMapObj) : '';
         const currentMap = bom.sizeUsageMap ?? '';
+        const currentRawMap = bom.patternSizeUsageMap ?? '';
+        const currentSpecMap = bom.sizeSpecMap ?? '';
         const newLoss = lossEdits[bom.id] ?? Number(bom.lossRate ?? 0);
         const lossChanged = Number(newLoss) !== Number(bom.lossRate ?? 0);
-        // 计算平均用量（各码均值），同步到 BOM 的 usageAmount
         const sizeVals = Object.values(mapObj).filter(v => v > 0);
         const avgUsage = sizeVals.length > 0
           ? Math.round((sizeVals.reduce((a, b) => a + b, 0) / sizeVals.length) * 100) / 100
           : null;
         const usageChanged = avgUsage !== null && Number(avgUsage) !== Number(bom.usageAmount ?? 0);
-        if (newMapJson !== currentMap || lossChanged || usageChanged) {
+        if (newMapJson !== currentMap || rawMapJson !== currentRawMap || newSpecJson !== currentSpecMap || lossChanged || usageChanged) {
           promises.push(
             api.put('/style/bom', {
               ...bom,
               sizeUsageMap: newMapJson || null,
+              patternSizeUsageMap: rawMapJson || null,
+              sizeSpecMap: newSpecJson || null,
+              patternUnit: '米',
+              conversionRate,
               lossRate: newLoss,
               ...(avgUsage !== null ? { usageAmount: avgUsage } : {}),
             })
@@ -217,48 +275,61 @@ const StylePatternTab: React.FC<Props> = ({
     } finally {
       setSavingUsage(false);
     }
-  }, [bomList, usageEdits, lossEdits, message, fetchBomList]);
+  }, [bomList, usageEdits, specEdits, lossEdits, message, fetchBomList]);
 
   // 各码用量配比表格列
   const usageColumns = useMemo(() => {
-    const cols: import('antd').TableColumnsType<StyleBom> = [
+    const cols: import('antd').TableColumnsType<PatternMaterialRow> = [
       {
         title: '物料名称',
-        dataIndex: 'materialName',
-        width: 140,
+        dataIndex: 'bom',
+        width: 180,
         ellipsis: true,
-        render: (name: string, record: StyleBom) => (
+        render: (_: unknown, record: PatternMaterialRow) => (
           <div>
-            <div>{name}</div>
-            {record.color && <Text type="secondary" style={{ fontSize: 12 }}>{record.color}</Text>}
+            <div>{record.bom.materialName}{record.mode === 'spec' ? '（规格）' : isZipperMaterial(record.bom) ? '（数量）' : ''}</div>
+            {record.bom.color && <Text type="secondary" style={{ fontSize: 12 }}>{record.bom.color}</Text>}
           </div>
         ),
       },
       {
         title: '单位',
-        dataIndex: 'unit',
-        width: 60,
+        key: 'unit',
+        width: 72,
+        render: (_: unknown, record: PatternMaterialRow) => record.mode === 'spec' ? 'cm' : (record.bom.patternUnit || record.bom.unit || '-'),
+      },
+      {
+        title: '规格/幅宽',
+        key: 'specification',
+        width: 120,
+        render: (_: unknown, record: PatternMaterialRow) => {
+          if (record.mode === 'spec') {
+            return '拉链长度';
+          }
+          return record.bom.specification || record.bom.fabricWeight || '—';
+        },
       },
       {
         title: (
           <span>
-            平均用量
+            平均值
             <br />
             <Text type="secondary" style={{ fontSize: 11 }}>(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',
         width: 90,
-        render: (_: unknown, record: StyleBom) => {
-          if (!record.id) return '—';
-          const edits = usageEdits[record.id] ?? {};
+        render: (_: unknown, record: PatternMaterialRow) => {
+          const edits = record.mode === 'spec'
+            ? (specEdits[record.bomId] ?? {})
+            : (usageEdits[record.bomId] ?? {});
           const vals = Object.values(edits).filter((v): v is number => v !== null && v !== undefined && (v as number) > 0);
           if (vals.length === 0) {
-            return record.usageAmount != null ? (
-              <Text type="secondary">{record.usageAmount}</Text>
-            ) : '—';
+            if (record.mode === 'spec') return '—';
+            return record.bom.usageAmount != null ? <Text type="secondary">{record.bom.usageAmount}</Text> : '—';
           }
           const avg = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+          if (record.mode === 'spec') return <Text strong>{avg}cm</Text>;
           return <Text strong>{avg}</Text>;
         },
       },
@@ -266,9 +337,11 @@ const StylePatternTab: React.FC<Props> = ({
         title: '损耗率(%)',
         key: 'lossRate',
         width: 100,
-        render: (_: unknown, record: StyleBom) => {
-          if (!record.id) return null;
-          const val = lossEdits[record.id] ?? Number(record.lossRate ?? 0);
+        render: (_: unknown, record: PatternMaterialRow) => {
+          if (record.mode === 'spec') {
+            return <Text type="secondary">{Number(record.bom.lossRate ?? 0)}%</Text>;
+          }
+          const val = lossEdits[record.bomId] ?? Number(record.bom.lossRate ?? 0);
           return (
             <InputNumber
               size="small"
@@ -277,7 +350,7 @@ const StylePatternTab: React.FC<Props> = ({
               step={1}
               precision={1}
               value={val}
-              onChange={(v) => handleLossChange(record.id!, v)}
+              onChange={(v) => handleLossChange(record.bomId, v)}
               disabled={childReadOnly}
               style={{ width: '100%' }}
             />
@@ -293,18 +366,21 @@ const StylePatternTab: React.FC<Props> = ({
         ),
         key: `size_${size}`,
         width: 80,
-        render: (_: unknown, record: StyleBom) => {
-          if (!record.id) return null;
-          const val = (usageEdits[record.id] ?? {})[size] ?? null;
+        render: (_: unknown, record: PatternMaterialRow) => {
+          const val = record.mode === 'spec'
+            ? (specEdits[record.bomId] ?? {})[size] ?? null
+            : (usageEdits[record.bomId] ?? {})[size] ?? null;
           return (
             <InputNumber
               size="small"
               min={0}
-              max={99}
-              step={0.05}
+              max={record.mode === 'spec' ? 999 : 99}
+              step={record.mode === 'spec' ? 1 : 0.05}
               precision={2}
               value={val ?? undefined}
-              onChange={(v) => handleUsageChange(record.id!, size, v)}
+              onChange={(v) => (record.mode === 'spec'
+                ? handleSpecChange(record.bomId, size, v)
+                : handleUsageChange(record.bomId, size, v))}
               disabled={childReadOnly}
               style={{ width: '100%' }}
             />
@@ -313,7 +389,7 @@ const StylePatternTab: React.FC<Props> = ({
       });
     }
     return cols;
-  }, [activeSizes, usageEdits, lossEdits, handleUsageChange, handleLossChange, childReadOnly]);
+  }, [activeSizes, usageEdits, specEdits, lossEdits, handleUsageChange, handleSpecChange, handleLossChange, childReadOnly]);
 
   return (
     <div>
@@ -378,7 +454,7 @@ const StylePatternTab: React.FC<Props> = ({
           <Space>
             <span>各码实际用量</span>
             <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
-              纸样师傅按各码纸样测量填入，下单管理和裁剪管理将依此计算实际面辅料用量
+              纸样师傅按各码纸样测量填入，下单管理和裁剪管理将依此计算实际面辅料用量，拉链辅料也会自动带入
             </Text>
           </Space>
         }
@@ -404,10 +480,10 @@ const StylePatternTab: React.FC<Props> = ({
             {bomList.length === 0 && !bomLoading ? (
               <Text type="secondary">BOM清单中暂无面料/里料，请先在BOM清单中添加面辅料</Text>
             ) : (
-              <Table<StyleBom>
+              <Table<PatternMaterialRow>
                 size="small"
-                rowKey={(r) => String(r.id ?? r.materialCode)}
-                dataSource={bomList}
+                rowKey={(r) => r.id}
+                dataSource={patternRows}
                 columns={usageColumns}
                 pagination={false}
                 scroll={{ x: 'max-content' }}
@@ -421,4 +497,3 @@ const StylePatternTab: React.FC<Props> = ({
 };
 
 export default StylePatternTab;
-

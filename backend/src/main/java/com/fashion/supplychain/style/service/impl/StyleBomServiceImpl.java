@@ -9,12 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.fashion.supplychain.common.UserContext;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +28,8 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
 
     /** BOM缓存前缀 */
     private static final String BOM_CACHE_PREFIX = "style:bom:";
+    /** BOM缓存版本：字段结构变更时递增，避免旧缓存污染新字段 */
+    private static final String BOM_CACHE_VERSION = "v2";
     /** BOM列表缓存30分钟 */
     private static final long BOM_CACHE_TTL_MINUTES = 30;
 
@@ -41,7 +41,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         boolean includeImageUrls = hasImageUrlsColumn();
         boolean includeFabricComposition = hasFabricCompositionColumn();
         // 尝试从Redis缓存获取
-        String cacheKey = BOM_CACHE_PREFIX + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp");
+        String cacheKey = BOM_CACHE_PREFIX + BOM_CACHE_VERSION + ":" + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp");
         try {
             List<StyleBom> cached = redisService.get(cacheKey);
             if (cached != null) {
@@ -68,6 +68,10 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
                     StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,
@@ -98,6 +102,10 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                             StyleBom::getUnit,
                             StyleBom::getUsageAmount,
                             StyleBom::getSizeUsageMap,
+                            StyleBom::getPatternSizeUsageMap,
+                            StyleBom::getSizeSpecMap,
+                            StyleBom::getPatternUnit,
+                            StyleBom::getConversionRate,
                             StyleBom::getLossRate,
                             StyleBom::getUnitPrice,
                             StyleBom::getTotalPrice,
@@ -129,6 +137,10 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
                     StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,
@@ -158,6 +170,10 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                             StyleBom::getUnit,
                             StyleBom::getUsageAmount,
                             StyleBom::getSizeUsageMap,
+                            StyleBom::getPatternSizeUsageMap,
+                            StyleBom::getSizeSpecMap,
+                            StyleBom::getPatternUnit,
+                            StyleBom::getConversionRate,
                             StyleBom::getLossRate,
                             StyleBom::getUnitPrice,
                             StyleBom::getTotalPrice,
@@ -209,6 +225,11 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getSize,
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
+                    StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,
@@ -238,6 +259,11 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getSize,
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
+                    StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,
@@ -268,6 +294,11 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getSize,
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
+                    StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,
@@ -296,6 +327,11 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     StyleBom::getSize,
                     StyleBom::getUnit,
                     StyleBom::getUsageAmount,
+                    StyleBom::getSizeUsageMap,
+                    StyleBom::getPatternSizeUsageMap,
+                    StyleBom::getSizeSpecMap,
+                    StyleBom::getPatternUnit,
+                    StyleBom::getConversionRate,
                     StyleBom::getLossRate,
                     StyleBom::getUnitPrice,
                     StyleBom::getTotalPrice,

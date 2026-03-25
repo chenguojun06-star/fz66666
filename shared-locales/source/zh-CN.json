@@ -31,7 +31,7 @@
     "submitting": "登录中...",
     "wechatQuickLogin": "微信一键登录",
     "serverUrl": "服务器地址",
-    "serverUrlPlaceholder": "例如：http://192.168.1.10:8088",
+    "serverUrlPlaceholder": "例如：https://api.example.com",
     "noAccount": "还没有账号？",
     "registerNow": "立即注册",
     "loginSuccess": "登录成功",

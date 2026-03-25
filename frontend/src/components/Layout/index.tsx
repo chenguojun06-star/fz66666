@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu, Tag } from 'antd';
+import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu, Tag, Tooltip } from 'antd';
 import { CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
@@ -153,12 +153,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuI18nMapByPath = useMemo<Record<string, string>>(() => ({
     [paths.styleInfoList]: 'menu.items.styleInfo',
-    [paths.patternProduction]: 'menu.items.patternProduction',
     [paths.dataCenter]: 'menu.items.dataCenter',
     [paths.templateCenter]: 'menu.items.templateCenter',
     [paths.orderManagementList]: 'menu.items.orderManagement',
     [paths.productionList]: 'menu.items.productionList',
     [paths.materialPurchase]: 'menu.items.materialPurchase',
+    [paths.productionPartners]: 'menu.items.factory',
     [paths.cutting]: 'menu.items.cutting',
     [paths.progressDetail]: 'menu.items.progressDetail',
     [paths.warehousing]: 'menu.items.warehousing',
@@ -272,6 +272,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) || hasPermissionForPath(item.path)
           );
         }
+        if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(section.path!))) return true;
         return hasPermissionForPath(section.path!);
       })
       .map((section) => {
@@ -298,8 +299,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             icon: section.icon,
             label: section.title,
             children: children.length > 0 ? children : undefined,
+            popupClassName: 'layout-sidebar-submenu-popup',
           };
         } else {
+          if (sidebarIsCollapsed && !isMobile) {
+            return {
+              key: `${section.key}__collapsed_group`,
+              icon: section.icon,
+              label: section.title,
+              children: [
+                {
+                  key: section.path!,
+                  icon: section.icon,
+                  label: <Link to={section.path!}>{section.title}</Link>,
+                },
+              ],
+              popupClassName: 'layout-sidebar-submenu-popup',
+            };
+          }
           return {
             key: section.path!,
             icon: section.icon,
@@ -307,7 +324,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           };
         }
       });
-  }, [localizedMenuConfig, user, isSuperAdmin, isFactoryAccount]);
+  }, [localizedMenuConfig, user, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile]);
 
   // 获取当前选中的菜单项
   const selectedKeys = useMemo(() => {
@@ -318,6 +335,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (sidebarIsCollapsed) return;
     setMenuOpenKeys(openKeys);
   };
+
+  const menuInteractionProps = sidebarIsCollapsed
+    ? {
+        triggerSubMenuAction: (isMobile ? 'click' : 'hover') as 'click' | 'hover',
+        subMenuOpenDelay: 0,
+        subMenuCloseDelay: 0.08,
+      }
+    : {
+        openKeys: menuOpenKeys,
+        onOpenChange: handleMenuOpenChange,
+        triggerSubMenuAction: 'click' as const,
+      };
 
   useEffect(() => {
     if (isMobile) {
@@ -365,6 +394,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (base === '/order-management' && pathname !== base) return t('layout.orderDetail', language);
     if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return t('layout.cuttingTask', language);
     if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return t('layout.warehousingDetail', language);
+    if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
 
     for (const section of localizedMenuConfig) {
       if (section.path && normalizePath(section.path) === base) return section.title;
@@ -585,23 +615,45 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Menu
             mode="inline"
             selectedKeys={selectedKeys}
-            openKeys={sidebarIsCollapsed ? undefined : menuOpenKeys}
-            onOpenChange={handleMenuOpenChange}
             items={menuItems}
             inlineCollapsed={sidebarIsCollapsed}
-            triggerSubMenuAction={sidebarIsCollapsed ? (isMobile ? 'click' : 'hover') : 'click'}
+            getPopupContainer={() => document.body}
+            {...menuInteractionProps}
             className="sidebar-menu"
           />
+          {sidebarIsCollapsed && !isMobile ? (
+            <div className="sidebar-icp-collapsed">
+              <Tooltip
+                placement="rightBottom"
+                classNames={{ root: 'sidebar-icp-tooltip' }}
+                title={(
+                  <div className="sidebar-icp-tooltip-content">
+                    <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer">
+                      粤公网安备44011302005352号
+                    </a>
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+                      粤ICP备2026026776号-1
+                    </a>
+                  </div>
+                )}
+              >
+                <Button type="text" size="small" className="sidebar-icp-collapsed-btn">
+                  <img src="/police.png" alt="公安备案图标" className="sidebar-icp-collapsed-icon" />
+                  <span>备案</span>
+                </Button>
+              </Tooltip>
+            </div>
+          ) : null}
           {!sidebarIsCollapsed && !isMobile && (
-            <div className="sidebar-icp" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(255,255,255,0.45)', padding: '10px 0' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
-                  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <div className="sidebar-icp">
+              <div className="sidebar-icp-links">
+                <div className="sidebar-icp-link-row">
+                  <img src="/police.png" alt="公安备案图标" className="sidebar-icp-icon" />
+                  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer">
                     粤公网安备44011302005352号
                   </a>
                 </div>
-                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
                   粤ICP备2026026776号-1
                 </a>
               </div>

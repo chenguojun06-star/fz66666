@@ -13,6 +13,7 @@ import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
+  stockStateMap?: Record<string, boolean>;
   loading: boolean;
   total: number;
   pageSize: number;
@@ -21,6 +22,7 @@ interface StyleCardViewProps {
   onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
+  focusedStyleId?: string | null;
 }
 
 /**
@@ -31,6 +33,7 @@ interface StyleCardViewProps {
  */
 const StyleCardView: React.FC<StyleCardViewProps> = ({
   data,
+  stockStateMap = {},
   loading,
   total,
   pageSize,
@@ -38,16 +41,84 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   onPageChange,
   onScrap,
   onPrint,
-  onMaintenance
+  onMaintenance,
+  focusedStyleId,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { columns: cardColumns } = useCardGridLayout(10);
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
+  const parseSizeColorConfig = (raw: unknown): { sizes: string[]; colors: string[]; quantities: number[] } => {
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
+      return {
+        sizes: Array.isArray((parsed as any)?.sizes) ? (parsed as any).sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
+        colors: Array.isArray((parsed as any)?.colors) ? (parsed as any).colors.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
+        quantities: Array.isArray((parsed as any)?.quantities) ? (parsed as any).quantities.map((item: unknown) => Number(item || 0)) : [],
+      };
+    } catch {
+      return { sizes: [], colors: [], quantities: [] };
+    }
+  };
+
+  const buildConfiguredSpecPairs = (record: StyleInfo) => {
+    const config = parseSizeColorConfig((record as any).sizeColorConfig);
+    const directColor = String((record as any).color || '').trim() || config.colors.find(Boolean) || '';
+    const parsed = typeof (record as any).sizeColorConfig === 'string' ? (() => {
+      try {
+        return JSON.parse((record as any).sizeColorConfig || '{}') as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] };
+      } catch {
+        return {};
+      }
+    })() : (((record as any).sizeColorConfig as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] }) || {});
+    const matrixSizes = Array.isArray(parsed?.sizes) ? parsed.sizes.map((item) => String(item || '').trim()).filter(Boolean) : config.sizes;
+    const matrixRows = Array.isArray(parsed?.matrixRows) ? parsed.matrixRows : [];
+    const matrixPairs = matrixRows.flatMap((row) => {
+      const rowColor = String(row?.color || '').trim();
+      const quantities = Array.isArray(row?.quantities) ? row.quantities : [];
+      return matrixSizes
+        .map((size, index) => ({ color: rowColor, size, quantity: Number(quantities[index] || 0) }))
+        .filter((item) => item.color && item.size && item.quantity > 0);
+    });
+    if (matrixPairs.length) {
+      return matrixPairs;
+    }
+    const topLevelPairs = config.sizes
+      .map((size, index) => ({ color: directColor, size, quantity: Number(config.quantities[index] || 0) }))
+      .filter((item) => item.size && item.quantity > 0);
+    if (topLevelPairs.length) {
+      return topLevelPairs;
+    }
+    const fallbackSizes = String((record as any).size || '').split(/[/,，\s]+/).map((item) => item.trim()).filter(Boolean);
+    const fallbackQuantity = Number((record as any).sampleQuantity || 0);
+    if (directColor && fallbackSizes.length === 1 && fallbackQuantity > 0) {
+      return [{ color: directColor, size: fallbackSizes[0], quantity: fallbackQuantity }];
+    }
+    return [];
+  };
+
+  const resolveDisplayColor = (record: StyleInfo) => {
+    const pairs = buildConfiguredSpecPairs(record);
+    return pairs.length ? Array.from(new Set(pairs.map((item) => item.color).filter(Boolean))).join(' / ') : '';
+  };
+
+  const resolveDisplaySize = (record: StyleInfo) => {
+    const pairs = buildConfiguredSpecPairs(record);
+    return pairs.length ? pairs.map((item) => item.size).join(' / ') : '';
+  };
+
+  const resolveDisplayQuantity = (record: StyleInfo) => {
+    const pairs = buildConfiguredSpecPairs(record);
+    return pairs.length ? pairs.map((item) => `${item.quantity}`).join(' / ') : '';
+  };
+
   const isStageDoneRow = (record: StyleInfo) => {
-    const node = String((record as any).progressNode || '').trim();
-    return node === '样衣完成';
+    const stockKey = `${String((record as any).styleNo || '').trim().toUpperCase()}|${resolveDisplayColor(record).trim().toUpperCase()}`;
+    if (stockStateMap[stockKey]) {
+      return true;
+    }
+    return String((record as any).latestPatternStatus || '').trim().toUpperCase() === 'COMPLETED';
   };
 
   const renderSourceText = (record: StyleInfo) => {
@@ -57,6 +128,10 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   const isScrappedRow = (record: StyleInfo) => {
     return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
       || String((record as any).progressNode || '').trim() === '开发样报废';
+  };
+
+  const getStyleDomKey = (record: Partial<StyleInfo> | null | undefined) => {
+    return String(record?.id || record?.styleNo || '').trim();
   };
 
   return (
@@ -70,9 +145,10 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       subtitleField="styleName"
       fields={[]}
       fieldGroups={[
-        [{ label: '码数', key: 'sizeColorConfig', render: (val) => { if (!val) return '-'; try { const config = JSON.parse(val); const sizes = (config.sizes || []).filter((s: string) => s && s.trim()); return sizes.length > 0 ? sizes.join(',') : '-'; } catch { return '-'; } } }, { label: '数量', key: 'sampleQuantity', render: (val) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
-        [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
+        [{ label: '颜色', key: 'color', render: (_val, record) => resolveDisplayColor(record as StyleInfo) || '-' }, { label: '码数', key: 'sizeColorConfig', render: (_val, record) => resolveDisplaySize(record as StyleInfo) || '-' }],
+        [{ label: '数量', key: 'sampleQuantity', render: (_val, record) => { const qty = resolveDisplayQuantity(record as StyleInfo); return qty && qty !== '0' ? `${qty}件` : '-'; } }, { label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }],
+        [{ label: '品类', key: 'category', render: (val) => val || '-' }, { label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
+        [{ label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
       ]}
       progressConfig={{
         show: true,
@@ -137,6 +213,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         return <Tag color={color}>{node}</Tag>;
       }}
       onCardClick={(record) => navigate(`/style-info/${record.id}`)}
+      getCardId={(record) => `style-card-${getStyleDomKey(record as StyleInfo)}`}
+      getCardStyle={(record) => getStyleDomKey(record as StyleInfo) === focusedStyleId ? {
+        boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
+        transform: 'translateY(-2px)',
+      } : undefined}
       actions={(record) => {
         const r = record as StyleInfo;
         if (isScrappedRow(r)) {

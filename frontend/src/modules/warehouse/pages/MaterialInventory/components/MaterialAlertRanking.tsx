@@ -27,6 +27,7 @@ export interface MaterialStockAlertItem {
   fabricWidth?: string;
   fabricWeight?: string;
   fabricComposition?: string;
+  conversionRate?: number;
 }
 
 interface MaterialAlertRankingProps {

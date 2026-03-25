@@ -119,6 +119,7 @@ export function useMaterialInventoryData() {
           specification: item.specifications,
           safetyStock: item.safetyStock || 100,
           inTransitQty: 0,
+          conversionRate: item.conversionRate != null ? Number(item.conversionRate) : undefined,
           unitPrice: Number(item.unitPrice) || 0,
           totalValue: Number(item.totalValue) || (item.quantity || 0) * (Number(item.unitPrice) || 0),
           warehouseLocation: item.location || '默认仓',
@@ -381,6 +382,7 @@ export function useMaterialInventoryData() {
         fabricWidth: alertMatch.fabricWidth || dbRec0?.fabricWidth || '',
         fabricWeight: alertMatch.fabricWeight || dbRec0?.fabricWeight || '',
         fabricComposition: alertMatch.fabricComposition || dbRec0?.fabricComposition || '',
+        conversionRate: alertMatch.conversionRate || dbRec0?.conversionRate || undefined,
       });
       const suggested = Number(alertMatch.suggestedSafetyStock ?? alertMatch.safetyStock ?? 0);
       const current = Number(alertMatch.quantity ?? 0);
@@ -404,6 +406,7 @@ export function useMaterialInventoryData() {
           fabricWidth: m.fabricWidth || '',
           fabricWeight: m.fabricWeight || '',
           fabricComposition: m.fabricComposition || '',
+          conversionRate: m.conversionRate != null ? Number(m.conversionRate) : undefined,
         });
         // 查询进销存获取真实库存，计算采购缺口
         try {
@@ -425,6 +428,7 @@ export function useMaterialInventoryData() {
                     quantity: availableQty,
                     safetyStock,
                     lockedQuantity: Number(stockRecord.lockedQuantity || 0),
+                    conversionRate: stockRecord.conversionRate != null ? Number(stockRecord.conversionRate) : prev.conversionRate,
                   }
                 : prev,
             );
@@ -466,6 +470,7 @@ export function useMaterialInventoryData() {
         materialName: instructionTarget.materialName,
         materialType: instructionTarget.materialType,
         unit: instructionTarget.unit,
+        conversionRate: instructionTarget.conversionRate,
         color: instructionTarget.color,
         size: instructionTarget.size,
         purchaseQuantity: values.purchaseQuantity,
@@ -767,13 +772,13 @@ export function useMaterialInventoryData() {
         <div class="info">
           <div class="info-row"><span class="info-label">出库单号：</span><span>OUT${new Date().getTime()}</span></div>
           <div class="info-row"><span class="info-label">出库日期：</span><span>${dayjs().format('YYYY-MM-DD HH:mm')}</span></div>
-          <div class="info-row"><span class="info-label">面料编号：</span><span>${record.materialCode}</span></div>
-          <div class="info-row"><span class="info-label">面料名称：</span><span>${record.materialName}</span></div>
+          <div class="info-row"><span class="info-label">物料编号：</span><span>${record.materialCode}</span></div>
+          <div class="info-row"><span class="info-label">物料名称：</span><span>${record.materialName}</span></div>
           <div class="info-row"><span class="info-label">规格型号：</span><span>${record.specification}</span></div>
           <div class="info-row"><span class="info-label">供应商：</span><span>${record.supplierName}</span></div>
         </div>
         <table class="table">
-          <thead><tr><th>序号</th><th>面料名称</th><th>规格</th><th>单位</th><th>库存数量</th><th>出库数量</th><th>库位</th><th>备注</th></tr></thead>
+          <thead><tr><th>序号</th><th>物料名称</th><th>规格</th><th>单位</th><th>库存数量</th><th>出库数量</th><th>库位</th><th>备注</th></tr></thead>
           <tbody><tr><td>1</td><td>${record.materialName}</td><td>${record.specification}</td><td>${record.unit}</td><td>${record.availableQty}</td><td>___________</td><td>${record.warehouseLocation}</td><td></td></tr></tbody>
         </table>
         <div class="footer"><div class="info-row"><span class="info-label">备注：</span><span>_________________________________________</span></div></div>

@@ -27,6 +27,7 @@ export interface StyleInfo extends Record<string, unknown> {
   latestOrderNo?: string;
   latestOrderStatus?: string;
   latestProductionProgress?: number;
+  latestPatternStatus?: string;
 
   patternStatus?: string;
   patternStartTime?: string;
@@ -104,6 +105,14 @@ export interface StyleBom extends Record<string, unknown> {
   usageAmount: number;
   /** 纸样各码实际用量（JSON，格式：{"S":1.5,"M":1.6}；为空则用统一 usageAmount） */
   sizeUsageMap?: string;
+  /** 纸样录入各码实际用量（原始单位） */
+  patternSizeUsageMap?: string;
+  /** 各码规格尺寸（JSON，常用于拉链长度cm） */
+  sizeSpecMap?: string;
+  /** 纸样录入单位 */
+  patternUnit?: string;
+  /** 换算系数：1个纸样录入单位 = x个BOM单位 */
+  conversionRate?: number;
   lossRate: number;
   unitPrice?: number;
   totalPrice?: number;
@@ -133,11 +142,13 @@ export interface StyleSize extends Record<string, unknown> {
   partName: string;
   groupName?: string;
   measureMethod?: string;
+  baseSize?: string;
   standardValue: number;
   tolerance: number;
   sort: number;
   /** 部位参考图片URLs（JSON数组字符串） */
   imageUrls?: string;
+  gradingRule?: string;
 }
 
 export interface StyleProcess extends Record<string, unknown> {

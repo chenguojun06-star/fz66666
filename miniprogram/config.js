@@ -9,13 +9,13 @@
  * 合法域名：已在微信公众平台「开发→开发管理→服务器域名」配置
  *   backend-226678-6-1405390085.sh.run.tcloudbase.com  // cspell:ignore tcloudbase
  *
- * 本地开发：
- * - 在「微信开发者工具→详情→本地设置」中勾选「不校验合法域名」
- * - 在登录页手动输入本机地址（如 http://192.168.x.x:8088）
+ * 安全要求：
+ * - 小程序侧仅使用已备案的 HTTPS 域名或受控网关地址
+ * - 不在前端源码、缓存或请求配置中保留内网 IP
  */
 // 生产后端地址（自定义域名 www.webyszl.cn → 后端服务，HTTPS 已开启）
 const DEFAULT_BASE_URL = 'https://www.webyszl.cn';
-const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备用（内网 IP）
+const FALLBACK_BASE_URL = DEFAULT_BASE_URL;
 
 /**
  * 是否启用调试日志（生产环境请设为 false）
@@ -24,12 +24,21 @@ const DEBUG_MODE = false;
 
 /**
  * 判断 URL 是否为占位符（未配置真实域名）
- * 开发者工具中 envVersion = 'develop'，且 DEFAULT_BASE_URL 还是占位符时，自动用 FALLBACK
+ * 开发者工具中若 DEFAULT_BASE_URL 仍是占位符，则自动用 FALLBACK
  * @param {string} url - 待检测的 URL 字符串
  * @returns {boolean} 是否为占位符地址
  */
 function isPlaceholderUrl(url) {
   return !url || url.includes('YOUR_CLOUD_BACKEND_DOMAIN') || url === 'https://YOUR_CLOUD_BACKEND_DOMAIN';
+}
+
+/**
+ * 判断是否为内网 IP 地址
+ * @param {string} url - 待检测的 URL
+ * @returns {boolean} 是否为内网地址
+ */
+function isPrivateNetworkUrl(url) {
+  return /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(:\d+)?(\/|$)/i.test(url);
 }
 
 /**
@@ -47,23 +56,26 @@ function normalizeBaseUrl(url) {
 }
 
 /**
- * 将 localhost/127.0.0.1 替换为局域网 IP
+ * 将不安全或不可达的地址回退到默认云地址
  * @param {string} url - 原始 URL
- * @returns {string} 替换后的 URL
+ * @returns {string} 安全可用的 URL
  */
-function replaceLoopback(url) {
+function resolveSafeBaseUrl(url) {
   const v = normalizeBaseUrl(url);
   if (!v) {
     return '';
   }
-  if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(v)) {
+  if (isPlaceholderUrl(v)) {
+    return '';
+  }
+  if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(v) || isPrivateNetworkUrl(v)) {
     return DEFAULT_BASE_URL;
   }
   return v;
 }
 
 /**
- * 获取当前 API 基址（优先 Storage > 默认局域网 IP）
+ * 获取当前 API 基址（优先 Storage > 默认云地址）
  * @returns {string} API 基础地址
  */
 function getBaseUrl() {
@@ -72,9 +84,6 @@ function getBaseUrl() {
       const stored = wx.getStorageSync('api_base_url');
       if (stored) {
         const v = normalizeBaseUrl(stored);
-        // 自动清理已过期的旧 IP 地址缓存
-        // 如果 Storage 中的地址不是当前 DEFAULT_BASE_URL 且不是 FALLBACK，
-        // 且是一个内网 IP 地址，则认为已过期，用 DEFAULT_BASE_URL 替换
         if (v) {
           // 1. Storage 里存的是占位符（未上线时曾写入）→ 清除，降级到默认云地址
           if (isPlaceholderUrl(v)) {
@@ -89,28 +98,13 @@ function getBaseUrl() {
             try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
             return DEFAULT_BASE_URL;
           }
-          // 3. Storage 里存的是任意内网 IP（包括 FALLBACK_BASE_URL 本身）→ 替换为云地址
-          // 注意：不能用 v !== FALLBACK_BASE_URL 排除，否则旧 FALLBACK 被跳过、导致 ERR_ADDRESS_UNREACHABLE
-          const isAnyLanIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(:\d+)?(\/|$)/i.test(v);
 
-          // 获取当前环境
-          let envVersion = 'release';
-          try {
-            if (typeof wx !== 'undefined' && wx.getAccountInfoSync) {
-              envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
-            }
-          } catch (e) {
-            // getAccountInfoSync 在旧版基础库可能不存在，静默降级为 release
+          // 3. Storage 里存的是内网 IP 或本地回环地址 → 统一替换为云地址
+          if (isPrivateNetworkUrl(v) || /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(v)) {
+            try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
+            return DEFAULT_BASE_URL;
           }
-
-          // 只有在正式版(release)中，才强制将内网IP替换为云地址
-          if (isAnyLanIp && envVersion === 'release') {
-            // 云端部署时，内网地址不可达，强制替换为云地址
-            const fresh = isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
-            try { wx.setStorageSync('api_base_url', fresh); } catch (_) { /* ignore */ }
-            return fresh;
-          }
-          // 3. 其他合法地址（如手动配置的云地址）直接使用
+          // 4. 其他合法地址（如手动配置的云地址）直接使用
           return v;
         }
       }
@@ -118,8 +112,8 @@ function getBaseUrl() {
   } catch (_e) {
     // 忽略 Storage 读取失败
   }
-  // 使用默认生产地址（开发时请在登录页手动输入本机地址）
-  // 如果 DEFAULT_BASE_URL 还是占位符（未配置正式域名），自动降级到 FALLBACK（内网地址）
+  // 使用默认生产地址
+  // 如果 DEFAULT_BASE_URL 还是占位符（未配置正式域名），自动降级到 FALLBACK
   if (isPlaceholderUrl(DEFAULT_BASE_URL)) {
     return FALLBACK_BASE_URL;
   }
@@ -132,7 +126,7 @@ function getBaseUrl() {
  * @returns {string} 实际存储的地址
  */
 function setBaseUrl(url) {
-  const v = replaceLoopback(url);
+  const v = resolveSafeBaseUrl(url);
   try {
     if (typeof wx !== 'undefined' && wx.setStorageSync) {
       wx.setStorageSync('api_base_url', v);

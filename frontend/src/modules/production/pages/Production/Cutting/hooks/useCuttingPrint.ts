@@ -13,6 +13,7 @@ interface UseCuttingPrintOptions {
 export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [printBundles, setPrintBundles] = useState<CuttingBundleRow[]>([]);
+  const [highlightedBundleIds, setHighlightedBundleIds] = useState<string[]>([]);
   const [printUnlocked, setPrintUnlocked] = useState(false);
 
 // 打印配置：自由输入纸张宽高（单位：cm），默认 7×4
@@ -26,7 +27,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     qrSize: 84,
   });
 
-  const openBatchPrint = (selectedBundles: CuttingBundleRow[]) => {
+  const openBatchPrint = (selectedBundles: CuttingBundleRow[], options?: { highlightedBundleIds?: string[] }) => {
     if (!printUnlocked) {
       message.warning('请先保存生成裁剪单后再打印');
       return;
@@ -36,6 +37,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       return;
     }
     setPrintBundles(selectedBundles.slice());
+    setHighlightedBundleIds((options?.highlightedBundleIds || []).filter(Boolean));
     setPrintPreviewOpen(true);
   };
 
@@ -88,7 +90,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             <div>颜色：${String(b.color || '').trim() || '-'}</div>
             <div>码数：${String(b.size || '').trim() || '-'}</div>
             <div>数量：${Number(b.quantity || 0)}</div>
-            <div>扎号：${Number(b.bundleNo || 0) || '-'}</div>
+            <div>扎号：${String(b.bundleLabel || '').trim() || Number(b.bundleNo || 0) || '-'}</div>
           </div>
         </div>
       </div>
@@ -226,6 +228,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   return {
     printPreviewOpen, setPrintPreviewOpen,
     printBundles, setPrintBundles,
+    highlightedBundleIds, setHighlightedBundleIds,
     printUnlocked, setPrintUnlocked,
     printConfig, setPrintConfig,
     openBatchPrint, triggerPrint,

@@ -731,12 +731,24 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => v || '-'
                               },
                               {
-                                title: '采购数量',
+                                title: '需求数量',
                                 dataIndex: 'purchaseQuantity',
                                 key: 'purchaseQuantity',
                                 width: 120,
                                 align: 'right',
                                 render: (v: any, record: any) => `${Number(v || 0).toFixed(2)} ${record.unit || ''}`
+                              },
+                              {
+                                title: '参考公斤数',
+                                key: 'referenceKilograms',
+                                width: 120,
+                                align: 'right',
+                                render: (_: any, record: any) => {
+                                  const meters = Number(record.purchaseQuantity || 0);
+                                  const rate = Number(record.conversionRate || 0);
+                                  if (!rate || rate <= 0) return '-';
+                                  return `${(meters / rate).toFixed(2)} 公斤`;
+                                }
                               },
                               {
                                 title: '已到货',

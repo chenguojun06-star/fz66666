@@ -161,24 +161,40 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "学习", "学了什么", "置信度", "训练")) {
             return smartHandlers.handleLearningReportQuery();
         }
+        // 20.1) 根因分析
+        if (containsAny(question, "根因", "原因分析", "为什么会", "为什么", "背后原因")) {
+            return smartHandlers.handleRootCauseQuery(question);
+        }
+        // 20.2) 规律发现
+        if (containsAny(question, "规律", "模式", "趋势规律", "发现什么规律")) {
+            return smartHandlers.handlePatternQuery();
+        }
+        // 20.3) 目标拆解
+        if (containsAny(question, "目标", "拆解", "计划", "路线", "怎么推进")) {
+            return smartHandlers.handleGoalQuery(question);
+        }
+        // 20.4) Agent 例会
+        if (containsAny(question, "例会", "会议", "讨论", "辩论", "共识")) {
+            return smartHandlers.handleMeetingQuery(question);
+        }
 
-        // 20.1) 报价建议 → 成本查询（报价核心数据源相同）
+        // 21.1) 报价建议 → 成本查询（报价核心数据源相同）
         if (containsAny(question, "报价", "估价", "估算")) {
             return smartHandlers.handleCostQuery();
         }
-        // 20.2) 供应商评分/综合评分 → 工厂排名（同一数据域）
+        // 21.2) 供应商评分/综合评分 → 工厂排名（同一数据域）
         if (containsAny(question, "供应商评分", "综合评分", "评分排行")) {
             return smartHandlers.handleFactoryRankingQuery();
         }
-        // 20.3) 智能派工 → 员工效率（派工依据）
+        // 21.3) 智能派工 → 员工效率（派工依据）
         if (containsAny(question, "派工", "派单")) {
             return smartHandlers.handleWorkerEfficiencyQuery();
         }
-        // 20.4) 待审批执行命令 → 风险订单（最需要执行操作的）
+        // 21.4) 待审批执行命令 → 风险订单（最需要执行操作的）
         if (containsAny(question, "AI命令", "执行命令", "执行")) {
             return smartHandlers.handleRiskQuery();
         }
-        // 20.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
+        // 21.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
         if (containsAny(question, "待审批", "审批")) {
             NlQueryResponse resp = new NlQueryResponse();
             resp.setIntent("ai_chat");
@@ -186,16 +202,16 @@ public class NlQueryOrchestrator {
             resp.setConfidence(90);
             return resp;
         }
-        // 20.5) 财务/资金审核 → 成本分析（财务核心查询）
+        // 21.5) 财务/资金审核 → 成本分析（财务核心查询）
         if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
             return smartHandlers.handleCostQuery();
         }
 
-        // 21) 帮助
+        // 22) 帮助
         if (containsAny(question, "帮助", "能做什么", "你会什么", "功能", "怎么用", "你好")) {
             return dataHandlers.handleHelpQuery();
         }
-        // 22) 总览/概况
+        // 23) 总览/概况
         if (containsAny(question, "总览", "概况", "汇总", "情况", "怎么样", "报告", "整体")) {
             return dataHandlers.handleSummaryQuery(tenantId);
         }
@@ -219,7 +235,8 @@ public class NlQueryOrchestrator {
             "order_query", "overdue", "compare", "health", "bottleneck", "risk", "anomaly",
             "production", "defect", "quality", "factory_ranking", "pulse", "worker_efficiency",
             "warehousing", "cutting", "cost", "rhythm", "scheduling", "notification",
-            "self_healing", "learning", "quote", "supplier_scorecard", "smart_assignment",
+            "self_healing", "learning", "root_cause", "pattern", "goal", "meeting",
+            "quote", "supplier_scorecard", "smart_assignment",
             "execution", "finance_audit", "help", "summary"
     );
 
@@ -248,6 +265,10 @@ public class NlQueryOrchestrator {
             + "notification - 通知/消息/提醒\n"
             + "self_healing - 自动修复/自愈/系统修复\n"
             + "learning - 学习/报告/培训\n"
+            + "root_cause - 根因/原因分析/为什么会发生\n"
+            + "pattern - 规律/模式/反复出现的问题\n"
+            + "goal - 目标拆解/推进计划/行动路径\n"
+            + "meeting - 例会/会议/共识讨论/多方辩论\n"
             + "quote - 报价/估价/定价\n"
             + "supplier_scorecard - 供应商评分/供应商排名\n"
             + "smart_assignment - 智能派工/排班/分配\n"
@@ -293,9 +314,9 @@ public class NlQueryOrchestrator {
             case "warehousing":       return dataHandlers.handleWarehousingQuery(tenantId);
             case "cutting":           return dataHandlers.handleCuttingQuery(tenantId);
             case "cost":              return smartHandlers.handleCostQuery();
-            case "rhythm":            return smartHandlers.handlePulseQuery();
-            case "scheduling":        return smartHandlers.handleRiskQuery();
-            case "notification":      return smartHandlers.handleHealthQuery();
+            case "rhythm":            return smartHandlers.handleRhythmQuery();
+            case "scheduling":        return smartHandlers.handleSchedulingQuery();
+            case "notification":      return smartHandlers.handleNotificationQuery();
             case "self_healing":      return smartHandlers.handleSelfHealingQuery();
             case "learning":          return smartHandlers.handleLearningReportQuery();
             case "quote":             return smartHandlers.handleCostQuery();

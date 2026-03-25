@@ -885,6 +885,7 @@ public class StyleBomOrchestrator {
                 purchase.setMaterialType(bom.getMaterialType());
                 purchase.setSpecifications(bom.getSpecification());
                 purchase.setUnit(bom.getUnit());
+                purchase.setConversionRate(bom.getConversionRate());
 
                 // 采购数量 = BOM单件用量 × 款式总件数（含损耗率）
                 BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;

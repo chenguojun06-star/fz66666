@@ -31,7 +31,7 @@
     "submitting": "កំពុងចូល...",
     "wechatQuickLogin": "ចូល WeChat ដោយប៉ះម្តង",
     "serverUrl": "អាសយដ្ឋានម៉ាស៊ីនមេ",
-    "serverUrlPlaceholder": "ឧ. http://192.168.1.10:8088",
+    "serverUrlPlaceholder": "ឧ. https://api.example.com",
     "noAccount": "មិនទាន់មានគណនីមែនទេ?",
     "registerNow": "ចុះឈ្មោះឥឡូវ",
     "loginSuccess": "ចូលដោយជោគជ័យ",

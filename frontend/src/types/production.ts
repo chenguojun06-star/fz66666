@@ -244,6 +244,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   specifications?: string;
   unit?: string;
   purchaseQuantity: number;
+  conversionRate?: number;
   arrivedQuantity: number;
   supplierId: string;
   supplierName: string;
@@ -462,6 +463,7 @@ export interface MaterialDatabase extends Record<string, unknown> {
   unit?: string;
   supplierName?: string;
   unitPrice?: number;
+  conversionRate?: number;
   description?: string;
   image?: string;
   remark?: string;

@@ -87,6 +87,13 @@ const _MaterialInventory: React.FC = () => {
     handleEditSafetyStock,
   });
 
+  const inventoryPageSize = pagination.pagination.pageSize;
+  const inventoryCurrent = pagination.pagination.current;
+  const inventoryTotalPages = Math.max(1, Math.ceil((pagination.pagination.total || 0) / inventoryPageSize));
+  const pickupPageSize = pickupData.pagination.pagination.pageSize;
+  const pickupCurrent = pickupData.pagination.pagination.current;
+  const pickupTotalPages = Math.max(1, Math.ceil((pickupData.pagination.pagination.total || 0) / pickupPageSize));
+
   return (
     <Layout>
         {showSmartErrorNotice && smartError ? (
@@ -203,7 +210,13 @@ const _MaterialInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             scroll={{ x: 1600 }}
-            pagination={pagination.pagination}
+            pagination={{
+              ...pagination.pagination,
+              simple: false,
+              showTotal: (total, range) => `第 ${inventoryCurrent}/${inventoryTotalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+              pageSizeOptions: ['20', '50', '100', '200'],
+              onChange: pagination.onChange,
+            }}
           />
         </Card>
 
@@ -401,7 +414,13 @@ const _MaterialInventory: React.FC = () => {
                     loading={pickupData.loading}
                     rowKey="id"
                     scroll={{ x: 1600 }}
-                    pagination={pickupData.pagination.pagination}
+                    pagination={{
+                      ...pickupData.pagination.pagination,
+                      simple: false,
+                      showTotal: (total, range) => `第 ${pickupCurrent}/${pickupTotalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                      pageSizeOptions: ['20', '50', '100', '200'],
+                      onChange: pickupData.pagination.onChange,
+                    }}
                     rowSelection={{
                       type: 'checkbox',
                       selectedRowKeys: pickupData.selectedRowKeys,
@@ -584,8 +603,8 @@ const _MaterialInventory: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="purchaseQuantity"
-                label="*采购数量"
-                rules={[{ required: true, message: '请输入采购数量' }]}
+                label="*需求数量"
+                rules={[{ required: true, message: '请输入需求数量' }]}
               >
                 <InputNumber min={1} style={{ width: '100%' }} placeholder="自动计算为安全库存缺口" />
               </Form.Item>
@@ -753,17 +772,17 @@ const _MaterialInventory: React.FC = () => {
         <Form form={inboundForm} layout="vertical" style={{ marginTop: 8 }}>
           {/* 第一行：扫码编号（全宽） */}
           <Form.Item
-            label="面料编号"
+            label="物料编号"
             name="materialCode"
-            rules={[{ required: true, message: '请输入或扫码面料编号' }]}
+            rules={[{ required: true, message: '请输入或扫码物料编号' }]}
           >
-            <Input placeholder="请扫码或手动输入面料编号" prefix={<ScanOutlined />} size="large" />
+            <Input placeholder="请扫码或手动输入物料编号" prefix={<ScanOutlined />} size="large" />
           </Form.Item>
 
           {/* 第二行：名称 + 类型 + 颜色 + 规格（四欄） */}
           <Row gutter={12}>
             <Col span={9}>
-              <Form.Item label="面料名称" name="materialName">
+              <Form.Item label="物料名称" name="materialName">
                 <Input disabled placeholder="扫码后自动填充" />
               </Form.Item>
             </Col>

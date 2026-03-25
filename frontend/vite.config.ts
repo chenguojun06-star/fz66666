@@ -61,12 +61,10 @@ export default defineConfig({
       'Content-Security-Policy':
         "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: http: https:;",
     },
-    // HMR 配置：固定内网 IP，确保内网设备通过 192.168.2.215:5173 访问时热更新正常
-    // ⚠️ 禁止修改 host 值：动态模块加载（React Router lazy）依赖此地址，修改会导致
-    //    'Failed to fetch dynamically imported module' 错误
+    // HMR 配置：默认跟随当前访问域名，必要时允许通过环境变量覆盖
     hmr: {
       protocol: 'ws',
-      host: '192.168.2.215', // 固定本机内网 IP，支持 localhost 和内网设备同时访问
+      host: env.VITE_HMR_HOST || undefined,
       port: 5173,
       clientPort: 5173
     },

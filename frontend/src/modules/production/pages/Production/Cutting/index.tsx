@@ -14,7 +14,7 @@ import { canViewPrice } from '@/utils/sensitiveDataMask';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -37,6 +37,7 @@ const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { modalWidth } = useViewport();
   const params = useParams();
   const routeOrderNo = useMemo(() => {
@@ -50,6 +51,17 @@ const CuttingManagement: React.FC = () => {
   }, [params]);
 
   const isEntryPage = Boolean(routeOrderNo);
+  const autoPrintBundleIds = useMemo(() => {
+    const search = new URLSearchParams(location.search);
+    return String(search.get('bundleIds') || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }, [location.search]);
+  const autoPrintEnabled = useMemo(() => {
+    const search = new URLSearchParams(location.search);
+    return search.get('autoPrint') === '1';
+  }, [location.search]);
 
   // 活动任务状态（主组件持有，供 hooks 使用）
   const [orderId, setOrderId] = useState<string>('');
@@ -105,6 +117,7 @@ const CuttingManagement: React.FC = () => {
     bundles.setImportLocked(false);
     bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
     bundles.clearBundleSelection();
+    print.setHighlightedBundleIds([]);
     if (clearRoute && routeOrderNo) {
       navigate('/production/cutting', { replace: true });
     }
@@ -135,6 +148,16 @@ const CuttingManagement: React.FC = () => {
     })();
   }, [routeOrderNo, user?.id, user?.name]);
 
+  useEffect(() => {
+    if (!autoPrintEnabled || !autoPrintBundleIds.length || !bundles.dataSource.length) return;
+    const matched = bundles.dataSource.filter((row) => row.id && autoPrintBundleIds.includes(String(row.id)));
+    if (!matched.length) return;
+    bundles.setSelectedBundleRowKeys(matched.map((row) => row.id as React.Key));
+    bundles.setSelectedBundles(matched);
+    print.openBatchPrint(matched, { highlightedBundleIds: autoPrintBundleIds });
+    navigate(location.pathname, { replace: true });
+  }, [autoPrintBundleIds, autoPrintEnabled, bundles.dataSource, location.pathname, navigate, print, bundles]);
+
   // 打印解锁：已有二维码时自动解锁
   useEffect(() => {
     const hasQr = bundles.dataSource.some((r) => String(r?.qrCode || '').trim());
@@ -144,6 +167,7 @@ const CuttingManagement: React.FC = () => {
   // 活动任务变更 → 重置打印
   useEffect(() => {
     print.setPrintUnlocked(false);
+    print.setHighlightedBundleIds([]);
     bundles.clearBundleSelection();
     print.setPrintBundles([]);
     print.setPrintPreviewOpen(false);
@@ -181,12 +205,24 @@ const CuttingManagement: React.FC = () => {
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
-          title: '采购数量',
+          title: '需求数量',
           dataIndex: 'purchaseQuantity',
           key: 'purchaseQuantity',
           width: 110,
           align: 'right' as const,
           render: (v: unknown) => Number(v ?? 0) || 0,
+        },
+        {
+          title: '参考公斤数',
+          key: 'referenceKilograms',
+          width: 110,
+          align: 'right' as const,
+          render: (_: unknown, record: MaterialPurchase) => {
+            const meters = Number(record.purchaseQuantity ?? 0);
+            const rate = Number(record.conversionRate ?? 0);
+            if (!rate || rate <= 0) return '-';
+            return `${(meters / rate).toFixed(2)} 公斤`;
+          },
         },
         {
           title: '单价(元)',

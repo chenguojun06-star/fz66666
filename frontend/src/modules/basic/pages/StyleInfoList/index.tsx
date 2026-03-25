@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Modal } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
@@ -20,8 +20,12 @@ import StyleStatsCard from './components/StyleStatsCard';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
+import { STYLE_INFO_LIST_REFRESH_KEY } from '@/modules/warehouse/pages/SampleInventory';
+import { savePageSize } from '@/utils/pageSizeStore';
 
 import '../StyleInfo/styles.css';
+
+type StyleSmartFilter = 'all' | 'overdue' | 'warning';
 
 /**
  * 款式信息列表页
@@ -70,6 +74,11 @@ const StyleInfoListPage: React.FC = () => {
 
   // 字典选项（品类，用于表格展示代码转标签）
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
+  const [stockStateMap, setStockStateMap] = useState<Record<string, boolean>>({});
+  const [smartFilter, setSmartFilter] = useState<StyleSmartFilter>('all');
+  const [pendingFocusStyleId, setPendingFocusStyleId] = useState<string | null>(null);
+  const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
+  const focusClearTimerRef = useRef<number | null>(null);
 
   // 初始化加载
   useEffect(() => {
@@ -82,6 +91,72 @@ const StyleInfoListPage: React.FC = () => {
   useEffect(() => {
     fetchList();
   }, [queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
+
+  useEffect(() => {
+    const refreshIfNeeded = () => {
+      if (!localStorage.getItem(STYLE_INFO_LIST_REFRESH_KEY)) return;
+      localStorage.removeItem(STYLE_INFO_LIST_REFRESH_KEY);
+      fetchList();
+      loadDevelopmentStats(statsRangeType);
+    };
+
+    refreshIfNeeded();
+    const handleFocus = () => refreshIfNeeded();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) refreshIfNeeded();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchList, loadDevelopmentStats, statsRangeType]);
+
+  useEffect(() => {
+    const loadStockState = async () => {
+      const styleNos = Array.from(new Set(
+        data
+          .map((item) => String(item.styleNo || '').trim())
+          .filter(Boolean)
+      ));
+      if (!styleNos.length) {
+        setStockStateMap({});
+        return;
+      }
+
+      try {
+        const results = await Promise.all(styleNos.map(async (styleNo) => {
+          const res = await api.get('/stock/sample/list', {
+            params: {
+              page: 1,
+              pageSize: 50,
+              styleNo,
+              sampleType: 'development',
+              recordStatus: 'active',
+            },
+          });
+          return { styleNo, records: (res as any)?.data?.records || [] };
+        }));
+
+        const nextMap: Record<string, boolean> = {};
+        results.forEach(({ styleNo, records }) => {
+          records.forEach((item: any) => {
+            const key = `${String(styleNo || '').trim().toUpperCase()}|${String(item?.color || '').trim().toUpperCase()}`;
+            if (key !== '|') {
+              nextMap[key] = true;
+            }
+          });
+        });
+        setStockStateMap(nextMap);
+      } catch {
+        setStockStateMap({});
+      }
+    };
+
+    void loadStockState();
+  }, [data]);
 
   // 加载品类选项（从字典API动态加载，用于表格代码转标签）
   const loadCategoryOptions = async () => {
@@ -187,23 +262,79 @@ const StyleInfoListPage: React.FC = () => {
     });
   }, [data]);
 
-  const overdueStyleCount = useMemo(() => {
+  const overdueStyles = useMemo(() => {
     return activeStyles.filter((item) => {
       if (!item.deliveryDate) return false;
       return dayjs(item.deliveryDate).endOf('day').isBefore(dayjs());
-    }).length;
+    });
   }, [activeStyles]);
 
-  const warningStyleCount = useMemo(() => {
+  const warningStyles = useMemo(() => {
     return activeStyles.filter((item) => {
       if (!item.deliveryDate) return false;
       const diffDays = dayjs(item.deliveryDate).startOf('day').diff(dayjs().startOf('day'), 'day');
       return diffDays >= 0 && diffDays <= 3;
-    }).length;
+    });
   }, [activeStyles]);
+
+  const overdueStyleCount = useMemo(() => {
+    return overdueStyles.length;
+  }, [overdueStyles]);
+
+  const warningStyleCount = useMemo(() => {
+    return warningStyles.length;
+  }, [warningStyles]);
+
+  const getStyleDomKey = useCallback((record: Partial<StyleInfo> | null | undefined) => {
+    return String(record?.id || record?.styleNo || '').trim();
+  }, []);
+
+  const scrollToFocusedStyle = useCallback((styleId: string) => {
+    const safeId = styleId.replace(/"/g, '\\"');
+    const selector = viewMode === 'list'
+      ? `#style-smart-row-${safeId}`
+      : `#style-card-${safeId}`;
+    const node = document.querySelector(selector) as HTMLElement | null;
+    if (!node) return false;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFocusedStyleId(styleId);
+    if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    focusClearTimerRef.current = window.setTimeout(() => setFocusedStyleId(null), 2200);
+    return true;
+  }, [viewMode]);
+
+  useEffect(() => {
+    return () => {
+      if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingFocusStyleId) return;
+    const timer = window.setTimeout(() => {
+      if (scrollToFocusedStyle(pendingFocusStyleId)) {
+        setPendingFocusStyleId(null);
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [pendingFocusStyleId, scrollToFocusedStyle, viewMode, data]);
+
+  const handleSmartFilterClick = useCallback((target: Exclude<StyleSmartFilter, 'all'>, records: StyleInfo[]) => {
+    if (smartFilter === target) {
+      setSmartFilter('all');
+      setPendingFocusStyleId(null);
+      setFocusedStyleId(null);
+      return;
+    }
+    setSmartFilter(target);
+    setPendingFocusStyleId(getStyleDomKey(records[0]));
+  }, [getStyleDomKey, smartFilter]);
 
   // 分页处理
   const handlePageChange = (page: number, pageSize: number) => {
+    if (pageSize !== queryParams.pageSize) {
+      savePageSize(pageSize);
+    }
     setQueryParams((prev) => ({
       ...prev,
       page: pageSize !== prev.pageSize ? 1 : page,
@@ -229,9 +360,30 @@ const StyleInfoListPage: React.FC = () => {
 
         <SmartPredictionStrip
           items={[
-            { key: 'overdue', count: overdueStyleCount, tone: 'danger', label: '个项目已延期' },
-            { key: 'warning', count: warningStyleCount, tone: 'warning', label: '个项目临近交期' },
+            {
+              key: 'overdue',
+              count: overdueStyleCount,
+              tone: 'red',
+              label: '已延期',
+              hint: overdueStyles[0]?.styleNo ? `点击定位到 ${overdueStyles[0].styleNo}` : '点击定位到延期款号',
+              active: smartFilter === 'overdue',
+              onClick: () => handleSmartFilterClick('overdue', overdueStyles),
+            },
+            {
+              key: 'warning',
+              count: warningStyleCount,
+              tone: 'orange',
+              label: '临近交期',
+              hint: warningStyles[0]?.styleNo ? `点击定位到 ${warningStyles[0].styleNo}` : '点击定位到临近交期款号',
+              active: smartFilter === 'warning',
+              onClick: () => handleSmartFilterClick('warning', warningStyles),
+            },
           ]}
+          onClear={smartFilter !== 'all' ? () => {
+            setSmartFilter('all');
+            setPendingFocusStyleId(null);
+            setFocusedStyleId(null);
+          } : undefined}
         />
 
         {/* 筛选面板 */}
@@ -275,6 +427,7 @@ const StyleInfoListPage: React.FC = () => {
         {viewMode === 'list' ? (
           <StyleTableView
             data={data}
+            stockStateMap={stockStateMap}
             loading={loading}
             total={total}
             pageSize={queryParams.pageSize}
@@ -284,10 +437,13 @@ const StyleInfoListPage: React.FC = () => {
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
+            onRefresh={fetchList}
+            focusedStyleId={focusedStyleId}
           />
         ) : (
           <StyleCardView
             data={data}
+            stockStateMap={stockStateMap}
             loading={loading}
             total={total}
             pageSize={queryParams.pageSize}
@@ -296,6 +452,7 @@ const StyleInfoListPage: React.FC = () => {
             onScrap={handleScrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
+            focusedStyleId={focusedStyleId}
           />
         )}
       </Card>

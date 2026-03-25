@@ -42,6 +42,11 @@ public class StyleSize {
     private String measureMethod;
 
     /**
+     * 基准码/样衣码
+     */
+    private String baseSize;
+
+    /**
      * 标准数值
      */
     private BigDecimal standardValue;
@@ -78,6 +83,11 @@ public class StyleSize {
      * 部位参考图片URLs（JSON数组字符串，每个部位行可上传多张图）
      */
     private String imageUrls;
+
+    /**
+     * 跳码规则JSON
+     */
+    private String gradingRule;
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;

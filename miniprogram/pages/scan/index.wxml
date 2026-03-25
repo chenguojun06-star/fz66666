@@ -376,14 +376,14 @@
                 wx:for="{{scanResultConfirm.processOptions}}"
                 wx:key="value"
                 id="process-item-{{index}}"
-                class="inline-selector-item {{scanResultConfirm.processIndex === index ? 'active' : ''}}"
+                  class="inline-selector-item {{scanResultConfirm.selectedProcessNames.indexOf(item.value) > -1 ? 'active' : ''}}"
                 data-index="{{index}}"
                 bindtap="onProcessScrollSelect"
                 hover-class="inline-selector-item-hover"
                 hover-stay-time="80">
                 <view class="inline-selector-left">
-                  <view class="inline-selector-radio {{scanResultConfirm.processIndex === index ? 'checked' : ''}}">
-                    <view wx:if="{{scanResultConfirm.processIndex === index}}" class="inline-selector-radio-dot"></view>
+                  <view class="inline-selector-radio {{scanResultConfirm.selectedProcessNames.indexOf(item.value) > -1 ? 'checked' : ''}}">
+                    <view wx:if="{{scanResultConfirm.selectedProcessNames.indexOf(item.value) > -1}}" class="inline-selector-radio-dot"></view>
                   </view>
                   <text class="inline-selector-label">{{item.value}}</text>
                 </view>
@@ -393,7 +393,7 @@
           </view>
 
           <!-- 入库模式：仓库选择 -->
-          <view wx:if="{{scanResultConfirm.scanType === 'warehouse'}}" class="warehouse-input-row">
+          <view wx:if="{{scanResultConfirm.hasWarehouseSelected}}" class="warehouse-input-row">
             <view class="warehouse-label">目标仓库：</view>
             <view class="warehouse-option-row">
               <view
@@ -425,9 +425,9 @@
             <text class="hint-icon">⚠️</text>
             <text class="hint-text">此菲号有 {{scanResultConfirm.defectQty}} 件次品，返修后直接入库，入库数量不能超过次品数</text>
           </view>
-          <view wx:elif="{{scanResultConfirm.scanType === 'warehouse'}}" class="result-hint">
+          <view wx:elif="{{scanResultConfirm.hasWarehouseSelected}}" class="result-hint">
             <text class="hint-icon">🏠</text>
-            <text class="hint-text">选择目标仓库，点击“入库”提交</text>
+            <text class="hint-text">已选择入库工序，请选择目标仓库后提交</text>
           </view>
           <view wx:elif="{{scanResultConfirm.scanData.qualityStage === 'confirm'}}" class="result-hint">
             <text class="hint-icon">💡</text>
@@ -435,14 +435,14 @@
           </view>
           <view wx:else class="result-hint">
             <text class="hint-icon">💡</text>
-            <text class="hint-text">确认工序无误后，点击“领取记录”提交</text>
+            <text class="hint-text">可一次勾选多个工序，确认无误后批量提交</text>
           </view>
         </view>
       </view>
       <view class="modal-foot">
         <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeScanResultConfirm">取消</view>
         <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" hover-class="modal-btn-confirm-hover" bindtap="onConfirmScanResult">
-          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanType === 'warehouse' ? '入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取记录')))}}
+          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.hasWarehouseSelected ? '批量提交' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '批量领取')))}}
         </view>
       </view>
     </view>
@@ -494,7 +494,7 @@
         <view wx:if="{{scanConfirm.detail.isPattern}}" class="purchase-modal-list">
           <view class="purchase-modal-item">
             <view class="pmi-row">
-              <text class="pmi-label">选择工序</text>
+              <text class="pmi-label">选择工序（可多选）</text>
               <view class="inline-selector" style="margin-top: 8rpx;">
                 <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
                   <view

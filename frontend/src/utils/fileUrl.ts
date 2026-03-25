@@ -8,6 +8,14 @@
  * 需要在 URL 上附加 ?token=xxx 让后端 TokenAuthFilter 识别身份。
  */
 
+const isViteDevServerRequest = (): boolean => {
+  try {
+    return window.location.port === '5173';
+  } catch {
+    return false;
+  }
+};
+
 /**
  * 给文件URL附加认证 token（用于浏览器直接打开/下载/图片显示）
  *
@@ -66,9 +74,11 @@ export function getFullAuthedFileUrl(fileUrl: string | undefined | null): string
     return getAuthedFileUrl(url);
   }
 
-  // 以 /api/ 开头的走 Vite proxy（开发模式 localhost:5173）
-  // 内网访问需要直连后端
+  // 以 /api/ 开头的优先走当前站点代理
   const authedUrl = getAuthedFileUrl(url);
+  if (isViteDevServerRequest()) {
+    return authedUrl;
+  }
 
   // 只有内网 IP（192.168.x.x / 10.x.x.x / 172.16-31.x.x）才需要直连后端 8088
   // 云托管公网域名和 localhost 均通过 nginx/Vite proxy 转发，使用相对路径即可

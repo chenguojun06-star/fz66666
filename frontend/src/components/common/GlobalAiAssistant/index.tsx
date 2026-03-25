@@ -14,12 +14,14 @@ import {
   DislikeOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import { Tooltip } from 'antd';
+import { App, Tooltip } from 'antd';
 import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
+import { paths } from '@/routeConfig';
 import styles from './index.module.css';
 import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
+import { AiTraceCardWidget, BundleSplitCardWidget, PurchaseDocCardWidget, TeamStatusCardWidget, type AiTraceCardData, type BundleSplitCardData, type PurchaseDocCardData, type TeamStatusCardData } from './AgentCards';
 
 /** 生成简短唯一 sessionId */
 function genSessionId(): string {
@@ -62,30 +64,35 @@ function renderSimpleMarkdown(text: string): string {
   let inList = false;
   for (const raw of lines) {
     const line = raw;
+    const h3Match = line.match(/^###\s+(.+)/);
+    const h2Match = line.match(/^##\s+(.+)/);
+    const h1Match = line.match(/^#\s+(.+)/);
+    const ulMatch = line.match(/^[-*]\s+(.+)/);
+    const olMatch = line.match(/^\d+\.\s+(.+)/);
     // 标题
-    if (/^###\s+(.+)/.test(line)) {
+    if (h3Match) {
       if (inList) { html.push('</ul>'); inList = false; }
-      html.push(`<strong style="display:block;margin:8px 0 4px;font-size:14px">${RegExp.$1}</strong>`);
+      html.push(`<strong style="display:block;margin:8px 0 4px;font-size:14px">${h3Match[1]}</strong>`);
       continue;
     }
-    if (/^##\s+(.+)/.test(line)) {
+    if (h2Match) {
       if (inList) { html.push('</ul>'); inList = false; }
-      html.push(`<strong style="display:block;margin:10px 0 4px;font-size:15px">${RegExp.$1}</strong>`);
+      html.push(`<strong style="display:block;margin:10px 0 4px;font-size:15px">${h2Match[1]}</strong>`);
       continue;
     }
-    if (/^#\s+(.+)/.test(line)) {
+    if (h1Match) {
       if (inList) { html.push('</ul>'); inList = false; }
-      html.push(`<strong style="display:block;margin:12px 0 6px;font-size:16px">${RegExp.$1}</strong>`);
+      html.push(`<strong style="display:block;margin:12px 0 6px;font-size:16px">${h1Match[1]}</strong>`);
       continue;
     }
     // 无序列表
-    if (/^[-*]\s+(.+)/.test(line)) {
+    if (ulMatch) {
       if (!inList) { html.push('<ul style="margin:4px 0;padding-left:20px">'); inList = true; }
-      html.push(`<li>${inlineFmt(RegExp.$1)}</li>`);
+      html.push(`<li>${inlineFmt(ulMatch[1])}</li>`);
       continue;
     }
     // 有序列表
-    if (/^\d+\.\s+(.+)/.test(line)) {
+    if (olMatch) {
       if (inList) { html.push('</ul>'); inList = false; }
       html.push(`<div style="margin:2px 0">${inlineFmt(line)}</div>`);
       continue;
@@ -148,10 +155,12 @@ interface QuickAction {
 }
 
 /** 从 AI 原始回复中提取 CHART/ACTIONS 标记块，返回干净展示文本 + 结构化数据 */
-function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[]; quickActions: QuickAction[] } {
+function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[]; quickActions: QuickAction[]; teamStatusCards: TeamStatusCardData[]; bundleSplitCards: BundleSplitCardData[] } {
   const charts: ChartSpec[] = [];
   const actionCards: ActionCard[] = [];
   const quickActions: QuickAction[] = [];
+  const teamStatusCards: TeamStatusCardData[] = [];
+  const bundleSplitCards: BundleSplitCardData[] = [];
   const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   let m: RegExpExecArray | null;
   while ((m = chartRe.exec(rawText)) !== null) {
@@ -172,12 +181,28 @@ function parseAiResponse(rawText: string): { displayText: string; charts: ChartS
       if (Array.isArray(parsed)) quickActions.push(...(parsed as QuickAction[]));
     } catch { /* skip */ }
   }
+  const teamStatusRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
+  while ((m = teamStatusRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1].trim()) as unknown;
+      if (Array.isArray(parsed)) teamStatusCards.push(...(parsed as TeamStatusCardData[]));
+    } catch { /* skip */ }
+  }
+  const bundleSplitRe = /【BUNDLE_SPLIT】([\s\S]*?)【\/BUNDLE_SPLIT】/g;
+  while ((m = bundleSplitRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1].trim()) as unknown;
+      if (Array.isArray(parsed)) bundleSplitCards.push(...(parsed as BundleSplitCardData[]));
+    } catch { /* skip */ }
+  }
   const displayText = rawText
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
+    .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
+    .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
     .trim();
-  return { displayText, charts, actionCards, quickActions };
+  return { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards };
 }
 
 interface Message {
@@ -190,6 +215,11 @@ interface Message {
   charts?: ChartSpec[];
   actionCards?: ActionCard[];
   quickActions?: QuickAction[];
+  teamStatusCards?: TeamStatusCardData[];
+  bundleSplitCards?: BundleSplitCardData[];
+  purchaseDocCard?: PurchaseDocCardData;
+  agentCommandId?: string;
+  agentTraceCard?: AiTraceCardData;
   /* ── hyper-advisor 扩展字段 ── */
   riskIndicators?: RiskIndicator[];
   simulation?: SimulationResultData;
@@ -217,7 +247,7 @@ interface Message {
 const INITIAL_MSG: Message = {
   id: 'init-msg',
   role: 'ai',
-  text: '你好呀～我是小云 🌤️ 有什么我可以帮你的吗？',
+  text: '你好呀～我是小云 🌤️ 你直接用自然语言跟我说就行，我会分析、执行，或者把任务分派给真实同事去处理。下面这些按钮只是示例，不是必须点。',
 };
 
 const SUGGESTIONS = [
@@ -226,12 +256,27 @@ const SUGGESTIONS = [
   '📊 本月经营报告',
   '🚨 逾期订单预警',
   '⚠️ 异常订单排查',
+  '👥 通知跟单跟进这单',
+  '🧵 安排生产主管推进排期',
 ];
 
 const choose = (seed: number, variants: string[]) => {
   if (!variants.length) return '';
   return variants[Math.abs(seed) % variants.length];
 };
+
+const extractOrderNo = (text: string) => {
+  const match = text.match(/\b([A-Z]{1,6}\d{6,}|\d{8,})\b/i);
+  return match?.[1]?.trim();
+};
+
+const isPurchaseDocFile = (file: File) => {
+  const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.gif', '.pdf'].includes(ext);
+};
+
+const shouldAutoInbound = (text: string) => /入库|到货入库|直接入库|自动入库/.test(text);
+const shouldAutoArrival = (text: string) => /自动收货|自动到货|一键收货|登记到货|收货/.test(text);
 
 type CloudMood = 'normal' | 'curious' | 'urgent' | 'error' | 'success';
 
@@ -241,115 +286,36 @@ const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading 
   const isError = mood === 'error';
   const isSuccess = mood === 'success';
   const isCurious = mood === 'curious';
-
-  let bodyAnim = styles.cloudBodyNormal;
-  if (isUrgent) bodyAnim = styles.cloudBodyUrgent;
-  if (isError) bodyAnim = styles.cloudBodyError;
-  if (isSuccess) bodyAnim = styles.cloudBodySuccess;
-  if (active || interacting) bodyAnim = styles.cloudBodyInteract;
-
-  const stop1 = isUrgent ? "#fff0f0" : isError ? "#f2f5f8" : "#ffffff";
-  const stop2 = isUrgent ? "#ffccc7" : isError ? "#d9e2ec" : "#dcf0ff";
-
+  const cloudClasses = [
+    styles.cuteCloud,
+    active ? styles.cuteCloudActive : '',
+    interacting ? styles.cuteCloudInteracting : '',
+    isUrgent ? styles.cuteCloudUrgent : '',
+    isError ? styles.cuteCloudError : '',
+    isSuccess ? styles.cuteCloudSuccess : '',
+    isCurious ? styles.cuteCloudCurious : '',
+    loading ? styles.cuteCloudLoading : '',
+  ].filter(Boolean).join(' ');
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 6px 12px rgba(24,144,255,0.4))' }}>
-      <defs>
-        <linearGradient id={`cloudGrad-${mood}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={stop1} style={{ transition: 'stop-color 0.3s' }} />
-          <stop offset="100%" stopColor={stop2} style={{ transition: 'stop-color 0.3s' }} />
-        </linearGradient>
-
-        <clipPath id="leftEyeClip">
-           <rect x="36" y="38" width="20" height="24" className={styles.eyelidLeft} />
-        </clipPath>
-        <clipPath id="rightEyeClip">
-           <rect x="60" y="38" width="20" height="24" className={styles.eyelidRight} />
-        </clipPath>
-      </defs>
-
-      <g transform={active ? "translate(0, 0)" : "translate(0, 5)"}>
-        <g className={bodyAnim}>
-           {/* 软萌云朵基础层 */}
-           <path d="M 30 65 A 15 15 0 0 1 30 35 A 18 18 0 0 1 60 25 A 22 22 0 0 1 85 50 A 15 15 0 0 1 85 75 L 30 75 A 15 15 0 0 1 30 65 Z" fill={`url(#cloudGrad-${mood})`} style={{ transition: 'fill 0.3s' }} />
-
-           {isUrgent && (
-             <path d="M 78 35 Q 78 40 76 42 Q 74 40 74 35 Q 74 30 76 28 Q 78 30 78 35 Z" fill="#69c0ff" opacity="0.8" className={styles.sweatAnim} />
-           )}
-           {isSuccess && (
-             <g className={styles.starsAnim}>
-                <path d="M 20 30 L 22 35 L 27 35 L 23 38 L 25 43 L 20 40 L 15 43 L 17 38 L 13 35 L 18 35 Z" fill="#ffdd00" />
-                <path d="M 85 25 L 86 28 L 89 28 L 87 30 L 88 33 L 85 31 L 82 33 L 83 30 L 81 28 L 84 28 Z" fill="#ff7a45" />
-             </g>
-           )}
-
-           {isUrgent && (
-             <g stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round">
-               <path d="M 40 45 L 48 48" />
-               <path d="M 68 48 L 76 45" />
-             </g>
-           )}
-           {isCurious && (
-             <g stroke="#4B6685" strokeWidth="2" strokeLinecap="round">
-               <path d="M 42 46 L 48 45" />
-               <path d="M 68 45 L 74 46" />
-             </g>
-           )}
-
-           {loading ? (
-              <g stroke="#1890ff" strokeWidth="2.5" fill="none" strokeLinecap="round">
-                <path d="M 46 50 A 4 4 0 1 1 45.9 50" className={styles.spinLeft} />
-                <path d="M 70 50 A 4 4 0 1 1 69.9 50" className={styles.spinRight} />
-              </g>
-           ) : isError ? (
-              <g>
-                <path d="M 42 50 Q 46 45 50 50" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M 66 50 Q 70 45 74 50" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
-                <ellipse cx="46" cy="56" rx="2" ry="3" fill="#69c0ff" className={styles.tearTear} />
-                <ellipse cx="70" cy="56" rx="2" ry="3" fill="#69c0ff" className={styles.tearTear} style={{ animationDelay: '0.5s' }} />
-              </g>
-           ) : isSuccess ? (
-              <g fill="#ffbb96">
-                 <path d="M 46 46 L 48 49 L 51 49 L 49 51 L 50 54 L 46 52 L 42 54 L 43 51 L 41 49 L 44 49 Z" />
-                 <path d="M 70 46 L 72 49 L 75 49 L 73 51 L 74 54 L 70 52 L 66 54 L 67 51 L 65 49 L 68 49 Z" />
-              </g>
-           ) : (
-              <g className={(interacting || active) ? styles.eyeFollowMouse : ''}>
-                <g clipPath="url(#leftEyeClip)">
-                  <circle cx={isCurious ? "48" : "46"} cy="50" r={isUrgent ? "5" : "6"} fill="#4B6685" style={{ transition: 'all 0.3s' }} />
-                  <circle cx={isCurious ? "47" : "44"} cy="48" r={isUrgent ? "1.5" : "2"} fill="#ffffff" style={{ transition: 'all 0.3s' }} />
-                  <circle cx={isCurious ? "49" : "47"} cy="52" r="1" fill="#ffffff" opacity="0.8" />
-                </g>
-                <g clipPath="url(#rightEyeClip)">
-                  <circle cx={isCurious ? "68" : "70"} cy="50" r={isUrgent ? "5" : "6"} fill="#4B6685" style={{ transition: 'all 0.3s' }} />
-                  <circle cx={isCurious ? "67" : "68"} cy="48" r={isUrgent ? "1.5" : "2"} fill="#ffffff" style={{ transition: 'all 0.3s' }} />
-                  <circle cx={isCurious ? "69" : "71"} cy="52" r="1" fill="#ffffff" opacity="0.8" />
-                </g>
-              </g>
-           )}
-
-           {(!isError && !loading) && (
-              <g opacity={isCurious ? "0.4" : "0.9"}>
-                <ellipse cx="38" cy="58" rx="6" ry="3.5" fill={isUrgent ? "#ff4d4f" : "#FFA5BB"} className={styles.blushAnim} style={{ transition: 'fill 0.3s' }} />
-                <ellipse cx="78" cy="58" rx="6" ry="3.5" fill={isUrgent ? "#ff4d4f" : "#FFA5BB"} className={styles.blushAnim} style={{ transition: 'fill 0.3s' }} />
-              </g>
-           )}
-
-           <g>
-             {loading ? (
-               <line x1="56" y1="56" x2="60" y2="56" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
-             ) : isUrgent ? (
-               <ellipse cx="58" cy="57" rx="2.5" ry="3.5" fill="none" stroke="#4B6685" strokeWidth="2" />
-             ) : isError ? (
-               <path d="M 55 58 Q 58 55 61 58" fill="none" stroke="#4B6685" strokeWidth="2.5" strokeLinecap="round" />
-             ) : isSuccess ? (
-               <path d="M 54 54 Q 58 62 62 54" fill="#FF8CA3" stroke="#FF8CA3" strokeWidth="1" strokeLinecap="round" />
-             ) : (
-               <path d="M 54 55 Q 58 60 62 55" fill="none" stroke="#FF8CA3" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'all 0.3s' }} />
-             )}
-           </g>
-        </g>
-      </g>
-    </svg>
+    <div className={styles.cuteCloudStage} style={{ width: size, height: size }}>
+      <div className={cloudClasses}>
+        <span className={`${styles.cuteCloudGlow} ${active || interacting ? styles.cuteCloudGlowActive : ''}`} />
+        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartLeft}`} />
+        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartCenter}`} />
+        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartRight}`} />
+        <span className={styles.cuteCloudBase} />
+        <span className={`${styles.cuteCloudEye} ${styles.cuteCloudEyeLeft} ${loading ? styles.cuteCloudEyeSpin : ''}`}>
+          {!loading ? <span className={`${styles.cuteCloudEyeHighlight} ${styles.cuteCloudEyeHighlightLeft}`} /> : null}
+        </span>
+        <span className={`${styles.cuteCloudEye} ${styles.cuteCloudEyeRight} ${loading ? styles.cuteCloudEyeSpin : ''}`}>
+          {!loading ? <span className={`${styles.cuteCloudEyeHighlight} ${styles.cuteCloudEyeHighlightRight}`} /> : null}
+        </span>
+        <span className={`${styles.cuteCloudMouth} ${isError ? styles.cuteCloudMouthSad : isUrgent ? styles.cuteCloudMouthO : styles.cuteCloudMouthSmile}`} />
+        {isUrgent ? <span className={styles.cuteCloudSweat} /> : null}
+        {isSuccess ? <span className={`${styles.cuteCloudSparkle} ${styles.cuteCloudSparkleLeft}`} /> : null}
+        {isSuccess ? <span className={`${styles.cuteCloudSparkle} ${styles.cuteCloudSparkleRight}`} /> : null}
+      </div>
+    </div>
   );
 };
 
@@ -540,6 +506,7 @@ const saveDismissedPending = (set: Set<string>) => {
 };
 
 const GlobalAiAssistant: React.FC = () => {
+  const { message } = App.useApp();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [_mood, setMood] = useState<CloudMood>('normal');
@@ -804,10 +771,11 @@ const GlobalAiAssistant: React.FC = () => {
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
-            const { displayText, charts, actionCards, quickActions } = parseAiResponse(rawContent);
+            const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
+            const { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards, quickActions }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards, agentCommandId: commandId }
               : m));
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
@@ -850,15 +818,40 @@ const GlobalAiAssistant: React.FC = () => {
             const res = await intelligenceApi.aiAdvisorChat(contextualText);
             // @ts-ignore
             const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
-            const answer = resultData?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
+            const rawAnswer = resultData?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
+            const commandId = resultData?.commandId ? String(resultData.commandId) : undefined;
+            const { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawAnswer);
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) {
-                return prev.map(m => m.id === aiMsgId ? { ...m, text: answer, intent: resultData?.source, reportType: reportTypeToDownload } : m);
+                return prev.map(m => m.id === aiMsgId ? {
+                  ...m,
+                  text: displayText,
+                  intent: resultData?.source,
+                  reportType: reportTypeToDownload,
+                  charts,
+                  actionCards,
+                  quickActions,
+                  teamStatusCards,
+                  bundleSplitCards,
+                  agentCommandId: commandId,
+                } : m);
               }
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: answer, intent: resultData?.source, reportType: reportTypeToDownload }];
+              return [...prev, {
+                id: aiMsgId,
+                role: 'ai' as const,
+                text: displayText,
+                intent: resultData?.source,
+                reportType: reportTypeToDownload,
+                charts,
+                actionCards,
+                quickActions,
+                teamStatusCards,
+                bundleSplitCards,
+                agentCommandId: commandId,
+              }];
             });
-            speak(answer);
+            speak(displayText);
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
             setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
@@ -882,10 +875,10 @@ const GlobalAiAssistant: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif'];
+    const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.pdf'];
     const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
-    if (!allowed.includes(ext)) { alert('只支持 Excel（xlsx/xls）、CSV 和图片文件'); return; }
-    if (file.size > 5 * 1024 * 1024) { alert('文件大小不能超过 5MB'); return; }
+    if (!allowed.includes(ext)) { alert('只支持 Excel（xlsx/xls）、CSV、图片和 PDF 文件'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过 10MB'); return; }
     setAttachedFile(file);
     e.target.value = '';
   };
@@ -946,6 +939,32 @@ const GlobalAiAssistant: React.FC = () => {
     const fileToUpload = attachedFile;
     setAttachedFile(null);
     try {
+      if (isPurchaseDocFile(fileToUpload)) {
+        const orderNo = extractOrderNo(question);
+        const recognized = await intelligenceApi.recognizePurchaseDoc(fileToUpload, orderNo);
+        const autoMode = shouldAutoInbound(question) ? 'inbound' : shouldAutoArrival(question) ? 'arrival' : null;
+        let purchaseDocCard = recognized as PurchaseDocCardData;
+        if (autoMode) {
+          purchaseDocCard = await intelligenceApi.autoExecutePurchaseDoc({
+            docId: String((recognized as Record<string, unknown>).docId || ''),
+            orderNo,
+            warehouseLocation: autoMode === 'inbound' ? '默认仓' : undefined,
+            confirmInbound: autoMode === 'inbound',
+          }) as PurchaseDocCardData;
+        }
+        const aiText = autoMode
+          ? `我已经按采购单据识别结果执行了${autoMode === 'inbound' ? '到货并入库' : '自动到货'}，你可以在下面查看匹配和执行情况。`
+          : '我已经识别了这张采购单据，你可以先查看匹配结果，也可以继续让我直接自动到货或到货入库。';
+        setUploadingFile(false);
+        setMessages(prev => [...prev, {
+          id: `a-doc-${Date.now()}`,
+          role: 'ai' as const,
+          text: aiText,
+          purchaseDocCard,
+        }]);
+        speak(aiText);
+        return;
+      }
       const result = await intelligenceApi.uploadAnalyze(fileToUpload);
       setUploadingFile(false);
       await handleSend(`${question || '请帮我分析这个文件'}\n\n${result.parsedContent}`);
@@ -953,6 +972,45 @@ const GlobalAiAssistant: React.FC = () => {
       setUploadingFile(false);
       await handleSend(question || '文件上传失败，请直接描述需求');
     }
+  };
+
+  const handleShowAgentTrace = async (commandId?: string) => {
+    if (!commandId) return;
+    try {
+      const res = await intelligenceApi.getAiAgentTraceDetail(commandId) as unknown as { data?: { data?: { logs?: AiTraceCardData['logs']; count?: number } } };
+      const data = res?.data?.data;
+      setMessages(prev => [...prev, {
+        id: `trace-${commandId}-${Date.now()}`,
+        role: 'ai' as const,
+        text: `这是本次小云执行轨迹，commandId：${commandId}`,
+        agentTraceCard: {
+          commandId,
+          logs: Array.isArray((data as { logs?: unknown[] })?.logs) ? (data as { logs: AiTraceCardData['logs'] }).logs : [],
+          count: typeof (data as { count?: unknown })?.count === 'number' ? (data as { count: number }).count : undefined,
+        },
+      }]);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '执行轨迹查询失败');
+    }
+  };
+
+  const handleShowRecentTraces = async () => {
+    try {
+      const res = await intelligenceApi.getAiAgentRecentTraces({ limit: 8 }) as unknown as { data?: { data?: Array<Record<string, unknown>> } };
+      const rows = Array.isArray(res?.data?.data) ? res.data.data : [];
+      const text = rows.length
+        ? `最近小云执行记录：\n${rows.map((item, index) => `${index + 1}. ${(item.commandId as string) || '-'} ｜ ${(item.status as string) || '-'} ｜ ${(item.createdAt as string) || '-'}`).join('\n')}`
+        : '最近还没有可用的小云执行记录。';
+      setMessages(prev => [...prev, { id: `recent-traces-${Date.now()}`, role: 'ai' as const, text }]);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '最近执行记录查询失败');
+    }
+  };
+
+  const openTraceCenter = (commandId?: string) => {
+    const search = commandId ? `?commandId=${encodeURIComponent(commandId)}` : '';
+    setIsOpen(false);
+    navigate(`${paths.aiAgentTraceCenter}${search}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -980,6 +1038,7 @@ const GlobalAiAssistant: React.FC = () => {
       const voice = voices.find(v => v.lang.startsWith('zh') && (
         v.name.toLowerCase().includes('xiaoyi') ||
         v.name.toLowerCase().includes('xiaoxiao') ||
+        v.name.toLowerCase().includes('xiaoyu') ||
         v.name.includes('女') ||
         v.name.toLowerCase().includes('female')
       )) ?? voices.find(v => v.lang.includes('zh'));
@@ -1002,10 +1061,10 @@ const GlobalAiAssistant: React.FC = () => {
       //   report: pitch中档+rate稳 = 沉着播报感
       //   casual: 标准呆萌基调
       const base = ({
-        urgent: { pitch: 1.50, rate: 1.00 },
-        good:   { pitch: 1.90, rate: 0.88 },
-        report: { pitch: 1.62, rate: 0.84 },
-        casual: { pitch: 1.72, rate: 0.83 },
+        urgent: { pitch: 1.18, rate: 0.95 },
+        good:   { pitch: 1.38, rate: 0.82 },
+        report: { pitch: 1.22, rate: 0.8 },
+        casual: { pitch: 1.3, rate: 0.78 },
       } as Record<Mood, { pitch: number; rate: number }>)[mood];
 
       // ③ 按标点拆段，短于2字的合并
@@ -1027,15 +1086,15 @@ const GlobalAiAssistant: React.FC = () => {
         const u = new SpeechSynthesisUtterance(seg);
         u.lang = 'zh-CN';
         if (voice) u.voice = voice;
-        u.volume = 0.92;
+        u.volume = 0.88;
 
         let p = base.pitch;
         let r = base.rate;
 
-        if (/[！!]/.test(seg))              { p += 0.20; r += 0.07; }  // 蹦跶高音
-        else if (/[？?]/.test(seg))         { p += 0.10; r -= 0.08; }  // 上扬疑惑
-        else if (i === 0)                   { p += 0.12; }              // 开场引入
-        else if (i === segments.length - 1) { p -= 0.07; r -= 0.05; }  // 收尾余韵
+        if (/[！!]/.test(seg))              { p += 0.08; r += 0.04; }
+        else if (/[？?]/.test(seg))         { p += 0.06; r -= 0.05; }
+        else if (i === 0)                   { p += 0.06; }
+        else if (i === segments.length - 1) { p -= 0.04; r -= 0.04; }
 
         u.pitch = Math.max(0.5, Math.min(2.0, p));
         u.rate  = Math.max(0.5, Math.min(1.5, r));
@@ -1141,13 +1200,18 @@ const GlobalAiAssistant: React.FC = () => {
               </div>
             )}
             {messages.length === 1 && (
-              <div className={styles.suggestionChips}>
-                {SUGGESTIONS.map(q => (
-                  <div key={q} className={styles.chip} onClick={() => handleSend(q)}>
-                    {q}
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className={styles.quickHint}>
+                  直接自然语言输入就可以，下面只是常用示例
+                </div>
+                <div className={styles.suggestionChips}>
+                  {SUGGESTIONS.map(q => (
+                    <div key={q} className={styles.chip} onClick={() => handleSend(q)}>
+                      {q}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {messages.map(msg => (
@@ -1250,6 +1314,88 @@ const GlobalAiAssistant: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {msg.role === 'ai' && !!msg.teamStatusCards?.length && (
+                    <div className={styles.teamStatusWrapper}>
+                      {msg.teamStatusCards.map((card, i) => (
+                        <TeamStatusCardWidget
+                          key={`${card.orderNo ?? 'team'}-${i}`}
+                          card={card}
+                          onNavigate={(path) => {
+                            const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic'];
+                            const safePath = path && knownPrefixes.some(prefix => path.startsWith(prefix)) ? path : '/production';
+                            setIsOpen(false);
+                            navigate(safePath);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {msg.role === 'ai' && !!msg.bundleSplitCards?.length && (
+                    <div className={styles.teamStatusWrapper}>
+                      {msg.bundleSplitCards.map((card, i) => (
+                        <BundleSplitCardWidget
+                          key={`${card.sourceBundleId ?? card.rootBundleId ?? 'split'}-${i}`}
+                          card={card}
+                          onNavigateToCutting={(splitCard) => {
+                            const orderNo = splitCard.orderNo;
+                            const bundleIds = (splitCard.bundles || [])
+                              .filter((item) => item.splitStatus === 'split_child' && item.bundleId)
+                              .map((item) => item.bundleId);
+                            const query = new URLSearchParams();
+                            if (bundleIds.length) {
+                              query.set('bundleIds', bundleIds.join(','));
+                              query.set('autoPrint', '1');
+                            }
+                            const next = orderNo ? `/production/cutting/task/${encodeURIComponent(orderNo)}${query.toString() ? `?${query.toString()}` : ''}` : paths.cutting;
+                            setIsOpen(false);
+                            navigate(next);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {msg.role === 'ai' && msg.purchaseDocCard && (
+                    <div className={styles.teamStatusWrapper}>
+                      <PurchaseDocCardWidget
+                        card={msg.purchaseDocCard}
+                        onAutoAction={async (mode, card) => {
+                          try {
+                            const result = await intelligenceApi.autoExecutePurchaseDoc({
+                              docId: card.docId,
+                              orderNo: card.orderNo,
+                              warehouseLocation: mode === 'inbound' ? '默认仓' : undefined,
+                              confirmInbound: mode === 'inbound',
+                            });
+                            setMessages(prev => prev.map(item => item.id === msg.id ? {
+                              ...item,
+                              text: mode === 'inbound' ? '我已经根据这张采购单据执行到货并入库。' : '我已经根据这张采购单据执行自动到货。',
+                              purchaseDocCard: result as PurchaseDocCardData,
+                            } : item));
+                          } catch (error) {
+                            message.error(error instanceof Error ? error.message : '采购单据自动执行失败');
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  {msg.role === 'ai' && msg.agentCommandId && (
+                    <div className={styles.quickActionsRow}>
+                      <button className={styles.actionBtn} onClick={() => void handleShowAgentTrace(msg.agentCommandId)}>
+                        查看执行轨迹
+                      </button>
+                      <button className={styles.actionBtn} onClick={() => openTraceCenter(msg.agentCommandId)}>
+                        打开独立页
+                      </button>
+                      <button className={styles.actionBtn} onClick={() => void handleShowRecentTraces()}>
+                        最近执行记录
+                      </button>
+                    </div>
+                  )}
+                  {msg.role === 'ai' && msg.agentTraceCard && (
+                    <div className={styles.teamStatusWrapper}>
+                      <AiTraceCardWidget card={msg.agentTraceCard} />
+                    </div>
+                  )}
                   {/* ACTIONS_JSON 快捷操作按钮 */}
                   {msg.role === 'ai' && !!msg.quickActions?.length && (
                     <div className={styles.quickActionsRow}>
@@ -1350,7 +1496,7 @@ const GlobalAiAssistant: React.FC = () => {
               ref={fileInputRef}
               type="file"
               style={{ display: 'none' }}
-              accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif"
+              accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf"
               onChange={handleFileSelect}
             />
             {attachedFile && (
@@ -1362,17 +1508,25 @@ const GlobalAiAssistant: React.FC = () => {
             <div className={styles.inputRow}>
               <button
                 className={styles.uploadBtn}
-                title="上传文件（Excel/CSV/图片）"
+                title="上传文件（Excel/CSV/图片/PDF）"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isTyping || uploadingFile}
               >
                 <PaperClipOutlined />
               </button>
+              <button
+                className={`${styles.uploadBtn} ${styles.traceBtn}`}
+                title="查看AI记录"
+                onClick={() => openTraceCenter()}
+                disabled={isTyping || uploadingFile}
+              >
+                AI记录
+              </button>
               <input
                 ref={inputRef}
                 type="text"
                 className={styles.chatInput}
-                placeholder="输入问题，或上传 Excel / CSV 文件分析"
+                placeholder="直接说需求，也可以上传采购单据让我自动识别、到货或入库"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -1385,7 +1539,8 @@ const GlobalAiAssistant: React.FC = () => {
                 disabled={isTyping || isRecording}
                 style={{ color: isRecording ? '#f5222d' : undefined }}
               >
-                {isRecording ? <LoadingOutlined spin /> : '🎤'}
+                {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}
+                <span>语音</span>
               </button>
               <button
                 className={styles.sendBtn}
@@ -1393,6 +1548,7 @@ const GlobalAiAssistant: React.FC = () => {
                 disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}
               >
                 {uploadingFile ? <LoadingOutlined /> : <SendOutlined />}
+                <span>{uploadingFile ? '处理中' : '发送'}</span>
               </button>
             </div>
           </div>

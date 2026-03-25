@@ -133,6 +133,8 @@ export function useMaterialInventoryColumns({
         const inTransitQty = record.inTransitQty ?? 0;
         const lockedQty = record.lockedQty ?? 0;
         const safetyStock = record.safetyStock ?? 0;
+        const conversionRate = Number(record.conversionRate ?? 0);
+        const referenceKg = conversionRate > 0 ? Number((availableQty / conversionRate).toFixed(2)) : null;
         const isLow = availableQty < safetyStock;
         return (
           <Space orientation="vertical" size={10} style={{ width: '100%' }}>
@@ -170,6 +172,15 @@ export function useMaterialInventoryColumns({
               <span style={{ color: 'var(--neutral-text-disabled)' }}>安全库存:</span> {safetyStock} {record.unit}
               <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span> {record.warehouseLocation || '-'}
+            </div>
+            <div style={{
+              fontSize: "var(--font-size-sm)",
+              color: 'var(--neutral-text-secondary)',
+              fontWeight: 500
+            }}>
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>参考公斤数:</span> {referenceKg == null ? '-' : `${referenceKg} kg`}
+              <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>几米一公斤:</span> {conversionRate > 0 ? conversionRate : '-'}
             </div>
             {isLow && (
               <div style={{

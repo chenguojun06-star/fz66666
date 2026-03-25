@@ -428,9 +428,14 @@
   background: #f5f5f5;
   padding: 10px 16px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   outline: none;
   transition: all 0.3s;
+}
+
+.chatInput::placeholder {
+  font-size: 11px;
+  color: #a3a3a3;
 }
 
 .chatInput:focus {
@@ -439,17 +444,20 @@
 }
 
 .sendBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  height: 34px;
+  min-width: 58px;
+  padding: 0 10px;
+  border-radius: 18px;
   background: #1890ff;
   color: white;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 11px;
+  font-weight: 500;
   transition: all 0.2s;
   flex-shrink: 0;
 }
@@ -533,52 +541,259 @@
   color: #1890ff;
 }
 
-/* 小云专属动画：眨眼 */
-.cloudEyeLeft .eyeOpen { animation: openLeft 8s infinite; }
-.cloudEyeLeft .eyeClosed { animation: closedLeft 8s infinite; }
-
-.cloudEyeRight .eyeOpen { animation: openRight 8s infinite; }
-.cloudEyeRight .eyeClosed { animation: closedRight 8s infinite; }
-
-@keyframes openLeft {
-  0%, 28%, 32%, 63%, 67%, 100% { opacity: 1; }
-  29%, 31%, 64%, 66% { opacity: 0; }
+.cuteCloudStage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes closedLeft {
-  0%, 28%, 32%, 63%, 67%, 100% { opacity: 0; }
-  29%, 31%, 64%, 66% { opacity: 1; }
+.cuteCloud {
+  position: relative;
+  width: 88%;
+  height: 72%;
+  animation: cloudFloatSoft 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 14px rgba(31, 117, 234, 0.2));
 }
 
-@keyframes openRight {
-  0%, 28%, 32%, 100% { opacity: 1; }
-  29%, 31% { opacity: 0; }
+.cuteCloudActive,
+.cuteCloudInteracting {
+  animation-duration: 2.6s;
 }
 
-@keyframes closedRight {
-  0%, 28%, 32%, 100% { opacity: 0; }
-  29%, 31% { opacity: 1; }
+.cuteCloudUrgent {
+  animation-duration: 1.8s;
 }
 
-/* 小云专属动画：张嘴说话/微笑交替 */
-.cloudMouthO {
-  animation: mouthToggle 6s infinite alternate;
-}
-.cloudMouthSmile {
-  animation: mouthToggle 6s infinite alternate-reverse;
-}
-
-@keyframes mouthToggle {
-  0%, 45% { opacity: 1; }
-  55%, 100% { opacity: 0; }
+.cuteCloudGlow {
+  position: absolute;
+  inset: 8% 10%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(86, 154, 255, 0.28), rgba(86, 154, 255, 0.04) 68%, transparent 82%);
+  filter: blur(8px);
+  animation: cloudGlowPulse 4s ease-in-out infinite;
 }
 
-/* 小云专属动画：更有活力的弹跳 (覆盖原有的 floatTrigger，让它更像跳动) */
+.cuteCloudGlowActive {
+  animation-duration: 2.2s;
+}
+
+.cuteCloudPart,
+.cuteCloudBase {
+  position: absolute;
+  background: linear-gradient(180deg, #ffffff 0%, #dce9ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 6px 14px rgba(31, 117, 234, 0.14);
+}
+
+.cuteCloudPart {
+  border-radius: 50%;
+}
+
+.cuteCloudPartLeft {
+  width: 30%;
+  height: 40%;
+  left: 12%;
+  top: 34%;
+}
+
+.cuteCloudPartCenter {
+  width: 38%;
+  height: 52%;
+  left: 31%;
+  top: 16%;
+}
+
+.cuteCloudPartRight {
+  width: 28%;
+  height: 36%;
+  right: 12%;
+  top: 38%;
+}
+
+.cuteCloudBase {
+  left: 13%;
+  right: 13%;
+  bottom: 12%;
+  height: 30%;
+  border-radius: 999px;
+}
+
+.cuteCloudEye {
+  position: absolute;
+  top: 43%;
+  width: 12%;
+  height: 18%;
+  border-radius: 999px;
+  background: #3f5d95;
+  z-index: 2;
+  animation: cloudBlink 6.8s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.cuteCloudEyeLeft {
+  left: 31%;
+}
+
+.cuteCloudEyeRight {
+  right: 31%;
+}
+
+.cuteCloudCurious .cuteCloudEyeLeft {
+  transform: translate(-4px, -2px);
+}
+
+.cuteCloudCurious .cuteCloudEyeRight {
+  transform: translate(4px, -2px);
+}
+
+.cuteCloudEyeSpin {
+  border: 2px solid #4d8fff;
+  border-right-color: transparent;
+  border-top-color: transparent;
+  background: transparent;
+  border-radius: 50%;
+  animation: cloudEyeSpin 1s linear infinite;
+}
+
+.cuteCloudEyeHighlight {
+  position: absolute;
+  width: 44%;
+  height: 36%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  top: 12%;
+  left: 14%;
+  animation: eyeHighlightTwinkle 4.2s ease-in-out infinite;
+}
+
+.cuteCloudMouth {
+  position: absolute;
+  left: 50%;
+  bottom: 24%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.cuteCloudMouthSmile {
+  width: 26%;
+  height: 13%;
+  border-bottom: 4px solid #597ac0;
+  border-radius: 0 0 999px 999px;
+  animation: cloudSmileTalk 3.6s ease-in-out infinite;
+}
+
+.cuteCloudMouthO {
+  width: 16%;
+  height: 18%;
+  border: 4px solid #597ac0;
+  border-radius: 50%;
+}
+
+.cuteCloudMouthSad {
+  width: 26%;
+  height: 12%;
+  border-top: 4px solid #597ac0;
+  border-radius: 999px 999px 0 0;
+}
+
+.cuteCloudSweat {
+  position: absolute;
+  right: 16%;
+  top: 12%;
+  width: 10%;
+  height: 18%;
+  background: linear-gradient(180deg, #8fd0ff, #5aa8ff);
+  border-radius: 50% 50% 70% 70%;
+  transform: rotate(16deg);
+  animation: sweatDrop 1.4s ease-in-out infinite;
+}
+
+.cuteCloudSparkle {
+  position: absolute;
+  width: 10%;
+  height: 10%;
+  background: #ffd86a;
+  clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+  animation: sparkleBlink 1.8s ease-in-out infinite;
+}
+
+.cuteCloudSparkleLeft {
+  left: 10%;
+  top: 18%;
+}
+
+.cuteCloudSparkleRight {
+  right: 8%;
+  top: 10%;
+  animation-delay: 0.5s;
+}
+
+.cuteCloudError .cuteCloudPart,
+.cuteCloudError .cuteCloudBase {
+  background: linear-gradient(180deg, #fdfefe 0%, #e7edf5 100%);
+}
+
+.cuteCloudUrgent .cuteCloudPart,
+.cuteCloudUrgent .cuteCloudBase {
+  background: linear-gradient(180deg, #fffefe 0%, #e1efff 100%);
+}
+
+.cuteCloudSuccess .cuteCloudPart,
+.cuteCloudSuccess .cuteCloudBase {
+  background: linear-gradient(180deg, #ffffff 0%, #d9f4ff 100%);
+}
+
 @keyframes floatTrigger {
   0%, 100% { transform: translateY(0) scale(1); }
   20% { transform: translateY(-8px) scale(0.98, 1.02); }
   50% { transform: translateY(0) scale(1.02, 0.98); }
   80% { transform: translateY(-4px) scale(0.99, 1.01); }
+}
+
+@keyframes cloudFloatSoft {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-4px) scale(1.01, 0.99); }
+  50% { transform: translateY(0) scale(0.99, 1.01); }
+  75% { transform: translateY(-2px) scale(1.01); }
+}
+
+@keyframes cloudGlowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes cloudBlink {
+  0%, 44%, 48%, 92%, 96%, 100% { transform: scaleY(1); opacity: 1; }
+  46%, 94% { transform: scaleY(0.18); opacity: 0.85; }
+}
+
+@keyframes cloudSmileTalk {
+  0%, 100% { transform: translateX(-50%) scaleX(1); }
+  50% { transform: translateX(-50%) scaleX(1.12); }
+}
+
+@keyframes cloudEyeSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes eyeHighlightTwinkle {
+  0%, 100% { opacity: 0.72; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes blushPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes sweatDrop {
+  0%, 100% { transform: translateY(0) rotate(16deg); opacity: 0.8; }
+  50% { transform: translateY(4px) rotate(24deg); opacity: 1; }
+}
+
+@keyframes sparkleBlink {
+  0%, 100% { opacity: 0.3; transform: scale(0.86); }
+  50% { opacity: 1; transform: scale(1.1); }
 }
 
 /* ── 文件上传 ─────────────────────────────────────────────────────────────── */
@@ -596,17 +811,43 @@
 .uploadBtn:hover { color: #1890ff; }
 .uploadBtn:disabled { color: #d9d9d9; cursor: not-allowed; }
 
+.traceBtn {
+  min-width: 42px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #8c8c8c;
+  border-radius: 10px;
+  background: #f5f5f5;
+}
+
+.traceBtn:hover {
+  color: #1890ff;
+  background: #e6f4ff;
+}
+
 .voiceBtn {
-  background: none;
-  border: none;
+  height: 34px;
+  min-width: 54px;
+  padding: 0 10px;
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 18px;
   cursor: pointer;
-  padding: 4px 6px;
-  font-size: 17px;
-  transition: transform 0.15s;
+  font-size: 11px;
+  color: #6b7280;
+  transition: all 0.15s;
   flex-shrink: 0;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
-.voiceBtn:hover { transform: scale(1.15); }
+.voiceBtn:hover {
+  color: #1890ff;
+  border-color: #91d5ff;
+  background: #e6f4ff;
+}
 .voiceBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .attachChip {
@@ -623,6 +864,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.quickHint {
+  font-size: 11px;
+  color: rgba(79, 157, 255, 0.82);
+  margin-bottom: 10px;
 }
 .attachChipRemove {
   background: none;
@@ -669,6 +916,229 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #f0f0f0;
+}
+
+.teamStatusWrapper {
+  margin-top: 8px;
+}
+
+.teamStatusCard {
+  background: linear-gradient(180deg, #f6ffed 0%, #fcffe6 100%);
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.teamStatusHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.teamStatusTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #237804;
+}
+
+.teamStatusMeta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #4d7c0f;
+}
+
+.teamStatusSummary {
+  font-size: 12px;
+  color: #355f1b;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.teamStatusStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #5b8c00;
+  margin-bottom: 10px;
+}
+
+.teamStatusStats span {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(183, 235, 143, 0.9);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.teamStatusRecipients {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teamRecipientItem {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(183, 235, 143, 0.95);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.teamRecipientHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.teamRecipientName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #135200;
+}
+
+.teamRecipientRole {
+  font-size: 11px;
+  color: #52c41a;
+}
+
+.teamRecipientStage {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #237804;
+  margin-bottom: 3px;
+}
+
+.teamRecipientNext {
+  font-size: 11px;
+  color: #5b8c00;
+  line-height: 1.5;
+}
+
+.teamStatusWarning {
+  margin-top: 8px;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #cf1322;
+}
+
+.teamStatusHistory {
+  margin-top: 10px;
+  border-top: 1px dashed rgba(24, 144, 255, 0.18);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.teamStatusHistoryItem {
+  display: grid;
+  grid-template-columns: 124px 72px 70px 1fr;
+  gap: 6px;
+  font-size: 11px;
+  color: #4d7c0f;
+  background: rgba(255, 255, 255, 0.68);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.purchaseDocCard {
+  background: linear-gradient(180deg, #fff7e6 0%, #fffbe6 100%);
+  border: 1px solid #ffd591;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.purchaseDocHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.purchaseDocTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ad4e00;
+}
+
+.purchaseDocMeta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.purchaseDocSummary {
+  font-size: 12px;
+  color: #613400;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.purchaseDocStats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.purchaseDocStats span {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 213, 145, 0.9);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.purchaseDocItem {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 213, 145, 0.95);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.purchaseDocItemHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #874d00;
+}
+
+.purchaseDocItemMeta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocItemTip {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #d46b08;
 }
 
 /* ===== 催单内联编辑卡片 ===== */

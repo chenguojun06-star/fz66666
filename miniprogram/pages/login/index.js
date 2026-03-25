@@ -1,5 +1,5 @@
 const { getToken, setToken, setUserInfo } = require('../../utils/storage');
-const { getBaseUrl, setBaseUrl, normalizeBaseUrl } = require('../../config');
+const { getBaseUrl, setBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
 const { validateByRule } = require('../../utils/validationRules');
@@ -354,15 +354,7 @@ Page({
     const envVersion = resolveEnvVersion();
     const showDevFields = envVersion !== 'release';
 
-    let apiBaseUrl = getBaseUrl();  // 已自动处理占位符→内网地址降级
-    if (showDevFields) {
-      try {
-        const saved = wx.getStorageSync('api_base_url');
-        apiBaseUrl = normalizeBaseUrl(saved) || getBaseUrl();
-      } catch (e) {
-        apiBaseUrl = getBaseUrl();
-      }
-    }
+    const apiBaseUrl = getBaseUrl();
     setBaseUrl(apiBaseUrl);
 
     // 正式/体验版：先静默尝试 openid 一键登录（已绑定则无需选公司）

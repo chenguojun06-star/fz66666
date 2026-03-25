@@ -55,6 +55,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(500) DEFAULT NULL COMMENT '面料成分（从物料资料库同步）'");
             repaired += ensureColumn(conn, schema, "t_material_purchase", "invoice_urls",
                     "TEXT DEFAULT NULL COMMENT '发票/单据图片URL列表(JSON数组)，用于财务留底'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "conversion_rate",
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "conversion_rate",
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "conversion_rate",
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
                 repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_status",
                     "VARCHAR(32) DEFAULT NULL COMMENT '初审状态: pending_audit=待初审 passed=初审通过 rejected=初审驳回'");
                 repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_reason",
@@ -75,6 +81,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(32) DEFAULT NULL COMMENT '开发来源类型：SELF_DEVELOPED / SELECTION_CENTER'");
             repaired += ensureColumn(conn, schema, "t_style_info", "development_source_detail",
                     "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细：自主开发 / 选品中心'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "size_color_config",
+                    "MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
+            repaired += ensureColumnType(conn, schema, "t_style_info", "size_color_config",
+                    "mediumtext", "MODIFY COLUMN `size_color_config` MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
             repaired += ensureColumn(conn, schema, "t_style_info", "image_insight",
                     "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
             repaired += ensureColumn(conn, schema, "t_style_info", "fabric_composition",
@@ -117,12 +127,26 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
                     "VARCHAR(100) DEFAULT NULL COMMENT '物料成分，优先从面辅料资料带入' ");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_weight",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "size_usage_map",
                     "TEXT DEFAULT NULL COMMENT '码数用量配比(JSON，格式：{\"S\":1.5,\"M\":1.6,\"L\":1.7}，为空则统一用usageAmount)'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "pattern_size_usage_map",
+                    "TEXT DEFAULT NULL COMMENT '纸样录入各码用量(JSON，原始单位)'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "size_spec_map",
+                    "TEXT DEFAULT NULL COMMENT '各码规格尺寸(JSON，常用于拉链长度cm)'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "pattern_unit",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '纸样录入单位'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "conversion_rate",
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算系数：1个纸样录入单位=x个BOM单位'");
             repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
                     "VARCHAR(50) DEFAULT NULL COMMENT '尺寸分组名，如上装区/下装区' ");
+            repaired += ensureColumn(conn, schema, "t_style_size", "base_size",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '基准码/样衣码' ");
+            repaired += ensureColumn(conn, schema, "t_style_size", "grading_rule",
+                    "TEXT DEFAULT NULL COMMENT '跳码规则JSON' ");
                 repaired += ensureColumn(conn, schema, "t_cutting_task", "factory_type",
                     "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型：internal=内部工厂 external=外发工厂'");
                 repaired += ensureColumn(conn, schema, "t_product_warehousing", "repair_status",

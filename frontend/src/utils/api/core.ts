@@ -80,11 +80,31 @@ export const withQuery = (path: string, params: Record<string, unknown>): string
   return queryString ? `${path}?${queryString}` : path;
 };
 
+const isViteDevServerRequest = (): boolean => {
+  try {
+    const env = (import.meta as unknown as { env?: { DEV?: boolean } })?.env;
+    if (env?.DEV) {
+      return true;
+    }
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.location.port === '5173';
+  } catch {
+    return false;
+  }
+};
+
 const resolveApiBaseUrl = (): string => {
   try {
     const raw = (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } })?.env?.VITE_API_BASE_URL;
     const v = raw == null ? '' : String(raw).trim();
-    if (!v) return '/api';
+    if (!v) {
+      if (isViteDevServerRequest()) {
+        return '/api';
+      }
+      return '/api';
+    }
 
     const normalized = v.replace(/\/+$/g, '');
     if (normalized === '/api') return normalized;

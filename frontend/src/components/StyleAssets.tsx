@@ -16,6 +16,46 @@ import { message } from '@/utils/antdStatic';
  * 标识类型定义
  */
 type IdLike = string | number;
+const EMPTY_COVER_OVERRIDE = '__EMPTY_STYLE_COVER__';
+const STYLE_COVER_OVERRIDE_EVENT = 'style-cover-override-change';
+
+const getStyleCoverOverrideKeys = (styleId?: IdLike, styleNo?: string) => ([
+  styleId != null && String(styleId).trim() ? `style-cover-override:id:${String(styleId).trim()}` : null,
+  styleNo != null && String(styleNo).trim() ? `style-cover-override:no:${String(styleNo).trim()}` : null,
+].filter(Boolean) as string[]);
+
+export const setStyleCoverOverride = (styleId?: IdLike, styleNo?: string, url?: string | null) => {
+  if (typeof window === 'undefined') return;
+  if (!styleId && !styleNo) return;
+  const storedValue = url === null ? EMPTY_COVER_OVERRIDE : (url || null);
+  getStyleCoverOverrideKeys(styleId, styleNo).forEach((key) => {
+    if (storedValue !== null) {
+      window.localStorage.setItem(key, storedValue);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  });
+  window.dispatchEvent(new CustomEvent(STYLE_COVER_OVERRIDE_EVENT, {
+    detail: {
+      styleId: styleId != null ? String(styleId) : '',
+      styleNo: styleNo != null ? String(styleNo) : '',
+      url: url ?? null,
+      keys: getStyleCoverOverrideKeys(styleId, styleNo),
+    },
+  }));
+};
+
+export const getStyleCoverOverride = (styleId?: IdLike, styleNo?: string) => {
+  if (typeof window === 'undefined') return null;
+  if (!styleId && !styleNo) return null;
+  const keys = getStyleCoverOverrideKeys(styleId, styleNo);
+  for (const key of keys) {
+    const value = window.localStorage.getItem(key);
+    if (value === EMPTY_COVER_OVERRIDE) return '';
+    if (value) return value;
+  }
+  return null;
+};
 
 /**
  * 款号封面缩略图组件
@@ -38,7 +78,14 @@ export const StyleCoverThumb: React.FC<{
   // NaN 守卫：只有合法正数才使用，否则回退到默认值 40
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
   // 图片链接状态
-  const [url, setUrl] = React.useState<string | null>(src || null);
+  const resolvePreferredUrl = React.useCallback(() => {
+    const override = getStyleCoverOverride(styleId, styleNo);
+    if (override !== null) {
+      return override || null;
+    }
+    return src || null;
+  }, [src, styleId, styleNo]);
+  const [url, setUrl] = React.useState<string | null>(resolvePreferredUrl);
   // 加载状态
   const [loading, setLoading] = React.useState(false);
   // src URL 是否已加载失败（用于触发 fallback 附件查询）
@@ -46,9 +93,29 @@ export const StyleCoverThumb: React.FC<{
 
   // 当src变化时更新链接并重置失败状态
   React.useEffect(() => {
-    setUrl(src || null);
+    setUrl(resolvePreferredUrl());
     setSrcFailed(false);
-  }, [src]);
+  }, [resolvePreferredUrl]);
+
+  React.useEffect(() => {
+    const handler = (event: StorageEvent) => {
+      if (!event.key || !getStyleCoverOverrideKeys(styleId, styleNo).includes(event.key)) return;
+      setUrl(event.newValue === EMPTY_COVER_OVERRIDE ? null : (event.newValue || src || null));
+      setSrcFailed(false);
+    };
+    const customHandler = (event: Event) => {
+      const detail = (event as CustomEvent<{ keys?: string[]; url?: string | null }>).detail;
+      if (!detail?.keys?.some((key) => getStyleCoverOverrideKeys(styleId, styleNo).includes(key))) return;
+      setUrl(detail.url || null);
+      setSrcFailed(false);
+    };
+    window.addEventListener('storage', handler);
+    window.addEventListener(STYLE_COVER_OVERRIDE_EVENT, customHandler as any);
+    return () => {
+      window.removeEventListener('storage', handler);
+      window.removeEventListener(STYLE_COVER_OVERRIDE_EVENT, customHandler as any);
+    };
+  }, [src, styleId, styleNo]);
 
   // 加载款号封面图片
   // - src 有值且未失败时：直接使用 src，不查附件 API
@@ -57,7 +124,7 @@ export const StyleCoverThumb: React.FC<{
   React.useEffect(() => {
     let mounted = true;
     // src 有效且未加载失败时，跳过附件查询
-    if (src && !srcFailed) return () => { mounted = false; };
+    if (url && !srcFailed) return () => { mounted = false; };
     if (!styleId && !styleNo) return () => { mounted = false; };
 
     (async () => {
@@ -79,7 +146,7 @@ export const StyleCoverThumb: React.FC<{
       }
     })();
     return () => { mounted = false; };
-  }, [styleId, styleNo, src, srcFailed]);
+  }, [styleId, styleNo, url, srcFailed]);
 
   return (
     <div

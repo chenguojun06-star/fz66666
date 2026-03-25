@@ -249,6 +249,22 @@ public class MaterialPurchaseController {
         return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo));
     }
 
+    @PostMapping("/replay-doc")
+    public Result<?> replayDoc(@RequestBody Map<String, Object> body) {
+        String docId = body == null ? null : String.valueOf(body.getOrDefault("docId", "")).trim();
+        String orderNo = body == null ? null : String.valueOf(body.getOrDefault("orderNo", "")).trim();
+        return Result.success(purchaseDocOrchestrator.replaySavedDoc(docId, orderNo));
+    }
+
+    @PostMapping("/auto-execute-doc")
+    public Result<?> autoExecuteDoc(@RequestBody Map<String, Object> body) {
+        String docId = body == null ? null : String.valueOf(body.getOrDefault("docId", "")).trim();
+        String orderNo = body == null ? null : String.valueOf(body.getOrDefault("orderNo", "")).trim();
+        String warehouseLocation = body == null ? null : String.valueOf(body.getOrDefault("warehouseLocation", "")).trim();
+        boolean confirmInbound = body != null && Boolean.parseBoolean(String.valueOf(body.getOrDefault("confirmInbound", "false")));
+        return Result.success(purchaseDocOrchestrator.autoExecuteSavedDoc(docId, orderNo, warehouseLocation, confirmInbound));
+    }
+
     /**
      * 更新采购记录发票/单据图片URL列表（财务留底）
      * 参数：{ purchaseId, invoiceUrls（JSON字符串） }

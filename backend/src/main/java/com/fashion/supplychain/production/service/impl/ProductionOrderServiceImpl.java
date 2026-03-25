@@ -330,6 +330,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             mp.setMaterialType(bom.getMaterialType());
             mp.setSpecifications(bom.getSpecification());
             mp.setUnit(bom.getUnit());
+            mp.setConversionRate(bom.getConversionRate());
             mp.setSupplierName(bom.getSupplier());
 
             BigDecimal usage = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;

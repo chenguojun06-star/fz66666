@@ -22,7 +22,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
-import { formatMaterialQuantityWithUnit, normalizeMaterialQuantity } from '../MaterialPurchase/utils';
+import { formatMaterialQuantityWithUnit, formatReferenceKilograms, normalizeMaterialQuantity } from '../MaterialPurchase/utils';
 
 const { TextArea } = Input;
 
@@ -251,12 +251,19 @@ const MaterialPurchaseDetail: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '采购数量',
+      title: '需求数量',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,
       align: 'right',
       render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
+    },
+    {
+      title: '参考公斤数',
+      key: 'referenceKilograms',
+      width: 110,
+      align: 'right',
+      render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
     },
     {
       title: '到货数量',

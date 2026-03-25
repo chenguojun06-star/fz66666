@@ -3,6 +3,7 @@ package com.fashion.supplychain.stock.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
 import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
@@ -36,6 +37,12 @@ public class SampleStockController {
         return Result.success();
     }
 
+    @PostMapping("/inbound/batch")
+    public Result<Void> inboundBatch(@RequestBody SampleStockInboundBatchRequest request) {
+        sampleStockService.inboundBatch(request);
+        return Result.success();
+    }
+
     @PostMapping("/loan")
     public Result<Void> loan(@RequestBody SampleLoan loan) {
         sampleStockService.loan(loan);
@@ -48,6 +55,14 @@ public class SampleStockController {
         Integer returnQuantity = params.get("returnQuantity") != null ? Integer.parseInt(params.get("returnQuantity").toString()) : null;
         String remark = (String) params.get("remark");
         sampleStockService.returnSample(loanId, returnQuantity, remark);
+        return Result.success();
+    }
+
+    @PostMapping("/destroy")
+    public Result<Void> destroy(@RequestBody Map<String, Object> params) {
+        String stockId = params.get("stockId") == null ? null : String.valueOf(params.get("stockId"));
+        String remark = params.get("remark") == null ? null : String.valueOf(params.get("remark"));
+        sampleStockService.destroy(stockId, remark);
         return Result.success();
     }
 

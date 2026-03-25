@@ -9,6 +9,7 @@ import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import { message } from '@/utils/antdStatic';
+import { formatReferenceKilograms } from '../../utils';
 
 const { Option } = Select;
 
@@ -33,6 +34,8 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedUnitPrice = Form.useWatch('unitPrice', form);
   const watchedArrivedQuantity = Form.useWatch('arrivedQuantity', form);
   const watchedStyleCover = Form.useWatch('styleCover', form);
+  const watchedPurchaseQuantity = Form.useWatch('purchaseQuantity', form);
+  const watchedConversionRate = Form.useWatch('conversionRate', form);
 
   // Stock check
   const watchedMaterialCode = Form.useWatch('materialCode', form);
@@ -81,6 +84,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       materialCode: m.materialCode || '',
       materialName: m.materialName || '',
       unit: m.unit || '',
+      conversionRate: m.conversionRate != null ? Number(m.conversionRate) : undefined,
     };
     // 物料类型映射：DB 可能存 fabric/FABRIC/fabricA 等，统一归到表单 Select 的有效值
     if (m.materialType) {
@@ -422,13 +426,27 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
 
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
+          <Form.Item name="purchaseQuantity" label="需求数量" rules={[{ required: true, message: '必填' }]}>
             <InputNumber id="purchaseQuantity" style={{ width: '100%' }} min={0} />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item name="arrivedQuantity" label="到货数量">
             <InputNumber id="arrivedQuantity" style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="conversionRate" label="几米一公斤">
+            <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={4} placeholder="如：3" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item label="参考公斤数">
+            <Input
+              value={formatReferenceKilograms(watchedPurchaseQuantity, watchedConversionRate)}
+              readOnly
+              placeholder="-"
+            />
           </Form.Item>
         </Col>
       </Row>

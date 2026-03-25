@@ -13,6 +13,7 @@ export interface MaterialInventory {
   lockedQty: number;
   safetyStock: number;
   unit: string;
+  conversionRate?: number;
   unitPrice: number;
   totalValue: number;
   warehouseLocation: string;

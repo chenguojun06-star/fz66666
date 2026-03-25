@@ -3,6 +3,7 @@ export interface SampleStock {
   styleId?: string;
   styleNo: string;
   styleName?: string;
+  patternNo?: string;
   sampleType: string; // development, pre_production, shipment, sales
   color: string;
   size: string;
@@ -11,6 +12,10 @@ export interface SampleStock {
   location?: string;
   imageUrl?: string;
   remark?: string;
+  sampleCompletedTime?: string;
+  inventoryStatus?: 'active' | 'destroyed';
+  destroyTime?: string;
+  destroyRemark?: string;
   createTime?: string;
   updateTime?: string;
 }

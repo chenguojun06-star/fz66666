@@ -31,7 +31,7 @@
     "submitting": "Đang đăng nhập...",
     "wechatQuickLogin": "Đăng nhập nhanh WeChat",
     "serverUrl": "Địa chỉ máy chủ",
-    "serverUrlPlaceholder": "Ví dụ: http://192.168.1.10:8088",
+    "serverUrlPlaceholder": "Ví dụ: https://api.example.com",
     "noAccount": "Chưa có tài khoản?",
     "registerNow": "Đăng ký ngay",
     "loginSuccess": "Đăng nhập thành công",

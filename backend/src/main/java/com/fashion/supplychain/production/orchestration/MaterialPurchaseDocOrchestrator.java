@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PurchaseOrderDoc;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PurchaseOrderDocService;
+import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,9 @@ public class MaterialPurchaseDocOrchestrator {
 
     @Autowired
     private PurchaseOrderDocService purchaseOrderDocService;
+
+    @Autowired
+    private ProcurementOrchestrator procurementOrchestrator;
 
     // ─────────────────────────────────────────────────────────────────
     // 公共入口
@@ -103,6 +107,7 @@ public class MaterialPurchaseDocOrchestrator {
 
         long matchCount = matchedItems.stream()
                 .filter(m -> Boolean.TRUE.equals(m.get("matched"))).count();
+        Map<String, Object> result = new HashMap<>();
 
         // 5. 持久化到 t_purchase_order_doc（单据永久保存在详情页）
         try {
@@ -120,16 +125,77 @@ public class MaterialPurchaseDocOrchestrator {
             purchaseOrderDocService.save(doc);
             log.info("[PurchaseDocRecognize] 单据已保存 id={} orderNo={} matchCount={}",
                     doc.getId(), orderNo, matchCount);
+            result.put("docId", doc.getId());
         } catch (Exception e) {
             log.warn("[PurchaseDocRecognize] 单据保存DB失败（不影响识别结果返回）: {}", e.getMessage());
         }
-
-        Map<String, Object> result = new HashMap<>();
         result.put("imageUrl", imageUrl);
         result.put("rawText", aiRaw);
         result.put("items", matchedItems);
         result.put("matchCount", matchCount);
         result.put("totalRecognized", recognizedItems.size());
+        return result;
+    }
+
+    public Map<String, Object> replaySavedDoc(String docId, String orderNo) {
+        PurchaseOrderDoc doc = resolveDoc(docId, orderNo);
+        String resolvedOrderNo = orderNo != null && !orderNo.isBlank() ? orderNo.trim() : doc.getOrderNo();
+        List<Map<String, Object>> recognizedItems = parseAiItems(doc.getRawText());
+        List<Map<String, Object>> matchedItems = matchWithPurchaseItems(recognizedItems, resolvedOrderNo, UserContext.tenantId());
+        long matchCount = matchedItems.stream().filter(m -> Boolean.TRUE.equals(m.get("matched"))).count();
+        Map<String, Object> result = new HashMap<>();
+        result.put("docId", doc.getId());
+        result.put("imageUrl", doc.getImageUrl());
+        result.put("orderNo", resolvedOrderNo);
+        result.put("items", matchedItems);
+        result.put("matchCount", matchCount);
+        result.put("totalRecognized", recognizedItems.size());
+        return result;
+    }
+
+    public Map<String, Object> autoExecuteSavedDoc(String docId, String orderNo, String warehouseLocation, boolean confirmInbound) {
+        Map<String, Object> replay = replaySavedDoc(docId, orderNo);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) replay.getOrDefault("items", List.of());
+        List<Map<String, Object>> executed = new ArrayList<>();
+        List<Map<String, Object>> skipped = new ArrayList<>();
+        for (Map<String, Object> item : items) {
+            if (!Boolean.TRUE.equals(item.get("matched")) || item.get("purchaseId") == null) {
+                skipped.add(copyExecutionItem(item, "skipped", "未匹配到采购单"));
+                continue;
+            }
+            Integer qty = toInteger(item.get("quantity"));
+            if (qty == null || qty <= 0) {
+                skipped.add(copyExecutionItem(item, "skipped", "识别数量为空或无效"));
+                continue;
+            }
+            try {
+                Map<String, Object> params = new LinkedHashMap<>();
+                params.put("purchaseId", String.valueOf(item.get("purchaseId")));
+                params.put("arrivedQuantity", qty);
+                params.put("warehouseLocation", warehouseLocation);
+                params.put("operatorId", UserContext.userId());
+                params.put("operatorName", UserContext.username());
+                params.put("remark", "小云根据采购单据识别自动执行");
+                Object result = confirmInbound
+                        ? procurementOrchestrator.confirmArrivalAndInbound(params)
+                        : procurementOrchestrator.updateArrivedQuantity(Map.of(
+                                "id", String.valueOf(item.get("purchaseId")),
+                                "arrivedQuantity", qty,
+                                "remark", "小云根据采购单据识别自动登记到货"));
+                Map<String, Object> row = copyExecutionItem(item, "success", confirmInbound ? "已到货并入库" : "已登记到货");
+                row.put("result", result);
+                executed.add(row);
+            } catch (Exception e) {
+                skipped.add(copyExecutionItem(item, "failed", e.getMessage()));
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>(replay);
+        result.put("executed", executed);
+        result.put("skipped", skipped);
+        result.put("confirmInbound", confirmInbound);
+        result.put("warehouseLocation", warehouseLocation);
+        result.put("summary", "已执行 " + executed.size() + " 条，跳过 " + skipped.size() + " 条");
         return result;
     }
 
@@ -196,7 +262,6 @@ public class MaterialPurchaseDocOrchestrator {
     // AI 结果解析
     // ─────────────────────────────────────────────────────────────────
 
-    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseAiItems(String raw) {
         List<Map<String, Object>> items = new ArrayList<>();
         if (raw == null || raw.isBlank()) return items;
@@ -374,5 +439,40 @@ public class MaterialPurchaseDocOrchestrator {
 
     private String str(Object v) {
         return v != null ? v.toString().trim() : null;
+    }
+
+    private PurchaseOrderDoc resolveDoc(String docId, String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        if (docId != null && !docId.isBlank()) {
+            PurchaseOrderDoc doc = purchaseOrderDocService.getById(docId.trim());
+            if (doc == null || !Objects.equals(doc.getTenantId(), tenantId)) {
+                throw new IllegalArgumentException("采购单据不存在");
+            }
+            return doc;
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            List<PurchaseOrderDoc> docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo.trim());
+            if (!docs.isEmpty()) {
+                return docs.get(0);
+            }
+        }
+        throw new IllegalArgumentException("未找到可用的采购单据记录");
+    }
+
+    private Map<String, Object> copyExecutionItem(Map<String, Object> item, String status, String message) {
+        Map<String, Object> row = new LinkedHashMap<>(item);
+        row.put("executionStatus", status);
+        row.put("executionMessage", message);
+        return row;
+    }
+
+    private Integer toInteger(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) return number.intValue();
+        try {
+            return (int) Double.parseDouble(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

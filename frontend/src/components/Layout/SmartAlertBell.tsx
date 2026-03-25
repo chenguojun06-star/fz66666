@@ -51,8 +51,8 @@ interface AiMessage {
   suggestions?: string[];
 }
 
-const AI_WELCOME = '我是小云。问我任何订单/风险/工厂问题，我直接给结论和数据。';
-const AI_DEFAULT_SUGGESTIONS = ['先帮我排今天处理顺序', '哪些单今天最危险', '哪个工厂正在拖节奏', '先动哪一步最有效'];
+const AI_WELCOME = '我是小云。你直接自然语言跟我说就行，我会分析问题、执行动作，或者通知对应同事去处理。下面这些只是示例。';
+const AI_DEFAULT_SUGGESTIONS = ['先帮我排今天处理顺序', '给我本周工作总结', '给我本月经营报告', '通知跟单跟进这单'];
 // 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
 const SUGGESTION_NAV: Record<string, string> = {
   '整体情况怎么样？': '/dashboard',

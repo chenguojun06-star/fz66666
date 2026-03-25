@@ -6,12 +6,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Autowired
     private MaterialInboundMapper materialInboundMapper;
+
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
 
     @Override
     public IPage<MaterialStock> queryPage(Map<String, Object> params) {
@@ -57,7 +63,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         wrapper.orderByDesc(MaterialStock::getUpdateTime);
 
-        return baseMapper.selectPage(pageInfo, wrapper);
+        IPage<MaterialStock> result = baseMapper.selectPage(pageInfo, wrapper);
+        enrichConversionRate(result == null ? null : result.getRecords());
+        return result;
     }
 
     @Override
@@ -166,6 +174,11 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         MaterialStock exist = this.getOne(query);
         if (exist != null) {
+            if (p.getConversionRate() != null && (exist.getConversionRate() == null || exist.getConversionRate().compareTo(p.getConversionRate()) != 0)) {
+                exist.setConversionRate(p.getConversionRate());
+                exist.setUpdateTime(LocalDateTime.now());
+                this.updateById(exist);
+            }
             return exist;
         }
 
@@ -186,6 +199,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (p.getUnitPrice() != null) {
             newStock.setUnitPrice(p.getUnitPrice());
         }
+        if (p.getConversionRate() != null) {
+            newStock.setConversionRate(p.getConversionRate());
+        }
         if (p.getSupplierName() != null) {
             newStock.setSupplierName(p.getSupplierName());
         }
@@ -196,6 +212,39 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         this.save(newStock);
         return newStock;
+    }
+
+    private void enrichConversionRate(List<MaterialStock> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<String> materialIds = records.stream()
+                .map(MaterialStock::getMaterialId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (materialIds.isEmpty()) {
+            return;
+        }
+        Map<String, BigDecimal> conversionByMaterialId = materialDatabaseService.list(
+                new LambdaQueryWrapper<MaterialDatabase>()
+                        .in(MaterialDatabase::getId, materialIds)
+                        .select(MaterialDatabase::getId, MaterialDatabase::getConversionRate))
+                .stream()
+                .filter(item -> item != null && StringUtils.hasText(item.getId()) && item.getConversionRate() != null)
+                .collect(Collectors.toMap(MaterialDatabase::getId, MaterialDatabase::getConversionRate, (a, b) -> a));
+        if (conversionByMaterialId.isEmpty()) {
+            return;
+        }
+        for (MaterialStock record : records) {
+            if (record == null || record.getConversionRate() != null || !StringUtils.hasText(record.getMaterialId())) {
+                continue;
+            }
+            BigDecimal conversionRate = conversionByMaterialId.get(record.getMaterialId());
+            if (conversionRate != null) {
+                record.setConversionRate(conversionRate);
+            }
+        }
     }
 
     @Override

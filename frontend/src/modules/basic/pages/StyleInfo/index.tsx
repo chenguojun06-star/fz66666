@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Modal, Select, Tabs } from 'antd';
+import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
@@ -22,8 +23,20 @@ import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileC
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { setStyleCoverOverride } from '@/components/StyleAssets';
 
 import './styles.css';
+
+type SizeColorMatrixRow = {
+  color: string;
+  quantities: number[];
+  imageUrl?: string;
+};
+
+type PendingColorImage = {
+  color: string;
+  file: File;
+};
 
 const StyleInfoDetailPage: React.FC = () => {
   const params = useParams();
@@ -75,9 +88,15 @@ const StyleInfoDetailPage: React.FC = () => {
   const [qty3, setQty3] = useState(0);
   const [qty4, setQty4] = useState(0);
   const [qty5, setQty5] = useState(0);
+  const [matrixSizes, setMatrixSizes] = useState<string[]>([]);
+  const [matrixColors, setMatrixColors] = useState<string[]>([]);
+  const [sizeColorMatrixRows, setSizeColorMatrixRows] = useState<SizeColorMatrixRow[]>([]);
+  const [colorImageMap, setColorImageMap] = useState<Record<string, string>>({});
+  const [coverRefreshToken, setCoverRefreshToken] = useState(0);
 
   // 待上传图片
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [pendingColorImages, setPendingColorImages] = useState<PendingColorImage[]>([]);
 
   // ===== 3. 从currentStyle恢复颜色码数数据 =====
   useEffect(() => {
@@ -88,6 +107,7 @@ const StyleInfoDetailPage: React.FC = () => {
       try {
         const config = JSON.parse((currentStyle as any).sizeColorConfig);
         if (config.sizes) {
+          setMatrixSizes(config.sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean));
           setSize1(config.sizes[0] || '');
           setSize2(config.sizes[1] || '');
           setSize3(config.sizes[2] || '');
@@ -95,6 +115,7 @@ const StyleInfoDetailPage: React.FC = () => {
           setSize5(config.sizes[4] || '');
         }
         if (config.colors) {
+          setMatrixColors(config.colors.map((item: unknown) => String(item || '').trim()).filter(Boolean));
           setColor1(config.colors[0] || '');
           setColor2(config.colors[1] || '');
           setColor3(config.colors[2] || '');
@@ -107,6 +128,14 @@ const StyleInfoDetailPage: React.FC = () => {
           setQty3(config.quantities[2] || 0);
           setQty4(config.quantities[3] || 0);
           setQty5(config.quantities[4] || 0);
+        }
+        if (Array.isArray(config.matrixRows)) {
+          setSizeColorMatrixRows(config.matrixRows.map((row: any) => ({
+            color: String(row?.color || ''),
+            quantities: Array.isArray(row?.quantities) ? row.quantities.map((qty: any) => Number(qty || 0)) : [],
+          })));
+        } else {
+          setSizeColorMatrixRows([]);
         }
         if (config.commonSizes) {
           setCommonSizes(config.commonSizes);
@@ -121,6 +150,10 @@ const StyleInfoDetailPage: React.FC = () => {
     }
 
     const legacy = currentStyle as any;
+    const legacySizes = [legacy.size1, legacy.size2, legacy.size3, legacy.size4, legacy.size5].map((item) => String(item || '').trim()).filter(Boolean);
+    const legacyColors = [legacy.color1, legacy.color2, legacy.color3, legacy.color4, legacy.color5].map((item) => String(item || '').trim()).filter(Boolean);
+    setMatrixSizes(legacySizes);
+    setMatrixColors(legacyColors);
     setSize1(legacy.size1 || '');
     setSize2(legacy.size2 || '');
     setSize3(legacy.size3 || '');
@@ -138,16 +171,151 @@ const StyleInfoDetailPage: React.FC = () => {
     setQty3(legacy.qty3 || 0);
     setQty4(legacy.qty4 || 0);
     setQty5(legacy.qty5 || 0);
+    setSizeColorMatrixRows([]);
+    setColorImageMap({});
   }, [currentStyle]);
+
+  useEffect(() => {
+    if (!currentStyle?.id) return;
+    let mounted = true;
+    void (async () => {
+      try {
+        const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+        const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const nextMap: Record<string, string> = {};
+        list.forEach((item: any) => {
+          const bizType = String(item?.bizType || '');
+          if (!bizType.startsWith('color_image::')) return;
+          const color = decodeURIComponent(bizType.slice('color_image::'.length));
+          if (color && item?.fileUrl && !nextMap[color]) {
+            nextMap[color] = String(item.fileUrl);
+          }
+        });
+        if (mounted) {
+          setColorImageMap(nextMap);
+        }
+      } catch {
+        if (mounted) {
+          setColorImageMap({});
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [currentStyle?.id, coverRefreshToken]);
+
+  useEffect(() => {
+    setSizeColorMatrixRows((prev) => prev.map((row) => ({
+      ...row,
+      imageUrl: colorImageMap[row.color] || row.imageUrl,
+    })));
+  }, [colorImageMap]);
+
+  useEffect(() => {
+    const normalized = [...matrixSizes, '', '', '', '', ''];
+    setSize1(normalized[0] || '');
+    setSize2(normalized[1] || '');
+    setSize3(normalized[2] || '');
+    setSize4(normalized[3] || '');
+    setSize5(normalized[4] || '');
+  }, [matrixSizes]);
+
+  useEffect(() => {
+    const normalized = [...matrixColors, '', '', '', '', ''];
+    setColor1(normalized[0] || '');
+    setColor2(normalized[1] || '');
+    setColor3(normalized[2] || '');
+    setColor4(normalized[3] || '');
+    setColor5(normalized[4] || '');
+  }, [matrixColors]);
+
+  useEffect(() => {
+    const currentPatternNo = String(form.getFieldValue('patternNo') || '').trim();
+    if (!isNewPage || currentPatternNo) return;
+    form.setFieldValue('patternNo', `ZYH${dayjs().format('YYYYMMDDHHmmss')}`);
+  }, [form, isNewPage]);
+
+  const handleCoverChange = (url: string | null) => {
+    setCurrentStyle((prev) => (prev ? { ...prev, cover: url || undefined } as any : prev));
+    if (currentStyle?.id || currentStyle?.styleNo) {
+      setStyleCoverOverride(currentStyle?.id, currentStyle?.styleNo, url);
+    }
+  };
+
+  const handleColorImageSync = async (color: string, file: File) => {
+    const bizType = `color_image::${encodeURIComponent(color)}`;
+    if (currentStyle?.id) {
+      const oldRes = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id, bizType } });
+      const oldList = Array.isArray((oldRes as any)?.data) ? (oldRes as any).data : [];
+      await Promise.all(oldList.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('styleId', String(currentStyle.id));
+      formData.append('bizType', bizType);
+      const res = await api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
+      if ((res as any).code !== 200) {
+        throw new Error((res as any).message || '上传失败');
+      }
+      const uploadedUrl = String((res as any)?.data?.fileUrl || '');
+      if (uploadedUrl) {
+        setColorImageMap((prev) => ({ ...prev, [color]: uploadedUrl }));
+        handleCoverChange(uploadedUrl);
+      }
+      setCoverRefreshToken((prev) => prev + 1);
+      return;
+    }
+    setPendingImages((prev) => {
+      const exists = prev.some((item) =>
+        item.name === file.name && item.size === file.size && item.lastModified === file.lastModified
+      );
+      return exists ? prev : [...prev, file];
+    });
+    setPendingColorImages((prev) => [...prev.filter((item) => item.color !== color), { color, file }]);
+  };
+
+  const handleColorImageClear = async (color: string) => {
+    if (currentStyle?.id) {
+      const bizType = `color_image::${encodeURIComponent(color)}`;
+      const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id, bizType } });
+      const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
+      await Promise.all(list.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
+      setColorImageMap((prev) => {
+        const next = { ...prev };
+        delete next[color];
+        return next;
+      });
+      if (String(currentStyle?.cover || '') === String(colorImageMap[color] || '')) {
+        handleCoverChange(null);
+      }
+      setCoverRefreshToken((prev) => prev + 1);
+      return;
+    }
+    const removed = pendingColorImages.find((item) => item.color === color)?.file;
+    if (removed) {
+      setPendingImages((prev) => prev.filter((file) =>
+        !(file.name === removed.name && file.size === removed.size && file.lastModified === removed.lastModified)
+      ));
+    }
+    setPendingColorImages((prev) => prev.filter((item) => item.color !== color));
+  };
 
   // sizeColorConfig对象
   const sizeColorConfig = {
-    sizes: [size1, size2, size3, size4, size5] as [string, string, string, string, string],
-    colors: [color1, color2, color3, color4, color5] as [string, string, string, string, string],
-    quantities: [qty1, qty2, qty3, qty4, qty5] as [number, number, number, number, number],
+    sizes: matrixSizes,
+    colors: matrixColors,
+    quantities: sizeColorMatrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0)),
     commonSizes,
     commonColors,
+    matrixRows: sizeColorMatrixRows.map((row) => ({
+      color: row.color,
+      quantities: row.quantities,
+    })),
   };
+  const totalMatrixQty = sizeColorMatrixRows.reduce(
+    (sum, row) => sum + row.quantities.reduce((subtotal, qty) => subtotal + Number(qty || 0), 0),
+    0
+  );
 
   // ===== 3. 表单操作Hook =====
   const {
@@ -168,6 +336,7 @@ const StyleInfoDetailPage: React.FC = () => {
     isNewPage,
     sizeColorConfig,
     pendingImages,
+    pendingColorImages,
   });
 
   // ===== 4. Tab相关状态（工序、生产制单） =====
@@ -359,6 +528,8 @@ const StyleInfoDetailPage: React.FC = () => {
               isFieldLocked={isFieldLocked}
               pendingImages={pendingImages}
               onPendingImagesChange={setPendingImages}
+              coverRefreshToken={coverRefreshToken}
+              onCoverChange={handleCoverChange}
               size1={size1}
               setSize1={setSize1}
               size2={size2}
@@ -389,6 +560,14 @@ const StyleInfoDetailPage: React.FC = () => {
               setQty4={setQty4}
               qty5={qty5}
               setQty5={setQty5}
+              sizeOptions={matrixSizes}
+              setSizeOptions={setMatrixSizes}
+              colorOptions={matrixColors}
+              setColorOptions={setMatrixColors}
+              sizeColorMatrixRows={sizeColorMatrixRows}
+              setSizeColorMatrixRows={setSizeColorMatrixRows}
+              onColorImageSync={handleColorImageSync}
+              onColorImageClear={handleColorImageClear}
               commonSizes={commonSizes}
               setCommonSizes={setCommonSizes}
               commonColors={commonColors}
@@ -410,6 +589,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleBomTab
                     styleId={currentStyle?.id}
+                    sizeColorConfig={sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
                     bomAssignee={(currentStyle as any)?.bomAssignee}
                     bomStartTime={(currentStyle as any)?.bomStartTime}
@@ -446,6 +626,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     sizeAssignee={(currentStyle as any)?.sizeAssignee}
                     sizeStartTime={(currentStyle as any)?.sizeStartTime}
                     sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
+                    linkedSizes={matrixSizes}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
@@ -532,7 +713,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 key: '3',
                 label: '报价单',
                 disabled: !currentStyle?.id,
-                children: <StyleQuotationTab styleId={currentStyle?.id} totalQty={qty1 + qty2 + qty3 + qty4 + qty5} />
+                children: <StyleQuotationTab styleId={currentStyle?.id} totalQty={totalMatrixQty} />
               },
               {
                 key: '4',

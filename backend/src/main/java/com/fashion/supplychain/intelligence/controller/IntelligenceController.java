@@ -497,15 +497,18 @@ public class IntelligenceController {
             return Result.fail("问题不能为空");
         }
         Result<String> agentResult = aiAgentOrchestrator.executeAgent(question);
+        String commandId = aiAgentOrchestrator.consumeLastCommandId();
         if (!Integer.valueOf(200).equals(agentResult.getCode())) {
             return Result.success(java.util.Map.of(
                     "answer", agentResult.getMessage(),
-                    "source", "error"
+                    "source", "error",
+                    "commandId", commandId
             ));
         }
         return Result.success(java.util.Map.of(
                 "answer", agentResult.getData(),
-                "source", "ai"
+                "source", "ai",
+                "commandId", commandId
         ));
     }
 

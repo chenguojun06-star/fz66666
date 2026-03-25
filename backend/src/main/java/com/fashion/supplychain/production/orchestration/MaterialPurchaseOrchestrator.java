@@ -180,6 +180,15 @@ public class MaterialPurchaseOrchestrator {
         String unit = ParamUtils.toTrimmedString(safeParams.get("unit"));
         String color = ParamUtils.toTrimmedString(safeParams.get("color"));
         String size = ParamUtils.toTrimmedString(safeParams.get("size"));
+        java.math.BigDecimal conversionRate = null;
+        Object conversionRateRaw = safeParams.get("conversionRate");
+        if (conversionRateRaw != null && StringUtils.hasText(String.valueOf(conversionRateRaw))) {
+            try {
+                conversionRate = new java.math.BigDecimal(String.valueOf(conversionRateRaw).trim());
+            } catch (NumberFormatException ignored) {
+                conversionRate = null;
+            }
+        }
         String receiverId = ParamUtils.toTrimmedString(safeParams.get("receiverId"));
         String receiverName = ParamUtils.toTrimmedString(safeParams.get("receiverName"));
         String remark = ParamUtils.toTrimmedString(safeParams.get("remark"));
@@ -202,6 +211,7 @@ public class MaterialPurchaseOrchestrator {
         purchase.setMaterialType(materialType);
         purchase.setSpecifications(specifications);
         purchase.setUnit(unit);
+        purchase.setConversionRate(conversionRate);
         purchase.setColor(color);
         purchase.setSize(size);
         purchase.setPurchaseQuantity(BigDecimal.valueOf(qty));

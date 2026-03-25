@@ -3,6 +3,7 @@ import { App, Button, Upload } from 'antd';
 import { DeleteOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { setStyleCoverOverride } from '@/components/StyleAssets';
 
 interface CoverImageUploadProps {
   styleId?: string | number;
@@ -11,6 +12,8 @@ interface CoverImageUploadProps {
   pendingFiles?: File[];  // 待上传的文件列表
   onPendingFilesChange?: (files: File[]) => void;  // 更新待上传文件
   coverUrl?: string | null;  // 兜底封面URL（选品中心下板时写入cover字段，无附件时展示）
+  refreshTrigger?: number;
+  onCoverChange?: (url: string | null) => void;
 }
 
 /**
@@ -24,6 +27,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   pendingFiles = [],
   onPendingFilesChange,
   coverUrl,
+  refreshTrigger = 0,
+  onCoverChange,
 }) => {
   const { message } = App.useApp();
   const [images, setImages] = useState<any[]>([]);
@@ -54,9 +59,19 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       const res = await api.get<{ code: number; data: any[] }>(`/style/attachment/list?styleId=${styleId}`);
       if (res.code === 200) {
         const imgs = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-        setImages(imgs);
-        if (imgs.length > 0 && currentIndex >= imgs.length) {
-          setCurrentIndex(0);
+        const sorted = coverUrl
+          ? [...imgs].sort((a, b) => {
+              const aCover = String(a?.fileUrl || '') === String(coverUrl || '');
+              const bCover = String(b?.fileUrl || '') === String(coverUrl || '');
+              if (aCover === bCover) return 0;
+              return aCover ? -1 : 1;
+            })
+          : imgs;
+        setImages(sorted);
+        if (sorted.length > 0) {
+          const coverIndex = coverUrl ? sorted.findIndex((item: any) => String(item?.fileUrl || '') === String(coverUrl || '')) : -1;
+          if (coverIndex >= 0) setCurrentIndex(coverIndex);
+          else if (currentIndex >= sorted.length) setCurrentIndex(0);
         }
       }
     } catch {
@@ -71,7 +86,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     if (!isNewMode) {
       fetchImages();
     }
-  }, [fetchImages, isNewMode]);
+  }, [fetchImages, isNewMode, refreshTrigger]);
 
   // 新建模式下添加本地文件
   const handleAddLocalFiles = (fileList: FileList | File[]) => {
@@ -132,12 +147,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       return false;
     }
     // 超出数量限制时跳过（保留前4张）
-    const fileIndex = fileList.indexOf(file);
-    if (fileIndex >= 4) {
-      message.warning('最多上传4张图片，多余的已忽略');
-      return false;
-    }
-
     setLoading(true);
     try {
       const formData = new FormData();
@@ -146,8 +155,13 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       // 使用较长超时（60秒）满足大图上传需求
       const res = await api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
       if ((res as any).code === 200) {
+        const nextCoverUrl = String((res as any)?.data?.fileUrl || '');
+        if (nextCoverUrl) {
+          onCoverChange?.(nextCoverUrl);
+          setStyleCoverOverride(styleId, undefined, nextCoverUrl);
+        }
         // 最后一个文件上传完成后刷新列表
-        if (file === fileList[Math.min(fileList.length - 1, 3)]) {
+        if (file === fileList[fileList.length - 1]) {
           message.success('图片上传成功');
           fetchImages();
         }
@@ -162,6 +176,70 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     return false;
   };
 
+  const handleUploadBatch = async (files: File[]) => {
+    const validFiles = files.filter((file) => file.type.startsWith('image/'));
+
+    if (!validFiles.length) {
+      message.warning('请上传图片文件');
+      return;
+    }
+
+    if (isNewMode) {
+      handleAddLocalFiles(validFiles);
+      return;
+    }
+
+    if (!styleId) {
+      message.warning('请先保存基础信息后再上传图片');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const file of validFiles) {
+        if (file.size > 15 * 1024 * 1024) {
+          message.error(`${file.name} 文件过大，最大15MB`);
+          continue;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('styleId', String(styleId));
+        const res = await api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
+        if ((res as any).code !== 200) {
+          message.error((res as any).message || `${file.name} 上传失败`);
+        } else {
+          const nextCoverUrl = String((res as any)?.data?.fileUrl || '');
+          if (nextCoverUrl) {
+            onCoverChange?.(nextCoverUrl);
+            setStyleCoverOverride(styleId, undefined, nextCoverUrl);
+          }
+        }
+      }
+      message.success('图片上传成功');
+      fetchImages();
+    } catch (error: any) {
+      message.error((error as any)?.message || '上传失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaste = async (event: React.ClipboardEvent<HTMLDivElement>) => {
+    if (!isUploadEnabled) return;
+    const files = Array.from(event.clipboardData.files || []);
+    if (!files.length) return;
+    event.preventDefault();
+    await handleUploadBatch(files);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    if (!isUploadEnabled) return;
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files || []);
+    if (!files.length) return;
+    await handleUploadBatch(files);
+  };
+
   const handleDelete = async (attachmentId: string | number, localIndex?: number) => {
     // 新建模式下删除本地文件
     if (isNewMode && localIndex !== undefined) {
@@ -173,6 +251,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       const res = await api.delete(`/style/attachment/${attachmentId}`);
       if ((res as any).code === 200 && (res as any).data === true) {
         message.success('删除成功');
+        const deletedUrl = String((displayImages.find((item) => String(item?.id) === String(attachmentId)) as any)?.fileUrl || '');
+        if (deletedUrl === String(coverUrl || '')) {
+          const nextCover = (displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as any)?.isCoverFallback) as any)?.fileUrl || null;
+          onCoverChange?.(nextCover);
+          setStyleCoverOverride(styleId, undefined, nextCover);
+        }
         fetchImages();
       } else {
         message.error((res as any).message || '删除失败');
@@ -199,6 +283,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       const res = await api.post(`/style/attachment/${img.id}/set-cover`);
       if ((res as any)?.code === 200 || res === true || (res as any)?.data === true) {
         setCurrentIndex(index);
+        onCoverChange?.(String(img.fileUrl || ''));
+        setStyleCoverOverride(styleId, undefined, String(img.fileUrl || ''));
         message.success('已设置为主图');
       } else {
         message.error((res as any)?.message || '设置主图失败');
@@ -206,6 +292,23 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     } catch {
       message.error('设置主图失败，请重试');
     }
+  };
+
+  const resolveAssetMeta = (img: any, index: number) => {
+    if (!img) return { label: '', color: '#94a3b8' };
+    if (String(img.fileUrl || '') === String(coverUrl || '')) {
+      return { label: '主图', color: 'var(--color-warning)' };
+    }
+    if ((img as any).isCoverFallback) {
+      return { label: '参考图', color: '#64748b' };
+    }
+    if (String(img.bizType || '').startsWith('color_image::')) {
+      return { label: '颜色图', color: '#2563eb' };
+    }
+    if (isNewMode && index === currentIndex) {
+      return { label: '主图', color: 'var(--color-warning)' };
+    }
+    return { label: '参考图', color: '#64748b' };
   };
 
   // 新建模式使用本地预览，否则使用服务器图片
@@ -216,13 +319,18 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       ? images
       : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []);
   const currentImage = displayImages[currentIndex];
+  const currentAssetMeta = resolveAssetMeta(currentImage, currentIndex);
   const isUploadEnabled = isNewMode || (enabled && styleId);
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ marginBottom: 8, fontWeight: 600 }}>封面图</div>
+    <div style={{ marginBottom: 12 }} onPaste={handlePaste}>
+      <div style={{ marginBottom: 8, fontWeight: 600 }}>图片资产</div>
       {/* 大图 */}
       <div
+        onDragOver={(event) => {
+          if (isUploadEnabled) event.preventDefault();
+        }}
+        onDrop={handleDrop}
         style={{
           width: '100%',
           maxWidth: 400,
@@ -239,7 +347,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         }}
       >
         {currentImage ? (
-          <img src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <img src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 12, fontWeight: 600 }}>
+              {currentAssetMeta.label}
+            </div>
+          </div>
         ) : coverUrl ? (
           // 无上传附件但有选品中心下板时的参考图（cover字段）
           <img src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -264,13 +377,13 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      {/* 缩略图列表 - 固定4个框，宽度跟随容器自动适应最大400px */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, width: '100%', maxWidth: 400, marginBottom: 12 }}>
-        {[0, 1, 2, 3].map((idx) => {
+        {Array.from({ length: Math.max(displayImages.length, 4) }).map((_, idx) => {
           const img = displayImages[idx];
           const hover = hoverIndex === idx;
           const canOperate = isNewMode || enabled;
           const isCoverFallback = !!(img as any)?.isCoverFallback;
+          const assetMeta = resolveAssetMeta(img, idx);
           return (
             <div
               key={idx}
@@ -362,19 +475,19 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     </div>
                   )}
                   {/* 主图/参考图标记 */}
-                  {currentIndex === idx && (
+                  {img && (
                     <div
                       style={{
                         position: 'absolute',
                         top: 2,
                         right: 2,
-                        background: isCoverFallback ? 'var(--neutral-text-secondary)' : 'var(--color-warning)',
+                        background: assetMeta.color,
                         color: 'var(--neutral-white)',
                         fontSize: 10,
                         padding: '2px 6px',
                       }}
                     >
-                      {isCoverFallback ? '参考图' : '主图'}
+                      {assetMeta.label}
                     </div>
                   )}
                 </>
@@ -394,7 +507,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             showUploadList={false}
             disabled={!isUploadEnabled}
             multiple
-            maxCount={4}
             accept="image/*"
           >
             <Button
@@ -404,11 +516,16 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               loading={loading}
               title={isNewMode ? '选择图片（保存时上传）' : !styleId ? '请先保存基础信息' : !enabled ? '样衣已完成，无法修改' : ''}
             >
-              {isNewMode ? '选择图片（最多4张）' : !styleId ? '请先保存' : !enabled ? '已锁定' : '上传图片（最多4张）'}
+              {isNewMode ? '选择图片' : !styleId ? '请先保存' : !enabled ? '已锁定' : '上传图片'}
             </Button>
           </Upload>
           {displayImages.length > 0 && <span style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''}</span>}
         </div>
+        {isUploadEnabled ? (
+          <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
+            支持点击选择、拖拽上传、Ctrl/Cmd + V 粘贴上传
+          </div>
+        ) : null}
         {isNewMode && pendingFiles.length > 0 && (
           <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span>💡</span>

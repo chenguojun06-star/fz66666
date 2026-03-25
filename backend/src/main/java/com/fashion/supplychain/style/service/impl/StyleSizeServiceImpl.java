@@ -20,13 +20,17 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
 
     private volatile Boolean imageUrlsColumnExists;
     private volatile Boolean groupNameColumnExists;
+    private volatile Boolean baseSizeColumnExists;
+    private volatile Boolean gradingRuleColumnExists;
 
     @Override
     public List<StyleSize> listByStyleId(Long styleId) {
         boolean includeImageUrls = hasImageUrlsColumn();
         boolean includeGroupName = hasGroupNameColumn();
         LambdaQueryWrapper<StyleSize> queryWrapper;
-        if (includeImageUrls && includeGroupName) {
+        boolean includeBaseSize = hasBaseSizeColumn();
+        boolean includeGradingRule = hasGradingRuleColumn();
+        if (includeImageUrls && includeGroupName && includeBaseSize && includeGradingRule) {
             queryWrapper = new LambdaQueryWrapper<StyleSize>()
                 .select(
                     StyleSize::getId,
@@ -35,6 +39,28 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
                     StyleSize::getPartName,
                     StyleSize::getGroupName,
                     StyleSize::getMeasureMethod,
+                    StyleSize::getBaseSize,
+                    StyleSize::getStandardValue,
+                    StyleSize::getTolerance,
+                    StyleSize::getSort,
+                    StyleSize::getCreateTime,
+                    StyleSize::getUpdateTime,
+                    StyleSize::getImageUrls,
+                    StyleSize::getGradingRule,
+                    StyleSize::getTenantId
+                )
+                .eq(StyleSize::getStyleId, styleId)
+                .orderByAsc(StyleSize::getSort);
+        } else if (includeImageUrls && includeGroupName && includeBaseSize) {
+            queryWrapper = new LambdaQueryWrapper<StyleSize>()
+                .select(
+                    StyleSize::getId,
+                    StyleSize::getStyleId,
+                    StyleSize::getSizeName,
+                    StyleSize::getPartName,
+                    StyleSize::getGroupName,
+                    StyleSize::getMeasureMethod,
+                    StyleSize::getBaseSize,
                     StyleSize::getStandardValue,
                     StyleSize::getTolerance,
                     StyleSize::getSort,
@@ -122,8 +148,14 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
         if (hasGroupNameColumn()) {
             updateWrapper.set(StyleSize::getGroupName, styleSize.getGroupName());
         }
+        if (hasBaseSizeColumn()) {
+            updateWrapper.set(StyleSize::getBaseSize, styleSize.getBaseSize());
+        }
         if (hasImageUrlsColumn()) {
             updateWrapper.set(StyleSize::getImageUrls, styleSize.getImageUrls());
+        }
+        if (hasGradingRuleColumn()) {
+            updateWrapper.set(StyleSize::getGradingRule, styleSize.getGradingRule());
         }
 
         return update(updateWrapper);
@@ -163,6 +195,44 @@ public class StyleSizeServiceImpl extends ServiceImpl<StyleSizeMapper, StyleSize
             return exists;
         } catch (Exception ex) {
             imageUrlsColumnExists = false;
+            return false;
+        }
+    }
+
+    private boolean hasBaseSizeColumn() {
+        Boolean cached = baseSizeColumnExists;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_style_size' AND COLUMN_NAME = 'base_size'",
+                    Integer.class
+            );
+            boolean exists = count != null && count > 0;
+            baseSizeColumnExists = exists;
+            return exists;
+        } catch (Exception ex) {
+            baseSizeColumnExists = false;
+            return false;
+        }
+    }
+
+    private boolean hasGradingRuleColumn() {
+        Boolean cached = gradingRuleColumnExists;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_style_size' AND COLUMN_NAME = 'grading_rule'",
+                    Integer.class
+            );
+            boolean exists = count != null && count > 0;
+            gradingRuleColumnExists = exists;
+            return exists;
+        } catch (Exception ex) {
+            gradingRuleColumnExists = false;
             return false;
         }
     }

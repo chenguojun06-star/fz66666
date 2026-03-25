@@ -52,11 +52,15 @@ public class AiAgentOrchestrator {
     @Autowired
     private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
 
+    @Autowired
+    private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
+
     private Map<String, AgentTool> toolMap;
     private List<AiTool> apiTools;
 
     /** 对话记忆：userId → 最近 N 轮 user+assistant 消息 */
     private final ConcurrentHashMap<String, List<AiMessage>> conversationMemory = new ConcurrentHashMap<>();
+    private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private static final int MAX_MEMORY_TURNS = 6; // 保留最近6轮（12条消息）
     private static final int MAX_USERS_CACHED = 200; // 超过则清理最早的
 
@@ -78,8 +82,13 @@ public class AiAgentOrchestrator {
             return Result.fail("智能服务暂未配置或不可用");
         }
 
+        String commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
+        lastCommandIdHolder.set(commandId);
+        long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
         List<AiMessage> messages = new ArrayList<>();
+        List<JsonNode> teamDispatchCards = new ArrayList<>();
+        List<JsonNode> bundleSplitCards = new ArrayList<>();
         messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
         // 加载对话记忆（最近 N 轮）
         List<AiMessage> history = getConversationHistory(userId);
@@ -96,6 +105,7 @@ public class AiAgentOrchestrator {
             IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, apiTools);
             if (!result.isSuccess()) {
                 log.error("[AiAgent] 推理失败: {}", result.getErrorMessage());
+                aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                 return Result.fail("推理服务暂时不可用: " + result.getErrorMessage());
             }
 
@@ -110,6 +120,7 @@ public class AiAgentOrchestrator {
                 for (AiToolCall toolCall : result.getToolCalls()) {
                     String toolName = toolCall.getFunction().getName();
                     String args = toolCall.getFunction().getArguments();
+                    long toolStartAt = System.currentTimeMillis();
                     log.info("[AiAgent] LLM 决定调用工具: {} | args: {}", toolName, args);
 
                     AgentTool tool = toolMap.get(toolName);
@@ -125,6 +136,9 @@ public class AiAgentOrchestrator {
                         }
                     }
                     log.info("[AiAgent] 工具调用结果:\n{}", toolResult);
+                    aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
+                    captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
+                    captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
                     String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
                     log.info("[AiAgent] 工具证据摘要:\n{}", toolEvidence);
                     messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
@@ -133,14 +147,24 @@ public class AiAgentOrchestrator {
                 // Done!
                 log.info("[AiAgent] 完成任务，进入自反思审查层");
                 String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                revisedContent = appendTeamDispatchCards(revisedContent, teamDispatchCards);
+                revisedContent = appendBundleSplitCards(revisedContent, bundleSplitCards);
 
                 log.info("[AiAgent] 返回最终结果给用户");
                 saveConversationTurn(userId, userMessage, revisedContent);
+                aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
                 return Result.success(revisedContent);
             }
         }
 
+        aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
         return Result.fail("对话轮数超过限制 (" + maxIterations + ")，可能陷入了死循环。");
+    }
+
+    public String consumeLastCommandId() {
+        String commandId = lastCommandIdHolder.get();
+        lastCommandIdHolder.remove();
+        return commandId;
     }
 
     /**
@@ -148,6 +172,8 @@ public class AiAgentOrchestrator {
      * 事件类型：thinking | tool_call | tool_result | answer | error | done
      */
     public void executeAgentStreaming(String userMessage, SseEmitter emitter) {
+        String commandId = null;
+        long requestStartAt = System.currentTimeMillis();
         try {
             if (!inferenceOrchestrator.isAnyModelEnabled()) {
                 emitSse(emitter, "error", Map.of("message", "智能服务暂未配置或不可用"));
@@ -155,7 +181,10 @@ public class AiAgentOrchestrator {
                 return;
             }
 
+            commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
             List<AiMessage> messages = new ArrayList<>();
+            List<JsonNode> teamDispatchCards = new ArrayList<>();
+            List<JsonNode> bundleSplitCards = new ArrayList<>();
             messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
             String userId = UserContext.userId();
             List<AiMessage> history = getConversationHistory(userId);
@@ -168,6 +197,7 @@ public class AiAgentOrchestrator {
 
                 IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, apiTools);
                 if (!result.isSuccess()) {
+                    aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                     emitSse(emitter, "error", Map.of("message", "推理服务暂时不可用: " + result.getErrorMessage()));
                     emitter.complete();
                     return;
@@ -182,6 +212,7 @@ public class AiAgentOrchestrator {
                     for (AiToolCall toolCall : result.getToolCalls()) {
                         String toolName = toolCall.getFunction().getName();
                         String args = toolCall.getFunction().getArguments();
+                        long toolStartAt = System.currentTimeMillis();
                         emitSse(emitter, "tool_call", Map.of("tool", toolName, "arguments", args));
 
                         AgentTool tool = toolMap.get(toolName);
@@ -196,6 +227,9 @@ public class AiAgentOrchestrator {
                                 toolResult = "{\"error\": \"执行失败: " + e.getMessage() + "\"}";
                             }
                         }
+                        aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
+                        captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
+                        captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
                         String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
                         emitSse(emitter, "tool_result", Map.of(
                                 "tool", toolName,
@@ -207,21 +241,28 @@ public class AiAgentOrchestrator {
                     // == 自反思审查 ==
                     emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
                     String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                    revisedContent = appendTeamDispatchCards(revisedContent, teamDispatchCards);
+                    revisedContent = appendBundleSplitCards(revisedContent, bundleSplitCards);
 
                     // 最终回答
                     saveConversationTurn(userId, userMessage, revisedContent);
-                    emitSse(emitter, "answer", Map.of("content", revisedContent));
+                    aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
+                    emitSse(emitter, "answer", Map.of("content", revisedContent, "commandId", commandId));
                     emitSse(emitter, "done", Map.of());
                     emitter.complete();
                     return;
                 }
             }
 
+            aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
             emitSse(emitter, "error", Map.of("message", "对话轮数超过限制"));
             emitter.complete();
 
         } catch (Exception e) {
             log.error("[AiAgent-Stream] 流式执行异常", e);
+            if (commandId != null) {
+                aiAgentTraceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - requestStartAt);
+            }
             try {
                 emitSse(emitter, "error", Map.of("message", "系统异常: " + e.getMessage()));
                 emitter.complete();
@@ -351,7 +392,7 @@ public class AiAgentOrchestrator {
                 intelligenceContext + "\n" +
                 memoryContext +
                 ragContext +
-                "【你的核心能力 — 12 大工具】\n" +
+                "【你的核心能力 — 业务工具】\n" +
                 "① tool_system_overview — 系统全局总览：订单统计、风险概况、今日数据（含昨日对比）、最需关注事项排名\n" +
                 "② tool_query_production_progress — 生产进度查询：按订单号/款式/状态/日期范围/工厂筛选，返回详细进度\n" +
                 "③ tool_smart_report — 智能报告生成：日报(daily)/周报(weekly)/月报(monthly)，含环比数据、工厂排名、风险摘要、成本汇总\n" +
@@ -371,7 +412,18 @@ public class AiAgentOrchestrator {
                 "⑰ tool_scan_undo — 扫码撤回：撤回错误扫码记录，受工资结算/后续工序/时效限制\n" +
                 "⑱ tool_cutting_task_create — 裁剪单创建：按款号+颜色尺码数量直接创建裁剪单\n" +
                 "⑲ tool_order_edit — 订单编辑：修改备注、紧急程度、工厂、客户、预计出货日期等\n" +
-                "⑳ tool_payroll_approve — 工资结算审批：approve(通过) / cancel(取消/驳回)\n\n" +
+                "⑳ tool_payroll_approve — 工资结算审批：approve(通过) / cancel(取消/驳回)\n" +
+                "㉑ tool_team_dispatch — 协同派单：把任务直接分派给真实员工，自动匹配跟单/生产主管/采购/财务/仓库/质检等岗位并发站内通知\n" +
+                "㉒ tool_material_audit — 面辅料审核：查看待发起采购初审/待采购初审/待领取审核，并支持直接发起、通过、驳回审核\n" +
+                "㉓ tool_material_reconciliation — 物料对账：查看对账单、更新状态、退回上一步、解释异常、派发责任人跟进\n" +
+                "㉔ tool_finance_workflow — 财务工作流：查看待付款/待审批、发起付款、确认线下付款、驳回付款、通过报销、通过成品结算\n" +
+                "㉕ tool_sample_workflow — 样衣开发与样板生产：查看样衣开发状态、启动/完成阶段、更新样衣进度、样衣审核、推到下单管理、样板领取/完成/入库/审核\n" +
+                "㉖ tool_sample_loan — 样衣借调与归还：处理样衣借出/归还，面向销售样、开发样等库存协同\n" +
+                "㉗ tool_warehouse_op_log — 仓库操作日志：查询样衣借调/归还、大货出库等审计轨迹\n" +
+                "㉘ tool_material_receive — 面辅料到货与智能收货：查看智能收货预览、一键智能收货、单条领取、到货登记、到货入库、撤回收货\n" +
+                "㉙ tool_style_template — 模板库与多码单价：从款式生成模板、应用模板、同步工序单价、查看/保存多码单价\n" +
+                "㉚ tool_material_doc_receive — 采购单据自动收货：基于已上传单据回放识别结果，并自动登记到货或自动到货入库\n" +
+                "㉛ tool_bundle_split_transfer — 拆菲转派：把一个菲号按数量拆成两个执行子菲号，也支持在未继续流转时撤回拆菲，让数据自动归回原有菲号\n\n" +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
@@ -389,10 +441,24 @@ public class AiAgentOrchestrator {
                 "6. 当用户问\"现在最应该关注什么\" → 调 tool_system_overview 读取 topPriorities，按优先级逐条解读并给出操作建议\n" +
                 "7. 库存问题 → 面辅料用 tool_query_warehouse_stock；样衣用 tool_sample_stock；成品/大货用 tool_finished_product_stock\n" +
                 "8. 客户/人员问题 → 客户档案用 tool_query_crm_customer；员工信息用 tool_query_system_user\n" +
-                "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 变更审批用 tool_change_approval(action=list_pending)；工资结算审批用 tool_payroll_approve\n" +
+                "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 变更审批用 tool_change_approval(action=list_pending)；工资结算审批用 tool_payroll_approve；面辅料采购初审/领取审核用 tool_material_audit(action=list_material_audits)\n" +
                 "10. 扫码撤回（\"撤回刚才那条扫码/撤销菲号扫码\"）→ 调 tool_scan_undo，优先传 recordId，其次传 scanCode\n" +
                 "11. 创建裁剪单（\"帮我开裁剪单\"）→ 调 tool_cutting_task_create\n" +
-                "12. 修改订单（\"把这个订单交期改到xx/备注改成xx\"）→ 调 tool_order_edit\n\n" +
+                "12. 修改订单（\"把这个订单交期改到xx/备注改成xx\"）→ 调 tool_order_edit\n" +
+                "13. 人员协同（\"通知跟单跟进这单/安排采购今天处理缺料/找财务确认回款/让生产主管推进\"）→ 优先调 tool_team_dispatch(action=dispatch)，明确责任岗位、时效、关联订单；执行后必须回报已分派给谁\n" +
+                "13.1 协同进度（\"谁在处理这单/这单通知出去了吗/财务接单没有\"）→ 调 tool_team_dispatch(action=query_status)\n" +
+                "13.2 协同回写（\"我接单了/我开始处理了/我处理完成了\"）→ 调 tool_team_dispatch(action=accept_task/start_task/complete_task)\n" +
+                "13.3 协同列表（\"列出当前协同任务/最近哪些任务卡住了\"）→ 调 tool_team_dispatch(action=list_tasks)\n" +
+                "14. 面辅料审核（\"帮我看面辅料待审核/发起这张采购单初审/通过这张领取单/驳回这张采购单\"）→ 必须优先调 tool_material_audit，不要只回答流程说明\n" +
+                "15. 物料对账（\"帮我看物料对账/通过这张对账/退回这张对账/这张对账为什么异常/通知财务处理这张对账\"）→ 必须优先调 tool_material_reconciliation\n" +
+                "16. 财务审批与付款（\"帮我看财务待审批/通过这张报销/发起这张对账付款/确认线下付款\"）→ 必须优先调 tool_finance_workflow\n" +
+                "17. 样衣开发与样板（\"把这款样衣开工/样衣进度改到80/样衣审核通过/推到下单管理/让样板入库\"）→ 必须优先调 tool_sample_workflow\n\n" +
+                "18. 样衣借调与归还（\"借一件样衣给客户/这件样衣归还入库\"）→ 调 tool_sample_loan\n" +
+                "19. 仓库追溯（\"谁借走了这件样衣/最近谁做了样衣归还\"）→ 调 tool_warehouse_op_log\n" +
+                "20. 面辅料到货与收货（\"看看这单能不能智能收货/把这张采购单登记到货/直接到货入库/一键收完这单面辅料\"）→ 必须优先调 tool_material_receive\n" +
+                "21. 模板库与多码单价（\"从这款生成模板/把模板套到这款样衣/同步工序单价/查看多码单价/保存多码单价\"）→ 必须优先调 tool_style_template\n" +
+                "22. 采购单据自动执行（\"按最新采购单据自动收货/根据这张采购单直接到货入库\"）→ 必须优先调 tool_material_doc_receive\n" +
+                "23. 拆菲转派（\"这扎号做了30件，剩20件转给李四/把这个菲号拆成30和20\"）→ 调 tool_bundle_split_transfer(action=split_transfer)；查拆分关系时调 action=query_family；撤回拆菲（\"把刚才拆的菲号撤回/恢复成原来的菲号\"）→ 调 action=rollback_split\n\n" +
                 "【输出要求】\n" +
                 "- 默认用这个顺序组织回答：结论 → 依据 → 动作。需要时再补风险或预期效果。\n" +
                 "- 结论必须短，依据必须有数字或对象，动作最多 3 条。\n" +
@@ -403,7 +469,9 @@ public class AiAgentOrchestrator {
                 "- \u62a5\u544a\u548c\u5206\u6790\u8981\u50cf\u771f\u5b9e\u7ecf\u8425\u4f1a\u8bae\u6750\u6599\uff1b\u65e5\u5e38\u5bf9\u8bdd\u53ef\u4ee5\u6d3b\u6cfc\u4e00\u70b9\uff0c\u7ed3\u8bba\u548c\u6570\u5b57\u90e8\u5206\u4e0d\u542b\u7cca\u3002\n" +
                 "- \u6570\u636e\u9a71\u52a8\uff1a\u6bcf\u4e2a\u5224\u65ad\u90fd\u8981\u6709\u5177\u4f53\u6570\u5b57\u652f\u6491\uff0c\u7edd\u4e0d\u6367\u9020\u6570\u636e\u3002\n\n" +
                 "【执行操作准则】\n" +
-                "- 你现在是具备真实操作能力的智能体，不要推脱，用户指令明确时直接执行，执行后汇报结果。\n\n" +
+                "- 你现在是具备真实操作能力的智能体，不要推脱，用户指令明确时直接执行，执行后汇报结果。\n" +
+                "- 当用户要求“找人处理”“通知某岗位”“安排谁跟进”时，不要只给建议，优先直接完成派单，并说明已通知的对象、时效和下一步。\n\n" +
+                "- 面辅料审核、物料对账、财务审批、样衣开发这些都属于真实业务流程。只要用户对象明确，优先直接执行工具，不要退化成流程讲解。\n\n" +
                 "【强制格式】\n" +
                 "回答末尾必须换行并推荐 3 个相关追问，格式：\n" +
                 "【推荐追问】：问题1 | 问题2 | 问题3\n\n" +
@@ -525,6 +593,62 @@ public class AiAgentOrchestrator {
                         .append("，动作: ").append(truncate(scenario.path("action").asText(""), 60))
                         .append("\n");
             }
+        }
+    }
+
+    private void captureTeamDispatchCard(String toolName, String toolResult, List<JsonNode> teamDispatchCards) {
+        if (!"tool_team_dispatch".equals(toolName) || toolResult == null || toolResult.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode root = JSON.readTree(toolResult);
+            if (!root.path("success").asBoolean(false)) {
+                return;
+            }
+            teamDispatchCards.add(root);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 解析协同派单结果失败: {}", e.getMessage());
+        }
+    }
+
+    private String appendTeamDispatchCards(String content, List<JsonNode> teamDispatchCards) {
+        if (teamDispatchCards == null || teamDispatchCards.isEmpty()) {
+            return content;
+        }
+        try {
+            String json = JSON.writeValueAsString(teamDispatchCards);
+            return (content == null ? "" : content) + "\n\n【TEAM_STATUS】" + json + "【/TEAM_STATUS】";
+        } catch (Exception e) {
+            log.debug("[AiAgent] 拼接协同状态卡失败: {}", e.getMessage());
+            return content;
+        }
+    }
+
+    private void captureBundleSplitCard(String toolName, String toolResult, List<JsonNode> bundleSplitCards) {
+        if (!"tool_bundle_split_transfer".equals(toolName) || toolResult == null || toolResult.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode root = JSON.readTree(toolResult);
+            if (!root.path("success").asBoolean(false)) {
+                return;
+            }
+            bundleSplitCards.add(root);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 解析拆菲转派结果失败: {}", e.getMessage());
+        }
+    }
+
+    private String appendBundleSplitCards(String content, List<JsonNode> bundleSplitCards) {
+        if (bundleSplitCards == null || bundleSplitCards.isEmpty()) {
+            return content;
+        }
+        try {
+            String json = JSON.writeValueAsString(bundleSplitCards);
+            return (content == null ? "" : content) + "\n\n【BUNDLE_SPLIT】" + json + "【/BUNDLE_SPLIT】";
+        } catch (Exception e) {
+            log.debug("[AiAgent] 拼接拆菲转派卡失败: {}", e.getMessage());
+            return content;
         }
     }
 

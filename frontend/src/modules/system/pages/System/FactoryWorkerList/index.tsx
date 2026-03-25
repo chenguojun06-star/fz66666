@@ -224,7 +224,7 @@ const FactoryWorkerList: React.FC = () => {
               >
                 创建账号
               </Button>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.factory)}>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.productionPartners)}>
                 返回供应商管理
               </Button>
             </Space>

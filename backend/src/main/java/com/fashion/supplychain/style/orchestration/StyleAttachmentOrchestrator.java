@@ -231,6 +231,11 @@ public class StyleAttachmentOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("附件不存在");
         }
+        StyleInfo style = null;
+        try {
+            style = styleInfoService.getById(Long.valueOf(String.valueOf(current.getStyleId())));
+        } catch (Exception ignore) {
+        }
         String type = StringUtils.hasText(current.getBizType()) ? current.getBizType().trim() : null;
         if ("pattern".equalsIgnoreCase(type) && isPatternLocked(String.valueOf(current.getStyleId()))) {
             throw new IllegalStateException("纸样已完成，无法修改，请先回退");
@@ -242,6 +247,22 @@ public class StyleAttachmentOrchestrator {
                 return true;
             }
             throw new IllegalStateException("删除失败");
+        }
+        String currentCover = style == null ? null : style.getCover();
+        if (StringUtils.hasText(currentCover) && currentCover.trim().equals(String.valueOf(current.getFileUrl()).trim())) {
+            List<StyleAttachment> remainingImages = styleAttachmentService.listByStyleId(String.valueOf(current.getStyleId()))
+                    .stream()
+                    .filter(item -> item != null && StringUtils.hasText(item.getFileType()) && item.getFileType().contains("image"))
+                    .toList();
+            String nextCover = remainingImages.isEmpty() ? null : remainingImages.get(0).getFileUrl();
+            try {
+                styleInfoService.lambdaUpdate()
+                        .eq(StyleInfo::getId, Long.valueOf(String.valueOf(current.getStyleId())))
+                        .set(StyleInfo::getCover, nextCover)
+                        .update();
+            } catch (Exception e) {
+                log.warn("[ATTACHMENT-DELETE] 封面重置失败: styleId={}, nextCover={}", current.getStyleId(), nextCover, e);
+            }
         }
         return true;
     }

@@ -44,6 +44,7 @@ export const paths = {
   productionList: '/production',
   materialPurchase: '/production/material',
   materialPurchaseDetail: '/production/material/:styleNo',
+  productionPartners: '/production/partners',
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
@@ -87,6 +88,7 @@ export const paths = {
   systemIssues: '/system/issues',
   integrationCenter: '/integration/center',
   intelligenceCenter: '/intelligence/center',
+  aiAgentTraceCenter: '/intelligence/agent-traces',
   crm: '/crm',
   crmReceivables: '/crm/receivables',
   selectionBatch: '/selection',
@@ -179,9 +181,9 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AppstoreOutlined),
     items: [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
-      { label: '样板生产', path: paths.patternProduction, icon: React.createElement(ScissorOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '单价维护', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
+      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },
@@ -191,7 +193,8 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(ShoppingCartOutlined),
     items: [
       { label: '面辅料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
-      { label: '供应商管理', path: paths.factory, icon: React.createElement(TeamOutlined) },
+      { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
+      { label: '物料资料库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
     ],
   },
   {
@@ -206,14 +209,19 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
+    title: '供应商管理',
+    key: 'supplierManagement',
+    icon: React.createElement(TeamOutlined),
+    path: paths.productionPartners,
+  },
+  {
     title: '仓库管理',
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [
-      { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
-      { label: '物料资料库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
-      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },    ],
+      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },
+    ],
   },
   {
     title: 'CRM客户管理',
@@ -304,6 +312,7 @@ export const routeToPermissionCode: Record<string, string> = {
 
   [paths.productionList]: permissionCodes.productionList,
   [paths.materialPurchase]: permissionCodes.materialPurchase,
+  [paths.productionPartners]: permissionCodes.factory,
   [paths.cutting]: permissionCodes.cutting,
   [paths.materialPicking]: permissionCodes.materialPicking,
   [paths.progressDetail]: permissionCodes.progress,
@@ -329,6 +338,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.dataImport]: permissionCodes.dataImport,
   [paths.integrationCenter]: permissionCodes.integrationCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
+  [paths.aiAgentTraceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
   // financeTaxExport: 标准格式免费开放，有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
   [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT

@@ -218,15 +218,18 @@ const StyleProductionTab: React.FC<Props> = ({
             {reviewStatusTag(sampleReviewStatus)}
             {!sampleReviewStatus && !sampleCompleted && (
               <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                （样衣完成后可添加审核记录）
+                （样衣生产完成后可记录审核结论）
               </span>
             )}
           </div>
           {sampleCompleted && (
             <Button size="small" onClick={openReviewModal}>
-              {sampleReviewStatus ? '修改审核' : '记录审核'}
+              {sampleReviewStatus ? '修改审核结论' : '记录审核结论'}
             </Button>
           )}
+        </div>
+        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-secondary)', lineHeight: '1.8', marginBottom: sampleReviewStatus ? 8 : 0 }}>
+          审核通过只代表样衣确认通过，完成入库后才算样衣闭环。
         </div>
         {sampleReviewStatus && (
           <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-secondary)', lineHeight: '1.8' }}>
@@ -283,12 +286,12 @@ const StyleProductionTab: React.FC<Props> = ({
 
       {/* 样衣审核 Modal */}
       <Modal
-        title="样衣审核记录"
+        title="记录样衣审核结论"
         open={reviewModalVisible}
         onCancel={() => setReviewModalVisible(false)}
         onOk={handleReviewSave}
         confirmLoading={reviewSaving}
-        okText="保存"
+        okText="保存结论"
         cancelText="取消"
         width="40vw"
         destroyOnHidden

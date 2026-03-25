@@ -78,6 +78,7 @@ const _FinishedInventory: React.FC = () => {
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
+  const currentPageSize = pagination.pagination.pageSize;
 
   // ===== 使用 useModal 管理弹窗 =====
   const outboundModal = useModal<FinishedInventory>();
@@ -113,8 +114,6 @@ const _FinishedInventory: React.FC = () => {
         {
           page: 1,
           pageSize: 500,
-          keyword: searchText || undefined,
-          orderNo: searchText || undefined,
           factoryType: selectedFactoryType || undefined,
         }
       );
@@ -132,11 +131,11 @@ const _FinishedInventory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchText, selectedFactoryType, showSmartErrorNotice, reportSmartError]);
+  }, [selectedFactoryType, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   // 前端筛选 + 按订单+款号聚合逻辑
   const dataSource = useMemo(() => {
@@ -195,6 +194,9 @@ const _FinishedInventory: React.FC = () => {
 
     return Array.from(groupMap.values());
   }, [rawDataSource, searchText, selectedFactoryType, statusValue]);
+
+  const totalRecords = dataSource.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / currentPageSize));
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -755,7 +757,14 @@ const _FinishedInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             scroll={{ x: 1400 }}
-            pagination={pagination.pagination}
+            pagination={{
+              ...pagination.pagination,
+              total: totalRecords,
+              simple: false,
+              showTotal: (total, range) => `第 ${pagination.pagination.current}/${totalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+              pageSizeOptions: ['20', '50', '100', '200'],
+              onChange: pagination.onChange,
+            }}
           />
         </Card>
 

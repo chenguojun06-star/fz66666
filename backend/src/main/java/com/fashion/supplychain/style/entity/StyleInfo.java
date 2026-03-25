@@ -294,6 +294,9 @@ public class StyleInfo {
     private Integer latestProductionProgress;
 
     @TableField(exist = false)
+    private String latestPatternStatus;
+
+    @TableField(exist = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime maintenanceTime;
 

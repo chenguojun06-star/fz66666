@@ -21,7 +21,7 @@ interface StyleActionButtonsProps {
 
 /**
  * 款式详情操作按钮组
- * 包含：返回列表、解锁编辑、保存、样衣完成、推送到订单
+ * 包含：返回列表、解锁编辑、保存、开发完成、推送到订单
  */
 const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
   saving,
@@ -47,10 +47,10 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
     borderColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--color-success)',
   };
 
-  // 推送到下单管理需要：样衣完成 + 有工序数据 + 未推送
+  // 推送到下单管理需要：样衣开发完成 + 有工序数据 + 未推送
   const canPushToOrder = sampleCompleted && hasProcessData && !pushedToOrder;
   const pushToOrderTitle = !sampleCompleted
-    ? '请先完成样衣制作'
+    ? '请先标记样衣开发完成'
     : !hasProcessData
     ? '请先配置工序'
     : pushedToOrder
@@ -82,7 +82,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
         {saveButtonText}
       </Button>
 
-      {/* 样衣完成（仅详情页显示） */}
+      {/* 样衣开发完成（仅详情页显示） */}
       {!isNewPage && (
         <Button
           type="primary"
@@ -92,7 +92,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           onClick={onCompleteSample}
           size="small"
         >
-          {sampleCompleted ? '样衣已完成' : '样衣完成'}
+          {sampleCompleted ? '开发已完成' : '标记开发完成'}
         </Button>
       )}
 

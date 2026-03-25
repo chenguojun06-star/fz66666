@@ -69,7 +69,8 @@ const ProfileInfoTab: React.FC = () => {
 
     const [theme, setTheme] = useState<string>(() => {
         try {
-            return localStorage.getItem(getUserThemeKey()) || fallbackTheme;
+            const savedTheme = String(localStorage.getItem(getUserThemeKey()) || '').trim();
+            return !savedTheme || savedTheme === 'default' ? fallbackTheme : savedTheme;
         } catch {
             return fallbackTheme;
         }
@@ -194,7 +195,7 @@ const ProfileInfoTab: React.FC = () => {
     }, [canManageSmartFlags]);
 
     const onThemeChange = (next: string) => {
-        const v = String(next || '').trim() || 'default';
+        const v = String(next || '').trim() || fallbackTheme;
         setTheme(v);
         applyTheme(v);
         try {
@@ -447,9 +448,9 @@ const ProfileInfoTab: React.FC = () => {
                             value={theme}
                             onChange={onThemeChange}
                             options={[
-                                { value: 'default', label: '默认主题（浅色）' },
+                                { value: 'white', label: '默认主题（纯白）' },
+                                { value: 'blue', label: '经典蓝主题（深蓝侧栏）' },
                                 { value: 'lightblue', label: '浅蓝主题（浅色）' },
-                                { value: 'white', label: '纯白主题（浅色）' },
                                 { value: 'dark', label: '深色主题（雾黑）' },
                             ]}
                         />

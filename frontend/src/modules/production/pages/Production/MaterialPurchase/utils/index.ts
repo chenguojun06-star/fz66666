@@ -73,6 +73,27 @@ export const formatMaterialQuantityWithUnit = (value: unknown, unit?: unknown, p
   return unitText ? `${quantityText} ${unitText}` : quantityText;
 };
 
+export const computeReferenceKilograms = (
+  meterUsage: unknown,
+  conversionRate: unknown,
+  precision = MATERIAL_QUANTITY_PRECISION,
+) => {
+  const meters = normalizeMaterialQuantity(meterUsage, precision);
+  const rate = Number(conversionRate);
+  if (!Number.isFinite(rate) || rate <= 0) return null;
+  return normalizeMaterialQuantity(meters / rate, precision);
+};
+
+export const formatReferenceKilograms = (
+  meterUsage: unknown,
+  conversionRate: unknown,
+  precision = MATERIAL_QUANTITY_PRECISION,
+) => {
+  const kilograms = computeReferenceKilograms(meterUsage, conversionRate, precision);
+  if (kilograms == null) return '-';
+  return `${formatMaterialQuantity(kilograms, precision)} 公斤`;
+};
+
 export const getStatusConfig = (status: MaterialPurchaseType['status']) => {
   // 处理空状态或未定义
   if (!status || String(status).trim() === '') {

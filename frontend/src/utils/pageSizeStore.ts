@@ -11,6 +11,22 @@
  */
 
 const KEY_PREFIX = 'ps:';
+export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE_OPTIONS = ['20', '50', '100', '200'] as const;
+
+function resolveDefaultPageSize(defaultVal: number): number {
+  return Number.isFinite(defaultVal) && defaultVal > 0
+    ? defaultVal
+    : DEFAULT_PAGE_SIZE;
+}
+
+export function normalizePageSize(size: number, defaultVal = DEFAULT_PAGE_SIZE): number {
+  const fallback = resolveDefaultPageSize(defaultVal);
+  if (!Number.isFinite(size) || size <= 0) {
+    return fallback;
+  }
+  return size;
+}
 
 function getKey(): string {
   try {
@@ -25,12 +41,13 @@ function getKey(): string {
  * @param defaultVal 默认每页条数（用户首次访问时使用）
  */
 export function readPageSize(defaultVal: number): number {
+  const fallback = resolveDefaultPageSize(defaultVal);
   try {
     const raw = localStorage.getItem(getKey());
     const n = raw ? parseInt(raw, 10) : NaN;
-    return Number.isFinite(n) && n > 0 ? n : defaultVal;
+    return normalizePageSize(n, fallback);
   } catch {
-    return defaultVal;
+    return fallback;
   }
 }
 
@@ -40,7 +57,7 @@ export function readPageSize(defaultVal: number): number {
  */
 export function savePageSize(size: number): void {
   try {
-    localStorage.setItem(getKey(), String(size));
+    localStorage.setItem(getKey(), String(normalizePageSize(size)));
   } catch {
     // localStorage 不可用时静默忽略
   }

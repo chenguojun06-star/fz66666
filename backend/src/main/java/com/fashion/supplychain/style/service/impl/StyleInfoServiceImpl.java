@@ -1,11 +1,15 @@
 package com.fashion.supplychain.style.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleOperationLog;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
@@ -52,6 +56,12 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     @Autowired
     @Lazy
     private StyleQuotationService styleQuotationService;
+
+    @Autowired
+    private PatternProductionService patternProductionService;
+
+    @Autowired
+    private SampleStockMapper sampleStockMapper;
 
     @Override
     public IPage<StyleInfo> queryPage(Map<String, Object> params) {
@@ -350,6 +360,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         }
 
         Map<Long, StyleOperationLog> latestMaintenance = new HashMap<>();
+        Map<String, PatternProduction> latestPatternByStyleKey = new HashMap<>();
+        Set<String> stockedStyleKeys = new HashSet<>();
         if (!ids.isEmpty()) {
             List<StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
                     .in(StyleOperationLog::getStyleId, ids)
@@ -364,6 +376,57 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     latestMaintenance.put(log.getStyleId(), log);
                 }
             }
+
+            List<String> styleIdStrings = ids.stream().map(String::valueOf).toList();
+            List<PatternProduction> patterns = patternProductionService.lambdaQuery()
+                    .in(PatternProduction::getStyleId, styleIdStrings)
+                    .eq(PatternProduction::getDeleteFlag, 0)
+                    .orderByDesc(PatternProduction::getUpdateTime)
+                    .orderByDesc(PatternProduction::getCreateTime)
+                    .list();
+            for (PatternProduction pattern : patterns) {
+                if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) {
+                    continue;
+                }
+                try {
+                    Long styleId = Long.valueOf(pattern.getStyleId().trim());
+                    String key = buildStyleColorKey(styleId, pattern.getColor());
+                    if (!latestPatternByStyleKey.containsKey(key)) {
+                        latestPatternByStyleKey.put(key, pattern);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            List<String> styleIdStringsForStock = ids.stream().map(String::valueOf).toList();
+            List<String> styleNosForStock = records.stream()
+                    .map(StyleInfo::getStyleNo)
+                    .filter(StringUtils::hasText)
+                    .toList();
+            List<SampleStock> stocks = sampleStockMapper.selectList(new QueryWrapper<SampleStock>()
+                    .and(wrapper -> wrapper.in("style_id", styleIdStringsForStock)
+                            .or()
+                            .in(!styleNosForStock.isEmpty(), "style_no", styleNosForStock))
+                    .eq("sample_type", "development")
+                    .eq("delete_flag", 0));
+            for (SampleStock stock : stocks) {
+                if (stock == null) {
+                    continue;
+                }
+                if (StringUtils.hasText(stock.getStyleId())) {
+                    try {
+                        Long styleId = Long.valueOf(stock.getStyleId().trim());
+                        stockedStyleKeys.add(buildStyleColorKey(styleId, stock.getColor()));
+                    } catch (Exception ignored) {
+                    }
+                } else if (StringUtils.hasText(stock.getStyleNo())) {
+                    for (StyleInfo style : records) {
+                        if (style != null && StringUtils.hasText(style.getStyleNo()) && stock.getStyleNo().trim().equalsIgnoreCase(style.getStyleNo().trim()) && style.getId() != null) {
+                            stockedStyleKeys.add(buildStyleColorKey(style.getId(), stock.getColor()));
+                        }
+                    }
+                }
+            }
         }
 
         for (StyleInfo style : records) {
@@ -372,9 +435,19 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
 
             StyleOperationLog m = style.getId() != null ? latestMaintenance.get(style.getId()) : null;
+            PatternProduction latestPattern = style.getId() != null
+                    ? latestPatternByStyleKey.get(buildStyleColorKey(style.getId(), style.getColor()))
+                    : null;
             style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
             style.setMaintenanceMan(m != null ? m.getOperator() : null);
             style.setMaintenanceRemark(m != null ? m.getRemark() : null);
+            String latestPatternStatus = latestPattern != null ? latestPattern.getStatus() : null;
+            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
+                    && style.getId() != null
+                    && stockedStyleKeys.contains(buildStyleColorKey(style.getId(), style.getColor()))) {
+                latestPatternStatus = "COMPLETED";
+            }
+            style.setLatestPatternStatus(latestPatternStatus);
 
             String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
             String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
@@ -416,6 +489,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             style.setProgressNode("未开始");
             style.setCompletedTime(null);
         }
+    }
+
+    private String buildStyleColorKey(Long styleId, String color) {
+        return String.valueOf(styleId) + "|" + String.valueOf(color == null ? "" : color).trim().toUpperCase();
     }
 
     @Override

@@ -5,6 +5,7 @@ import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
+import dayjs from 'dayjs';
 
 interface UseStyleFormActionsProps {
   form: FormInstance;
@@ -15,13 +16,15 @@ interface UseStyleFormActionsProps {
   isNewPage: boolean;
   // 颜色码数配置
   sizeColorConfig: {
-    sizes: [string, string, string, string, string];
-    colors: [string, string, string, string, string];
-    quantities: [number, number, number, number, number];
+    sizes: string[];
+    colors: string[];
+    quantities: number[];
     commonSizes: string[];
     commonColors: string[];
+    matrixRows?: Array<{ color: string; quantities: number[]; imageUrl?: string }>;
   };
   pendingImages?: File[];
+  pendingColorImages?: Array<{ color: string; file: File }>;
 }
 
 /**
@@ -36,7 +39,8 @@ export const useStyleFormActions = ({
   setEditLocked,
   isNewPage,
   sizeColorConfig,
-  pendingImages = []
+  pendingImages = [],
+  pendingColorImages = [],
 }: UseStyleFormActionsProps) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -79,17 +83,29 @@ export const useStyleFormActions = ({
 
       // 添加颜色码数配置数据
       normalizedValues.sizeColorConfig = JSON.stringify(sizeColorConfig);
+      if (!String(normalizedValues.patternNo || '').trim()) {
+        normalizedValues.patternNo = `ZYH${dayjs().format('YYYYMMDDHHmmss')}`;
+      }
         normalizedValues.category = normalizeCategoryQuery(normalizedValues.category);
         normalizedValues.season = normalizeSeasonQuery(normalizedValues.season);
 
       // 提取第一个有效颜色作为样衣生产的颜色字段
-      const firstColor = sizeColorConfig.colors.find(c => c && c.trim());
+      const firstColor = sizeColorConfig.matrixRows?.find((row) => row.color && row.color.trim())?.color
+        || sizeColorConfig.colors.find(c => c && c.trim());
       if (firstColor) {
         normalizedValues.color = firstColor.trim();
       }
+      const selectedSizes = sizeColorConfig.sizes
+        .map((size) => String(size || '').trim())
+        .filter(Boolean);
+      if (selectedSizes.length) {
+        normalizedValues.size = selectedSizes.join('/');
+      }
 
       // 计算样衣数量总和
-      const totalQuantity = sizeColorConfig.quantities.reduce((sum, qty) => sum + (qty || 0), 0);
+      const totalQuantity = (sizeColorConfig.matrixRows?.length
+        ? sizeColorConfig.matrixRows.reduce((sum, row) => sum + (row.quantities || []).reduce((subtotal, qty) => subtotal + Number(qty || 0), 0), 0)
+        : sizeColorConfig.quantities.reduce((sum, qty) => sum + (qty || 0), 0));
       if (totalQuantity > 0) {
         normalizedValues.sampleQuantity = totalQuantity;
       }
@@ -154,7 +170,7 @@ export const useStyleFormActions = ({
           const newId = String(res.data.id);
 
           // 上传待上传的图片
-          if (pendingImages.length > 0) {
+          if (pendingImages.length > 0 || pendingColorImages.length > 0) {
             try {
               const uploadPromises = pendingImages.map(async (file) => {
                 const formData = new FormData();
@@ -162,7 +178,14 @@ export const useStyleFormActions = ({
                 formData.append('styleId', newId);
                 return api.post('/style/attachment/upload', formData);
               });
-              const uploadResults = await Promise.all(uploadPromises);
+              const colorUploadPromises = pendingColorImages.map(async ({ color, file }) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('styleId', newId);
+                formData.append('bizType', `color_image::${encodeURIComponent(color)}`);
+                return api.post('/style/attachment/upload', formData);
+              });
+              const uploadResults = await Promise.all([...uploadPromises, ...colorUploadPromises]);
               const successCount = uploadResults.filter((r: any) => r.code === 200).length;
               if (successCount > 0) {
                 message.success(`成功上传 ${successCount} 张图片`);
@@ -197,7 +220,7 @@ export const useStyleFormActions = ({
   };
 
   /**
-   * 样衣完成
+   * 标记样衣开发完成
    */
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
@@ -205,7 +228,7 @@ export const useStyleFormActions = ({
     // 检查样衣生产模块是否已完成
     const productionCompletedTime = (currentStyle as any)?.productionCompletedTime;
     if (!productionCompletedTime) {
-      message.warning('请先完成样衣生产后再进行样衣完成操作');
+      message.warning('请先完成样衣生产后，再标记开发完成');
       return;
     }
 
@@ -213,7 +236,7 @@ export const useStyleFormActions = ({
     try {
       const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`, null, { timeout: 30000 });
       if (res.code === 200) {
-        message.success('样衣开发已完成');
+        message.success('样衣开发已完成，可继续进行审核与入库');
         fetchDetail(String(currentStyle.id));
         return true;
       } else {

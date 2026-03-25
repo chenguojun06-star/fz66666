@@ -69,6 +69,7 @@ function showScanResultConfirm(ctx, data) {
   }
 
   const selectedOption = processOptions[processIndex];
+  const selectedProcessNames = selectedOption ? [selectedOption.value] : [];
   const confirmedQty = normalizePositiveInt(quantity, 1);
 
   ctx.setData({
@@ -82,6 +83,7 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.bundleNo': bundleNo,
     'scanResultConfirm.styleNo': orderDetail?.styleNo || '',
     'scanResultConfirm.processOptions': processOptions,
+    'scanResultConfirm.selectedProcessNames': selectedProcessNames,
     'scanResultConfirm.processIndex': processIndex,
     'scanResultConfirm.scanData': scanData,
     'scanResultConfirm.orderDetail': orderDetail,
@@ -98,6 +100,7 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.timeDisplay': `${scanData && scanData.receiveTime ? scanData.receiveTime : '—'} | ${scanData && scanData.confirmTime ? scanData.confirmTime : '—'}`,
     // 先清空，待异步拉取后补填
     'scanResultConfirm.imageInsight': '',
+    'scanResultConfirm.hasWarehouseSelected': !!selectedOption && selectedOption.scanType === 'warehouse',
   });
 
   // 异步拉取款式难度提示（不阻塞确认弹窗显示）
@@ -146,8 +149,8 @@ function closeScanResultConfirm(ctx) {
  * @param {number} confirmedQty - 确认数量
  * @returns {Object} 提交参数
  */
-function buildScanData(confirm, confirmedQty) {
-  const normalizedScanType = normalizeScanType(confirm.processName, confirm.scanType);
+function buildScanData(confirm, option, confirmedQty) {
+  const normalizedScanType = normalizeScanType(option.value, option.scanType || confirm.scanType);
   const existingScanData = confirm.scanData || {};
   const qualityStage = existingScanData.qualityStage
     ? existingScanData.qualityStage
@@ -156,10 +159,10 @@ function buildScanData(confirm, confirmedQty) {
 
   return {
     ...existingScanData,
-    processName: confirm.processName,
-    progressStage: confirm.progressStage,
+    processName: option.value,
+    progressStage: option.value,
     scanType: normalizedScanType,
-    unitPrice: confirm.unitPrice || 0,
+    unitPrice: option.unitPrice || 0,
     quantity: confirmedQty,
     qualityStage,
     // 入库模式：携带仓库编号
@@ -195,17 +198,23 @@ function buildFriendlyErrorMessage(error) {
  * @param {Object} params.result - 接口返回数据
  * @param {number} params.confirmedQty - 确认数量
  * @param {Object} params.scanData - 提交数据
+ * @param {boolean} [params.closeAfter=true] - 是否关闭确认弹窗
+ * @param {boolean} [params.silent=false] - 是否静默提示
  * @returns {void}
  */
-function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData }) {
+function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData, closeAfter = true, silent = false }) {
   const recordId = result && result.scanRecord && (result.scanRecord.id || result.scanRecord.recordId);
   if (!recordId) {
     const msg = (result && result.message) ? String(result.message) : '提交未落库，请重试';
     throw new Error(msg);
   }
 
-  toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
-  closeScanResultConfirm(ctx);
+  if (!silent) {
+    toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
+  }
+  if (closeAfter) {
+    closeScanResultConfirm(ctx);
+  }
 
   ctx.handleScanSuccess({
     ...result,
@@ -221,6 +230,11 @@ function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData }) {
   });
 }
 
+function getSelectedOptions(confirm) {
+  const selectedNames = Array.isArray(confirm.selectedProcessNames) ? confirm.selectedProcessNames : [];
+  return (confirm.processOptions || []).filter(option => selectedNames.includes(option.value));
+}
+
 /**
  * 工序滚动选择器 - 点击选中
  * @param {Object} ctx - Page 上下文
@@ -231,22 +245,31 @@ function onProcessScrollSelect(ctx, e) {
   const index = e.currentTarget.dataset.index;
   const option = ctx.data.scanResultConfirm.processOptions[index];
   if (!option) return;
+  const selectedNames = new Set(ctx.data.scanResultConfirm.selectedProcessNames || []);
+  if (selectedNames.has(option.value)) {
+    selectedNames.delete(option.value);
+  } else {
+    selectedNames.add(option.value);
+  }
+  const nextSelected = Array.from(selectedNames);
+  const selectedOptions = (ctx.data.scanResultConfirm.processOptions || []).filter(item => nextSelected.includes(item.value));
+  const primaryOption = selectedOptions[0] || option;
 
   ctx.setData({
-    'scanResultConfirm.processIndex': index,
-    'scanResultConfirm.processName': option.value,
-    'scanResultConfirm.progressStage': option.value,
-    'scanResultConfirm.scanType': option.scanType,
-    'scanResultConfirm.unitPrice': option.unitPrice || 0,
+    'scanResultConfirm.processIndex': nextSelected.length ? index : -1,
+    'scanResultConfirm.selectedProcessNames': nextSelected,
+    'scanResultConfirm.processName': primaryOption.value,
+    'scanResultConfirm.progressStage': primaryOption.value,
+    'scanResultConfirm.scanType': primaryOption.scanType,
+    'scanResultConfirm.unitPrice': primaryOption.unitPrice || 0,
+    'scanResultConfirm.hasWarehouseSelected': selectedOptions.some(item => item.scanType === 'warehouse'),
   });
-  // 🔧 修复：切换到 quality 工序时同步 qualityStage
-  if (option.scanType === 'quality') {
+  if (selectedOptions.some(item => item.scanType === 'quality')) {
     const existingScanData = ctx.data.scanResultConfirm.scanData || {};
     existingScanData.qualityStage = existingScanData.qualityStage || 'receive';
     ctx.setData({ 'scanResultConfirm.scanData': existingScanData });
   }
-  // 切换工序时重置仓库选择
-  if (option.scanType !== 'warehouse') {
+  if (!selectedOptions.some(item => item.scanType === 'warehouse')) {
     ctx.setData({ 'scanResultConfirm.warehouseCode': '' });
   }
 }
@@ -304,14 +327,32 @@ async function onConfirmScanResult(ctx) {
       return;
     }
 
-    const scanData = buildScanData(confirm, confirmedQty);
+    const selectedOptions = getSelectedOptions(confirm);
+    if (!selectedOptions.length) {
+      toast.error('请至少选择一个工序');
+      return;
+    }
 
-    // api.production.executeScan 使用 ok() 包装：
-    //   成功 → 返回 resp.data = {success:true, message:"...", scanRecord:{id,...}}
-    //   失败 → throw createBizError(resp)，被下方 catch 捕获
-    const result = await api.production.executeScan(scanData);
+    for (const option of selectedOptions) {
+      const scanData = buildScanData(confirm, option, confirmedQty);
+      const result = await api.production.executeScan(scanData);
+      handleSubmitSuccess({
+        ctx,
+        confirm: {
+          ...confirm,
+          processName: option.value,
+          progressStage: option.value,
+        },
+        result,
+        confirmedQty,
+        scanData,
+        closeAfter: false,
+        silent: true,
+      });
+    }
 
-    handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData });
+    closeScanResultConfirm(ctx);
+    toast.success(`✅ 已完成 ${selectedOptions.length} 个工序扫码`);
   } catch (e) {
     toast.error(buildFriendlyErrorMessage(e));
   } finally {

@@ -17,6 +17,7 @@ interface CuttingBundleRow {
   size: string;
   quantity: number;
   bundleNo?: number;
+  bundleLabel?: string;
   bedNo?: number; // 床号（裁剪批次编号）
   qrCode?: string;
   status?: string;

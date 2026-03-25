@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs, Image } from 'antd';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs, Image, Tag } from 'antd';
 import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -20,6 +20,11 @@ interface Props {
   bomStartTime?: string;
   bomCompletedTime?: string;
   onRefresh?: () => void | Promise<void>;
+  sizeColorConfig?: {
+    sizes?: string[];
+    colors?: string[];
+    matrixRows?: Array<{ color: string; quantities: number[]; imageUrl?: string }>;
+  };
 }
 
 const sortBomRows = (rows: StyleBom[]) => {
@@ -36,6 +41,17 @@ const sortBomRows = (rows: StyleBom[]) => {
   return list;
 };
 
+const normalizeUniqueValues = (values?: string[]) => {
+  const seen = new Set<string>();
+  return (Array.isArray(values) ? values : [])
+    .map((item) => String(item || '').trim())
+    .filter((item) => {
+      if (!item || seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+};
+
 const StyleBomTab: React.FC<Props> = ({
   styleId,
   readOnly,
@@ -43,6 +59,7 @@ const StyleBomTab: React.FC<Props> = ({
   bomStartTime,
   bomCompletedTime,
   onRefresh,
+  sizeColorConfig,
 }) => {
   const { user } = useAuth();
   const { message } = App.useApp();
@@ -73,6 +90,35 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialPage, setMaterialPage] = useState(1);
   const [materialKeyword, setMaterialKeyword] = useState('');
   const [materialTargetRowId, setMaterialTargetRowId] = useState('');
+  const activeSizes = normalizeUniqueValues(sizeColorConfig?.sizes);
+  const activeColors = normalizeUniqueValues(sizeColorConfig?.colors);
+  const parseNumberMap = useCallback((value?: string) => {
+    try {
+      const parsed = JSON.parse(String(value || '{}'));
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, number> : {};
+    } catch {
+      return {};
+    }
+  }, []);
+  const extractSpecLength = useCallback((value?: string) => {
+    const matched = String(value || '').match(/(\d+(?:\.\d+)?)/);
+    return matched ? Number(matched[1]) : 0;
+  }, []);
+  const buildSizeUsageMap = useCallback((usageAmount: number, existing?: string) => {
+    const parsed = parseNumberMap(existing);
+    if (!activeSizes.length) return existing || '';
+    return JSON.stringify(
+      Object.fromEntries(activeSizes.map((size) => [size, Number(parsed[size] ?? usageAmount ?? 0)]))
+    );
+  }, [activeSizes, parseNumberMap]);
+  const buildSizeSpecMap = useCallback((specification?: string, existing?: string) => {
+    const parsed = parseNumberMap(existing);
+    const defaultSpec = extractSpecLength(specification);
+    if (!activeSizes.length) return existing || '';
+    return JSON.stringify(
+      Object.fromEntries(activeSizes.map((size) => [size, Number(parsed[size] ?? defaultSpec ?? 0)]))
+    );
+  }, [activeSizes, extractSpecLength, parseNumberMap]);
   const [materialCreateForm] = Form.useForm();
 
   const [checkingStock, setCheckingStock] = useState(false);
@@ -335,6 +381,8 @@ const StyleBomTab: React.FC<Props> = ({
         specification: '',
         size: '',
         unit: '',
+        patternUnit: '',
+        conversionRate: 1,
         usageAmount: 0,
         lossRate: 0,
         unitPrice: 0,
@@ -358,6 +406,8 @@ const StyleBomTab: React.FC<Props> = ({
       specification: '',
       size: '',
       unit: '',
+      patternUnit: '',
+      conversionRate: 1,
       usageAmount: 0,
       lossRate: 0,
       unitPrice: 0,
@@ -422,7 +472,10 @@ const StyleBomTab: React.FC<Props> = ({
       materialCode: String(m.materialCode || '').trim(),
       materialName: String(m.materialName || '').trim(),
       fabricComposition: String(m.fabricComposition || '').trim(),
+      fabricWeight: String(m.fabricWeight || '').trim(),
       unit: String(m.unit || '').trim(),
+      patternUnit: String(m.patternUnit || m.unit || '').trim(),
+      conversionRate: Number(m.conversionRate ?? 1) || 1,
       supplier: String(m.supplierName || '').trim(),
       specification: String(m.specifications ?? m.specification ?? '').trim(),
       unitPrice: Number(m.unitPrice) || 0,
@@ -434,6 +487,7 @@ const StyleBomTab: React.FC<Props> = ({
     if (materialColor) {
       patch.color = materialColor;
     }
+    patch.sizeSpecMap = buildSizeSpecMap(patch.specification, m.sizeSpecMap);
     const current = (form.getFieldValue(rowId) || {}) as any;
     const merged = { ...current, ...patch };
     merged.totalPrice = calcTotalPrice(merged);
@@ -554,7 +608,14 @@ const StyleBomTab: React.FC<Props> = ({
     for (const r of Array.isArray(rows) ? rows : []) {
       const rid = String(r?.id ?? '');
       if (!rid) continue;
-      next[rid] = { ...r, materialType: normalizeMaterialType<MaterialType>((r as Record<string, unknown>).materialType) };
+      next[rid] = {
+        ...r,
+        materialType: normalizeMaterialType<MaterialType>((r as Record<string, unknown>).materialType),
+        sizeUsageMapObject: parseNumberMap(r.patternSizeUsageMap || r.sizeUsageMap),
+        sizeSpecMapObject: parseNumberMap(r.sizeSpecMap),
+        patternUnit: String(r.patternUnit || r.unit || '').trim(),
+        conversionRate: Number(r.conversionRate ?? 1) || 1,
+      };
     }
     return next;
   };
@@ -583,7 +644,14 @@ const StyleBomTab: React.FC<Props> = ({
     }
     const rid = String(record.id!);
     form.setFieldsValue({
-      [rid]: { ...record, materialType: normalizeMaterialType<MaterialType>((record as Record<string, unknown>).materialType) },
+      [rid]: {
+        ...record,
+        materialType: normalizeMaterialType<MaterialType>((record as Record<string, unknown>).materialType),
+        sizeUsageMapObject: parseNumberMap(record.patternSizeUsageMap || record.sizeUsageMap),
+        sizeSpecMapObject: parseNumberMap(record.sizeSpecMap),
+        patternUnit: String(record.patternUnit || record.unit || '').trim(),
+        conversionRate: Number(record.conversionRate ?? 1) || 1,
+      },
     });
     setEditingKey(rid);
   };
@@ -618,6 +686,19 @@ const StyleBomTab: React.FC<Props> = ({
       if (index > -1) {
         const item = newData[index];
         const newItem: any = { ...item, ...row };
+        const conversionRate = Number(row?.conversionRate ?? newItem.conversionRate ?? 1) || 1;
+        const rawSizeUsageMap = activeSizes.length
+          ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
+          : parseNumberMap(item.patternSizeUsageMap || item.sizeUsageMap);
+        newItem.patternUnit = '米';
+        newItem.conversionRate = conversionRate;
+        newItem.patternSizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.patternSizeUsageMap;
+        newItem.sizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.sizeUsageMap;
+        newItem.sizeSpecMap = activeSizes.length
+          ? JSON.stringify(Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeSpecMapObject?.[size] ?? extractSpecLength(newItem.specification) ?? 0)])))
+          : item.sizeSpecMap;
+        delete newItem.sizeUsageMapObject;
+        delete newItem.sizeSpecMapObject;
         newItem.totalPrice = calcTotalPrice(newItem as any);
         let res;
 
@@ -727,6 +808,19 @@ const StyleBomTab: React.FC<Props> = ({
         const key = String(item.id);
         const row = (allValues?.[key] || {}) as any;
         const newItem: any = { ...item, ...row };
+        const conversionRate = Number(row?.conversionRate ?? newItem.conversionRate ?? 1) || 1;
+        const rawSizeUsageMap = activeSizes.length
+          ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
+          : parseNumberMap(item.patternSizeUsageMap || item.sizeUsageMap);
+        newItem.patternUnit = '米';
+        newItem.conversionRate = conversionRate;
+        newItem.patternSizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.patternSizeUsageMap;
+        newItem.sizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.sizeUsageMap;
+        newItem.sizeSpecMap = activeSizes.length
+          ? JSON.stringify(Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeSpecMapObject?.[size] ?? extractSpecLength(newItem.specification) ?? 0)])))
+          : item.sizeSpecMap;
+        delete newItem.sizeUsageMapObject;
+        delete newItem.sizeSpecMapObject;
         newItem.totalPrice = calcTotalPrice(newItem as any);
 
         if (isTempId(item.id)) {
@@ -782,10 +876,15 @@ const StyleBomTab: React.FC<Props> = ({
       materialType: 'fabricA',
       materialCode: '',
       materialName: '',
-      color: '',
+      color: activeColors.length === 1 ? activeColors[0] : activeColors.join('/'),
       specification: '',
-      size: '',
+      size: activeSizes.join('/'),
+      sizeUsageMap: buildSizeUsageMap(0),
+      patternSizeUsageMap: buildSizeUsageMap(0),
+      sizeSpecMap: buildSizeSpecMap(''),
       unit: '',
+      patternUnit: '',
+      conversionRate: 1,
       usageAmount: 0,
       lossRate: 0,
       unitPrice: 0,
@@ -1014,6 +1113,7 @@ const StyleBomTab: React.FC<Props> = ({
     setMaterialTab,
     setMaterialTargetRowId,
     onApplyPickup: handleApplyPickup,
+    activeSizes,
   });
 
   return (
@@ -1055,6 +1155,22 @@ const StyleBomTab: React.FC<Props> = ({
           return true;
         }}
       />
+      {(activeSizes.length || activeColors.length) ? (
+        <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 12, background: 'rgba(37, 99, 235, 0.04)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {activeSizes.length ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>基础码数</span>
+              {activeSizes.map((size) => <Tag key={size} style={{ margin: 0 }}>{size}</Tag>)}
+            </div>
+          ) : null}
+          {activeColors.length ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>基础颜色</span>
+              {activeColors.map((color) => <Tag key={color} style={{ margin: 0 }}>{color}</Tag>)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {/* 左侧：库存检查和生成采购单 */}
         <Space>
@@ -1255,6 +1371,8 @@ const StyleBomTab: React.FC<Props> = ({
                       { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 160, ellipsis: true },
                       { title: '成分', dataIndex: 'fabricComposition', key: 'fabricComposition', width: 160, ellipsis: true,
                         render: (v: unknown) => String(v || '').trim() || '-' },
+                      { title: '克重', dataIndex: 'fabricWeight', key: 'fabricWeight', width: 90, ellipsis: true,
+                        render: (v: unknown) => String(v || '').trim() || '-' },
                       { title: '类型', dataIndex: 'materialType', width: 90,
                         render: (v: unknown) => getMaterialTypeLabel(v) },
                       { title: '颜色', dataIndex: 'color', width: 90, ellipsis: true },
@@ -1326,6 +1444,7 @@ const StyleBomTab: React.FC<Props> = ({
                         materialType: String(values.materialType || 'accessory').trim(),
                         specifications: String(values.specifications || '').trim(),
                         fabricComposition: String(values.fabricComposition || '').trim(),
+                        fabricWeight: String(values.fabricWeight || '').trim(),
                         unitPrice: Number(values.unitPrice) || 0,
                         remark: String(values.remark || '').trim(),
                         styleNo: String(currentStyleNo || '').trim(),
@@ -1396,6 +1515,9 @@ const StyleBomTab: React.FC<Props> = ({
                     </Form.Item>
                     <Form.Item name="fabricComposition" label="成分">
                       <Input id="fabricComposition" placeholder="如：100%棉" />
+                    </Form.Item>
+                    <Form.Item name="fabricWeight" label="克重">
+                      <Input id="fabricWeight" placeholder="如：220g" />
                     </Form.Item>
                     <Form.Item name="unitPrice" label="单价" initialValue={0}>
                       <InputNumber id="unitPrice" min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />

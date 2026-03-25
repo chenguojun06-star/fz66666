@@ -4,6 +4,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatReferenceKilograms } from '../../utils';
 
 interface PurchasePreviewViewProps {
   previewList: MaterialPurchaseType[];
@@ -110,10 +111,16 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             key: 'unit',
           },
           {
-            title: '采购数量',
+            title: '需求数量',
             dataIndex: 'purchaseQuantity',
             key: 'purchaseQuantity',
             align: 'right' as const,
+          },
+          {
+            title: '参考公斤数',
+            key: 'referenceKilograms',
+            align: 'right' as const,
+            render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
           },
           {
             title: '供应商',

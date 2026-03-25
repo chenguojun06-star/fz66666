@@ -5,6 +5,7 @@ import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCi
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageStatCards from '@/components/common/PageStatCards';
+import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -820,72 +821,15 @@ const ProductionList: React.FC = () => {
           />
 
           {/* 智能提示条 */}
-          {smartActionItems.some((item) => item.value > 0) && (
-            <div style={{
-              display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center',
-              margin: '0 0 8px 0',
-              padding: '8px 12px',
-              background: 'linear-gradient(90deg, #fff9f0 0%, #fff4e8 100%)',
-              border: '1px solid #ffd8a8',
-              borderRadius: 8,
-              fontSize: 13,
-            }}>
-              <span style={{ color: '#595959', fontWeight: 500 }}>⚡ 智能提示：</span>
-              {smartActionItems.filter((item) => item.value > 0).map((item) => {
-                const colorMap = {
-                  orange: '#d46b08',
-                  red: '#cf1322',
-                  cyan: '#08979c',
-                  green: '#389e0d',
-                } as const;
-                const bgMap = {
-                  orange: '#fff7e6',
-                  red: '#fff1f0',
-                  cyan: '#e6fffb',
-                  green: '#f6ffed',
-                } as const;
-                const color = colorMap[item.tone];
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    title={item.hint}
-                    onClick={item.onClick}
-                    style={{
-                      border: `1px solid ${item.active ? color : `${color}33`}`,
-                      background: item.active ? `${color}14` : bgMap[item.tone],
-                      color,
-                      borderRadius: 999,
-                      padding: '4px 10px',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item.label} {item.value}
-                  </button>
-                );
-              })}
-              {smartQueueFilter !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSmartQueueFilter('all');
-                  }}
-                  style={{
-                    marginLeft: 'auto',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#8c8c8c',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                  }}
-                >
-                  清除筛选
-                </button>
-              )}
-            </div>
-          )}
+          <SmartPredictionStrip
+            items={smartActionItems.map((item) => ({
+              ...item,
+              count: item.value,
+            }))}
+            onClear={smartQueueFilter !== 'all' ? () => {
+              setSmartQueueFilter('all');
+            } : undefined}
+          />
 
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar

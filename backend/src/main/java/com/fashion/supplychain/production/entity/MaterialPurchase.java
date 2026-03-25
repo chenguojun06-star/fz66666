@@ -35,6 +35,11 @@ public class MaterialPurchase {
 
     private BigDecimal purchaseQuantity;
 
+    /**
+     * 换算值：几米一公斤（参考值）
+     */
+    private BigDecimal conversionRate;
+
     private Integer arrivedQuantity;
 
     /**

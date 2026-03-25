@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, } from 'antd';
+import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -15,6 +15,7 @@ interface Props {
   sizeAssignee?: string;
   sizeStartTime?: string;
   sizeCompletedTime?: string;
+  linkedSizes?: string[];
   simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮、提示信息
   onRefresh?: () => void;
 }
@@ -24,11 +25,20 @@ type MatrixCell = {
   value: number;
 };
 
+type GradingZone = {
+  key: string;
+  label: string;
+  sizes: string[];
+  step: number;
+};
+
 type MatrixRow = {
   key: string;
   groupName: string;
   partName: string;
   measureMethod: string;
+  baseSize: string;
+  gradingZones: GradingZone[];
   tolerance: number;
   sort: number;
   cells: Record<string, MatrixCell>;
@@ -64,6 +74,18 @@ const splitSizeNames = (name: string) => {
     .filter(Boolean);
   if (!parts.length) return [];
   return parts;
+};
+
+const normalizeSizeList = (sizes: string[] = []) => {
+  return sortSizeNames(
+    Array.from(
+      new Set(
+        sizes
+          .map((item) => String(item || '').trim())
+          .filter(Boolean),
+      ),
+    ),
+  );
 };
 
 const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
@@ -166,12 +188,74 @@ const normalizeChunkImageAssignments = (list: MatrixRow[]) => {
   return normalizedRows;
 };
 
+const createGradingZone = (sizes: string[] = [], label = '跳码区'): GradingZone => ({
+  key: `grading-zone-${Date.now()}-${Math.random()}`,
+  label,
+  sizes,
+  step: 0,
+});
+
+const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[]) => {
+  const validSizes = new Set(sizeColumns);
+  const used = new Set<string>();
+  return zones
+    .map((zone, index) => {
+      const nextSizes = zone.sizes.filter((size) => validSizes.has(size) && !used.has(size));
+      nextSizes.forEach((size) => used.add(size));
+      return {
+        key: zone.key || `grading-zone-${index}`,
+        label: String(zone.label || `跳码区${index + 1}`),
+        sizes: nextSizes,
+        step: toNumberSafe(zone.step),
+      };
+    })
+    .filter((zone) => zone.sizes.length > 0);
+};
+
+const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
+  try {
+    const parsed = JSON.parse(String(rule || '{}'));
+    const zones = normalizeGradingZones(
+      Array.isArray(parsed?.zones) ? parsed.zones.map((zone: any, index: number) => ({
+        key: String(zone?.key || `grading-zone-${index}`),
+        label: String(zone?.label || `跳码区${index + 1}`),
+        sizes: Array.isArray(zone?.sizes) ? zone.sizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
+        step: toNumberSafe(zone?.step),
+      })) : [],
+      sizeColumns
+    );
+    const baseSize = sizeColumns.includes(String(parsed?.baseSize || '').trim())
+      ? String(parsed.baseSize).trim()
+      : '';
+    return { baseSize, gradingZones: zones };
+  } catch {
+    return {
+      baseSize: '',
+      gradingZones: [],
+    };
+  }
+};
+
+const serializeGradingRule = (row: MatrixRow, sizeColumns: string[]) => {
+  const gradingZones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
+  return JSON.stringify({
+    baseSize: String(row.baseSize || '').trim(),
+    zones: gradingZones.map((zone) => ({
+      key: zone.key,
+      label: zone.label,
+      sizes: zone.sizes,
+      step: toNumberSafe(zone.step),
+    })),
+  });
+};
+
 const StyleSizeTab: React.FC<Props> = ({
   styleId,
   readOnly,
   sizeAssignee,
   sizeStartTime,
   sizeCompletedTime,
+  linkedSizes = [],
   simpleView = false,
   onRefresh,
 }) => {
@@ -187,6 +271,10 @@ const StyleSizeTab: React.FC<Props> = ({
 
   const [addSizeOpen, setAddSizeOpen] = useState(false);
   const [addGroupOpen, setAddGroupOpen] = useState(false);
+  const [gradingConfigOpen, setGradingConfigOpen] = useState(false);
+  const [gradingTargetRowKey, setGradingTargetRowKey] = useState('');
+  const [gradingDraftBaseSize, setGradingDraftBaseSize] = useState('');
+  const [gradingDraftZones, setGradingDraftZones] = useState<GradingZone[]>([]);
   // 未开始时禁止编辑（需先点击「开始尺寸表」）
   const notStarted = !sizeStartTime && !sizeCompletedTime;
   const [newSizeName, setNewSizeName] = useState('');
@@ -201,6 +289,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
   const { message, modal } = App.useApp();
+  const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
 
   const displayRows = useMemo<DisplayRow[]>(() => {
     const sortedRows = rows
@@ -369,16 +458,15 @@ const StyleSizeTab: React.FC<Props> = ({
         combinedSizeIdsRef.current = Array.from(new Set(combinedIds.map((x) => (typeof x === 'string' ? x : x))));
         originalRef.current = normalizedList;
 
-        const sizes = sortSizeNames(
-          Array.from(
-            new Set(
-              normalizedList
-                .flatMap((x) => splitSizeNames((x as any)?.sizeName as string))
-                .map((x) => String(x || '').trim())
-                .filter(Boolean),
-            ),
-          ),
+        const sizesFromRows = normalizeSizeList(
+          normalizedList
+            .flatMap((x) => splitSizeNames((x as any)?.sizeName as string))
+            .map((x) => String(x || '').trim())
+            .filter(Boolean),
         );
+        const sizes = linkedSizeColumns.length
+          ? normalizeSizeList([...linkedSizeColumns, ...sizesFromRows])
+          : sizesFromRows;
 
         const byPart = new Map<string, StyleSize[]>();
         normalizedList.forEach((it) => {
@@ -395,6 +483,7 @@ const StyleSizeTab: React.FC<Props> = ({
             const groupName = resolveGroupName((items[0] as any)?.groupName as string, partName);
             const key = items.map((x) => String(x.id || '')).filter(Boolean)[0] || mapKey || `tmp-${Date.now()}-${Math.random()}`;
             const measureMethod = items.length ? String((items[0] as Record<string, unknown>).measureMethod || '') : '';
+            const gradingMeta = parseGradingRule((items[0] as any)?.gradingRule, sizes);
             const tolerance = items.length ? toNumberSafe((items[0] as Record<string, unknown>).tolerance) : 0;
             const sort = Math.min(...items.map((x) => toNumberSafe((x as Record<string, unknown>).sort)), 0);
             const cells: Record<string, MatrixCell> = {};
@@ -408,7 +497,18 @@ const StyleSizeTab: React.FC<Props> = ({
             const rawImageUrls = (items[0] as any)?.imageUrls;
             let imageUrls: string[] | undefined;
             try { imageUrls = rawImageUrls ? JSON.parse(rawImageUrls) : undefined; } catch { imageUrls = undefined; }
-            return { key, groupName, partName, measureMethod, tolerance, sort, cells, imageUrls };
+            return {
+              key,
+              groupName,
+              partName,
+              measureMethod,
+              baseSize: String((items[0] as any)?.baseSize || gradingMeta.baseSize || ''),
+              gradingZones: gradingMeta.gradingZones,
+              tolerance,
+              sort,
+              cells,
+              imageUrls,
+            };
           })
           .sort((a, b) => (toNumberSafe(a.sort) || 0) - (toNumberSafe(b.sort) || 0));
 
@@ -426,6 +526,29 @@ const StyleSizeTab: React.FC<Props> = ({
   useEffect(() => {
     fetchSize();
   }, [styleId]);
+
+  useEffect(() => {
+    if (editMode || !linkedSizeColumns.length) return;
+    setSizeColumns((prev) => {
+      const next = normalizeSizeList(linkedSizeColumns);
+      return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+    });
+    setRows((prev) => normalizeChunkImageAssignments(prev.map((row) => {
+      const nextCells: Record<string, MatrixCell> = {};
+      linkedSizeColumns.forEach((sizeName) => {
+        const matched = row.cells[sizeName];
+        nextCells[sizeName] = matched
+          ? { ...matched, value: toNumberSafe(matched.value) }
+          : { value: 0 };
+      });
+      return {
+        ...row,
+        baseSize: linkedSizeColumns.includes(String(row.baseSize || '').trim()) ? String(row.baseSize || '').trim() : '',
+        gradingZones: normalizeGradingZones(row.gradingZones || [], linkedSizeColumns),
+        cells: nextCells,
+      };
+    })));
+  }, [editMode, linkedSizeColumns]);
 
   useEffect(() => {
     if (!readOnly) return;
@@ -492,6 +615,78 @@ const StyleSizeTab: React.FC<Props> = ({
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance: toNumberSafe(tolerance) } : r)));
   };
 
+  const applyGradingToRow = (row: MatrixRow) => {
+    if (!sizeColumns.length) return row;
+    const baseSize = sizeColumns.includes(String(row.baseSize || '').trim())
+      ? String(row.baseSize).trim()
+      : '';
+    const baseIndex = sizeColumns.indexOf(baseSize);
+    if (baseIndex < 0) return { ...row, baseSize };
+    const zones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
+    if (!zones.length) {
+      return { ...row, baseSize, gradingZones: [] };
+    }
+    const baseValue = toNumberSafe(row.cells[baseSize]?.value);
+    const stepForSize = (sizeName: string) => {
+      const zone = zones.find((item) => item.sizes.includes(sizeName));
+      return toNumberSafe(zone?.step);
+    };
+    const nextCells = { ...row.cells };
+    nextCells[baseSize] = { ...(nextCells[baseSize] || { value: 0 }), value: baseValue };
+    for (let index = baseIndex + 1; index < sizeColumns.length; index += 1) {
+      const currentSize = sizeColumns[index];
+      const prevSize = sizeColumns[index - 1];
+      const prevValue = toNumberSafe(nextCells[prevSize]?.value);
+      nextCells[currentSize] = {
+        ...(nextCells[currentSize] || { value: 0 }),
+        value: Number((prevValue + stepForSize(currentSize)).toFixed(2)),
+      };
+    }
+    for (let index = baseIndex - 1; index >= 0; index -= 1) {
+      const currentSize = sizeColumns[index];
+      const nextSize = sizeColumns[index + 1];
+      const nextValue = toNumberSafe(nextCells[nextSize]?.value);
+      nextCells[currentSize] = {
+        ...(nextCells[currentSize] || { value: 0 }),
+        value: Number((nextValue - stepForSize(nextSize)).toFixed(2)),
+      };
+    }
+    return { ...row, baseSize, gradingZones: zones, cells: nextCells };
+  };
+
+  const updateBaseSize = (rowKey: string, baseSize: string) => {
+    setRows((prev) => prev.map((row) => (
+      row.key === rowKey ? applyGradingToRow({ ...row, baseSize: String(baseSize || '').trim() }) : row
+    )));
+  };
+
+  const openGradingConfig = (row: MatrixRow) => {
+    setGradingTargetRowKey(row.key);
+    setGradingDraftBaseSize(row.baseSize || '');
+    setGradingDraftZones(normalizeGradingZones(row.gradingZones || [], sizeColumns));
+    setGradingConfigOpen(true);
+  };
+
+  const applyGradingDraft = () => {
+    const targetKey = gradingTargetRowKey;
+    if (!targetKey) return;
+    if (!gradingDraftBaseSize || !sizeColumns.includes(gradingDraftBaseSize)) {
+      message.error('请先选择样版码');
+      return;
+    }
+    setRows((prev) => prev.map((row) => (
+      row.key === targetKey
+        ? applyGradingToRow({
+            ...row,
+            baseSize: gradingDraftBaseSize,
+            gradingZones: normalizeGradingZones(gradingDraftZones, sizeColumns),
+          })
+        : row
+    )));
+    setGradingConfigOpen(false);
+    setGradingTargetRowKey('');
+  };
+
   const updateCellValue = (rowKey: string, sizeName: string, value: number) => {
     setRows((prev) =>
       prev.map((r) =>
@@ -537,7 +732,17 @@ const StyleSizeTab: React.FC<Props> = ({
       });
       const insertAt = groupRowIndices.length ? groupRowIndices[groupRowIndices.length - 1] + 1 : prev.length;
       const next = [...prev];
-      next.splice(insertAt, 0, { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: 0, cells });
+      next.splice(insertAt, 0, {
+        key,
+        groupName,
+        partName: '',
+        measureMethod: '',
+        baseSize: '',
+        gradingZones: [],
+        tolerance: 0,
+        sort: 0,
+        cells,
+      });
       return normalizeRowSorts(next);
     });
     if (!editMode) enterEdit();
@@ -559,7 +764,17 @@ const StyleSizeTab: React.FC<Props> = ({
 
     setRows((prev) => normalizeRowSorts([
       ...prev,
-      { key, groupName, partName: '', measureMethod: '', tolerance: 0, sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1, cells },
+      {
+        key,
+        groupName,
+        partName: '',
+        measureMethod: '',
+        baseSize: '',
+        gradingZones: [],
+        tolerance: 0,
+        sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1,
+        cells,
+      },
     ]));
     setAddGroupOpen(false);
     setNewGroupName('');
@@ -611,7 +826,12 @@ const StyleSizeTab: React.FC<Props> = ({
         nextToAdd.forEach((sn) => {
           nextCells[sn] = { value: 0 };
         });
-        return { ...r, cells: nextCells };
+        return {
+          ...r,
+          baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
+          gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
+          cells: nextCells,
+        };
       }),
     );
     setAddSizeOpen(false);
@@ -695,7 +915,13 @@ const StyleSizeTab: React.FC<Props> = ({
       prev.map((r) => {
         const nextCells = { ...r.cells };
         delete nextCells[sizeName];
-        return { ...r, cells: nextCells };
+        const nextSizes = sizeColumns.filter((s) => s !== sizeName);
+        return {
+          ...r,
+          baseSize: nextSizes.includes(r.baseSize) ? r.baseSize : '',
+          gradingZones: normalizeGradingZones(r.gradingZones || [], nextSizes),
+          cells: nextCells,
+        };
       }),
     );
   };
@@ -718,12 +944,19 @@ const StyleSizeTab: React.FC<Props> = ({
     originals.forEach((o) => {
       if (o.id != null) originalById.set(String(o.id), o);
     });
+    const obsoleteOriginalIds = originals
+      .filter((item) => item.id != null && !sizeColumns.includes(String(item.sizeName || '').trim()))
+      .map((item) => String(item.id));
 
     setSaving(true);
     try {
       const combinedIds = combinedSizeIdsRef.current || [];
       const deleteTasks = Array.from(
-        new Set([...deletedIds.map((x) => String(x)), ...combinedIds.map((x) => String(x))].filter(Boolean)),
+        new Set([
+          ...deletedIds.map((x) => String(x)),
+          ...combinedIds.map((x) => String(x)),
+          ...obsoleteOriginalIds,
+        ].filter(Boolean)),
       ).map((id) => api.delete(`/style/size/${id}`));
       if (deleteTasks.length) {
         await Promise.all(deleteTasks);
@@ -733,6 +966,7 @@ const StyleSizeTab: React.FC<Props> = ({
       normalizedRows.forEach((r) => {
         const groupName = resolveGroupName(r.groupName, r.partName);
         const imageUrlsJson = r.imageUrls && r.imageUrls.length > 0 ? JSON.stringify(r.imageUrls.slice(0, 2)) : null;
+        const gradingRule = serializeGradingRule(r, sizeColumns);
         sizeColumns.forEach((sn) => {
           const cell = r.cells[sn];
           const id = cell?.id;
@@ -743,10 +977,12 @@ const StyleSizeTab: React.FC<Props> = ({
             partName: r.partName,
             groupName,
             measureMethod: r.measureMethod,
+            baseSize: r.baseSize || '',
             standardValue: toNumberSafe(cell?.value),
             tolerance: toNumberSafe(r.tolerance),
             sort: toNumberSafe(r.sort),
             imageUrls: imageUrlsJson,
+            gradingRule,
           };
 
           if (id != null && String(id).trim() !== '') {
@@ -757,10 +993,12 @@ const StyleSizeTab: React.FC<Props> = ({
               String(old.partName || '').trim() !== String(r.partName || '').trim() ||
               String((old as Record<string, unknown>).groupName || '').trim() !== String(payload.groupName || '').trim() ||
               String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
+              String((old as Record<string, unknown>).baseSize || '').trim() !== String(payload.baseSize || '').trim() ||
               toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
               toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
               toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort) ||
-              String((old as Record<string, unknown>).imageUrls || '') !== String(payload.imageUrls || '');
+              String((old as Record<string, unknown>).imageUrls || '') !== String(payload.imageUrls || '') ||
+              String((old as Record<string, unknown>).gradingRule || '') !== String(payload.gradingRule || '');
             if (changed) {
               tasks.push(api.put('/style/size', payload));
             }
@@ -937,6 +1175,44 @@ const StyleSizeTab: React.FC<Props> = ({
             record.measureMethod
           ),
       },
+      {
+        title: '样版码',
+        dataIndex: 'baseSize',
+        width: 110,
+        align: 'center' as const,
+        render: (_: any, record: MatrixRow) =>
+          editableMode ? (
+            <Select
+              value={record.baseSize || undefined}
+              allowClear
+              style={{ width: '100%' }}
+              options={sizeColumns.map((size) => ({ value: size, label: size }))}
+              onChange={(value) => updateBaseSize(record.key, String(value || ''))}
+            />
+          ) : (
+            record.baseSize || '-'
+          ),
+      },
+      {
+        title: '跳码区',
+        dataIndex: 'gradingZones',
+        width: 260,
+        render: (_: any, record: MatrixRow) => {
+          const summary = normalizeGradingZones(record.gradingZones || [], sizeColumns)
+            .map((zone) => `${zone.label}(${zone.sizes.join('/')}) ±${toNumberSafe(zone.step)}`)
+            .join('；');
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 12, lineHeight: 1.6, color: '#334155' }}>{summary || '-'}</div>
+              {editableMode ? (
+                <Button size="small" onClick={() => openGradingConfig(record)}>
+                  配置跳码区
+                </Button>
+              ) : null}
+            </div>
+          );
+        },
+      },
     ];
 
     const sizeCols = sizeColumns.map((sn) => ({
@@ -1031,7 +1307,7 @@ const StyleSizeTab: React.FC<Props> = ({
     // readOnly/只读模式下隐藏操作列（无任何可操作按钮，空列无意义）
     const filteredRight = editableMode ? right : right.filter(col => col.key !== 'operation');
     return [...left, ...sizeCols, ...filteredRight];
-  }, [editMode, readOnly, sizeColumns, displayRows, groupNameOptions]);
+  }, [editMode, readOnly, sizeColumns, displayRows, groupNameOptions, rows]);
 
   return (
     <div>
@@ -1244,6 +1520,111 @@ const StyleSizeTab: React.FC<Props> = ({
           rows={4}
           onChange={(e) => setNewSizeName(e.target.value)}
         />
+      </ResizableModal>
+
+      <ResizableModal
+        open={gradingConfigOpen}
+        title="配置跳码区"
+        onCancel={() => {
+          setGradingConfigOpen(false);
+          setGradingTargetRowKey('');
+        }}
+        onOk={applyGradingDraft}
+        okText="保存并带出"
+        cancelText="取消"
+        confirmLoading={saving}
+        width="52vw"
+        minWidth={720}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.62 : 520}
+        minHeight={420}
+        autoFontSize={false}
+        scaleWithViewport
+      >
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontWeight: 600 }}>样版码</div>
+            <Select
+              value={gradingDraftBaseSize || undefined}
+              allowClear
+              options={sizeColumns.map((size) => ({ value: size, label: size }))}
+              onChange={(value) => setGradingDraftBaseSize(String(value || ''))}
+            />
+          </div>
+          <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.7 }}>
+            跳码区直接使用当前尺寸表里的码数，不再单独搞第二套码数。样版码不写死，由你自己指定；再给每个区勾选要覆盖的码数和跳码值，系统按区间推算。
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {gradingDraftZones.map((zone, index) => (
+              <div key={zone.key} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, background: '#fff' }}>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.7fr auto', gap: 10, alignItems: 'center' }}>
+                    <Input
+                      value={zone.label}
+                      placeholder={`跳码区${index + 1}`}
+                      onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
+                    />
+                    <InputNumber
+                      value={zone.step}
+                      min={0}
+                      step={0.1}
+                      style={{ width: '100%' }}
+                      addonBefore="跳码"
+                      onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, step: toNumberSafe(value) } : item)))}
+                    />
+                    <Button
+                      danger
+                      onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
+                      disabled={gradingDraftZones.length <= 1}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>
+                      这个跳码区包含的码数：{zone.sizes.length ? zone.sizes.join(' / ') : '未选择'}
+                    </div>
+                    <Space size={8} wrap>
+                      <Button size="small" type="link" onClick={() => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, sizes: [...sizeColumns] } : item)))}>
+                        全选当前码数
+                      </Button>
+                      <Button size="small" type="link" onClick={() => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, sizes: [] } : item)))}>
+                        清空
+                      </Button>
+                    </Space>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {sizeColumns.map((size) => {
+                      const checked = zone.sizes.includes(size);
+                      return (
+                        <Tag
+                          key={`${zone.key}-${size}`}
+                          color={checked ? 'blue' : undefined}
+                          style={{ marginInlineEnd: 0, cursor: 'pointer', userSelect: 'none' }}
+                          onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
+                            if (item.key !== zone.key) return item;
+                            const nextSizes = item.sizes.includes(size)
+                              ? item.sizes.filter((current) => current !== size)
+                              : [...item.sizes, size];
+                            return { ...item, sizes: sortSizeNames(nextSizes) };
+                          }))}
+                        >
+                          {size}
+                        </Tag>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={() => setGradingDraftZones((prev) => [...prev, createGradingZone([], `跳码区${prev.length + 1}`)])}
+          >
+            新增跳码区
+          </Button>
+        </div>
       </ResizableModal>
     </div>
   );

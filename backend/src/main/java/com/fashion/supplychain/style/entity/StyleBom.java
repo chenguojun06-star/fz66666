@@ -39,6 +39,11 @@ public class StyleBom {
      */
     private String fabricComposition;
 
+    /**
+     * 克重（面料专属）
+     */
+    private String fabricWeight;
+
     private String materialType;
 
     /**
@@ -67,6 +72,26 @@ public class StyleBom {
      * 码数用量配比（JSON，格式：{"S":1.5,"M":1.6,"L":1.7}，为空则统一用 usageAmount）
      */
     private String sizeUsageMap;
+
+    /**
+     * 纸样录入各码用量（原始单位）
+     */
+    private String patternSizeUsageMap;
+
+    /**
+     * 各码规格尺寸（JSON，常用于拉链长度cm）
+     */
+    private String sizeSpecMap;
+
+    /**
+     * 纸样录入单位
+     */
+    private String patternUnit;
+
+    /**
+     * 换算系数：1个纸样录入单位 = x个BOM单位
+     */
+    private BigDecimal conversionRate;
 
     /**
      * 损耗率(%)

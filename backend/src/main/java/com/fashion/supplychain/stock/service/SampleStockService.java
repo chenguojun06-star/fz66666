@@ -2,6 +2,7 @@ package com.fashion.supplychain.stock.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
 
@@ -16,6 +17,8 @@ public interface SampleStockService extends IService<SampleStock> {
      */
     void inbound(SampleStock stock);
 
+    void inboundBatch(SampleStockInboundBatchRequest request);
+
     /**
      * 借出样衣
      */
@@ -25,4 +28,6 @@ public interface SampleStockService extends IService<SampleStock> {
      * 归还样衣
      */
     void returnSample(String loanId, Integer returnQuantity, String remark);
+
+    void destroy(String stockId, String remark);
 }

@@ -90,6 +90,23 @@ public class SampleStock implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
+    @TableField(exist = false)
+    private String patternNo;
+
+    @TableField(exist = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sampleCompletedTime;
+
+    @TableField(exist = false)
+    private String inventoryStatus;
+
+    @TableField(exist = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime destroyTime;
+
+    @TableField(exist = false)
+    private String destroyRemark;
+
     /**
      * 删除标记
      */

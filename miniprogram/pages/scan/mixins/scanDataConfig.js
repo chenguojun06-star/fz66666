@@ -38,12 +38,14 @@ const scanPageData = {
     loading: false,
     processName: '',
     processOptions: [],
+    selectedProcessNames: [],
     processIndex: -1,
     scanCode: '',
     parsedData: null,
     quantity: 0,
     warehouseCode: '',
     imageInsight: '',
+    hasWarehouseSelected: false,
   },
 
   // 撤销功能

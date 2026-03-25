@@ -18,6 +18,8 @@ interface StyleBasicInfoFormProps {
   isFieldLocked: (fieldValue: any) => boolean;
   pendingImages: File[];
   onPendingImagesChange: (files: File[]) => void;
+  coverRefreshToken: number;
+  onCoverChange: (url: string | null) => void;
   // 颜色码数配置props
   size1: string;
   setSize1: (v: string) => void;
@@ -49,6 +51,14 @@ interface StyleBasicInfoFormProps {
   setQty4: (v: number) => void;
   qty5: number;
   setQty5: (v: number) => void;
+  sizeOptions: string[];
+  setSizeOptions: (values: string[]) => void;
+  colorOptions: string[];
+  setColorOptions: (values: string[]) => void;
+  sizeColorMatrixRows: Array<{ color: string; quantities: number[]; imageUrl?: string }>;
+  setSizeColorMatrixRows: (rows: Array<{ color: string; quantities: number[]; imageUrl?: string }>) => void;
+  onColorImageSync: (color: string, file: File) => Promise<void> | void;
+  onColorImageClear: (color: string) => Promise<void> | void;
   commonSizes: string[];
   setCommonSizes: (v: string[]) => void;
   commonColors: string[];
@@ -67,10 +77,16 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   isFieldLocked,
   pendingImages,
   onPendingImagesChange,
+  coverRefreshToken,
+  onCoverChange,
   size1, setSize1, size2, setSize2, size3, setSize3, size4, setSize4, size5, setSize5,
   color1, setColor1, color2, setColor2, color3, setColor3, color4, setColor4, color5, setColor5,
   qty1, setQty1, qty2, setQty2, qty3, setQty3, qty4, setQty4, qty5, setQty5,
-  commonSizes, setCommonSizes, commonColors, setCommonColors
+  sizeOptions, setSizeOptions, colorOptions, setColorOptions,
+  sizeColorMatrixRows, setSizeColorMatrixRows,
+  commonSizes, setCommonSizes, commonColors, setCommonColors,
+  onColorImageSync,
+  onColorImageClear
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
@@ -96,6 +112,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             pendingFiles={pendingImages}
             onPendingFilesChange={onPendingImagesChange}
             coverUrl={currentStyle?.cover}
+            refreshTrigger={coverRefreshToken}
+            onCoverChange={onCoverChange}
           />
         </Col>
 
@@ -272,14 +290,16 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 <Form.Item
                   name="fabricCompositionParts"
                   label="洗水唛成分 / 洗涤说明"
-                  tooltip="每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出"
                 >
                   <CompositionPartsEditor disabled={editLocked} />
                 </Form.Item>
+                <div style={{ marginTop: -8, marginBottom: 10, fontSize: 12, lineHeight: 1.6, color: '#8c8c8c' }}>
+                  每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出
+                </div>
               </Col>
             </Row>
             <Form.Item name="washInstructions" hidden><Input /></Form.Item>
-            <div style={{ marginTop: -4, fontSize: 12, color: '#8c8c8c' }}>
+            <div style={{ marginTop: 0, fontSize: 12, lineHeight: 1.6, color: '#8c8c8c' }}>
               打印洗水唛时会自动带出 5 个标准护理图标；旧款式如果已经维护过专属护理码，打印时仍优先使用旧值。
             </div>
 
@@ -338,6 +358,14 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             setQty4={setQty4}
             qty5={qty5}
             setQty5={setQty5}
+            sizeOptions={sizeOptions}
+            setSizeOptions={setSizeOptions}
+            colorOptions={colorOptions}
+            setColorOptions={setColorOptions}
+            matrixRows={sizeColorMatrixRows}
+            setMatrixRows={setSizeColorMatrixRows}
+            onImageSync={onColorImageSync}
+            onImageClear={onColorImageClear}
             commonSizes={commonSizes}
             setCommonSizes={setCommonSizes}
             commonColors={commonColors}

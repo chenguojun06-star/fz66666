@@ -15,6 +15,12 @@ public class CuttingBundle {
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
 
+    private String rootBundleId;
+
+    private String parentBundleId;
+
+    private String sourceBundleId;
+
     private String productionOrderId;
 
     private String productionOrderNo;
@@ -29,6 +35,8 @@ public class CuttingBundle {
 
     private Integer bundleNo;
 
+    private String bundleLabel;
+
     private Integer quantity;
 
     /**
@@ -39,6 +47,10 @@ public class CuttingBundle {
     private String qrCode;
 
     private String status;
+
+    private String splitStatus;
+
+    private Integer splitSeq;
 
     private LocalDateTime createTime;
 

@@ -49,7 +49,7 @@ const MaterialDatabasePage: React.FC = () => {
   const { visible, data: currentMaterial, open, close } = useModal<MaterialDatabase>();
 
   // 分页状态管理（替代 queryParams, total）
-  const { pagination, setTotal } = useTablePagination(10);
+  const { pagination, onChange, setTotal } = useTablePagination(20);
 
   // ===== 保留的状态 =====
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
@@ -319,13 +319,13 @@ const MaterialDatabasePage: React.FC = () => {
       }
     },
     {
-      title: '面料编号',
+      title: '物料编号',
       dataIndex: 'materialCode',
       key: 'materialCode',
       width: 120,
     },
     {
-      title: '面料名称',
+      title: '物料名称',
       dataIndex: 'materialName',
       key: 'materialName',
       width: 150,
@@ -406,6 +406,17 @@ const MaterialDatabasePage: React.FC = () => {
       width: 100,
       align: 'right' as const,
       render: (value: unknown) => renderMaskedNumber(value, user),
+    },
+    {
+      title: '几米一公斤',
+      dataIndex: 'conversionRate',
+      key: 'conversionRate',
+      width: 110,
+      align: 'right' as const,
+      render: (value: unknown) => {
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : '-';
+      },
     },
     {
       title: '备注',
@@ -531,7 +542,7 @@ const MaterialDatabasePage: React.FC = () => {
                 <StandardSearchBar
                   searchValue={searchKeyword}
                   onSearchChange={setSearchKeyword}
-                  searchPlaceholder="搜索面料编号/名称"
+                  searchPlaceholder="搜索物料编号/名称"
                   dateValue={dateRange}
                   onDateChange={setDateRange}
                   statusValue={statusValue}
@@ -563,9 +574,11 @@ const MaterialDatabasePage: React.FC = () => {
             size={isMobile ? 'small' : 'middle'}
             pagination={{
               ...pagination,
+              simple: false,
               showTotal: (t) => `共 ${t} 条`,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
+              pageSizeOptions: ['20', '50', '100', '200'],
+              onChange,
               size: isMobile ? 'small' : 'default',
             }}
           />
@@ -620,19 +633,19 @@ const MaterialDatabasePage: React.FC = () => {
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="materialCode"
-                  label="面料编号"
-                  rules={[{ required: true, message: '请输入面料编号' }]}
+                  label="物料编号"
+                  rules={[{ required: true, message: '请输入物料编号' }]}
                 >
-                  <Input placeholder="请输入面料编号" />
+                  <Input placeholder="请输入物料编号" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="materialName"
-                  label="面料名称"
-                  rules={[{ required: true, message: '请输入面料名称' }]}
+                  label="物料名称"
+                  rules={[{ required: true, message: '请输入物料名称' }]}
                 >
-                  <Input placeholder="请输入面料名称" />
+                  <Input placeholder="请输入物料名称" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
@@ -712,6 +725,17 @@ const MaterialDatabasePage: React.FC = () => {
                     min={0}
                     step={0.01}
                     precision={2}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8} md={6} lg={4} xl={4}>
+                <Form.Item name="conversionRate" label="几米一公斤">
+                  <InputNumber
+                    placeholder="如：3"
+                    style={{ width: '100%' }}
+                    min={0}
+                    step={0.01}
+                    precision={4}
                   />
                 </Form.Item>
               </Col>

@@ -455,6 +455,13 @@ const OrderManagement: React.FC = () => {
     return Number((budgetQty * unitPrice).toFixed(2));
   };
 
+  const calcBomReferenceKg = (record: StyleBom) => {
+    const meters = calcBomBudgetQty(record);
+    const conversionRate = Number((record as Record<string, unknown>).conversionRate) || 0;
+    if (!Number.isFinite(meters) || meters <= 0 || conversionRate <= 0) return null;
+    return Number((meters / conversionRate).toFixed(4));
+  };
+
   const bomColumns = [
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
@@ -497,10 +504,19 @@ const OrderManagement: React.FC = () => {
     },
     { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
     {
-      title: '预算采购数量',
+      title: '需求数量(米)',
       key: 'budgetQty',
       width: 140,
       render: (_: any, record: StyleBom) => calcBomBudgetQty(record),
+    },
+    {
+      title: '参考公斤数',
+      key: 'referenceKg',
+      width: 120,
+      render: (_: any, record: StyleBom) => {
+        const kg = calcBomReferenceKg(record);
+        return kg == null ? '-' : `${kg} kg`;
+      },
     },
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
     { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
@@ -2127,7 +2143,7 @@ const OrderManagement: React.FC = () => {
                 children: (
                   <div>
                     <div style={{ marginBottom: 12, color: 'var(--neutral-text-light)' }}>
-                      预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)；<span style={{ color: 'var(--warning-color, #f7a600)' }}>★</span> 表示已配置码数用量，按每码分别计算，单件用量显示加权平均值
+                      需求数量(米) = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)；<span style={{ color: 'var(--warning-color, #f7a600)' }}>★</span> 表示已配置码数用量，按每码分别计算，单件用量显示加权平均值
                     </div>
                     <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>面料</div>
                     <ResizableTable

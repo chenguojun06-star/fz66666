@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, ConfigProvider } from 'antd';
 import type { TableProps } from 'antd';
-import { savePageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, normalizePageSize, savePageSize } from '@/utils/pageSizeStore';
 
 /**
  * 任意记录类型定义
@@ -30,6 +30,26 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   maxColumnWidth?: number;
   /** 默认列宽，默认120px */
   defaultColumnWidth?: number;
+};
+
+const normalizePageSizeOptions = (
+  pageSizeOptions?: Array<string | number>,
+  pageSize?: number,
+  defaultPageSize?: number
+): string[] => {
+  const fallback = [...DEFAULT_PAGE_SIZE_OPTIONS];
+  const base = Array.isArray(pageSizeOptions) && pageSizeOptions.length > 0
+    ? pageSizeOptions.map((item) => String(item))
+    : fallback;
+  const effectivePageSize = pageSize ?? defaultPageSize;
+  if (effectivePageSize == null) {
+    return base;
+  }
+  const currentPageSize = String(normalizePageSize(effectivePageSize, DEFAULT_PAGE_SIZE));
+  if (base.includes(currentPageSize)) {
+    return base;
+  }
+  return [...base, currentPageSize].sort((a, b) => Number(a) - Number(b));
 };
 
 const hashString = (input: string) => {
@@ -400,21 +420,31 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     if (paginationProp === undefined || paginationProp === null) return paginationProp;
     const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
     const { position, placement, ...baseRest } = base as any;
+    const normalizedPageSize = typeof base?.pageSize === 'number'
+      ? normalizePageSize(base.pageSize, DEFAULT_PAGE_SIZE)
+      : undefined;
+    const normalizedDefaultPageSize = typeof base?.defaultPageSize === 'number'
+      ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
+      : undefined;
 
     // 拦截 onChange：当用户切换每页条数时，自动持久化到 localStorage
     const originalOnChange = base?.onChange;
-    const trackedPageSize = base?.pageSize as number | undefined;
+    const trackedPageSize = normalizedPageSize ?? normalizedDefaultPageSize;
     const interceptedOnChange = (page: number, pageSize: number) => {
-      if (trackedPageSize === undefined || pageSize !== trackedPageSize) {
-        savePageSize(pageSize);
+      const nextPageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
+      if (trackedPageSize === undefined || nextPageSize !== trackedPageSize) {
+        savePageSize(nextPageSize);
       }
-      originalOnChange?.(page, pageSize);
+      originalOnChange?.(page, nextPageSize);
     };
 
     return {
       ...baseRest,
+      pageSize: normalizedPageSize,
+      defaultPageSize: normalizedDefaultPageSize,
+      pageSizeOptions: normalizePageSizeOptions(base?.pageSizeOptions, normalizedPageSize, normalizedDefaultPageSize),
       onChange: interceptedOnChange,
-      simple: base?.simple ?? true,
+      simple: base?.simple ?? false,
       showSizeChanger: base?.showSizeChanger ?? true,
       placement: placement ?? position ?? ['bottomRight'],
     } as any;

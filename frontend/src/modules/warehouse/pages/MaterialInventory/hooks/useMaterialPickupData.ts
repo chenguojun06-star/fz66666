@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Form } from 'antd';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
@@ -115,6 +115,10 @@ export function useMaterialPickupData() {
       if (!opt?.silent) setLoading(false);
     }
   }, [keyword, pickupType, auditStatus, financeStatus, orderNo, styleNo, pagination]);
+
+  useEffect(() => {
+    void fetchData({ silent: true });
+  }, [fetchData, pagination.pagination.current, pagination.pagination.pageSize]);
 
   // ===== 新建 =====
   const handleCreate = async () => {

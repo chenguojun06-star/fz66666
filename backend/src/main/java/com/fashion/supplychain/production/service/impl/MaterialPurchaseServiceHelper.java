@@ -355,6 +355,7 @@ public class MaterialPurchaseServiceHelper {
                 mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
                 mp.setSpecifications(bom.getSpecification());
                 mp.setUnit(bom.getUnit());
+                mp.setConversionRate(bom.getConversionRate());
                 mp.setPurchaseQuantity(requiredQty);
                 mp.setArrivedQuantity(0);
                 mp.setSupplierName(bom.getSupplier());

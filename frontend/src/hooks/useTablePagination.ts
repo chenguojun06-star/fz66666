@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { readPageSize, savePageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, normalizePageSize, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 
 /**
  * 表格分页配置
@@ -38,23 +38,25 @@ export interface PaginationConfig {
  *   }}
  * />
  */
-export const useTablePagination = (initialPageSize = 10) => {
+export const useTablePagination = (initialPageSize = DEFAULT_PAGE_SIZE) => {
   const [pagination, setPagination] = useState<PaginationConfig>({
     current: 1,
     pageSize: readPageSize(initialPageSize),
     total: 0,
     showSizeChanger: true,
     showQuickJumper: true,
-    pageSizeOptions: ['10', '20', '50', '100'],
+    pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
   });
 
   /**
    * 页码或每页条数变化时的回调
    */
   const onChange = (page: number, pageSize: number) => {
+    const nextPageSize = normalizePageSize(pageSize, initialPageSize);
     setPagination(prev => {
-      if (pageSize !== prev.pageSize) savePageSize(pageSize);
-      return { ...prev, current: page, pageSize };
+      const nextCurrent = nextPageSize !== prev.pageSize ? 1 : page;
+      if (nextPageSize !== prev.pageSize) savePageSize(nextPageSize);
+      return { ...prev, current: nextCurrent, pageSize: nextPageSize };
     });
   };
 
@@ -87,9 +89,11 @@ export const useTablePagination = (initialPageSize = 10) => {
    * 设置每页条数
    */
   const setPageSize = (pageSize: number) => {
+    const nextPageSize = normalizePageSize(pageSize, initialPageSize);
+    savePageSize(nextPageSize);
     setPagination(prev => ({
       ...prev,
-      pageSize,
+      pageSize: nextPageSize,
       current: 1, // 改变每页条数时重置到第一页
     }));
   };

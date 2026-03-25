@@ -1,6 +1,5 @@
 package com.fashion.supplychain.production.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
@@ -149,6 +148,7 @@ public class PatternProductionOrchestrator {
 
         // 同步更新 StyleInfo
         syncStyleInfoOnReceive(record.getStyleId(), currentUser);
+        syncStyleInfoSampleStage(record);
 
         log.info("Pattern production received: id={}, receiver={}", id, currentUser);
         return "领取成功";
@@ -179,6 +179,7 @@ public class PatternProductionOrchestrator {
             }
 
             patternProductionService.updateById(record);
+            syncStyleInfoSampleStage(record);
             log.info("Pattern production progress updated: id={}, progress={}", id, progressNodes);
             return "进度更新成功";
         } catch (Exception e) {
@@ -276,36 +277,22 @@ public class PatternProductionOrchestrator {
                 ? pattern.getQuantity() : 1;
 
         if ("WAREHOUSE_IN".equals(operationType)) {
-            // 幂等查找（同租户+款号+颜色+类型=development，若以后扩展可由前端传）
-            LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
-                    .eq(SampleStock::getDeleteFlag, 0)
-                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
-                    .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(SampleStock::getSampleType, "development")
-                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
-            SampleStock existing = sampleStockService.getOne(q);
-            if (existing != null) {
-                // 累加库存
-                sampleStockMapper.updateStockQuantity(existing.getId(), qty);
-                log.info("[样衣入库] 累加库存 stockId={} +{}件", existing.getId(), qty);
-            } else {
-                // 新建库存记录
-                SampleStock stock = new SampleStock();
-                stock.setStyleId(pattern.getStyleId());
-                stock.setStyleNo(pattern.getStyleNo());
-                stock.setColor(pattern.getColor());
-                stock.setSampleType("development");
-                stock.setQuantity(qty);
-                stock.setLoanedQuantity(0);
-                stock.setLocation(scanRecord.getWarehouseCode());
-                stock.setRemark("扫码自动入库");
-                stock.setCreateTime(LocalDateTime.now());
-                stock.setUpdateTime(LocalDateTime.now());
-                stock.setDeleteFlag(0);
-                stock.setTenantId(tenantId);
+            List<SampleStock> plannedStocks = buildInboundStocksFromPattern(pattern, scanRecord, tenantId);
+            for (SampleStock stock : plannedStocks) {
+                LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
+                        .eq(SampleStock::getDeleteFlag, 0)
+                        .eq(SampleStock::getStyleNo, stock.getStyleNo())
+                        .eq(SampleStock::getColor, stock.getColor())
+                        .eq(SampleStock::getSize, stock.getSize())
+                        .eq(SampleStock::getSampleType, "development")
+                        .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+                SampleStock existing = sampleStockService.getOne(q);
+                if (existing != null) {
+                    throw new IllegalStateException("该颜色尺码已存在库存，不能重复扫码入库");
+                }
                 sampleStockService.save(stock);
-                log.info("[样衣入库] 新建库存 styleNo={} color={} qty={}",
-                        pattern.getStyleNo(), pattern.getColor(), qty);
+                log.info("[样衣扫码入库] 新建库存 styleNo={} color={} size={} qty={}",
+                        stock.getStyleNo(), stock.getColor(), stock.getSize(), stock.getQuantity());
             }
 
         } else if ("WAREHOUSE_OUT".equals(operationType)) {
@@ -377,6 +364,140 @@ public class PatternProductionOrchestrator {
             sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity());
             log.info("[样衣归还] loanId={} stockId={} qty=-{}", loan.getId(), stock.getId(), loan.getQuantity());
         }
+    }
+
+    private List<SampleStock> buildInboundStocksFromPattern(PatternProduction pattern, PatternScanRecord scanRecord, Long tenantId) {
+        StyleInfo styleInfo = null;
+        Long styleId = parseStyleId(pattern.getStyleId());
+        if (styleId != null) {
+            styleInfo = styleInfoService.getById(styleId);
+        }
+        if (styleInfo == null && StringUtils.hasText(pattern.getStyleNo())) {
+            styleInfo = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getStyleNo, pattern.getStyleNo())
+                    .last("LIMIT 1")
+                    .one();
+        }
+        if (styleInfo == null) {
+            throw new IllegalStateException("未找到样衣开发资料，无法自动匹配颜色尺码数量入库");
+        }
+
+        List<Map<String, Object>> specRows = extractConfiguredSpecRows(styleInfo, pattern.getColor());
+        if (specRows.isEmpty()) {
+            throw new IllegalStateException("未配置有生产数量的颜色尺码，无法扫码入库");
+        }
+
+        List<SampleStock> stocks = new ArrayList<>();
+        for (Map<String, Object> row : specRows) {
+            SampleStock stock = new SampleStock();
+            stock.setStyleId(String.valueOf(styleInfo.getId()));
+            stock.setStyleNo(styleInfo.getStyleNo());
+            stock.setStyleName(styleInfo.getStyleName());
+            stock.setImageUrl(styleInfo.getCover());
+            stock.setColor(String.valueOf(row.get("color")));
+            stock.setSize(String.valueOf(row.get("size")));
+            stock.setSampleType("development");
+            stock.setQuantity((Integer) row.get("quantity"));
+            stock.setLoanedQuantity(0);
+            stock.setLocation(scanRecord == null ? null : scanRecord.getWarehouseCode());
+            stock.setRemark("扫码自动入库");
+            stock.setCreateTime(LocalDateTime.now());
+            stock.setUpdateTime(LocalDateTime.now());
+            stock.setDeleteFlag(0);
+            stock.setTenantId(tenantId);
+            stocks.add(stock);
+        }
+        return stocks;
+    }
+
+    private List<Map<String, Object>> extractConfiguredSpecRows(StyleInfo styleInfo, String preferredColor) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        if (styleInfo == null || !StringUtils.hasText(styleInfo.getSizeColorConfig())) {
+            return rows;
+        }
+        try {
+            Map<String, Object> config = objectMapper.readValue(styleInfo.getSizeColorConfig(), new TypeReference<Map<String, Object>>() {});
+            List<String> sizes = new ArrayList<>();
+            Object sizesRaw = config.get("sizes");
+            if (sizesRaw instanceof List<?> list) {
+                for (Object item : list) {
+                    String value = item == null ? "" : String.valueOf(item).trim();
+                    if (StringUtils.hasText(value)) {
+                        sizes.add(value);
+                    }
+                }
+            }
+
+            String directColor = StringUtils.hasText(styleInfo.getColor()) ? styleInfo.getColor().trim() : "";
+            Object colorsRaw = config.get("colors");
+            if (colorsRaw instanceof List<?> list) {
+                for (Object item : list) {
+                    String value = item == null ? "" : String.valueOf(item).trim();
+                    if (StringUtils.hasText(value)) {
+                        directColor = value;
+                        break;
+                    }
+                }
+            }
+            if (!StringUtils.hasText(directColor)) {
+                directColor = StringUtils.hasText(preferredColor) ? preferredColor.trim() : "";
+            }
+
+            Object matrixRowsRaw = config.get("matrixRows");
+            if (matrixRowsRaw instanceof List<?> list) {
+                for (Object item : list) {
+                    if (!(item instanceof Map<?, ?> matrixRow)) {
+                        continue;
+                    }
+                    String color = matrixRow.get("color") == null ? "" : String.valueOf(matrixRow.get("color")).trim();
+                    if (!StringUtils.hasText(color)) {
+                        continue;
+                    }
+                    if (StringUtils.hasText(preferredColor) && !preferredColor.trim().equalsIgnoreCase(color)) {
+                        continue;
+                    }
+                    Object quantitiesRaw = matrixRow.get("quantities");
+                    if (!(quantitiesRaw instanceof List<?> quantities)) {
+                        continue;
+                    }
+                    for (int i = 0; i < sizes.size(); i++) {
+                        int quantity = i < quantities.size() ? Integer.parseInt(String.valueOf(quantities.get(i) == null ? 0 : quantities.get(i))) : 0;
+                        if (quantity <= 0) {
+                            continue;
+                        }
+                        Map<String, Object> row = new HashMap<>();
+                        row.put("color", color);
+                        row.put("size", sizes.get(i));
+                        row.put("quantity", quantity);
+                        rows.add(row);
+                    }
+                }
+            }
+            if (!rows.isEmpty()) {
+                return rows;
+            }
+
+            Object topQuantitiesRaw = config.get("quantities");
+            if (StringUtils.hasText(directColor) && topQuantitiesRaw instanceof List<?> topQuantities) {
+                for (int i = 0; i < sizes.size(); i++) {
+                    int quantity = i < topQuantities.size() ? Integer.parseInt(String.valueOf(topQuantities.get(i) == null ? 0 : topQuantities.get(i))) : 0;
+                    if (quantity <= 0) {
+                        continue;
+                    }
+                    if (StringUtils.hasText(preferredColor) && !preferredColor.trim().equalsIgnoreCase(directColor)) {
+                        continue;
+                    }
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("color", directColor);
+                    row.put("size", sizes.get(i));
+                    row.put("quantity", quantity);
+                    rows.add(row);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析样衣配置失败，styleNo={}, error={}", styleInfo.getStyleNo(), e.getMessage());
+        }
+        return rows;
     }
 
     /**
@@ -858,6 +979,89 @@ public class PatternProductionOrchestrator {
         }
     }
 
+    private void syncStyleInfoSampleStage(PatternProduction pattern) {
+        if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) {
+            return;
+        }
+
+        try {
+            Long styleId = Long.parseLong(pattern.getStyleId());
+            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            if (styleInfo == null) {
+                return;
+            }
+
+            boolean sampleFinished = "COMPLETED".equalsIgnoreCase(String.valueOf(styleInfo.getSampleStatus()));
+            int progress = calculatePatternProgressPercent(pattern);
+            String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
+            LocalDateTime now = LocalDateTime.now();
+
+            StyleInfo patch = new StyleInfo();
+            patch.setId(styleId);
+            patch.setUpdateTime(now);
+
+            if (StringUtils.hasText(pattern.getReceiver()) && !StringUtils.hasText(styleInfo.getProductionAssignee())) {
+                patch.setProductionAssignee(pattern.getReceiver());
+            }
+
+            if (pattern.getReceiveTime() != null && styleInfo.getProductionStartTime() == null) {
+                patch.setProductionStartTime(pattern.getReceiveTime());
+            }
+
+            if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
+                patch.setProductionCompletedTime(pattern.getCompleteTime() != null ? pattern.getCompleteTime() : now);
+            }
+
+            if (!sampleFinished && !"PENDING".equals(status)) {
+                patch.setSampleStatus("IN_PROGRESS");
+                patch.setSampleProgress(progress);
+                patch.setSampleCompletedTime(null);
+            }
+
+            styleInfoService.updateById(patch);
+        } catch (Exception e) {
+            log.error("Failed to sync style sample stage: patternId={}, styleId={}", pattern.getId(), pattern.getStyleId(), e);
+        }
+    }
+
+    private int calculatePatternProgressPercent(PatternProduction pattern) {
+        String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
+        if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
+            return 100;
+        }
+
+        String progressNodes = pattern.getProgressNodes();
+        if (!StringUtils.hasText(progressNodes)) {
+            return "IN_PROGRESS".equals(status) ? 5 : 0;
+        }
+
+        try {
+            Map<String, Object> nodes = objectMapper.readValue(progressNodes, new TypeReference<Map<String, Object>>() {});
+            List<Integer> percents = new ArrayList<>();
+            for (Object value : nodes.values()) {
+                if (value instanceof Number) {
+                    percents.add(Math.max(0, Math.min(100, ((Number) value).intValue())));
+                    continue;
+                }
+                try {
+                    percents.add(Math.max(0, Math.min(100, Integer.parseInt(String.valueOf(value)))));
+                } catch (Exception ignored) {
+                }
+            }
+
+            if (percents.isEmpty()) {
+                return "IN_PROGRESS".equals(status) ? 5 : 0;
+            }
+
+            int sum = percents.stream().mapToInt(Integer::intValue).sum();
+            int avg = Math.round((float) sum / percents.size());
+            return Math.max("IN_PROGRESS".equals(status) ? 5 : 0, avg);
+        } catch (Exception e) {
+            log.warn("Failed to parse pattern progress nodes: patternId={}", pattern.getId(), e);
+            return "IN_PROGRESS".equals(status) ? 5 : 0;
+        }
+    }
+
     private void updatePatternStatusByOperation(PatternProduction pattern, String operationType, String operatorName) {
         boolean needUpdate = false;
 
@@ -960,6 +1164,7 @@ public class PatternProductionOrchestrator {
         if (needUpdate) {
             pattern.setUpdateTime(LocalDateTime.now());
             patternProductionService.updateById(pattern);
+            syncStyleInfoSampleStage(pattern);
         }
     }
 
