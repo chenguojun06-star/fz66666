@@ -68,6 +68,7 @@
     <view class="voice-hint" wx:if="{{voiceHint}}">{{voiceHint}}</view>
     <view class="chat-input-area">
       <view
+        wx:if="{{voiceEntryVisible}}"
         class="voice-btn {{isRecording ? 'voice-btn-recording' : ''}} {{(!voiceEnabled || isLoading) ? 'voice-btn-disabled' : ''}}"
         catchtouchstart="startVoiceInput"
         catchtouchend="stopVoiceInput"

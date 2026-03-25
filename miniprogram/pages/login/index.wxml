@@ -1,146 +1,153 @@
 <view class="login-page">
-  <!-- 语言切换（暂隐藏，后续上线）
-  <view class="login-lang-corner" bindtap="onLanguageSwitchTap">
-    <text class="login-lang-icon">🌐</text>
-    <text class="login-lang-text">{{currentLanguageLabel}}</text>
-  </view>
-  -->
-
-  <!-- 天蝎座星座呼吸灯装饰 -->
-  <view class="login-constellation" aria-hidden="true">
-    <view class="constellation-line"></view>
-    <view class="constellation-glow"></view>
-    <view class="constellation-dot" style="left:48rpx;top:50rpx;"></view>
-    <view class="constellation-dot" style="left:96rpx;top:100rpx;"></view>
-    <view class="constellation-dot" style="left:136rpx;top:146rpx;"></view>
-    <view class="constellation-dot" style="left:182rpx;top:124rpx;"></view>
-    <view class="constellation-dot" style="left:230rpx;top:156rpx;"></view>
-    <view class="constellation-dot" style="left:270rpx;top:196rpx;"></view>
-    <view class="constellation-dot" style="left:310rpx;top:174rpx;"></view>
-    <view class="constellation-dot" style="left:342rpx;top:218rpx;"></view>
-    <view class="constellation-dot" style="left:366rpx;top:240rpx;"></view>
+  <view class="login-bg" aria-hidden="true">
+    <view class="tech-grid"></view>
+    <view class="tech-map"></view>
+    <view class="tech-glow tech-glow-left"></view>
+    <view class="tech-glow tech-glow-right"></view>
+    <view class="tech-arc tech-arc-1"></view>
+    <view class="tech-arc tech-arc-2"></view>
+    <view class="tech-arc tech-arc-3"></view>
+    <view class="tech-node tech-node-1"></view>
+    <view class="tech-node tech-node-2"></view>
+    <view class="tech-node tech-node-3"></view>
+    <view class="tech-node tech-node-4"></view>
+    <view class="tech-node tech-node-5"></view>
   </view>
 
-  <view class="login-content">
-    <!-- 顶部工厂名称（居中大字） -->
-    <view class="login-header">
-      <text class="login-title">{{selectedTenantName || i18nTexts.brand}}</text>
-    </view>
+  <view class="login-shell">
+    <view class="login-panel">
+      <view class="login-card-accent login-card-accent-top"></view>
+      <view class="login-card-accent login-card-accent-bottom"></view>
 
-    <!-- 正在验证微信身份（openid check loading） -->
-    <view wx:if="{{wechatChecking}}" class="wechat-checking">
-      <view class="wechat-checking-icon">微信</view>
-      <text class="wechat-checking-text">{{i18nTexts.wechatChecking}}</text>
-    </view>
-
-    <!-- 登录表单（openid 未绑定时 / 开发环境） -->
-    <block wx:if="{{!wechatChecking}}">
-
-    <!-- 邀请横幅：管理员扫码邀请员工时显示 -->
-    <view wx:if="{{inviteBanner}}" class="invite-banner">
-      <text class="invite-banner-icon">🎉</text>
-      <text class="invite-banner-text">{{inviteBanner}}</text>
-    </view>
-
-    <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.company}}</view>
-      <view class="login-input-wrap">
-        <text class="login-input-icon">🔍</text>
-        <input
-          class="login-input"
-          placeholder="{{tenantsLoading ? i18nTexts.loading : i18nTexts.companySearchPlaceholder}}"
-          value="{{tenantSearchText}}"
-          bindinput="onTenantSearch"
-          bindfocus="onTenantSearchFocus"
-          disabled="{{loading || tenantsLoading || inviteTenantFixed}}"
-        />
-        <text wx:if="{{selectedTenantName && !inviteTenantFixed}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
+      <view class="login-header">
+        <view class="login-title-row">
+          <view class="login-title">{{i18nTexts.brand}}</view>
+          <view class="login-title-cloud">
+            <view class="login-title-cloud-scale">
+              <view class="tech-cloud-glow"></view>
+              <view class="tech-cloud">
+                <view class="tech-cloud-part tech-cloud-part-left"></view>
+                <view class="tech-cloud-part tech-cloud-part-center"></view>
+                <view class="tech-cloud-part tech-cloud-part-right"></view>
+                <view class="tech-cloud-base"></view>
+                <view class="tech-cloud-eye tech-cloud-eye-left">
+                  <view class="tech-cloud-eye-highlight"></view>
+                </view>
+                <view class="tech-cloud-eye tech-cloud-eye-right">
+                  <view class="tech-cloud-eye-highlight"></view>
+                </view>
+                <view class="tech-cloud-smile"></view>
+                <view class="tech-cloud-spark tech-cloud-spark-left"></view>
+                <view class="tech-cloud-spark tech-cloud-spark-right"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="login-subtitle">在线协同・智能预警・提升履约确定性。</view>
       </view>
-      <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">{{i18nTexts.companySelectedPrefix}}{{selectedTenantName}}</view>
-      <!-- 搜索结果下拉 -->
-      <view wx:if="{{showTenantResults && filteredTenants.length > 0}}" class="tenant-results">
-        <view
-          wx:for="{{filteredTenants}}"
-          wx:key="id"
-          class="tenant-result-item"
-          data-index="{{index}}"
-          bindtap="onTenantSelect"
-          hover-class="tenant-result-item-hover"
-          hover-stay-time="50"
-        >{{item.tenantName}}</view>
-      </view>
-      <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
-        <view class="tenant-result-empty">{{i18nTexts.companyNotFound}}</view>
-      </view>
-    </view>
 
-    <!-- 用户名 -->
-    <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.username}}</view>
-      <view class="login-input-wrap">
-        <text class="login-input-icon">👤</text>
-        <input
-          class="login-input"
-          placeholder="{{i18nTexts.usernamePlaceholder}}"
-          value="{{username}}"
-          bindinput="onUsernameInput"
-          disabled="{{loading}}"
-        />
+      <view wx:if="{{wechatChecking}}" class="wechat-checking">
+        <view class="wechat-checking-badge">微信</view>
+        <view class="wechat-checking-title">{{i18nTexts.wechatChecking}}</view>
       </view>
-    </view>
 
-    <!-- 密码 -->
-    <view class="login-field">
-      <view class="login-label"><text class="login-label-required">*</text> {{i18nTexts.password}}</view>
-      <view class="login-input-wrap">
-        <text class="login-input-icon">🔒</text>
-        <input
-          class="login-input"
-          placeholder="{{i18nTexts.passwordPlaceholder}}"
-          password="{{!showPassword}}"
-          value="{{password}}"
-          bindinput="onPasswordInput"
-          disabled="{{loading}}"
-        />
-        <text class="login-input-eye" bindtap="togglePassword">{{showPassword ? '🙈' : '👁'}}</text>
-      </view>
-    </view>
+      <block wx:if="{{!wechatChecking}}">
+        <view wx:if="{{inviteBanner}}" class="invite-banner">
+          <text class="invite-banner-icon">✦</text>
+          <text class="invite-banner-text">{{inviteBanner}}</text>
+        </view>
 
-    <!-- 登录按钮 -->
-    <view class="login-btn-wrap">
-      <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">
-        {{loading ? i18nTexts.submitting : i18nTexts.submit}}
-      </view>
-    </view>
+        <view class="login-field">
+          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.company}}</view>
+          <view class="login-input-wrap">
+            <text class="login-input-icon">⌕</text>
+            <input
+              class="login-input"
+              placeholder="{{tenantsLoading ? i18nTexts.loading : i18nTexts.companySearchPlaceholder}}"
+              value="{{tenantSearchText}}"
+              bindinput="onTenantSearch"
+              bindfocus="onTenantSearchFocus"
+              disabled="{{loading || tenantsLoading || inviteTenantFixed}}"
+            />
+            <text wx:if="{{selectedTenantName && !inviteTenantFixed}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
+          </view>
+          <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">{{i18nTexts.companySelectedPrefix}}{{selectedTenantName}}</view>
+          <view wx:if="{{showTenantResults && filteredTenants.length > 0}}" class="tenant-results">
+            <view
+              wx:for="{{filteredTenants}}"
+              wx:key="id"
+              class="tenant-result-item"
+              data-index="{{index}}"
+              bindtap="onTenantSelect"
+              hover-class="tenant-result-item-hover"
+              hover-stay-time="50"
+            >{{item.tenantName}}</view>
+          </view>
+          <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
+            <view class="tenant-result-empty">{{i18nTexts.companyNotFound}}</view>
+          </view>
+        </view>
 
-    <!-- 微信一键登录 -->
-    <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
-      <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin" hover-class="login-btn-wechat-hover" hover-stay-time="50">
-        {{loading ? i18nTexts.submitting : i18nTexts.wechatQuickLogin}}
-      </view>
-    </view>
+        <view class="login-field">
+          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.username}}</view>
+          <view class="login-input-wrap">
+            <text class="login-input-icon">◌</text>
+            <input
+              class="login-input"
+              placeholder="{{i18nTexts.usernamePlaceholder}}"
+              value="{{username}}"
+              bindinput="onUsernameInput"
+              disabled="{{loading}}"
+            />
+          </view>
+        </view>
 
-    <!-- 开发模式：服务器地址 -->
-    <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
-      <view class="login-label">{{i18nTexts.serverUrl}}</view>
-      <view class="login-input-wrap">
-        <text class="login-input-icon">🌐</text>
-        <input
-          class="login-input"
-          placeholder="{{i18nTexts.serverUrlPlaceholder}}"
-          value="{{apiBaseUrl}}"
-          bindinput="onApiBaseUrlInput"
-        />
-      </view>
-    </view>
+        <view class="login-field">
+          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.password}}</view>
+          <view class="login-input-wrap">
+            <text class="login-input-icon">◐</text>
+            <input
+              class="login-input"
+              placeholder="{{i18nTexts.passwordPlaceholder}}"
+              password="{{!showPassword}}"
+              value="{{password}}"
+              bindinput="onPasswordInput"
+              disabled="{{loading}}"
+            />
+            <text class="login-input-eye" bindtap="togglePassword">{{showPassword ? '隐' : '显'}}</text>
+          </view>
+        </view>
 
-    <!-- 注册入口 -->
-    <view class="login-register-section">
-      <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">{{i18nTexts.noAccount}}{{i18nTexts.registerNow}}</view>
-    </view>
+        <view class="login-btn-wrap">
+          <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">
+            {{loading ? i18nTexts.submitting : i18nTexts.submit}}
+          </view>
+        </view>
 
-    <!-- 底部版权 -->
-    <view class="login-footer">© 2026 {{i18nTexts.brand}}</view>
-    </block><!-- /!wechatChecking -->
+        <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
+          <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin" hover-class="login-btn-wechat-hover" hover-stay-time="50">
+            {{loading ? i18nTexts.submitting : i18nTexts.wechatQuickLogin}}
+          </view>
+        </view>
+
+        <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
+          <view class="login-label">{{i18nTexts.serverUrl}}</view>
+          <view class="login-input-wrap">
+            <text class="login-input-icon">◎</text>
+            <input
+              class="login-input"
+              placeholder="{{i18nTexts.serverUrlPlaceholder}}"
+              value="{{apiBaseUrl}}"
+              bindinput="onApiBaseUrlInput"
+            />
+          </view>
+        </view>
+
+        <view class="login-register-section">
+          <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">{{i18nTexts.noAccount}}{{i18nTexts.registerNow}}</view>
+        </view>
+      </block>
+
+    </view>
   </view>
 </view>

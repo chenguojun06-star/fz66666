@@ -1,179 +1,706 @@
-/* ==========================================
- * 登录页样式 - 一体式深蓝设计 + 天蝎座呼吸灯
- * ========================================== */
-
-/* 登录页专属主题色（品牌沉浸式设计，不使用通用 design-tokens） */
 page {
-  --login-bg: #0b2d5c;
-  --login-primary: #2d7ff9;
-  --login-primary-alt: #1890ff;
-  --login-text: rgba(255, 255, 255, 0.96);
-  --login-text-muted: rgba(255, 255, 255, 0.82);
-  --login-text-faint: rgba(255, 255, 255, 0.50);
-  --login-input-bg: rgba(246, 248, 255, 0.95);
-  --login-border: rgba(255, 255, 255, 0.14);
+  --login-primary: #1f75ea;
+  --login-primary-alt: #1562d6;
+  --login-bg-deep: #dfe6f0;
+  --login-bg-light: #edf2f8;
+  --login-panel-bg: rgba(236, 242, 251, 0.88);
+  --login-panel-border: rgba(31, 117, 234, 0.12);
+  --login-text-main: #26384b;
+  --login-text-body: #6a7486;
+  --login-text-soft: #90a5b5;
+  --login-input-bg: rgba(255, 255, 255, 0.82);
+  --login-input-border: rgba(194, 203, 222, 0.62);
   --login-wechat: #07c160;
-  background: var(--login-bg);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(109, 155, 239, 0.24), transparent 24%),
+    radial-gradient(circle at 84% 18%, rgba(170, 194, 235, 0.2), transparent 22%),
+    linear-gradient(135deg, var(--login-bg-deep) 0%, var(--login-bg-light) 42%, #d7e0ec 100%);
 }
 
-/* 整体页面 - 一体式全屏深蓝 */
 .login-page {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 80rpx 48rpx calc(40rpx + env(safe-area-inset-bottom));
+  padding: calc(48rpx + env(safe-area-inset-top)) 28rpx calc(36rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--login-bg);
 }
 
-.login-lang-corner {
-  position: fixed;
-  top: calc(20rpx + env(safe-area-inset-top));
-  right: 24rpx;
-  z-index: 30;
-  display: flex;
+.login-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tech-grid {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    linear-gradient(rgba(143, 167, 212, 0.18) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(143, 167, 212, 0.18) 1rpx, transparent 1rpx);
+  background-size: 54rpx 54rpx;
+  opacity: 0.56;
+  animation:
+    gridFloat 22s linear infinite,
+    gridBreath 6s ease-in-out infinite;
+}
+
+.tech-map {
+  position: absolute;
+  top: 90rpx;
+  left: 44rpx;
+  right: 44rpx;
+  height: 300rpx;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 520'%3E%3Cg fill='none' stroke='%2393a9bb' stroke-width='2' opacity='0.28'%3E%3Cpath d='M85 185c40-36 96-57 158-59 34-1 62 7 94 19 18 7 40 8 58 2l21 19 18-5 20 15 34 0 20 18 10 31 38 2 16 28 22 8 13 34-20 24-44-7-31 13-25-9-42 20-10 24-31 18-48-1-34-18-43 10-36-20-28-42-57-9-31-44 6-45z'/%3E%3Cpath d='M487 151l40-27 40 3 28-20 34 13 26-3 26 20 37 1 25 27 0 31-28 8-15 20-40 5-37 17-57 4-24 16-48-11-13-21 14-30-20-26 12-27z'/%3E%3Cpath d='M706 145l53-18 44 10 17 18 48 8 46 25 32 30 58 14 27 38-25 28-51-5-41 18-57-8-36 6-31-26-39-9-29-31-14-39-25-18-9-30z'/%3E%3Cpath d='M905 324l39 16 28 34-14 37-44 3-22-23-10-40z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.48;
+  animation: mapBreath 7s ease-in-out infinite;
+}
+
+.tech-glow {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.tech-glow-left {
+  width: 420rpx;
+  height: 420rpx;
+  top: -80rpx;
+  left: -90rpx;
+  background: radial-gradient(circle, rgba(31, 117, 234, 0.18), transparent 70%);
+  animation: glowBreath 8s ease-in-out infinite;
+}
+
+.tech-glow-right {
+  width: 440rpx;
+  height: 440rpx;
+  right: -120rpx;
+  bottom: 220rpx;
+  background: radial-gradient(circle, rgba(76, 142, 241, 0.16), transparent 72%);
+  animation: glowBreath 9s ease-in-out infinite reverse;
+}
+
+.tech-arc {
+  position: absolute;
+  border-top: 2rpx solid rgba(31, 117, 234, 0.42);
+  border-radius: 999rpx 999rpx 0 0;
+  opacity: 0.72;
+}
+
+.tech-arc-1 {
+  width: 300rpx;
+  height: 140rpx;
+  left: 60rpx;
+  top: 250rpx;
+  transform: rotate(-8deg);
+  animation: arcPulse 5.6s ease-in-out infinite;
+}
+
+.tech-arc-2 {
+  width: 260rpx;
+  height: 160rpx;
+  right: 120rpx;
+  top: 190rpx;
+  transform: rotate(9deg);
+  animation: arcPulse 7s ease-in-out infinite 1.2s;
+}
+
+.tech-arc-3 {
+  width: 340rpx;
+  height: 170rpx;
+  right: 30rpx;
+  top: 280rpx;
+  transform: rotate(-5deg);
+  animation: arcPulse 6.4s ease-in-out infinite 2s;
+}
+
+.tech-node,
+.signal-node {
+  position: absolute;
+  border-radius: 50%;
+  background: #3d82ef;
+}
+
+.tech-node {
+  width: 12rpx;
+  height: 12rpx;
+  box-shadow: 0 0 0 10rpx rgba(61, 130, 239, 0.16);
+  animation:
+    nodePulse 4.8s ease-in-out infinite,
+    nodeFloat 8s ease-in-out infinite;
+}
+
+.tech-node-1 {
+  left: 96rpx;
+  top: 318rpx;
+}
+.tech-node-2 {
+  left: 190rpx;
+  top: 256rpx;
+  animation-delay: 0.8s;
+}
+.tech-node-3 {
+  right: 212rpx;
+  top: 236rpx;
+  animation-delay: 1.6s;
+}
+.tech-node-4 {
+  right: 104rpx;
+  top: 316rpx;
+  animation-delay: 0.4s;
+}
+.tech-node-5 {
+  right: 70rpx;
+  top: 420rpx;
+  animation-delay: 2s;
+}
+
+.login-shell {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 694rpx;
+  margin: 0 auto;
+}
+
+.login-hero {
+  padding: 18rpx 12rpx 42rpx;
+}
+
+.login-kicker {
+  display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  height: 56rpx;
-  padding: 0 16rpx;
+  padding: 10rpx 20rpx;
   border-radius: 999rpx;
-  border: 1rpx solid var(--login-border);
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--login-primary);
+  background: rgba(255, 255, 255, 0.56);
+  border: 1rpx solid rgba(31, 117, 234, 0.22);
+  box-shadow: 0 12rpx 30rpx rgba(150, 188, 214, 0.16);
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
-.login-lang-icon {
+.login-hero-title {
+  margin-top: 28rpx;
+  color: var(--login-text-main);
+  font-size: 54rpx;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.login-hero-desc {
+  margin-top: 16rpx;
+  color: var(--login-text-body);
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.login-visual {
+  position: relative;
+  width: 360rpx;
+  height: 360rpx;
+  margin: 52rpx auto 0;
+}
+
+.tech-orbit,
+.tech-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tech-orbit {
+  border: 2rpx solid rgba(31, 117, 234, 0.22);
+}
+
+.orbit-a {
+  width: 284rpx;
+  height: 284rpx;
+  border-style: dashed;
+  animation: rotateClockwise 14s linear infinite;
+}
+
+.orbit-b {
+  width: 340rpx;
+  height: 340rpx;
+  animation: rotateReverse 22s linear infinite;
+}
+
+.orbit-c {
+  width: 392rpx;
+  height: 392rpx;
+  border-style: dotted;
+  border-color: rgba(31, 117, 234, 0.16);
+  animation: rotateClockwise 30s linear infinite;
+}
+
+.tech-ring {
+  border: 2rpx solid transparent;
+}
+
+.ring-1 {
+  width: 228rpx;
+  height: 228rpx;
+  border-top-color: rgba(31, 117, 234, 0.82);
+  border-right-color: rgba(31, 117, 234, 0.26);
+  border-left-color: rgba(31, 117, 234, 0.32);
+  animation: rotateClockwise 9s linear infinite;
+}
+
+.ring-2 {
+  width: 182rpx;
+  height: 182rpx;
+  border-bottom-color: rgba(79, 143, 255, 0.84);
+  border-top: 2rpx dashed rgba(79, 143, 255, 0.32);
+  animation: rotateReverse 7s linear infinite;
+}
+
+.ring-3 {
+  width: 128rpx;
+  height: 128rpx;
+  border-color: rgba(31, 117, 234, 0.2);
+  border-right-color: rgba(31, 117, 234, 0.68);
+  animation: rotateClockwise 5s ease-in-out infinite;
+}
+
+.tech-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 184rpx;
+  height: 184rpx;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(31, 117, 234, 0.16), rgba(31, 117, 234, 0.04) 62%, transparent 78%);
+  animation: haloBreath 6.5s ease-in-out infinite;
+}
+
+.tech-axis {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0.5;
+}
+
+.tech-axis-x {
+  width: 404rpx;
+  height: 2rpx;
+  margin-left: -202rpx;
+  margin-top: -1rpx;
+  background: linear-gradient(90deg, transparent, rgba(31, 117, 234, 0.52), transparent);
+}
+
+.tech-axis-y {
+  width: 2rpx;
+  height: 404rpx;
+  margin-left: -1rpx;
+  margin-top: -202rpx;
+  background: linear-gradient(180deg, transparent, rgba(31, 117, 234, 0.52), transparent);
+}
+
+.signal-node {
+  width: 12rpx;
+  height: 12rpx;
+  box-shadow: 0 0 0 10rpx rgba(31, 117, 234, 0.14);
+}
+
+.signal-node-1 {
+  left: 60rpx;
+  top: 48rpx;
+  animation: nodePulse 4.2s ease-in-out infinite;
+}
+.signal-node-2 {
+  right: 32rpx;
+  top: 136rpx;
+  animation: nodePulse 4.2s ease-in-out infinite 0.8s;
+}
+.signal-node-3 {
+  left: 88rpx;
+  bottom: 40rpx;
+  animation: nodePulse 4.2s ease-in-out infinite 1.6s;
+}
+.signal-node-4 {
+  right: 86rpx;
+  bottom: 50rpx;
+  animation: nodePulse 4.2s ease-in-out infinite 2.2s;
+}
+
+.tech-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 156rpx;
+  height: 120rpx;
+  margin-left: -78rpx;
+  margin-top: -60rpx;
+  z-index: 2;
+  animation: coreBreath 6.2s ease-in-out infinite;
+}
+
+.tech-cloud-glow {
+  position: absolute;
+  inset: 10rpx 8rpx;
+  border-radius: 999rpx;
+  background: radial-gradient(circle, rgba(74, 140, 255, 0.22), rgba(74, 140, 255, 0.04) 66%, transparent 78%);
+  animation: glowPulse 5.2s ease-in-out infinite;
+}
+
+.tech-cloud {
+  position: relative;
+  width: 120rpx;
+  height: 86rpx;
+  margin: 16rpx auto 0;
+  animation: floatSoft 4.8s ease-in-out infinite;
+}
+
+.tech-cloud-part,
+.tech-cloud-base {
+  position: absolute;
+  background: linear-gradient(180deg, #f8fbff 0%, #d9e7ff 100%);
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.9),
+    0 8rpx 18rpx rgba(31, 117, 234, 0.14);
+}
+
+.tech-cloud-part {
+  border-radius: 50%;
+}
+
+.tech-cloud-part-left {
+  width: 40rpx;
+  height: 40rpx;
+  left: 12rpx;
+  top: 28rpx;
+}
+
+.tech-cloud-part-center {
+  width: 52rpx;
+  height: 52rpx;
+  left: 34rpx;
+  top: 12rpx;
+}
+
+.tech-cloud-part-right {
+  width: 36rpx;
+  height: 36rpx;
+  right: 12rpx;
+  top: 30rpx;
+}
+
+.tech-cloud-base {
+  left: 14rpx;
+  right: 14rpx;
+  bottom: 10rpx;
+  height: 32rpx;
+  border-radius: 999rpx;
+}
+
+.tech-cloud-eye {
+  position: absolute;
+  top: 40rpx;
+  width: 14rpx;
+  height: 18rpx;
+  border-radius: 999rpx;
+  background: #3a5ea7;
+  z-index: 2;
+  overflow: hidden;
+  animation: cloudBlink 6.6s ease-in-out infinite;
+}
+
+.tech-cloud-eye-left {
+  left: 32rpx;
+}
+
+.tech-cloud-eye-right {
+  right: 32rpx;
+}
+
+.tech-cloud-eye-highlight {
+  width: 6rpx;
+  height: 6rpx;
+  margin: 2rpx 0 0 2rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  animation: eyeHighlightTwinkle 4.2s ease-in-out infinite;
+}
+
+.tech-cloud-smile {
+  position: absolute;
+  left: 50%;
+  bottom: 14rpx;
+  width: 32rpx;
+  height: 16rpx;
+  margin-left: -16rpx;
+  border-bottom: 4rpx solid #3a5ea7;
+  border-radius: 0 0 32rpx 32rpx;
+  z-index: 2;
+  animation: cloudSmileTalk 3.8s ease-in-out infinite;
+}
+
+.tech-cloud-spark {
+  position: absolute;
+  width: 10rpx;
+  height: 10rpx;
+  background: #ffd86a;
+  transform: rotate(45deg);
+  animation: sparkleBlink 2s ease-in-out infinite;
+}
+
+.tech-cloud-spark-left {
+  left: 6rpx;
+  top: 12rpx;
+}
+
+.tech-cloud-spark-right {
+  right: 4rpx;
+  top: 10rpx;
+  animation-delay: 0.6s;
+}
+
+.small-ai-badge {
+  position: absolute;
+  top: 18rpx;
+  right: 10rpx;
+  min-width: 58rpx;
+  height: 42rpx;
+  line-height: 42rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #3a89f6, #1f75ea);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+  box-shadow: 0 10rpx 26rpx rgba(31, 117, 234, 0.2);
+}
+
+.tech-float-card {
+  position: absolute;
+  min-width: 124rpx;
+  padding: 14rpx 16rpx;
+  border-radius: 22rpx;
+  background: rgba(241, 246, 255, 0.72);
+  border: 1rpx solid rgba(31, 117, 234, 0.14);
+  box-shadow: 0 18rpx 34rpx rgba(31, 117, 234, 0.08);
+}
+
+.tech-float-card-top {
+  top: 0;
+  left: 50%;
+  animation: floatTopCard 5.2s ease-in-out infinite;
+}
+
+.tech-float-card-left {
+  left: -14rpx;
+  bottom: 70rpx;
+  animation: floatPanelY 6s ease-in-out infinite 0.5s;
+}
+
+.tech-float-card-right {
+  right: -18rpx;
+  top: 198rpx;
+  animation: floatPanelY 6.6s ease-in-out infinite 1s;
+}
+
+.tech-float-label {
+  display: block;
+  color: #718198;
+  font-size: 18rpx;
+}
+
+.tech-float-value {
+  display: block;
+  margin-top: 6rpx;
+  color: #334455;
   font-size: 24rpx;
+  font-weight: 700;
 }
 
-.login-lang-text {
-  font-size: 22rpx;
-  color: var(--login-text);
+.login-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14rpx;
+  margin-top: 40rpx;
+}
+
+.highlight-card,
+.login-panel {
+  background: var(--login-panel-bg);
+  border: 1rpx solid var(--login-panel-border);
+  box-shadow: 0 18rpx 34rpx rgba(31, 117, 234, 0.08);
+}
+
+.highlight-card {
+  padding: 18rpx;
+  border-radius: 22rpx;
+}
+
+.highlight-label {
+  display: block;
+  color: #6d7e99;
+  font-size: 18rpx;
+  letter-spacing: 1rpx;
+}
+
+.highlight-value {
+  display: block;
+  margin-top: 10rpx;
+  color: #23384d;
+  font-size: 24rpx;
+  line-height: 1.5;
   font-weight: 600;
 }
 
-/* ===== 天蝎座星座呼吸灯 ===== */
-.login-constellation {
-  position: fixed;
-  right: 6%;
-  bottom: 10%;
-  width: 400rpx;
-  height: 280rpx;
-  pointer-events: none;
-  z-index: 1;
-  animation: constellation-breathe 3.8s ease-in-out infinite;
-}
-
-/* 星座连线 */
-.constellation-line {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'%3E%3Cpolyline points='48,50 96,100 136,146 182,124 230,156 270,196 310,174 342,218 366,240' fill='none' stroke='%23d2e8ff' stroke-opacity='0.45' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-/* 星座光晕 */
-.constellation-glow {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  opacity: 0.35;
-  filter: blur(1px);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'%3E%3Cpolyline points='48,50 96,100 136,146 182,124 230,156 270,196 310,174 342,218 366,240' fill='none' stroke='%232d7ff9' stroke-opacity='0.30' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-/* 星座节点亮点 */
-.constellation-dot {
-  position: absolute;
-  width: 6rpx;
-  height: 6rpx;
-  background: #d2e8ff;
-  border-radius: 50%;
-  box-shadow: 0 0 8rpx 3rpx rgba(210, 232, 255, 0.6);
-  animation: dot-twinkle 2.4s ease-in-out infinite;
-}
-
-.constellation-dot:nth-child(4) { animation-delay: 0.3s; }
-.constellation-dot:nth-child(5) { animation-delay: 0.6s; }
-.constellation-dot:nth-child(6) { animation-delay: 0.9s; }
-.constellation-dot:nth-child(7) { animation-delay: 1.2s; }
-.constellation-dot:nth-child(8) { animation-delay: 1.5s; }
-.constellation-dot:nth-child(9) { animation-delay: 1.8s; }
-.constellation-dot:nth-child(10) { animation-delay: 2.1s; }
-.constellation-dot:nth-child(11) { animation-delay: 0.15s; }
-
-@keyframes constellation-breathe {
-  0%, 100% {
-    opacity: 0.18;
-    filter: drop-shadow(0 0 10rpx rgba(210, 232, 255, 0.08));
-  }
-  50% {
-    opacity: 0.48;
-    filter: drop-shadow(0 0 18rpx rgba(210, 232, 255, 0.16));
-  }
-}
-
-@keyframes dot-twinkle {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.8);
-  }
-}
-
-/* 内容区域 - 无卡片边框，一体融合 */
-.login-content {
-  width: 100%;
-  max-width: 620rpx;
+.login-panel {
   position: relative;
-  z-index: 10;
+  padding: 40rpx 34rpx 28rpx;
+  border-radius: 32rpx;
 }
 
-/* ===== 顶部工厂名称（居中大字） ===== */
+.login-card-accent {
+  position: absolute;
+  height: 2rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, transparent, rgba(121, 148, 236, 0.82), transparent);
+}
+
+.login-card-accent-top {
+  top: 18rpx;
+  left: 32rpx;
+  right: 32rpx;
+}
+
+.login-card-accent-bottom {
+  bottom: 18rpx;
+  left: 60rpx;
+  right: 60rpx;
+  opacity: 0.6;
+}
+
 .login-header {
   text-align: center;
-  margin-bottom: 40rpx;
+  margin-bottom: 24rpx;
+}
+
+.login-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
 }
 
 .login-title {
-  display: block;
-  font-size: 48rpx;
-  font-weight: 800;
-  color: var(--login-text);
-  letter-spacing: 2rpx;
-  text-shadow:
-    0 2rpx 0 rgba(255, 255, 255, 0.10),
-    0 4rpx 0 rgba(0, 0, 0, 0.26),
-    0 20rpx 52rpx rgba(0, 0, 0, 0.55);
+  color: #2b3646;
+  font-weight: 700;
+  font-size: 44rpx;
+  letter-spacing: 1rpx;
 }
 
-/* ===== 表单字段 ===== */
-.login-field {
-  margin-bottom: 28rpx;
+.login-title-cloud {
   position: relative;
+  width: 66rpx;
+  height: 50rpx;
+  flex-shrink: 0;
+}
+
+.login-title-cloud-scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120rpx;
+  height: 86rpx;
+  transform: scale(0.5);
+  transform-origin: left top;
+}
+
+.login-title-cloud-scale .tech-cloud {
+  margin: 0;
+}
+
+.login-subtitle {
+  margin-top: 10rpx;
+  color: #7a8595;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.wechat-checking {
+  padding: 64rpx 0 48rpx;
+  text-align: center;
+}
+
+.wechat-checking-badge {
+  width: 108rpx;
+  height: 108rpx;
+  line-height: 108rpx;
+  margin: 0 auto 28rpx;
+  border-radius: 50%;
+  background: var(--login-wechat);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  box-shadow: 0 16rpx 30rpx rgba(7, 193, 96, 0.22);
+}
+
+.wechat-checking-title {
+  color: var(--login-text-main);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.wechat-checking-desc {
+  margin-top: 14rpx;
+  color: var(--login-text-body);
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.invite-banner {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(31, 117, 234, 0.18);
+  background: linear-gradient(135deg, rgba(230, 244, 255, 0.94), rgba(240, 249, 255, 0.9));
+}
+
+.invite-banner-icon {
+  font-size: 30rpx;
+  color: var(--login-primary);
+  margin-right: 14rpx;
+}
+
+.invite-banner-text {
+  flex: 1;
+  color: var(--login-primary);
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.login-field {
+  position: relative;
+  margin-bottom: 22rpx;
 }
 
 .login-field-dev {
-  margin-top: 16rpx;
-  padding-top: 16rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  margin-top: 14rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid rgba(121, 148, 236, 0.16);
 }
 
 .login-label {
-  font-size: 26rpx;
-  color: var(--login-text-muted);
-  font-weight: 700;
   margin-bottom: 12rpx;
+  color: #4e687a;
+  font-size: 24rpx;
+  font-weight: 600;
 }
 
 .login-label-required {
@@ -181,92 +708,68 @@ page {
   margin-right: 4rpx;
 }
 
-/* 输入框容器（半透明融合深蓝背景） */
 .login-input-wrap {
   display: flex;
   align-items: center;
-  height: 88rpx;
-  background: var(--login-input-bg);
-  border: 1rpx solid var(--login-border);
-  border-radius: 28rpx;
+  min-height: 88rpx;
   padding: 0 24rpx;
+  border-radius: 20rpx;
+  background: var(--login-input-bg);
+  border: 1rpx solid var(--login-input-border);
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.82),
+    0 10rpx 20rpx rgba(147, 185, 208, 0.08);
+}
+
+.login-input-icon,
+.login-input-clear,
+.login-input-eye {
+  flex-shrink: 0;
 }
 
 .login-input-icon {
-  font-size: 32rpx;
-  margin-right: 16rpx;
-  flex-shrink: 0;
+  width: 34rpx;
+  color: #8f9dad;
+  font-size: 28rpx;
+  text-align: center;
 }
 
 .login-input {
   flex: 1;
-  height: 86rpx;
-  font-size: 28rpx;
-  color: rgba(17, 24, 39, 0.92);
-  background: transparent;
-  border: none;
-  text-align: center;
-}
-
-.login-input-clear {
-  font-size: 28rpx;
-  color: rgba(17, 24, 39, 0.35);
-  padding: 8rpx;
-  flex-shrink: 0;
-}
-
-.login-input-eye {
-  font-size: 32rpx;
-  padding: 8rpx;
-  flex-shrink: 0;
-}
-
-/* 已选择提示 */
-.tenant-selected-tag {
-  font-size: 22rpx;
-  color: #52c41a;
-  margin-top: 8rpx;
-  padding-left: 4rpx;
-}
-
-/* 邀请横幅 */
-.invite-banner {
-  display: flex;
-  align-items: center;
-  background: linear-gradient(135deg, #e6f4ff, #f0f9ff);
-  border: 1rpx solid #91caff;
-  border-radius: 16rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 24rpx;
-}
-.invite-banner-icon {
-  font-size: 36rpx;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-}
-.invite-banner-text {
+  height: 88rpx;
+  margin-left: 16rpx;
+  color: #22384a;
   font-size: 26rpx;
-  color: #1677ff;
-  line-height: 1.5;
-  flex: 1;
 }
 
-/* 搜索结果下拉 */
+.login-input-clear,
+.login-input-eye {
+  color: #7387a0;
+  font-size: 24rpx;
+  padding: 10rpx;
+}
+
+.tenant-selected-tag {
+  margin-top: 10rpx;
+  color: #6a84ca;
+  font-size: 20rpx;
+}
+
 .tenant-results {
-  background: #fff;
-  border: 1rpx solid rgba(0, 0, 0, 0.08);
-  border-radius: 16rpx;
   margin-top: 12rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.08);
   max-height: 320rpx;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
 }
 
 .tenant-result-item {
-  padding: 24rpx 28rpx;
-  font-size: 28rpx;
+  padding: 22rpx 26rpx;
   color: #1d1d1f;
+  font-size: 26rpx;
   border-bottom: 1rpx solid rgba(0, 0, 0, 0.04);
 }
 
@@ -274,118 +777,278 @@ page {
   border-bottom: none;
 }
 
-/* hover-class="tenant-result-item-hover" 替代 :active */
 .tenant-result-item-hover {
   background: rgba(45, 127, 249, 0.08);
 }
 
 .tenant-result-empty {
   padding: 24rpx 28rpx;
-  font-size: 26rpx;
-  color: #c0c0c0;
+  color: #9aa6b2;
+  font-size: 24rpx;
   text-align: center;
 }
 
-/* ===== 登录按钮 ===== */
 .login-btn-wrap {
-  margin-top: 20rpx;
+  margin-top: 22rpx;
+}
+
+.login-btn,
+.login-btn-wechat {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-weight: 600;
 }
 
 .login-btn {
-  width: 100%;
-  height: 84rpx;
-  line-height: 84rpx;
-  text-align: center;
-  font-size: 30rpx;
-  font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, var(--login-primary) 0%, var(--login-primary-alt) 100%);
-  border-radius: 999rpx;
-  box-shadow: 0 14rpx 30rpx rgba(45, 127, 249, 0.34);
+  font-size: 30rpx;
   letter-spacing: 8rpx;
-}
-
-/* hover-class="login-btn-hover" 替代 :active */
-.login-btn-hover {
-  opacity: 0.85;
-  transform: scale(0.98);
+  background: linear-gradient(90deg, var(--login-primary), var(--login-primary-alt));
+  box-shadow: 0 14rpx 30rpx rgba(31, 117, 234, 0.22);
 }
 
 .login-btn-wechat {
-  width: 100%;
-  height: 84rpx;
-  line-height: 84rpx;
-  text-align: center;
-  font-size: 28rpx;
-  font-weight: 500;
   color: #fff;
+  font-size: 28rpx;
   background: var(--login-wechat);
-  border-radius: 999rpx;
-  box-shadow: 0 10rpx 24rpx rgba(7, 193, 96, 0.3);
+  box-shadow: 0 10rpx 24rpx rgba(7, 193, 96, 0.24);
 }
 
-/* hover-class="login-btn-wechat-hover" 替代 :active */
+.login-btn-hover,
 .login-btn-wechat-hover {
-  opacity: 0.85;
+  opacity: 0.88;
   transform: scale(0.98);
 }
 
 .login-btn-disabled {
-  opacity: 0.5;
-  pointer-events: none;
+  opacity: 0.66;
 }
 
-/* ===== 注册入口 ===== */
 .login-register-section {
   margin-top: 28rpx;
   text-align: center;
 }
 
 .login-register-link {
-  font-size: 26rpx;
-  color: var(--login-primary);
+  display: inline-block;
+  padding: 10rpx 20rpx;
+  color: #6f84bf;
+  font-size: 24rpx;
   font-weight: 500;
-  /* 增大点击区域：解决响应区域过小问题 */
-  display: block;
-  padding: 20rpx 40rpx;
-  margin: -20rpx -40rpx;
 }
 
-/* hover-class="login-register-link-hover" 替代 :active */
 .login-register-link-hover {
-  color: rgba(45, 127, 249, 1);
+  color: #5d73af;
 }
 
-/* ===== 底部版权 ===== */
 .login-footer {
-  margin-top: 16rpx;
+  margin-top: 20rpx;
   text-align: center;
-  font-size: 22rpx;
-  color: var(--login-text-faint);
+  color: var(--login-text-soft);
+  font-size: 20rpx;
 }
 
-/* ===== 微信身份验证中 loading 状态 ===== */
-.wechat-checking {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80rpx 0 60rpx;
+@keyframes rotateClockwise {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
-.wechat-checking-icon {
-  width: 100rpx;
-  height: 100rpx;
-  background: var(--login-wechat);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: #fff;
-  margin-bottom: 28rpx;
+
+@keyframes rotateReverse {
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
 }
-.wechat-checking-text {
-  font-size: 28rpx;
-  color: var(--login-text-muted);
-  letter-spacing: 2rpx;
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6rpx);
+  }
+}
+
+@keyframes floatPanelY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+@keyframes floatTopCard {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-10rpx);
+  }
+}
+
+@keyframes gridFloat {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 26rpx, 0);
+  }
+}
+
+@keyframes gridBreath {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.74;
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes nodeFloat {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -6rpx;
+  }
+}
+
+@keyframes arcPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+@keyframes mapBreath {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.995);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes glowBreath {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.64;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.62;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes haloBreath {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0.62;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes coreBreath {
+  0%,
+  100% {
+    transform: scale(0.98);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes cloudBlink {
+  0%,
+  44%,
+  48%,
+  92%,
+  96%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  46%,
+  94% {
+    transform: scaleY(0.18);
+    opacity: 0.85;
+  }
+}
+
+@keyframes cloudSmileTalk {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.12);
+  }
+}
+
+@keyframes sparkleBlink {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: rotate(45deg) scale(0.86);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.08);
+  }
+}
+
+@keyframes eyeHighlightTwinkle {
+  0%,
+  100% {
+    opacity: 0.74;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }

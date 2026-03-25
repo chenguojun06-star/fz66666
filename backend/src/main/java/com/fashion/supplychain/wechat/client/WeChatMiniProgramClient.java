@@ -2,6 +2,8 @@ package com.fashion.supplychain.wechat.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,13 +15,14 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
 public class WeChatMiniProgramClient {
+
+    private static final Logger log = LoggerFactory.getLogger(WeChatMiniProgramClient.class);
 
     private final String appid;
     private final String secret;
@@ -75,7 +78,9 @@ public class WeChatMiniProgramClient {
         try {
             resp = restTemplate.getForEntity(url, String.class);
         } catch (Exception e) {
-            return Code2SessionResult.fail("调用微信接口失败");
+            log.warn("[WxCode2Session] request failed appId={} codePrefix={} reason={}",
+                    maskAppId(appid), maskCode(code), buildExceptionMessage(e));
+            return Code2SessionResult.fail("调用微信接口失败，请检查服务端网络、DNS、TLS 或微信配置");
         }
         String body = resp == null ? null : resp.getBody();
         if (!StringUtils.hasText(body)) {
@@ -92,9 +97,12 @@ public class WeChatMiniProgramClient {
 
             if (errcode != 0) {
                 String msg = StringUtils.hasText(errmsg) ? errmsg : "微信接口错误";
+                log.warn("[WxCode2Session] wechat returned errcode={} errmsg={} appId={} codePrefix={}",
+                        errcode, msg, maskAppId(appid), maskCode(code));
                 return Code2SessionResult.fail(msg);
             }
             if (!StringUtils.hasText(openid)) {
+                log.warn("[WxCode2Session] openid missing appId={} codePrefix={}", maskAppId(appid), maskCode(code));
                 return Code2SessionResult.fail("未获取到openid");
             }
             Code2SessionResult ok = Code2SessionResult.ok();
@@ -103,6 +111,8 @@ public class WeChatMiniProgramClient {
             ok.setUnionid(unionid);
             return ok;
         } catch (Exception e) {
+            log.warn("[WxCode2Session] parse failed appId={} bodySnippet={} reason={}",
+                    maskAppId(appid), bodySnippet(body), buildExceptionMessage(e));
             return Code2SessionResult.fail("解析微信返回失败");
         }
     }
@@ -134,6 +144,7 @@ public class WeChatMiniProgramClient {
             String token = root.path("access_token").asText(null);
             return StringUtils.hasText(token) ? token : null;
         } catch (Exception e) {
+            log.warn("[WxAccessToken] fetch failed appId={} reason={}", maskAppId(appid), buildExceptionMessage(e));
             return null;
         }
     }
@@ -171,8 +182,48 @@ public class WeChatMiniProgramClient {
             // 非 PNG → 可能是 JSON 错误，忽略
             return null;
         } catch (Exception e) {
+            log.warn("[WxQrCode] fetch failed appId={} reason={}", maskAppId(appid), buildExceptionMessage(e));
             return null;
         }
+    }
+
+    private String maskAppId(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "(empty)";
+        }
+        if (value.length() <= 6) {
+            return value.charAt(0) + "***";
+        }
+        return value.substring(0, 3) + "***" + value.substring(value.length() - 3);
+    }
+
+    private String maskCode(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "(empty)";
+        }
+        int end = Math.min(8, value.length());
+        return value.substring(0, end) + "...";
+    }
+
+    private String bodySnippet(String body) {
+        if (!StringUtils.hasText(body)) {
+            return "(empty)";
+        }
+        String normalized = body.replaceAll("\\s+", " ").trim();
+        int end = Math.min(120, normalized.length());
+        return normalized.substring(0, end);
+    }
+
+    private String buildExceptionMessage(Exception e) {
+        if (e == null) {
+            return "(unknown)";
+        }
+        String simpleName = e.getClass().getSimpleName();
+        String message = e.getMessage();
+        if (!StringUtils.hasText(message)) {
+            return simpleName;
+        }
+        return simpleName + ": " + message;
     }
 
     private String urlEncode(String value) {

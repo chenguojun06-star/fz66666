@@ -59,9 +59,7 @@ function validateUsername(username) {
  * @returns {string} 错误信息，空字符串表示验证通过
  */
 function validatePassword(password) {
-  return (
-    validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || ''
-  );
+  return validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || '';
 }
 
 /**
@@ -173,7 +171,11 @@ async function executeLogin(params, options = {}) {
         'pending_reminders',
       ];
       OLD_DATA_KEYS.forEach(key => {
-        try { wx.removeStorageSync(key); } catch (_) { /* ignore */ }
+        try {
+          wx.removeStorageSync(key);
+        } catch (_) {
+          /* ignore */
+        }
       });
 
       setToken(resp.data.token);
@@ -251,7 +253,7 @@ Page({
     // 是否正在尝试微信快速登录（验证 openid 绑定状态中）
     wechatChecking: false,
     // 邀请模式：管理员扫码邀请员工时显示
-    inviteBanner: '',         // 如"由 XX 工厂邀请加入"
+    inviteBanner: '', // 如"由 XX 工厂邀请加入"
     inviteTenantFixed: false, // true 时锁定公司选择字段
     i18nTexts: {},
   },
@@ -313,7 +315,9 @@ Page({
         if (match && match[1]) {
           this._loadInviteTenant(match[1]);
         }
-      } catch (_) { /* 忽略解析失败 */ }
+      } catch (_) {
+        /* 忽略解析失败 */
+      }
     }
   },
 
@@ -395,7 +399,7 @@ Page({
   onLanguageSwitchTap() {
     const { languageNameMap } = this.data;
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
-    const itemList = langList.map((lang) => languageNameMap[lang] || lang);
+    const itemList = langList.map(lang => languageNameMap[lang] || lang);
 
     wx.showActionSheet({
       itemList,
@@ -441,7 +445,9 @@ Page({
                 tenantSearchText = selectedTenantName;
               }
             }
-          } catch (_) { /* ignore */ }
+          } catch (_) {
+            /* ignore */
+          }
         }
 
         this.setData({
@@ -515,7 +521,9 @@ Page({
       try {
         wx.setStorageSync('lastTenantId', String(tenant.id));
         wx.setStorageSync('lastTenantName', tenant.tenantName || '');
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     }
   },
 
@@ -576,21 +584,33 @@ Page({
 
     // 验证账号密码
     let err = validateUsername(username);
-    if (err) { toast.error(err); return; }
+    if (err) {
+      toast.error(err);
+      return;
+    }
     err = validatePassword(password);
-    if (err) { toast.error(err); return; }
+    if (err) {
+      toast.error(err);
+      return;
+    }
 
     // 开发模式下设置 API 地址
     const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
     if (this.data.showDevFields && apiBaseUrl) {
       err = validateAndSetBaseUrl(apiBaseUrl);
-      if (err) { toast.error(err); return; }
+      if (err) {
+        toast.error(err);
+        return;
+      }
     }
 
     this.setData({ loading: true });
     try {
       const code = await resolveLoginCode();
-      if (!code) { toast.error(i18n.t('login.getCodeFailed')); return; }
+      if (!code) {
+        toast.error(i18n.t('login.getCodeFailed'));
+        return;
+      }
       await executeLogin({ code, username, password, tenantId });
     } finally {
       this.setData({ loading: false });

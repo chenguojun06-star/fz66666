@@ -3,6 +3,8 @@ const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 const { toast } = require('../../utils/uiHelper.js');
 
+const WECHAT_SI_ENABLED = false;
+
 Component({
   properties: {
     visible: {
@@ -36,6 +38,7 @@ Component({
     taskLoading: false,
     isRecording: false,
     voiceEnabled: false,
+    voiceEntryVisible: false,
     voiceHint: '',
   },
   lifetimes: {
@@ -103,8 +106,12 @@ Component({
   },
   methods: {
     initVoiceRecognition() {
+      if (!WECHAT_SI_ENABLED) {
+        this.setData({ voiceEnabled: false, voiceEntryVisible: false });
+        return;
+      }
       if (this.voiceManager) {
-        this.setData({ voiceEnabled: true });
+        this.setData({ voiceEnabled: true, voiceEntryVisible: true });
         return;
       }
       try {
@@ -146,10 +153,10 @@ Component({
           }
           toast.error('语音识别失败，请重试');
         };
-        this.setData({ voiceEnabled: true });
+        this.setData({ voiceEnabled: true, voiceEntryVisible: true });
       } catch (err) {
         console.warn('[AiAssistant] voice plugin unavailable', err);
-        this.setData({ voiceEnabled: false });
+        this.setData({ voiceEnabled: false, voiceEntryVisible: false });
       }
     },
     switchTab(e) {
