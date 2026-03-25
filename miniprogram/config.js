@@ -3,7 +3,7 @@
  *
  * 回退策略（按优先级）：
  * 1. Storage 中保存的地址（api_base_url）
- * 2. DEFAULT_BASE_URL（生产微信云托管地址）
+ * 2. DEFAULT_BASE_URL（生产正式 API 域名）
  * 3. FALLBACK_BASE_URL（开发备用）
  *
  * 合法域名：已在微信公众平台「开发→开发管理→服务器域名」配置
@@ -13,8 +13,7 @@
  * - 小程序侧仅使用已备案的 HTTPS 域名或受控网关地址
  * - 不在前端源码、缓存或请求配置中保留内网 IP
  */
-// 生产后端地址（自定义域名 www.webyszl.cn → 后端服务，HTTPS 已开启）
-const DEFAULT_BASE_URL = 'https://www.webyszl.cn';
+const DEFAULT_BASE_URL = 'https://api.webyszl.cn';
 const FALLBACK_BASE_URL = DEFAULT_BASE_URL;
 
 /**
@@ -90,11 +89,10 @@ function getBaseUrl() {
             try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
             return isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
           }
-          // 2. Storage 里存的是旧的腾讯云托管默认域名（已迁移到自定义域名）→ 更新为新地址
-          // 原因：旧地址 backend-226678-*.sh.run.tcloudbase.com 仍可用但已废弃，
-          // 直接替换为自定义域名 www.webyszl.cn，避免将来旧地址失效导致小程序崩溃。
+          // 2. Storage 里存的是旧的腾讯云托管默认域名或旧正式域名 → 更新为新地址
           const isOldCloudDomain = v.includes('backend-226678') || v.includes('frontend-226678');
-          if (isOldCloudDomain) {
+          const isLegacyFormalDomain = /^https:\/\/(www\.)?webyszl\.cn$/i.test(v);
+          if (isOldCloudDomain || isLegacyFormalDomain) {
             try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
             return DEFAULT_BASE_URL;
           }

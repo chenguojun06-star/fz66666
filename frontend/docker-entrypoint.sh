@@ -13,14 +13,14 @@ fi
 # 清理 BACKEND_URL 前后空白（防止 Dockerfile ENV 或控制台配置混入空格）
 BACKEND_URL=$(echo "$BACKEND_URL" | tr -d '[:space:]')
 if [ -z "$BACKEND_URL" ]; then
-  BACKEND_URL="http://backend:8088"
+  BACKEND_URL="https://api.webyszl.cn"
 fi
 
 # ⚠️ 防循环代理保护：BACKEND_URL 绝对不能指向前端自身
 # www.webyszl.cn 已绑定到【前端服务】，若 BACKEND_URL 仍指向它会造成死循环。
 # 同样，frontend-226678-* 是前端容器自身域名，也不能作为代理目标。
-# 检测到以上情况自动修正为正确后端地址，无需人工介入。
-CORRECT_BACKEND="http://backend:8088"
+# 检测到以上情况自动修正为正式后端地址，无需人工介入。
+CORRECT_BACKEND="https://api.webyszl.cn"
 case "$BACKEND_URL" in
   *frontend-226678*|www.webyszl.cn|https://www.webyszl.cn|http://www.webyszl.cn|webyszl.cn|https://webyszl.cn|http://webyszl.cn)
     echo "[WARNING] BACKEND_URL='${BACKEND_URL}' 指向前端自身，检测到循环代理风险！"
