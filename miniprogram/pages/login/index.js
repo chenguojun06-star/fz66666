@@ -104,13 +104,11 @@ async function resolveLoginCode() {
   const appId = resolveAppId();
   const envVersion = resolveEnvVersion();
 
-  // 开发环境或无效 AppID，使用 Mock 模式（跳过微信登录）
-  if (!appId || appId === 'touristappid' || envVersion === 'develop') {
-    console.log('[Login] 开发环境，使用 Mock 模式跳过微信登录');
+  if (!appId || appId === 'touristappid') {
+    console.log('[Login] 未获取到有效 AppID，使用 Mock 模式跳过微信登录');
     return 'mock_dev';
   }
 
-  // 生产环境才调用真实 wx.login()
   try {
     const loginRes = await new Promise((resolve, reject) => {
       wx.login({
@@ -122,8 +120,7 @@ async function resolveLoginCode() {
     return loginRes && loginRes.code ? String(loginRes.code) : '';
   } catch (err) {
     console.error('[Login] wx.login() 失败:', err);
-    // 如果微信登录失败，降级到 Mock 模式
-    return 'mock_dev';
+    return envVersion === 'develop' ? 'mock_dev' : '';
   }
 }
 

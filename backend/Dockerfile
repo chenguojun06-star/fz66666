@@ -8,6 +8,10 @@ RUN mvn -e -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 ENV PORT=8088
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates ca-certificates-java curl \
+  && update-ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 # ⚠️ 强制设置容器时区为北京时间（Asia/Shanghai）
 # eclipse-temurin 基础镜像默认 UTC，不设置会导致 LocalDateTime.now() 返回 UTC
 # 表现：扫码记录时间偏 8 小时（小程序显示"8小时前"）
@@ -25,4 +29,4 @@ ENV SPRING_PROFILES_ACTIVE=prod
 # -XX:TieredStopAtLevel=1  仅使用 C1 编译器，加速启动 30~50%
 # -Duser.timezone          双保险：确保 JVM 使用正确时区（与容器系统 TZ 一致）
 # -Dspring.jmx.enabled=false  禁用 JMX，减少启动扫描时间
-CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-jar", "/app/app.jar"]
+CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts", "-jar", "/app/app.jar"]
