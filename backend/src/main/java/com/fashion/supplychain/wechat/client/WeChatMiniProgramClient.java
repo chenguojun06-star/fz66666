@@ -13,6 +13,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.File;
+import java.net.URI;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -40,6 +45,21 @@ public class WeChatMiniProgramClient {
         this.mockEnabled = mockEnabled;
         this.restTemplate = new RestTemplate();
         this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    public void initDiagnostics() {
+        String trustStore = resolveTrustStorePath();
+        File trustStoreFile = StringUtils.hasText(trustStore) ? new File(trustStore) : null;
+        log.info("[WxRuntime] appId={} mockEnabled={} javaHome={} trustStore={} trustStoreExists={} trustStoreReadable={} trustStoreSize={}",
+                maskAppId(appid),
+                mockEnabled,
+                System.getProperty("java.home"),
+                StringUtils.hasText(trustStore) ? trustStore : "(default)",
+                trustStoreFile != null && trustStoreFile.exists(),
+                trustStoreFile != null && trustStoreFile.canRead(),
+                trustStoreFile != null && trustStoreFile.exists() ? trustStoreFile.length() : -1);
+        probeWeChatTls();
     }
 
     public Code2SessionResult code2Session(String jsCode) {
@@ -224,6 +244,42 @@ public class WeChatMiniProgramClient {
             return simpleName;
         }
         return simpleName + ": " + message;
+    }
+
+    private String resolveTrustStorePath() {
+        String configured = System.getProperty("javax.net.ssl.trustStore");
+        if (StringUtils.hasText(configured)) {
+            return configured;
+        }
+        String javaHome = System.getProperty("java.home");
+        if (!StringUtils.hasText(javaHome)) {
+            return "";
+        }
+        return javaHome + "/lib/security/cacerts";
+    }
+
+    private void probeWeChatTls() {
+        HttpsURLConnection connection = null;
+        try {
+            URL url = URI.create("https://api.weixin.qq.com").toURL();
+            connection = (HttpsURLConnection) url.openConnection();
+            connection.setConnectTimeout(4000);
+            connection.setReadTimeout(4000);
+            connection.setRequestMethod("GET");
+            connection.connect();
+            log.info("[WxRuntime] tls probe ok responseCode={} cipherSuite={} host={}",
+                    connection.getResponseCode(),
+                    connection.getCipherSuite(),
+                    url.getHost());
+        } catch (Exception e) {
+            log.warn("[WxRuntime] tls probe failed host=api.weixin.qq.com reason={} trustStore={}",
+                    buildExceptionMessage(e),
+                    resolveTrustStorePath());
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private String urlEncode(String value) {
