@@ -1,8 +1,9 @@
 import React, { Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Spin, App as AntdApp } from 'antd';
+import { Button, App as AntdApp } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
+import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
 import { useAuth } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -58,7 +59,7 @@ const ShareOrderPage = React.lazy(() => import('./modules/production/pages/Share
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) {
-    return null;
+    return <XiaoyunPageLoader message="小云正在确认要带你去哪里…" />;
   }
   return <Navigate to={isAuthenticated ? paths.dashboard : paths.login} replace />;
 };
@@ -66,7 +67,7 @@ const RootRedirect: React.FC = () => {
 const LoginGate: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) {
-    return null;
+    return <XiaoyunPageLoader message="小云正在准备登录入口…" />;
   }
   return isAuthenticated ? <Navigate to={paths.dashboard} replace /> : <Login />;
 };
@@ -167,6 +168,7 @@ const AppRoutes: React.FC = () => {
   const { modalWidth } = useViewport();
   const backgroundLocation = (location.state as any)?.backgroundLocation;
   const [paletteOpen, setPaletteOpen] = React.useState(false);
+  const routeFallback = <XiaoyunPageLoader message="小云正在展开页面内容…" inline />;
 
   // ⌘K / Ctrl+K 全局搜索快捷键
   React.useEffect(() => {
@@ -214,76 +216,76 @@ const AppRoutes: React.FC = () => {
         <Route path="/register" element={<Register />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path={paths.dashboard} element={<Suspense fallback={<Spin />}><Dashboard /></Suspense>} />
-          <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfoList /></Suspense>} />
-          <Route path="/style-info/new" element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
-          <Route path={paths.styleInfoDetail} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
-          <Route path={paths.productionList} element={<Suspense fallback={<Spin />}><ProductionList /></Suspense>} />
-          <Route path={paths.cutting} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
-          <Route path={paths.cuttingTask} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
-          <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
-          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={<Spin />}><MaterialPurchaseDetail /></Suspense>} />
-          <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
-          <Route path={paths.warehousingInspect} element={<Suspense fallback={<Spin />}><InspectionDetail /></Suspense>} />
-          <Route path={paths.materialPicking} element={<Suspense fallback={<Spin />}><MaterialPicking /></Suspense>} />
-          <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
-          <Route path={paths.orderTransfer} element={<Suspense fallback={<Spin />}><OrderTransfer /></Suspense>} />
+          <Route path={paths.dashboard} element={<Suspense fallback={routeFallback}><Dashboard /></Suspense>} />
+          <Route path={paths.styleInfoList} element={<Suspense fallback={routeFallback}><StyleInfoList /></Suspense>} />
+          <Route path="/style-info/new" element={<Suspense fallback={routeFallback}><StyleInfo /></Suspense>} />
+          <Route path={paths.styleInfoDetail} element={<Suspense fallback={routeFallback}><StyleInfo /></Suspense>} />
+          <Route path={paths.productionList} element={<Suspense fallback={routeFallback}><ProductionList /></Suspense>} />
+          <Route path={paths.cutting} element={<Suspense fallback={routeFallback}><CuttingManagement /></Suspense>} />
+          <Route path={paths.cuttingTask} element={<Suspense fallback={routeFallback}><CuttingManagement /></Suspense>} />
+          <Route path={paths.materialPurchase} element={<Suspense fallback={routeFallback}><MaterialPurchase /></Suspense>} />
+          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense>} />
+          <Route path={paths.warehousing} element={<Suspense fallback={routeFallback}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.warehousingInspect} element={<Suspense fallback={routeFallback}><InspectionDetail /></Suspense>} />
+          <Route path={paths.materialPicking} element={<Suspense fallback={routeFallback}><MaterialPicking /></Suspense>} />
+          <Route path={paths.warehousingDetail} element={<Suspense fallback={routeFallback}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.orderTransfer} element={<Suspense fallback={routeFallback}><OrderTransfer /></Suspense>} />
           <Route
             path={paths.progressDetail}
             element={
-              <Suspense fallback={<Spin />}>
+              <Suspense fallback={routeFallback}>
                 <ProgressDetail />
               </Suspense>
             }
           />
-          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={<Spin />}><MaterialPurchaseDetail /></Suspense>} />
-          <Route path={paths.orderFlow} element={<Suspense fallback={<Spin />}><OrderFlow /></Suspense>} />
-          <Route path={paths.materialReconciliation} element={<Suspense fallback={<Spin />}><MaterialReconciliation /></Suspense>} />
-          <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
-          <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
-          <Route path={paths.expenseReimbursement} element={<Suspense fallback={<Spin />}><ExpenseReimbursement /></Suspense>} />
-          <Route path={paths.wagePayment} element={<Suspense fallback={<Spin />}><WagePayment /></Suspense>} />
-          <Route path={paths.ecSalesRevenue} element={<Suspense fallback={<Spin />}><EcSalesRevenue /></Suspense>} />
-          <Route path={paths.financeTaxExport} element={<Suspense fallback={<Spin />}><TaxExport /></Suspense>} />
-          <Route path={paths.crm} element={<Suspense fallback={<Spin />}><CrmDashboard /></Suspense>} />
-          <Route path={paths.crmReceivables} element={<Suspense fallback={<Spin />}><ReceivableList /></Suspense>} />
+          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense>} />
+          <Route path={paths.orderFlow} element={<Suspense fallback={routeFallback}><OrderFlow /></Suspense>} />
+          <Route path={paths.materialReconciliation} element={<Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense>} />
+          <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense>} />
+          <Route path={paths.financeCenter} element={<Suspense fallback={routeFallback}><FinanceCenter /></Suspense>} />
+          <Route path={paths.expenseReimbursement} element={<Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense>} />
+          <Route path={paths.wagePayment} element={<Suspense fallback={routeFallback}><WagePayment /></Suspense>} />
+          <Route path={paths.ecSalesRevenue} element={<Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense>} />
+          <Route path={paths.financeTaxExport} element={<Suspense fallback={routeFallback}><TaxExport /></Suspense>} />
+          <Route path={paths.crm} element={<Suspense fallback={routeFallback}><CrmDashboard /></Suspense>} />
+          <Route path={paths.crmReceivables} element={<Suspense fallback={routeFallback}><ReceivableList /></Suspense>} />
           <Route path={paths.selectionBatch} element={<SelectionCenter />} />
 
-          <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />
-          <Route path={paths.materialDatabase} element={<Suspense fallback={<Spin />}><MaterialDatabase /></Suspense>} />
-          <Route path={paths.finishedInventory} element={<Suspense fallback={<Spin />}><FinishedInventory /></Suspense>} />
-          <Route path={paths.sampleInventory} element={<Suspense fallback={<Spin />}><SampleInventory /></Suspense>} />
-          <Route path={paths.ecommerceOrders} element={<Suspense fallback={<Spin />}><EcommerceOrders /></Suspense>} />
+          <Route path={paths.materialInventory} element={<Suspense fallback={routeFallback}><MaterialInventory /></Suspense>} />
+          <Route path={paths.materialDatabase} element={<Suspense fallback={routeFallback}><MaterialDatabase /></Suspense>} />
+          <Route path={paths.finishedInventory} element={<Suspense fallback={routeFallback}><FinishedInventory /></Suspense>} />
+          <Route path={paths.sampleInventory} element={<Suspense fallback={routeFallback}><SampleInventory /></Suspense>} />
+          <Route path={paths.ecommerceOrders} element={<Suspense fallback={routeFallback}><EcommerceOrders /></Suspense>} />
 
-          <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
-          <Route path={paths.dict} element={<Suspense fallback={<Spin />}><DictManage /></Suspense>} />
-          <Route path={paths.tutorial} element={<Suspense fallback={<Spin />}><Tutorial /></Suspense>} />
-          <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
-          <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
-          <Route path={paths.organization} element={<Suspense fallback={<Spin />}><OrganizationTree /></Suspense>} />
-          <Route path={paths.productionPartners} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
-          <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
-          <Route path={paths.factoryWorkers} element={<Suspense fallback={<Spin />}><FactoryWorkerList /></Suspense>} />
-          <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
-          <Route path={paths.systemLogs} element={<Suspense fallback={<Spin />}><SystemLogs /></Suspense>} />
-          <Route path={paths.profile} element={<Suspense fallback={<Spin />}><Profile /></Suspense>} />
-          <Route path={paths.tenantManagement} element={<Suspense fallback={<Spin />}><TenantManagement /></Suspense>} />
-          <Route path={paths.customerManagement} element={<Suspense fallback={<Spin />}><CustomerManagement /></Suspense>} />
-          <Route path={paths.systemIssues} element={<Suspense fallback={<Spin />}><SystemIssueBoard /></Suspense>} />
-          <Route path={paths.appStore} element={<Suspense fallback={<Spin />}><AppStore /></Suspense>} />
-          <Route path={paths.dataImport} element={<Suspense fallback={<Spin />}><DataImport /></Suspense>} />
-          <Route path={paths.integrationCenter} element={<Suspense fallback={<Spin />}><IntegrationCenter /></Suspense>} />
-          <Route path={paths.intelligenceCenter} element={<Suspense fallback={<Spin />}><IntelligenceCenter /></Suspense>} />
-          <Route path={paths.aiAgentTraceCenter} element={<Suspense fallback={<Spin />}><AiAgentTraceCenter /></Suspense>} />
-          <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
-          <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
-          <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />
-          <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
-          <Route path={paths.patternRevision} element={<Suspense fallback={<Spin />}><PatternRevisionManagement /></Suspense>} />
+          <Route path={paths.user} element={<Suspense fallback={routeFallback}><UserList /></Suspense>} />
+          <Route path={paths.dict} element={<Suspense fallback={routeFallback}><DictManage /></Suspense>} />
+          <Route path={paths.tutorial} element={<Suspense fallback={routeFallback}><Tutorial /></Suspense>} />
+          <Route path={paths.userApproval} element={<Suspense fallback={routeFallback}><UserApproval /></Suspense>} />
+          <Route path={paths.role} element={<Suspense fallback={routeFallback}><RoleList /></Suspense>} />
+          <Route path={paths.organization} element={<Suspense fallback={routeFallback}><OrganizationTree /></Suspense>} />
+          <Route path={paths.productionPartners} element={<Suspense fallback={routeFallback}><FactoryList /></Suspense>} />
+          <Route path={paths.factory} element={<Suspense fallback={routeFallback}><FactoryList /></Suspense>} />
+          <Route path={paths.factoryWorkers} element={<Suspense fallback={routeFallback}><FactoryWorkerList /></Suspense>} />
+          <Route path={paths.loginLog} element={<Suspense fallback={routeFallback}><LoginLogList /></Suspense>} />
+          <Route path={paths.systemLogs} element={<Suspense fallback={routeFallback}><SystemLogs /></Suspense>} />
+          <Route path={paths.profile} element={<Suspense fallback={routeFallback}><Profile /></Suspense>} />
+          <Route path={paths.tenantManagement} element={<Suspense fallback={routeFallback}><TenantManagement /></Suspense>} />
+          <Route path={paths.customerManagement} element={<Suspense fallback={routeFallback}><CustomerManagement /></Suspense>} />
+          <Route path={paths.systemIssues} element={<Suspense fallback={routeFallback}><SystemIssueBoard /></Suspense>} />
+          <Route path={paths.appStore} element={<Suspense fallback={routeFallback}><AppStore /></Suspense>} />
+          <Route path={paths.dataImport} element={<Suspense fallback={routeFallback}><DataImport /></Suspense>} />
+          <Route path={paths.integrationCenter} element={<Suspense fallback={routeFallback}><IntegrationCenter /></Suspense>} />
+          <Route path={paths.intelligenceCenter} element={<Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense>} />
+          <Route path={paths.aiAgentTraceCenter} element={<Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense>} />
+          <Route path={paths.orderManagementList} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
+          <Route path={paths.orderManagementDetail} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
+          <Route path={paths.dataCenter} element={<Suspense fallback={routeFallback}><DataCenter /></Suspense>} />
+          <Route path={paths.templateCenter} element={<Suspense fallback={routeFallback}><TemplateCenter /></Suspense>} />
+          <Route path={paths.patternRevision} element={<Suspense fallback={routeFallback}><PatternRevisionManagement /></Suspense>} />
         </Route>
         {/* 客户订单分享页（无需登录） */}
-        <Route path="/share/:token" element={<Suspense fallback={<Spin />}><ShareOrderPage /></Suspense>} />
-        <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
+        <Route path="/share/:token" element={<Suspense fallback={routeFallback}><ShareOrderPage /></Suspense>} />
+        <Route path="*" element={<Suspense fallback={routeFallback}><NotFound /></Suspense>} />
       </Routes>
 
       {backgroundLocation ? (
@@ -304,7 +306,7 @@ const AppRoutes: React.FC = () => {
                 initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
                 destroyOnHidden
               >
-                <Suspense fallback={<Spin />}>
+                <Suspense fallback={routeFallback}>
                   <ProgressDetail embedded />
                 </Suspense>
               </ResizableModal>

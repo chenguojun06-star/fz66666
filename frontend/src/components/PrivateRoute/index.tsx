@@ -1,8 +1,8 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Spin } from 'antd';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { paths, resolvePermissionCode, superAdminOnlyPaths } from '../../routeConfig';
+import XiaoyunPageLoader from '../common/XiaoyunPageLoader';
 
 // 工厂账号可访问路径（与 Layout.FACTORY_VISIBLE_PATHS 保持一致）
 // 注意：paths.productionList ('/production') 仅做精确匹配，避免放行 /production/picking 等非白名单路径
@@ -25,11 +25,7 @@ const PrivateRoute: React.FC = () => {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" />
-      </div>
-    );
+    return <XiaoyunPageLoader message="小云正在核对登录状态，请稍等一下…" />;
   }
 
   if (!isAuthenticated) {

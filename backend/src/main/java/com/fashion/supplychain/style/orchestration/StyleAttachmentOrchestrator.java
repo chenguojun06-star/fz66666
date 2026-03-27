@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
@@ -42,8 +43,11 @@ public class StyleAttachmentOrchestrator {
     public List<StyleAttachment> list(String styleId, String styleNo, String bizType) {
         String sid = styleId;
         if (!StringUtils.hasText(sid) && StringUtils.hasText(styleNo)) {
-            StyleInfo style = styleInfoService.lambdaQuery().eq(StyleInfo::getStyleNo, styleNo.trim()).one();
-            if (style == null) {
+            StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                    .select(StyleInfo::getId)
+                    .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .last("limit 1"), false);
+            if (style == null || style.getId() == null) {
                 throw new NoSuchElementException("款号不存在");
             }
             sid = String.valueOf(style.getId());
