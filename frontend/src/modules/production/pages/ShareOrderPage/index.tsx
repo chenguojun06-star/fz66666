@@ -15,7 +15,7 @@ import {
   AuditOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
-import { CuteCloudTrigger } from '@/components/common/GlobalAiAssistant';
+import { CuteCloudTrigger } from '@/components/common/XiaoyunCloudAvatar';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
 

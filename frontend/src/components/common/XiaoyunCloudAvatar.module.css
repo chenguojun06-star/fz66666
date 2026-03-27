@@ -1,0 +1,207 @@
+.stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.halo,
+.ring,
+.ringSoft {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.halo {
+  inset: 12%;
+  background: radial-gradient(circle, rgba(104, 164, 255, 0.32), rgba(104, 164, 255, 0.08) 62%, transparent 80%);
+  filter: blur(8px);
+  animation: haloBreath 3.2s ease-in-out infinite;
+}
+
+.ring {
+  inset: 2%;
+  border: 2px solid rgba(113, 170, 255, 0.28);
+  animation: ringRotate 4.6s linear infinite;
+}
+
+.ringSoft {
+  inset: -6%;
+  border: 1px dashed rgba(155, 195, 255, 0.34);
+  animation: ringReverse 6.2s linear infinite;
+}
+
+.loading .ring {
+  border-color: rgba(113, 170, 255, 0.4);
+  animation-duration: 1.9s;
+}
+
+.loading .ringSoft {
+  border-color: rgba(210, 233, 255, 0.55);
+  animation-duration: 2.6s;
+}
+
+.cloud {
+  position: relative;
+  width: 88%;
+  height: 72%;
+  animation: cloudFloat 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 14px rgba(31, 117, 234, 0.18));
+}
+
+.active .cloud,
+.interacting .cloud {
+  animation-duration: 2.8s;
+}
+
+.loading .cloud {
+  animation-duration: 1.8s;
+}
+
+.part,
+.base {
+  position: absolute;
+  background: linear-gradient(180deg, #ffffff 0%, #dce9ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 6px 14px rgba(31, 117, 234, 0.14);
+}
+
+.part {
+  border-radius: 50%;
+}
+
+.partLeft {
+  width: 30%;
+  height: 40%;
+  left: 12%;
+  top: 34%;
+}
+
+.partCenter {
+  width: 38%;
+  height: 52%;
+  left: 31%;
+  top: 16%;
+}
+
+.partRight {
+  width: 28%;
+  height: 36%;
+  right: 12%;
+  top: 38%;
+}
+
+.base {
+  left: 13%;
+  right: 13%;
+  bottom: 12%;
+  height: 30%;
+  border-radius: 999px;
+}
+
+.eye {
+  position: absolute;
+  top: 43%;
+  width: 12%;
+  height: 18%;
+  border-radius: 999px;
+  background: #3f5d95;
+  z-index: 2;
+  animation: eyeBlink 6.8s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.eyeLeft {
+  left: 31%;
+}
+
+.eyeRight {
+  right: 31%;
+}
+
+.loading .eye {
+  border: 2px solid #4d8fff;
+  border-right-color: transparent;
+  border-top-color: transparent;
+  background: transparent;
+  border-radius: 50%;
+  animation: eyeRotate 1s linear infinite;
+}
+
+.highlight {
+  position: absolute;
+  width: 44%;
+  height: 36%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  top: 12%;
+  left: 14%;
+  animation: eyeSpark 4.2s ease-in-out infinite;
+}
+
+.loading .highlight {
+  display: none;
+}
+
+.mouth {
+  position: absolute;
+  left: 50%;
+  bottom: 24%;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 26%;
+  height: 13%;
+  border-bottom: 4px solid #597ac0;
+  border-radius: 0 0 999px 999px;
+  animation: mouthTalk 3.6s ease-in-out infinite;
+}
+
+.loading .mouth {
+  width: 18%;
+  height: 18%;
+  border: 4px solid #597ac0;
+  border-radius: 50%;
+  border-top-color: rgba(89, 122, 192, 0.22);
+  border-left-color: rgba(89, 122, 192, 0.22);
+  border-right-color: #597ac0;
+  border-bottom-color: #597ac0;
+}
+
+@keyframes cloudFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-4px) scale(1.01, 0.99); }
+  50% { transform: translateY(0) scale(0.99, 1.01); }
+  75% { transform: translateY(-2px) scale(1.01); }
+}
+
+@keyframes haloBreath {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes ringRotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ringReverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes eyeBlink {
+  0%, 44%, 48%, 92%, 96%, 100% { transform: scaleY(1); opacity: 1; }
+  46%, 94% { transform: scaleY(0.18); opacity: 0.85; }
+}
+
+@keyframes eyeRotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes eyeSpark {
+  0%, 100% { opacity: 0.72; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes mouthTalk {
+  0%, 100% { transform: translateX(-50%) scaleX(1); }
+  50% { transform: translateX(-50%) scaleX(1.12); }
+}

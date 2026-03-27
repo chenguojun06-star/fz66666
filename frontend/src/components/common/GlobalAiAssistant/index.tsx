@@ -21,6 +21,7 @@ import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
 import { paths } from '@/routeConfig';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightCard';
+import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
 import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
 import { AiTraceCardWidget, BundleSplitCardWidget, PurchaseDocCardWidget, TeamStatusCardWidget, type AiTraceCardData, type BundleSplitCardData, type PurchaseDocCardData, type TeamStatusCardData } from './AgentCards';
@@ -226,6 +227,19 @@ const SUGGESTIONS = [
   '🧵 安排生产主管推进排期',
 ];
 
+const describeToolName = (toolName?: string) => {
+  const raw = String(toolName || '').trim();
+  if (!raw) return '处理步骤';
+  const mapped: Record<string, string> = {
+    tool_order_learning: '下单学习分析',
+    tool_change_approval: '审批处理',
+    tool_deep_analysis: '深度风险分析',
+    tool_team_dispatch: '团队协同处理',
+    tool_bundle_split_transfer: '拆菲转派处理',
+  };
+  return mapped[raw] || raw.replace(/^tool_/, '').replace(/_/g, ' ');
+};
+
 const choose = (seed: number, variants: string[]) => {
   if (!variants.length) return '';
   return variants[Math.abs(seed) % variants.length];
@@ -243,48 +257,6 @@ const isPurchaseDocFile = (file: File) => {
 
 const shouldAutoInbound = (text: string) => /入库|到货入库|直接入库|自动入库/.test(text);
 const shouldAutoArrival = (text: string) => /自动收货|自动到货|一键收货|登记到货|收货/.test(text);
-
-type CloudMood = 'normal' | 'curious' | 'urgent' | 'error' | 'success';
-
-// 超级可爱的表情云朵组件
-export const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading = false, interacting = false }: { size?: number, active?: boolean, mood?: CloudMood, loading?: boolean, interacting?: boolean }) => {
-  const isUrgent = mood === 'urgent';
-  const isError = mood === 'error';
-  const isSuccess = mood === 'success';
-  const isCurious = mood === 'curious';
-  const cloudClasses = [
-    styles.cuteCloud,
-    active ? styles.cuteCloudActive : '',
-    interacting ? styles.cuteCloudInteracting : '',
-    isUrgent ? styles.cuteCloudUrgent : '',
-    isError ? styles.cuteCloudError : '',
-    isSuccess ? styles.cuteCloudSuccess : '',
-    isCurious ? styles.cuteCloudCurious : '',
-    loading ? styles.cuteCloudLoading : '',
-  ].filter(Boolean).join(' ');
-  return (
-    <div className={styles.cuteCloudStage} style={{ width: size, height: size }}>
-      <div className={cloudClasses}>
-        <span className={`${styles.cuteCloudGlow} ${active || interacting ? styles.cuteCloudGlowActive : ''}`} />
-        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartLeft}`} />
-        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartCenter}`} />
-        <span className={`${styles.cuteCloudPart} ${styles.cuteCloudPartRight}`} />
-        <span className={styles.cuteCloudBase} />
-        <span className={`${styles.cuteCloudEye} ${styles.cuteCloudEyeLeft} ${loading ? styles.cuteCloudEyeSpin : ''}`}>
-          {!loading ? <span className={`${styles.cuteCloudEyeHighlight} ${styles.cuteCloudEyeHighlightLeft}`} /> : null}
-        </span>
-        <span className={`${styles.cuteCloudEye} ${styles.cuteCloudEyeRight} ${loading ? styles.cuteCloudEyeSpin : ''}`}>
-          {!loading ? <span className={`${styles.cuteCloudEyeHighlight} ${styles.cuteCloudEyeHighlightRight}`} /> : null}
-        </span>
-        <span className={`${styles.cuteCloudMouth} ${isError ? styles.cuteCloudMouthSad : isUrgent ? styles.cuteCloudMouthO : styles.cuteCloudMouthSmile}`} />
-        {isUrgent ? <span className={styles.cuteCloudSweat} /> : null}
-        {isSuccess ? <span className={`${styles.cuteCloudSparkle} ${styles.cuteCloudSparkleLeft}`} /> : null}
-        {isSuccess ? <span className={`${styles.cuteCloudSparkle} ${styles.cuteCloudSparkleRight}`} /> : null}
-      </div>
-    </div>
-  );
-};
-
 
 // ── 任务流操作卡片组件 ─────────────────────────────────────────────────────────
 /** 催单内联编辑卡片 — 跟单员/老板直接在 AI 对话中填写出货日期和备注 */
@@ -475,7 +447,7 @@ const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [_mood, setMood] = useState<CloudMood>('normal');
+  const [_mood, setMood] = useState<XiaoyunCloudMood>('normal');
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -540,7 +512,7 @@ const GlobalAiAssistant: React.FC = () => {
         const actualData = res?.code === 200 ? res.data : (res?.data || res);
         if (actualData) {
           const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, pendingItems: apiPendingItems = [], topPriorityOrder } = actualData;
-          let newMood: CloudMood = 'normal';
+          let newMood: XiaoyunCloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
           const seed = overdueOrderCount * 17 + highRiskOrderCount * 11 + todayScanCount;
 
@@ -720,7 +692,7 @@ const GlobalAiAssistant: React.FC = () => {
         (event) => {
           streamStarted = true;
           if (event.type === 'thinking') {
-            toolStatus = `🧠 思考中（第${event.data.iteration || 1}轮）...`;
+            toolStatus = `小云正在整理思路，准备给你结论…`;
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) {
@@ -729,11 +701,12 @@ const GlobalAiAssistant: React.FC = () => {
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
             });
           } else if (event.type === 'tool_call') {
-            toolStatus = `🔍 正在调用 ${event.data.tool || '工具'}...`;
+            toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''))}…`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'tool_result') {
-            const ok = event.data.success ? '✅' : '❌';
-            toolStatus = `${ok} ${event.data.tool || '工具'}调用完成`;
+            toolStatus = event.data.success
+              ? `${describeToolName(String(event.data.tool || ''))} 已处理完成，小云继续整理结果…`
+              : `${describeToolName(String(event.data.tool || ''))} 这一步没处理成功，小云正在重新组织答案…`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
@@ -949,7 +922,7 @@ const GlobalAiAssistant: React.FC = () => {
       setMessages(prev => [...prev, {
         id: `trace-${commandId}-${Date.now()}`,
         role: 'ai' as const,
-        text: `这是本次小云执行轨迹，commandId：${commandId}`,
+        text: '这是刚才这次处理的执行过程，我帮你整理成步骤了。',
         agentTraceCard: {
           commandId,
           logs: Array.isArray((data as { logs?: unknown[] })?.logs) ? (data as { logs: AiTraceCardData['logs'] }).logs : [],
@@ -966,7 +939,7 @@ const GlobalAiAssistant: React.FC = () => {
       const res = await intelligenceApi.getAiAgentRecentTraces({ limit: 8 }) as unknown as { data?: { data?: Array<Record<string, unknown>> } };
       const rows = Array.isArray(res?.data?.data) ? res.data.data : [];
       const text = rows.length
-        ? `最近小云执行记录：\n${rows.map((item, index) => `${index + 1}. ${(item.commandId as string) || '-'} ｜ ${(item.status as string) || '-'} ｜ ${(item.createdAt as string) || '-'}`).join('\n')}`
+        ? `最近小云处理记录：\n${rows.map((item, index) => `${index + 1}. ${String(item.status || '已记录')} · ${String(item.createdAt || '时间未记录')}`).join('\n')}`
         : '最近还没有可用的小云执行记录。';
       setMessages(prev => [...prev, { id: `recent-traces-${Date.now()}`, role: 'ai' as const, text }]);
     } catch (error) {
@@ -1188,7 +1161,7 @@ const GlobalAiAssistant: React.FC = () => {
               >
                 {msg.role === 'ai' && (
                   <div className={styles.messageAvatar}>
-                    <CuteCloudTrigger size={24} active />
+                    <XiaoyunCloudAvatar size={24} active />
                   </div>
                 )}
 
@@ -1461,14 +1434,10 @@ const GlobalAiAssistant: React.FC = () => {
             {isTyping && (
               <div className={`${styles.messageRow} ${styles.rowAi}`}>
                 <div className={styles.messageAvatar}>
-                  <CuteCloudTrigger size={24} active />
+                  <XiaoyunCloudAvatar size={28} active loading />
                 </div>
                 <div className={`${styles.messageBubble} ${styles.bubbleAi}`}>
-                  <div className={styles.typingIndicator}>
-                    <div className={styles.typingDot} />
-                    <div className={styles.typingDot} />
-                    <div className={styles.typingDot} />
-                  </div>
+                  <div className={styles.typingText}>小云正在处理，请稍等一下…</div>
                 </div>
               </div>
             )}

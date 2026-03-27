@@ -1173,7 +1173,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #888;
+  color: #6b7895;
   margin-bottom: 8px;
 }
 .sap-ai-input-row {
@@ -1222,10 +1222,6 @@
 .sap-ai-msg-user { flex-direction: row-reverse; }
 .sap-ai-msg-avatar {
   width: 22px; height: 22px;
-  border-radius: 50%;
-  background: rgba(109, 40, 217, 0.1);
-  color: #6d28d9;
-  font-size: 11px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   margin-top: 2px;

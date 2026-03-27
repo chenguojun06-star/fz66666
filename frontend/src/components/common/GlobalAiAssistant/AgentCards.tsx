@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
 
 export interface TeamStatusRecipient {
@@ -83,6 +84,32 @@ export interface AiTraceCardData {
   logs?: AiTraceLogItem[];
   count?: number;
 }
+
+const describeTraceAction = (action?: string) => {
+  const raw = String(action || '').trim();
+  const mapped: Record<string, string> = {
+    route: '判断该怎么处理',
+    think: '整理处理思路',
+    tool_call: '调用系统能力',
+    tool_result: '回收处理结果',
+    answer: '生成回复结果',
+  };
+  return mapped[raw] || raw || '处理步骤';
+};
+
+const describeTraceStatus = (status?: string) => {
+  const raw = String(status || '').trim().toUpperCase();
+  const mapped: Record<string, string> = {
+    SUCCESS: '已完成',
+    DONE: '已完成',
+    OK: '已完成',
+    FAILED: '失败',
+    ERROR: '失败',
+    RUNNING: '进行中',
+    PENDING: '等待中',
+  };
+  return mapped[raw] || '已记录';
+};
 
 export interface BundleSplitCardData {
   success?: boolean;
@@ -232,24 +259,27 @@ export const AiTraceCardWidget: React.FC<{
   return (
     <div className={styles.purchaseDocCard}>
       <div className={styles.purchaseDocHeader}>
-        <div>
-          <div className={styles.purchaseDocTitle}>🛰️ 小云执行轨迹</div>
-          <div className={styles.purchaseDocMeta}>{card.commandId || '未提供 commandId'}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <XiaoyunCloudAvatar size={28} active />
+          <div>
+            <div className={styles.purchaseDocTitle}>小云刚才的处理过程</div>
+            <div className={styles.purchaseDocMeta}>我把这次处理整理成步骤给你看，不显示技术编号。</div>
+          </div>
         </div>
       </div>
       <div className={styles.purchaseDocStats}>
-        <span>轨迹数 {card.count ?? logs.length}</span>
+        <span>处理步骤 {card.count ?? logs.length}</span>
       </div>
       <div className={styles.purchaseDocItems}>
         {logs.slice(0, 6).map((item, index) => (
           <div key={`${item.id ?? item.createdAt ?? index}`} className={styles.purchaseDocItem}>
             <div className={styles.purchaseDocItemHead}>
-              <span>{item.action || '未知动作'}</span>
-              <span>{item.status || 'UNKNOWN'}</span>
+              <span>{describeTraceAction(item.action)}</span>
+              <span>{describeTraceStatus(item.status)}</span>
             </div>
             <div className={styles.purchaseDocItemMeta}>
               {item.createdAt || '--'}
-              {typeof item.durationMs === 'number' ? ` · ${item.durationMs}ms` : ''}
+              {typeof item.durationMs === 'number' ? ` · ${Math.max(1, Math.round(item.durationMs / 100) / 10)}秒` : ''}
             </div>
             {(item.reason || item.remark) && <div className={styles.purchaseDocItemTip}>{item.reason || item.remark}</div>}
             {item.errorMessage && <div className={styles.purchaseDocItemTip}>{item.errorMessage}</div>}

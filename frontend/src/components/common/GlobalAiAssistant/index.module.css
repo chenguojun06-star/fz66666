@@ -392,6 +392,12 @@
   gap: 4px;
   padding: 4px 8px;
 }
+.typingText {
+  color: #5c6b8a;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 2px 0;
+}
 .typingDot {
   width: 6px;
   height: 6px;

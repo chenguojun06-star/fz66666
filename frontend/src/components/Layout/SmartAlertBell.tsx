@@ -5,17 +5,17 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  RobotOutlined,
   SendOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Badge, Input, Spin } from 'antd';
+import { Badge, Input } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
 import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
 import { buildXiaoyunPopupIntroMessage } from './xiaoyunPopupPresenter';
 import { useAuth } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
+import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
 
 // ─── 数据类型 ────────────────────────────────────────────────
@@ -341,7 +341,10 @@ const SmartAlertBell: React.FC = () => {
         </div>
 
         {loading && (
-          <div className="sap-loading"><Spin size="small" /><span>加载中…</span></div>
+          <div className="sap-loading">
+            <XiaoyunCloudAvatar size={34} active loading />
+            <span>小云正在整理提醒，请稍等一下…</span>
+          </div>
         )}
 
         {!loading && (
@@ -545,15 +548,15 @@ const SmartAlertBell: React.FC = () => {
           {/* ── AI 助手区 —— 使用系统内置 Intelligence API，无需外部 Key ── */}
             <div className="sap-ai-zone">
               <div className="sap-ai-label">
-                <RobotOutlined style={{ color: '#6d28d9', marginRight: 4 }} />
-                <span>AI 跟单助手（系统内置）</span>
+                <span style={{ display: 'inline-flex', marginRight: 6 }}><XiaoyunCloudAvatar size={18} active /></span>
+                <span>小云智能助手</span>
               </div>
               {/* 对话历史 */}
               <div className="sap-ai-chat-history">
                 {aiMessages.map((msg, i) => (
                   <div key={i} className={`sap-ai-msg sap-ai-msg-${msg.role}`}>
                     {msg.role === 'ai' && (
-                      <span className="sap-ai-msg-avatar"><RobotOutlined /></span>
+                      <span className="sap-ai-msg-avatar"><XiaoyunCloudAvatar size={18} active /></span>
                     )}
                     <div className="sap-ai-msg-bubble">
                       <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
@@ -596,9 +599,9 @@ const SmartAlertBell: React.FC = () => {
                 ))}
                 {aiLoading && (
                   <div className="sap-ai-msg sap-ai-msg-ai">
-                    <span className="sap-ai-msg-avatar"><RobotOutlined /></span>
+                    <span className="sap-ai-msg-avatar"><XiaoyunCloudAvatar size={22} active loading /></span>
                     <div className="sap-ai-msg-bubble sap-ai-thinking">
-                      <Spin size="small" style={{ marginRight: 6 }} /><span>思考中…</span>
+                      <span>小云正在处理，请稍等一下…</span>
                     </div>
                   </div>
                 )}
