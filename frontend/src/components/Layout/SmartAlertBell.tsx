@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertOutlined,
@@ -106,7 +106,7 @@ const SmartAlertBell: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const introMessage = useMemo(() => buildXiaoyunPopupIntroMessage(brief, events), [brief, events]);
+  const introMessage = buildXiaoyunPopupIntroMessage();
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([
     { role: 'ai', content: introMessage.content, suggestions: introMessage.suggestions, cards: introMessage.cards },
   ]);
@@ -200,20 +200,6 @@ const SmartAlertBell: React.FC = () => {
   useEffect(() => {
     if (!fetchedToday) fetchData();
   }, [fetchedToday, fetchData]);
-
-  useEffect(() => {
-    setAiMessages(prev => {
-      if (prev.length !== 1 || prev[0]?.role !== 'ai') {
-        return prev;
-      }
-      return [{
-        role: 'ai',
-        content: introMessage.content,
-        suggestions: introMessage.suggestions,
-        cards: introMessage.cards,
-      }];
-    });
-  }, [introMessage]);
 
   // 点击面板外关闭
   useEffect(() => {
@@ -434,11 +420,11 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── 智能建议 ── */}
+            {/* ── 提醒建议 ── */}
             {brief?.suggestions && brief.suggestions.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <CheckCircleOutlined style={{ color: '#0284c7' }} /> 智能建议
+                  <CheckCircleOutlined style={{ color: '#0284c7' }} /> 提醒建议
                   <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
